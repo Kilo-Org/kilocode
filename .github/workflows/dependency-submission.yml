@@ -1,0 +1,138 @@
+# kilocode_change - new file
+name: Dependency submission
+
+# Feeds GitHub's dependency graph with the two dependency sets it cannot read
+# on its own, so Dependabot alerts cover them:
+#
+# - bun.lock: the dependency graph only parses package-lock.json, yarn.lock and
+#   pnpm-lock.yaml. For the Bun workspace it reads each package.json, which
+#   lists direct dependencies by range (and `catalog:` ones not at all), so no
+#   transitive npm dependency ever got an alert.
+# - packages/kilo-jetbrains: Gradle builds are never detected statically, so
+#   the JetBrains plugin had no alerts at all.
+#
+# Dependabot raises alerts for everything submitted here, and
+# security-findings-notify.yml reports them like any other alert. Bun alerts
+# never get a security update PR (Dependabot has no bun security updates):
+# fix them with root overrides, catalog pins or parent upgrades. For Gradle,
+# Dependabot can open security update PRs for direct dependencies in
+# libs.versions.toml; transitive ones are fixed by hand with the security
+# floors in packages/kilo-jetbrains/gradle/libs.versions.toml. The graph keeps the
+# latest snapshot per job, so each job only needs to rerun when its inputs
+# change; the weekly run is a safety net.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - bun.lock
+      - script/kilocode/dependency-snapshot.ts
+      - script/kilocode/sbom/lock.ts
+      - packages/kilo-jetbrains/**/*.gradle.kts
+      - packages/kilo-jetbrains/gradle/**
+      - packages/kilo-jetbrains/gradle.properties
+      - .github/workflows/dependency-submission.yml
+  schedule:
+    - cron: "43 4 * * 1" # weekly, Monday
+  workflow_dispatch:
+
+# Concurrency is per job, not per workflow: a push that only changes bun.lock
+# must not cancel a Gradle submission started by an earlier push, because the
+# newer run skips the Gradle job and would never redo it (and vice versa).
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  changes:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      bun: ${{ github.event_name != 'push' && 'true' || steps.filter.outputs.bun }}
+      gradle: ${{ github.event_name != 'push' && 'true' || steps.filter.outputs.gradle }}
+    steps:
+      - uses: actions/checkout@v6
+        if: github.event_name == 'push'
+        with:
+          persist-credentials: false
+
+      - id: filter
+        if: github.event_name == 'push'
+        uses: Kilo-Org/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # v3
+        with:
+          filters: |
+            bun:
+              - bun.lock
+              - script/kilocode/dependency-snapshot.ts
+              - script/kilocode/sbom/lock.ts
+              - .github/workflows/dependency-submission.yml
+            gradle:
+              - packages/kilo-jetbrains/**/*.gradle.kts
+              - packages/kilo-jetbrains/gradle/**
+              - packages/kilo-jetbrains/gradle.properties
+              - .github/workflows/dependency-submission.yml
+
+  bun:
+    needs: changes
+    if: needs.changes.outputs.bun == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: dependency-submission-bun
+      cancel-in-progress: true
+    permissions:
+      contents: write # required by the dependency submission API
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      - name: Build snapshot
+        run: bun script/kilocode/dependency-snapshot.ts bun.lock > "$RUNNER_TEMP/bun-snapshot.json"
+
+      - name: Submit snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh api --method POST "repos/$REPO/dependency-graph/snapshots" --input "$RUNNER_TEMP/bun-snapshot.json"
+
+  gradle:
+    needs: changes
+    if: needs.changes.outputs.gradle == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: dependency-submission-gradle
+      cancel-in-progress: true
+    permissions:
+      contents: write # required by the dependency submission API
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/dependency-submission@v4
+        env:
+          # Only what the plugin ships is `runtime`; build tooling, Gradle
+          # plugins and tests are `development`, so alerts can be triaged.
+          DEPENDENCY_GRAPH_RUNTIME_INCLUDE_CONFIGURATIONS: runtimeClasspath
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          build-root-directory: packages/kilo-jetbrains
+          # The plugin's gradle.properties turns the configuration cache on,
+          # which the dependency graph plugin cannot reuse without an
+          # encryption key; a one-off resolution run does not need it.
+          additional-arguments: --no-configuration-cache

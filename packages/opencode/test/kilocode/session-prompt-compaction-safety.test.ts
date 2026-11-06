@@ -2,10 +2,13 @@
 // Ensures Kilo's post-filterCompacted trim and post-summary media strip are
 // applied before messages are serialized for the provider request.
 
+import path from "path"
+import fs from "fs/promises"
+import { Global } from "@opencode-ai/core/global"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Fiber, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -301,6 +304,42 @@ const dangling = Effect.fn("prompt-safety.dangling")(function* (sessionID: Sessi
     providerID: ref.providerID,
     time: { created: Date.now() },
   } satisfies MessageV2.Assistant)
+})
+
+// Starts a separate Kilo process that holds a turn on the session, as a second `kilo serve` does while it waits on the provider.
+const owner = Effect.fn("prompt-safety.owner")(function* (sessionID: SessionID) {
+  const script = [
+    `import { Effect } from "effect"`,
+    `import { KiloSessionTurn } from ${JSON.stringify(path.join(import.meta.dir, "../../src/kilocode/session/turn.ts"))}`,
+    `await Effect.runPromise(KiloSessionTurn.hold(process.env.TURN_SESSION, Effect.succeed(() => {})))`,
+    `console.log("ready")`,
+    `setInterval(() => {}, 60_000)`, // keeps the process alive until the test kills it
+  ].join("\n")
+  const proc = yield* Effect.acquireRelease(
+    Effect.sync(() =>
+      Bun.spawn([process.execPath, "-e", script], {
+        cwd: path.join(import.meta.dir, "../.."),
+        env: { ...process.env, TURN_SESSION: sessionID },
+        stdout: "pipe",
+        stderr: "inherit",
+      }),
+    ),
+    (proc) =>
+      Effect.promise(() => {
+        proc.kill("SIGKILL")
+        return proc.exited
+      }),
+  )
+  const out = yield* Effect.promise(async () => {
+    const chunks: string[] = []
+    for await (const chunk of proc.stdout.pipeThrough(new TextDecoderStream())) {
+      chunks.push(chunk)
+      if (chunks.join("").includes("ready")) break
+    }
+    return chunks.join("")
+  })
+  expect(out).toContain("ready")
+  return proc
 })
 
 const file = Effect.fn("prompt-safety.file")(function* (
@@ -716,6 +755,87 @@ describe("SessionPrompt recovery", () => {
           (msg) => msg.info.role === "assistant" && msg.parts.length === 0 && !msg.info.finish && !msg.info.error,
         )
         expect(empty).toHaveLength(0)
+        expect(msgs.some((msg) => msg.info.id === stale.id)).toBe(false)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
+
+  it.live("marks the session turn on disk while a reply runs, for other Kilo processes", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Turn marker" })
+        const marker = path.join(Global.Path.state, "session-turn", `${chat.id}.${process.pid}`)
+        const gate = Promise.withResolvers<void>()
+        yield* llm.hold("done", gate.promise)
+
+        const run = yield* prompt
+          .prompt({ sessionID: chat.id, agent: "build", parts: [{ type: "text", text: "Reply while held" }] })
+          .pipe(Effect.forkChild)
+        yield* llm.wait(1)
+        expect(yield* Effect.promise(() => fs.readFile(marker, "utf8"))).toBeString()
+
+        gate.resolve()
+        yield* Fiber.join(run)
+        expect(
+          yield* Effect.promise(() =>
+            fs.stat(marker).then(
+              () => true,
+              () => false,
+            ),
+          ),
+        ).toBe(false)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
+
+  it.live("keeps an empty assistant that another live process is still writing", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Cross-process reply" })
+        const first = yield* user(chat.id, "Sent through the other process")
+        const live = yield* dangling(chat.id, first.id)
+        yield* owner(chat.id)
+
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "Sent while the other process waits" }],
+        })
+
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
+        expect(msgs.some((msg) => msg.info.id === live.id)).toBe(true)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
+
+  it.live("recovers a dangling assistant whose process crashed during the turn", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* () {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Crashed process reply" })
+        const first = yield* user(chat.id, "Sent before the other process crashed")
+        const stale = yield* dangling(chat.id, first.id)
+        const proc = yield* owner(chat.id)
+        proc.kill("SIGKILL")
+        yield* Effect.promise(() => proc.exited)
+
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          noReply: true,
+          parts: [{ type: "text", text: "Sent after the crash" }],
+        })
+
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
         expect(msgs.some((msg) => msg.info.id === stale.id)).toBe(false)
       }),
       { git: true, config: providerCfg },

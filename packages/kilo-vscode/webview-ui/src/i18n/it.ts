@@ -258,6 +258,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo Read",
   "ui.permission.toolLabel.todoWrite": "Todo Write",
   "ui.permission.toolLabel.codeSearch": "Ricerca codice",
+  "ui.permission.toolLabel.browserOpen": "Browser integrato",
   "ui.permission.copyCommand": "Copia",
   "ui.approval.auto": "Approvato automaticamente",
   "ui.approval.manual": "Approvato da te",
@@ -444,6 +445,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Recupera contenuti da una pagina web",
   "settings.permissions.tool.websearch.description": "Cerca sul web",
   "settings.permissions.tool.codesearch.description": "Cerca codice sul web",
+  "settings.permissions.tool.browser_open.description": "Apri una pagina nel Browser integrato",
   "settings.permissions.tool.external_directory.description": "Accede a file fuori dalla directory del progetto",
   "settings.permissions.tool.doom_loop.description": "Rileva chiamate tool ripetute con input identico",
   "session.delete.title": "Elimina sessione",
@@ -816,6 +818,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Cronologia dei prompt per conversazione",
   "settings.experimental.conversationPromptHistory.description":
     "Mantieni la cronologia dei prompt (ArrowUp/ArrowDown) separata per ogni conversazione invece di condividerne una sola tra tutte le conversazioni.",
+  "settings.experimental.agentManagerSplash.title": "Schermata iniziale di Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Prova la nuova introduzione di Agent Manager con esempi di flussi di lavoro. Si applica immediatamente.",
   "settings.experimental.claudeMigration.title": "Migrazione Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importa una volta le istruzioni globali CLAUDE.md supportate, le competenze semplici e le definizioni MCP disabilitate. I file Claude originali restano invariati; riavvia il backend dopo l'attivazione.",
@@ -1038,6 +1043,8 @@ export const dict = {
     "Gestisci lista task. Consente lettura e aggiornamento della lista task interna.",
   "settings.autoApprove.tool.webfetch": "Recupera URL. Consente di recuperare contenuti da un URL specifico.",
   "settings.autoApprove.tool.websearch": "Cerca sul web. Consente ricerche web esterne.",
+  "settings.autoApprove.tool.browser_open":
+    "Apri pagine nel Browser integrato. È l'anteprima integrata, non l'automazione Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "Previeni azioni identiche ripetute. Si attiva quando la stessa chiamata tool si ripete con input identico.",
   "settings.checkpoints.enable.title": "Abilita snapshot",

@@ -16,7 +16,7 @@ This document will help you set up your development environment and understand h
 Before you begin, make sure you have the following installed:
 
 1. **Git** - For version control
-2. **Bun 1.4.2+** - Required for installing dependencies and running scripts
+2. **Bun `1.4.4`** - The exact official npm package is required for installing dependencies and running scripts
 3. **Visual Studio Code** - Our recommended IDE for development
 4. **Java 21** - Required only when running JetBrains plugin checks or repo-level checks that include `@kilocode/kilo-jetbrains`
 
@@ -35,7 +35,19 @@ Before you begin, make sure you have the following installed:
      ```
      Replace `[YOUR-USERNAME]` with your actual GitHub username.
 
-1. **Install dependencies**:
+2. **Install the pinned Bun release**:
+
+   Use Node.js 24.22.1 or newer with npm from a trusted source:
+
+   ```bash
+   npm install --global bun@1.4.4
+   bun --version
+   bun --print "Bun.revision"
+   ```
+
+   The expected `Bun.revision` is `38afee6c84fcf48c0edb2466aa4b27d287a59c30`. The CLI build rejects other revisions. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the exact revision and target artifact checksums.
+
+3. **Install dependencies**:
 
    ```bash
    bun install

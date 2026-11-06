@@ -334,6 +334,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Ler Tarefas",
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
+  "ui.permission.toolLabel.browserOpen": "Navegador Integrado",
   "ui.permission.copyCommand": "Copiar",
   "ui.approval.auto": "Aprovado automaticamente",
   "ui.approval.manual": "Aprovado por você",
@@ -571,6 +572,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Buscar conteúdo de uma URL",
   "settings.permissions.tool.websearch.description": "Pesquisar na web",
   "settings.permissions.tool.codesearch.description": "Pesquisar código na web",
+  "settings.permissions.tool.browser_open.description": "Abrir uma página no Navegador Integrado",
   "settings.permissions.tool.external_directory.description": "Acessar arquivos fora do diretório do projeto",
   "settings.permissions.tool.doom_loop.description": "Detectar chamadas de ferramentas repetidas com entrada idêntica",
 
@@ -986,6 +988,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Histórico de prompts por conversa",
   "settings.experimental.conversationPromptHistory.description":
     "Mantenha o histórico de prompts (ArrowUp/ArrowDown) separado para cada conversa, em vez de compartilhar um único histórico entre todas as conversas.",
+  "settings.experimental.agentManagerSplash.title": "Tela de boas-vindas do Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "Experimente a nova introdução do Agent Manager com exemplos de fluxos de trabalho. Aplicação imediata.",
   "settings.experimental.claudeMigration.title": "Migração do Claude Code",
   "settings.experimental.claudeMigration.description":
     "Importe uma vez instruções globais CLAUDE.md compatíveis, habilidades simples e definições MCP desativadas. Os arquivos originais do Claude permanecem inalterados; reinicie o backend após ativar.",
@@ -1195,6 +1200,8 @@ export const dict = {
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
   "settings.autoApprove.tool.websearch": "Pesquisar na web. Permite realizar pesquisas externas na web.",
+  "settings.autoApprove.tool.browser_open":
+    "Abrir páginas no Navegador Integrado. Esta é a pré-visualização no aplicativo, não a automação de navegador do Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
   "settings.autoApprove.tool.doom_loop":

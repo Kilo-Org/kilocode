@@ -323,6 +323,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "قراءة المهام",
   "ui.permission.toolLabel.todoWrite": "كتابة المهام",
   "ui.permission.toolLabel.codeSearch": "بحث الكود",
+  "ui.permission.toolLabel.browserOpen": "المتصفح المدمج",
   "ui.permission.copyCommand": "نسخ",
   "ui.approval.auto": "تمت الموافقة تلقائيًا",
   "ui.approval.manual": "تمت الموافقة من قبلك",
@@ -557,6 +558,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "جلب محتوى من عنوان URL",
   "settings.permissions.tool.websearch.description": "البحث في الويب",
   "settings.permissions.tool.codesearch.description": "البحث عن كود على الويب",
+  "settings.permissions.tool.browser_open.description": "فتح صفحة في المتصفح المدمج",
   "settings.permissions.tool.external_directory.description": "الوصول إلى الملفات خارج دليل المشروع",
   "settings.permissions.tool.doom_loop.description": "اكتشاف استدعاءات الأدوات المتكررة بمدخلات متطابقة",
 
@@ -953,6 +955,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "سجل مطالبات لكل محادثة",
   "settings.experimental.conversationPromptHistory.description":
     "إبقاء سجل مطالبات الإدخال (استدعاء بالسهمين لأعلى/لأسفل) منفصلاً لكل محادثة بدلاً من مشاركة سجل واحد بين جميع المحادثات.",
+  "settings.experimental.agentManagerSplash.title": "شاشة ترحيب Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "جرّب المقدمة الجديدة لـ Agent Manager مع أمثلة لسير العمل. تُطبّق فورًا.",
   "settings.experimental.claudeMigration.title": "ترحيل Claude Code",
   "settings.experimental.claudeMigration.description":
     "استورد مرة واحدة تعليمات CLAUDE.md العامة المدعومة والمهارات البسيطة وتعريفات MCP المعطلة. تبقى ملفات Claude الأصلية دون تغيير؛ أعد تشغيل الخلفية بعد التفعيل.",
@@ -1151,6 +1156,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "إدارة قائمة المهام. يسمح بقراءة وتحديث قائمة المهام الداخلية.",
   "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
   "settings.autoApprove.tool.websearch": "البحث في الويب. يسمح بإجراء عمليات بحث خارجية في الويب.",
+  "settings.autoApprove.tool.browser_open":
+    "فتح صفحات في المتصفح المدمج. هذه معاينة داخل التطبيق، وليست أتمتة متصفح Playwright.",
   "settings.autoApprove.tool.external_directory":
     "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
   "settings.autoApprove.tool.doom_loop":

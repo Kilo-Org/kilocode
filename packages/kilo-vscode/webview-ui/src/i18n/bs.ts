@@ -331,6 +331,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Čitanje liste zadataka",
   "ui.permission.toolLabel.todoWrite": "Ažuriranje liste zadataka",
   "ui.permission.toolLabel.codeSearch": "Pretraga koda",
+  "ui.permission.toolLabel.browserOpen": "Integrirani preglednik",
   "ui.permission.copyCommand": "Kopiraj",
   "ui.approval.auto": "Automatski odobreno",
   "ui.approval.manual": "Odobrili ste vi",
@@ -612,6 +613,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Preuzmi sadržaj sa URL-a",
   "settings.permissions.tool.websearch.description": "Pretražuj web",
   "settings.permissions.tool.codesearch.description": "Pretraži kod na webu",
+  "settings.permissions.tool.browser_open.description": "Otvori stranicu u integriranom pregledniku",
   "settings.permissions.tool.external_directory.description": "Pristup datotekama izvan direktorija projekta",
   "settings.permissions.tool.doom_loop.description": "Otkriva ponovljene pozive alata sa identičnim unosom",
 
@@ -977,6 +979,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "Historija upita po razgovoru",
   "settings.experimental.conversationPromptHistory.description":
     "Čuvajte historiju upita (ArrowUp/ArrowDown) zasebno za svaki razgovor umjesto da dijelite jednu historiju među svim razgovorima.",
+  "settings.experimental.agentManagerSplash.title": "Početni ekran Agent Managera",
+  "settings.experimental.agentManagerSplash.description":
+    "Isprobajte novi uvod u Agent Manager s primjerima radnih tokova. Primjenjuje se odmah.",
   "settings.experimental.claudeMigration.title": "Claude Code migracija",
   "settings.experimental.claudeMigration.description":
     "Jednom uvezite podržane globalne CLAUDE.md upute, jednostavne vještine i onemogućene MCP definicije. Originalne Claude datoteke ostaju nepromijenjene; ponovo pokrenite backend nakon uključivanja.",
@@ -1184,6 +1189,8 @@ export const dict = {
     "Upravljanje listom zadataka. Dozvoljava čitanje i ažuriranje interne liste zadataka.",
   "settings.autoApprove.tool.webfetch": "Preuzimanje URL-a. Omogućava preuzimanje sadržaja sa određenog URL-a.",
   "settings.autoApprove.tool.websearch": "Pretražuj web. Dozvoljava izvršavanje eksternih pretraga weba.",
+  "settings.autoApprove.tool.browser_open":
+    "Otvori stranice u integriranom pregledniku. Ovo je pregled unutar aplikacije, a ne Playwright automatizacija preglednika.",
   "settings.autoApprove.tool.external_directory":
     "Pristup datotekama izvan radnog prostora. Pokreće se prilikom pristupa datotekama izvan trenutnog direktorija projekta.",
   "settings.autoApprove.tool.doom_loop":

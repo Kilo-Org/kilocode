@@ -120,6 +120,21 @@ export default {
         );
       `)
       // kilocode_change end
+      // kilocode_change start
+      yield* tx.run(`
+        CREATE TABLE \`kilo_continuation_intent\` (
+          \`account_id\` text NOT NULL,
+          \`operation_key\` text NOT NULL,
+          \`selection_json\` text NOT NULL,
+          \`cloud_origin\` text NOT NULL,
+          \`provider\` text NOT NULL,
+          \`prepared_json\` text NOT NULL,
+          \`created_at\` integer NOT NULL,
+          \`expires_at\` integer NOT NULL,
+          CONSTRAINT \`kilo_continuation_intent_pk\` PRIMARY KEY(\`account_id\`, \`operation_key\`)
+        );
+      `)
+      // kilocode_change end
       yield* tx.run(`
         CREATE TABLE \`permission\` (
           \`id\` text PRIMARY KEY,

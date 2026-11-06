@@ -439,14 +439,114 @@ describe("agent usage", () => {
     }),
   )
 
+  it.instance("pages runs by keyset over startedAt and id", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "root" })
+      for (const created of [1_000, 2_000, 3_000, 4_000]) {
+        yield* turn({
+          sessionID: root.id,
+          agent: "build",
+          created,
+          completed: created + 100,
+          cost: 0.25,
+          tokens: tokens(1, 1, 0, 0, 0),
+        })
+      }
+      // Two turns that start at the same millisecond must still page one by one.
+      yield* turn({
+        sessionID: root.id,
+        agent: "plan",
+        created: 5_000,
+        completed: 5_100,
+        cost: 0.5,
+        tokens: tokens(1, 1, 0, 0, 0),
+      })
+      yield* turn({
+        sessionID: root.id,
+        agent: "plan",
+        created: 5_000,
+        completed: 5_100,
+        cost: 0.5,
+        tokens: tokens(1, 1, 0, 0, 0),
+      })
+
+      const all = yield* AgentUsage.runs()
+      expect(all.map((run) => run.startedAt)).toEqual([5_000, 5_000, 4_000, 3_000, 2_000, 1_000])
+
+      const first = yield* AgentUsage.runs({ limit: 2 })
+      expect(first.map((run) => run.id)).toEqual(all.slice(0, 2).map((run) => run.id))
+
+      const rest = yield* AgentUsage.runs({ limit: 2, cursor: first[1]! })
+      expect(rest.map((run) => run.id)).toEqual(all.slice(2, 4).map((run) => run.id))
+
+      const paged: string[] = first.map((run) => run.id)
+      const limit = 2
+      const second = yield* AgentUsage.runs({ limit, cursor: first.at(-1)! })
+      paged.push(...second.map((run) => run.id))
+      const third = yield* AgentUsage.runs({ limit, cursor: second.at(-1)! })
+      paged.push(...third.map((run) => run.id))
+      expect(paged).toEqual(all.map((run) => run.id))
+
+      expect(yield* AgentUsage.runs({ limit: 2, cursor: all.at(-1)! })).toEqual([])
+    }),
+  )
+
+  it.instance("keeps summary at one rollup per agent regardless of paging", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "root" })
+      for (const created of [1_000, 2_000, 3_000]) {
+        yield* turn({
+          sessionID: root.id,
+          agent: "build",
+          created,
+          completed: created + 100,
+          cost: 0.25,
+          tokens: tokens(1, 1, 0, 0, 0),
+        })
+      }
+
+      const summary = yield* AgentUsage.summary({ limit: 1, cursor: { startedAt: 2_000, id: MessageID.ascending() } })
+      expect(summary).toHaveLength(1)
+      expect(summary[0]).toMatchObject({ agent: "build", runs: 3, cost: 0.75, lastRunAt: 3_000 })
+    }),
+  )
+
+  it.instance("round-trips the opaque cursor and rejects malformed input", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "root" })
+      yield* turn({
+        sessionID: root.id,
+        agent: "build",
+        created: 1_000,
+        completed: 1_100,
+        cost: 0.25,
+        tokens: tokens(1, 1, 0, 0, 0),
+      })
+      const [run] = yield* AgentUsage.runs()
+      const encoded = AgentUsage.cursor.encode(run)
+      expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
+      // Passing a whole run must still yield a token that carries only the paging key.
+      expect(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"))).toEqual({
+        startedAt: 1_000,
+        id: run.id,
+      })
+      expect(AgentUsage.cursor.decode(encoded)).toEqual({ startedAt: 1_000, id: run.id })
+      expect(() => AgentUsage.cursor.decode("not-a-cursor")).toThrow()
+      expect(() =>
+        AgentUsage.cursor.decode(Buffer.from(JSON.stringify({ startedAt: -1, id: run.id })).toString("base64url")),
+      ).toThrow()
+    }),
+  )
+
   it.instance("drives the runs query off the session, message, and step-finish indexes", () =>
     Effect.gen(function* () {
       const { db } = yield* Database.Service
       const test = yield* TestInstance
       const projectID = ProjectV2.ID.make("plan-project")
-      const plan = yield* db.all<{ detail: string }>(
-        sql`EXPLAIN QUERY PLAN ${AgentUsage.runsQuery(projectID)}`,
-      )
+      const plan = yield* db.all<{ detail: string }>(sql`EXPLAIN QUERY PLAN ${AgentUsage.runsQuery(projectID)}`)
       const details = plan.map((row) => row.detail).join("\n")
       expect(details).toContain("USING INDEX session_project_idx")
       expect(details).toContain("USING INDEX message_session_time_created_id_idx")

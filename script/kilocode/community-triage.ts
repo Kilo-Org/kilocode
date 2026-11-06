@@ -11,13 +11,13 @@ import { appendFileSync } from "node:fs"
 
 export const DAY = 24 * 60 * 60 * 1000
 export const WAIT_DAYS = 14
+
 const LIMIT = 15
 
 export const label = {
   community: "community",
   triage: "needs-triage",
   awaiting: "awaiting-contributor",
-  high: "high-value",
   keep: "keep-open",
   first: "first-time-contributor",
   quick: "quick-win",
@@ -86,8 +86,7 @@ export const labels = [
   { name: label.community, color: "0e8a16", description: "Opened by someone outside the Kilo team" },
   { name: label.triage, color: "fbca04", description: "Waiting for a maintainer to look" },
   { name: label.awaiting, color: "d4c5f9", description: "Waiting for the contributor to reply" },
-  { name: label.high, color: "5319e7", description: "We want this change. Never auto-closed. Set by hand." },
-  { name: label.keep, color: "bfdadc", description: "Never auto-close this PR. Set by hand." },
+  { name: label.keep, color: "bfdadc", description: "Never auto-closed. The team may adopt it. Set by hand." },
   { name: label.first, color: "fef2c0", description: "First contribution to this repo. Say hello!" },
   { name: label.quick, color: "bfd4f2", description: "Small, low-risk change. Quick to review." },
   ...priorities,
@@ -233,7 +232,7 @@ export type State =
   | { state: "awaiting"; since: number; days: number }
 
 // A hand-set label means a maintainer already looked at the PR.
-const triaged = (tags: string[]) => tags.includes(label.high) || tags.includes(label.keep)
+const triaged = (tags: string[]) => tags.includes(label.keep)
 
 // Whose turn it is. The latest maintainer reaction decides, unless the author
 // answered (comment, review reply or new commit) after it.
@@ -271,7 +270,6 @@ export type Row = {
   state: State
   failing: boolean
   adopt: boolean
-  closed: boolean
   first: boolean
   quick?: Quick
 }
@@ -287,7 +285,7 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   }
   const age = (row: Row) => Math.floor((now - row.created) / DAY)
   const bold = (text: string) => (mode === "md" ? `**${text}**` : `*${text}*`)
-  const open = rows.filter((row) => !row.closed)
+  const open = rows
   const found: { short: string; count: number; text: string }[] = []
   const section = (name: string, short: string, list: Row[], note: (row: Row) => string) => {
     if (list.length === 0) return
@@ -301,7 +299,7 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   const ci = (row: Row) => `${row.first ? ", first-time contributor" : ""}${row.failing ? ", CI failing" : ""}`
 
   section(
-    "Adopt: high-value, no reply in 14 days",
+    "Adopt: keep-open, no reply in 14 days",
     "Adopt",
     open.filter((row) => row.adopt),
     (row) => `${awaiting(row)?.days}d silent`,
@@ -325,13 +323,7 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
     "Waiting for contributor",
     "Waiting",
     state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
-    (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${ci(row)}`,
-  )
-  section(
-    "Closed in this run",
-    "Closed",
-    rows.filter((row) => row.closed),
-    () => `no reply in ${WAIT_DAYS} days`,
+    (row) => `${awaiting(row)?.days}d waiting${ci(row)}`,
   )
 
   const firsts = open.filter((row) => row.first).length
@@ -500,9 +492,6 @@ const drop = (num: number, list: string[]) =>
       api(`/repos/${repo}/issues/${num}/labels/${encodeURIComponent(item)}`, { method: "DELETE", ok: [404] }),
     ),
   )
-const comment = (num: number, body: string) =>
-  api(`/repos/${repo}/issues/${num}/comments`, { method: "POST", body: JSON.stringify({ body }) })
-
 async function files(num: number) {
   const out: string[] = []
   for (let page = 1; ; page++) {
@@ -568,26 +557,6 @@ type Pull = {
   reviewThreads: { totalCount: number; nodes: { comments: { nodes: Node[] } }[] }
 }
 
-type Reply = { user: { login: string } | null; created_at?: string; submitted_at?: string }
-
-// The query reads only the latest comments, reviews and replies. Before a PR
-// is closed or adopted, ask the API for everything since the maintainer's
-// last reaction, so a reply outside that window cannot be missed.
-async function replied(num: number, login: string, since: number) {
-  const iso = new Date(since).toISOString()
-  const get = async (path: string): Promise<Reply[]> => (await api(`/repos/${repo}/${path}`)).json()
-  const mine = (list: Reply[]) =>
-    list.some((x) => x.user?.login === login && Date.parse(x.created_at ?? x.submitted_at ?? "") > since)
-  if (mine(await get(`issues/${num}/comments?since=${iso}&per_page=100`))) return true
-  if (mine(await get(`pulls/${num}/comments?since=${iso}&per_page=100`))) return true
-  for (let page = 1; page <= 5; page++) {
-    const list = await get(`pulls/${num}/reviews?per_page=100&page=${page}`)
-    if (mine(list)) return true
-    if (list.length < 100) return false
-  }
-  return false
-}
-
 const query = `
 query($owner: String!, $repo: String!, $cursor: String) {
   repository(owner: $owner, name: $repo) {
@@ -631,9 +600,6 @@ async function quick(pr: Pull, ready: boolean) {
 async function sweep() {
   needMember(process.env.MEMBER_TOKEN)
   const now = Date.now()
-  const enabled = process.env.CLOSE_ENABLED === "true"
-  const cap = Number(process.env.MAX_COMMENTS ?? 20)
-  let spent = 0
   await ensure()
 
   const prs: Pull[] = []
@@ -689,12 +655,7 @@ async function sweep() {
       pr.reviews.totalCount > pr.reviews.nodes.length ||
       pr.reviewThreads.totalCount > pr.reviewThreads.nodes.length
     const first = classify(events, tags, now)
-    const state: State =
-      first.state === "triage" && cut
-        ? { state: "review" }
-        : first.state === "awaiting" && first.days >= WAIT_DAYS && (await replied(pr.number, login, first.since))
-          ? { state: "review" }
-          : first
+    const state: State = first.state === "triage" && cut ? { state: "review" } : first
     const failing = ["FAILURE", "ERROR"].includes(commit?.statusCheckRollup?.state ?? "")
     const plan = decide(tags, state)
     const more = [...(tags.includes(label.community) ? [] : [label.community])]
@@ -722,39 +683,17 @@ async function sweep() {
       state,
       failing,
       adopt: false,
-      closed: false,
       first: newcomer(pr.authorAssociation),
       quick: kind,
     }
 
-    if (state.state === "awaiting" && state.days >= WAIT_DAYS) {
-      if (tags.includes(label.high)) {
-        row.adopt = true
-      } else if (!tags.includes(label.keep)) {
-        if (!enabled) console.log(`[dry-run] would close #${pr.number} (${state.days}d without reply)`)
-        else if (spent < cap) {
-          spent++
-          await comment(
-            pr.number,
-            `Closing this pull request because a maintainer asked for changes on ${new Date(state.since).toISOString().slice(0, 10)} and we have not heard back in ${WAIT_DAYS} days. Feel free to reopen it when you have updates, or open a new one.`,
-          )
-          await api(`/repos/${repo}/pulls/${pr.number}`, { method: "PATCH", body: JSON.stringify({ state: "closed" }) })
-          row.closed = true
-          console.log(`closed #${pr.number}`)
-        }
-      }
-    } else if (state.state === "awaiting" && plan.add.includes(label.awaiting) && enabled && spent < cap) {
-      spent++
-      const due = new Date(state.since + WAIT_DAYS * DAY).toISOString().slice(0, 10)
-      await comment(
-        pr.number,
-        `Thanks for the contribution! A maintainer left feedback and is waiting for your reply. If we do not hear back by ${due}, this pull request will be closed. Push a fix or leave a comment to keep it open.`,
-      )
-    }
+    // A kept PR whose contributor stayed silent is for the team to adopt or let go.
+    // The sweep closes nothing. kilo-auto-close.yml is the only closer.
+    if (state.state === "awaiting" && state.days >= WAIT_DAYS && tags.includes(label.keep)) row.adopt = true
 
     console.log(`#${pr.number} ${state.state} +[${[...plan.add, ...more]}] -[${plan.remove}]`)
     await add(pr.number, [...plan.add, ...more])
-    await drop(pr.number, row.closed ? [] : plan.remove)
+    await drop(pr.number, plan.remove)
     rows.push(row)
   }
 

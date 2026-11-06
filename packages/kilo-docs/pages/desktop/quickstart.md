@@ -1,6 +1,6 @@
 ---
 title: "Quickstart"
-description: "Sign in, open a workspace, and start your first agentic chat in Kilo Desktop."
+description: "Sign in, open a workspace, and start your first agentic session in Kilo Desktop."
 ---
 
 # Quickstart
@@ -29,7 +29,7 @@ Choose whether you want Kilo to operate with high autonomy or review its work fi
 
 ### 4. Create a workspace
 
-A workspace scopes a chat to one or more folders on your machine. Add the folder(s) you want the agent to work in; the agent's file access, terminal, and git operations all run inside the workspace. You can add more workspaces anytime. 
+A workspace scopes a session to one or more folders on your machine. Add the folder(s) you want the agent to work in; the agent's file access, terminal, and git operations all run inside the workspace. You can add more workspaces anytime. 
 
 ### 5. See what you can do
 
@@ -37,17 +37,34 @@ A short tour of Kilo Desktop's features finishes setup.
 
 ## Navigate the home screen
 
-When Kilo Desktop opens, you land on a new chat in the workspace you created during setup.
+When Kilo Desktop opens, you land on a new session in the workspace you created during setup.
 
-{% image src="/docs/img/desktop/quickstart-home-screen.png" alt="The Kilo Desktop home screen with the sidebar and a new chat" width="800" /%}
+{% image src="/docs/img/desktop/quickstart-home-screen.png" alt="The Kilo Desktop home screen with the sidebar and a new session" width="800" /%}
 
 ### Sidebar
 
-The sidebar on the left manages your chats and workspaces.
+The sidebar on the left manages your sessions and workspaces.
 
-- **New chat** starts a fresh conversation.
-- **Search** finds your past chats.
-- **Workspaces** lists the folders you've added. Select the dropdown to switch to a different workspace or create a new one. Use the filter to organize the list — group by **Status**, **Workspace**, or **Updated**, order by **Updated** or **Title**, choose what each row shows, and filter by status (**Needs attention**, **Working**, **Idle**, or **Archived**).
+- **New session** starts a fresh conversation.
+- **Search** (⌘K / Ctrl+Shift+K) finds past sessions and workspaces.
+- **Workspace filter** — choose **All workspaces**, **No workspace** (sessions that aren't in a workspace), or a single workspace. You can also create a **New workspace** here.
+- **Session list options** {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} — organize the list:
+  - **Grouping**: **Status**, **Workspace**, or **Updated**.
+  - **Ordering**: **Updated** or **Title**.
+  - **Show**: choose what each row shows (**Workspace**, **Updated**, **PR**).
+  - **Filters**: by **Status** (**All**, **Needs attention**, **Working**, **Idle**, **Archived**) or by **Pull request** (**All**, **Any PR**, **Open PR**).
+
+  **Collapse All** / **Expand All** and **Reset view** are in the same menu.
+
+If a folder in a workspace has been moved, renamed, deleted, or is on a drive that isn't connected, Kilo Desktop shows a warning icon next to that workspace in the workspace filter and in the **Select workspace** menu. Select the icon to open **Edit workspace**, where the missing folder is marked *This folder is unavailable. Select its new location or remove it.* Use **Add folder** to choose the folder's new location and remove the old entry with **×**. If the folder you removed was **Primary**, the first remaining folder becomes primary, so select **Make primary** on the right folder if needed. Then select **Save**.
+
+### Manage sessions
+
+Hover a session to **Archive** or **Pin** it. The **…** (More) menu also has **Rename** and **Delete**.
+
+- **Pin** keeps a session in the **Pinned** group at the top of the list. Shift+click a session, or press ⌥⌘P (macOS) / Ctrl+Shift+P (Windows/Linux), to pin or unpin it.
+- **Archive** moves an idle session into the **Archived** group. Archiving can't be undone.
+- **Delete** asks you to confirm (**Delete this session?**). It permanently removes the session and its history. If the session is the last one using a worktree, Kilo Desktop asks **Delete session and worktree?** instead, listing the session and the worktree's branch. Choose **Keep worktree** to delete only the session, or **Delete both**. Deleting the worktree loses its uncommitted changes and unpushed commits.
 
 ### Settings
 
@@ -65,12 +82,45 @@ The controls around the input let you:
 - **Choose an agent** to set how it approaches your request. Pick one of the default agents: Code, Plan, Ask, Debug, or Architect. See [Using agents](/docs/code-with-ai/agents/using-agents) for what each one does.
 - **Select autonomy level** for the agent. With **Manually approve**, Kilo asks before each file edit or command; with **Automatically approve**, it proceeds on its own without requesting permission.
 - **Pick a model** for the chat. The available models depend on how you're signed in and which providers you've connected. The list can include [Kilo Gateway](/docs/gateway) models, provider models you've added, or a [local model](/docs/desktop/features/local-inference) you've added. The picker labels free models **Free** and models that use your own API key **BYOK**. Use the filter to show only free models. Free models may use your data for training; see [Privacy](/docs/desktop/settings/general#privacy).
-- **Select a workspace** to scope the chat to a workspace, add a **New workspace**, or choose **No workspace** to chat without one.
-- **Set where changes go** with the git controls beside the workspace — work in your **Local** repository (switching or creating **branches** as needed), or run the session in a **new worktree**, an isolated copy created from a base branch. See [Git integration](/docs/desktop/features/git).
+- **Select a workspace** to scope the session to a workspace, add a **New workspace**, or choose **No workspace** to chat without one.
+- **Set where changes go** with the git controls beside the workspace — work in your **Local** repository (switching or creating **branches** as needed), run the session in a **New worktree** (an isolated copy created from a base branch), or reuse one of your **Existing worktrees**. See [Git integration](/docs/desktop/features/git).
 
 ### Send your first message
 
 Enter your message and send it to start the conversation. See [What you can ask](/docs/desktop/what-you-can-ask) for prompts to get you started.
+
+While the agent is working, you can keep typing and select **Queue** (or press Enter) to line up your next message. Queued messages appear above the input and are sent one at a time when the agent finishes. Select **Send now** to send one immediately, or delete it. **Stop generating** pauses the queue.
+
+Hover a queued message for more controls:
+
+- **Edit queued message** changes its text. Press Enter (or select **Save**) to keep the change, or Esc (or **Cancel**) to discard it. The queue waits while you edit, and its header shows **· Editing**.
+- **Drag to reorder** — when more than one message is queued, drag a message by its handle to change the order, or focus the handle and use the up and down arrow keys.
+- **Delete queued message** removes it.
+
+Select **Pause queue** in the queue header to hold queued messages after the agent finishes; the header shows **· Paused**. Select **Resume queue** to continue sending.
+
+### Review a plan
+
+When the **Plan** (or **Architect**) agent writes a plan, a plan card appears in the chat with a preview. Select **View Plan** to read the full plan in a **Plan** tab beside the chat, then **Approve** it to let the agent start work. To change the plan, type your feedback and select **Refine**. Each revision gets its own card, and an open Plan tab switches to the newest revision once it's ready.
+
+### Pages and diagrams in replies
+
+When a chart, table, or mockup says more than prose, the agent can show an HTML page right in its reply. The page follows your light or dark theme, and tall pages scroll inside the frame. Hover the page to see its title and two buttons:
+
+- **Save to workspace** — saves the page as an `.html` file at the root of the chat's workspace folder (or its worktree), named after the page title. Kilo Desktop never overwrites a file; if the name is taken, it adds a number, such as `Chart 2.html`. Select **Open** in the confirmation to view the saved page in a [Browser](/docs/desktop/features/browser) tab.
+- **Full screen** — opens the page in a larger view.
+
+Pages can't reach the network, except to load scripts from a few public CDNs (jsDelivr, unpkg, cdnjs, Plotly, Bokeh, and HoloViz). When you click a link in a page, Kilo Desktop asks **Open *site* in your browser?** and opens it in your default browser only if you select **Open**.
+
+When the agent draws a diagram — a flowchart, sequence diagram, Gantt chart, and so on — Kilo Desktop renders it as a Mermaid diagram card labeled with its type. Select **Show source** to see the Mermaid code (**Show diagram** switches back), or **Copy** to copy it.
+
+### Find text
+
+Press **⌘F** (macOS) or **Ctrl+F** (Windows/Linux) to search the chat transcript (**Find in transcript**), an open **Plan** tab (**Find in plan**), or a rendered Markdown or Mermaid preview in [Files](/docs/desktop/features/files#open-and-edit-files) (**Find in file**). The search applies to the tab you're working in. The bar shows the match count; press Enter for the next match and Shift+Enter for the previous one, toggle **Match case** (**Aa**), and press Esc to close it. In the code editor, **⌘F** / **Ctrl+F** opens the editor's own search instead.
+
+### Keyboard shortcuts
+
+Press ⌘/ (Ctrl+/) to see all keyboard shortcuts. You can change them in [General settings](/docs/desktop/settings/general#shortcuts).
 
 ## Work in tab groups
 
@@ -104,12 +154,12 @@ By default, each tab group you open is added next to the others, and the tab gro
 
 ### Save and reuse layouts
 
-When you find an arrangement of tab groups and tabs you like, save it as a **layout** and reuse it in other chats. A layout stores how your tab groups and tabs are arranged, not their contents — your chat history and the files, notebooks, or pages you had open aren't included.
+When you find an arrangement of tab groups and tabs you like, save it as a **layout** and reuse it in other sessions. A layout stores how your tab groups and tabs are arranged, not their contents — your chat history and the files, notebooks, or pages you had open aren't included.
 
-Use the {% svgIcon src="/docs/img/desktop/panels-top-left.svg" /%} **Layouts** button at the top right of a chat to:
+Use the {% svgIcon src="/docs/img/desktop/panels-top-left.svg" /%} **Layouts** button at the top right of a session to:
 
-- **Save current layout** — name the arrangement and, optionally, **Use as default for new chats**. The dialog lists any open tabs it can't recreate in a new chat (such as a specific file, notebook, or browser page).
-- **Apply a layout** — select a saved layout from the menu to rearrange the current chat to match.
+- **Save current layout** — name the arrangement and, optionally, **Use as default for new sessions**. The dialog lists any open tabs it can't recreate in a new session (such as a specific file, notebook, or browser page).
+- **Apply a layout** — select a saved layout from the menu to rearrange the current session to match.
 - **Manage layouts** — set or clear the default, update a layout from the current arrangement, rename it, or delete it.
 
-The default layout applies to new chats only; existing chats stay as they are.
+The default layout applies to new sessions only; existing sessions stay as they are.

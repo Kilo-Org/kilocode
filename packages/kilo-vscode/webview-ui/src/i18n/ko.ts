@@ -331,6 +331,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "할 일 읽기",
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
+  "ui.permission.toolLabel.browserOpen": "통합 브라우저",
   "ui.permission.copyCommand": "복사",
   "ui.approval.auto": "자동 승인됨",
   "ui.approval.manual": "사용자가 승인함",
@@ -565,6 +566,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "URL에서 콘텐츠 가져오기",
   "settings.permissions.tool.websearch.description": "웹 검색",
   "settings.permissions.tool.codesearch.description": "웹에서 코드 검색",
+  "settings.permissions.tool.browser_open.description": "통합 브라우저에서 페이지 열기",
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
 
@@ -967,6 +969,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "대화별 프롬프트 기록",
   "settings.experimental.conversationPromptHistory.description":
     "프롬프트 기록(ArrowUp/ArrowDown)을 모든 대화에서 공유하지 않고 대화별로 분리하여 유지합니다.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager 시작 화면",
+  "settings.experimental.agentManagerSplash.description":
+    "워크플로 예제가 포함된 새로운 Agent Manager 소개 화면을 사용해 보세요. 즉시 적용됩니다.",
   "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
@@ -1162,6 +1167,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "작업 목록 관리. 내부 작업 목록을 읽고 업데이트할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.websearch": "웹 검색. 외부 웹 검색을 수행할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.browser_open":
+    "통합 브라우저에서 페이지를 엽니다. 앱 내 미리보기이며 Playwright 브라우저 자동화가 아닙니다.",
   "settings.autoApprove.tool.external_directory":
     "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
   "settings.autoApprove.tool.doom_loop":

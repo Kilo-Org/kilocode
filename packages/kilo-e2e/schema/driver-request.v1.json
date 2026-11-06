@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runDir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "descriptorPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactsDir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scenario": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "enum": [
+            "session.open",
+            "prompt.stream",
+            "permission.continue"
+          ]
+        },
+        "lane": {
+          "type": "string",
+          "enum": [
+            "local",
+            "cloud"
+          ]
+        },
+        "prompt": {
+          "type": "object",
+          "properties": {
+            "directive": {
+              "type": "string",
+              "enum": [
+                "open",
+                "stream",
+                "permission"
+              ]
+            },
+            "token": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "directive",
+            "token"
+          ]
+        },
+        "expected": {
+          "type": "object",
+          "properties": {
+            "ui": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "model": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "terminalTranscriptToken": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "ui",
+            "model",
+            "terminalTranscriptToken"
+          ]
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "transcript.read",
+              "stream.observe",
+              "permission.answer"
+            ]
+          }
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "lane",
+        "prompt",
+        "expected",
+        "requires",
+        "timeoutMs"
+      ]
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "branch",
+        "commit"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runId",
+    "runDir",
+    "descriptorPath",
+    "artifactsDir",
+    "scenario",
+    "project"
+  ]
+}

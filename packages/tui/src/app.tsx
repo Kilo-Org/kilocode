@@ -66,7 +66,7 @@ import { ToastProvider, useToast } from "./ui/toast"
 import { KVProvider, useKV } from "./context/kv"
 import * as Model from "./util/model"
 import { ArgsProvider, useArgs, type Args } from "./context/args"
-import open from "open"
+import { openUrl } from "@opencode-ai/core/open" // kilocode_change - backport upstream browser URL validation
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import type { TuiConfig } from "./config"
 import { createTuiApiAdapters } from "./plugin/adapters"
@@ -844,7 +844,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
             DialogHeadlessLink.show(dialog, KiloApp.DOCS_URL)
             return
           }
-          open(KiloApp.DOCS_URL).catch((err) => console.error("Failed to open docs", err))
+          openUrl(KiloApp.DOCS_URL).catch((err) => console.error("Failed to open docs", err))
           // kilocode_change end
           dialog.clear()
         },

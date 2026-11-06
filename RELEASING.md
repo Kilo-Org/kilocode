@@ -64,6 +64,7 @@ Downloads all build artifacts and publishes to every distribution channel:
 - Publishes platform-specific binary packages to **npm** (e.g. `@kilocode/cli-linux-x64`, `@kilocode/cli-darwin-arm64`, etc.).
 - Publishes the main `@kilocode/cli` package to **npm** with optional dependencies on the binary packages.
 - Builds and pushes a multi-arch **Docker image** (`ghcr.io/kilo-org/kilocode`) to GitHub Container Registry (linux/amd64 + linux/arm64).
+- Builds and pushes the image's **OpenShell variant** (`ghcr.io/kilo-org/kilocode:<version>-openshell` and `:latest-openshell`) from the Dockerfile's `openshell` stage, for the same platforms.
 
 #### SDK (`@kilocode/sdk`)
 
@@ -82,6 +83,10 @@ Downloads all build artifacts and publishes to every distribution channel:
 
 - **AUR (Arch Linux)**: Clones `kilo-bin` from the AUR, updates the `PKGBUILD` with new version and SHA256 checksums, and pushes.
 - **Homebrew**: Clones `Kilo-Org/homebrew-tap`, updates the `kilo.rb` formula with new version, download URLs, and SHA256 checksums, and pushes.
+
+#### Conda (stable releases and pre-releases)
+
+- **Conda (Anaconda.org)**: Uses [`rattler-build`](https://rattler.build) to repackage the released CLI archives (no compilation) into a `kilo-cli` conda package for `linux-64`, `linux-aarch64`, `osx-64`, `osx-arm64`, and `win-64`, all built from the single Linux publish runner (see the `Build conda package` step in `publish.yml` and the recipe in `packages/opencode/script/kilocode/conda-recipe/`). The built `.conda` files are then uploaded to Anaconda.org via the [`anaconda/actions/upload-package`](https://github.com/anaconda/actions) action, publishing under the `anaconda-cloud` org (same as ana-cli). Runs for both stable releases (`main` label, installed with `conda install -c anaconda-cloud kilo-cli`) and pre-releases (`rc` label, installed with `-c anaconda-cloud/label/rc`; the version is sanitized for conda, e.g. `0.0.0-rc-202609221200` → `0.0.0.rc.202609221200`).
 
 ## Prerequisites and Permissions
 
@@ -112,6 +117,7 @@ The following secrets must be configured in the repository:
 | `VSCE_TOKEN` | VS Code Marketplace personal access token |
 | `OVSX_TOKEN` | Open VSX Registry token (currently unused but configured) |
 | `AUR_KEY` | SSH private key for pushing to the AUR |
+| `ANACONDA_API_KEY` | Anaconda.org API token for uploading the conda package |
 
 ### Concurrency
 

@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "operation": {
+          "type": "string",
+          "const": "prepare"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lane": {
+          "type": "string",
+          "enum": [
+            "local",
+            "cloud"
+          ]
+        },
+        "fakeLlmScope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "descriptorPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectDir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "data": {
+              "type": "string",
+              "minLength": 1
+            },
+            "config": {
+              "type": "string",
+              "minLength": 1
+            },
+            "state": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cache": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "data",
+            "config",
+            "state",
+            "cache"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "operation",
+        "runId",
+        "lane",
+        "fakeLlmScope",
+        "descriptorPath",
+        "projectDir",
+        "state"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "operation": {
+          "type": "string",
+          "const": "cleanup"
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "descriptorPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "descriptorPresent": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "operation",
+        "runId",
+        "descriptorPath",
+        "descriptorPresent"
+      ]
+    }
+  ]
+}

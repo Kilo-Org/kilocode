@@ -3,6 +3,7 @@ import type { BackgroundJob } from "@/background/job"
 import type { SessionID } from "@/session/schema"
 import path from "path"
 import { Permission } from "@/permission"
+import { PermissionAllowlist } from "../permission/allowlist"
 import { guarded } from "../agent"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
@@ -104,6 +105,12 @@ export namespace KiloTask {
    * so use a session-level edit restriction to confine a delegated workflow.
    * Parent ask/allow rules must not replace the selected subagent's policy.
    *
+   * Edit is judged on the same `edit` ruleset as the rest of the loop: the session rules for a
+   * custom delegator, everything for a native or unknown-provenance caller. A catch-all deny
+   * followed by path allows is an allowlist baseline, not a blanket denial, so only its
+   * specific denies are inherited there. Before this, such a caller lost edit/write in every
+   * delegated subagent because the baseline was collapsed into a wildcard deny.
+   *
    * Broad bash denies are deliberately NOT inherited from the calling agent. A read-only/delegating
    * agent (plan, ask, orchestrator) carries a `readOnlyBash` allowlist whose deny rules
    * (`*`, `git *`, shell-operator guards) exist only to shape that allowlist. Projecting
@@ -128,16 +135,27 @@ export namespace KiloTask {
     const edit = input.caller.native === false ? session : rules
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
+    const mutation = mutations()
     // `guarded` covers the tools a read-only mode may never regain from config; keeping
     // it here too stops a Plan-launched subagent from reaching them under a catch-all.
     // `bash` is intentionally excluded — see the doc comment above (#11523).
-    const mutation = new Set(["edit", ...guarded.filter((p) => p !== "bash")])
+    // Only `*`-permission rules can match the literal input "*", so this is true exactly
+    // for the modes whose guard sets `"*": "deny"` and for a global deny-all config.
+    const readonly = Permission.evaluate("*", "*", rules).action === "deny"
     const inherited = [
       ...rules.filter((rule) => rule.permission !== "edit"),
-      ...edit.filter((rule) => rule.permission === "edit"),
-    ].filter((r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)))
+      ...edit.filter((rule) => rule.permission === "edit" && rule.action === "deny"),
+    ].filter(
+      (r: Permission.Rule) =>
+        r.action === "deny" &&
+        (isMcp(r.permission) ||
+          (r.permission === "edit"
+            ? readonly || r.pattern !== "*" || !PermissionAllowlist.exceptions("edit", edit)
+            : mutation.has(r.permission))),
+    )
     for (const permission of mutation) {
       if (Permission.evaluate(permission, "*", permission === "edit" ? edit : rules).action !== "deny") continue
+      if (!readonly && PermissionAllowlist.exceptions(permission, permission === "edit" ? edit : rules)) continue
       inherited.push({ permission, pattern: "*", action: "deny" })
     }
     const scoped = rules.filter((rule) => rule.permission !== "*")
@@ -147,6 +165,30 @@ export namespace KiloTask {
       inherited.push({ permission, pattern: "*", action: "deny" })
     }
     return merge(inherited)
+  }
+
+  /**
+   * Merge a resumed child session's stored permission with a freshly built ceiling.
+   * Children created before the allowlist fix carry a flattened catch-all deny for a
+   * mutation the caller only scoped, and appending the fresh rules after it left the
+   * stale deny winning. Drop only catch-all mutation denies the fresh ceiling does not
+   * reproduce; specific denies and intentional read-only ceilings survive.
+   */
+  export function refresh(stale: Permission.Ruleset, fresh: Permission.Ruleset) {
+    const mutation = mutations()
+    const keep = (rule: Permission.Rule) =>
+      !(
+        rule.action === "deny" &&
+        rule.pattern === "*" &&
+        mutation.has(rule.permission) &&
+        !fresh.some((next) => next.action === "deny" && next.pattern === "*" && next.permission === rule.permission)
+      )
+    return merge(stale.filter(keep), fresh)
+  }
+
+  /** Tools whose permission is mutated by the calling agent's ceilings. */
+  function mutations() {
+    return new Set(["edit", ...guarded.filter((p) => p !== "bash")])
   }
 
   /** Extra permission rules appended to subagent sessions */

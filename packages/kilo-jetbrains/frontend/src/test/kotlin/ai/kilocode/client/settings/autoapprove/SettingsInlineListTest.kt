@@ -3,7 +3,7 @@ package ai.kilocode.client.settings.autoapprove
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListCellBounds
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.popup.JBPopup
@@ -250,7 +250,7 @@ class SettingsInlineListTest : BasePlatformTestCase() {
     private fun clickLevel(list: SettingsInlineList, key: String) {
         val jList = jbList(list)
         val model = jList.model
-        val idx = (0 until model.size).first { (model.getElementAt(it) as ActiveListItem).key == key }
+        val idx = (0 until model.size).first { (model.getElementAt(it) as ActiveItem).key == key }
         jList.selectedIndex = idx
         jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
         jList.doLayout()

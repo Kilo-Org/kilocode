@@ -43,6 +43,7 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
@@ -126,6 +127,43 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("", panel.dump())
     }
 
+    fun `test exposes authoritative prompt stream state`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "hello from prompt"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p2", "a1", "text", "K1-PROMPT-STREAM"))
+        model.setState(SessionState.Idle)
+
+        assertEquals("hello from prompt", panel.messageText("user"))
+        assertEquals("K1-PROMPT-STREAM", panel.messageText("assistant"))
+        assertEquals("", panel.messageErrors())
+        assertEquals("Idle", panel.stateName())
+        assertNull(panel.stateMessage())
+        assertNull(panel.sessionId())
+    }
+
+    fun `test reports assistant errors and error state detail`() {
+        model.upsertMessage(msg("a1", "assistant").copy(error = failure("boom")))
+        model.setState(SessionState.Error("boom", "APIError"))
+
+        assertTrue(panel.messageErrors().contains("boom"))
+        assertEquals("Error", panel.stateName())
+        assertEquals("boom", panel.stateMessage())
+    }
+
+    fun `test reports cloud terminal failures on the user prompt`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.setTerminal(ChatEventDto.MessageTerminal(
+            sessionID = "ses",
+            messageID = "u1",
+            status = "failed",
+            delivery = "accepted",
+            accepted = true,
+        ))
+
+        assertTrue(panel.messageErrors().contains("user: terminal=failed"))
+    }
+
     fun `test modified files card follows turn anchor summary`() {
         model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
 
@@ -149,6 +187,58 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     // ------ failed turns ------
+
+    fun `test Cloud terminal failure renders on original prompt while newer turn stays busy`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setState(SessionState.Busy("newer turn"))
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "queued", false)
+
+        model.setTerminal(terminal)
+
+        val card = cards("u1").single()
+        assertEquals(KiloBundle.message("session.cloud.message.failed"), card.text())
+        assertTrue(cards("u2").isEmpty())
+        assertEquals(SessionState.Busy("newer turn"), model.state)
+        assertNull(model.message("u1")!!.info.error)
+        val count = components(panel).size
+        repeat(300) { model.setTerminal(terminal) }
+        assertSame(card, cards("u1").single())
+        assertEquals(count, components(panel).size)
+    }
+
+    fun `test deferred interrupted terminal renders when original prompt arrives`() {
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "interrupted", "sent", true)
+        model.setTerminal(terminal)
+        assertEquals(0, panel.turnCount())
+        model.upsertMessage(msg("u1", "user"))
+        assertEquals(KiloBundle.message("session.cloud.message.interrupted"), cards("u1").single().text())
+    }
+
+    fun `test Cloud completed prompt has no error card or global state change`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.setQueued(setOf("u1"))
+        model.setState(SessionState.Busy("next turn"))
+        model.setTerminal(ChatEventDto.MessageTerminal("ses", "u1", "completed", "sent", true))
+        assertTrue(cards("u1").isEmpty())
+        assertTrue(model.queued.isEmpty())
+        assertEquals(SessionState.Busy("next turn"), model.state)
+    }
+
+    fun `test Cloud failure survives retained history refresh and replay without duplicate cards`() {
+        val terminal = ChatEventDto.MessageTerminal("ses", "u1", "failed", "sent", true)
+        val history = listOf(MessageWithPartsDto(msg("u1", "user"), emptyList()))
+        model.loadHistory(history)
+        model.setTerminal(terminal)
+        model.loadHistory(history)
+        assertEquals(KiloBundle.message("session.cloud.message.failed"), cards("u1").single().text())
+        val card = cards("u1").single()
+        model.setTerminal(terminal)
+        assertSame(card, cards("u1").single())
+        model.clear()
+        assertEquals(0, panel.turnCount())
+        assertTrue(components(panel).filterIsInstance<MessageErrorView>().isEmpty())
+    }
 
     fun `test failed message renders the provider text in the transcript`() {
         model.upsertMessage(msg("a1", "assistant"))

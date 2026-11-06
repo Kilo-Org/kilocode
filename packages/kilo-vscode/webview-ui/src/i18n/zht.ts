@@ -313,6 +313,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "讀取待辦",
   "ui.permission.toolLabel.todoWrite": "更新待辦",
   "ui.permission.toolLabel.codeSearch": "程式碼搜尋",
+  "ui.permission.toolLabel.browserOpen": "整合瀏覽器",
   "ui.permission.copyCommand": "複製",
   "ui.approval.auto": "已自動核准",
   "ui.approval.manual": "由你核准",
@@ -543,6 +544,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "從 URL 取得內容",
   "settings.permissions.tool.websearch.description": "搜尋網頁",
   "settings.permissions.tool.codesearch.description": "在網路上搜尋程式碼",
+  "settings.permissions.tool.browser_open.description": "在整合瀏覽器中開啟頁面",
   "settings.permissions.tool.external_directory.description": "存取專案目錄之外的檔案",
   "settings.permissions.tool.doom_loop.description": "偵測具有相同輸入的重複工具呼叫",
 
@@ -894,6 +896,8 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "依對話區分的提示歷史",
   "settings.experimental.conversationPromptHistory.description":
     "為每個對話單獨保存提示歷史(ArrowUp/ArrowDown),而不是在所有對話間共用同一份。",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager 歡迎頁",
+  "settings.experimental.agentManagerSplash.description": "試用附有工作流程範例的新版 Agent Manager 介紹頁。立即生效。",
   "settings.experimental.claudeMigration.title": "Claude Code 遷移",
   "settings.experimental.claudeMigration.description":
     "一次性匯入受支援的全域 CLAUDE.md 指示、簡單技能和已停用的 MCP 定義。不會修改原始 Claude 檔案；啟用後請重新啟動後端。",
@@ -1080,6 +1084,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "管理任務清單。允許讀取和更新內部任務清單。",
   "settings.autoApprove.tool.webfetch": "擷取 URL。允許從特定 URL 擷取內容。",
   "settings.autoApprove.tool.websearch": "搜尋網頁。允許執行外部網路搜尋。",
+  "settings.autoApprove.tool.browser_open":
+    "在整合瀏覽器中開啟頁面。這是應用程式內預覽，不是 Playwright 瀏覽器自動化。",
   "settings.autoApprove.tool.external_directory": "存取工作區外部的檔案。存取目前專案目錄之外的檔案時觸發。",
   "settings.autoApprove.tool.doom_loop": "防止重複相同操作。當相同的工具呼叫以相同的輸入重複時觸發。",
   "settings.checkpoints.enable.title": "啟用快照",

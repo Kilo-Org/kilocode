@@ -329,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "خواندن Todo",
   "ui.permission.toolLabel.todoWrite": "نوشتن Todo",
   "ui.permission.toolLabel.codeSearch": "جستجوی کد",
+  "ui.permission.toolLabel.browserOpen": "مرورگر یکپارچه",
   "ui.permission.copyCommand": "کپی",
   "ui.approval.auto": "تأیید خودکار",
   "ui.approval.manual": "تأیید شده توسط شما",
@@ -525,6 +526,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "دریافت محتوا از یک URL",
   "settings.permissions.tool.websearch.description": "جستجو در وب",
   "settings.permissions.tool.codesearch.description": "جستجوی کد در وب",
+  "settings.permissions.tool.browser_open.description": "باز کردن صفحه در مرورگر یکپارچه",
   "settings.permissions.tool.external_directory.description": "دسترسی به فایل‌های خارج از پوشه پروژه",
   "settings.permissions.tool.doom_loop.description": "تشخیص فراخوانی‌های تکراری ابزار با ورودی یکسان",
 
@@ -966,6 +968,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "تاریخچه پرامپت برای هر گفتگو",
   "settings.experimental.conversationPromptHistory.description":
     "تاریخچه پرامپت (ArrowUp/ArrowDown) را برای هر گفتگو جداگانه نگه دارید، به جای اشتراک یک تاریخچه بین همه گفتگوها.",
+  "settings.experimental.agentManagerSplash.title": "صفحه خوشامدگویی Agent Manager",
+  "settings.experimental.agentManagerSplash.description":
+    "معرفی جدید Agent Manager را با نمونه‌های گردش کار امتحان کنید. بلافاصله اعمال می‌شود.",
   "settings.experimental.claudeMigration.title": "مهاجرت Claude Code",
   "settings.experimental.claudeMigration.description":
     "دستورالعمل‌های سراسری CLAUDE.md پشتیبانی‌شده، مهارت‌های ساده و تعریف‌های MCP غیرفعال را فقط یک‌بار وارد کنید. فایل‌های اصلی Claude تغییر نمی‌کنند؛ پس از فعال‌سازی backend را دوباره راه‌اندازی کنید.",
@@ -1165,6 +1170,8 @@ export const dict = {
     "مدیریت فهرست وظایف. اجازه خواندن و به‌روزرسانی فهرست وظایف داخلی را می‌دهد.",
   "settings.autoApprove.tool.webfetch": "دریافت یک URL. امکان بازیابی محتوا از یک URL مشخص را فراهم می‌کند.",
   "settings.autoApprove.tool.websearch": "جستجو در وب. امکان انجام جستجوهای خارجی در وب را فراهم می‌کند.",
+  "settings.autoApprove.tool.browser_open":
+    "باز کردن صفحه‌ها در مرورگر یکپارچه. این پیش‌نمایش درون‌برنامه‌ای است، نه خودکارسازی مرورگر Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "جلوگیری از اقدامات تکراری یکسان. زمانی فعال می‌شود که همان فراخوانی ابزار با ورودی یکسان تکرار شود.",
 

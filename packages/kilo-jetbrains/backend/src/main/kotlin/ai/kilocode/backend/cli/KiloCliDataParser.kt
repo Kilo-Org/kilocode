@@ -151,10 +151,29 @@ object KiloCliDataParser {
         val obj = tryParseObject(data) ?: return null
 
         // SSE data is a GlobalEvent: { directory, payload: { type, properties } }
-        val payload = obj["payload"]?.jsonObject ?: obj
-        val props = payload["properties"]?.jsonObject ?: return null
+        val payload = if ("payload" in obj) obj["payload"] as? JsonObject ?: return null else obj
+        val props = payload["properties"] as? JsonObject ?: return null
 
         return when (type) {
+            "cloud.message.failed", "cloud.message.completed" -> {
+                val sid = (props["sessionID"] as? JsonPrimitive)
+                    ?.takeIf { it.isString }?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                val mid = (props["messageId"] as? JsonPrimitive)
+                    ?.takeIf { it.isString }?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                val status = (props["status"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                    ?: return null
+                val delivery = (props["delivery"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                    ?: return null
+                val accepted = (props["accepted"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
+                    ?: return null
+                if (delivery !in setOf("queued", "sent")) return null
+                if (type == "cloud.message.completed") {
+                    if (status != "completed" || delivery != "sent" || !accepted) return null
+                }
+                if (type == "cloud.message.failed" && status !in setOf("failed", "interrupted")) return null
+                ChatEventDto.MessageTerminal(sid, mid, status, delivery, accepted)
+            }
+
             "message.updated" -> {
                 val sid = props.str("sessionID") ?: return null
                 val info = props["info"]?.jsonObject ?: return null
@@ -1020,6 +1039,10 @@ object KiloCliDataParser {
         }
         fields += "\"text\":${escape(part.text.orEmpty())}"
         if (part.synthetic == true) fields += "\"synthetic\":true"
+        val injected = part.injectedTitle?.trim()?.takeIf { it.isNotEmpty() }
+        if (injected != null) {
+            fields += "\"metadata\":{\"kilo\":{\"injected\":{\"title\":${escape(injected)}}}}"
+        }
         return "{${fields.joinToString(",")}}"
     }
 
@@ -1375,6 +1398,7 @@ object KiloCliDataParser {
             filename = obj.str("filename"),
             synthetic = obj.flagOrNull("synthetic"),
             source = parseSource(obj["source"]),
+            injectedTitle = injectedTitle(topMeta),
             tool = obj.str("tool"),
             callID = obj.str("callID"),
             state = state?.str("status"),
@@ -2129,6 +2153,11 @@ private fun JsonObject?.map(key: String): Map<String, String> {
         val text = value.scalar() ?: return@mapNotNull null
         name to text
     }.toMap()
+}
+
+private fun injectedTitle(meta: JsonObject?): String? {
+    val injected = meta?.get("kilo")?.obj()?.get("injected")?.obj() ?: return null
+    return injected.str("title")?.trim()?.takeIf { it.isNotEmpty() }?.take(200)
 }
 
 private fun JsonObject?.time(key: String): PartTimeDto? {

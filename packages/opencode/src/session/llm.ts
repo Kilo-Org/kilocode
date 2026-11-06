@@ -34,6 +34,11 @@ import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
+import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
+import { openaiMessages, openaiTools } from "@/kilocode/auto-routing/messages"
+import { organization, token } from "@/kilocode/provider/catalog"
+import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { Identity } from "@kilocode/kilo-telemetry"
 // kilocode_change end
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -96,6 +101,37 @@ const live: Layer.Layer<
     const events = yield* EventV2Bridge.Service
     const llmClient = yield* LLMClient.Service
     const flags = yield* RuntimeFlags.Service
+
+    // kilocode_change start - ADR 0005: a custom auto router that this CLI can
+    // serve asks the routing worker for a decision and dispatches it itself.
+    const route = Effect.fn("LLM.route")(function* (input: StreamInput) {
+      if (!KiloCustomRouter.isCustomRouter({ providerID: input.model.providerID, modelID: input.model.id })) {
+        return undefined
+      }
+      const item = yield* provider.getProvider(input.model.providerID)
+      const info = yield* auth.get(input.model.providerID)
+      const providers = yield* provider.list()
+      const machineId = yield* Effect.promise(() => Identity.getMachineId().catch(() => undefined))
+      const pick = yield* Effect.promise(async () =>
+        KiloCustomRouter.resolve({
+          modelID: input.model.id,
+          messages: openaiMessages(input.messages),
+          tools: await openaiTools(input.tools),
+          sessionID: input.sessionID,
+          requestID: input.user.id,
+          mode: input.agent.name,
+          machineId,
+          token: token(item.options, info),
+          organizationId: organization(item.options, info),
+          providers,
+        }),
+      )
+      if (!pick) return undefined
+      const model = KiloCustomRouter.routedModel({ pick, base: input.model, providers })
+      if (!model) throw new Error(KiloCustomRouter.errorMessage("custom_router_unavailable", input.model.id))
+      return { model, variant: pick.variant }
+    })
+    // kilocode_change end
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
       const l = log.clone().tag("providerID", input.model.providerID).tag("modelID", input.model.id) // kilocode_change
@@ -466,9 +502,28 @@ const live: Layer.Layer<
               (ctrl) => Effect.sync(() => ctrl.abort()),
             )
 
-            const result = yield* run({ ...input, abort: ctrl.signal })
+            // kilocode_change start - ADR 0005: dispatch a custom auto router this CLI can serve
+            const routing: { current?: { providerID: string; modelID: string } } = {}
+            const stamp = (event: LLMEvent) =>
+              routing.current ? KiloRoutedModel.stamp(event, routing.current) : event
+            const mark = (events: Stream.Stream<LLMEvent, unknown>): Stream.Stream<LLMEvent, unknown> =>
+              events.pipe(Stream.map(stamp))
+            const routed = yield* route(input)
+            if (routed) routing.current = { providerID: routed.model.providerID, modelID: routed.model.id }
+            const request: StreamInput = routed
+              ? {
+                  ...input,
+                  model: routed.model,
+                  user: routed.variant
+                    ? { ...input.user, model: { ...input.user.model, variant: routed.variant } }
+                    : input.user,
+                }
+              : input
+            // kilocode_change end
 
-            if (result.type === "native") return result.stream
+            const result = yield* run({ ...request, abort: ctrl.signal }) // kilocode_change - ADR 0005 dispatch the routed model
+
+            if (result.type === "native") return mark(result.stream) // kilocode_change - ADR 0005 stamp the routed model
 
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
@@ -484,6 +539,7 @@ const live: Layer.Layer<
               ),
               // kilocode_change end
               Stream.flatMap((events) => Stream.fromIterable(events)),
+              Stream.map(stamp), // kilocode_change - ADR 0005 stamp the routed model
             )
           }),
         ),

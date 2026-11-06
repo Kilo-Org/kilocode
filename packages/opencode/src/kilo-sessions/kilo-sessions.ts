@@ -36,6 +36,7 @@ import {
   enabled as prEnabled,
   loadSessionLinks,
   pruneLegacyWorktreeLinks,
+  readSessionPrLink,
   recordPrCreate,
   recordPush,
 } from "@/kilo-sessions/pr-link"
@@ -154,6 +155,29 @@ export namespace KiloSessions {
     | { ok: false; reason: string; skipped?: true; refused?: true }
   const bootstrapInflight = new Map<string, Promise<BootstrapOutcome>>()
 
+  // Per-session in-flight initial transcript sync. `create` registers the
+  // promise here instead of firing and forgetting, so an acknowledged
+  // continuation can join the full transcript before it settles an otherwise
+  // empty queue. The promise resolves to an outcome: a failed full sync must
+  // stay a failure so the continuation never dispatches a partial transcript.
+  type FullSyncOutcome = { ok: true } | { ok: false; reason: "failed" }
+  const fullSyncInflight = new Map<string, Promise<FullSyncOutcome>>()
+  function trackFullSync(sessionId: string): Promise<FullSyncOutcome> {
+    const existing = fullSyncInflight.get(sessionId)
+    if (existing) return existing
+    const tracked: Promise<FullSyncOutcome> = fullSync(sessionId)
+      .then((): FullSyncOutcome => ({ ok: true }))
+      .catch((error): FullSyncOutcome => {
+        log.error("share full sync failed", { sessionId, error })
+        return { ok: false, reason: "failed" }
+      })
+      .finally(() => {
+        if (fullSyncInflight.get(sessionId) === tracked) fullSyncInflight.delete(sessionId)
+      })
+    fullSyncInflight.set(sessionId, tracked)
+    return tracked
+  }
+
   // kilocode_change - `bootstrap` rejects with this when the relay answered the
   // ingest POST with a definitive refusal (a permanent 4xx). `trackBootstrap`
   // marks the outcome `refused` from this type, and only a refused outcome may
@@ -216,11 +240,21 @@ export namespace KiloSessions {
     return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getModel(providerID, modelID)))
   }
 
+  // A user message's model is optional display metadata, not message data. A
+  // retired or unknown provider/model must not fail the whole transcript, so a
+  // model-not-found is tolerated per reference while every other provider error
+  // still fails the sync. Resolved models keep their source order.
   async function models(refs: Array<{ providerID: string; modelID: string }>) {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(
       Provider.Service.use((svc) =>
-        Effect.all(refs.map((ref) => svc.getModel(ProviderV2.ID.make(ref.providerID), ModelV2.ID.make(ref.modelID)))),
+        Effect.all(
+          refs.map((ref) =>
+            svc
+              .getModel(ProviderV2.ID.make(ref.providerID), ModelV2.ID.make(ref.modelID))
+              .pipe(Effect.catchTag("ProviderModelNotFoundError", () => Effect.succeed(undefined))),
+          ),
+        ).pipe(Effect.map((rows) => rows.filter((row): row is NonNullable<typeof row> => row !== undefined))),
       ),
     )
   }
@@ -310,6 +344,98 @@ export namespace KiloSessions {
 
   export async function drainIngestForShutdown() {
     await drainIngest()
+  }
+
+  export type ContinuationSyncResult =
+    | { ok: true }
+    | { ok: false; reason: "disabled" | "signed_out" | "no_share" | "failed" }
+
+  /**
+   * Acknowledged ingest sync for Continue-in-Cloud. Every requested session must
+   * be shared and flushed with a successful acknowledgement — including the
+   * initial transcript — or the whole preparation fails. One deadline bounds
+   * auth/client resolution, the share bootstrap, the transcript, and the
+   * settle; a rejected or timed-out part fails the whole wait so Cloud is never
+   * called with a partial transcript. It never calls `drain()`, which
+   * permanently shuts the queue down after a best-effort attempt.
+   */
+  export async function syncForContinuation(
+    sessionIDs: string[],
+    opts?: { timeoutMs?: number },
+  ): Promise<ContinuationSyncResult> {
+    if (ingestDisabled || shareDisabled) return { ok: false, reason: "disabled" }
+
+    const timeoutMs = opts?.timeoutMs ?? 15_000
+    const deadline = Date.now() + timeoutMs
+
+    // Bound a promise by the shared deadline. A rejection and a missed deadline
+    // are distinct failures (`timedOut`), and the timer is always cleared so a
+    // settled wait leaves no pending timer.
+    const bound = async <T>(
+      task: Promise<T>,
+    ): Promise<{ ok: true; value: T } | { ok: false; timedOut: boolean }> => {
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const timeout = new Promise<{ ok: false; timedOut: boolean }>((resolve) => {
+        timer = setTimeout(() => resolve({ ok: false, timedOut: true }), Math.max(0, deadline - Date.now()))
+        timer.unref?.()
+      })
+      try {
+        return await Promise.race([
+          task.then(
+            (value): { ok: true; value: T } => ({ ok: true, value }),
+            (): { ok: false; timedOut: boolean } => ({ ok: false, timedOut: false }),
+          ),
+          timeout,
+        ])
+      } finally {
+        if (timer) clearTimeout(timer)
+      }
+    }
+
+    // Auth/client resolution is part of the acknowledged wait.
+    const client = await bound(getClient())
+    if (!client.ok) return { ok: false, reason: "failed" }
+    if (!client.value) return { ok: false, reason: "signed_out" }
+
+    const unique = [...new Set(sessionIDs)]
+    for (const id of unique) {
+      const existing = await bound(get(id).catch(() => undefined))
+      if (!existing.ok) return { ok: false, reason: existing.timedOut ? "failed" : "no_share" }
+      if (existing.value?.ingestPath) continue
+
+      // A share that never reaches the relay (skipped bootstrap) or is refused
+      // leaves no ingest path: the session cannot be acknowledged, so fail.
+      const shared = await bound(ensureSharedSession(id))
+      if (!shared.ok) {
+        log.warn("continuation sync unavailable", { sessionId: id, timedOut: shared.timedOut })
+        return { ok: false, reason: shared.timedOut ? "failed" : "no_share" }
+      }
+      const created = await bound(get(id).catch(() => undefined))
+      if (!created.ok) return { ok: false, reason: created.timedOut ? "failed" : "no_share" }
+      if (!created.value?.ingestPath) return { ok: false, reason: "no_share" }
+    }
+
+    // The initial transcript must be enqueued and acknowledged. A rejected or
+    // timed-out full sync is a failed acknowledged sync, never a success.
+    for (const id of unique) {
+      const synced = await bound(trackFullSync(id))
+      if (!synced.ok || !synced.value.ok) {
+        log.warn("continuation full sync did not complete", { sessionId: id })
+        return { ok: false, reason: "failed" }
+      }
+    }
+
+    const settled = await ingest.settle(unique, Math.max(0, deadline - Date.now()))
+    if (!settled.ok) {
+      log.warn("continuation sync did not settle", { sessions: unique.length, reason: settled.reason })
+      return { ok: false, reason: "failed" }
+    }
+    return { ok: true }
+  }
+
+  /** The organization a session's ingest rows belong to, or undefined for a personal account. */
+  export async function organizationForSession(sessionId: string): Promise<string | undefined> {
+    return getOrgId(sessionId)
   }
 
   /** @internal - lifecycle regression coverage */
@@ -492,11 +618,18 @@ export namespace KiloSessions {
   async function syncPrLinkTriple(sessionId: string, triple: PrLinkTriple) {
     const key = JSON.stringify(triple)
     if (lastPrLinkTriple.get(sessionId) === key) return
-    // Record the triple only after ingest accepts (queues) it. A missing client
-    // makes ingest.sync return false without queueing; recording before would
-    // poison the dedupe map and skip the persist after a later login.
+    // The queue drops items without a share. Leave those triples retryable
+    // until bootstrap completes, just as ingest.sync does for a missing client.
+    if (!(await readShare(sessionId))) return
     const accepted = await ingest.sync(sessionId, [{ type: "session_pr_link", data: triple }])
     if (accepted) lastPrLinkTriple.set(sessionId, key)
+  }
+
+  // Ingest stored evidence without a remote heartbeat. Withdraw an absent
+  // record only if this process previously ingested the session's link.
+  async function syncPrLinkForSession(sessionId: string) {
+    const record = await readSessionPrLink(sessionId)
+    await syncSessionPrLink(sessionId, record, new Set())
   }
 
   // Sessions already cleared by the legacy sweep this process.
@@ -784,20 +917,23 @@ export namespace KiloSessions {
             if (!prEnabled()) return
             // kilocode_change - A PR is linked only on the session's own hard
             // evidence: the session ran a create command whose output returned
-            // the PR URL, or it pushed the PR's head branch. Agent text, a
+            // the PR URL, it pushed the PR's head branch, or it explicitly
+            // linked the PR with link_pr. Agent text, a
             // listing (`gh pr list`), a view, or a review is a mention, never a
-            // link, so only a completed shell tool with such a command is read.
+            // link, so only a completed evidence-producing tool is read.
             if (part.type !== "tool" || part.state.status !== "completed") return
+            if (part.tool === "link_pr") return syncPrLinkForSession(part.sessionID)
             if (part.tool !== "bash" && part.tool !== "shell") return
             const raw = part.state.input["command"]
             const command = typeof raw === "string" ? raw : undefined
             if (!command) return
             if (isPrCreateCommand(command)) {
               await recordPrCreate(part.sessionID, Instance.worktree, part.state.output)
-              return
+              return syncPrLinkForSession(part.sessionID)
             }
             if (isPushCommand(command)) {
               await recordPush(part.sessionID, Instance.worktree, command, part.state.output)
+              await syncPrLinkForSession(part.sessionID)
             }
           })
           watch(Session.Event.Diff, (evt) =>
@@ -893,9 +1029,14 @@ export namespace KiloSessions {
           if (prEnabled()) {
             yield* Effect.acquireRelease(
               Effect.sync(() =>
-                startPrLinkPoll(async () => {
-                  await Instance.restore(ctx, () => refreshPrLink())
-                }),
+                startPrLinkPoll(() =>
+                  Instance.restore(ctx, async () => {
+                    // Preserve evidence from the previous process before refresh can remove it.
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                    await refreshPrLink()
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                  }),
+                ),
               ),
               (stop) => Effect.sync(stop),
             )
@@ -1399,7 +1540,9 @@ export namespace KiloSessions {
     const result = await task
     if (!result) return { id: "", ingestPath: "" }
 
-    void fullSync(sessionId).catch((error) => log.error("share full sync failed", { sessionId, error }))
+    // Track (do not fire and forget) the initial transcript sync so an
+    // acknowledged continuation can join it before settling.
+    void trackFullSync(sessionId)
 
     return result
   }
@@ -1782,6 +1925,7 @@ export namespace KiloSessions {
         data: await statuses.snapshot(sessionId, () => AppRuntime.runPromise(deriveStatus(sessionId))),
       },
     ])
+    await syncPrLinkForSession(sessionId)
   }
 
   /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
