@@ -509,6 +509,55 @@ export const dict = {
   "agentManager.intro.guide": "Читать руководство",
   "agentManager.intro.dismiss": "Пропустить введение",
   "agentManager.intro.reopen": "Как работает Agent Manager",
+  "agentManager.splash.preview.label": "Предпросмотр боковой панели Agent Manager",
+  "agentManager.splash.eyebrow": "AGENT MANAGER",
+  "agentManager.splash.compact.subtitle":
+    "Запускайте задачи параллельно с помощью worktree, делегируйте работу и следите за каждым агентом из одного места.",
+  "agentManager.splash.hide": "Скрыть",
+  "agentManager.splash.hideLabel": "Скрыть знакомство с Agent Manager",
+  "agentManager.splash.title": "Запустите в работу флот агентов Kilo.",
+  "agentManager.splash.subtitle":
+    "Решайте несколько задач параллельно с помощью worktree, делегируйте работу, следите за прогрессом каждого агента и поддерживайте продвижение нескольких рабочих потоков из одного места.",
+  "agentManager.splash.hint": "или",
+  "agentManager.splash.proceed": "продолжите локально в поле сообщения ниже",
+  "agentManager.splash.folded.title": "Запустите в работу флот агентов Kilo",
+  "agentManager.splash.folded.note": "Кросстековые функции, делегирование, сравнение моделей и многое другое",
+  "agentManager.splash.showExamples": "Показать примеры",
+  "agentManager.splash.examples.crossStack.tag": "Мультирепо",
+  "agentManager.splash.examples.crossStack.title": "Одна функция, три репо",
+  "agentManager.splash.examples.crossStack.pitch":
+    "Один бриф, один агент на репозиторий и вся функция в одном представлении.",
+  "agentManager.splash.examples.crossStack.feature1.name": "Мультирепозиторные проекты",
+  "agentManager.splash.examples.crossStack.feature1.text":
+    "Бэкенд, фронтенд и инфраструктура рядом в одной боковой панели.",
+  "agentManager.splash.examples.crossStack.feature2.name": "Статус сеансов в реальном времени",
+  "agentManager.splash.examples.crossStack.feature2.text": "Сразу видно, что работает, что завершено и что ждёт вас.",
+  "agentManager.splash.examples.crossStack.feature3.name": "Значки PR и счётчики изменений",
+  "agentManager.splash.examples.crossStack.feature3.text": "Узнайте, что изменил каждый агент, прежде чем открыть.",
+  "agentManager.splash.examples.delegate.tag": "Делегирование",
+  "agentManager.splash.examples.delegate.title": "Поручите одному сеансу большую задачу",
+  "agentManager.splash.examples.delegate.pitch":
+    "Попросите один сеанс разбить большую задачу на параллельные сеансы, а затем зайдите в любой из них.",
+  "agentManager.splash.examples.delegate.feature1.name": "Сеансы, запускающие сеансы",
+  "agentManager.splash.examples.delegate.feature1.text":
+    "Сеанс может запускать новые сеансы, каждый в собственном worktree.",
+  "agentManager.splash.examples.delegate.feature2.name": "Изолированные worktree",
+  "agentManager.splash.examples.delegate.feature2.text":
+    "Каждая работа получает собственную копию, поэтому ничего не пересекается.",
+  "agentManager.splash.examples.delegate.feature3.name": "Подключайтесь где угодно",
+  "agentManager.splash.examples.delegate.feature3.text":
+    "Зайдите в любой запущенный сеанс или следите за всей задачей сверху.",
+  "agentManager.splash.examples.compare.tag": "Сравнение моделей",
+  "agentManager.splash.examples.compare.title": "Из трёх выберите лучший",
+  "agentManager.splash.examples.compare.pitch":
+    "Отправьте один запрос нескольким агентам или моделям и сохраните лучший результат.",
+  "agentManager.splash.examples.compare.feature1.name": "Запуски нескольких версий",
+  "agentManager.splash.examples.compare.feature1.text": "Запустите одну задачу сразу как несколько версий.",
+  "agentManager.splash.examples.compare.feature2.name": "Смешивайте модели",
+  "agentManager.splash.examples.compare.feature2.text": "Сравните Kilo Auto, Claude и GPT на одинаковой работе.",
+  "agentManager.splash.examples.compare.feature3.name": "Оставьте лучший",
+  "agentManager.splash.examples.compare.feature3.text":
+    "Просмотрите настоящие diff рядом, оставьте один и отбросьте остальные.",
   "agentManager.worktree.health.absent-restorable": "Папка удалена",
   "agentManager.worktree.health.absent-restorableNote":
     "Папки нет, но ветка {{branch}} сохранилась. Восстановите её, чтобы продолжить работу здесь.",

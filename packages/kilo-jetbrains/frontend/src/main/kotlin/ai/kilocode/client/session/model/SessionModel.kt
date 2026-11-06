@@ -640,6 +640,7 @@ class SessionModel {
                 val text = dto.text ?: return
                 existing.content.clear()
                 existing.content.append(text)
+                dto.injectedTitle?.let { existing.injectedTitle = it }
             }
             is Reasoning -> {
                 val text = dto.text ?: return
@@ -731,6 +732,7 @@ class SessionModel {
         return when (dto.type) {
             "text" -> notice(dto) ?: Text(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
+                injectedTitle = dto.injectedTitle
             }
             "reasoning" -> Reasoning(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)

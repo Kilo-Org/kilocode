@@ -345,13 +345,14 @@ class SessionController(
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
+        injectedTitle: String? = null,
     ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
         val hosted = ref is SessionRef.Hosted
         val messageID = if (hosted) hostedMessageID() else null
-        val dto = promptDto(text, files, editorContext, select).let {
+        val dto = promptDto(text, files, editorContext, select, injectedTitle).let {
             if (messageID != null) it.copy(messageID = messageID) else it
         }
         val props = promptProps(files)
@@ -2789,6 +2790,7 @@ class SessionController(
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
+        injectedTitle: String? = null,
     ): PromptDto {
         val sel = model.model?.let(::parseModel)
         val provider = select?.provider ?: sel?.first
@@ -2798,7 +2800,9 @@ class SessionController(
         // be validated against model.variants yet; only the fallback is filtered.
         val variant = select?.variant ?: model.variant?.takeIf { it in model.variants }
         val parts = buildList {
-            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+            text.takeIf { it.isNotBlank() }?.let {
+                add(PromptPartDto(type = "text", text = it, injectedTitle = injectedTitle))
+            }
             addAll(files)
         }
         return PromptDto(

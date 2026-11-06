@@ -974,6 +974,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "会話ごとのプロンプト履歴",
   "settings.experimental.conversationPromptHistory.description":
     "プロンプト履歴 (ArrowUp/ArrowDown) をすべての会話で共有せず、会話ごとに分けて保持します。",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager スプラッシュ画面",
+  "settings.experimental.agentManagerSplash.description":
+    "ワークフローの例を含む新しい Agent Manager の紹介画面を試せます。変更はすぐに適用されます。",
   "settings.experimental.claudeMigration.title": "Claude Code 移行",
   "settings.experimental.claudeMigration.description":
     "サポートされるグローバル CLAUDE.md 命令、簡単なスキル、無効化された MCP 定義を一度だけインポートします。元の Claude ファイルは変更されません。有効化後にバックエンドを再起動してください。",

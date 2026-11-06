@@ -969,6 +969,9 @@ export const dict = {
   "settings.experimental.conversationPromptHistory.title": "대화별 프롬프트 기록",
   "settings.experimental.conversationPromptHistory.description":
     "프롬프트 기록(ArrowUp/ArrowDown)을 모든 대화에서 공유하지 않고 대화별로 분리하여 유지합니다.",
+  "settings.experimental.agentManagerSplash.title": "Agent Manager 시작 화면",
+  "settings.experimental.agentManagerSplash.description":
+    "워크플로 예제가 포함된 새로운 Agent Manager 소개 화면을 사용해 보세요. 즉시 적용됩니다.",
   "settings.experimental.claudeMigration.title": "Claude Code 마이그레이션",
   "settings.experimental.claudeMigration.description":
     "지원되는 전역 CLAUDE.md 지침, 간단한 스킬 및 비활성화된 MCP 정의를 한 번 가져옵니다. 원본 Claude 파일은 변경되지 않으며 활성화 후 백엔드를 다시 시작해야 합니다.",
