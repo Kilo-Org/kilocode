@@ -17,7 +17,10 @@ import { Process } from "@/util/process"
 import { errorMessage } from "@/util/error"
 import { text } from "node:stream/consumers"
 import { Effect, Option } from "effect"
-// kilocode_change - @/kilocode/auth/remove is dynamically imported in the logout handler to keep startup fast
+// kilocode_change start
+// @/kilocode/auth/remove is dynamically imported in the logout handler to keep startup fast
+import { handleAnacondaLink } from "@/kilocode/provider/anaconda-link"
+// kilocode_change end
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -121,6 +124,11 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
             expires,
             ...extraFields,
           })
+          // kilocode_change start - Link Kilo account to Anaconda keyring after CLI login
+          if (saveProvider === "kilo") {
+            yield* Effect.promise(() => handleAnacondaLink(access).catch(() => {}))
+          }
+          // kilocode_change end
         }
         if ("key" in result) {
           yield* put(saveProvider, {
@@ -154,6 +162,11 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
             expires,
             ...extraFields,
           })
+          // kilocode_change start - Link Kilo account to Anaconda keyring after CLI code login
+          if (saveProvider === "kilo") {
+            yield* Effect.promise(() => handleAnacondaLink(access).catch(() => {}))
+          }
+          // kilocode_change end
         }
         if ("key" in result) {
           yield* put(saveProvider, {
