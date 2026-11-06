@@ -1620,5 +1620,29 @@
     "state": "dropped",
     "note": "The v1 experimental sandbox keys (`experimental.sandbox`, `experimental.sandbox_restrict_network`, `experimental.sandbox_writable_paths`) have no v1 runtime caller (git grep over packages/*/src finds only the schema and the generated SDK types). The live v1 key is the top-level `sandbox` struct, read by packages/opencode/src/kilocode/sandbox/config.ts and folded by KiloConfigPolicy. The experimental aliases are dead fields.",
     "by": "v2-config-keys"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/work-style-apply.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/shared/work-style-presets.ts#buildWorkStylePlan, packages/kilo-vscode/src/work-style-host.ts#apply",
+    "note": "buildWorkStyleApplyPlan becomes buildWorkStylePlan in the Kilo-owned preset module; the host apply path turns the plan into config edits and VS Code settings, and restores both when a write fails. The v2 permission rules use the ordered permissions ruleset, so the v1 permission map is translated to edit/shell/read/external_directory rules instead of the v1 permission object.",
+    "by": "pickle-hydrofoil"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/work-style-apply-handler.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/work-style-host.ts#workStyleHost.handle",
+    "note": "The get/apply/set/skip handlers become requestWorkStyle, applyWorkStyle and setWorkStyle; skip is setWorkStyle with skipped. The webview provider in packages/kilo-vscode/webview-ui/src/context/work-style.tsx owns the messages and toasts.",
+    "by": "pickle-hydrofoil"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/work-style.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/work-style-host.ts#state, initialize, setState",
+    "note": "state/configured/initialize/setWorkStyle are ported into the host module. v1's isWorkStyleSetting push is superseded by the v2 settings watch, which already sends vscodeSettingsLoaded for the related settings.",
+    "by": "pickle-hydrofoil"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/onboarding/work-style-toasts.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/context/work-style.tsx",
+    "note": "The saved and failed toasts are inline in the v2 WorkStyleProvider.",
+    "by": "pickle-hydrofoil"
   }
 }
