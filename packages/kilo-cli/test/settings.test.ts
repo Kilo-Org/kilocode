@@ -370,6 +370,22 @@ test(
 )
 
 test(
+  "a malformed or non-object target is reported as invalid, not as a no-op or an internal error",
+  boot({ global: { shell: "sh" } }, async (client, { directory, global }) => {
+    const file = path.join(global, "kilo2.json")
+    await Bun.write(file, "{")
+    const malformed = await failure(settingsWrite(client, directory, { scope: "global", unset: [["privacy_mode"]] }))
+    expect(malformed?.type).toBe("invalid")
+    expect(await Bun.file(file).text()).toBe("{")
+    await Bun.write(file, "[]")
+    const array = await failure(settingsWrite(client, directory, { scope: "global", set: { shell: "zsh" } }))
+    expect(array?.type).toBe("invalid")
+    expect(await Bun.file(file).text()).toBe("[]")
+  }),
+  30_000,
+)
+
+test(
   "an empty unset path is rejected",
   boot({ global: { privacy_mode: true } }, async (_client, { directory, request }) => {
     const response = await request(

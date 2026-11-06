@@ -8,12 +8,14 @@ describe("KiloConfigValidate.unknownKeys", () => {
     ).toEqual([])
   })
 
-  test("lists unknown keys and v1-only names that the v2 schema does not define", () => {
-    expect(KiloConfigValidate.unknownKeys({ bogus: 1, permission: {}, console: {}, shell: "sh" })).toEqual([
-      "bogus",
-      "permission",
-      "console",
-    ])
+  test("lists unknown keys, reader-migrated legacy names and the derived workflow_models", () => {
+    expect(
+      KiloConfigValidate.unknownKeys({ bogus: 1, permission: {}, autoupdate: true, console: {}, workflow_models: {}, shell: "sh" }),
+    ).toEqual(["bogus", "permission", "autoupdate", "console", "workflow_models"])
+  })
+
+  test("allows a null (removal) for any key", () => {
+    expect(KiloConfigValidate.unknownKeys({ bogus: null, autoupdate: null })).toEqual([])
   })
 })
 
@@ -41,6 +43,26 @@ describe("KiloConfigValidate.check", () => {
 
   test("replacing an invalid value with another invalid value is still reported", () => {
     expect(KiloConfigValidate.check(`{ "privacy_mode": "no" }`, [{ path: ["privacy_mode"], value: "yes" }])).toHaveLength(1)
+  })
+
+  test("reports an invalid display layout, which the reader drops", () => {
+    expect(KiloConfigValidate.check(`{}`, [{ path: ["terminal_command_display"], value: "sideways" }])).toEqual([
+      '$.terminal_command_display: ignored invalid terminal_command_display; expected "expanded" or "collapsed"',
+    ])
+  })
+
+  test("a conflict where the native value wins does not block the write", () => {
+    expect(
+      KiloConfigValidate.check(`{ "autoupdate": true, "update": "notify" }`, [{ path: ["update"], value: "disable" }]),
+    ).toEqual([])
+  })
+
+  test("a pre-existing root rejection does not fail a write with no set", () => {
+    expect(KiloConfigValidate.check(`// only a comment\n`, [])).toEqual([])
+  })
+
+  test("throws when the document cannot take the edit", () => {
+    expect(() => KiloConfigValidate.check(`[]`, [{ path: ["shell"], value: "sh" }])).toThrow()
   })
 
   test("a removal is never refused for the value it removes", () => {

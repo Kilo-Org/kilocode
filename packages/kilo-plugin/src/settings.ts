@@ -8,7 +8,7 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Context, Effect, Layer, Option, type Scope as EffectScope } from "effect"
-import { parse } from "jsonc-parser"
+import { parse, type ParseError } from "jsonc-parser"
 import path from "node:path"
 
 // The `kilocode.settings` RPC: the write half of the v1 `PATCH /config/overlay`. It resolves the global or project
@@ -188,7 +188,10 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
                   .readFileString(file)
                   .pipe(Effect.mapError((error) => context.error("failed", error.message, { message: error.message })))
               : "{}\n"
-            const document: unknown = parse(text, [], { allowTrailingComma: true })
+            const errors: ParseError[] = []
+            const document: unknown = parse(text, errors, { allowTrailingComma: true })
+            // A malformed target is reported before any edit is filtered against its partial parse.
+            if (errors.length > 0) return yield* invalid(`${file} is not valid JSON or JSONC; it was left unchanged`)
             const edits: Edit[] = []
             for (const [key, value] of Object.entries(input.set ?? {})) expandSet([key], value, edits, document)
             for (const parts of input.unset ?? []) {
@@ -203,7 +206,11 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
               return { scope, target: current, changed: false }
             // Validate the edited target as the reader will load it, so a value the reader would skip is refused
             // here instead of reported as written.
-            const issues = KiloConfigValidate.check(text, applicable)
+            // jsonc-parser throws on an edit the document cannot take, for example a non-object root.
+            const issues = yield* Effect.try({
+              try: () => KiloConfigValidate.check(text, applicable),
+              catch: (cause) => (cause instanceof Error ? cause.message : String(cause)),
+            }).pipe(Effect.catch((message) => Effect.succeed([`cannot edit: ${message}`])))
             if (issues.length > 0) return yield* invalid(`${file} was left unchanged: ${issues.join("; ")}`)
 
             const guard = (error: KiloConfigWriter.WriteError) =>
