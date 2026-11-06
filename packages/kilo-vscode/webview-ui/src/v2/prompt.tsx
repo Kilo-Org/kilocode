@@ -52,6 +52,9 @@ import { PromptHint } from "./prompt-hint"
 // The key is the session id, or the pending tab id before a first prompt creates the session.
 const drafts = new Map<string, string>()
 
+// field-sizing grows the textarea from its content, so the composer needs no scrollHeight measurement.
+const fieldSizing = typeof CSS !== "undefined" && CSS.supports("field-sizing", "content")
+
 // Browser references picked for each draft, kept with the same key as the draft text.
 const references = new Map<string, BrowserReference[]>()
 
@@ -292,14 +295,47 @@ export function PromptInput(props: {
     saveReviewDraft(draft, comments())
   })
 
+  // kilocode_change start: batch the auto-height pass into one frame. Reading
+  // scrollHeight after a height write forces a synchronous layout on every
+  // keystroke, so the measurement waits for the frame and only writes a height
+  // that changed. Browsers with field-sizing size the textarea from CSS alone.
+  let fitFrame: number | undefined
+  let fitted = 0
+  let firstFit = true
+  const fit = () => {
+    const input = refs.input
+    if (!input) return
+    if (!fieldSizing) {
+      const previous = input.style.height
+      input.style.height = "auto"
+      // As in main: size to the content, which includes a wrapped placeholder.
+      const height = Math.min(input.scrollHeight, 200)
+      if (height === fitted && previous) input.style.height = previous
+      else {
+        fitted = height
+        input.style.height = `${height}px`
+      }
+    }
+    scroll()
+  }
   createEffect(() => {
     text()
     if (!refs.input) return
-    refs.input.style.height = "auto"
-    // As in main: size to the content, which includes a wrapped placeholder.
-    refs.input.style.height = `${Math.min(refs.input.scrollHeight, 200)}px`
-    scroll()
+    if (firstFit) {
+      firstFit = false
+      fit()
+      return
+    }
+    if (fitFrame !== undefined) return
+    fitFrame = requestAnimationFrame(() => {
+      fitFrame = undefined
+      fit()
+    })
   })
+  onCleanup(() => {
+    if (fitFrame !== undefined) cancelAnimationFrame(fitFrame)
+  })
+  // kilocode_change end
 
   const focusInput = () => refs.input?.focus({ preventScroll: true })
   // The restore chain outlives the event that started it, so every handle is tracked and dropped on unmount.
