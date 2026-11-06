@@ -2,6 +2,7 @@
 // own entry (`webview-ui/settings`), so this bundle carries only the chat transcript and its content.
 import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
 import { NotificationsProvider } from "../context/notifications"
+import { WorkStyleProvider } from "../context/work-style"
 import { IndexingProvider } from "../context/indexing"
 import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { Chat } from "./chat"
@@ -18,7 +19,9 @@ export default function App(props: { directory: string; view: string }) {
             <NotificationsProvider>
               <SpeechToTextStatusProvider>
                 <div class="container">
-                  <Chat />
+                  <WorkStyleProvider>
+                    <Chat />
+                  </WorkStyleProvider>
                 </div>
               </SpeechToTextStatusProvider>
             </NotificationsProvider>
