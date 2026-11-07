@@ -99,7 +99,7 @@ object SessionUiStyle {
          * hover size still clears the content instead of sitting on top of it.
          *
          * Reserved whether or not the rail is currently showing, so the transcript does not reflow when
-         * a second prompt makes it appear.
+         * the first prompt makes it appear.
          */
         const val INNER_RIGHT = PromptRail.TICK_HOVER + UiStyle.Gap.XS
 

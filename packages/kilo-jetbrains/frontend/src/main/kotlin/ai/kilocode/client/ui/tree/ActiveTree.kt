@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveDeleteOptions
 import ai.kilocode.client.ui.active.ActiveEditOptions
 import ai.kilocode.client.ui.active.ActiveHit
+import ai.kilocode.client.ui.active.ActiveHover
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMenu
 import ai.kilocode.client.ui.active.ActiveMove
@@ -19,6 +20,7 @@ import ai.kilocode.client.ui.active.ActiveSurface
 import ai.kilocode.client.ui.active.activeInvalidate
 import ai.kilocode.client.ui.active.activeUpdateUI
 import ai.kilocode.client.ui.active.activeToolWindowBackground
+import ai.kilocode.client.ui.active.activeHoverable
 import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.client.ui.active.showActiveDeletePopup
 import ai.kilocode.client.ui.active.showActiveEditPopup
@@ -264,6 +266,7 @@ internal class ActiveTreeView(
     private val entries get() = hierarchy.entries
     private val expandedOnce = HashSet<String>()
     private var hoveredKey: String? = null
+    private val button = ActiveHover()
     private var anchorKey: String? = null
     private var pending: String? = null
     private var pendingRefresh = false
@@ -382,8 +385,18 @@ internal class ActiveTreeView(
             JComponent.WHEN_FOCUSED,
         )
         addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseMoved(e: MouseEvent) { cursor = cursorAt(e.point) }
+            override fun mouseMoved(e: MouseEvent) {
+                val hit = hoverCell(e.point)
+                cursor = hit?.let { Cursor.getPredefinedCursor(it.cursor) } ?: baseCursor
+            }
+
             override fun mouseDragged(e: MouseEvent) { cursor = cursorAt(e.point) }
+        })
+        addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mouseExited(e: MouseEvent) {
+                setHovered(null)
+                cursor = baseCursor
+            }
         })
         ToolTipManager.sharedInstance().registerComponent(this)
         installReorder()
@@ -762,6 +775,7 @@ internal class ActiveTreeView(
         val active = selected && (focused || popups > 0)
         val enabled = isEnabled && !entry.item.disabled
         val hovered = hoveredKey == entry.key
+        val cell = if (hovered) button.cell?.takeIf { button.row == getRowForPath(TreePath(entry.path)) } else null
         val fg = UIUtil.getTreeForeground(active, active || focused)
         val background = background
         val selection = UIUtil.getTreeBackground(true, focused || popups > 0)
@@ -784,6 +798,7 @@ internal class ActiveTreeView(
             width = width,
             actionsVisible = actions && ui is CustomBoundsTreeUI,
             menuVisible = menuVisible(entry, enabled, hovered),
+            hoveredCell = cell,
             opaque = false,
             bodyHeight = if (entry.allowsChildren) null else height,
             interactive = ui is CustomBoundsTreeUI,
@@ -804,6 +819,7 @@ internal class ActiveTreeView(
         // A drag owns the pointer; row hover would reopen the popup after the drag started.
         val next = if (dragging) null else key
         if (next == null) {
+            button.clear()
             TreeHoverListener.DEFAULT.mouseExited(this)
             hover.mouseExited(this)
         }
@@ -814,6 +830,44 @@ internal class ActiveTreeView(
         next?.let { entries[it] }?.let { repaintEntry(it) }
         actions.hover?.invoke(next?.let { entries[it]?.item })
         animation.update()
+    }
+
+    /**
+     * Updates row and button-cell hover for [point], answering the enabled button under it.
+     *
+     * The row's hit regions are cached by [button] until the row or its selection changes, so moving
+     * across one row does not re-render its stamp for every mouse event.
+     */
+    private fun hoverCell(point: Point): ActiveHit? {
+        if (dragging) return null
+        val row = getClosestRowForLocation(point.x, point.y)
+        // The row is chosen by the vertical band alone. A trailing button can sit outside the painted
+        // selection frame or the native path bounds, and an x-based rejection there would drop the
+        // row hover exactly where the menu lives.
+        val entry = row.takeIf { it >= 0 }?.let(::entryAt)?.takeIf {
+            val cell = regions.cell(it) ?: return@takeIf false
+            point.y >= cell.y && point.y < cell.y + cell.height
+        }
+        if (entry == null) {
+            setHovered(null)
+            return null
+        }
+        if (hoveredKey != entry.key) setHovered(entry.key)
+        val selected = selectionModel.isPathSelected(TreePath(entry.path))
+        val old = button.cell
+        val hit = button.move(row, selected, point) { hoverCells(entry) }
+        if (old != button.cell) {
+            repaintEntry(entry)
+            animation.update()
+        }
+        return hit
+    }
+
+    /** Hit regions of [entry]'s buttons, or none when the row has nothing interactive. */
+    private fun hoverCells(entry: ActiveEntry): List<ActiveHit> {
+        val item = entry.item
+        if (!isEnabled || item.progress != null || item.disabled || !activeHoverable(item, menu)) return emptyList()
+        return regions.hits(entry)
     }
 
     private fun repaintEntry(entry: ActiveEntry) {
@@ -1089,6 +1143,9 @@ internal class ActiveTreeRenderer(
     }
 
     fun component(state: ActiveRenderState): JComponent = active.render(state)
+
+    /** Hit regions of the current render's buttons, in tree coordinates. */
+    fun buttons(x: Int, y: Int): List<ActiveHit> = active.buttons(x, y)
 
     fun preferredHeight(state: ActiveRenderState, width: Int): Int =
         active.bodyPreferredHeight(state.copy(width = width))

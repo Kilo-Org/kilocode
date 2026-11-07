@@ -7,8 +7,16 @@ import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.rail.PromptRail
 import ai.kilocode.client.session.ui.rail.PromptRailEntry
+import ai.kilocode.client.session.ui.rail.PromptRailKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.PartDto
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import java.awt.Point
@@ -19,19 +27,24 @@ import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities
 
 class PromptRailLayoutTest : SessionUiTestBase() {
-    fun `test rail is hidden until two prompts exist`() {
+    fun `test rail shows as soon as one prompt exists`() {
         showMessages()
+        ui.setSize(900, 400)
+        layoutAll(ui)
         val rail = find<PromptRail>(ui)
-        assertFalse(rail.isVisible)
+        assertFalse("there is nothing to navigate yet", rail.isVisible)
 
         fillTranscript(1)
         layoutAll(ui)
         drainScroll()
-        assertFalse(rail.isVisible)
+        assertEquals(1, rail.items().size)
+        assertTrue("a single prompt must still be navigable", rail.isVisible)
+        assertTrue(rail.entries().isNotEmpty())
 
         fillTranscript(1, start = 1)
         layoutAll(ui)
         drainScroll()
+        assertEquals(2, rail.items().size)
         assertTrue(rail.isVisible)
     }
 
@@ -120,6 +133,73 @@ class PromptRailLayoutTest : SessionUiTestBase() {
             "the guide must not span the prompt's whole turn",
             messages.findTurn("msg_1") === highlight.outlined(),
         )
+    }
+
+    /**
+     * An answered question is a navigator entry of its own. Picking it has to reach the question card
+     * inside the assistant message, not merely the start of the turn it lives in.
+     */
+    fun `test navigating from the rail reaches an answered question`() {
+        KiloPluginSettings.setQuestionDisplay(BlockDisplay.COLLAPSED)
+        try {
+            showMessages()
+            ui.setSize(900, 400)
+            layoutAll(ui)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("msg_0")))
+        emit(ChatEventDto.PartUpdated("ses_test", part("p0", "msg_0", "text", "Build it")))
+            emit(
+                ChatEventDto.MessageUpdated(
+                    "ses_test",
+                    MessageDto(id = "a0", sessionID = "ses_test", role = "assistant", time = MessageTimeDto(created = 0.0)),
+                ),
+            )
+            emit(
+                ChatEventDto.PartUpdated(
+                    "ses_test",
+                    PartDto(
+                        id = "q1",
+                        sessionID = "ses_test",
+                        messageID = "a0",
+                        type = "tool",
+                        tool = "question",
+                        state = "completed",
+                        input = mapOf("questions" to """[{"question":"Which database?","header":"Database"}]"""),
+                        metadata = mapOf("answers" to """[["Postgres"]]"""),
+                    ),
+                ),
+            )
+            fillTranscript(6, start = 1)
+            layoutAll(ui)
+            ui.promptRail.refresh()
+            find<SessionRootPanel>(ui).overlay.doLayout()
+            drainScroll()
+
+            val messages = find<SessionMessageListPanel>(ui)
+            val question = messages.findPart("a0", "q1") as QuestionResultView
+            assertFalse("the card starts collapsed", question.isExpanded())
+
+            val rail = find<PromptRail>(ui)
+            val index = rail.items().indexOfFirst { it.kind == PromptRailKind.QUESTION }
+            assertTrue("the answered question must be listed, got ${rail.items()}", index >= 0)
+            assertTrue(
+                "the question must have its own tick, got ${rail.entries()}",
+                rail.entries().contains(PromptRailEntry.Prompt(index)),
+            )
+
+            rail.onSelect!!.invoke(PromptRailEntry.Prompt(index))
+            drainScroll()
+
+            assertTrue("a navigator jump opens the collapsed question card", question.isExpanded())
+            assertEquals("the jumped-to question must become the active entry", index, rail.active())
+            assertSame(
+                "the navigator must outline the question card it landed on",
+                question,
+                find<SessionHighlightOverlay>(ui).outlined(),
+            )
+        } finally {
+            KiloPluginSettings.unsetQuestionDisplay()
+        }
     }
 
     fun `test scrolling changes active prompt and jump scrolls to prompt top`() {

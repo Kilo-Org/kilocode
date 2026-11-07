@@ -239,7 +239,7 @@ internal class PromptRail : JComponent() {
     }
 
     private fun syncVisible() {
-        val show = available && entries.size >= 2
+        val show = available && entries.isNotEmpty()
         if (isVisible != show) isVisible = show
     }
 

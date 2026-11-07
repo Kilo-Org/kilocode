@@ -734,6 +734,7 @@ class SessionUi(
             parent = this,
             timers = timers,
             onReveal = ::revealPrompt,
+            onRevealPart = ::revealPart,
         )
         if (!readonly) {
             prompt.onFileDrag = ::syncDrop
@@ -1379,6 +1380,12 @@ class SessionUi(
     @RequiresEdt
     private fun jumpTimeline(message: String, part: String) {
         if (!scroll.scrollPartTop(message, part)) return
+        revealPart(message, part)
+    }
+
+    /** Outlines the part a jump landed on, falling back to its message when the part has no renderer. */
+    @RequiresEdt
+    private fun revealPart(message: String, part: String) {
         val step = messageBody.findPart(message, part) ?: messageBody.findMessage(message) ?: return
         highlight.show(step)
     }

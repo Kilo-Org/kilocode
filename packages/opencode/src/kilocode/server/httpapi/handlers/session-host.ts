@@ -15,6 +15,7 @@ import {
   type ProviderID,
   type RemoteSessionID,
   type WorkspaceID,
+  type WorkspaceProfileDefaultInput,
   type WorkspaceSessionStartBody,
 } from "@/kilocode/session-hosting/types"
 import { SessionHostEvent } from "@opencode-ai/schema/kilocode/session-host-event"
@@ -263,6 +264,22 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
         .pipe(Effect.mapError(mapFailure))
     })
 
+    const setWorkspacePersonalDefaultProfile = Effect.fn("SessionHostHttpApi.setWorkspacePersonalDefaultProfile")(
+      function* (ctx: { payload: WorkspaceProfileDefaultInput }) {
+        const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+        return yield* provider.setWorkspacePersonalDefaultProfile(ctx.payload).pipe(Effect.mapError(mapFailure))
+      },
+    )
+
+    const clearWorkspacePersonalDefaultProfile = Effect.fn(
+      "SessionHostHttpApi.clearWorkspacePersonalDefaultProfile",
+    )(function* (ctx: { params: { profileID: string } }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      return yield* provider
+        .clearWorkspacePersonalDefaultProfile({ id: ctx.params.profileID })
+        .pipe(Effect.mapError(mapFailure))
+    })
+
     const createWorkspace = Effect.fn("SessionHostHttpApi.createWorkspace")(function* (ctx: {
       payload: CreateWorkspaceInput
     }) {
@@ -421,6 +438,8 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("detach", detach)
       .handle("listWorkspaces", listWorkspaces)
       .handle("listWorkspaceProfiles", listWorkspaceProfiles)
+      .handle("setWorkspacePersonalDefaultProfile", setWorkspacePersonalDefaultProfile)
+      .handle("clearWorkspacePersonalDefaultProfile", clearWorkspacePersonalDefaultProfile)
       .handle("createWorkspace", createWorkspace)
       .handle("continueWorkspace", continueWorkspace)
       .handle("getWorkspace", getWorkspace)
