@@ -8,7 +8,20 @@ export type Scope = "global" | "project"
 /** A config directory with its filesystem-resolved form, used to decide whether deleting inside it is allowed. */
 export type Candidate = { readonly root: string; readonly resolved: string }
 
+/**
+ * An allowed config directory. `reference` is the resolved project or global config directory the deletion must stay
+ * inside, so a symlink below the root cannot widen deletion any more than a symlinked root can.
+ */
+export type Root = {
+  readonly root: string
+  readonly reference: string
+  readonly scope: Scope
+}
+
 export type AgentPath = { readonly name: string; readonly path: string; readonly scope: Scope }
+
+/** A discovered file and the resolved location of its directory entry. */
+export type Discovered = { readonly file: string; readonly real: string }
 
 export type Failure = "not_found" | "not_removable"
 
@@ -44,7 +57,7 @@ export function isAgentFile(root: string, file: string) {
 export function roots(candidates: readonly Candidate[], directory: string, global: string) {
   const project = path.resolve(directory)
   const home = path.resolve(global)
-  const result: { root: string; scope: Scope }[] = []
+  const result: Root[] = []
   for (const item of candidates) {
     if (path.parse(item.resolved).root === item.resolved) continue
     const scope = containsDirectory(home, item.resolved)
@@ -54,23 +67,33 @@ export function roots(candidates: readonly Candidate[], directory: string, globa
         : undefined
     if (scope === undefined) continue
     if (result.some((entry) => entry.root === item.root)) continue
-    result.push({ root: item.root, scope })
+    result.push({ root: item.root, reference: scope === "global" ? home : project, scope })
   }
   return result
 }
 
-/** The agents a removal may delete: files the config agent plugin would discover, inside a known root. */
-export function agents(files: readonly string[], known: readonly { root: string; scope: Scope }[]): AgentPath[] {
+/**
+ * The agents a removal may delete: files the config agent plugin would discover, inside a known root. `real` is the
+ * resolved location of the file's directory entry, so a symlinked directory below the root cannot point a deletion
+ * outside the project or the global config directory. A symlinked file stays the entry itself, so it is deleted as
+ * the link and never through to its target.
+ */
+export function agents(files: readonly Discovered[], known: readonly Root[]): AgentPath[] {
   const result: AgentPath[] = []
-  for (const file of files) {
-    const resolved = path.resolve(file)
-    for (const item of known) {
-      if (!isAgentFile(item.root, resolved)) continue
-      result.push({ name: documentID(item.root, resolved), path: resolved, scope: item.scope })
-      break
-    }
+  for (const item of files) {
+    const root = known.find((entry) => isAgentFile(entry.root, item.file))
+    if (!root) continue
+    if (!containsDirectory(root.reference, item.real)) continue
+    result.push({ name: documentID(root.root, item.file), path: item.real, scope: root.scope })
   }
   return result
+}
+
+/** A stable order for the removable list; glob order follows the filesystem. */
+export function compare(a: AgentPath, b: AgentPath) {
+  if (a.name !== b.name) return a.name < b.name ? -1 : 1
+  if (a.path === b.path) return 0
+  return a.path < b.path ? -1 : 1
 }
 
 /**

@@ -19,6 +19,7 @@ import {
   isDefinedAgent,
   primaryAgents,
   removeAgentConfig,
+  removableScopes,
   type AgentRow,
 } from "./agent-list"
 import ModeCreateView from "./ModeCreateView"
@@ -41,7 +42,7 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
   const location = { directory: v2.directory }
 
   const [view, setView] = createSignal<View>("list")
-  const [removable, setRemovable] = createSignal<readonly string[]>([])
+  const [removable, setRemovable] = createSignal<readonly { name: string; scope: "global" | "project" }[]>([])
   const [editing, setEditing] = createSignal("")
   const [created, setCreated] = createSignal<string[]>([])
   const [importError, setImportError] = createSignal("")
@@ -53,10 +54,11 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
     return rpc
       .removable({}, { location })
       .then((agents) => {
-        setRemovable(agents.map((agent) => agent.name))
+        setRemovable(agents.map((agent) => ({ name: agent.name, scope: agent.scope })))
       })
   }
-  const isRemovable = (id: string) => removable().includes(id)
+  const scopes = (id: string) => removableScopes(id, removable())
+  const isRemovable = (id: string) => scopes(id).length > 0
 
   createEffect(
     on(v2.connection.status, (status) => {
@@ -155,7 +157,14 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
     dialog.show(() => (
       <Dialog title={language.t("settings.agentBehaviour.removeAgent.title")} fit>
         <div class="dialog-confirm-body">
-          <span>{language.t("settings.agentBehaviour.removeAgent.confirm", { name: row.label })}</span>
+          <span>
+            {language.t(
+              scopes(row.id).length > 1
+                ? "settings.agentBehaviour.removeAgent.confirmAll"
+                : "settings.agentBehaviour.removeAgent.confirm",
+              { name: row.label },
+            )}
+          </span>
           <div class="dialog-confirm-actions">
             <Button variant="ghost" size="large" onClick={() => dialog.close()}>
               {language.t("common.cancel")}
@@ -174,28 +183,36 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
                     // A markdown agent is removed through the RPC, which deletes the file that defines it; a
                     // config-defined row only has its config keys dropped.
                     if (isRemovable(row.id)) {
-                      const removed = await rpc.remove({ name: row.id }, { location }).then(
-                        () => true,
-                        (error: unknown) => {
-                          v2.report(error)
-                          return false
-                        },
-                      )
+                      // One definition narrows the removal to its scope; two cannot be narrowed, so the confirm copy
+                      // says both go.
+                      const editable = scopes(row.id)
+                      const only = editable.length === 1 ? editable[0] : undefined
+                      const removed = await rpc
+                        .remove(only === undefined ? { name: row.id } : { name: row.id, scope: only }, { location })
+                        .then(
+                          () => true,
+                          (error: unknown) => {
+                            v2.report(error)
+                            return false
+                          },
+                        )
                       if (!removed) return
+                      // A row can also be defined by a config entry; deleting only the file would bring it back.
+                      if (row.defined) await removeAgentConfig(config, row.id)
                       v2.data.location.agent.invalidate()
                       await v2.data.location.agent.sync()
                       await refreshRemovable()
                     } else {
                       await removeAgentConfig(config, row.id)
-                      // As v1, clear a file's default_agent only when that file itself names the removed agent.
-                      for (const scope of ["project", "global"] as const) {
-                        const raw = config.raw(scope) as Record<string, unknown> | undefined
-                        if (raw?.["default_agent"] === row.id) await config.unset(["default_agent"], scope)
-                      }
+                    }
+                    // As v1, clear a file's default_agent only when that file itself names the removed agent.
+                    for (const scope of ["project", "global"] as const) {
+                      const raw = config.raw(scope) as Record<string, unknown> | undefined
+                      if (raw?.["default_agent"] === row.id) await config.unset(["default_agent"], scope)
                     }
                     setCreated((ids) => ids.filter((id) => id !== row.id))
                     if (editing() === row.id) back()
-                  })()
+                  })().catch(v2.report)
                 }, 150)
               }}
             >

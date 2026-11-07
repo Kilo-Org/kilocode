@@ -818,12 +818,7 @@
   "api:POST /kilocode/agent/remove": {
     "state": "ported",
     "v2": "packages/schema/src/kilocode/agent.ts",
-    "note": "The Kilo plugin RPC kilocode.agent remove replaces the v1 POST /kilocode/agent/remove route. It deletes the markdown file the config agent plugin discovered (under <root>/{agent,agents,mode,modes}/ in the project .kilo2 or the global config directory) and publishes config.updated so the registry rescans. A config-only or built-in agent has no file and is never offered; a v1 agents-table key has no v2 meaning because that table does not create agents. The VS Code Agents subtab calls remove for the agents the RPC lists.",
-    "by": "agent-removal"
-  },
-  "api:DELETE /session/{sessionID}/message/{messageID}": {
-    "state": "dropped",
-    "note": "Not carried yet. v2 has no transcript message deletion: the client has session.inbox.cancel for a queued prompt and no message remove endpoint (v1: DELETE /api/session/{id}/message/{messageID} with a queued flag), so the original client has no caller either. #14380 still tracks the runtime operation. Revisit when it lands; the original client would then need the queued/requestID handling v1 had.",
+    "note": "The Kilo plugin RPC kilocode.agent remove replaces the v1 POST /kilocode/agent/remove route. It deletes the markdown file the config agent plugin discovered (under <root>/{agent,agents,mode,modes}/ in the project .kilo2 or the global config directory) and publishes config.updated so the registry rescans. A config-only or built-in agent has no file and is never offered. A config-defined agent (`agents.<id>` in kilo2.jsonc) is still a real agent on v2 and is removed by unsetting that key, which the Agents subtab keeps on the config path. The VS Code Agents subtab calls remove for the agents the RPC lists.",
     "by": "agent-removal"
   },
   "api:POST /kilocode/skill/remove": {

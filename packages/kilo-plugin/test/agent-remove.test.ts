@@ -33,8 +33,8 @@ describe("roots", () => {
 
   test("the project directory is project-scoped and the global config directory is global", () => {
     expect(AgentRemove.roots([candidate(root), candidate(global)], project, global)).toEqual([
-      { root, scope: "project" },
-      { root: global, scope: "global" },
+      { root, reference: project, scope: "project" },
+      { root: global, reference: global, scope: "global" },
     ])
   })
 
@@ -48,7 +48,7 @@ describe("roots", () => {
     const link = path.join(project, ".kilo2")
     const target = path.join(project, "config")
     expect(AgentRemove.roots([candidate(link, target)], project, global)).toEqual([
-      { root: link, scope: "project" },
+      { root: link, reference: project, scope: "project" },
     ])
   })
 
@@ -58,16 +58,39 @@ describe("roots", () => {
 })
 
 describe("agents", () => {
+  const known = [{ root, reference: project, scope: "project" as const }]
+
   test("files outside the discovery depth are not listed", () => {
-    const known = [{ root, scope: "project" as const }]
     const files = [
       path.join(root, "agents", "demo.md"),
       path.join(root, "modes", "nested", "deep.md"),
       path.join(root, "skills", "demo.md"),
-    ]
+    ].map((file) => ({ file, real: file }))
     expect(AgentRemove.agents(files, known)).toEqual([
       { name: "demo", path: path.join(root, "agents", "demo.md"), scope: "project" },
     ])
+  })
+
+  test("a symlinked directory below the root cannot point outside the project", () => {
+    // `.kilo2/agents/shared` is a symlink: the scanned path looks contained, the entry it resolves to does not.
+    const file = path.join(root, "agents", "shared", "outside.md")
+    expect(AgentRemove.agents([{ file, real: "/tmp/elsewhere/agents/outside.md" }], known)).toEqual([])
+  })
+
+  test("a symlinked directory that stays inside the project is still removable", () => {
+    const file = path.join(root, "agents", "shared", "demo.md")
+    const real = path.join(project, "config", "agents", "demo.md")
+    expect(AgentRemove.agents([{ file, real }], known)).toEqual([
+      { name: "shared/demo", path: real, scope: "project" },
+    ])
+  })
+})
+
+describe("compare", () => {
+  test("orders the removable list by name, not by scan order", () => {
+    const demo = { name: "demo", path: "/project/.kilo2/agents/demo.md", scope: "project" as const }
+    const writer = { name: "writer", path: "/project/.kilo2/agents/writer.md", scope: "project" as const }
+    expect([writer, demo].sort(AgentRemove.compare)).toEqual([demo, writer])
   })
 })
 

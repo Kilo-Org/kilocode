@@ -6,6 +6,7 @@ import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { projectBoundary } from "./project-boundary"
 import { Context, Effect, Layer, Option, type Scope as EffectScope } from "effect"
 import path from "node:path"
 
@@ -54,16 +55,9 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
     // Canonicalize the roots once: entry paths are canonicalized, so a symlinked config root must compare equal.
     const globalDirectory = yield* fs.resolve(global.config)
     const systemDir = yield* fs.resolve(systemDirectory())
-    const projectRoot = yield* fs.resolve(ctx.location.project.directory)
-    const locationRoot = yield* fs.resolve(directory)
-    // The reader walks ancestors up to the worktree root inside VCS, or to the filesystem root outside it. A project
-    // write must stay inside that same boundary, so a repository-controlled symlink cannot redirect it to any external
-    // file. `project.directory` equals the location outside VCS, where a VCS marker decides between the two cases.
-    const vcs =
-      projectRoot !== locationRoot ||
-      (yield* fs.existsSafe(path.join(locationRoot, ".git"))) ||
-      (yield* fs.existsSafe(path.join(locationRoot, ".hg")))
-    const projectBoundary = vcs ? projectRoot : path.parse(locationRoot).root
+    // A project write must stay inside the boundary the reader walks, so a repository-controlled symlink cannot
+    // redirect it to any external file.
+    const boundary = yield* projectBoundary(fs, ctx.location)
 
     const writeTarget = (scope: KiloSettingsRpc.Scope) => ({
       directory: scope === "global" ? globalDirectory : directory,
@@ -73,7 +67,7 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
     const isConfigFile = (file: string) => KiloConfigFiles.names.includes(path.basename(file))
     const inGlobal = (file: string) => FSUtil.contains(globalDirectory, file)
     const inSystem = (file: string) => FSUtil.contains(systemDir, file)
-    const inProject = (file: string) => FSUtil.contains(projectBoundary, file) && !inGlobal(file) && !inSystem(file)
+    const inProject = (file: string) => FSUtil.contains(boundary, file) && !inGlobal(file) && !inSystem(file)
     const inScope = (scope: KiloSettingsRpc.Scope, file: string) =>
       scope === "global" ? inGlobal(file) : inProject(file)
 

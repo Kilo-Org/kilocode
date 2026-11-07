@@ -7,6 +7,7 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Effect, Option, Schedule, Scope } from "effect"
 import path from "path"
+import { projectBoundary } from "../project-boundary"
 import { AgentRemove } from "./remove"
 
 // Deletes the markdown definition of a custom agent that the config agent plugin discovered. The config agent
@@ -33,18 +34,31 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
             .pipe(Effect.map((resolved) => ({ root: path.resolve(entry.path), resolved }))),
       )
       // Both reference directories are resolved too: on macOS `/var` resolves to `/private/var`, and a resolved
-      // candidate compared against an unresolved reference would look like it sits outside the project.
-      const project = yield* fs.resolve(ctx.location.directory)
+      // candidate compared against an unresolved reference would look like it sits outside the project. The project
+      // bound is the one config discovery walks to (the worktree root inside VCS, the filesystem root outside it), so
+      // an ancestor `.kilo2` that discovery loads stays removable from a subdirectory workspace.
+      const project = yield* projectBoundary(fs, ctx.location)
       const home = yield* fs.resolve(global.config)
       const roots = AgentRemove.roots(candidates, project, home)
-      const files = yield* Effect.forEach(roots, (item) =>
+      const discovered = yield* Effect.forEach(roots, (item) =>
         Effect.forEach(AgentRemove.patterns, (pattern) =>
-          fs
-            .scan(pattern, { cwd: item.root, absolute: true, dot: true, symlink: true })
-            .pipe(Effect.orElseSucceed((): string[] => [])),
+          fs.scan(pattern, { cwd: item.root, absolute: true, dot: true, symlink: true }).pipe(
+            Effect.orElseSucceed((): string[] => []),
+            // Resolve the directory, not the file: discovery follows symlinks, so a symlinked directory below the root
+            // would otherwise hand back a path that only looks contained. A symlinked file keeps its own entry so the
+            // removal deletes the link instead of the file it points at.
+            Effect.flatMap((files) =>
+              Effect.forEach(files, (file) =>
+                fs
+                  .resolve(path.dirname(file))
+                  .pipe(Effect.map((parent) => ({ file, real: path.join(parent, path.basename(file)) }))),
+              ),
+            ),
+          ),
         ).pipe(Effect.map((lists) => lists.flat())),
       )
-      return AgentRemove.agents(files.flat(), roots)
+      // Glob order follows the filesystem, so sort to keep the response stable across platforms.
+      return AgentRemove.agents(discovered.flat(), roots).sort(AgentRemove.compare)
     })
 
     const registered = Effect.fn("KiloAgentRemovePlugin.registered")(function* () {
@@ -56,10 +70,13 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
       return listed.map((agent) => ({ name: agent.name, path: agent.path, scope: agent.scope }))
     })
 
-    // The reload this RPC announces must not rescan a path that has already been deleted, so the announcement waits
-    // until the files are observably gone.
-    const arrive = Effect.fn("KiloAgentRemovePlugin.arrive")(function* (files: readonly string[]) {
-      const gone = Effect.forEach(files, (file) => fs.isFile(file)).pipe(Effect.map((items) => items.every((it) => !it)))
+    // The config agent plugin reloads on a 100 ms debounce, so announcing alone would let a caller read the registry
+    // before the removed agent leaves it. Wait for the registry, as the skill removal does.
+    const arrive = Effect.fn("KiloAgentRemovePlugin.arrive")(function* (name: string) {
+      const gone = ctx.agent.list().pipe(
+        Effect.orDie,
+        Effect.map((result) => !result.data.some((agent) => agent.id === name)),
+      )
       yield* Effect.repeat(gone, { until: (done) => done, schedule: Schedule.spaced("25 millis") }).pipe(
         Effect.timeout("2 seconds"),
         Effect.ignore,
@@ -102,8 +119,8 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
                 ),
               { discard: true },
             )
-            yield* arrive(files)
             yield* bus.publish(Event.Updated, {})
+            yield* arrive(input.name)
             return {}
           }),
       })
