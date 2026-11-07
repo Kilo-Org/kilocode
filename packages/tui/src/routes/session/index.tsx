@@ -1624,8 +1624,63 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const local = useLocal()
   const { theme } = useTheme()
   const sync = useSync()
+  const clipboard = useClipboard()
+  const toast = useToast()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
   const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
+  
+  // 👇 FUNGSI BARU UNTUK KOMPRESI TEKS
+  const cleanText = (text: string) => {
+    if (!text) return ""
+    // 1. Buang emoji
+    let cleaned = text.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+    // 2. Ubah spasi/tab beruntun menjadi satu spasi
+    cleaned = cleaned.replace(/[ \t]+/g, " ")
+    // 3. Ubah 3 baris baru atau lebih menjadi maksimal 2 baris baru
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n")
+    // 4. Trim awal dan akhir
+    return cleaned.trim()
+  }
+
+  const copyText = () => {
+    const text = props.parts.filter((x) => x.type === "text").map((x) => (x as any).text ?? "").join("\n")
+    // 👇 Terapkan cleanText
+    const cleanedText = cleanText(text)
+    
+    clipboard.write?.(cleanedText)
+      .then(() => toast.show({ message: "Text copied to clipboard!", variant: "success" }))
+      .catch(() => toast.show({ message: "Failed to copy text", variant: "error" }))
+  }
+  
+  const copyRaw = (allMessages: any[] | undefined) => {
+    if (!Array.isArray(allMessages)) {
+      clipboard.write?.("No message history found")
+      return
+    }
+    const rawParts = allMessages
+      .filter((m: any) => m.role === "assistant")
+      .flatMap((m: any) => sync.data.part[m.id] ?? [])
+      .map((p: any) => {
+        if (p.type === "reasoning" || p.type === "thought") return `[Thought]\n${(p as any).text ?? ""}`
+        if (p.type === "tool") {
+          const tool = (p as any).tool ?? ""
+          const input = (p as any).state?.input ?? {}
+          const output = (p as any).state?.output ?? ""
+          return `[Tool: ${tool}]\nInput: ${JSON.stringify(input, null, 2)}\nOutput: ${output}`
+        }
+        if (p.type === "text") return (p as any).text ?? ""
+        return ""
+      })
+      .filter(Boolean)
+      .join("\n\n")
+
+    // 👇 Terapkan cleanText
+    const cleanedRaw = cleanText(rawParts)
+
+    clipboard.write?.(cleanedRaw)
+      .then(() => toast.show({ message: "Raw copied to clipboard!", variant: "success" }))
+      .catch(() => toast.show({ message: "Failed to copy raw", variant: "error" }))
+  }
   const routed = createMemo(() => RoutedModelMeta.info(ctx.providers(), props.parts, ctx.showDetails(), props.message)) // kilocode_change
   const route = createMemo(() => routed().footer) // kilocode_change
 
@@ -1714,31 +1769,45 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
           <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
-            <text marginTop={1}>
-              <span
-                style={{
-                  fg:
-                    props.message.error?.name === "MessageAbortedError"
-                      ? theme.textMuted
-                      : local.agent.color(props.message.agent),
-                }}
-              >
-                ▣{" "}
-              </span>{" "}
-              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-              <span style={{ fg: theme.textMuted }}> · {model()}</span>
-              {/* kilocode_change start - show routed model in regular assistant footer */}
-              <Show when={route()}>
-                <span style={{ fg: theme.textMuted }}> · {route()}</span>
-              </Show>
-              {/* kilocode_change end */}
-              <Show when={duration()}>
-                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-              </Show>
-              <Show when={props.message.error?.name === "MessageAbortedError"}>
-                <span style={{ fg: theme.textMuted }}> · interrupted</span>
-              </Show>
-            </text>
+            <box flexDirection="row" marginTop={1}>
+              <text>
+                <span
+                  style={{
+                    fg:
+                      props.message.error?.name === "MessageAbortedError"
+                        ? theme.textMuted
+                        : local.agent.color(props.message.agent),
+                  }}
+                >
+                  ▣{" "}
+                </span>{" "}
+                <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
+                <span style={{ fg: theme.textMuted }}>  |  {model()}</span>
+                {/* kilocode_change start - show routed model in regular assistant footer */}
+                <Show when={route()}>
+                  <span style={{ fg: theme.textMuted }}>  |  {route()}</span>
+                </Show>
+                {/* kilocode_change end */}
+                <Show when={duration()}>
+                  <span style={{ fg: theme.textMuted }}>  |  {Locale.duration(duration())}</span>
+                </Show>
+                <Show when={props.message.error?.name === "MessageAbortedError"}>
+                  <span style={{ fg: theme.textMuted }}>  |  interrupted</span>
+                </Show>
+              </text>
+              
+              <text fg={theme.textMuted}>  |  </text>
+              
+              <text onMouseDown={() => copyText()} fg={theme.text}>
+                <b>text</b>
+              </text>
+              
+              <text fg={theme.textMuted}>  |  </text>
+              
+              <text onMouseDown={() => copyRaw(messages())} fg={theme.text}>
+                <b>raw</b>
+              </text>
+            </box>
           </box>
         </Match>
       </Switch>
