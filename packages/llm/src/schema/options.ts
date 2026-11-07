@@ -134,11 +134,24 @@ export namespace ModelLimits {
     input instanceof ModelLimits ? input : new ModelLimits(input ?? {})
 }
 
+export class RateLimit extends Schema.Class<RateLimit>("LLM.RateLimit")({
+  rpm: Schema.optional(Schema.Number),
+  rps: Schema.optional(Schema.Number),
+}) {}
+
+export namespace RateLimit {
+  export type Input = RateLimit | { rpm?: number; rps?: number }
+
+  export const make = (input: Input): RateLimit =>
+    input instanceof RateLimit ? input : new RateLimit(input)
+}
+
 export class ModelDefaults extends Schema.Class<ModelDefaults>("LLM.ModelDefaults")({
   limits: Schema.optional(ModelLimits),
   generation: Schema.optional(GenerationOptions),
   providerOptions: Schema.optional(ProviderOptions),
   http: Schema.optional(HttpOptions),
+  rateLimit: Schema.optional(RateLimit),
 }) {}
 
 export namespace ModelDefaults {
@@ -149,6 +162,7 @@ export namespace ModelDefaults {
         readonly generation?: GenerationOptions.Input
         readonly providerOptions?: ProviderOptions
         readonly http?: HttpOptions.Input
+        readonly rateLimit?: RateLimit.Input
       }
 
   /** Normalize selected-model request defaults without applying precedence. */
@@ -159,6 +173,7 @@ export namespace ModelDefaults {
       generation: input.generation === undefined ? undefined : GenerationOptions.make(input.generation),
       providerOptions: input.providerOptions,
       http: input.http === undefined ? undefined : HttpOptions.make(input.http),
+      rateLimit: input.rateLimit === undefined ? undefined : RateLimit.make(input.rateLimit),
     })
   }
 }

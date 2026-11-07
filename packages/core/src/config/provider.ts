@@ -44,6 +44,15 @@ const ModelApi = Schema.Union([
   }),
 ])
 
+const _RateLimitBase = Schema.Struct({
+  rpm: Schema.optional(Schema.Int),
+  rps: Schema.optional(Schema.Int),
+})
+
+export class ModelRateLimit extends Schema.Class<ModelRateLimit>("ConfigV2.Model.RateLimit")(_RateLimitBase.fields) {}
+
+export class ProviderRateLimit extends Schema.Class<ProviderRateLimit>("ConfigV2.Provider.RateLimit")(_RateLimitBase.fields) {}
+
 class Model extends Schema.Class<Model>("ConfigV2.Model")({
   family: ModelV2.Family.pipe(Schema.optional),
   name: Schema.String.pipe(Schema.optional),
@@ -60,6 +69,7 @@ class Model extends Schema.Class<Model>("ConfigV2.Model")({
   cost: Schema.Union([Cost, Cost.pipe(Schema.Array)]).pipe(Schema.optional),
   disabled: Schema.Boolean.pipe(Schema.optional),
   limit: Limit.pipe(Schema.optional),
+  rateLimit: ModelRateLimit.pipe(Schema.optional),
 }) {}
 
 export class Info extends Schema.Class<Info>("ConfigV2.Provider")({
@@ -67,5 +77,6 @@ export class Info extends Schema.Class<Info>("ConfigV2.Provider")({
   env: Schema.String.pipe(Schema.Array, Schema.optional),
   api: ProviderV2.Api.pipe(Schema.optional),
   request: Request.pipe(Schema.optional),
+  rateLimit: ProviderRateLimit.pipe(Schema.optional),
   models: Schema.Record(Schema.String, Model).pipe(Schema.optional),
 }) {}
