@@ -38,6 +38,12 @@ describe("provider catalog", () => {
 })
 
 describe("Ace Data Cloud catalog identity", () => {
+  it("keeps Ace in the full provider list without assigning recommendation priority", () => {
+    const item = provider("acedatacloud")
+    expect(isPopularProvider(item)).toBe(false)
+    expect(sortProviders([item, provider("openai")]).map((entry) => entry.id)).toEqual(["openai", "acedatacloud"])
+  })
+
   it("uses the provider logo instead of the generic icon", () => {
     expect(providerIcon(provider("acedatacloud"))).toBe("acedatacloud")
     expect(providerIcon(provider("unknown"))).toBe("synthetic")

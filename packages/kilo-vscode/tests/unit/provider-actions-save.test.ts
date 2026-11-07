@@ -235,6 +235,20 @@ describe("disconnectProvider", () => {
 })
 
 describe("connectProvider", () => {
+  it("keeps Ace application credentials in auth storage without writing project or provider config", async () => {
+    const { ctx, calls } = createCtx({ disabled_providers: ["openai"] })
+
+    await connectProvider(ctx, "req", "acedatacloud", "ace-test-application-key")
+
+    expect(calls.set).toEqual([{ providerID: "acedatacloud", auth: { type: "api", key: "ace-test-application-key" } }])
+    expect(calls.config).toEqual([])
+    expect(calls.project).toEqual([])
+    expect(calls.dispose).toBe(1)
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toEqual([{ type: "providerConnected", requestId: "req", providerID: "acedatacloud" }])
+    expect(JSON.stringify(calls.posts)).not.toContain("ace-test-application-key")
+  })
+
   it("stores api auth metadata from provider prompts", async () => {
     const { ctx, calls } = createCtx()
 
