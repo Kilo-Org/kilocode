@@ -1917,5 +1917,80 @@
     "state": "ported",
     "note": "packages/kilo-plugin/test/question-option-schema.test.ts carries the mode and labelKey/descriptionKey assertions against KiloQuestion.Option (packages/schema/src/kilocode/question.ts): mode round-trips, mode is optional, labelKey and descriptionKey round-trip, plus omission of undefined hints on encode. The v1 source-marker checks guarded a kilocode_change block in a shared file; v2 has no shared-file change, and the plugin test instead fails when upstream's question tool schema or executor drifts from the Kilo mirror (KiloQuestionPlugin). The v1 'question defaults' assertion covers the `default` hint, which is out of scope here and tracked with patch:unattributed:schema/v1:85a47cb2581a under #15332.",
     "by": "v2-question-mode"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/cron.ts": {
+    "state": "native",
+    "v2": "packages/core/src/schedule.ts",
+    "note": "The hand-written 5-field engine (validate, next, the DST-aware day walk) is native: schedule times use Effect Cron (Cron.parse/Cron.next) in the schedule's IANA time zone via nextCron, following and firstDue in packages/core/src/schedule.ts. Differences: a cron must fire at most once a minute and there is no 7-day forced TTL (ends replaces it); v1's deterministic per-id fire-time jitter (JITTER_MS) is not carried because v2 polls a due-indexed table instead of arming per-id timers.",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/wakeup-format.ts": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "relative() and excerpt() are native: schedule_list renders nextDueAt and endsAt in the schedule's own zone and clips the prompt to 80 characters in summary(), with no separate formatter module.",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/schedule-wakeup.ts": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "schedule_wakeup is native as schedule_create plus schedule_list: delay maps to when.in and an absolute when maps to when.at with an optional tz, and the session owns its schedules. Differences: the time syntax is an Effect duration (for example \"5 minutes\", not v1's \"5m\"), and the clamp notice and the 10-pending-wakeups per-session cap are not carried (tracked by the open wakeup/schema.ts and wakeup/index.ts cells).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/schedule-wakeup.txt": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "The tool description is replaced by the native schedule_create/schedule_list descriptions and the /schedule command instructions (packages/core/src/plugin/command/schedule.txt). The 'at most 10 pending wakeups' sentence is not carried (see the open wakeup/schema.ts cell).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/cancel-wakeup.ts": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "cancel_wakeup (list and cancel) is native as schedule_list plus schedule_delete, with schedule_pause and schedule_resume added. Difference: an unknown id is a not-found tool failure rather than v1's idempotent report; v1's goal-cancel notice is service-level and is tracked by the open wakeup/index.ts cell.",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/cancel-wakeup.txt": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "The description is replaced by the native schedule_list/schedule_delete/schedule_pause/schedule_resume descriptions and the /schedule command instructions (packages/core/src/plugin/command/schedule.txt).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron.ts": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "cron_create, cron_list and cron_delete are native as schedule_create (when.cron, or a one-shot when.in/when.at), schedule_list and schedule_delete, with schedule_pause/schedule_resume added. Differences: the name field replaces v1's implicit label and the 10-tasks per-session cap is not carried (tracked by the open wakeup/schema.ts cell).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-create.txt": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "Replaced by the native schedule_create description and the /schedule command instructions (packages/core/src/plugin/command/schedule.txt).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-list.txt": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "Replaced by the native schedule_list description and the /schedule command instructions (packages/core/src/plugin/command/schedule.txt).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-delete.txt": {
+    "state": "native",
+    "v2": "packages/core/src/tool/plugin/schedule.ts",
+    "note": "Replaced by the native schedule_delete description and the /schedule command instructions (packages/core/src/plugin/command/schedule.txt).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/generate-image.ts": {
+    "state": "dropped",
+    "note": "Out of scope in migration-tracking/plan.md ('image generation', and 'features behind experimental flags that are off by default on v1': v1 gated this behind experimental.image_generation, off by default). Upstream v2 has a native experimental_image_generate tool (packages/core/src/tool/plugin/image-generate.ts) that covers the general capability with a different gate (an available image model rather than a config key), different inputs (up to 8 images and an optional path) and a background-job flow. v1's Kilo Gateway provider path (KILO_OPENROUTER_BASE, experimental.image_generation_model) is not carried, so the native tool does not register for a Kilo Gateway-only user; recorded as a gap in issue #15935.",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/src/kilocode/tool/generate-image.txt": {
+    "state": "dropped",
+    "note": "Same as generate-image.ts: the v1 tool description is not carried because image generation is out of scope in migration-tracking/plan.md and upstream v2 provides a native experimental_image_generate tool with its own description (packages/core/src/tool/plugin/image-generate.ts).",
+    "by": "schedule-parity"
+  },
+  "module:packages/opencode/test/kilocode/tool/generate-image.test.ts": {
+    "state": "dropped",
+    "note": "Same as generate-image.ts: out of scope in migration-tracking/plan.md, so the v1 test is not carried. The native tool's assertions live in packages/core/test/tool-image-generate.test.ts.",
+    "by": "schedule-parity"
   }
 }
