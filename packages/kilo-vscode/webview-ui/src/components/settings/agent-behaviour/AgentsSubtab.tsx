@@ -4,6 +4,7 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Select } from "@kilocode/kilo-ui/select"
+import { KiloAgentRpc } from "@opencode/schema/kilocode/agent"
 import { Component, For, Show, createEffect, createMemo, createSignal, on } from "solid-js"
 import { useLanguage } from "../../../context/language"
 import { useV2 } from "../../../v2/client"
@@ -36,11 +37,26 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
   const v2 = useV2()
   const config = useSettingsConfig()
   const dialog = useDialog()
+  const rpc = v2.api.rpc(KiloAgentRpc.Definition)
+  const location = { directory: v2.directory }
 
   const [view, setView] = createSignal<View>("list")
+  const [removable, setRemovable] = createSignal<readonly string[]>([])
   const [editing, setEditing] = createSignal("")
   const [created, setCreated] = createSignal<string[]>([])
   const [importError, setImportError] = createSignal("")
+
+  // The agents the `kilocode.agent` RPC may delete: the ones a markdown file defines. A config-defined or built-in
+  // agent has no file, so the list offers no remove control for it.
+  const refreshRemovable = (): Promise<void> => {
+    if (v2.connection.status() !== "connected") return Promise.resolve()
+    return rpc
+      .removable({}, { location })
+      .then((agents) => {
+        setRemovable(agents.map((agent) => agent.name))
+      })
+  }
+  const isRemovable = (id: string) => removable().includes(id)
 
   createEffect(
     on(v2.connection.status, (status) => {
@@ -49,7 +65,9 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
         v2.data.location.agent.sync(),
         v2.data.location.model.sync(),
         v2.data.location.provider.sync(),
-      ]).catch(v2.report)
+      ])
+        .then(refreshRemovable)
+        .catch(v2.report)
     }),
   )
 
@@ -150,16 +168,34 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
                 // Delay until after the dialog close animation, as v1, so the list re-render does not
                 // fire a click on a shifted row under the overlay.
                 setTimeout(() => {
+                  // The row leaves the list only after the removal succeeds; a failure keeps it, so the list
+                  // still matches what the server reports.
                   void (async () => {
-                    await removeAgentConfig(config, row.id)
-                    // As v1, clear a file's default_agent only when that file itself names the removed agent.
-                    for (const scope of ["project", "global"] as const) {
-                      const raw = config.raw(scope) as Record<string, unknown> | undefined
-                      if (raw?.["default_agent"] === row.id) await config.unset(["default_agent"], scope)
+                    // A markdown agent is removed through the RPC, which deletes the file that defines it; a
+                    // config-defined row only has its config keys dropped.
+                    if (isRemovable(row.id)) {
+                      const removed = await rpc.remove({ name: row.id }, { location }).then(
+                        () => true,
+                        (error: unknown) => {
+                          v2.report(error)
+                          return false
+                        },
+                      )
+                      if (!removed) return
+                      v2.data.location.agent.invalidate()
+                      await v2.data.location.agent.sync()
+                      await refreshRemovable()
+                    } else {
+                      await removeAgentConfig(config, row.id)
+                      // As v1, clear a file's default_agent only when that file itself names the removed agent.
+                      for (const scope of ["project", "global"] as const) {
+                        const raw = config.raw(scope) as Record<string, unknown> | undefined
+                        if (raw?.["default_agent"] === row.id) await config.unset(["default_agent"], scope)
+                      }
                     }
+                    setCreated((ids) => ids.filter((id) => id !== row.id))
+                    if (editing() === row.id) back()
                   })()
-                  setCreated((ids) => ids.filter((id) => id !== row.id))
-                  if (editing() === row.id) back()
                 }, 150)
               }}
             >
@@ -333,7 +369,9 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
                     </Show>
                   </div>
                   <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
-                    <Show when={row.removable}>
+                    {/* A config-defined row is removed through its config keys; a markdown-defined agent only has a
+                        file, which the `kilocode.agent` RPC deletes, so both kinds offer the control. */}
+                    <Show when={row.removable || isRemovable(row.id)}>
                       <IconButton
                         size="small"
                         variant="ghost"
