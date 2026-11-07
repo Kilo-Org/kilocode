@@ -9,7 +9,7 @@
  */
 
 import { $ } from "bun"
-import { chmod, copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises"
+import { chmod, cp, mkdir, mkdtemp, rename, rm, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
@@ -23,12 +23,14 @@ const name = process.env.KILO_ALPHA_NAME ?? "kilo2"
 
 class InstallError extends Error {}
 
-try {
-  await main()
-} catch (error) {
-  if (!(error instanceof InstallError)) throw error
-  console.error(`install:alpha: ${error.message}`)
-  process.exitCode = 1
+if (import.meta.main) {
+  try {
+    await main()
+  } catch (error) {
+    if (!(error instanceof InstallError)) throw error
+    console.error(`install:alpha: ${error.message}`)
+    process.exitCode = 1
+  }
 }
 
 async function main() {
@@ -81,22 +83,32 @@ async function install(runID: number, tmp: string) {
   const extract = await $`tar -xzf ${archive} -C ${tmp}`.quiet().nothrow()
   if (extract.exitCode !== 0) fail(`Could not extract ${artifact}:\n${extract.stderr.toString().trim()}`)
 
-  const bin = path.join(tmp, `cli-${target}`, "bin")
-  const [executable] = await readdir(bin)
-  if (!executable) fail(`No executable found in ${bin}.`)
-
-  await mkdir(binDir, { recursive: true })
-  const dest = path.join(binDir, name)
-  await rm(dest, { force: true })
-  await copyFile(path.join(bin, executable), dest)
-  await chmod(dest, 0o755)
-  // Files from a download carry the quarantine attribute; clearing it avoids Gatekeeper blocking the binary.
-  await $`xattr -d com.apple.quarantine ${dest}`.quiet().nothrow()
-
+  const dest = await installFiles(path.join(tmp, `cli-${target}`, "bin"), binDir, name)
   const version = await $`${dest} --version`.quiet().nothrow()
   if (version.exitCode !== 0) fail(`Installed ${dest}, but it failed to start:\n${version.stderr.toString().trim()}`)
   console.error(`installed ${dest} (${version.stdout.toString().trim()})`)
   if (!process.env.PATH?.split(path.delimiter).includes(binDir)) console.error(`note: ${binDir} is not on your PATH`)
+}
+
+export async function installFiles(bin: string, binDir: string, name: string) {
+  if (!(await Bun.file(path.join(bin, "kilo2")).exists())) fail(`No kilo2 executable found in ${bin}.`)
+  const dest = path.resolve(binDir, name)
+  const data = path.join(path.dirname(dest), `.${path.basename(dest)}-alpha`)
+  await mkdir(data, { recursive: true })
+  const release = await mkdtemp(path.join(data, "release-"))
+  try {
+    await cp(bin, release, { recursive: true })
+    const executable = path.join(release, "kilo2")
+    await chmod(executable, 0o755)
+    await $`xattr -d com.apple.quarantine ${executable}`.quiet().nothrow()
+    const link = path.join(release, "link")
+    await symlink(executable, link)
+    await rename(link, dest)
+  } catch (error) {
+    await rm(release, { recursive: true, force: true })
+    throw error
+  }
+  return dest
 }
 
 function fail(message: string): never {
