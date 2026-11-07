@@ -219,9 +219,11 @@ export function createTuiAttention(input: {
                   try {
                     if (err) {
                       console.debug("notify-send failed", { error: err })
-                      // Only fallback to renderer if the binary is missing (ENOENT).
-                      // Other errors (like timeout) mean the popup may have already appeared.
-                      if (err.message.includes("ENOENT") || (err as any).code === "ENOENT") {
+                      const isTimeout = err.killed || Boolean(err.signal)
+                      
+                      // If the process timed out, the popup likely appeared and is waiting to be dismissed.
+                      // If it's any other error (missing binary, D-Bus down), fallback to the renderer.
+                      if (!isTimeout) {
                         resolve(input.renderer.triggerNotification(message, title))
                       } else {
                         resolve(false)
