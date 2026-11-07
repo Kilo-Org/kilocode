@@ -1,8 +1,16 @@
 package ai.kilocode.client.ui.tree
 
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
 import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.active.ActiveReorder
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.iconButtonSize
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.DataKey
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -10,6 +18,8 @@ import java.awt.Point
 import java.awt.event.MouseEvent
 import javax.swing.plaf.metal.MetalTreeUI
 import javax.swing.tree.TreePath
+
+private const val BADGE = "pull-request"
 
 class ActiveTreeInteractionTest : BasePlatformTestCase() {
     private data class Row(override val key: String) : ActiveItem {
@@ -85,6 +95,61 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
     fun `test upper native disclosure boundary toggles once without selecting branch`() = boundary(true)
 
     fun `test lower native disclosure boundary toggles once without selecting branch`() = boundary(false)
+
+    fun `test a badge under the pointer is the only hovered cell`() {
+        val tree = ActiveTree("")
+        tree.update(listOf(ActiveTreeNode(BadgeRow("a")), ActiveTreeNode(BadgeRow("b"))))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(DefaultTreeUI())
+        view.setSize(400, 300)
+        val first = view.hierarchy.entries.getValue("a")
+        val second = view.hierarchy.entries.getValue("b")
+
+        moveTo(view, first)
+        assertEquals(BADGE, view.state(first, false, false).hoveredCell)
+        assertNull(view.state(second, false, false).hoveredCell)
+
+        moveTo(view, second)
+        assertNull(view.state(first, false, false).hoveredCell)
+        assertEquals(BADGE, view.state(second, false, false).hoveredCell)
+
+        val frame = requireNotNull(view.regions.frame(second))
+        view.dispatchEvent(
+            MouseEvent(
+                view, MouseEvent.MOUSE_MOVED, 0, 0, frame.x + 1, frame.y + frame.height / 2, 0, false,
+                MouseEvent.NOBUTTON,
+            ),
+        )
+        assertNull(view.state(second, false, false).hoveredCell)
+    }
+
+    fun `test the menu button is hoverable around its compact icon box`() {
+        val menu = ActiveMenu(DataKey.create<String>("test.menu.compact"), DefaultActionGroup(), { it.key })
+        val tree = ActiveTree("", menu = menu)
+        tree.update(listOf(ActiveTreeNode(BadgeRow("a")), ActiveTreeNode(BadgeRow("b"))))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(DefaultTreeUI())
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("a")
+        val frame = requireNotNull(view.regions.frame(entry))
+        moveTo(view, Point(frame.x + 1, frame.y + frame.height / 2))
+        val hit = view.regions.hits(entry).single { it.id == ACTIVE_MENU_CELL }
+        val cell = requireNotNull(view.regions.cell(entry))
+        val standard = iconButtonSize(AllIcons.Actions.More)
+
+        assertEquals("The menu hover uses the standard icon-button width", standard.width, hit.bounds.width)
+        assertEquals("The menu hover uses the standard icon-button height", standard.height, hit.bounds.height)
+        assertTrue("The menu hover is not stretched over the row height", hit.bounds.height < cell.height)
+        assertEquals("The menu hover stays vertically centered", frame.y + (frame.height - hit.bounds.height) / 2,
+            hit.bounds.y)
+        assertTrue("The menu hover stays inside the trailing edge",
+            hit.bounds.x + hit.bounds.width <= cell.x + cell.width)
+
+        for (x in listOf(hit.bounds.x, hit.bounds.x + hit.bounds.width / 2, hit.bounds.x + hit.bounds.width - 1)) {
+            moveTo(view, Point(x, hit.bounds.y + hit.bounds.height / 2))
+            assertEquals(ACTIVE_MENU_CELL, view.state(entry, false, false).hoveredCell)
+        }
+    }
 
     fun `test unsupported delegate owns disclosure and group body clicks`() {
         var selections = 0
@@ -171,9 +236,28 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         assertEquals(1, selections)
     }
 
+    @RequiresEdt
+    private fun moveTo(view: ActiveTreeView, entry: ActiveEntry) {
+        val hit = view.regions.hits(entry).single { it.id == BADGE }
+        moveTo(view, Point(hit.bounds.centerX.toInt(), hit.bounds.centerY.toInt()))
+    }
+
+    private fun moveTo(view: ActiveTreeView, point: Point) {
+        view.dispatchEvent(
+            MouseEvent(view, MouseEvent.MOUSE_MOVED, 0, 0, point.x, point.y, 0, false, MouseEvent.NOBUTTON),
+        )
+    }
+
     private fun nodes() = listOf(ActiveTreeNode(Row("group"), listOf("a", "b", "c").map {
         ActiveTreeNode(Row(it))
     }))
+
+    private class BadgeRow(override val key: String) : ActiveItem {
+        override val title = key
+        override val secondaryBadges = listOf(
+            ActiveBadge("#1", UiStyle.Badge.PullRequestOpen, id = BADGE, action = {}),
+        )
+    }
 
     @RequiresEdt
     private fun keys(view: ActiveTreeView): List<String> = view.hierarchy.entries.getValue("group").let { node ->

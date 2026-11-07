@@ -7,6 +7,7 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.Icon
 import javax.swing.JButton
 
 class HoverIcon(private val fill: Boolean = false) : JButton() {
@@ -48,9 +49,8 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
             val side = labelledHeight()
             return Dimension(side, side)
         }
-        val icon = icon ?: return JBUI.size(MIN, MIN)
-        val side = maxOf(JBUI.scale(MIN), icon.iconWidth + JBUI.scale(PAD), icon.iconHeight + JBUI.scale(PAD))
-        return Dimension(side, side)
+        val icon = icon ?: return JBUI.size(ICON_BUTTON_MIN, ICON_BUTTON_MIN)
+        return iconButtonSize(icon)
     }
 
     // Button UIs commonly special-case null/empty text and size purely from the icon, skipping the
@@ -123,10 +123,22 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
         repaint()
     }
 
-    private companion object {
-        const val MIN = 24
-        const val PAD = 8
-    }
+}
+
+private const val ICON_BUTTON_MIN = 24
+private const val ICON_BUTTON_PAD = 8
+
+/**
+ * Standard square size for an icon-only button: a 24px floor with symmetric 8px total padding around
+ * an icon. Shared so row glyphs in the compact lists get the same button padding as toolbar icons.
+ */
+internal fun iconButtonSize(icon: Icon): Dimension {
+    val side = maxOf(
+        JBUI.scale(ICON_BUTTON_MIN),
+        icon.iconWidth + JBUI.scale(ICON_BUTTON_PAD),
+        icon.iconHeight + JBUI.scale(ICON_BUTTON_PAD),
+    )
+    return Dimension(side, side)
 }
 
 fun iconButton(button: JButton) {
