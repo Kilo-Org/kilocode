@@ -32,7 +32,7 @@ Costs are determined by the upstream provider's pricing based on token usage:
 
 ## Balance management
 
-Model inference is deducted from your balance at the upstream provider's rate with no markup. A 5% payment-processing fee applies when you purchase Kilo credits; the fee is charged separately and does not increase your balance. For example, $1 of purchased credits funds $1 of usage.
+Model inference is deducted from your balance at the upstream provider's rate with no markup. Kilo is not currently charging a payment-processing fee when you purchase Kilo credits. For example, $1 of purchased credits funds $1 of usage.
 
 ### Individual accounts
 
