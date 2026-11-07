@@ -1,0 +1,13 @@
+{
+  "$schema": "https://app.kilo.ai/tui.json",
+  "plugin": [
+    "/home/rrx/Dokumen/kilocode/repo/packages/opencode/src/cli/cmd/tui/plugins/notifications-sidebar.tsx"
+  ],
+  "attention": {
+    "enabled": true,
+    "notifications": true,
+    "sound": true,
+    "volume": 0.4,
+    "sound_pack": "kilo.default"
+  }
+}
