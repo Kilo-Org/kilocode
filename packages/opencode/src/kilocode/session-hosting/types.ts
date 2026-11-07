@@ -345,7 +345,10 @@ export const ProfileOverrides = Schema.Struct({
 }).annotate({ identifier: "SessionHostProfileOverrides" })
 export type ProfileOverrides = Schema.Schema.Type<typeof ProfileOverrides>
 
-/** Cloud resolves an explicitly selected profile server-side. */
+/**
+ * An explicitly selected Cloud profile. When omitted, Cloud applies the
+ * caller's effective default profile, if any.
+ */
 export const Profile = Schema.Struct({
   id: Schema.String.check(Schema.isUUID()),
   overrides: Schema.optional(ProfileOverrides),
@@ -362,18 +365,44 @@ export const WorkspaceProfileListInput = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspaceProfileListInput" })
 export type WorkspaceProfileListInput = Schema.Schema.Type<typeof WorkspaceProfileListInput>
 
+export const WorkspaceProfileOwner = Schema.Literals(["user", "organization"]).annotate({
+  identifier: "SessionHostWorkspaceProfileOwner",
+})
+export type WorkspaceProfileOwner = Schema.Schema.Type<typeof WorkspaceProfileOwner>
+
 export const WorkspaceProfileSummary = Schema.Struct({
   id: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
   name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
   description: Schema.NullOr(Schema.String.check(Schema.isMaxLength(1000))),
-  isDefault: Schema.Boolean,
+  ownerType: WorkspaceProfileOwner,
+  isPersonalDefault: Schema.Boolean,
+  isOrganizationDefault: Schema.Boolean,
 }).annotate({ identifier: "SessionHostWorkspaceProfileSummary" })
 export type WorkspaceProfileSummary = Schema.Schema.Type<typeof WorkspaceProfileSummary>
 
+/**
+ * Personal and organization profiles available for workspace creation, plus the
+ * stored defaults and the effective default Cloud applies when no profile is
+ * supplied. A personal default always wins over an organization default.
+ */
 export const WorkspaceProfilePage = Schema.Struct({
-  items: Schema.Array(WorkspaceProfileSummary),
+  personalProfiles: Schema.Array(WorkspaceProfileSummary),
+  organizationProfiles: Schema.Array(WorkspaceProfileSummary),
+  personalDefaultProfileID: Schema.NullOr(Schema.String),
+  organizationDefaultProfileID: Schema.NullOr(Schema.String),
+  effectiveDefaultProfileID: Schema.NullOr(Schema.String),
 }).annotate({ identifier: "SessionHostWorkspaceProfilePage" })
 export type WorkspaceProfilePage = Schema.Schema.Type<typeof WorkspaceProfilePage>
+
+export const WorkspaceProfileDefaultInput = Schema.Struct({
+  id: Schema.String.check(Schema.isUUID()),
+}).annotate({ identifier: "SessionHostWorkspaceProfileDefaultInput" })
+export type WorkspaceProfileDefaultInput = Schema.Schema.Type<typeof WorkspaceProfileDefaultInput>
+
+export const WorkspaceProfileDefaultResult = Schema.Struct({
+  success: Schema.Literal(true),
+}).annotate({ identifier: "SessionHostWorkspaceProfileDefaultResult" })
+export type WorkspaceProfileDefaultResult = Schema.Schema.Type<typeof WorkspaceProfileDefaultResult>
 
 export const WorkspaceListInput = Schema.Struct({
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 }))),
@@ -411,26 +440,36 @@ export const DeleteWorkspaceResult = Schema.Struct({
 export type DeleteWorkspaceResult = Schema.Schema.Type<typeof DeleteWorkspaceResult>
 
 /**
- * Create a hosted workspace and its root session. `operationKey` is required so
- * a retried request is admitted once, and `messageID` names the root initial
- * message so an ambiguous failure can be retried without a duplicate turn.
- * Omit `profile` to create without a profile override.
+ * Create a hosted workspace and, optionally, its root initial turn. `operationKey`
+ * is required so a retried request is admitted once. A prompt and its `messageID`
+ * arrive together: omitting both creates an empty workspace whose first prompt
+ * is submitted later through the workspace session start route. Supplying a
+ * `profile` pins one explicitly; omitting it lets Cloud apply the effective
+ * default profile.
  */
 export const CreateWorkspaceInput = Schema.Struct({
   repository: Repository,
   profile: Schema.optional(Profile),
-  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+  prompt: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000))),
   agent: Agent,
   operationKey: Schema.String.check(Schema.isUUID()),
-  messageID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  messageID: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255))),
   organizationID: Schema.optional(OrganizationID),
-}).annotate({ identifier: "SessionHostCreateWorkspaceInput" })
+})
+  .check(
+    Schema.makeFilter((input) =>
+      (input.prompt === undefined) === (input.messageID === undefined)
+        ? undefined
+        : "prompt and messageID must be supplied together",
+    ),
+  )
+  .annotate({ identifier: "SessionHostCreateWorkspaceInput" })
 export type CreateWorkspaceInput = Schema.Schema.Type<typeof CreateWorkspaceInput>
 
 export const CreateWorkspaceResult = Schema.Struct({
   workspace: HostedWorkspaceID,
   session: HostedSessionID,
-  messageID: Schema.String,
+  messageID: Schema.optional(Schema.String),
   replayed: Schema.Boolean,
 }).annotate({ identifier: "SessionHostCreateWorkspaceResult" })
 export type CreateWorkspaceResult = Schema.Schema.Type<typeof CreateWorkspaceResult>
@@ -641,6 +680,14 @@ export interface Provider {
   readonly listWorkspaceProfiles: (
     input?: WorkspaceProfileListInput,
   ) => Effect.Effect<WorkspaceProfilePage, HostedFailure>
+  /** Sets the authenticated user's personal default workspace profile. */
+  readonly setWorkspacePersonalDefaultProfile: (
+    input: WorkspaceProfileDefaultInput,
+  ) => Effect.Effect<WorkspaceProfileDefaultResult, HostedFailure>
+  /** Clears the authenticated user's personal default workspace profile. */
+  readonly clearWorkspacePersonalDefaultProfile: (
+    input: WorkspaceProfileDefaultInput,
+  ) => Effect.Effect<WorkspaceProfileDefaultResult, HostedFailure>
   /**
    * Provider-owned request mapping for the proven native allowlist. Provider
    * origin, credentials, control identities, selectors, and fences stay inside

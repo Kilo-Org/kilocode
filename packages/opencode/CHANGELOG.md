@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 7.8.28
+
+### Minor Changes
+
+- [#15929](https://github.com/Kilo-Org/kilocode/pull/15929) [`f15aff8`](https://github.com/Kilo-Org/kilocode/commit/f15aff8f3d186e3ed459775d0b164bed7782e320) - Expose hosted workspace profile defaults through the Session Host API. Clients can create an empty hosted workspace without an initial prompt or profile, list personal and organization profiles with their default flags, and set or clear the personal default profile.
+
+### Patch Changes
+
+- [#15921](https://github.com/Kilo-Org/kilocode/pull/15921) [`8116541`](https://github.com/Kilo-Org/kilocode/commit/8116541a9b71fc855ee199a9d6f8e044ad6e32bb) Thanks [@zfralish](https://github.com/zfralish)! - Skip plugin tools whose arguments cannot be converted to JSON Schema instead of failing every prompt in the session
+
 ## 7.8.26
 
 ### Minor Changes

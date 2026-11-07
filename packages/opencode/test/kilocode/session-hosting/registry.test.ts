@@ -36,7 +36,16 @@ function provider(name: string, session: string, options: { default?: boolean; a
     transcript: () => Effect.succeed({ items: [] }),
     start: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     listWorkspaces: () => Effect.succeed({ items: [] }),
-    listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
+    listWorkspaceProfiles: () =>
+      Effect.succeed({
+        personalProfiles: [],
+        organizationProfiles: [],
+        personalDefaultProfileID: null,
+        organizationDefaultProfileID: null,
+        effectiveDefaultProfileID: null,
+      }),
+    setWorkspacePersonalDefaultProfile: () => Effect.succeed({ success: true }),
+    clearWorkspacePersonalDefaultProfile: () => Effect.succeed({ success: true }),
     getWorkspace: (input) =>
       Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
     getWorkspaceStatus: (input) =>

@@ -231,23 +231,35 @@ function harness(initial: Partial<State> = {}) {
           },
         })
       }
-      if (url.pathname === "/api/trpc/agentProfiles.list") {
+      if (url.pathname === "/trpc/listHostedWorkspaceProfiles") {
         return Response.json({
           result: {
             data: {
-              json: [
+              personalProfiles: [
                 {
                   id: PROFILE,
                   name: "Default",
                   description: null,
-                  isDefault: true,
+                  ownerType: "user",
+                  isPersonalDefault: true,
+                  isOrganizationDefault: false,
                   varCount: 2,
                   varValues: ["SECRET_VALUE"],
                 },
               ],
+              organizationProfiles: [],
+              personalDefaultProfileId: PROFILE,
+              organizationDefaultProfileId: null,
+              effectiveDefaultProfileId: PROFILE,
             },
           },
         })
+      }
+      if (url.pathname === "/trpc/setHostedWorkspacePersonalDefaultProfile") {
+        return Response.json({ result: { data: { success: true } } })
+      }
+      if (url.pathname === "/trpc/clearHostedWorkspacePersonalDefaultProfile") {
+        return Response.json({ result: { data: { success: true } } })
       }
       if (url.pathname === "/trpc/listHostedWorkspaces") {
         if (state.catalog === "two") {
@@ -680,19 +692,59 @@ describe("session host HttpApi", () => {
     }),
   )
 
-  it.live("lists authorized workspace profiles without profile secret inputs", () =>
+  it.live("lists authorized workspace profiles with their default flags and no secret inputs", () =>
     Effect.gen(function* () {
       const response = yield* HttpClient.get(`${SessionHostPaths.workspaceProfiles}?organizationID=${PROFILE}`)
       expect(response.status).toBe(200)
       const body: unknown = yield* response.json
       expect(body).toEqual({
-        items: [{ id: PROFILE, name: "Default", description: null, isDefault: true }],
+        personalProfiles: [
+          {
+            id: PROFILE,
+            name: "Default",
+            description: null,
+            ownerType: "user",
+            isPersonalDefault: true,
+            isOrganizationDefault: false,
+          },
+        ],
+        organizationProfiles: [],
+        personalDefaultProfileID: PROFILE,
+        organizationDefaultProfileID: null,
+        effectiveDefaultProfileID: PROFILE,
       })
       expect(JSON.stringify(body)).not.toContain("SECRET_VALUE")
       expect(JSON.stringify(body)).not.toContain("varCount")
       const call = app.calls.at(-1)
-      expect(call?.path).toBe("/api/trpc/agentProfiles.list")
-      expect(call?.auth).toBe(`Bearer ${TOKEN}`)
+      expect(call?.path).toBe("/trpc/listHostedWorkspaceProfiles")
+      expect(call?.auth).toBe(`Bearer ${CONTROL}`)
+      expect(Object(parse(new URL(call?.search ?? "", app.url).searchParams.get("input") ?? "{}"))).toEqual({
+        kilocodeOrganizationId: PROFILE,
+      })
+    }),
+  )
+
+  it.live("sets and clears the personal default workspace profile", () =>
+    Effect.gen(function* () {
+      const set = yield* HttpClientRequest.post(SessionHostPaths.workspaceProfilePersonalDefault).pipe(
+        HttpClientRequest.bodyJson({ id: PROFILE }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(set.status).toBe(200)
+      expect(yield* set.json).toEqual({ success: true })
+
+      const cleared = yield* HttpClient.execute(
+        HttpClientRequest.delete(
+          SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE),
+        ),
+      )
+      expect(cleared.status).toBe(200)
+      expect(yield* cleared.json).toEqual({ success: true })
+
+      expect(app.calls.at(-2)?.path).toBe("/trpc/setHostedWorkspacePersonalDefaultProfile")
+      expect(app.calls.at(-2)?.body).toBe(JSON.stringify({ profileId: PROFILE }))
+      expect(app.calls.at(-1)?.path).toBe("/trpc/clearHostedWorkspacePersonalDefaultProfile")
+      expect(app.calls.at(-1)?.body).toBe(JSON.stringify({ profileId: PROFILE }))
     }),
   )
 

@@ -43,6 +43,7 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
             preview.shellCard()
             preview.editCard()
             preview.mcpCard()
+            preview.questionCard()
         }
     }
 
@@ -58,6 +59,8 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
             assertEquals("diff appears at 1000ms", 3, preview.visibleCardCount())
             timers.advanceBy(PREVIEW_STEP_MS.toLong())
             assertEquals("MCP appears at 1500ms", 4, preview.visibleCardCount())
+            timers.advanceBy(PREVIEW_STEP_MS.toLong())
+            assertEquals("question appears at 2000ms", 5, preview.visibleCardCount())
         } finally {
             preview.dispose()
         }
@@ -128,11 +131,19 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
     }
 
     fun `test preview reflects each draft block setting`() = edtUnit {
-        open(expanded(mcpTool = BlockDisplay.COLLAPSED)) { preview ->
+        open(expanded(mcpTool = BlockDisplay.COLLAPSED, question = BlockDisplay.COLLAPSED)) { preview ->
             assertTrue(preview.reasoningCard().isExpanded())
             assertTrue(preview.shellCard().isExpanded())
             assertTrue(preview.editCard().isExpanded())
             assertFalse(preview.mcpCard().isExpanded())
+            assertFalse(preview.questionCard().isExpanded())
+        }
+    }
+
+    fun `test question cards are expanded by default`() = edtUnit {
+        open(expanded()) { preview ->
+            assertTrue("answered questions start open", preview.questionCard().isExpanded())
+            assertTrue(preview.questionCard().bodyCreated())
         }
     }
 
@@ -267,9 +278,18 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
         terminal: BlockDisplay = BlockDisplay.EXPANDED,
         codeEdit: BlockDisplay = BlockDisplay.EXPANDED,
         mcpTool: BlockDisplay = BlockDisplay.EXPANDED,
+        question: BlockDisplay = BlockDisplay.EXPANDED,
         approvalReason: Boolean = true,
         hoverPreview: Boolean = true,
-    ) = TranscriptDisplay(reasoning, terminal, codeEdit, mcpTool, approvalReason, hoverPreview)
+    ) = TranscriptDisplay(
+        reasoning = reasoning,
+        terminal = terminal,
+        codeEdit = codeEdit,
+        mcpTool = mcpTool,
+        question = question,
+        approvalReason = approvalReason,
+        hoverPreview = hoverPreview,
+    )
 
     private fun countDescendants(component: java.awt.Component): Int {
         if (component !is java.awt.Container) return 0
@@ -295,7 +315,7 @@ class TranscriptPreviewTest : BasePlatformTestCase() {
     }
 
     private fun revealAll() {
-        repeat(3) { timers.advanceBy(PREVIEW_STEP_MS.toLong()) }
+        repeat(4) { timers.advanceBy(PREVIEW_STEP_MS.toLong()) }
         UIUtil.dispatchAllInvocationEvents()
     }
 
