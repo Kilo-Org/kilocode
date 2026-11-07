@@ -23,6 +23,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { MCP } from "@/mcp"
 import type { Tool as MCPToolDef } from "@modelcontextprotocol/sdk/types.js"
+import z from "zod" // kilocode_change
 
 const configLayer = TestConfig.layer({
   directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".kilo")])), // kilocode_change
@@ -59,6 +60,43 @@ const brokenPluginLayer = Layer.succeed(
   }),
 )
 
+// kilocode_change start
+// A plugin whose middle tool declares an arg Zod cannot represent in JSON Schema. The
+// conversion throws inside `fromPlugin`; without a per-tool boundary the throw escapes the
+// state constructor and the registry returns no tools at all, which is what took down every
+// prompt in a session.
+const unconvertiblePluginLayer = Layer.succeed(
+  Plugin.Service,
+  Plugin.Service.of({
+    init: () => Effect.void,
+    trigger: ((_name: unknown, _input: unknown, output: unknown) =>
+      Effect.succeed(output)) as Plugin.Interface["trigger"],
+    list: () =>
+      Effect.succeed([
+        {
+          tool: {
+            good_before: {
+              description: "converts fine",
+              args: { path: z.string() },
+              execute: async () => "ok",
+            },
+            unconvertible: {
+              description: "args Zod cannot convert",
+              args: { page: z.instanceof(Object) },
+              execute: async () => "ok",
+            },
+            good_after: {
+              description: "converts fine",
+              args: { pattern: z.string().min(1) },
+              execute: async () => "ok",
+            },
+          },
+        },
+      ]),
+  }),
+)
+// kilocode_change end
+
 const root = LayerNode.group([ToolRegistry.node, Agent.node])
 const registryLayer = (opts: RegistryLayerOptions = {}) => {
   const replacements = [
@@ -76,6 +114,7 @@ const it = testEffect(registryLayer())
 const scout = testEffect(registryLayer({ flags: { experimentalScout: true } })) // kilocode_change
 const contextTools = testEffect(registryLayer({ flags: { experimentalContextTools: true } })) // kilocode_change
 const withBrokenPlugin = testEffect(registryLayer({ plugin: brokenPluginLayer }))
+const withUnconvertiblePlugin = testEffect(registryLayer({ plugin: unconvertiblePluginLayer })) // kilocode_change
 // kilocode_change start
 const websearch = testEffect(
   registryLayer({
@@ -523,6 +562,19 @@ describe("tool.registry", () => {
       expect(ids).toContain("broken_plugin_tool")
     }),
   )
+
+  // kilocode_change start
+  withUnconvertiblePlugin.instance("skips a plugin tool whose schema cannot be converted", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+      expect(ids).toContain("good_before")
+      expect(ids).toContain("good_after")
+      expect(ids).toContain("read")
+      expect(ids).not.toContain("unconvertible")
+    }),
+  )
+  // kilocode_change end
 
   it.instance("loads tools from .kilo/tools (plural)" /* kilocode_change */, () =>
     Effect.gen(function* () {

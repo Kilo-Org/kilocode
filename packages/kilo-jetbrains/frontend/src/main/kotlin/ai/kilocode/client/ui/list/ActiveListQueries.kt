@@ -5,6 +5,7 @@ import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.activeHitCells
 import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.active.activeVisibleCells
+import com.intellij.ui.ExpandedItemListCellRendererWrapper
 import java.awt.Point
 import java.awt.Rectangle
 import javax.swing.JList
@@ -29,14 +30,21 @@ internal fun activeListHits(
 ): List<ActiveHit> {
     val model = list.model
     if (index < 0 || index >= model.size) return emptyList()
+    val installed = list.cellRenderer ?: return emptyList()
+    // JBList wraps every installed renderer in an adapter for per-item expansion, so unwrap before
+    // checking for the row renderer that owns the button regions.
+    val actual = ExpandedItemListCellRendererWrapper.unwrap(installed)
     @Suppress("UNCHECKED_CAST")
-    val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyList()
+    val renderer = actual as? ListCellRenderer<Any?> ?: return emptyList()
     val cell = list.getCellBounds(index, index) ?: return emptyList()
     // Render as focused so the region geometry and focused/unfocused selection state never alter
     // hit targets.
     val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
     comp.setBounds(0, 0, cell.width, cell.height)
     activeLayout(comp)
+    // The row renderer owns its button regions; fall back to the generic hit walk for a foreign
+    // renderer installed by a host or a test.
+    (actual as? ActiveListRenderer)?.let { return it.buttons(cell.x, cell.y) }
     return activeHitCells(comp, cell.x, cell.y)
 }
 
