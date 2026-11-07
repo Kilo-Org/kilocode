@@ -28,6 +28,7 @@ import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, 
 import { Prompt, type PromptRef } from "../../component/prompt"
 import type {
   AssistantMessage,
+  Message,
   Part,
   Provider,
   ToolPart,
@@ -351,7 +352,7 @@ export function Session() {
     return messages().filter((m) => m.role === "assistant")
   }
 
-  const extractText = (msgs: any[]) => {
+  const extractText = (msgs: Message[]) => {
     return msgs
       .flatMap((m) => sync.data.part[m.id] ?? [])
       .filter((x): x is TextPart => x.type === "text")
@@ -359,7 +360,7 @@ export function Session() {
       .join("\n")
   }
 
-  const extractRaw = (msgs: any[]) => {
+  const extractRaw = (msgs: Message[]) => {
     return msgs
       .flatMap((m) => sync.data.part[m.id] ?? [])
       .map((p: Part) => {
