@@ -297,7 +297,8 @@ describe("tool.apply_patch freeform", () => {
     }),
   )
 
-  it.instance("moves file overwriting existing destination", () =>
+  // kilocode_change start - refuse clobber and keep a case-only move
+  it.instance("rejects a move onto an existing file", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       const { ctx } = makeCtx()
@@ -311,14 +312,13 @@ describe("tool.apply_patch freeform", () => {
       const patchText =
         "*** Begin Patch\n*** Update File: old/name.txt\n*** Move to: renamed/dir/name.txt\n@@\n-from\n+new\n*** End Patch"
 
-      yield* execute({ patchText }, ctx)
-
-      yield* expectReadFailure(original)
-      expect(yield* readText(destination)).toBe("new\n")
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(original)).toBe("from\n")
+      expect(yield* readText(destination)).toBe("existing\n")
     }),
   )
 
-  it.instance("adds file overwriting existing file", () =>
+  it.instance("rejects an add onto an existing file", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       const { ctx } = makeCtx()
@@ -327,10 +327,183 @@ describe("tool.apply_patch freeform", () => {
 
       const patchText = "*** Begin Patch\n*** Add File: duplicate.txt\n+new content\n*** End Patch"
 
-      yield* execute({ patchText }, ctx)
-      expect(yield* readText(target)).toBe("new content\n")
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(target)).toBe("old content\n")
     }),
   )
+
+  it.instance("keeps the file when a move resolves to the same path", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "same.txt")
+      yield* writeText(target, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: same.txt\n*** Move to: same.txt\n@@\n-from\n+kept\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      expect(yield* readText(target)).toBe("kept\n")
+    }),
+  )
+
+  it.instance("keeps the file when a move only changes case", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      yield* writeText(path.join(test.directory, "Report.txt"), "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: Report.txt\n*** Move to: report.txt\n@@\n-from\n+kept\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      const names = yield* Effect.promise(() => fs.readdir(test.directory))
+      const name = names.find((item) => item.toLowerCase() === "report.txt")
+      expect(names.filter((item) => item.toLowerCase() === "report.txt")).toHaveLength(1)
+      expect(yield* readText(path.join(test.directory, name ?? "report.txt"))).toBe("kept\n")
+    }),
+  )
+
+  it.instance("recreates a file deleted earlier in the same patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "config.json")
+      yield* writeText(target, "old\n")
+
+      const patchText = "*** Begin Patch\n*** Delete File: config.json\n*** Add File: config.json\n+new\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      expect(yield* readText(target)).toBe("new\n")
+    }),
+  )
+
+  it.instance("moves onto a path deleted earlier in the same patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      yield* writeText(path.join(test.directory, "a.txt"), "from\n")
+      yield* writeText(path.join(test.directory, "b.txt"), "old\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Delete File: b.txt\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+moved\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      yield* expectReadFailure(path.join(test.directory, "a.txt"))
+      expect(yield* readText(path.join(test.directory, "b.txt"))).toBe("moved\n")
+    }),
+  )
+
+  it.instance("adds a path vacated by an earlier move in the same patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      yield* writeText(path.join(test.directory, "a.txt"), "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+moved\n*** Add File: a.txt\n+fresh\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      expect(yield* readText(path.join(test.directory, "b.txt"))).toBe("moved\n")
+      expect(yield* readText(path.join(test.directory, "a.txt"))).toBe("fresh\n")
+    }),
+  )
+
+  it.instance("does not replace a symlink target when the move names that target", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "target.txt")
+      const link = path.join(test.directory, "link.txt")
+      yield* writeText(target, "safe\n")
+      const made = yield* Effect.promise(async () => {
+        try {
+          await fs.symlink(target, link)
+          return true
+        } catch (err) {
+          const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+          if (code === "EPERM" || code === "ENOTSUP") return false
+          throw err
+        }
+      })
+      if (!made) return
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: link.txt\n*** Move to: target.txt\n@@\n-safe\n+replaced\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(target)).toBe("safe\n")
+      expect((yield* Effect.promise(() => fs.lstat(link))).isSymbolicLink()).toBe(true)
+    }),
+  )
+
+  it.instance("rejects a later add onto an existing file before writing earlier hunks", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const kept = path.join(test.directory, "a.txt")
+      const occupied = path.join(test.directory, "existing.txt")
+      yield* writeText(kept, "before\n")
+      yield* writeText(occupied, "stay\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: a.txt\n@@\n-before\n+after\n*** Add File: existing.txt\n+new\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(kept)).toBe("before\n")
+      expect(yield* readText(occupied)).toBe("stay\n")
+    }),
+  )
+
+  it.instance("rejects a move onto a path created earlier in the same patch before writing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const source = path.join(test.directory, "a.txt")
+      yield* writeText(source, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Add File: x.txt\n+created\n*** Update File: a.txt\n*** Move to: x.txt\n@@\n-from\n+moved\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(source)).toBe("from\n")
+      yield* expectReadFailure(path.join(test.directory, "x.txt"))
+    }),
+  )
+
+  it.instance("rejects a move of a file deleted earlier in the same patch before writing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const source = path.join(test.directory, "a.txt")
+      yield* writeText(source, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Delete File: a.txt\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+moved\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "source already removed")
+      expect(yield* readText(source)).toBe("from\n")
+      yield* expectReadFailure(path.join(test.directory, "b.txt"))
+    }),
+  )
+
+  it.instance("rejects a second move of the same source before writing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const source = path.join(test.directory, "a.txt")
+      yield* writeText(source, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+one\n*** Update File: a.txt\n*** Move to: c.txt\n@@\n-from\n+two\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "source already removed")
+      expect(yield* readText(source)).toBe("from\n")
+      yield* expectReadFailure(path.join(test.directory, "b.txt"))
+      yield* expectReadFailure(path.join(test.directory, "c.txt"))
+    }),
+  )
+  // kilocode_change end
 
   it.instance("rejects update when target file is missing", () =>
     Effect.gen(function* () {

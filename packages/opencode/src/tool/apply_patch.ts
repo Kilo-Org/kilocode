@@ -1,4 +1,5 @@
 import * as path from "path"
+import { lstat } from "fs/promises"
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -30,6 +31,108 @@ export const ApplyPatchTool = Tool.define(
     const afs = yield* FSUtil.Service
     const format = yield* Format.Service
     const events = yield* EventV2Bridge.Service
+
+    // kilocode_change start - refuse a destination that is a different existing file
+    const cased = (source: string, dest: string) => {
+      const left = path.resolve(source)
+      const right = path.resolve(dest)
+      if (path.dirname(left) !== path.dirname(right)) return false
+      const from = path.basename(left)
+      const to = path.basename(right)
+      return from !== to && from.toLowerCase() === to.toLowerCase()
+    }
+
+    const stat = Effect.fn("ApplyPatchTool.stat")(function* (target: string) {
+      return yield* Effect.tryPromise({
+        try: () => lstat(target),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.catch((err) => {
+          if ("code" in err && err.code === "ENOENT") return Effect.succeed(undefined)
+          return Effect.fail(err)
+        }),
+      )
+    })
+
+    const same = Effect.fn("ApplyPatchTool.same")(function* (source: string, dest: string) {
+      if (path.resolve(source) === path.resolve(dest)) return true
+      if (!cased(source, dest)) return false
+      const left = yield* stat(source)
+      const right = yield* stat(dest)
+      if (!left || !right || left.isSymbolicLink() || right.isSymbolicLink()) return false
+      return left.dev === right.dev && left.ino === right.ino
+    })
+
+    const guard = Effect.fn("ApplyPatchTool.guard")(function* (source: string | undefined, dest: string) {
+      if (source && (yield* same(source, dest))) return
+      if (!(yield* afs.exists(dest))) return
+      return yield* Effect.fail(new Error(`apply_patch verification failed: destination already exists: ${dest}`))
+    })
+
+    const seen = Effect.fn("ApplyPatchTool.seen")(function* (list: string[], target: string) {
+      for (const item of list) {
+        if (yield* same(item, target)) return true
+      }
+      return false
+    })
+
+    const forget = Effect.fn("ApplyPatchTool.forget")(function* (list: string[], target: string) {
+      const next: string[] = []
+      for (const item of list) {
+        if (!(yield* same(item, target))) next.push(item)
+      }
+      list.splice(0, list.length, ...next)
+    })
+
+    const claim = Effect.fn("ApplyPatchTool.claim")(function* (
+      gone: string[],
+      made: string[],
+      source: string | undefined,
+      dest: string,
+    ) {
+      if (yield* seen(gone, dest)) {
+        yield* forget(gone, dest)
+        made.push(dest)
+        return
+      }
+      if (yield* seen(made, dest)) {
+        return yield* Effect.fail(new Error(`apply_patch verification failed: destination already exists: ${dest}`))
+      }
+      yield* guard(source, dest)
+      made.push(dest)
+    })
+
+    const preview = Effect.fn("ApplyPatchTool.preview")(function* (
+      changes: ReadonlyArray<{ type: string; filePath: string; movePath?: string }>,
+    ) {
+      const gone: string[] = []
+      const made: string[] = []
+      for (const change of changes) {
+        if (change.type === "delete") {
+          yield* forget(made, change.filePath)
+          gone.push(change.filePath)
+          continue
+        }
+        if (change.type === "add") {
+          yield* claim(gone, made, undefined, change.filePath)
+          continue
+        }
+        if (change.type !== "move" || !change.movePath) continue
+        // The source was already deleted or moved in this patch. Applying
+        // would write the destination, then fail removing a path that is gone.
+        if (yield* seen(gone, change.filePath)) {
+          return yield* Effect.fail(
+            new Error(`apply_patch verification failed: source already removed: ${change.filePath}`),
+          )
+        }
+        const alias = yield* same(change.filePath, change.movePath)
+        yield* claim(gone, made, alias ? change.filePath : undefined, change.movePath)
+        if (alias) continue
+        yield* forget(made, change.filePath)
+        gone.push(change.filePath)
+      }
+    })
+    // kilocode_change end
 
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -227,6 +330,7 @@ export const ApplyPatchTool = Tool.define(
         ...(change.movePath ? { movePath: change.movePath } : {}),
       }))
 
+      yield* preview(fileChanges) // kilocode_change - reject a collided patch before any write
       // Check permissions if needed
       const relativePaths = fileChanges.map((c) => path.relative(instance.worktree, c.filePath).replaceAll("\\", "/"))
       yield* ctx.ask({
@@ -247,6 +351,7 @@ export const ApplyPatchTool = Tool.define(
         const edited = change.type === "delete" ? undefined : (change.movePath ?? change.filePath)
         switch (change.type) {
           case "add":
+            yield* guard(undefined, change.filePath) // kilocode_change
             // Create parent directories (recursive: true is safe on existing/root dirs)
             yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
             updates.push({ file: change.filePath, event: "add" })
@@ -259,6 +364,38 @@ export const ApplyPatchTool = Tool.define(
 
           case "move":
             if (change.movePath) {
+              yield* guard(change.filePath, change.movePath) // kilocode_change
+              // kilocode_change start - a case-only rename is the same inode; write then remove deletes it
+              const identical = path.resolve(change.filePath) === path.resolve(change.movePath)
+              const alias = !identical && (yield* same(change.filePath, change.movePath))
+              if (identical || alias) {
+                if (alias) {
+                  const hop = `${change.movePath}.${process.pid}.hop`
+                  yield* afs.rename(change.filePath, hop)
+                  yield* afs.rename(hop, change.movePath).pipe(
+                    Effect.catch((err) =>
+                      afs.rename(hop, change.filePath).pipe(
+                        Effect.matchEffect({
+                          onFailure: () =>
+                            Effect.fail(
+                              new Error(
+                                `apply_patch verification failed: rename left the file at ${hop}: ${err instanceof Error ? err.message : String(err)}`,
+                              ),
+                            ),
+                          onSuccess: () => Effect.fail(err),
+                        }),
+                      ),
+                    ),
+                  )
+                }
+                yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding)
+                updates.push(
+                  identical ? { file: change.movePath, event: "change" } : { file: change.filePath, event: "unlink" },
+                )
+                if (!identical) updates.push({ file: change.movePath, event: "add" })
+                break
+              }
+              // kilocode_change end
               // Create parent directories (recursive: true is safe on existing/root dirs)
               yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
               yield* afs.remove(change.filePath)
