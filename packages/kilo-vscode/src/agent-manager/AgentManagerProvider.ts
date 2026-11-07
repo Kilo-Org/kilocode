@@ -846,6 +846,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
             sessionId: session.id,
             forkedFromId: from,
             worktreeId: worktree,
+            session,
           }),
         log: (...args) => this.log(...args),
       },
@@ -1135,15 +1136,40 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void> {
-    return continueFromSidebar(this.api(), sessionId, progress)
+    return this.inWorkspaceProject(() => continueFromSidebar(this.api(), sessionId, progress))
   }
 
   public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
-    return createFromSidebar(this.api(), baseBranch, branchName)
+    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName))
   }
 
   public openAdvancedWorktree(): Promise<void> {
-    return openAdvancedWorktree(this.api())
+    return this.inWorkspaceProject(() => openAdvancedWorktree(this.api()))
+  }
+
+  /** The current branch of the workspace project, for the sidebar New Worktree menu. */
+  public workspaceBranch(): Promise<string | undefined> {
+    const manager = this.contexts.pinned()?.worktreeManager()
+    if (!manager) return Promise.resolve(undefined)
+    return manager
+      .currentBranch()
+      .then((branch) => branch || undefined)
+      .catch(() => undefined)
+  }
+
+  /**
+   * Runs a sidebar action on the workspace project, which the sidebar shows, and not on the project the panel shows.
+   * The panel switches to that project first, because the action opens it.
+   */
+  private inWorkspaceProject(action: () => Promise<void>): Promise<void> {
+    const context = this.contexts.pinned()
+    if (!context) return action()
+    if (this.contexts.active()?.id !== context.id) {
+      this.contexts.activate(context.id)
+      this.activateProject(context)
+      this.pushProjects()
+    }
+    return this.projectScope.run(context, action)
   }
 
   public diagnose(): Promise<void> {

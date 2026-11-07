@@ -7,7 +7,7 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiffInfo } from "@opencode/client"
+import type { FileDiffInfo, SessionInfo } from "@opencode/client"
 import type { BrowserElement } from "../services/browser-automation"
 import type { BrowserCursor, BrowserFrame, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { DiffImage } from "../diff/types"
@@ -310,6 +310,7 @@ interface SessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+  session: SessionInfo
 }
 
 interface SessionClosedMessage {

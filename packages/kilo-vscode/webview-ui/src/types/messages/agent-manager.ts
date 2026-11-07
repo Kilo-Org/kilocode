@@ -285,6 +285,7 @@ export interface AgentManagerSessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+  session: SessionInfo
 }
 
 export interface AgentManagerWorktreeActivityMessage {

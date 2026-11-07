@@ -1,5 +1,5 @@
 import type { ProjectStore } from "./store"
-import type { AgentManagerWorktreeSetupMessage, ExtensionMessage } from "../../src/types/messages/agent-manager"
+import type { AgentManagerWorktreeSetupMessage } from "../../src/types/messages/agent-manager"
 
 export interface SetupState {
   active: boolean

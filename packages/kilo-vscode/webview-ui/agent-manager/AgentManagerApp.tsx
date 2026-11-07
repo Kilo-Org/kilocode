@@ -1922,6 +1922,10 @@ const AgentManagerContent: Component = () => {
           setSelection: (id) => setSelection(id),
           evictLocal,
           selectSession: (id) => sessions.selectSession(id),
+          remember: (session) => {
+            const directory = session.location?.directory
+            if (directory) panel.store(directory).data.session.remember(session)
+          },
           requestChatFocus,
         })
         return
@@ -2222,7 +2226,6 @@ const AgentManagerContent: Component = () => {
                     onReferenceReady={(add) => (promptReference = add)}
                     onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
                     onViewTurnChanges={openTurnChanges}
-                    onForkSession={handleForkSession}
                     onForkMessage={handleForkSession}
                     onMissing={(id) => handleCloseTab(id)}
                     onPrompted={(sessionId, text, model) =>
