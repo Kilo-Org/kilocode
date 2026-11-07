@@ -148,4 +148,30 @@ class ActiveListBadgeCellTest : BasePlatformTestCase() {
         cell.update(ActiveBadge("", id = "pr-checks", icon = glyph, action = {}))
         assertTrue(cell.cellEnabled())
     }
+
+    fun `test a clickable worded badge reserves the hover halo`() {
+        val cell = ActiveBadgeCell()
+
+        cell.update(ActiveBadge("#7", UiStyle.Badge.PullRequestOpen, id = "pull-request", action = {}))
+
+        // A filled pill covers the label, so the hover fill needs padding around it to be visible.
+        assertTrue(cell.insets.left > 0)
+    }
+
+    fun `test a badge without an action keeps no hover halo`() {
+        val cell = ActiveBadgeCell()
+
+        cell.update(ActiveBadge("#7", UiStyle.Badge.PullRequestOpen, id = "pull-request"))
+
+        assertEquals(0, cell.insets.left)
+    }
+
+    fun `test a clickable glyph keeps no hover halo`() {
+        val cell = ActiveBadgeCell()
+
+        cell.update(ActiveBadge("", id = "pr-checks", icon = glyph, action = {}))
+
+        // A glyph is transparent around its strokes, so the hover fill shows through its own bounds.
+        assertEquals(0, cell.insets.left)
+    }
 }
