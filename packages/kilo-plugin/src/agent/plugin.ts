@@ -1,5 +1,6 @@
 import { Bus } from "@opencode/core/bus"
 import { Config } from "@opencode/core/config"
+import { systemDirectory } from "@opencode/core/kilocode/config/discovery"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Event } from "@opencode/schema/config"
 import { KiloAgentRpc } from "@opencode/schema/kilocode/agent"
@@ -39,7 +40,10 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
       // an ancestor `.kilo2` that discovery loads stays removable from a subdirectory workspace.
       const project = yield* projectBoundary(fs, ctx.location)
       const home = yield* fs.resolve(global.config)
-      const roots = AgentRemove.roots(candidates, project, home)
+      // Outside VCS the project boundary is the filesystem root, so the managed system directory must be excluded
+      // explicitly, as the settings writer does, rather than relying on a narrower boundary.
+      const system = yield* fs.resolve(systemDirectory())
+      const roots = AgentRemove.roots(candidates, project, home, system)
       const discovered = yield* Effect.forEach(roots, (item) =>
         Effect.forEach(AgentRemove.patterns, (pattern) =>
           fs.scan(pattern, { cwd: item.root, absolute: true, dot: true, symlink: true }).pipe(
@@ -68,6 +72,16 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
     const removable = Effect.fn("KiloAgentRemovePlugin.removable")(function* () {
       const listed = yield* known()
       return listed.map((agent) => ({ name: agent.name, path: agent.path, scope: agent.scope }))
+    })
+
+    // A name a config document still defines stays in the registry after its file is deleted, so waiting for it to
+    // leave would always run out the timeout; the caller removes that config entry next.
+    const defined = Effect.fn("KiloAgentRemovePlugin.defined")(function* (name: string) {
+      const entries = yield* config.value.entries()
+      return entries.some(
+        (entry) =>
+          entry.type === "document" && entry.info.agents !== undefined && Object.hasOwn(entry.info.agents, name),
+      )
     })
 
     // The config agent plugin reloads on a 100 ms debounce, so announcing alone would let a caller read the registry
@@ -120,7 +134,7 @@ export const KiloAgentRemovePlugin = define<Bus.Service | FSUtil.Service | Globa
               { discard: true },
             )
             yield* bus.publish(Event.Updated, {})
-            yield* arrive(input.name)
+            if (!(yield* defined(input.name))) yield* arrive(input.name)
             return {}
           }),
       })

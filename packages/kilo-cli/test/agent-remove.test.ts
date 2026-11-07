@@ -347,7 +347,11 @@ test(
     try {
       await withHost(directory, async (client, options) => {
         const rpc = client.rpc(KiloAgentRpc.Definition)
-        await Bun.sleep(200)
+        // Discovery must follow the link, or this would pass without ever exercising the containment guard.
+        await eventually(
+          () => client.agent.list(options),
+          (result) => result.data.some((agent) => agent.id === "outside"),
+        )
         expect((await rpc.removable({}, options)).some((agent) => agent.name === "outside")).toBe(false)
         const error = await rpc.remove({ name: "outside" }, options).then(
           () => undefined,
@@ -428,6 +432,36 @@ test(
       })
     } finally {
       await rm(repository, { recursive: true, force: true })
+    }
+  },
+  30_000,
+)
+
+test(
+  "a config definition outlives its markdown file",
+  async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-rpc-")))
+    await $`git init -q -b main ${directory}`.quiet()
+    const config = path.join(directory, ".kilo2")
+    const file = path.join(config, "agents", "demo.md")
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, AGENT)
+    await writeFile(path.join(config, "kilo2.jsonc"), JSON.stringify({ agents: { demo: { description: "From config" } } }))
+    try {
+      await withHost(directory, async (client, options) => {
+        const rpc = client.rpc(KiloAgentRpc.Definition)
+        await eventually(
+          () => client.agent.list(options),
+          (result) => result.data.some((agent) => agent.id === "demo"),
+        )
+        expect((await rpc.removable({}, options)).map((agent) => agent.name)).toContain("demo")
+        await rpc.remove({ name: "demo" }, options)
+        expect(await Bun.file(file).exists()).toBe(false)
+        // The config entry keeps the agent registered, so the removal must not wait for it to leave the registry.
+        expect((await client.agent.list(options)).data.some((agent) => agent.id === "demo")).toBe(true)
+      })
+    } finally {
+      await rm(directory, { recursive: true, force: true })
     }
   },
   30_000,

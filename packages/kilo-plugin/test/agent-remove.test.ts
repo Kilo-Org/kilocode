@@ -52,6 +52,13 @@ describe("roots", () => {
     ])
   })
 
+  test("the managed system directory is never a project deletion root", () => {
+    const system = path.join(project, "system")
+    expect(AgentRemove.roots([candidate(system)], project, global, system)).toEqual([])
+    // Outside VCS the project boundary is the filesystem root, which would otherwise admit it.
+    expect(AgentRemove.roots([candidate(system)], "/", global, system)).toEqual([])
+  })
+
   test("only directories the config service reports are roots", () => {
     expect(AgentRemove.roots([], project, global)).toEqual([])
   })

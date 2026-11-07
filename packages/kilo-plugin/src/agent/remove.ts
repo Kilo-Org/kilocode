@@ -52,24 +52,33 @@ export function isAgentFile(root: string, file: string) {
 /**
  * The config directories a removal may delete from, with the scope each is reported under. Only a directory that
  * resolves inside the project or inside the global config directory qualifies, so a project `.kilo2` that is a
- * symlink to `/` resolves outside both and never becomes a deletion root. The filesystem root is never a root.
+ * symlink to `/` resolves outside both and never becomes a deletion root. The filesystem root is never a root, and
+ * the managed system directory is excluded from the project scope as the settings writer also excludes it.
  */
-export function roots(candidates: readonly Candidate[], directory: string, global: string) {
-  const project = path.resolve(directory)
-  const home = path.resolve(global)
+export function roots(candidates: readonly Candidate[], directory: string, global: string, system?: string) {
+  const references = {
+    project: path.resolve(directory),
+    home: path.resolve(global),
+    system: system === undefined ? undefined : path.resolve(system),
+  }
   const result: Root[] = []
   for (const item of candidates) {
     if (path.parse(item.resolved).root === item.resolved) continue
-    const scope = containsDirectory(home, item.resolved)
-      ? "global"
-      : containsDirectory(project, item.resolved)
-        ? "project"
-        : undefined
+    const scope = scopeOf(item, references)
     if (scope === undefined) continue
     if (result.some((entry) => entry.root === item.root)) continue
-    result.push({ root: item.root, reference: scope === "global" ? home : project, scope })
+    result.push({ root: item.root, reference: scope === "global" ? references.home : references.project, scope })
   }
   return result
+}
+
+function scopeOf(
+  candidate: Candidate,
+  references: { readonly project: string; readonly home: string; readonly system?: string },
+): Scope | undefined {
+  if (containsDirectory(references.home, candidate.resolved)) return "global"
+  if (references.system !== undefined && containsDirectory(references.system, candidate.resolved)) return undefined
+  return containsDirectory(references.project, candidate.resolved) ? "project" : undefined
 }
 
 /**
