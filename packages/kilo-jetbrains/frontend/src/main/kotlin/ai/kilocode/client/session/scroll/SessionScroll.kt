@@ -213,6 +213,16 @@ internal class SessionScroll(
         return jump(::revealPass) { messages.findPart(message, part) ?: messages.findMessage(message) }
     }
 
+    /**
+     * Like [scrollPartTop] but pins the part's top to the viewport edge instead of revealing it with a
+     * gap. The prompt navigator uses this: its active tick is the last entry whose top is at or above the
+     * viewport, and a reveal that stops a gap short would leave the previous entry marked active.
+     */
+    @RequiresEdt
+    fun scrollPartPinned(message: String, part: String): Boolean {
+        return jump(::topPass) { messages.findPart(message, part) ?: messages.findMessage(message) }
+    }
+
     @RequiresEdt
     private fun jump(pass: (Int, Int, () -> JComponent?) -> Unit, resolve: () -> JComponent?): Boolean {
         val target = resolve() ?: return false

@@ -79,6 +79,9 @@ describe("TelemetryEvent", () => {
     const names: string[] = Object.values(TelemetryEvent)
     expect(names).toContain("MCP Auth Started")
     expect(names).toContain("MCP Auth Completed")
+    // The editors sent these names before the CLI owned them; existing reports select them.
+    expect(names).toContain("Marketplace Item Installed")
+    expect(names).toContain("Marketplace Item Removed")
   })
 
   test("share events are defined", () => {

@@ -4,7 +4,7 @@ import { AgentStartRequestSchema, AgentStartResponseSchema } from "@/kilocode/cl
 import { ControlTokenError, createControlTokenClient, type ControlTokenClient } from "@/kilocode/cloud/control-token"
 import { createBearerHttpClient, type BearerRequest } from "@/kilocode/cloud/http"
 import { createMessageId } from "@/kilocode/cloud/message-id"
-import { resolveCloudAgentOrigin, resolveKiloApiOrigin, resolveWebAppOrigin } from "@/kilocode/cloud/origin"
+import { resolveCloudAgentOrigin, resolveWebAppOrigin } from "@/kilocode/cloud/origin"
 import { readBoundedJson } from "@/kilocode/cloud/response-json"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -25,6 +25,7 @@ import {
   WorkspaceDeleteInput,
   WorkspaceGetInput,
   WorkspaceListInput,
+  WorkspaceProfileDefaultInput,
   WorkspaceProfileListInput,
   WorkspaceSessionStartInput,
   WorkspaceStatusInput,
@@ -48,6 +49,7 @@ import {
   type Profile,
   type StartResult,
   type Transport,
+  type WorkspaceProfileDefaultResult,
   type WorkspaceProfilePage,
   type WorkspaceSessionStartResult,
 } from "./types"
@@ -159,7 +161,7 @@ const WorkspaceCreate = z.object({
   workspaceId: z.string().min(1),
   cloudAgentSessionId: z.string().min(1),
   kiloSessionId: z.string().min(1),
-  messageId: z.string().min(1),
+  messageId: z.string().min(1).optional(),
   replayed: z.boolean().optional(),
 })
 
@@ -206,7 +208,17 @@ const CloudProfile = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   description: z.string().nullable(),
-  isDefault: z.boolean(),
+  ownerType: z.enum(["user", "organization"]),
+  isPersonalDefault: z.boolean(),
+  isOrganizationDefault: z.boolean(),
+})
+
+const CloudProfilePage = z.object({
+  personalProfiles: z.array(CloudProfile),
+  organizationProfiles: z.array(CloudProfile),
+  personalDefaultProfileId: z.string().nullable(),
+  organizationDefaultProfileId: z.string().nullable(),
+  effectiveDefaultProfileId: z.string().nullable(),
 })
 
 export interface Options {
@@ -279,11 +291,6 @@ export function provider(options: Options): Provider {
     catch: () => new HostedFailure({ code: "rejected", message: "Kilo web app URL is invalid", retryable: false }),
   })
 
-  const apiOrigin = Effect.try({
-    try: () => resolveKiloApiOrigin(env),
-    catch: () => new HostedFailure({ code: "rejected", message: "Kilo API base URL is invalid", retryable: false }),
-  })
-
   const controlTokens: ControlTokenClient = createControlTokenClient({
     ...(options.fetch ? { fetch: options.fetch } : {}),
     clock,
@@ -340,33 +347,6 @@ export function provider(options: Options): Provider {
               ? "Kilo Cloud is unreachable"
               : "Kilo Cloud start outcome is unknown; retry with the same operation key and message ID",
             retryable,
-          })
-        },
-      })
-      reachable()
-      return response
-    })
-
-  /**
-   * Account API calls use the source credential directly at the API origin.
-   * They never pass through the Worker control-token exchange.
-   */
-  const apiRequest = (auth: CloudAuth.Resolved, req: BearerRequest) =>
-    Effect.gen(function* () {
-      const base = yield* apiOrigin
-      const response = yield* Effect.tryPromise({
-        try: () =>
-          createBearerHttpClient({
-            origin: base,
-            apiKey: Redacted.value(auth.token),
-            ...(options.fetch ? { fetch: options.fetch } : {}),
-          }).request(req),
-        catch: () => {
-          unreachable()
-          return new HostedFailure({
-            code: "unavailable",
-            message: "Kilo API is unreachable",
-            retryable: true,
           })
         },
       })
@@ -916,20 +896,22 @@ export function provider(options: Options): Provider {
         operationKey: input.operationKey,
         clientProvenance: "agent-manager",
         repository: repositoryPayload(input.repository),
-        profile: profilePayload(input.profile),
-        message: { prompt: input.prompt, id: input.messageID },
+        ...(input.profile === undefined ? {} : { profile: profilePayload(input.profile) }),
+        ...(input.prompt === undefined || input.messageID === undefined
+          ? {}
+          : { message: { prompt: input.prompt, id: input.messageID } }),
         agent: agentPayload(input.agent),
         ...(auth.organizationID ? { options: { kilocodeOrganizationId: auth.organizationID } } : {}),
       })
       const parsed = WorkspaceCreate.safeParse(body)
       if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace result"))
-      if (parsed.data.messageId !== input.messageID) {
+      if (input.messageID !== undefined && parsed.data.messageId !== input.messageID) {
         return yield* Effect.fail(invalid("Kilo Cloud returned a different message identity"))
       }
       return {
         workspace: yield* workspaceIdentity(parsed.data.workspaceId),
         session: yield* identity(parsed.data.kiloSessionId),
-        messageID: input.messageID,
+        ...(input.messageID === undefined ? {} : { messageID: input.messageID }),
         replayed: parsed.data.replayed === true,
       }
     })
@@ -1024,38 +1006,54 @@ export function provider(options: Options): Provider {
       }
     })
 
-  const unwrap = (value: unknown) =>
-    value !== null && typeof value === "object" && "json" in value ? (value as { json: unknown }).json : value
-
   const listWorkspaceProfiles = (
     raw: WorkspaceProfileListInput = {},
   ): Effect.Effect<WorkspaceProfilePage, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(WorkspaceProfileListInput, raw)
       const auth = yield* resolve(input.organizationID)
-      const params = new URLSearchParams()
-      params.set(
-        "input",
-        JSON.stringify(input.organizationID === undefined ? {} : { organizationId: input.organizationID }),
+      const body = yield* query(
+        auth,
+        "listHostedWorkspaceProfiles",
+        input.organizationID === undefined ? {} : { kilocodeOrganizationId: input.organizationID },
       )
-      const response = yield* apiRequest(auth, {
-        method: "GET",
-        path: `/api/trpc/agentProfiles.list?${params.toString()}`,
-        headers: headers(auth),
-      })
-      const body = yield* consume(response)
-      const value = unwrap(yield* data(body))
-      const parsed = z.array(CloudProfile).safeParse(value)
+      const parsed = CloudProfilePage.safeParse(body)
       if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned unsupported profile summaries"))
+      const summary = (profile: z.infer<typeof CloudProfile>) => ({
+        id: profile.id,
+        name: profile.name,
+        description: profile.description,
+        ownerType: profile.ownerType,
+        isPersonalDefault: profile.isPersonalDefault,
+        isOrganizationDefault: profile.isOrganizationDefault,
+      })
       return {
-        items: parsed.data.map((profile) => ({
-          id: profile.id,
-          name: profile.name,
-          description: profile.description,
-          isDefault: profile.isDefault,
-        })),
+        personalProfiles: parsed.data.personalProfiles.map(summary),
+        organizationProfiles: parsed.data.organizationProfiles.map(summary),
+        personalDefaultProfileID: parsed.data.personalDefaultProfileId,
+        organizationDefaultProfileID: parsed.data.organizationDefaultProfileId,
+        effectiveDefaultProfileID: parsed.data.effectiveDefaultProfileId,
       }
     })
+
+  const profileDefault = (
+    procedure: "setHostedWorkspacePersonalDefaultProfile" | "clearHostedWorkspacePersonalDefaultProfile",
+    raw: WorkspaceProfileDefaultInput,
+  ): Effect.Effect<WorkspaceProfileDefaultResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceProfileDefaultInput, raw)
+      const auth = yield* resolve()
+      const body = yield* mutation(auth, procedure, { profileId: input.id })
+      const parsed = z.object({ success: z.literal(true) }).safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported profile default result"))
+      return { success: true }
+    })
+
+  const setWorkspacePersonalDefaultProfile = (raw: WorkspaceProfileDefaultInput) =>
+    profileDefault("setHostedWorkspacePersonalDefaultProfile", raw)
+
+  const clearWorkspacePersonalDefaultProfile = (raw: WorkspaceProfileDefaultInput) =>
+    profileDefault("clearHostedWorkspacePersonalDefaultProfile", raw)
 
   /**
    * Maps one allowlisted native request onto the merged `/kilo` facade. Cloud
@@ -1121,6 +1119,8 @@ export function provider(options: Options): Provider {
     continueWorkspace,
     startWorkspaceSession,
     listWorkspaceProfiles,
+    setWorkspacePersonalDefaultProfile,
+    clearWorkspacePersonalDefaultProfile,
     route: native,
   }
 }

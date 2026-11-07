@@ -20241,7 +20241,7 @@
             }
           }
         },
-        "description": "Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.",
+        "description": "Create a hosted workspace and, optionally, its root initial turn and explicit profile. Omit prompt and messageID to create an empty workspace; Cloud applies the effective default profile when profile is omitted. Reuse the same operation key and message ID to retry safely.",
         "summary": "Create a hosted workspace",
         "requestBody": {
           "content": {
@@ -20470,12 +20470,220 @@
             }
           }
         },
-        "description": "List authorized profile summaries for workspace creation. Secret and environment values are never returned.",
+        "description": "List personal and organization profile summaries for workspace creation with their default flags. Secret and environment values are never returned.",
         "summary": "List workspace creation profiles",
         "x-codeSamples": [
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.listWorkspaceProfiles({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session-host/workspace/profiles/personal-default": {
+      "post": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.setWorkspacePersonalDefaultProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Personal default profile set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceProfileDefaultResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Set the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.",
+        "summary": "Set the personal default workspace profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionHostWorkspaceProfileDefaultInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.setWorkspacePersonalDefaultProfile({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session-host/workspace/profiles/personal-default/{profileID}": {
+      "delete": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.clearWorkspacePersonalDefaultProfile",
+        "parameters": [
+          {
+            "name": "profileID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personal default profile cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceProfileDefaultResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Clear the authenticated user's personal default profile for workspace creation. The profile must be owned by the caller.",
+        "summary": "Clear the personal default workspace profile",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.clearWorkspacePersonalDefaultProfile({\n  ...\n})"
           }
         ]
       }
@@ -45533,7 +45741,7 @@
             "$ref": "#/components/schemas/SessionHostOrganizationID"
           }
         },
-        "required": ["repository", "profile", "prompt", "agent", "operationKey", "messageID"],
+        "required": ["repository", "agent", "operationKey"],
         "additionalProperties": false
       },
       "SessionHostCreateWorkspaceResult": {
@@ -45552,7 +45760,7 @@
             "type": "boolean"
           }
         },
-        "required": ["workspace", "session", "messageID", "replayed"],
+        "required": ["workspace", "session", "replayed"],
         "additionalProperties": false
       },
       "SessionHostContinueWorkspaceInput": {
@@ -45681,6 +45889,10 @@
         "required": ["code", "message", "retryable"],
         "additionalProperties": false
       },
+      "SessionHostWorkspaceProfileOwner": {
+        "type": "string",
+        "enum": ["user", "organization"]
+      },
       "SessionHostWorkspaceProfileSummary": {
         "type": "object",
         "properties": {
@@ -45705,24 +45917,95 @@
               }
             ]
           },
-          "isDefault": {
+          "ownerType": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceProfileOwner"
+          },
+          "isPersonalDefault": {
+            "type": "boolean"
+          },
+          "isOrganizationDefault": {
             "type": "boolean"
           }
         },
-        "required": ["id", "name", "description", "isDefault"],
+        "required": ["id", "name", "description", "ownerType", "isPersonalDefault", "isOrganizationDefault"],
         "additionalProperties": false
       },
       "SessionHostWorkspaceProfilePage": {
         "type": "object",
         "properties": {
-          "items": {
+          "personalProfiles": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SessionHostWorkspaceProfileSummary"
             }
+          },
+          "organizationProfiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceProfileSummary"
+            }
+          },
+          "personalDefaultProfileID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organizationDefaultProfileID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "effectiveDefaultProfileID": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
-        "required": ["items"],
+        "required": [
+          "personalProfiles",
+          "organizationProfiles",
+          "personalDefaultProfileID",
+          "organizationDefaultProfileID",
+          "effectiveDefaultProfileID"
+        ],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceProfileDefaultInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+            "format": "uuid"
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceProfileDefaultResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["success"],
         "additionalProperties": false
       },
       "SessionHostWorkspaceComputeStatus": {

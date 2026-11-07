@@ -549,6 +549,26 @@ export const kiloScenarios: Scenario[] = [
     .probe({ path: "/path" })
     .status(401),
   http.protected
+    .post("/kilocode/session-host/workspace/profiles/personal-default", "sessionHost.setWorkspacePersonalDefaultProfile")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/workspace/profiles/personal-default",
+      headers: ctx.headers(),
+      body: { id: "33333333-3333-4333-8333-333333333333" },
+    }))
+    .status(401),
+  http.protected
+    .delete(
+      "/kilocode/session-host/workspace/profiles/personal-default/{profileID}",
+      "sessionHost.clearWorkspacePersonalDefaultProfile",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/profiles/personal-default/{profileID}", {
+        profileID: "33333333-3333-4333-8333-333333333333",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
     .post("/kilocode/session-host/workspace", "sessionHost.createWorkspace")
     .at((ctx) => ({
       path: "/kilocode/session-host/workspace",
