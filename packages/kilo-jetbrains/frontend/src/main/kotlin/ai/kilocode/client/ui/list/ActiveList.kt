@@ -28,7 +28,10 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Rectangle
+import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JViewport
 import javax.swing.KeyStroke
@@ -74,15 +77,46 @@ internal class ActiveList(
     }
 
     /**
-     * Called when the list scrolls. A popup anchored to a row has to close then: the row moves out from
-     * under it, and the balloon would otherwise sit pointing at whatever slid into its place.
+     * Called when the user scrolls the list — a wheel turn, a scrollbar drag, or a click on the track.
+     * A popup anchored to a row has to close then: the row moves out from under it, and the balloon
+     * would otherwise sit pointing at whatever slid into its place.
+     *
+     * Deliberately not the scrollbar's every adjustment: a viewport laying out moves the same model,
+     * and an owner that follows a row must keep doing so through a resize.
      */
     var onScroll: (() -> Unit)? = null
 
     init {
         view.onSelect = onSelect
-        // Any movement, including mid-drag: the row a popup points at has already left that position.
-        scroll.verticalScrollBar.addAdjustmentListener { onScroll?.invoke() }
+        // The row and button under the pointer move with every scroll, including a programmatic
+        // relayout, so their hover is always cleared. Only real user gestures count as scrolling for
+        // [onScroll]: a viewport laying out — a balloon resizing, a relayout — updates the scrollbar
+        // model too, and an owner such as the prompt navigator must not mistake that for the user taking
+        // over the list and drop its pending reveal.
+        scroll.verticalScrollBar.addAdjustmentListener { event ->
+            view.resetHover()
+            if (event.valueIsAdjusting) onScroll?.invoke()
+        }
+        scroll.addMouseWheelListener { onScroll?.invoke() }
+        view.list.addMouseWheelListener { onScroll?.invoke() }
+        // ScrollingUtil's page/home/end bindings move the viewport without changing the selection, so
+        // the selection callback does not cover them. Treat those keys as the user taking over too.
+        view.list.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(e: KeyEvent) {
+                if (e.keyCode == KeyEvent.VK_PAGE_UP ||
+                    e.keyCode == KeyEvent.VK_PAGE_DOWN ||
+                    e.keyCode == KeyEvent.VK_HOME ||
+                    e.keyCode == KeyEvent.VK_END
+                ) {
+                    onScroll?.invoke()
+                }
+            }
+        })
+        scroll.verticalScrollBar.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                onScroll?.invoke()
+            }
+        })
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
         if (surface == ActiveSurface.ToolWindow) isOpaque = true

@@ -6,6 +6,8 @@ import ai.kilocode.client.ui.active.ActiveAnimation
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveCell
 import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveHit
+import ai.kilocode.client.ui.active.ActiveHover
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
 import ai.kilocode.client.ui.active.ActiveMenu
@@ -14,6 +16,7 @@ import ai.kilocode.client.ui.active.ActiveReorder
 import ai.kilocode.client.ui.active.ActiveRowHeight
 import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.activeHoverable
 import ai.kilocode.client.ui.active.activeRegions
 import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.client.ui.layout.Stack
@@ -75,13 +78,15 @@ internal class ActiveListView(
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveItem>()
     private val renderer = ActiveListRenderer(model, cfg, menu, options)
-    // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
-    // have to turn on the hover action bar to get it.
-    private val hover = cfg.hoverActions || menu != null || onHover != null
+    // Row and button-cell hover share one state holder, so only one element is ever hovered and the
+    // hit regions of the current row are rebuilt once per entry instead of on every mouse move.
+    private val hover = ActiveHover()
     internal val list: JBList<ActiveItem> = object : JBList<ActiveItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
-        override fun hoveredIndex(): Int = hovered
+        override fun hoveredIndex(): Int = hover.row
+
+        override fun hoveredCell(): String? = hover.cell
 
         override fun processMouseEvent(e: MouseEvent) {
             if (e.id == MouseEvent.MOUSE_PRESSED && UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) {
@@ -227,26 +232,37 @@ internal class ActiveListView(
             }
 
             override fun mouseMoved(e: MouseEvent) {
-                if (hover && drag == null) {
-                    val idx = list.locationToIndex(e.point)
-                        .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
-                        ?: -1
-                    setHovered(idx)
+                if (drag != null) {
+                    syncCursor(cursorAt(e.point))
+                    return
                 }
-                syncCursor(cursorAt(e.point))
+                val idx = list.locationToIndex(e.point)
+                    .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
+                    ?: -1
+                val selected = idx >= 0 && list.isSelectedIndex(idx)
+                val oldCell = hover.cell
+                val hit = hover.move(idx, selected, e.point) { hoveredCells(idx, selected) }
+                if (hovered != idx) {
+                    setHovered(idx)
+                } else if (oldCell != hover.cell) {
+                    repaintRow(idx)
+                    animation.update()
+                }
+                syncCursor(hit?.let { Cursor.getPredefinedCursor(it.cursor) } ?: baseCursor)
             }
 
             override fun mouseExited(e: MouseEvent) {
-                if (hover) setHovered(-1)
+                setHovered(-1)
                 syncCursor(baseCursor)
             }
         }
         list.addMouseListener(mouse)
         list.addMouseMotionListener(mouse)
         list.addListSelectionListener { e: ListSelectionEvent ->
-            // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
-            // its selection flips instead of waiting for the next mouse move.
-            if (hover) repaintRow(hovered)
+            // Selection gates the hover-revealed action bar and can add cells, so repaint the hovered
+            // row and drop the cached regions as soon as its selection flips.
+            hover.invalidate()
+            repaintRow(hovered)
             if (!restoring && !e.valueIsAdjusting) {
                 anchor = identities()
                 mark = list.selectedIndex
@@ -267,6 +283,9 @@ internal class ActiveListView(
         })
         list.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
+                // Cached button regions are laid out for the previous width. Drop them so the next
+                // pointer move rebuilds right-aligned hit targets for the new size.
+                hover.invalidate()
                 if (extent == list.width || !cfg.wrapDescription) return
                 extent = list.width
                 resetCellSizes()
@@ -505,6 +524,7 @@ internal class ActiveListView(
     @RequiresEdt
     private fun sync(absent: Absent = Absent.KEEP, at: Int? = null) {
         checkEdt()
+        hover.invalidate()
         val q = filter.trim()
         val base = if (q.isBlank()) items else items.filter { matcher(q, it) }
         val state = drag
@@ -582,6 +602,7 @@ internal class ActiveListView(
     @RequiresEdt
     private fun setHovered(idx: Int) {
         checkEdt()
+        if (idx < 0) hover.clear()
         if (hovered == idx) return
         val old = hovered
         hovered = idx
@@ -591,6 +612,22 @@ internal class ActiveListView(
         // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
         onHover?.invoke(model.items.getOrNull(idx))
         animation.update()
+    }
+
+    /** Drops the row and button hover, for a scroll or resize that moves rows under the pointer. */
+    @RequiresEdt
+    internal fun resetHover() {
+        checkEdt()
+        setHovered(-1)
+    }
+
+    /** Hit regions of [idx]'s buttons, or none when the row has nothing interactive. */
+    private fun hoveredCells(idx: Int, selected: Boolean): List<ActiveHit> {
+        if (idx < 0 || idx >= model.size || !list.isEnabled) return emptyList()
+        val item = model.getElementAt(idx)
+        if (item is ActiveGap || item.disabled || item.progress != null) return emptyList()
+        if (!activeHoverable(item, menu)) return emptyList()
+        return activeListHits(list, idx, selected)
     }
 
     /**
