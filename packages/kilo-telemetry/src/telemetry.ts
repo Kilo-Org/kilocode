@@ -90,6 +90,18 @@ export interface McpAuthCompletedProperties extends McpAuthStartedProperties {
   authHandler?: string
 }
 
+/** One marketplace item installed into, or removed from, one config scope. Never carries parameter values. */
+export interface MarketplaceItemProperties extends Record<string, unknown> {
+  itemId: string
+  itemType: string
+  itemName?: string
+  target: "project" | "global"
+  /** `custom` when `KILO_MARKETPLACE_BASE_URL` points at a non-public catalog. */
+  catalog: "public" | "custom"
+  hasParameters?: boolean
+  installationMethodName?: string
+}
+
 export namespace Telemetry {
   let initialized = false
   let startTime = 0
@@ -331,6 +343,15 @@ export namespace Telemetry {
 
   export function trackMcpAuthCompleted(properties: McpAuthCompletedProperties) {
     track(TelemetryEvent.MCP_AUTH_COMPLETED, properties)
+  }
+
+  // Marketplace
+  export function trackMarketplaceItemInstalled(properties: MarketplaceItemProperties) {
+    track(TelemetryEvent.MARKETPLACE_ITEM_INSTALLED, properties)
+  }
+
+  export function trackMarketplaceItemRemoved(properties: MarketplaceItemProperties) {
+    track(TelemetryEvent.MARKETPLACE_ITEM_REMOVED, properties)
   }
 
   // Remote
