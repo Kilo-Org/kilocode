@@ -96,6 +96,56 @@ describe("sandbox FileSystem", () => {
     })
   })
 
+  test("rejects queued replacement of an existing marker file before the batch runs", async () => {
+    const cache = path.join(root, "markers")
+    const marker = path.join(cache, ".git")
+    await mkdir(path.join(cache, "repo"), { recursive: true })
+    await writeFile(marker, "")
+    const requests: Request[] = []
+    const runner: Runner = (_profile, request) => Effect.sync(() => requests.push(request)).pipe(Effect.as(undefined))
+    const profile: Profile = {
+      ...makeProfile(cache),
+      filesystem: { allowWrite: [{ path: cache, kind: "subtree", markers: true }], denyWrite: [], denyNames: [".git"] },
+    }
+    const batch = (effect: (fs: FileSystem.FileSystem) => Effect.Effect<void, unknown>) =>
+      execute(
+        withRunner(
+          runner,
+          run(
+            profile,
+            batchMutations(
+              Effect.gen(function* () {
+                yield* effect(yield* FileSystem.FileSystem)
+              }),
+            ),
+          ),
+        ).pipe(Effect.exit),
+      )
+
+    // Each operation sees a regular file at check time, but would leave a directory or link behind.
+    const replace = await batch((fs) =>
+      Effect.gen(function* () {
+        yield* fs.remove(marker)
+        yield* fs.symlink(path.join(cache, "repo"), marker)
+      }),
+    )
+    const swap = await batch((fs) =>
+      Effect.gen(function* () {
+        yield* fs.makeDirectory(path.join(cache, "dir"))
+        yield* fs.rename(path.join(cache, "dir"), marker)
+      }),
+    )
+    const write = await batch((fs) => fs.writeFileString(marker, "data"))
+
+    expect(replace._tag).toBe("Failure")
+    expect(swap._tag).toBe("Failure")
+    expect(write._tag).toBe("Success")
+    expect(requests).toMatchObject([
+      { op: "batch", operations: [{ op: "makeDirectory" }] },
+      { op: "batch", operations: [{ op: "writeFileString", path: marker }] },
+    ])
+  })
+
   test("flushes queued mutations before propagating a later failure", async () => {
     await mkdir(allowed, { recursive: true })
     const requests: Request[] = []

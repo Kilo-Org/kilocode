@@ -114,7 +114,7 @@ Writes are allowed in:
 
 Writes are denied everywhere else. The following rules still apply inside writable locations:
 
-- `.git` directories are always read-only to sandboxed tools.
+- `.git` directories are always read-only to sandboxed tools. Inside the workspace and Kilo's paths, any entry named `.git` is read-only. Inside `sandbox.writable_paths`, a regular file named `.git` (such as the marker uv keeps in its cache) can be created and written in place. On macOS it cannot be replaced, moved or removed. Git worktrees and submodules use such a file to point at their Git directory, so a sandboxed command could repoint one inside a writable path at a Git directory it controls, and Git would follow it the next time you run Git there. Avoid adding a directory that contains repositories or worktrees to `sandbox.writable_paths`.
 - Kilo's stored sandbox policy and preference files are read-only.
 - Kilo's global config root is read-only so a sandboxed command cannot widen network or write authority for a later session.
 - A permission approval for a path outside the sandbox does not make that path writable. Add the path to **Additional Writable Paths** if the tool must modify it.
