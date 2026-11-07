@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 101,
-    "markedLines": 1660,
+    "markedLines": 1676,
     "unmarkedLines": 299,
     "deletedFiles": 0
   },
@@ -17,7 +17,7 @@
     },
     "specs/v2/session-sync.md": {
       "rung": 4,
-      "seam": "Repository-specific native session sync design and operator commands. The v2 specification directory holds the producer contract; the cloud repository holds service admission, storage, and rollout. No runtime change."
+      "seam": "Repository-specific native session sync design and operator commands. The v2 specification directory holds the producer contract; the cloud repository holds service admission, storage, and rollout. This contract now states canonical workspace-root routing, restored/reconnected ownership, bounded pending admission and credential/account fences (+13 non-empty marked lines), and paged model discovery (+3). The exact 16-line documentation growth raises only the markedLines budget from 1660 to 1676; file, unmarked-line and deletion budgets are unchanged. Plugin hooks and host composition cannot supply repository specification text. Runtime and RPC implementations remain in Kilo-owned paths; this shared-file growth is documentation only."
     },
     "packages/cli/src/commands/commands.ts": {
       "rung": 3,
