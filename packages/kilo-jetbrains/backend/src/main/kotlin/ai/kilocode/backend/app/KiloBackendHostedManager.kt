@@ -96,7 +96,7 @@ class KiloBackendHostedManager(
         private const val INITIAL_BACKOFF_MS = 500L
         private const val OUTPUT_LIMIT = 65_536
         private const val ATTEMPT_LIMIT = 2
-        internal const val COLLECTOR_CAPACITY = 64
+        internal const val COLLECTOR_CAPACITY = 128
         private val MODEL = Regex("[a-zA-Z0-9._/\\-:~]{1,255}")
         private val AGENT = Regex("[a-z][a-z0-9-]{0,49}")
         private val MESSAGE = Regex("msg_[0-9a-f]{12}[0-9A-Za-z]{14}")
@@ -237,8 +237,9 @@ class KiloBackendHostedManager(
                 val index = queue.indexOfFirst {
                     it.action == "step_output" || (it.kind == "preparing" && !terminal(it))
                 }
-                if (index < 0) break
-                queue.removeAt(index)
+                // The bound is hard even when every queued event is protected. Keep the newest
+                // event by evicting the oldest protected one once no coalescible event remains.
+                queue.removeAt(if (index >= 0) index else 0)
             }
             wake.trySend(Unit)
         }

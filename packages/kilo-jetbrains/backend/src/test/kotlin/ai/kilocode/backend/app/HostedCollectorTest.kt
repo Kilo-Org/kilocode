@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HostedCollectorTest {
+    private val capacity = 128
     @Test
     fun `output is coalesced per step`() = runBlocking {
         val collector = KiloBackendHostedManager.Collector()
@@ -30,8 +31,22 @@ class HostedCollectorTest {
         collector.close()
 
         val events = drain(collector)
-        assertTrue(events.size <= KiloBackendHostedManager.COLLECTOR_CAPACITY + 1)
+        assertTrue(events.size <= capacity + 1)
         assertTrue(events.any { it.action == "attempt_completed" })
+    }
+
+    @Test
+    fun `protected events are still hard capped`() = runBlocking {
+        val collector = KiloBackendHostedManager.Collector()
+        repeat(200) { index ->
+            collector.offer(event(index, action = "attempt_failed", failure = "workspace_setup_failed", step = "s$index"))
+        }
+        collector.close()
+
+        val events = drain(collector)
+        assertEquals(capacity, events.size)
+        assertEquals("attempt_failed", events.last().action)
+        assertEquals(199.0, events.last().observedAt)
     }
 
     private suspend fun drain(collector: KiloBackendHostedManager.Collector): List<HostedSystemEventDto> {
@@ -48,6 +63,7 @@ class HostedCollectorTest {
         action: String,
         output: String? = null,
         step: String = "step",
+        failure: String? = null,
     ) = HostedSystemEventDto(
         sessionID = "hosted:cloud:wrk:ses",
         kind = "preparing",
@@ -55,6 +71,7 @@ class HostedCollectorTest {
         attemptID = "attempt",
         stepID = step,
         step = "setup",
+        failure = failure,
         output = output,
         observedAt = index.toDouble(),
         revision = index.toLong(),
