@@ -310,6 +310,87 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
+  const cleanText = (text: string) => {
+    if (!text) return ""
+    let cleaned = text.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+    cleaned = cleaned
+      .split("```")
+      .map((part, i) => (i % 2 === 0 ? part.replace(/[ \t]+/g, " ") : part))
+      .join("```")
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n")
+    return cleaned.trim()
+  }
+
+  const model = createMemo(() => {
+    const msg = lastAssistant()
+    if (!msg) return ""
+    return Model.name(providers(), msg.providerID, msg.modelID)
+  })
+
+  const duration = createMemo(() => {
+    const msg = lastAssistant()
+    if (!msg || !msg.time.completed) return 0
+    const user = messages().find((x) => x.role === "user" && x.id === msg.parentID)
+    if (!user || !user.time) return 0
+    return msg.time.completed - user.time.created
+  })
+
+  const copyText = () => {
+    const msg = lastAssistant()
+    if (!msg) return
+    const text = (sync.data.part[msg.id] ?? [])
+      .filter((x): x is TextPart => x.type === "text")
+      .map((x) => x.text)
+      .join("\n")
+    const cleanedText = cleanText(text)
+    if (!cleanedText) {
+      toast.show({ message: "No text found", variant: "error" })
+      return
+    }
+    clipboard.write?.(cleanedText)
+      .then(() => toast.show({ message: "Text copied to clipboard!", variant: "success" }))
+      .catch(() => toast.show({ message: "Failed to copy text", variant: "error" }))
+  }
+
+  const copyRaw = () => {
+    const msg = lastAssistant()
+    if (!msg) return
+    const rawParts = (sync.data.part[msg.id] ?? [])
+      .map((p: Part) => {
+        if (p.type === "reasoning") return `[Thought]\n${p.text}`
+        if (p.type === "tool") {
+          const tool = p.tool
+          const input = p.state.input
+          const output = p.state.status === "completed" ? p.state.output : ""
+          return `[Tool: ${tool}]\nInput: ${JSON.stringify(input, null, 2)}\nOutput: ${output}`
+        }
+        if (p.type === "text") return p.text
+        return ""
+      })
+      .filter(Boolean)
+      .join("\n\n")
+    const cleanedRaw = cleanText(rawParts)
+    if (!cleanedRaw) {
+      toast.show({ message: "No text found", variant: "error" })
+      return
+    }
+    clipboard.write?.(cleanedRaw)
+      .then(() => toast.show({ message: "Raw copied to clipboard!", variant: "success" }))
+      .catch(() => toast.show({ message: "Failed to copy raw", variant: "error" }))
+  }
+
+  const routed = createMemo(() => {
+    const msg = lastAssistant()
+    if (!msg) return undefined
+    return RoutedModelMeta.info(providers(), sync.data.part[msg.id] ?? [], showDetails(), msg)
+  })
+
+  const routeFooter = createMemo(() => {
+    const r = routed()
+    if (!r) return undefined
+    return r.footer
+  })
+
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
@@ -521,7 +602,25 @@ export function Session() {
       scroll.scrollTo(scroll.scrollHeight)
     }, 50)
   }
+  const jumpPrev = () => {
+    const targetID = findNextVisibleMessage("prev")
+    if (!targetID) {
+      scroll.scrollTo(0)
+      return
+    }
+    const child = scroll.getChildren().find((c) => c.id === targetID)
+    if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
 
+  const jumpNext = () => {
+    const targetID = findNextVisibleMessage("next")
+    if (!targetID) {
+      scroll.scrollTo(scroll.scrollHeight)
+      return
+    }
+    const child = scroll.getChildren().find((c) => c.id === targetID)
+    if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
   const local = useLocal()
 
   function enterChild(sessionID: string) {
@@ -1460,6 +1559,46 @@ export function Session() {
                 <Show when={networkVisible()}>
                   <NetworkPrompt request={network()[0]} />
                 </Show>
+                <box flexShrink={0} paddingTop={1} paddingBottom={1}>
+                  <Show when={lastAssistant()} keyed>
+                    {(msg) => (
+                      <box flexShrink={0} paddingLeft={3} marginTop={1}>
+                        <box flexDirection="row">
+                          <text>
+                            <span style={{ fg: local.agent.color(msg.agent) }}>▣ </span>
+                            <span style={{ fg: theme.text }}>{Locale.titlecase(msg.mode)}</span>
+                            <span style={{ fg: theme.textMuted }}>  |  {model()}</span>
+                            <Show when={routeFooter()}>
+                              <span style={{ fg: theme.textMuted }}>  |  {routeFooter()}</span>
+                            </Show>
+                            <Show when={duration()}>
+                              <span style={{ fg: theme.textMuted }}>  |  {Locale.duration(duration())}</span>
+                            </Show>
+                            <Show when={msg.error?.name === "MessageAbortedError"}>
+                              <span style={{ fg: theme.textMuted }}>  |  interrupted</span>
+                            </Show>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyText()} fg={theme.text}>
+                            <b>text</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyRaw()} fg={theme.text}>
+                            <b>raw</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => jumpPrev()} fg={theme.text}>
+                            <b>↑</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => jumpNext()} fg={theme.text}>
+                            <b>↓</b>
+                          </text>
+                        </box>
+                      </box>
+                    )}
+                  </Show>
+                </box>
                 <Show when={visible()}>
                   <pluginRuntime.Slot
                     name="session_prompt"
@@ -1621,80 +1760,11 @@ function UserMessage(props: {
 
 function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const ctx = use()
-  const local = useLocal()
   const { theme } = useTheme()
   const sync = useSync()
   const clipboard = useClipboard()
   const toast = useToast()
-  const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
-  const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
-  
-  // 👇 FUNGSI BARU UNTUK KOMPRESI TEKS
-  const cleanText = (text: string) => {
-    if (!text) return ""
-    // 1. Buang emoji
-    let cleaned = text.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
-    // 2. Ubah spasi/tab beruntun menjadi satu spasi
-    cleaned = cleaned.replace(/[ \t]+/g, " ")
-    // 3. Ubah 3 baris baru atau lebih menjadi maksimal 2 baris baru
-    cleaned = cleaned.replace(/\n{3,}/g, "\n\n")
-    // 4. Trim awal dan akhir
-    return cleaned.trim()
-  }
-
-  const copyText = () => {
-    const text = props.parts.filter((x) => x.type === "text").map((x) => (x as any).text ?? "").join("\n")
-    // 👇 Terapkan cleanText
-    const cleanedText = cleanText(text)
-    
-    clipboard.write?.(cleanedText)
-      .then(() => toast.show({ message: "Text copied to clipboard!", variant: "success" }))
-      .catch(() => toast.show({ message: "Failed to copy text", variant: "error" }))
-  }
-  
-  const copyRaw = (allMessages: any[] | undefined) => {
-    if (!Array.isArray(allMessages)) {
-      clipboard.write?.("No message history found")
-      return
-    }
-    const rawParts = allMessages
-      .filter((m: any) => m.role === "assistant")
-      .flatMap((m: any) => sync.data.part[m.id] ?? [])
-      .map((p: any) => {
-        if (p.type === "reasoning" || p.type === "thought") return `[Thought]\n${(p as any).text ?? ""}`
-        if (p.type === "tool") {
-          const tool = (p as any).tool ?? ""
-          const input = (p as any).state?.input ?? {}
-          const output = (p as any).state?.output ?? ""
-          return `[Tool: ${tool}]\nInput: ${JSON.stringify(input, null, 2)}\nOutput: ${output}`
-        }
-        if (p.type === "text") return (p as any).text ?? ""
-        return ""
-      })
-      .filter(Boolean)
-      .join("\n\n")
-
-    // 👇 Terapkan cleanText
-    const cleanedRaw = cleanText(rawParts)
-
-    clipboard.write?.(cleanedRaw)
-      .then(() => toast.show({ message: "Raw copied to clipboard!", variant: "success" }))
-      .catch(() => toast.show({ message: "Failed to copy raw", variant: "error" }))
-  }
   const routed = createMemo(() => RoutedModelMeta.info(ctx.providers(), props.parts, ctx.showDetails(), props.message)) // kilocode_change
-  const route = createMemo(() => routed().footer) // kilocode_change
-
-  const final = createMemo(() => {
-    return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
-  })
-
-  const duration = createMemo(() => {
-    if (!final()) return 0
-    if (!props.message.time.completed) return 0
-    const user = messages().find((x) => x.role === "user" && x.id === props.message.parentID)
-    if (!user || !user.time) return 0
-    return props.message.time.completed - user.time.created
-  })
 
   const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
@@ -1766,51 +1836,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         />
       </Show>
       {/* kilocode_change end */}
-      <Switch>
-        <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
-            <box flexDirection="row" marginTop={1}>
-              <text>
-                <span
-                  style={{
-                    fg:
-                      props.message.error?.name === "MessageAbortedError"
-                        ? theme.textMuted
-                        : local.agent.color(props.message.agent),
-                  }}
-                >
-                  ▣{" "}
-                </span>{" "}
-                <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-                <span style={{ fg: theme.textMuted }}>  |  {model()}</span>
-                {/* kilocode_change start - show routed model in regular assistant footer */}
-                <Show when={route()}>
-                  <span style={{ fg: theme.textMuted }}>  |  {route()}</span>
-                </Show>
-                {/* kilocode_change end */}
-                <Show when={duration()}>
-                  <span style={{ fg: theme.textMuted }}>  |  {Locale.duration(duration())}</span>
-                </Show>
-                <Show when={props.message.error?.name === "MessageAbortedError"}>
-                  <span style={{ fg: theme.textMuted }}>  |  interrupted</span>
-                </Show>
-              </text>
-              
-              <text fg={theme.textMuted}>  |  </text>
-              
-              <text onMouseDown={() => copyText()} fg={theme.text}>
-                <b>text</b>
-              </text>
-              
-              <text fg={theme.textMuted}>  |  </text>
-              
-              <text onMouseDown={() => copyRaw(messages())} fg={theme.text}>
-                <b>raw</b>
-              </text>
-            </box>
-          </box>
-        </Match>
-      </Switch>
     </>
   )
 }

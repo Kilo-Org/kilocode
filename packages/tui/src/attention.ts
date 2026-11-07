@@ -1,5 +1,5 @@
 /// <reference path="./audio.d.ts" />
-import { exec, execSync } from "node:child_process"
+import { execFileSync, execSync } from "node:child_process"
 import type {
   TuiAttention,
   TuiAttentionNotifyInput,
@@ -14,10 +14,12 @@ import type {
 
 /** Captured at module load so notification click can refocus the terminal window. */
 let TERMINAL_WINDOW_ID: string | undefined
-try {
-  TERMINAL_WINDOW_ID = execSync("xdotool getactivewindow", { encoding: "utf-8" }).trim()
-} catch {
-  // xdotool not available; window focus on click will be skipped
+if (process.platform === "linux") {
+  try {
+    TERMINAL_WINDOW_ID = execSync("/usr/bin/xdotool getactivewindow", { encoding: "utf-8" }).trim()
+  } catch {
+    // xdotool not available; window focus on click will be skipped
+  }
 }
 import { AttentionSoundName, type TuiConfig } from "./config"
 import { Schema } from "effect"
@@ -89,8 +91,8 @@ function clampVolume(volume: number) {
   return Math.min(1, Math.max(0, volume))
 }
 
-function soundVolume(input: TuiAttentionNotifyInput, config: Pick<TuiConfig.Resolved, "attention">) {
-  if (!config.attention.sound) return
+function soundVolume(input: TuiAttentionNotifyInput, config: Pick<TuiConfig.Resolved, "attention">, soundEnabled: boolean) {
+  if (!soundEnabled) return
   if (input.sound === false) return
   if (input.sound === undefined) return clampVolume(config.attention.volume)
   if (input.sound === true) return clampVolume(config.attention.volume)
@@ -184,28 +186,30 @@ export function createTuiAttention(input: {
         const message = normalizeText(request.message, "", MESSAGE_LIMIT)
         if (!message) return skipped("empty_message")
 
+        const soundEnabled = (input.kv?.get<boolean>("attention.sound") ?? input.config.attention.sound) as boolean
+        const notifyEnabled = (input.kv?.get<boolean>("attention.notifications") ?? input.config.attention.notifications) as boolean
+
         const requestedNotification = typeof request.notification === "object" ? request.notification : undefined
         const notificationSkip = focusSkip(requestedNotification?.when ?? "blurred", focus)
-        const notificationRequested = input.config.attention.notifications && request.notification !== false
+        const notificationRequested = notifyEnabled && request.notification !== false
         const shouldNotify = notificationRequested && !notificationSkip
         const notification = shouldNotify
           ? (() => {
               const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
               try {
                 if (process.platform === "linux") {
-                  exec(
-                    `notify-send --action=default=Open "${title}" "${message}"`,
-                    (err, stdout) => {
-                      if (err) {
-                        console.debug("notify-send failed", { error: err })
-                        return
-                      }
-                      if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
-                        exec(`xdotool windowactivate ${TERMINAL_WINDOW_ID}`, () => {})
-                      }
-                    },
-                  )
-                  return true
+                  try {
+                    const stdout = execFileSync("/usr/bin/notify-send", ["--action=default=Open", title, message], {
+                      encoding: "utf-8",
+                    })
+                    if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
+                      execFileSync("/usr/bin/xdotool", ["windowactivate", TERMINAL_WINDOW_ID])
+                    }
+                    return true
+                  } catch (err) {
+                    console.debug("notify-send failed", { error: err })
+                    return input.renderer.triggerNotification(message, title)
+                  }
                 }
                 return input.renderer.triggerNotification(message, title)
               } catch (error) {
@@ -214,7 +218,7 @@ export function createTuiAttention(input: {
               }
             })()
           : false
-        const volume = soundVolume(request, input.config)
+        const volume = soundVolume(request, input.config, soundEnabled)
         const requestedSound = typeof request.sound === "object" ? request.sound : undefined
         const soundSkip = volume === undefined ? undefined : focusSkip(requestedSound?.when ?? "always", focus)
         const soundName =
