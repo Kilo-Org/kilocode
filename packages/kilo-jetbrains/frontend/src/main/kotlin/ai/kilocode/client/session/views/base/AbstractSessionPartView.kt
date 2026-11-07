@@ -144,6 +144,18 @@ abstract class AbstractSessionPartView(
         return true
     }
 
+    /**
+     * Expands a collapsed card for a programmatic reveal, which does not go through [toggle]. The header
+     * has to be refreshed too: [expand] only attaches the body, so the chevron would still show the
+     * collapsed arrow.
+     */
+    fun open(): Boolean {
+        if (!expand()) return false
+        syncExpandable(true)
+        refresh()
+        return true
+    }
+
     protected fun hasBody(): Boolean = body != null
 
     protected fun bodyComponent(): JComponent = body()

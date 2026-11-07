@@ -17,6 +17,7 @@ import java.awt.Rectangle
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
 import javax.swing.JList
 import javax.swing.JScrollPane
 import javax.swing.KeyStroke
@@ -187,10 +188,72 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         fix.popup.select(39)
         assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
 
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        list.dispatchEvent(
+            MouseWheelEvent(
+                list,
+                MouseEvent.MOUSE_WHEEL,
+                0L,
+                0,
+                0,
+                0,
+                0,
+                false,
+                MouseWheelEvent.WHEEL_UNIT_SCROLL,
+                1,
+                3,
+            ),
+        )
         fix.port.viewPosition = Point(0, 0)
         fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
 
         assertEquals("manual scrolling must stop the resize follow", Point(0, 0), fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    fun `test keyboard scrolling stops revealing the hovered row on resize`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
+
+        val list = findList(fix.popup.component) ?: error("expected a JList of rows")
+        // Key events need a focused component in a showing window, so invoke the installed listener
+        // directly; this still covers the wiring under test.
+        val key = KeyEvent(list, KeyEvent.KEY_PRESSED, 0L, 0, KeyEvent.VK_PAGE_UP, KeyEvent.CHAR_UNDEFINED)
+        list.keyListeners.forEach { it.keyPressed(key) }
+        val after = fix.port.viewPosition
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals("keyboard scrolling must stop the resize follow", after, fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * The balloon lays the list out after sizing it, and that pass updates the scrollbar model too.
+     * That is not the user scrolling, so it must not drop the follow: the hovered row still has to be
+     * revealed when the viewport settles to its final, shorter extent.
+     */
+    fun `test a layout-time scrollbar update keeps the hovered row revealed`() {
+        val fix = shown(40, hovered = 39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the hovered last row starts at the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        val scroll = findScroll(fix.popup.component) ?: error("expected the row list to own a scroll pane")
+        scroll.verticalScrollBar.maximum += 40
+
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals(
+            "a layout-time model update must not stop the hovered row following the resize",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
 
         Disposer.dispose(fix.popup.disposable)
     }
