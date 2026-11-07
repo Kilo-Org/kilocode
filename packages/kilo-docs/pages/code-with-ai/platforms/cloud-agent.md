@@ -60,14 +60,24 @@ On the **General** tab:
 
 - **Default sandbox** — the sandbox for new sessions when a repository has no override. The dialog names the sandbox that **Platform default** resolves to, so you can see what a session uses when nothing else applies.
 - **Repository overrides** — set or clear a sandbox and an [agent environment profile](#agent-environment-profiles) for an individual repository.
+- **Your agent preferences** — personal agent settings that apply only to sessions you start; see [Your agent preferences](#your-agent-preferences).
 
 The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, **Agents**, **Instructions**, and **Import**.
 
-Each change saves as you make it. In an organization, members see the settings read-only; only owners and admins can change them.
+Each change saves as you make it. In an organization, members see the organization's sandbox and repository defaults read-only; only owners and admins can change them. Your own agent preferences stay editable.
 
 When you start a session, the sandbox is resolved in this order: the sandbox you pick in the new-session field, then the repository override, then the owner default, then the platform default. A saved choice that is no longer offered, or that is not available for the repository, falls through to the next level. The new-session picker preselects the sandbox that applies and tags it **Default**.
 
 Vercel sandboxes are offered for GitHub repositories only. If your account cannot select a sandbox, the settings show where sessions run as plain text and the new-session page hides the picker.
+
+### Your agent preferences
+
+At the bottom of the **General** tab, **Your agent preferences** controls personal Cloud Agent settings. They apply to every session you start, including organization sessions, and they do not change settings for other members.
+
+- **Agent modes** — toggle **Plan**, **Debug**, **Orchestrator**, and **Ask** in your agent picker. **Code** stays enabled because new sessions start in Code mode. Pick a mode's model in each session.
+- **Background models** — choose a model and thinking variant for **Explore** and **Compaction**, or keep the session model. An override applies only when the chosen model is available to the session.
+
+If you previously saved mode models, the section notes they are still active and offers **Use session model for all modes** to clear them.
 
 ## Repository environments
 
@@ -170,11 +180,18 @@ A worktree is a checkout of your repository on its own branch. It can host multi
 
 Each chat opens as its own tab in the worktree group. You can rename tabs, close and reopen them, or delete a whole worktree and all of its chats.
 
+### Deleting sessions and worktrees
+
+Delete a session from the Sessions view or the Cloud Agent sidebar. Deleting a session removes its saved history. When you delete the last chat in a worktree, Kilo asks you to confirm that the worktree's workspace and files are deleted with it, then removes the worktree. If another root chat was created in the worktree before you confirm, Kilo keeps the workspace and removes only the chat you selected.
+
+Deleting saved history does not depend on the sandbox being reachable. If the runtime or container cannot be cleaned up, Kilo still removes the history and shows a cleanup-pending warning instead of blocking the deletion, and keeps the pending workspace cleanup for a later retry.
+
 ### Workspace folders
 
 Group worktrees into folders in the sidebar. Folders are private to you, not shared with your organization.
 
 - Create a folder with a name and an optional color, then drag worktrees onto it.
+- Drag a session onto a folder to file it there, or onto **Ungrouped** to remove it from its folder. A standalone session moves into a new worktree of its own, while a session that already shares a worktree moves together with the rest of that worktree's chats. Child sessions cannot be moved this way.
 - Use the folder menu to rename it, change its color, move it up or down, or delete it. Deleting a folder returns its worktrees to **Ungrouped** without deleting them.
 - Click a folder's header to collapse or expand it.
 
@@ -191,6 +208,12 @@ Drag the divider between the list and the diff to resize the file list between 2
 Use the side-by-side toggle in the file viewer to switch between a unified diff and a split, side-by-side diff. The viewer starts in unified and remembers your choice for the files you open next. The markdown preview is unaffected.
 
 These are saved snapshots, not a live view of the checkout. Diffs may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
+
+## Inspecting session failures
+
+When a Cloud Agent session has failed runs, open the session's info dialog from the session header and expand the failure-history section. It lists the session's recent runs with dates, status, and a safe diagnostic message so you can see which runs failed and why without collecting logs by hand. The list is capped at the latest 50 runs, and the section is hidden when the session has no failures. It covers both regular sessions and worktree chats.
+
+Use **Download diagnostics** to save the same data as JSON, or **Download CSV** to save it as a spreadsheet. The exports include the Cloud Agent session ID, the Kilo session ID, and timestamps you can paste into a support ticket. Diagnostics past their retention window are left out of the export, and you can read failure data only for sessions you own.
 
 ## Pull request status
 
