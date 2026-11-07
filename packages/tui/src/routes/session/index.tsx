@@ -340,27 +340,28 @@ export function Session() {
     return msg.time.completed - user.time.created
   })
 
-  const copyText = () => {
-    const msg = lastAssistant()
-    if (!msg) return
-    const text = (sync.data.part[msg.id] ?? [])
+  // --- Utility helpers for copy actions ---
+  const getTurnMessages = () => {
+    const lastUserIndex = messages().findLastIndex((m) => m.role === "user")
+    if (lastUserIndex === -1) return []
+    return messages().slice(lastUserIndex).filter((m) => m.role === "assistant")
+  }
+
+  const getAllAssistantMessages = () => {
+    return messages().filter((m) => m.role === "assistant")
+  }
+
+  const extractText = (msgs: any[]) => {
+    return msgs
+      .flatMap((m) => sync.data.part[m.id] ?? [])
       .filter((x): x is TextPart => x.type === "text")
       .map((x) => x.text)
       .join("\n")
-    const cleanedText = cleanText(text)
-    if (!cleanedText) {
-      toast.show({ message: "No text found", variant: "error" })
-      return
-    }
-    clipboard.write?.(cleanedText)
-      .then(() => toast.show({ message: "Text copied to clipboard!", variant: "success" }))
-      .catch(() => toast.show({ message: "Failed to copy text", variant: "error" }))
   }
 
-  const copyRaw = () => {
-    const msg = lastAssistant()
-    if (!msg) return
-    const rawParts = (sync.data.part[msg.id] ?? [])
+  const extractRaw = (msgs: any[]) => {
+    return msgs
+      .flatMap((m) => sync.data.part[m.id] ?? [])
       .map((p: Part) => {
         if (p.type === "reasoning") return `[Thought]\n${p.text}`
         if (p.type === "tool") {
@@ -374,15 +375,24 @@ export function Session() {
       })
       .filter(Boolean)
       .join("\n\n")
-    const cleanedRaw = cleanText(rawParts)
-    if (!cleanedRaw) {
+  }
+
+  const copyToClipboard = (content: string, label: string) => {
+    const cleaned = cleanText(content)
+    if (!cleaned) {
       toast.show({ message: "No text found", variant: "error" })
       return
     }
-    clipboard.write?.(cleanedRaw)
-      .then(() => toast.show({ message: "Raw copied to clipboard!", variant: "success" }))
-      .catch(() => toast.show({ message: "Failed to copy raw", variant: "error" }))
+    clipboard
+      .write?.(cleaned)
+      .then(() => toast.show({ message: `${label} copied to clipboard!`, variant: "success" }))
+      .catch(() => toast.show({ message: `Failed to copy ${label.toLowerCase()}`, variant: "error" }))
   }
+
+  const copyTurnText = () => copyToClipboard(extractText(getTurnMessages()), "Turn text")
+  const copyTurnRaw = () => copyToClipboard(extractRaw(getTurnMessages()), "Turn raw")
+  const copyAllText = () => copyToClipboard(extractText(getAllAssistantMessages()), "All text")
+  const copyAllRaw = () => copyToClipboard(extractRaw(getAllAssistantMessages()), "All raw")
 
   const routed = createMemo(() => {
     const msg = lastAssistant()
@@ -1583,12 +1593,20 @@ export function Session() {
                             </Show>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
-                          <text onMouseDown={() => copyText()} fg={theme.text}>
-                            <b>text</b>
+                          <text onMouseDown={() => copyTurnText()} fg={theme.text}>
+                            <b>1-text</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
-                          <text onMouseDown={() => copyRaw()} fg={theme.text}>
-                            <b>raw</b>
+                          <text onMouseDown={() => copyTurnRaw()} fg={theme.text}>
+                            <b>1-raw</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyAllText()} fg={theme.text}>
+                            <b>all-text</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyAllRaw()} fg={theme.text}>
+                            <b>all-raw</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => jumpPrev()} fg={theme.text}>
