@@ -3,10 +3,17 @@ import type { IVectorStore, VectorStoreSearchResult } from "./interfaces"
 import type { IndexingState } from "./interfaces/manager"
 import type { IndexingTelemetryEvent, IndexingTelemetryMeta, IndexingTelemetryTrigger } from "./interfaces/telemetry"
 import { CodeIndexConfigManager, type IndexingConfigInput } from "./config-manager"
-import { DEFAULT_VECTOR_STORE, INITIAL_MANAGER_RECOVERY_DELAY_MS, MAX_MANAGER_RECOVERY_ATTEMPTS } from "./constants"
+import {
+  DEFAULT_VECTOR_STORE,
+  INITIAL_MANAGER_CONTENTION_DELAY_MS,
+  INITIAL_MANAGER_RECOVERY_DELAY_MS,
+  MAX_MANAGER_CONTENTION_DELAY_MS,
+  MAX_MANAGER_RECOVERY_ATTEMPTS,
+} from "./constants"
 import { CodeIndexStateManager } from "./state-manager"
 import { CodeIndexServiceFactory } from "./service-factory"
 import { CodeIndexSearchService } from "./search-service"
+import { WRITER_CONTENTION_MESSAGE } from "./writer-lock"
 import { CodeIndexOrchestrator } from "./orchestrator"
 import { CacheManager } from "./cache-manager"
 import { Emitter } from "./runtime"
@@ -55,6 +62,11 @@ export class CodeIndexManager {
   private _retryAttempt = 0
   private _retryMaxAttempts = MAX_MANAGER_RECOVERY_ATTEMPTS
   private _retryInitialDelayMs = INITIAL_MANAGER_RECOVERY_DELAY_MS
+  private _lockTimer: ReturnType<typeof setTimeout> | undefined
+  private _lockAttempt = 0
+  private _lockReported = false
+  private _lockDelay = INITIAL_MANAGER_CONTENTION_DELAY_MS
+  private _lockMaxDelay = MAX_MANAGER_CONTENTION_DELAY_MS
   private _disposed = false
 
   constructor(
@@ -136,6 +148,51 @@ export class CodeIndexManager {
     return true
   }
 
+  private clearLockRetry(): void {
+    if (this._lockTimer) clearTimeout(this._lockTimer)
+    this._lockTimer = undefined
+    this._lockAttempt = 0
+    this._lockReported = false
+  }
+
+  /**
+   * A session that lost the writer lock keeps that lock's holder, not its own
+   * failure, as the reason it cannot index. Re-check on a capped backoff so it
+   * takes over when the holder releases (exit, clear, disable, error) instead
+   * of staying in Standby until this process restarts. This deliberately does
+   * not run error recovery: recreating services would tear down the search path
+   * the follower can use while it waits.
+   */
+  private scheduleLockRetry(trigger: IndexingTelemetryTrigger): void {
+    if (this._disposed || this._lockTimer) return
+    if (this._retryTask || this._isRecoveringFromError) return
+
+    const attempt = this._lockAttempt
+    this._lockAttempt += 1
+    const delay = Math.min(this._lockDelay * Math.pow(2, attempt), this._lockMaxDelay)
+    // Bind the retry to the orchestrator that reported the contention. A
+    // recovery or settings change replaces the orchestrator, and starting a
+    // run on the replaced (shut down) instance would write nothing while
+    // hiding the new instance from the retry.
+    const orchestrator = this._orchestrator
+    if (!orchestrator) return
+    this._lockTimer = setTimeout(() => {
+      this._lockTimer = undefined
+      if (this._disposed || orchestrator !== this._orchestrator) return
+      if (!this.isFeatureEnabled || !this.isFeatureConfigured) return
+      if (this._retryTask || this._isRecoveringFromError) return
+      log.info("retrying indexing after writer lock contention", {
+        workspacePath: this.workspacePath,
+        attempt,
+        delay,
+      })
+      void orchestrator.startIndexing(trigger).catch((err) => {
+        log.error("indexing contention retry failed", { err, workspacePath: this.workspacePath })
+      })
+    }, delay)
+    this._lockTimer.unref?.()
+  }
+
   private async waitForRetry(delay: number): Promise<void> {
     await new Promise<void>((resolve) => {
       this._retryResolve = resolve
@@ -148,17 +205,45 @@ export class CodeIndexManager {
   }
 
   private handleTelemetry(event: IndexingTelemetryEvent): void {
-    this._telemetry.fire(event)
-
     if (event.type === "completed") {
+      this._telemetry.fire(event)
       this.resetRetryState()
+      this.clearLockRetry()
       return
     }
 
-    if (event.type !== "error") return
-    if (event.location !== "orchestrator:startIndexing" && event.location !== "orchestrator:watcher") return
+    if (event.type !== "error") {
+      this._telemetry.fire(event)
+      return
+    }
+
+    const fromStart =
+      event.location === "orchestrator:startIndexing" || event.location === "orchestrator:watcher"
+    const contention = event.error.includes(WRITER_CONTENTION_MESSAGE)
+
+    // Report the first contention of an episode, not every backoff retry: the
+    // retry loop is expected to see the same lock until its holder releases.
+    // Only the retryable locations are deduplicated, and only while the latch
+    // stands. A clear contention is terminal (the manager never retries it),
+    // so it is always reported rather than swallowed by a latch left over
+    // from a start, and any other failure ends the episode, so the next
+    // contention is reported again.
+    if (!contention) this._lockReported = false
+    if (!(contention && fromStart && this._lockReported)) this._telemetry.fire(event)
+
+    if (!fromStart) return
     if (!this.isFeatureEnabled || !this.isFeatureConfigured) return
     if (this._retryTask || this._isRecoveringFromError) return
+
+    // Lock contention is not failure: another live session holds the writer
+    // lock. Do not run the service-recreating recovery loop, but do re-check the
+    // lock on a bounded backoff so this session takes over when the holder goes
+    // away rather than waiting for a manual restart.
+    if (contention) {
+      this._lockReported = true
+      this.scheduleLockRetry(event.trigger ?? "background")
+      return
+    }
 
     if (this._retryAttempt >= this._retryMaxAttempts) {
       log.warn("indexing recovery retries exhausted", {
@@ -296,6 +381,7 @@ export class CodeIndexManager {
 
     if (!this.isFeatureEnabled) {
       log.info("indexing disabled by configuration", { workspacePath: this.workspacePath })
+      this.clearLockRetry()
       this._orchestrator?.stopWatcher()
       return { requiresRestart }
     }
@@ -368,6 +454,8 @@ export class CodeIndexManager {
         orchestratorState: this._orchestrator?.state,
       })
       this.emitStart("background")
+      // A direct start supersedes a scheduled contention retry.
+      this.clearLockRetry()
       // Fire and forget — indexing is a long-running background process
       this._orchestrator?.startIndexing("background")
     }
@@ -378,6 +466,8 @@ export class CodeIndexManager {
   public async startIndexing(): Promise<void> {
     if (this._disposed) return
     if (!this.isFeatureEnabled) return
+
+    this.clearLockRetry()
 
     await this.refreshBaseline()
     if (this.waiting()) return
@@ -403,11 +493,15 @@ export class CodeIndexManager {
 
   public stopWatcher(): void {
     if (!this.isFeatureEnabled) return
+    // A stop is a decision to stop indexing, so a queued contention retry
+    // must not undo it by starting a fresh run seconds later.
+    this.clearLockRetry()
     this._orchestrator?.stopWatcher()
   }
 
   public cancelIndexing(): void {
     if (!this.isFeatureEnabled) return
+    this.clearLockRetry()
     this._orchestrator?.cancelIndexing()
   }
 
@@ -445,6 +539,7 @@ export class CodeIndexManager {
     if (this._disposed) return
     this._disposed = true
     this.clearRetryTimer()
+    this.clearLockRetry()
     this._retryTask = undefined
     await this._orchestrator?.shutdown?.()
     await this._baselineStore?.close?.()
@@ -454,6 +549,9 @@ export class CodeIndexManager {
 
   public async clearIndexData(): Promise<void> {
     if (!this.isFeatureEnabled) return
+    // A successful clear must stay cleared: drop any queued contention retry
+    // first, or it would rebuild the index seconds after the delete.
+    this.clearLockRetry()
     this.assertInitialized()
     await this._orchestrator!.clearIndexData()
     await this._cacheManager!.clearCacheFile()
@@ -511,6 +609,7 @@ export class CodeIndexManager {
       })
       await this._recreateServices(baseline)
       if (this._disposed) return
+      this.clearLockRetry()
       await this._orchestrator?.startIndexing("background")
     })().finally(() => {
       this._baselineRefresh = undefined
@@ -557,6 +656,9 @@ export class CodeIndexManager {
   }
 
   private async _recreateServices(prepared?: Baseline): Promise<void> {
+    // The orchestrator is about to be replaced; a retry queued against the old
+    // one is dead work, and its timer must not fire mid-recreation.
+    this.clearLockRetry()
     log.info("starting indexing service recreation", { workspacePath: this.workspacePath })
     const factory = new CodeIndexServiceFactory(
       this._configManager!,
@@ -646,6 +748,7 @@ export class CodeIndexManager {
     })
 
     if (!this.isFeatureEnabled) {
+      this.clearLockRetry()
       this._orchestrator?.stopWatcher()
       this._stateManager.setSystemState("Standby", "Code indexing is disabled")
       return

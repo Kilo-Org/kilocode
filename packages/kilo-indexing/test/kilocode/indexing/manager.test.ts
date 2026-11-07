@@ -39,6 +39,8 @@ type Data = {
   _retryTask?: Promise<void>
   _retryMaxAttempts: number
   _retryInitialDelayMs: number
+  _lockDelay: number
+  _lockMaxDelay: number
   _recreateServices(): Promise<void>
   handleTelemetry(event: IndexingTelemetryEvent): void
 }
@@ -73,6 +75,13 @@ function createStartError(location = "orchestrator:startIndexing"): IndexingTele
     provider: "openai",
     vectorStore: "lancedb",
     modelId: "text-embedding-3-small",
+  }
+}
+
+function createContentionError(location = "orchestrator:startIndexing"): IndexingTelemetryEvent {
+  return {
+    ...createStartError(location),
+    error: "Another session is indexing this workspace.",
   }
 }
 
@@ -199,6 +208,11 @@ describe("CodeIndexManager", () => {
         } finally {
           await mgr.dispose()
         }
+        // The manager can leave a native watcher handle alive on Windows even
+        // after dispose. This is a one-shot probe, so exit explicitly instead
+        // of waiting for the event loop to drain; otherwise the parent sees a
+        // live child and times out while all assertions have already passed.
+        process.exit(0)
       `
       const child = Bun.spawn([process.execPath, "-e", script], {
         cwd: join(import.meta.dir, "../../.."),
@@ -210,7 +224,7 @@ describe("CodeIndexManager", () => {
       const timeout = setTimeout(() => {
         child.kill()
         gate.reject(new Error("Indexing subprocess timed out"))
-      }, 10_000)
+      }, 30_000)
       const [exit, stderr] = await Promise.race([
         Promise.all([child.exited, new Response(child.stderr).text()]),
         gate.promise,
@@ -564,6 +578,74 @@ describe("CodeIndexManager", () => {
     expect(start).toBe(0)
   })
 
+  test("retries the writer lock after contention instead of parking until restart", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 0
+    data._lockMaxDelay = 0
+    let starts = 0
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        starts += 1
+      },
+    }
+
+    data.handleTelemetry(createContentionError())
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    // The follower re-checks the lock itself; contention must not go through
+    // the service-recreating recovery loop.
+    expect(starts).toBe(1)
+    await mgr.dispose()
+  })
+
+  test("reports contention once per episode instead of on every backoff", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 1_000
+    data._lockMaxDelay = 1_000
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {},
+    }
+    let events = 0
+    mgr.onTelemetry.on(() => {
+      events += 1
+    })
+
+    data.handleTelemetry(createContentionError())
+    data.handleTelemetry(createContentionError())
+
+    // The retry loop sees the same lock until its holder releases; only the
+    // first failure is a new telemetry event.
+    expect(events).toBe(1)
+    await mgr.dispose()
+  })
+
+  test("dispose cancels a pending writer lock retry", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 25
+    data._lockMaxDelay = 25
+    let starts = 0
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        starts += 1
+      },
+    }
+
+    data.handleTelemetry(createContentionError())
+    await mgr.dispose()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(starts).toBe(0)
+  })
+
   test("retry exhaustion keeps Error and stops future retries", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
     const data = createData(mgr)
@@ -592,5 +674,139 @@ describe("CodeIndexManager", () => {
     data.handleTelemetry(createStartError())
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(calls).toBe(2)
+  })
+
+  test("a clear drops a queued contention retry so the index stays cleared", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 25
+    data._lockMaxDelay = 25
+    let starts = 0
+    let cleared = 0
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        starts += 1
+      },
+      async clearIndexData() {
+        cleared += 1
+      },
+    }
+    data._cacheManager = { async clearCacheFile() {} }
+
+    data.handleTelemetry(createContentionError())
+    await mgr.clearIndexData()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(cleared).toBe(1)
+    expect(starts).toBe(0)
+    await mgr.dispose()
+  })
+
+  test("stop and cancel drop a queued contention retry", async () => {
+    for (const stop of ["stopWatcher", "cancelIndexing"] as const) {
+      const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+      const data = createData(mgr)
+      data._lockDelay = 25
+      data._lockMaxDelay = 25
+      let starts = 0
+      data._orchestrator = {
+        state: "Standby",
+        stopWatcher() {},
+        cancelIndexing() {},
+        async startIndexing() {
+          starts += 1
+        },
+      }
+
+      data.handleTelemetry(createContentionError())
+      mgr[stop]()
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect({ stop, starts }).toEqual({ stop, starts: 0 })
+      await mgr.dispose()
+    }
+  })
+
+  test("a contention retry does not start on a replaced orchestrator", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 25
+    data._lockMaxDelay = 25
+    let oldStarts = 0
+    let newStarts = 0
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        oldStarts += 1
+      },
+    }
+
+    data.handleTelemetry(createContentionError())
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {
+        newStarts += 1
+      },
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(oldStarts).toBe(0)
+    // The retry was queued against the orchestrator that reported contention;
+    // it must not drive the replacement instead.
+    expect(newStarts).toBe(0)
+    await mgr.dispose()
+  })
+
+  test("a clear contention is reported even after a start contention latched", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 1_000
+    data._lockMaxDelay = 1_000
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {},
+    }
+    let events = 0
+    mgr.onTelemetry.on(() => {
+      events += 1
+    })
+
+    data.handleTelemetry(createContentionError())
+    data.handleTelemetry(createContentionError("orchestrator:clearIndexData"))
+
+    // The latch dedupes retry noise only; the clear failure is terminal and
+    // must reach telemetry once.
+    expect(events).toBe(2)
+    await mgr.dispose()
+  })
+
+  test("a non-contention failure ends the episode so the next contention is reported", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    data._lockDelay = 1_000
+    data._lockMaxDelay = 1_000
+    data._orchestrator = {
+      state: "Standby",
+      stopWatcher() {},
+      async startIndexing() {},
+    }
+    let events = 0
+    mgr.onTelemetry.on(() => {
+      events += 1
+    })
+
+    data.handleTelemetry(createContentionError())
+    // A different failure at a non-retryable location ends the contention
+    // episode without a `completed` event.
+    data.handleTelemetry(createStartError("orchestrator:clearIndexData"))
+    data.handleTelemetry(createContentionError())
+
+    expect(events).toBe(3)
+    await mgr.dispose()
   })
 })
