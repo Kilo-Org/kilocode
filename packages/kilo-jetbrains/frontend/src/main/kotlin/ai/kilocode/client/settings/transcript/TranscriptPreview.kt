@@ -17,6 +17,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.ReasoningView
+import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
@@ -35,6 +36,10 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -153,6 +158,9 @@ internal class TranscriptPreview(
     /** Test seam: the MCP / generic tool card rendered in the sample. */
     internal fun mcpCard(): ToolView = first(ToolView::class.java)
 
+    /** Test seam: the answered question card rendered in the sample. */
+    internal fun questionCard(): QuestionResultView = first(QuestionResultView::class.java)
+
     /** Test seam: number of sample parts revealed by the current replay. */
     internal fun visibleCardCount(): Int = view.partIds().size
 
@@ -199,6 +207,7 @@ private fun previewParts(): List<Content> = listOf(
     bashTool(),
     editTool(),
     mcpTool(),
+    questionTool(),
 )
 
 private fun bashTool() = Tool(PREVIEW_BASH_ID, "bash", toolKind("bash")).also {
@@ -231,11 +240,29 @@ private fun mcpTool() = Tool(PREVIEW_MCP_ID, "mcp__filesystem__read_text_file", 
     it.approval = ToolApproval(source = "agent", agent = "code")
 }
 
+private fun questionTool() = Tool(PREVIEW_QUESTION_ID, "question", toolKind("question")).also {
+    it.state = ToolExecState.COMPLETED
+    it.input = mapOf(
+        "questions" to buildJsonArray {
+            addJsonObject {
+                put("question", KiloBundle.message("settings.transcript.preview.question.prompt"))
+                put("header", KiloBundle.message("settings.transcript.preview.question.header"))
+            }
+        }.toString(),
+    )
+    it.metadata = mapOf(
+        "answers" to buildJsonArray {
+            addJsonArray { add(KiloBundle.message("settings.transcript.preview.question.answer")) }
+        }.toString(),
+    )
+}
+
 private const val PREVIEW_MESSAGE_ID = "transcript-preview"
 private const val PREVIEW_REASONING_ID = "transcript-preview-reasoning"
 private const val PREVIEW_BASH_ID = "transcript-preview-bash"
 private const val PREVIEW_EDIT_ID = "transcript-preview-edit"
 private const val PREVIEW_MCP_ID = "transcript-preview-mcp"
+private const val PREVIEW_QUESTION_ID = "transcript-preview-question"
 internal const val PREVIEW_STEP_MS = 500
 
 private val PREVIEW_DIFF = """

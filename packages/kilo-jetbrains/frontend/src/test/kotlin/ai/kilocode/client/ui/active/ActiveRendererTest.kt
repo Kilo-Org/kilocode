@@ -8,6 +8,7 @@ import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.client.ui.AnimationIcon
 import ai.kilocode.client.ui.LiveBadgeIcon
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -19,6 +20,7 @@ import ai.kilocode.client.session.ui.PickerRow
 import com.intellij.util.ui.JBUI
 import com.intellij.ui.components.JBLabel
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import java.awt.AlphaComposite
 import java.awt.Point
@@ -87,6 +89,39 @@ class ActiveRendererTest : BasePlatformTestCase() {
         assertTrue("Menu must be on selection, not tree background", color != view.background.rgb)
         assertEquals(color, image.getRGB(hit.bounds.x + hit.bounds.width - 1, y))
         assertTrue(bounds.contains(hit.bounds))
+    }
+
+    fun `test menu glyph paints the standard hover fill when it is the hovered cell`() {
+        val menu = ActiveMenu(DataKey.create<String>("renderer.menu.hover.fill"), DefaultActionGroup(), { it.key })
+        val tree = ActiveTree("", menu = menu)
+        tree.update(listOf(ActiveTreeNode(row)))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 200)
+        tree.select(row.key, false)
+        val entry = view.getPathForRow(0).lastPathComponent as ActiveEntry
+        val renderer = ActiveRenderer(menu = menu)
+        val state = view.state(entry, true, false, 400).copy(menuVisible = true)
+
+        fun paint(hoveredCell: String?): BufferedImage {
+            renderer.render(state.copy(hoveredCell = hoveredCell))
+            renderer.setSize(400, renderer.preferredSize.height)
+            activeLayout(renderer)
+            val image = BufferedImage(renderer.width, renderer.height, BufferedImage.TYPE_INT_ARGB)
+            val graphics = image.createGraphics()
+            try {
+                renderer.paint(graphics)
+            } finally {
+                graphics.dispose()
+            }
+            return image
+        }
+
+        val plain = paint(null)
+        val hit = renderer.buttons().single { it.id == ACTIVE_MENU_CELL }
+        val lit = paint(ACTIVE_MENU_CELL)
+        val x = hit.bounds.x + 1
+        val y = hit.bounds.y + 1
+        assertTrue("The menu glyph must paint the hover fill", plain.getRGB(x, y) != lit.getRGB(x, y))
     }
 
     fun `test shared content stays fixed when hover reveals menu`() {
@@ -384,7 +419,9 @@ class ActiveRendererTest : BasePlatformTestCase() {
         activeLayout(renderer)
         val icon = labels(renderer).single { it.icon === AllIcons.Actions.Edit }
         val left = SwingUtilities.convertPoint(icon, 0, 0, renderer).x
-        val right = SwingUtilities.convertPoint(menu, menu.width, 0, renderer).x
+        // The menu button reaches the selection edge; its content (the glyph) keeps the same trailing
+        // inset as the row's own content, so measure the content edge rather than the button edge.
+        val right = SwingUtilities.convertPoint(menu, menu.width - menu.insets.right, 0, renderer).x
         val frame = renderer.body() as PickerRow
         val leftGap = left
         val rightGap = renderer.width - right
@@ -463,6 +500,50 @@ class ActiveRendererTest : BasePlatformTestCase() {
             })
         }
     }
+    fun `test selected action pill ends where the menu strip starts`() {
+        val menu = ActiveMenu(DataKey.create<String>("renderer.pill.gap"), DefaultActionGroup(), { it.key })
+        val item = object : ActiveItem {
+            override val key = "action-pill"
+            override val title = "Row with actions"
+            override val cells = listOf(ActiveCell("run", "Run", alwaysVisible = true))
+        }
+        val renderer = ActiveRenderer(menu = menu)
+        val background = UIUtil.getPanelBackground()
+        val selection = UIUtil.getListBackground(true, true)
+        renderer.render(
+            ActiveRenderState(
+                item = item,
+                selected = true,
+                focused = true,
+                active = true,
+                hovered = true,
+                enabled = true,
+                background = background,
+                selectionColor = selection,
+                paintSelection = true,
+                backdrop = selection,
+                foreground = UIUtil.getListForeground(true, true),
+                pillBackground = selection,
+                width = 400,
+                actionsVisible = true,
+                menuVisible = true,
+                opaque = true,
+                bodyHeight = 48,
+            ),
+        )
+        renderer.setSize(400, renderer.preferredSize.height)
+        activeLayout(renderer)
+        val menuHit = renderer.buttons().single { it.id == ACTIVE_MENU_CELL }
+        val action = descendants(renderer).filterIsInstance<ActiveActionCell>().single { it.cellId == "run" }
+        // The pill is the overlay child: the first ancestor whose parent is the null-layout overlay.
+        val pill = generateSequence(action as java.awt.Component) { it.parent }
+            .takeWhile { it !== renderer }
+            .first { it is JPanel && it.parent is JPanel && (it.parent as JPanel).layout == null }
+        val right = SwingUtilities.convertPoint(pill, pill.width, 0, renderer).x
+
+        assertEquals("The action pill ends exactly where the menu strip begins", menuHit.bounds.x, right)
+    }
+
     fun `test tree and list top level selection share outer insets and menu gap`() {
         val menu = ActiveMenu(DataKey.create<String>("renderer.insets"), DefaultActionGroup(), { it.key })
         val tree = ActiveTree("", menu = menu)
@@ -500,8 +581,8 @@ class ActiveRendererTest : BasePlatformTestCase() {
             frame.x + frame.width)
         assertEquals("Body and selection share the cell", frame, body)
 
-        // The row body supplies the same small cell padding as the list, so the trailing menu keeps a
-        // list-sized gutter to the selection edge rather than hugging it.
+        // The row body supplies the same small cell padding as the list. The menu button is a compact
+        // icon-sized overlay that keeps the row's trailing inset, matching the other row glyphs.
         val renderer = ActiveRenderer(menu = menu)
         renderer.render(view.state(entry, true, false, body.width).copy(menuVisible = true))
         renderer.setSize(body.width, renderer.preferredSize.height)
@@ -510,9 +591,9 @@ class ActiveRendererTest : BasePlatformTestCase() {
             .single { it.cellId == ACTIVE_MENU_CELL }
         val right = SwingUtilities.convertPoint(cell, cell.width, 0, renderer).x
         assertEquals("Menu keeps the shared trailing inset", renderer.width, body.width)
-        assertTrue("Menu glyph stays inside the selection", body.x + right <= frame.x + frame.width)
-        assertEquals("Menu keeps the list-sized trailing gap",
-            ai.kilocode.client.ui.UiStyle.Gap.SM, frame.x + frame.width - (body.x + right))
+        assertTrue("Menu button stays inside the selection", body.x + right <= frame.x + frame.width)
+        assertEquals("Menu button keeps the row's trailing inset", JBUI.scale(UiStyle.Gap.SM),
+            frame.x + frame.width - (body.x + right))
     }
 
     private fun descendants(component: java.awt.Component): List<java.awt.Component> =

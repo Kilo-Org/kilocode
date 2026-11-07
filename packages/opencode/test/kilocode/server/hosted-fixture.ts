@@ -23,7 +23,16 @@ export function provider(
     start: () =>
       Effect.fail(new HostedFailure({ code: "invalid_request", message: "start is not supported", retryable: false })),
     listWorkspaces: () => Effect.succeed({ items: [] }),
-    listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
+    listWorkspaceProfiles: () =>
+      Effect.succeed({
+        personalProfiles: [],
+        organizationProfiles: [],
+        personalDefaultProfileID: null,
+        organizationDefaultProfileID: null,
+        effectiveDefaultProfileID: null,
+      }),
+    setWorkspacePersonalDefaultProfile: () => Effect.succeed({ success: true }),
+    clearWorkspacePersonalDefaultProfile: () => Effect.succeed({ success: true }),
     getWorkspace: () => Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
     getWorkspaceStatus: () =>
       Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
