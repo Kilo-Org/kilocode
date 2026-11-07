@@ -310,7 +310,7 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
-  // PINDAHKAN PROVIDERS DAN SHOWDETAILS KE SINI AGAR BISA DIAKSES OLEH MODEL & COPYRAW
+  // providers and showDetails must be declared before model and routed memos to avoid ReferenceError
   const providers = createMemo(() => Model.index(sync.data.provider))
   const [showDetails, setShowDetails] = kv.signal("tool_details_visibility", true)
   const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)

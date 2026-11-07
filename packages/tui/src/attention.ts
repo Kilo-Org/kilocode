@@ -12,7 +12,10 @@ import type {
   TuiAttentionSoundPackInfo,
 } from "@kilocode/plugin/tui"
 
-/** Captured at module load so notification click can refocus the terminal window. */
+/** 
+ * Captured at module load so notification click can refocus the terminal window.
+ * Only runs on Linux to avoid blocking startup on other platforms.
+ */
 let TERMINAL_WINDOW_ID: string | undefined
 if (process.platform === "linux") {
   try {
@@ -21,6 +24,7 @@ if (process.platform === "linux") {
     // xdotool not available; window focus on click will be skipped
   }
 }
+
 import { AttentionSoundName, type TuiConfig } from "./config"
 import { Schema } from "effect"
 import stripAnsi from "strip-ansi"
@@ -193,40 +197,59 @@ export function createTuiAttention(input: {
         const notificationSkip = focusSkip(requestedNotification?.when ?? "blurred", focus)
         const notificationRequested = notifyEnabled && request.notification !== false
         const shouldNotify = notificationRequested && !notificationSkip
-        
-        let notification = false
-        if (shouldNotify) {
-          const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
-          if (process.platform === "linux") {
-            notification = await new Promise<boolean>((resolve) => {
-              execFile(
-                "notify-send",
-                ["--action=default=Open", title, message],
-                { env: process.env, timeout: 5000 },
-                (err, stdout) => {
-                  if (err) {
-                    console.debug("notify-send failed", { error: err })
-                    resolve(input.renderer.triggerNotification(message, title))
-                    return
-                  }
-                  if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
-                    execFile("xdotool", ["windowactivate", TERMINAL_WINDOW_ID], () => {})
-                  }
-                  resolve(true)
-                }
-              )
-            })
-          } else {
-            notification = input.renderer.triggerNotification(message, title)
-          }
-        }
 
+        // 1. Calculate sound settings
         const volume = soundVolume(request, input.config, soundEnabled)
         const requestedSound = typeof request.sound === "object" ? request.sound : undefined
         const soundSkip = volume === undefined ? undefined : focusSkip(requestedSound?.when ?? "always", focus)
         const soundName =
           requestedSound?.name && Schema.is(AttentionSoundName)(requestedSound.name) ? requestedSound.name : "default"
-        const sound = volume === undefined || soundSkip ? false : await playSound(soundName, volume)
+
+        // 2. Prepare Notification Promise
+        let notificationPromise: Promise<boolean> = Promise.resolve(false)
+        if (shouldNotify) {
+          const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
+          if (process.platform === "linux") {
+            notificationPromise = new Promise<boolean>((resolve) => {
+              execFile(
+                "notify-send",
+                ["--action=default=Open", title, message],
+                { env: process.env, timeout: 5000 },
+                (err, stdout) => {
+                  try {
+                    if (err) {
+                      console.debug("notify-send failed", { error: err })
+                      // Only fallback to renderer if the binary is missing (ENOENT).
+                      // Other errors (like timeout) mean the popup may have already appeared.
+                      if (err.message.includes("ENOENT") || (err as any).code === "ENOENT") {
+                        resolve(input.renderer.triggerNotification(message, title))
+                      } else {
+                        resolve(false)
+                      }
+                      return
+                    }
+                    if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
+                      execFile("xdotool", ["windowactivate", TERMINAL_WINDOW_ID], () => {})
+                    }
+                    resolve(true)
+                  } catch (callbackErr) {
+                    console.debug("notify-send callback error", { error: callbackErr })
+                    resolve(false)
+                  }
+                }
+              )
+            })
+          } else {
+            notificationPromise = Promise.resolve(input.renderer.triggerNotification(message, title))
+          }
+        }
+
+        // 3. Prepare Sound Promise
+        const soundPromise =
+          volume === undefined || soundSkip ? Promise.resolve(false) : playSound(soundName, volume)
+
+        // 4. Execute both concurrently to prevent sound delay
+        const [notification, sound] = await Promise.all([notificationPromise, soundPromise])
 
         if (!notification && !sound) {
           if (notificationRequested && notificationSkip) return skipped(notificationSkip)
