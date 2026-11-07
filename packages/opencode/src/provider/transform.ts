@@ -8,6 +8,7 @@ import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 import { imageModalities } from "@/kilocode/provider/image-output" // kilocode_change
+import { mistralToolIds } from "@/kilocode/provider/mistral-tool-ids" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -270,6 +271,7 @@ function normalizeMessages(
         .substring(0, 9) // Take first 9 characters
         .padEnd(9, "0") // Pad with zeros if less than 9 characters
     }
+    const norm = mistralToolIds(scrub) // kilocode_change - truncated ids must stay unique (#15632)
     const result: ModelMessage[] = []
     for (let i = 0; i < msgs.length; i++) {
       const msg = msgs[i]
@@ -278,7 +280,7 @@ function normalizeMessages(
       if (msg.role === "assistant" && Array.isArray(msg.content)) {
         msg.content = msg.content.map((part) => {
           if (part.type === "tool-call" || part.type === "tool-result") {
-            return { ...part, toolCallId: scrub(part.toolCallId) }
+            return { ...part, toolCallId: norm(part.toolCallId) } // kilocode_change
           }
           return part
         })
@@ -286,7 +288,7 @@ function normalizeMessages(
       if (msg.role === "tool" && Array.isArray(msg.content)) {
         msg.content = msg.content.map((part) => {
           if (part.type === "tool-result") {
-            return { ...part, toolCallId: scrub(part.toolCallId) }
+            return { ...part, toolCallId: norm(part.toolCallId) } // kilocode_change
           }
           return part
         })
