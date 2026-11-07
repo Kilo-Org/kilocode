@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**1874 / 9765 cells done (19.2%)**, 89 dropped. `███░░░░░░░░░░░░░`
+**1881 / 9765 cells done (19.3%)**, 89 dropped. `███░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 1383 | 3518 | 39.3% |
+| module | 1387 | 3518 | 39.4% |
 | api | 11 | 36 | 30.6% |
-| patch | 109 | 3440 | 3.2% |
-| test | 371 | 2771 | 13.4% |
+| patch | 110 | 3440 | 3.2% |
+| test | 373 | 2771 | 13.5% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 72 plugin, 15 host, 3 seam, 6 patch.
+Landed by rung, for patch cells closed by a done-proof: 73 plugin, 15 host, 3 seam, 6 patch.
 
-Ratchets: 49 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/job`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/shell/parse`, `@opencode/core/skill`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 98 shared patches by rung: 59 seam, 39 patch (`script/upstream/shared-patches.json`).
+Ratchets: 51 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/job`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schedule`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/shell/parse`, `@opencode/core/skill`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/question`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 101 shared patches by rung: 61 seam, 40 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -42,8 +42,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-29 | 597 | 9819 | 6.1% |
 | 2026-10-30 | 646 | 9817 | 6.6% |
 | 2026-11-05 | 1609 | 9786 | 16.4% |
-| 2026-11-06 | 1685 | 9785 | 17.2% |
-| now | 1874 | 9765 | 19.2% |
+| 2026-11-06 | 1874 | 9765 | 19.2% |
+| now | 1881 | 9765 | 19.3% |
 
 ## Features
 
@@ -69,7 +69,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | commit-message | 4/4 |  |  | 3/3 | 7/7 | 100% | `████████████████` |  |
 | compaction-policy | 0/5 | 0/3 | 0/1 | 0/8 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | components | 9/16 |  | 1/2 | 4/4 | 14/22 | 63.6% | `██████████░░░░░░` | 1 patch |
-| config | 0/25 |  | 0/10 | 1/28 | 1/63 | 1.6% | `░░░░░░░░░░░░░░░░` |  |
+| config | 3/25 |  | 0/10 | 2/28 | 5/63 | 7.9% | `█░░░░░░░░░░░░░░░` |  |
 | console | 0/87 |  | 0/1 | 0/9 | 0/97 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | core-watcher |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | daemon | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -105,14 +105,14 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | permission | 1/12 |  | 0/6 | 1/16 | 2/34 | 5.9% | `█░░░░░░░░░░░░░░░` |  |
 | pii | 1/1 |  |  |  | 1/1 | 100% | `████████████████` |  |
 | plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| plugin | 7/26 |  | 0/2 | 1/6 | 8/34 | 23.5% | `████░░░░░░░░░░░░` |  |
+| plugin | 8/26 |  | 0/2 | 1/6 | 9/34 | 26.5% | `████░░░░░░░░░░░░` |  |
 | presence |  |  |  |  | 0/0 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | process | 0/4 | 0/1 | 0/9 | 0/1 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | project | 0/4 |  | 0/2 | 0/5 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | provider | 0/16 |  | 0/14 | 0/38 | 0/68 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | provider-usage | 6/6 | 2/2 | 2/2 |  | 10/10 | 100% | `████████████████` | 2 plugin |
 | pty | 0/6 |  | 0/14 | 0/7 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| question | 0/1 |  | 0/2 | 0/4 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| question | 0/1 |  | 0/2 | 1/4 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` |  |
 | reference | 0/3 |  | 0/3 | 0/2 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | release-publish-scope |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | review | 2/4 |  | 1/3 | 1/2 | 4/9 | 44.4% | `███████░░░░░░░░░` | 1 plugin |
@@ -206,7 +206,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | core/models-dev | 0/12 |  | 0/12 | 0% |
 | lsp | 0/12 |  | 0/12 | 0% |
 | core/flag | 0/11 |  | 0/11 | 0% |
-| schema/v1 | 0/11 |  | 0/11 | 0% |
+| schema/v1 | 1/11 |  | 1/11 | 9.1% |
 | tui/config | 0/11 |  | 0/11 | 0% |
 | ui/context | 0/11 |  | 0/11 | 0% |
 | core/config | 0/10 |  | 0/10 | 0% |

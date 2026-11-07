@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1874,
+    "done": 1881,
     "total": 9765,
-    "percent": 19.2,
+    "percent": 19.3,
     "dropped": 89,
     "kinds": [
       {
         "kind": "module",
-        "done": 1383,
+        "done": 1387,
         "total": 3518
       },
       {
@@ -21,25 +21,25 @@
       },
       {
         "kind": "patch",
-        "done": 109,
+        "done": 110,
         "total": 3440
       },
       {
         "kind": "test",
-        "done": 371,
+        "done": 373,
         "total": 2771
       }
     ],
     "landed": {
-      "plugin": 72,
+      "plugin": 73,
       "host": 15,
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 49,
+    "coreImports": 51,
     "sharedPatches": {
-      "seam": 59,
-      "patch": 39
+      "seam": 61,
+      "patch": 40
     }
   },
   "notCounted": {
@@ -84,6 +84,7 @@
     "@opencode/core/plugin/system-prompt/trinity.txt",
     "@opencode/core/provider",
     "@opencode/core/rpc",
+    "@opencode/core/schedule",
     "@opencode/core/schema",
     "@opencode/core/session",
     "@opencode/core/session/event",
@@ -98,6 +99,7 @@
     "@opencode/core/tool",
     "@opencode/core/tool-output",
     "@opencode/core/tool/plugin/file-diff",
+    "@opencode/core/tool/plugin/question",
     "@opencode/core/tool/plugin/todo",
     "@opencode/core/tool/read-filesystem",
     "@opencode/core/util/wildcard",
@@ -562,12 +564,12 @@
     },
     {
       "feature": "config",
-      "done": 1,
+      "done": 5,
       "total": 63,
       "dropped": 1,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 3,
           "total": 25
         },
         "api": {
@@ -579,7 +581,7 @@
           "total": 10
         },
         "test": {
-          "done": 1,
+          "done": 2,
           "total": 28
         }
       }
@@ -1481,12 +1483,12 @@
     },
     {
       "feature": "plugin",
-      "done": 8,
+      "done": 9,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 7,
+          "done": 8,
           "total": 26
         },
         "api": {
@@ -1655,7 +1657,7 @@
     },
     {
       "feature": "question",
-      "done": 0,
+      "done": 1,
       "total": 7,
       "dropped": 0,
       "kinds": {
@@ -1672,7 +1674,7 @@
           "total": 2
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 4
         }
       }
@@ -4877,7 +4879,7 @@
     },
     {
       "feature": "unattributed:schema/v1",
-      "done": 0,
+      "done": 1,
       "total": 11,
       "dropped": 0,
       "kinds": {
@@ -4890,13 +4892,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 11
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 1,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6301,6 +6309,7 @@
     "patch:unattributed:core/v1:a177a3c0a84c": "plugin",
     "patch:unattributed:core/v1:a4a32558d64b": "plugin",
     "patch:unattributed:core/v1:fb80dc4c3dd4": "plugin",
+    "patch:unattributed:schema/v1:04e56db46d79": "plugin",
     "patch:unattributed:session:13cc4c3e6a51": "plugin",
     "patch:unattributed:session:142910b3fc8c": "plugin",
     "patch:unattributed:session:5dd7101d7cc6": "plugin",
@@ -7954,6 +7963,9 @@
     "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
     "module:packages/opencode/src/kilocode/components/news.ts",
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
+    "module:packages/opencode/src/kilocode/config/excess.ts",
+    "module:packages/opencode/src/kilocode/config/overlay.ts",
+    "module:packages/opencode/src/kilocode/config/writer.ts",
     "module:packages/opencode/src/kilocode/indexing-auth.ts",
     "module:packages/opencode/src/kilocode/indexing-event.ts",
     "module:packages/opencode/src/kilocode/indexing-label.ts",
@@ -7975,6 +7987,7 @@
     "module:packages/opencode/src/kilocode/pii.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
+    "module:packages/opencode/src/kilocode/plugins/permissions.ts",
     "module:packages/opencode/src/kilocode/plugins/sidebar-footer.tsx",
     "module:packages/opencode/src/kilocode/plugins/sidebar-indexing.tsx",
     "module:packages/opencode/src/kilocode/plugins/sidebar-pr.tsx",
@@ -8047,8 +8060,10 @@
     "module:packages/opencode/test/kilocode/news.test.ts",
     "module:packages/opencode/test/kilocode/notebook-service.test.ts",
     "module:packages/opencode/test/kilocode/notebook-tools.test.ts",
+    "module:packages/opencode/test/kilocode/patch-jsonc.test.ts",
     "module:packages/opencode/test/kilocode/permission/agent-manager-prompt.test.ts",
     "module:packages/opencode/test/kilocode/primary-worktree.test.ts",
+    "module:packages/opencode/test/kilocode/question-option-schema.test.ts",
     "module:packages/opencode/test/kilocode/read-docx.test.ts",
     "module:packages/opencode/test/kilocode/read-notebook.test.ts",
     "module:packages/opencode/test/kilocode/read-xlsx.test.ts",
@@ -8175,6 +8190,7 @@
     "patch:unattributed:core/v1:eef8153da721",
     "patch:unattributed:core/v1:efe2b3136dab",
     "patch:unattributed:core/v1:fb80dc4c3dd4",
+    "patch:unattributed:schema/v1:04e56db46d79",
     "patch:unattributed:session:13cc4c3e6a51",
     "patch:unattributed:session:142910b3fc8c",
     "patch:unattributed:session:5dd7101d7cc6",
