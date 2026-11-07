@@ -1,4 +1,5 @@
 /// <reference path="./audio.d.ts" />
+import { exec, execSync } from "node:child_process"
 import type {
   TuiAttention,
   TuiAttentionNotifyInput,
@@ -10,6 +11,14 @@ import type {
   TuiAttentionSoundPack,
   TuiAttentionSoundPackInfo,
 } from "@kilocode/plugin/tui"
+
+/** Captured at module load so notification click can refocus the terminal window. */
+let TERMINAL_WINDOW_ID: string | undefined
+try {
+  TERMINAL_WINDOW_ID = execSync("xdotool getactivewindow", { encoding: "utf-8" }).trim()
+} catch {
+  // xdotool not available; window focus on click will be skipped
+}
 import { AttentionSoundName, type TuiConfig } from "./config"
 import { Schema } from "effect"
 import stripAnsi from "strip-ansi"
@@ -181,11 +190,24 @@ export function createTuiAttention(input: {
         const shouldNotify = notificationRequested && !notificationSkip
         const notification = shouldNotify
           ? (() => {
+              const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
               try {
-                return input.renderer.triggerNotification(
-                  message,
-                  normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT),
-                )
+                if (process.platform === "linux") {
+                  exec(
+                    `notify-send --action=default=Open "${title}" "${message}"`,
+                    (err, stdout) => {
+                      if (err) {
+                        console.debug("notify-send failed", { error: err })
+                        return
+                      }
+                      if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
+                        exec(`xdotool windowactivate ${TERMINAL_WINDOW_ID}`, () => {})
+                      }
+                    },
+                  )
+                  return true
+                }
+                return input.renderer.triggerNotification(message, title)
               } catch (error) {
                 console.debug("failed to trigger attention notification", { error })
                 return false
