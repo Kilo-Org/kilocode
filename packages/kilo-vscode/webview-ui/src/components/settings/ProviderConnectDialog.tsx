@@ -18,6 +18,7 @@ import {
   LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
 } from "../../utils/local-providers"
 import AnacondaDesktopDialog from "./AnacondaDesktopDialog"
+import { providerApiKeyUrl } from "./provider-catalog"
 
 interface ProviderConnectDialogProps {
   providerID: string
@@ -550,6 +551,20 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         onSubmit={submit}
       >
         <div class="provider-connect-body">{apiKeyDescription()}</div>
+        <Show when={providerApiKeyUrl(props.providerID)}>
+          {(url) => (
+            <a
+              href={url()}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                openExternal(url())
+              }}
+            >
+              {language.t("provider.connect.apiKey.label", { provider: name() })}
+            </a>
+          )}
+        </Show>
         <TextField
           autofocus
           type={vertexCredentials() ? "text" : "password"}
