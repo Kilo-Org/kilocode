@@ -427,6 +427,36 @@ it("bounds legacy cached results before replaying them", () =>
     })
   }))
 
+it("reserves duplicate replay headroom at the encoded outcome boundary", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture()
+    const probe: RemoteCommands.Outcome = { commandID: "boundary", status: "succeeded", result: "", duplicate: true }
+    const result = "x".repeat(60 * 1024 - Buffer.byteLength(JSON.stringify(probe)))
+    yield* f.commands.instance("list_directories", {}, "boundary")
+    yield* f.database.db.run(
+      sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify({
+        commandID: "boundary",
+        status: "succeeded",
+        result,
+      })} WHERE command_id='boundary'`,
+    )
+    const replay = yield* f.commands.instance("list_directories", {}, "boundary")
+    expect(replay).toEqual({ ...probe, result })
+    expect(Buffer.byteLength(JSON.stringify(replay))).toBe(60 * 1024)
+    yield* f.database.db.run(
+      sql`UPDATE _kilo_remote_command SET outcome=${JSON.stringify({
+        commandID: "boundary",
+        status: "succeeded",
+        result: result + "x",
+      })} WHERE command_id='boundary'`,
+    )
+    expect(yield* f.commands.instance("list_directories", {}, "boundary")).toMatchObject({
+      status: "failed",
+      duplicate: true,
+      error: { code: "response_too_large" },
+    })
+  }))
+
 it("pages model discovery within the response budget without losing models", () =>
   Effect.gen(function* () {
     const f = yield* fixture()

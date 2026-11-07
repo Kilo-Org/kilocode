@@ -326,7 +326,7 @@ The authenticated local API exposes `GET /remote/status`, `POST /remote/enable` 
 Each returns `{enabled, connected}`; repeated enable/disable calls are idempotent.
 
 Signed-in workspace hosts with sync on keep one presence socket each, independently of control acceptance.
-The server retains at most 100 workspace hosts, 100 total owned sessions and 100 pending ownership candidates.
+The server caps workspace hosts, owned sessions and pending candidates at 100 each; empty CLI hosts become evictable after one idle minute, while owned/watched/pending work, in-flight requests and private headless hosts remain protected.
 Only sessions created or continued in this process are advertised as live; untouched synchronized history is not.
 On restore and server reconnect, the TUI calls typed `kilocode.remote.attach` with the persisted session ID.
 The host verifies its authoritative session directory against the canonical launch root and announces ownership
@@ -334,7 +334,7 @@ without requiring a new local prompt or native event. Non-TUI local activity bin
 authoritative session directory. Status reads do not enroll synchronized history or enable remote commands.
 Transient synchronization readiness failures retain candidates for the existing background poll to admit after
 identity verification; this retries local ownership only, never command execution. Deletion, terminal access
-denial, detach, host shutdown and verified owner changes discard the corresponding pending candidates.
+denial, unavailable session directories, detach, host shutdown and verified owner changes discard the corresponding pending candidates.
 New activity evicts the least-recently active unwatched session. Verified account or tenant changes clear process
 ownership; credential rotation for the same owner refreshes transport without dropping session claims.
 Detach releases ownership after command admission. A process-wide fence retains the latest 100 detached session IDs,

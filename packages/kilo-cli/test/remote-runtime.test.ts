@@ -14,7 +14,7 @@ import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync"
 import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
-import { Context, Effect, Layer, Schema, Stream } from "effect"
+import { Context, Effect, Fiber, Layer, Schema, Stream } from "effect"
 import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
 import path from "node:path"
 import os from "node:os"
@@ -406,6 +406,14 @@ test("remote hosts use the explicit workspace and restore ownership before any n
         synced.push({ sessionID: offlineDeleted.id, directory: root, sourceID: "fixture-source", position: 22 })
         yield* Effect.promise(() => until(() => observed.includes(offlineDeleted.id)))
         yield* sessions.remove(offlineDeleted.id)
+        const missingDirectory = path.join(root, "missing-candidate")
+        yield* Effect.promise(() => mkdir(missingDirectory))
+        const missing = yield* sessions.create({
+          location: Location.Ref.make({ directory: AbsolutePath.make(missingDirectory) }),
+        })
+        synced.push({ sessionID: missing.id, directory: missingDirectory, sourceID: "fixture-source", position: 23 })
+        yield* Effect.promise(() => until(() => observed.includes(missing.id)))
+        yield* Effect.promise(() => rm(missingDirectory, { recursive: true }))
         const beats = heartbeats
         offline = false
         yield* Effect.promise(() =>
@@ -418,6 +426,13 @@ test("remote hosts use the explicit workspace and restore ownership before any n
         )
         expect(observed).toContain(detachBarrier.id)
         expect(seenSessions.has(offlineDeleted.id)).toBe(false)
+        const readsAfterMissing = liveReads
+        yield* Effect.promise(() => until(() => liveReads > readsAfterMissing && !observed.includes(missing.id)))
+        yield* Effect.promise(() => mkdir(missingDirectory))
+        const readsAfterRecreate = liveReads
+        yield* Effect.promise(() => until(() => liveReads > readsAfterRecreate))
+        expect(observed).not.toContain(missing.id)
+        expect(seenSessions.has(missing.id)).toBe(false)
         // A terminal access denial discards its candidate instead of resurrecting it
         // when synchronization later becomes readable.
         grantFailure = "organization_access_denied"
@@ -513,5 +528,150 @@ test("remote hosts use the explicit workspace and restore ownership before any n
     peer.stop(true)
     await rm(root, { recursive: true, force: true })
     await rm(outside, { recursive: true, force: true })
+  }
+}, 60_000)
+
+test("idle workspace eviction closes host scopes without evicting owned or in-flight hosts", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-remote-idle-")))
+  const idleDirectory = path.join(root, "idle")
+  const activeDirectory = path.join(root, "active")
+  const busyDirectory = path.join(root, "busy")
+  await Promise.all([idleDirectory, activeDirectory, busyDirectory].map((directory) => mkdir(directory)))
+  const sockets = new Set<Bun.ServerWebSocket<{ path: string }>>()
+  const peer = Bun.serve<{ path: string }>({
+    port: 0,
+    fetch(request, server) {
+      return server.upgrade(request, { data: { path: new URL(request.url).pathname } })
+        ? undefined
+        : new Response(null, { status: 400 })
+    },
+    websocket: {
+      open: (socket) => {
+        sockets.add(socket)
+      },
+      message() {},
+      close: (socket) => {
+        sockets.delete(socket)
+      },
+    },
+  })
+  let synced: KiloSessionSync.LiveContext["sessions"] = []
+  let hold = false
+  const entered = Promise.withResolvers<void>()
+  const released = Promise.withResolvers<void>()
+  let registrations = 0
+  const status = KiloSessionSyncRpc.Status.make({ directory: root, enabled: true, pending: 0, sessions: 1 })
+  const sync = KiloSessionSync.Service.of({
+    live: () =>
+      Effect.promise<KiloSessionSync.LiveContext>(async () => {
+        if (hold) {
+          entered.resolve()
+          await released.promise
+        }
+        return {
+          destination: peer.url.origin,
+          identity: "fixture",
+          organizationID: null,
+          tenant: { type: "user", id: "fixture-user" },
+          userID: "fixture-user",
+          sessions: synced,
+        }
+      }),
+    liveTicket: () => Effect.succeed({ ticket: "fixture", expiresAt: new Date(Date.now() + 120_000).toISOString() }),
+    livePosition: () => Effect.succeed({ sourceID: "fixture-source", position: 1 }),
+    organization: () => Effect.void,
+    status: () => Effect.succeed(status),
+    enable: () => Effect.succeed(status),
+    disable: () => Effect.succeed(status),
+    flush: () => Effect.succeed(status),
+  })
+  const replacements: LayerNode.Replacements = [
+    Global.node.replace(
+      Global.layerWith(
+        Object.fromEntries(
+          ["home", "data", "cache", "config", "state", "tmp", "bin", "log", "repos"].map((key) => [
+            key,
+            path.join(root, key),
+          ]),
+        ),
+      ),
+    ),
+    Database.node.replace(Database.configured({ path: path.join(root, "native.sqlite") })),
+    Bus.node.replace(
+      Bus.node.mapLayer((layer) =>
+        Layer.effect(
+          Bus.Service,
+          Effect.gen(function* () {
+            const bus = yield* Bus.Service
+            return Bus.Service.of({
+              ...bus,
+              project: (definition, projector) =>
+                Effect.sync(() => {
+                  registrations++
+                }).pipe(Effect.andThen(bus.project(definition, projector))),
+            })
+          }),
+        ).pipe(Layer.provide(layer)),
+      ),
+    ),
+    SessionSync.node.replace(
+      makeGlobalNode({
+        service: KiloSessionSync.Service,
+        layer: Layer.succeed(KiloSessionSync.Service, sync),
+        deps: [],
+      }),
+    ),
+    Remote.node.replace(Remote.configured({ enabled: false, background: false, idleTimeout: 0 })),
+  ]
+  try {
+    const session = await Effect.runPromise(
+      Effect.gen(function* () {
+        const context = yield* Layer.build(AppNodeBuilder.build(LayerNode.group([Session.node]), replacements))
+        return yield* Context.get(context, Session.Service).create({
+          location: Location.Ref.make({ directory: AbsolutePath.make(activeDirectory) }),
+        })
+      }).pipe(Effect.scoped),
+    )
+    synced = [{ sessionID: session.id, directory: activeDirectory, sourceID: "fixture-source", position: 1 }]
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const context = yield* Layer.build(AppNodeBuilder.build(LayerNode.group([Remote.node]), replacements))
+        const hosts = Context.get(context, KiloRemote.Service)
+        const idle = yield* hosts.forDirectory(idleDirectory)
+        yield* idle.enable()
+        yield* Effect.promise(() => until(() => sockets.size === 1))
+        const idleSocket = [...sockets][0]!
+        yield* idle.disable()
+        const active = yield* hosts.forDirectory(activeDirectory)
+        yield* active.attach(session.id)
+        yield* Effect.promise(() => until(() => !sockets.has(idleSocket) && sockets.size === 1))
+        expect((yield* idle.status().pipe(Effect.flip)).code).toBe("remote_unavailable")
+        const baseline = registrations
+        const busy = yield* hosts.forDirectory(busyDirectory)
+        hold = true
+        const opening = yield* busy.enable().pipe(Effect.forkScoped)
+        yield* Effect.promise(() => entered.promise)
+        const otherDirectory = path.join(root, "other")
+        yield* Effect.promise(() => mkdir(otherDirectory))
+        yield* hosts.forDirectory(otherDirectory)
+        expect(yield* hosts.forDirectory(busyDirectory)).toBe(busy)
+        hold = false
+        released.resolve()
+        yield* Fiber.join(opening)
+        // More lifetime roots than the capacity must remain usable once idle entries retire.
+        for (let index = 0; index < 101; index++) {
+          const directory = path.join(root, `workspace-${index}`)
+          yield* Effect.promise(() => mkdir(directory))
+          yield* hosts.forDirectory(directory)
+        }
+        expect(yield* hosts.forDirectory(activeDirectory)).toBe(active)
+        expect((yield* active.status()).enabled).toBe(false)
+        expect(registrations).toBe(baseline)
+      }).pipe(Effect.scoped),
+    )
+  } finally {
+    released.resolve()
+    peer.stop(true)
+    await rm(root, { recursive: true, force: true })
   }
 }, 60_000)

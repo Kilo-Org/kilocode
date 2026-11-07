@@ -133,9 +133,55 @@ const directory = Effect.fn("RemoteCommands.directory")(function* (root: string,
   return resolved
 })
 
-export const make = Effect.fn("RemoteCommands.make")(function* (options: Options) {
+// One durable run projection per native Bus/Database graph, shared by all workspace
+// executors. Host eviction must not leave another permanent set of projectors behind.
+const initializations = new WeakMap<Bus.Interface, Promise<void>>()
+export const initialize = Effect.fn("RemoteCommands.initialize")(function* () {
   const database = yield* Database.Service
   const bus = yield* Bus.Service
+  yield* Effect.promise(() => {
+    const existing = initializations.get(bus)
+    if (existing) return existing
+    const pending = Effect.runPromise(
+      Effect.gen(function* () {
+        yield* database.db
+          .run(
+            sql`CREATE TABLE IF NOT EXISTS _kilo_remote_run (
+            session_id TEXT PRIMARY KEY, run_id TEXT NOT NULL)`,
+          )
+          .pipe(Effect.orDie)
+        // Native event history is optional; keep the execution token in its native transaction.
+        yield* bus.project(SessionEvent.Execution.Started, (event) =>
+          database.db
+            .run(
+              sql`INSERT INTO _kilo_remote_run(session_id,run_id)
+              VALUES(${event.data.sessionID},${event.id})
+              ON CONFLICT(session_id) DO UPDATE SET run_id=excluded.run_id`,
+            )
+            .pipe(Effect.orDie),
+        )
+        for (const definition of [
+          SessionEvent.Execution.Succeeded,
+          SessionEvent.Execution.Failed,
+          SessionEvent.Execution.Interrupted,
+        ])
+          yield* bus.project(definition, (event) =>
+            database.db
+              .run(sql`DELETE FROM _kilo_remote_run WHERE session_id=${event.data.sessionID}`)
+              .pipe(Effect.orDie),
+          )
+      }),
+    ).catch((cause) => {
+      initializations.delete(bus)
+      throw cause
+    })
+    initializations.set(bus, pending)
+    return pending
+  })
+})
+
+export const make = Effect.fn("RemoteCommands.make")(function* (options: Options) {
+  const database = yield* Database.Service
   const sessions = yield* Session.Service
   const instances = yield* Instance.Service
   const locations = yield* LocationServiceMap.Service
@@ -145,6 +191,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     try: () => realpath(options.launchDirectory),
     catch: () => new Failure({ code: "directory_unavailable", message: "Launch directory is unavailable" }),
   })
+  yield* initialize()
   yield* database.db
     .transaction((tx) =>
       Effect.gen(function* () {
@@ -171,31 +218,6 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
       )
       .pipe(Effect.orDie)
   yield* prune()
-  yield* database.db
-    .run(
-      sql`CREATE TABLE IF NOT EXISTS _kilo_remote_run (
-    session_id TEXT PRIMARY KEY, run_id TEXT NOT NULL)`,
-    )
-    .pipe(Effect.orDie)
-  // Native event history is optional. Project the execution token in the same
-  // transaction as its lifecycle instead of relying on the retained event log.
-  yield* bus.project(SessionEvent.Execution.Started, (event) =>
-    database.db
-      .run(
-        sql`INSERT INTO _kilo_remote_run(session_id,run_id)
-      VALUES(${event.data.sessionID},${event.id})
-      ON CONFLICT(session_id) DO UPDATE SET run_id=excluded.run_id`,
-      )
-      .pipe(Effect.orDie),
-  )
-  for (const definition of [
-    SessionEvent.Execution.Succeeded,
-    SessionEvent.Execution.Failed,
-    SessionEvent.Execution.Interrupted,
-  ])
-    yield* bus.project(definition, (event) =>
-      database.db.run(sql`DELETE FROM _kilo_remote_run WHERE session_id=${event.data.sessionID}`).pipe(Effect.orDie),
-    )
 
   const identity = Effect.fn("RemoteCommands.identity")(function* (
     sessionID: string,
