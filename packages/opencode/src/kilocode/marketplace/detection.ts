@@ -1,5 +1,5 @@
 import path from "path"
-import { readdir } from "fs/promises"
+import { readdir, stat } from "fs/promises"
 import { parse as parseJsonc } from "jsonc-parser"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Skill } from "@/skill"
@@ -129,6 +129,22 @@ async function pluginEntries(scope: Scope, input: DetectInput): Promise<Entry[]>
     }
   }
   return out
+}
+
+/**
+ * Whether `scope` holds `item` where the marketplace installer puts it. Skills are keyed by their
+ * install directory, not frontmatter name, and count while their manifest exists: Settings removes
+ * a skill by deleting only `SKILL.md`.
+ */
+export async function present(scope: Scope, input: Omit<DetectInput, "skills">, item: { id: string; type: string }) {
+  if (item.type === "skill") {
+    return stat(path.join(Paths.skillsDir(scope, input.directory), item.id, "SKILL.md")).then(
+      (info) => info.isFile(),
+      () => false,
+    )
+  }
+  const id = item.type === "plugin" ? (pluginIdentity(item.id) ?? item.id) : item.id
+  return `${item.type}:${id}` in (await detectScope(scope, input))
 }
 
 export async function detect(input: DetectInput): Promise<MarketplaceInstalledMetadata> {

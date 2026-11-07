@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.rail
 
 import ai.kilocode.client.session.model.SessionModel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
@@ -342,6 +343,149 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         assertEquals(2, PromptRailItems.active(tops, 500, scrollable = true, atTop = false))
     }
 
+    fun `test answered questions follow their prompt as navigable items`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf(
+                    "questions" to
+                        """[{"question":"Which database?","header":"Database"},""" +
+                        """{"question":"Which tests?","header":"Tests"}]""",
+                ),
+                metadata = mapOf("answers" to """[["Postgres"],["Unit","E2E"]]"""),
+            ),
+        )
+
+        val items = PromptRailItems.items(model)
+
+        assertEquals(listOf("u1", "u1/q1/0", "u1/q1/1"), items.map { it.id })
+        assertEquals(PromptRailKind.QUESTION, items[1].kind)
+        assertEquals("Database", items[1].prompt)
+        assertEquals("Postgres", items[1].answer)
+        assertEquals("u1", items[1].turn)
+        assertEquals("a1", items[1].message)
+        assertEquals("q1", items[1].part)
+        assertEquals("Tests", items[2].prompt)
+        assertEquals("Unit\nE2E", items[2].answer)
+    }
+
+    fun `test unanswered questions are not listed`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf(
+                    "questions" to
+                        """[{"question":"Skipped?","header":"Skipped"},""" +
+                        """{"question":"Answered?","header":"Answered"}]""",
+                ),
+                metadata = mapOf("answers" to """[[""],["Yes"]]"""),
+            ),
+        )
+
+        val items = PromptRailItems.items(model)
+
+        assertEquals(listOf("u1", "u1/q1/1"), items.map { it.id })
+        assertEquals("Answered", items[1].prompt)
+        assertEquals("Yes", items[1].answer)
+    }
+
+    /** Answers arrive with the completed question, so the cache must invalidate on that transition. */
+    fun `test a question becoming answered refreshes the cached turn`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        val input = mapOf("questions" to """[{"question":"Which database?","header":"Database"}]""")
+        model.updateContent("a1", toolPart("q1", "a1", state = "running", input = input))
+        val cache = PromptRailItems.Cache()
+
+        assertEquals(listOf("u1"), PromptRailItems.items(model, cache).map { it.id })
+
+        model.updateContent(
+            "a1",
+            toolPart("q1", "a1", input = input, metadata = mapOf("answers" to """[["Postgres"]]""")),
+        )
+
+        assertEquals(listOf("u1", "u1/q1/0"), PromptRailItems.items(model, cache).map { it.id })
+    }
+
+    /** Answers are prose too, so they take the same short preview the reasoning block shows. */
+    fun `test answers are capped to the reasoning preview lines`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        val answers = (1..SessionUiStyle.View.Reasoning.BODY_LINES + 2).joinToString(",") { "\"Answer $it\"" }
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf("questions" to """[{"question":"Pick","header":"Pick"}]"""),
+                metadata = mapOf("answers" to "[[$answers]]"),
+            ),
+        )
+
+        val item = PromptRailItems.items(model).single { it.kind == PromptRailKind.QUESTION }
+
+        assertEquals(
+            (1..SessionUiStyle.View.Reasoning.BODY_LINES).joinToString("\n") { "Answer $it" } + "…",
+            item.answer,
+        )
+    }
+
+    fun `test a non-string header falls back to the question text`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf("questions" to """[{"question":"Pick one","header":{"nested":true}}]"""),
+                metadata = mapOf("answers" to """[["Postgres"]]"""),
+            ),
+        )
+
+        val item = PromptRailItems.items(model).single { it.kind == PromptRailKind.QUESTION }
+
+        assertEquals("Pick one", item.prompt)
+    }
+
+    fun `test a code-only answer still previews its text`() {
+        val model = SessionModel()
+        model.upsertMessage(message("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", "Build it"))
+        model.upsertMessage(message("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            toolPart(
+                "q1",
+                "a1",
+                input = mapOf("questions" to """[{"question":"How?","header":"Command"}]"""),
+                metadata = mapOf("answers" to """[["`bun test`"]]"""),
+            ),
+        )
+
+        val item = PromptRailItems.items(model).single { it.kind == PromptRailKind.QUESTION }
+
+        assertTrue("a code-only answer must not preview as blank", item.answer.contains("bun test"))
+    }
+
     private fun message(id: String, role: String) = MessageDto(
         id = id,
         sessionID = "ses",
@@ -362,5 +506,23 @@ class PromptRailItemsTest : BasePlatformTestCase() {
         type = type,
         text = text,
         synthetic = synthetic,
+    )
+
+    private fun toolPart(
+        id: String,
+        message: String,
+        name: String = "question",
+        state: String = "completed",
+        input: Map<String, String> = emptyMap(),
+        metadata: Map<String, String> = emptyMap(),
+    ) = PartDto(
+        id = id,
+        sessionID = "ses",
+        messageID = message,
+        type = "tool",
+        tool = name,
+        state = state,
+        input = input,
+        metadata = metadata,
     )
 }
