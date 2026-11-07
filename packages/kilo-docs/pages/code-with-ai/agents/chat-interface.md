@@ -65,6 +65,10 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 - **Agent dropdown** - Switch between agents (e.g. Code, Ask, Plan) from the sidebar
 - **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 
+**Recalling previous prompts:**
+
+Press `ArrowUp` at the start of the input to cycle back through prompts you already sent, and `ArrowDown` at the end to move forward again. A recalled prompt replaces the draft and places the caret at the start; pressing `ArrowDown` past the newest entry restores the draft you were typing. Recall is shared across conversations by default. To keep it separate for each conversation, enable **Per-Conversation Prompt History** in **Settings > Experimental** — see [Experimental features](/docs/getting-started/settings#experimental-features).
+
 **Providing context:**
 
 The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
@@ -91,6 +95,10 @@ When more than one session is open, the sidebar and Kilo editor tabs show a sess
 | `Cmd+Shift+Left` / `Right` | `Ctrl+Shift+Left` / `Right` | Move the focused session tab left / right |
 
 Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
+
+**Reviewing changes:**
+
+The **Changes** button above the input shows the working tree's changed-file count and added/removed line totals, and opens the Changes tab. The tab compares your work across **Branch**, **Staged**, and **Unstaged** scopes, and can also show the **Session** change or the change from a single turn. Diffs open in Kilo's diff viewer, where you can switch between unified and split layouts (remembered in the `kilo-code.new.diff.style` setting), render Markdown files with the eye/code toggle, add inline comments and send them to the chat, comment on a linked pull request, or revert a file. Agent Manager exposes the same diff and comment controls in its [Diff / Review Panel](/docs/automate/agent-manager#diff--review-panel).
 
 {% /tab %}
 {% tab label="CLI" %}

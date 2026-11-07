@@ -63,6 +63,17 @@ Once approved:
 - GitHub will show a **Connected** status.
 - Your Kilo workspace can now access GitHub repositories securely.
 
+### Connect your GitHub identity
+
+The personal GitHub panel also shows a **Use your GitHub identity** card. Connecting your identity lets eligible [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent) actions run as you — for example, commits and pushes attributed to your GitHub account — in repositories the Kilo GitHub App can access. This card appears on personal accounts; organization GitHub panels manage repository access instead.
+
+You can connect in two ways:
+
+- **Connect through GitHub** — authorizes the KiloConnect GitHub App for your account. App tokens refresh automatically, and the card shows the source as **GitHub App**.
+- **Provide a token** — paste a personal access token or OAuth access token. Kilo validates the token's GitHub identity and stores it encrypted, and the available actions depend on the token's permissions. Kilo cannot refresh a provided token, so the card shows its expiry; use **Replace token** when it expires.
+
+Select **Disconnect** to remove the connection. Disconnecting removes Kilo's stored copy of a provided token; to revoke the token itself, use its issuer. Kilo never places a provided token in a sandbox, runtime environment, or capability.
+
 ---
 
 ## Connecting GitLab

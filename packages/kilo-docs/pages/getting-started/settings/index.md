@@ -154,6 +154,10 @@ Code edit and diff blocks start collapsed. Choose **Expanded** for **Code Edit B
 
 Both keys accept `expanded` and `collapsed`.
 
+### Show Auto-Approval Reason
+
+Auto-approved tool calls can show why they were approved, such as a matching permission rule or an agent default. Turn **Show Auto-Approval Reason** off in the Display tab, or set `kilo-code.new.showAutoApprovalReason` to `false`, to hide the reason. It is on by default; the **Review first** display preset leaves it on and **High autonomy** turns it off.
+
 ### Work Styles and the Session Preview
 
 Onboarding asks you to pick a work style. The choice sets display defaults and, for **Review first**, permission rules:
@@ -173,6 +177,8 @@ Display changes apply as a draft. Click **Save** to keep them or **Discard** to 
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
+Kilo diff viewers also switch between unified and split layouts. Kilo remembers the layout you choose in the `kilo-code.new.diff.style` setting (`unified` or `split`), which the viewer sets the first time you toggle the layout.
 
 ### Web Search
 
@@ -273,6 +279,7 @@ Available experimental settings include:
 - **Share mode** - `manual`, `auto`, or `disabled` session sharing
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
+- **Per-Conversation Prompt History** - keep `ArrowUp`/`ArrowDown` prompt recall separate for each conversation instead of sharing one history across all conversations (off by default)
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Search Ignored Paths** - list folders or files the agent's `glob` tool should search even when `.gitignore` or other ignore files exclude them, such as `packages/*/dist` (`experimental.glob_include_ignored`, empty by default). Patterns are gitignore-style and relative to the workspace: a pattern without a slash matches folders at any depth, and a single file inside an ignored folder is listed by its path (for example `build/report.json`). Ignored or hidden folders inside a listed folder stay skipped, and `.git` is never searched
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)

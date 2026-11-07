@@ -259,6 +259,12 @@ Attach up to **5 files** (each up to **20 MiB**) from your phone to the remote s
 
 Attaching files from the phone is the mobile flow — this is separate from `kilo run --file <path>`, which attaches local files to a local prompt.
 
+### Previewing document attachments
+
+For a document attachment, Kilo offers a preview as the first choice, opening the file in your phone's native viewer — for example, a PDF in the platform PDF viewer. The existing **Open as text** and **Open in external app** options remain available.
+
+A device with no viewer for the file type reports that once and then drops the preview choice for that chip, and unsupported files such as archives keep only the text and share choices. If the file has not finished downloading, Kilo reports the error so you can retry.
+
 ### Receiving files from the CLI on your phone
 
 While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.

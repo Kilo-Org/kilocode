@@ -192,6 +192,8 @@ Configuration is managed through:
 - **`tui.jsonc`** for terminal UI settings such as notifications, sounds, themes, and keybindings
 - `kilo auth` for credential management
 
+Kilo warns about unrecognized top-level keys in a config file so a mistyped option does not silently do nothing. Run [`kilo config check`](/docs/code-with-ai/platforms/cli-reference#kilo-config-check) to list configuration warnings and errors; it exits with a non-zero status when it finds any. The agent also sees your existing config warnings when it edits a config file.
+
 ## CLI Notifications and Sounds
 
 CLI attention alerts are disabled by default. Enable and configure them by editing the TUI configuration:
