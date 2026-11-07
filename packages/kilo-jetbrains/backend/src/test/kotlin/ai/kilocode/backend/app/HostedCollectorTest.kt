@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HostedCollectorTest {
-    private val capacity = 128
+    private val capacity = KiloBackendHostedManager.COLLECTOR_CAPACITY
     @Test
     fun `output is coalesced per step`() = runBlocking {
         val collector = KiloBackendHostedManager.Collector()
