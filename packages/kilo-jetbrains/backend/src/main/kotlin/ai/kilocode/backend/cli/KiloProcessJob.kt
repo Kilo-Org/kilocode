@@ -76,8 +76,10 @@ internal class KiloProcessJob private constructor(
         private const val EXTENDED_LIMIT_SIZE = 144L
         private const val LIMIT_FLAGS_OFFSET = 16L
 
-        private val lib: Kernel32Job? by lazy {
-            runCatching { Native.load("kernel32", Kernel32Job::class.java) }
+        // A companion `by lazy` is linked in <clinit> on every OS, which loads Kernel32Job and
+        // com.sun.jna.win32.StdCallLibrary. Only setup() reads this holder, so it initializes on Windows only.
+        private object Kernel32 {
+            val lib: Kernel32Job? = runCatching { Native.load("kernel32", Kernel32Job::class.java) }
                 .getOrElse { KiloLog.create(KiloProcessJob::class.java).warn("Native.load(kernel32) failed", it); null }
         }
 
@@ -90,7 +92,8 @@ internal class KiloProcessJob private constructor(
             // Check JnaLoader.isLoaded() BEFORE any com.sun.jna.Native access. isLoaded() initializes
             // JNA behind its own failure boundary and returns false if jnidispatch is unavailable, so
             // a linkage error can never escape this best-effort path and orphan the just-started CLI.
-            if (!JnaLoader.isLoaded()) {
+            // runCatching because on 2026.3 JnaLoader itself ships in the JNA jar the plugin may not see.
+            if (!runCatching { JnaLoader.isLoaded() }.getOrDefault(false)) {
                 log.warn("CLI kill-on-close job skipped: JNA not loaded (pid=$pid, arch=${CpuArch.CURRENT})")
                 return null
             }
@@ -105,7 +108,7 @@ internal class KiloProcessJob private constructor(
                 log.warn("CLI kill-on-close job skipped: unsupported pointer size ${Native.POINTER_SIZE} (pid=$pid)")
                 return null
             }
-            val k = lib ?: run {
+            val k = Kernel32.lib ?: run {
                 log.warn("CLI kill-on-close job skipped: kernel32 mapping unavailable (pid=$pid)")
                 return null
             }
