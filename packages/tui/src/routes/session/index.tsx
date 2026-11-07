@@ -310,6 +310,11 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
+  // PINDAHKAN PROVIDERS DAN SHOWDETAILS KE SINI AGAR BISA DIAKSES OLEH MODEL & COPYRAW
+  const providers = createMemo(() => Model.index(sync.data.provider))
+  const [showDetails, setShowDetails] = kv.signal("tool_details_visibility", true)
+  const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
+
   const cleanText = (text: string) => {
     if (!text) return ""
     let cleaned = text.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
@@ -399,12 +404,10 @@ export function Session() {
   const thinkingMode = thinking.mode
   const showThinking = createMemo(() => true)
   const [timestamps, setTimestamps] = kv.signal<"hide" | "show">("timestamps", "hide")
-  const [showDetails, setShowDetails] = kv.signal("tool_details_visibility", true)
   const [showAssistantMetadata, _setShowAssistantMetadata] = kv.signal("assistant_metadata_visibility", true)
   const [showScrollbar, setShowScrollbar] = kv.signal("scrollbar_visible", false)
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
-  const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
 
   const wide = createMemo(() => dimensions().width > 120)
   const sidebarVisible = createMemo(() => {
@@ -415,7 +418,6 @@ export function Session() {
   })
   const showTimestamps = createMemo(() => timestamps() === "show")
   const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
-  const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
@@ -602,6 +604,7 @@ export function Session() {
       scroll.scrollTo(scroll.scrollHeight)
     }, 50)
   }
+
   const jumpPrev = () => {
     const targetID = findNextVisibleMessage("prev")
     if (!targetID) {
@@ -621,6 +624,7 @@ export function Session() {
     const child = scroll.getChildren().find((c) => c.id === targetID)
     if (child) scroll.scrollBy(child.y - scroll.y - 1)
   }
+
   const local = useLocal()
 
   function enterChild(sessionID: string) {
@@ -1562,7 +1566,7 @@ export function Session() {
                 <box flexShrink={0} paddingTop={1} paddingBottom={1}>
                   <Show when={lastAssistant()} keyed>
                     {(msg) => (
-                      <box flexShrink={0} paddingLeft={3} marginTop={1}>
+                      <box flexShrink={0} paddingLeft={3}>
                         <box flexDirection="row">
                           <text>
                             <span style={{ fg: local.agent.color(msg.agent) }}>▣ </span>

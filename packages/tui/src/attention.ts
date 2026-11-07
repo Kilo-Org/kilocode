@@ -1,5 +1,5 @@
 /// <reference path="./audio.d.ts" />
-import { execFileSync, execSync } from "node:child_process"
+import { execFile, execSync } from "node:child_process"
 import type {
   TuiAttention,
   TuiAttentionNotifyInput,
@@ -16,7 +16,7 @@ import type {
 let TERMINAL_WINDOW_ID: string | undefined
 if (process.platform === "linux") {
   try {
-    TERMINAL_WINDOW_ID = execSync("/usr/bin/xdotool getactivewindow", { encoding: "utf-8" }).trim()
+    TERMINAL_WINDOW_ID = execSync("xdotool getactivewindow", { encoding: "utf-8" }).trim()
   } catch {
     // xdotool not available; window focus on click will be skipped
   }
@@ -193,31 +193,34 @@ export function createTuiAttention(input: {
         const notificationSkip = focusSkip(requestedNotification?.when ?? "blurred", focus)
         const notificationRequested = notifyEnabled && request.notification !== false
         const shouldNotify = notificationRequested && !notificationSkip
-        const notification = shouldNotify
-          ? (() => {
-              const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
-              try {
-                if (process.platform === "linux") {
-                  try {
-                    const stdout = execFileSync("/usr/bin/notify-send", ["--action=default=Open", title, message], {
-                      encoding: "utf-8",
-                    })
-                    if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
-                      execFileSync("/usr/bin/xdotool", ["windowactivate", TERMINAL_WINDOW_ID])
-                    }
-                    return true
-                  } catch (err) {
+        
+        let notification = false
+        if (shouldNotify) {
+          const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
+          if (process.platform === "linux") {
+            notification = await new Promise<boolean>((resolve) => {
+              execFile(
+                "notify-send",
+                ["--action=default=Open", title, message],
+                { env: process.env, timeout: 5000 },
+                (err, stdout) => {
+                  if (err) {
                     console.debug("notify-send failed", { error: err })
-                    return input.renderer.triggerNotification(message, title)
+                    resolve(input.renderer.triggerNotification(message, title))
+                    return
                   }
+                  if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
+                    execFile("xdotool", ["windowactivate", TERMINAL_WINDOW_ID], () => {})
+                  }
+                  resolve(true)
                 }
-                return input.renderer.triggerNotification(message, title)
-              } catch (error) {
-                console.debug("failed to trigger attention notification", { error })
-                return false
-              }
-            })()
-          : false
+              )
+            })
+          } else {
+            notification = input.renderer.triggerNotification(message, title)
+          }
+        }
+
         const volume = soundVolume(request, input.config, soundEnabled)
         const requestedSound = typeof request.sound === "object" ? request.sound : undefined
         const soundSkip = volume === undefined ? undefined : focusSkip(requestedSound?.when ?? "always", focus)
