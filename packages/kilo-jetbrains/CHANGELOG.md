@@ -4,6 +4,18 @@
 
 ### Minor Changes
 
+- [#15886](https://github.com/Kilo-Org/kilocode/pull/15886) [`912b83e`](https://github.com/Kilo-Org/kilocode/commit/912b83eb8b037d9e30da23a0218fe3eff3481de0) - Highlight the pull request badge, status glyphs, change summary, and row menu when the pointer hovers them in worktree rows.
+
+- [#15820](https://github.com/Kilo-Org/kilocode/pull/15820) [`073f573`](https://github.com/Kilo-Org/kilocode/commit/073f573d56b899d1b6d090b60d6ca890b510ab63) - Add "Update from Base" to the worktree row menu so a worktree agent fetches and merges its saved base branch, preserving uncommitted work without using Git stash.
+
+### Patch Changes
+
+- [#15883](https://github.com/Kilo-Org/kilocode/pull/15883) [`b1c7d56`](https://github.com/Kilo-Org/kilocode/commit/b1c7d56727637ead8505df3f07839d39f52f2b90) - Show the prompt navigator rail even with a single prompt, select the hovered prompt when it opens, keep its row in view through popup resizes, and list answered questions with their header and a preview of the answers. Answered question cards now start expanded, expand automatically when reached from the prompt navigator, and have an "Expand question blocks" transcript setting.
+
+## 7.9.0
+
+### Minor Changes
+
 - [#15510](https://github.com/Kilo-Org/kilocode/pull/15510) [`20db8f7`](https://github.com/Kilo-Org/kilocode/commit/20db8f72c472842aa42e8b36644f73960e59b7e8) - Organize Agent Manager worktrees in a collapsible tree with responsive updates and reliable menus, hover actions, and drag-and-drop selection.
 
   Keep expand/collapse controls working with alternative IDE themes.
