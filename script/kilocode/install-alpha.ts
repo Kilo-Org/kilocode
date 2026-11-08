@@ -9,7 +9,7 @@
  */
 
 import { $ } from "bun"
-import { chmod, cp, mkdir, mkdtemp, rename, rm, symlink } from "node:fs/promises"
+import { chmod, cp, mkdir, mkdtemp, readdir, readlink, rename, rm, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
@@ -83,32 +83,46 @@ async function install(runID: number, tmp: string) {
   const extract = await $`tar -xzf ${archive} -C ${tmp}`.quiet().nothrow()
   if (extract.exitCode !== 0) fail(`Could not extract ${artifact}:\n${extract.stderr.toString().trim()}`)
 
-  const dest = await installFiles(path.join(tmp, `cli-${target}`, "bin"), binDir, name)
-  const version = await $`${dest} --version`.quiet().nothrow()
-  if (version.exitCode !== 0) fail(`Installed ${dest}, but it failed to start:\n${version.stderr.toString().trim()}`)
-  console.error(`installed ${dest} (${version.stdout.toString().trim()})`)
+  const installed = await installFiles(path.join(tmp, `cli-${target}`, "bin"), binDir, name)
+  console.error(`installed ${installed.dest} (${installed.version})`)
   if (!process.env.PATH?.split(path.delimiter).includes(binDir)) console.error(`note: ${binDir} is not on your PATH`)
 }
 
-export async function installFiles(bin: string, binDir: string, name: string) {
+// Each install lives in its own `release-*` directory so the sidecars (tree-sitter assets, sandbox worker) stay
+// beside the executable: Bun reports the symlink-resolved path as `process.execPath`, which is where they are found.
+async function installFiles(bin: string, binDir: string, name: string) {
   if (!(await Bun.file(path.join(bin, "kilo2")).exists())) fail(`No kilo2 executable found in ${bin}.`)
   const dest = path.resolve(binDir, name)
   const data = path.join(path.dirname(dest), `.${path.basename(dest)}-alpha`)
   await mkdir(data, { recursive: true })
+  const previous = await readlink(dest).catch(() => undefined)
   const release = await mkdtemp(path.join(data, "release-"))
   try {
     await cp(bin, release, { recursive: true })
     const executable = path.join(release, "kilo2")
     await chmod(executable, 0o755)
-    await $`xattr -d com.apple.quarantine ${executable}`.quiet().nothrow()
+    if (process.platform === "darwin") await $`xattr -d com.apple.quarantine ${executable}`.quiet().nothrow()
+    // Validate before the symlink moves so a release that cannot start never replaces a working install.
+    const check = await $`${executable} --version`.quiet().nothrow()
+    if (check.exitCode !== 0) fail(`The new release failed to start:\n${check.stderr.toString().trim()}`)
     const link = path.join(release, "link")
     await symlink(executable, link)
     await rename(link, dest)
+    await prune(data, [release, previous ? path.dirname(previous) : undefined])
+    return { dest, version: check.stdout.toString().trim() }
   } catch (error) {
     await rm(release, { recursive: true, force: true })
     throw error
   }
-  return dest
+}
+
+// Keep the new release and the one it replaced (for rollback); drop older and interrupted leftovers.
+async function prune(data: string, keep: (string | undefined)[]) {
+  const kept = new Set(keep)
+  const stale = (await readdir(data)).filter(
+    (entry) => entry.startsWith("release-") && !kept.has(path.join(data, entry)),
+  )
+  await Promise.all(stale.map((entry) => rm(path.join(data, entry), { recursive: true, force: true })))
 }
 
 function fail(message: string): never {
