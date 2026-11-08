@@ -60,14 +60,62 @@ On the **General** tab:
 
 - **Default sandbox** — the sandbox for new sessions when a repository has no override. The dialog names the sandbox that **Platform default** resolves to, so you can see what a session uses when nothing else applies.
 - **Repository overrides** — set or clear a sandbox and an [agent environment profile](#agent-environment-profiles) for an individual repository.
+- **Your agent preferences** — personal agent settings that apply only to sessions you start; see [Your agent preferences](#your-agent-preferences).
 
-The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, and **Agents**.
+The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, **Agents**, **Instructions**, and **Import**.
 
-Each change saves as you make it. In an organization, members see the settings read-only; only owners and admins can change them.
+Each change saves as you make it. In an organization, members see the organization's sandbox and repository defaults read-only; only owners and admins can change them. Your own agent preferences stay editable.
 
 When you start a session, the sandbox is resolved in this order: the sandbox you pick in the new-session field, then the repository override, then the owner default, then the platform default. A saved choice that is no longer offered, or that is not available for the repository, falls through to the next level. The new-session picker preselects the sandbox that applies and tags it **Default**.
 
 Vercel sandboxes are offered for GitHub repositories only. If your account cannot select a sandbox, the settings show where sessions run as plain text and the new-session page hides the picker.
+
+### Your agent preferences
+
+At the bottom of the **General** tab, **Your agent preferences** controls personal Cloud Agent settings. They apply to every session you start, including organization sessions, and they do not change settings for other members.
+
+- **Agent modes** — toggle **Plan**, **Debug**, **Orchestrator**, and **Ask** in your agent picker. **Code** stays enabled because new sessions start in Code mode. Pick a mode's model in each session.
+- **Background models** — choose a model and thinking variant for **Explore** and **Compaction**, or keep the session model. An override applies only when the chosen model is available to the session.
+
+If you previously saved mode models, the section notes they are still active and offers **Use session model for all modes** to clear them.
+
+## Repository environments
+
+Each repository can have one saved environment that applies automatically when a session starts, so you do not set up the same workspace for every chat. A repository environment holds:
+
+- A sandbox size
+- Network access
+- A setup script and a start script
+- Variables, including secrets (encrypted at rest)
+
+Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments. Other members can open an environment from the **Env** chip or Cloud Agent settings to view its scripts and variables read-only; editing, save, delete, and upload controls, and sandbox selection, are unavailable to them.
+
+### Network access
+
+Each repository environment sets how much of the internet a session can reach:
+
+| Mode | What the session can reach |
+|---|---|
+| **Full** | Any host. |
+| **Limited** | The Kilo, Git, and repository-host baseline, plus the hostnames you add. |
+| **None** | The Kilo, Git, and repository-host baseline only. |
+
+The baseline is always allowed, so **Limited** and **None** still clone, push, and reach Kilo. In **Limited**, add each extra hostname the setup script or agent needs; a hostname that is too long is rejected.
+
+Network access applies when the environment is prepared. A child session started from another session inherits the parent environment's policy; if the inherited policy cannot be validated, the child does not start instead of running with broader access.
+
+When a repository environment applies, its setup script replaces the setup commands from the selected [agent environment profile](#agent-environment-profiles). The profile's variables and agent settings still apply. A warning beside the profile picker explains when a profile's setup is replaced. The start script is not part of a profile, so it always runs in addition.
+
+Repository environments follow the same automatic-resolution policy as automatic profiles: sessions started by automated code reviews, Security Agent sessions, and unknown origins do not automatically receive a repository environment.
+
+### Setup script vs. start script
+
+The two scripts run at different times:
+
+- **Setup script** — the heavy work that builds the workspace, such as installing dependencies. It runs when Kilo builds the environment snapshot and when a workspace starts without a complete snapshot. Changing it takes effect after the next environment build.
+- **Start script** — work that must run every time a workspace starts, such as launching a service. It runs after setup, or on its own when a workspace starts from a snapshot, and again when a restored workspace starts. It does not run when a sibling chat joins a workspace that is already running. Because it is not a build input, changing it does not require rebuilding the snapshot.
+
+A workspace that starts entirely from an environment snapshot skips the environment's setup (the build already ran it) but still runs request-supplied setup commands and then the start script. Both scripts run through Bash with `-e -o pipefail`, so each stops at the first failing command, and a failing or timed-out command fails preparation. New and replaced variable values are encrypted; values stored before encryption remain compatible.
 
 ## Queueing follow-up messages
 
@@ -112,23 +160,46 @@ Standard-input prompts must be valid UTF-8 and contain no more than 100,000 char
   - Expect slightly longer setup after idle periods
   - Inactive cloud agent sessions are deleted after **7 days** during the beta, expired sessions are still accessible via the CLI
 
+## Delegating to child sessions
+
+A Cloud Agent session that you start interactively — from the web app, the desktop app, or Agent Manager — can launch child Cloud Agent sessions to work on part of the task. Each child runs in its own isolated sandbox.
+
+A session cannot launch child sessions when any of these apply:
+
+- **It is itself a child.** Child sessions cannot delegate further, so delegation stays one level deep.
+- **It runs on a shared sandbox.** Shared sandboxes do not support child sessions. Start the session on an isolated sandbox instead.
+- **It was started by a bot.** Sessions created by code reviews, security reviews, and triggers never get this capability.
+
+Sessions created before this capability became available keep it disabled. Start a new session to launch child sessions.
+
+A child session links back to the session that started it. A muted **Started from parent** link sits under the session title, and on narrow screens it appears as a compact **View parent** label. The overflow menu also lists **Open parent session**. These links follow the session across its sibling chats, terminals, and file views. The link is hidden when the parent session is missing, deleted, or not accessible to you.
+
 ## Worktrees and chats
 
 A worktree is a checkout of your repository on its own branch. It can host multiple chats with separate conversations, but edits from one chat are visible to the others. Use separate worktrees for tasks that need separate checkouts.
 
 Each chat opens as its own tab in the worktree group. You can rename tabs, close and reopen them, or delete a whole worktree and all of its chats.
 
+### Deleting sessions and worktrees
+
+Delete a session from the Sessions view or the Cloud Agent sidebar. Deleting a session removes its saved history. When you delete the last chat in a worktree, Kilo asks you to confirm that the worktree's workspace and files are deleted with it, then removes the worktree. If another root chat was created in the worktree before you confirm, Kilo keeps the workspace and removes only the chat you selected.
+
+Deleting saved history does not depend on the sandbox being reachable. If the runtime or container cannot be cleaned up, Kilo still removes the history and shows a cleanup-pending warning instead of blocking the deletion, and keeps the pending workspace cleanup for a later retry.
+
 ### Workspace folders
 
 Group worktrees into folders in the sidebar. Folders are private to you, not shared with your organization.
 
 - Create a folder with a name and an optional color, then drag worktrees onto it.
+- Drag a session onto a folder to file it there, or onto **Ungrouped** to remove it from its folder. A standalone session moves into a new worktree of its own, while a session that already shares a worktree moves together with the rest of that worktree's chats. Child sessions cannot be moved this way.
 - Use the folder menu to rename it, change its color, move it up or down, or delete it. Deleting a folder returns its worktrees to **Ungrouped** without deleting them.
 - Click a folder's header to collapse or expand it.
 
 ## Reviewing changes
 
-Select **Changes** in the chat header to open the worktree's saved change summary, including file status and lines added and removed. The view shows the comparison's base branch and when the summary was saved, with the changed-file list on the left and the selected file's diff on the right. Selecting another file replaces the diff in place instead of opening a new tab. Refresh to load the latest saved summary; reloading reads the latest saved revision without starting the workspace. Large summaries can be partial, with some files or line counts omitted.
+Select **Changes** in the chat header to open the worktree's saved change summary. It compares your work two ways: **Uncommitted** first, which shows changes in the working tree since the last commit, and **Against base branch** second, which shows the commits on the worktree branch since it diverged from the base branch. A file you committed and then edited further appears under both. Each file tab is labelled with its comparison, so you can open the same path in either one.
+
+The view shows the comparison's base branch and when the summary was saved, with the changed-file list on the left and the selected file's diff on the right. Selecting another file replaces the diff in place instead of opening a new tab. Refresh to load the latest saved summary; reloading reads the latest saved revision without starting the workspace. Large summaries can be partial, with some files or line counts omitted.
 
 While the change view is open, the current workspace tab is not shown as selected. Select that tab to close the view and return to it.
 
@@ -137,6 +208,32 @@ Drag the divider between the list and the diff to resize the file list between 2
 Use the side-by-side toggle in the file viewer to switch between a unified diff and a split, side-by-side diff. The viewer starts in unified and remembers your choice for the files you open next. The markdown preview is unaffected.
 
 These are saved snapshots, not a live view of the checkout. Diffs may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
+
+## Inspecting session failures
+
+When a Cloud Agent session has failed runs, open the session's info dialog from the session header and expand the failure-history section. It lists the session's recent runs with dates, status, and a safe diagnostic message so you can see which runs failed and why without collecting logs by hand. The list is capped at the latest 50 runs, and the section is hidden when the session has no failures. It covers both regular sessions and worktree chats.
+
+Use **Download diagnostics** to save the same data as JSON, or **Download CSV** to save it as a spreadsheet. The exports include the Cloud Agent session ID, the Kilo session ID, and timestamps you can paste into a support ticket. Diagnostics past their retention window are left out of the export, and you can read failure data only for sessions you own.
+
+## Pull request status
+
+When a session is linked to a GitHub pull request, a PR badge appears on its row in the sidebar. Hover the badge to see the linked pull request's cached status without leaving the session:
+
+- **Checks** — how many checks passed, failed, and are pending, plus skipped and unknown counts when present. When the cached inventory may be missing earlier checks, the row is labelled **Checks (observed)**.
+- **Unresolved threads** — the number of unresolved review threads.
+- **Merge conflicts** — whether GitHub can merge the branch into its base without conflicts. No conflicts does not mean the pull request is ready to merge.
+- **Merge status** — the merge state GitHub reports, such as clean, blocked, behind the base branch, checks failing, conflicts, or draft.
+- **Base** — the pull request's base branch.
+- **Review** — approved, changes requested, or awaiting review.
+- **Synced** — when the status was last received.
+
+The popover shows cached status from GitHub webhooks rather than querying GitHub while you hover. Select **Refresh** to request the latest status; the action appears when the status has not synced yet and otherwise at most once every 60 seconds. Values GitHub has not reported yet show as **Unknown**, and the popover notes which evidence is missing. Select the badge to open the pull request on GitHub.
+
+## Previewing a running app
+
+You can preview a web app running inside a Cloud Agent session's sandbox. When a session serves an app on a port, the web interface shows a preview button and preview links, and selecting one opens the running app in a new browser tab. Each preview is served from its own hostname that targets the session's workspace and port, so different sessions and ports do not collide.
+
+Preview is available to every Cloud Agent account.
 
 ## Agent Environment Profiles
 
@@ -149,6 +246,18 @@ Agent environment profiles are reusable bundles of environment settings for clou
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
 
 In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent settings dialog](#choosing-where-sessions-run).
+
+Only organization owners and admins can create, edit, or delete an organization-owned profile. Other members can open the profile and use it for a session, but they see its settings read-only. Personal profiles are unaffected — every account can create and manage its own.
+
+A profile holds up to **50 variables**. Variable keys must start with a letter or underscore, then contain only letters, digits, and underscores, up to 128 characters. Names the sandbox runtime owns are reserved, such as `HOME`, `SESSION_ID`, `SESSION_HOME`, `pnpm_config_store_dir`, and any name beginning with `XDG_`, `KILO`, or `OPENCODE`. The web and mobile editors keep keys in this shape, prefixing `_` when a key would start with a digit. These rules apply when you add a variable; keys stored earlier stay editable.
+
+### Importing a local configuration
+
+You can import a local Kilo configuration ZIP into a profile to move your agents, slash commands, skills, and instructions into the cloud. Open the profile in the **Profiles** tab and use the **Import** tab.
+
+Kilo validates the archive and shows a preview of what it contains before anything is saved. Review the preview, then confirm to replace the profile's agents, slash commands, skills, and instructions. Definitions that match keep their IDs, and definitions missing from the archive are removed; variables, setup commands, and MCP servers are not changed. If the archive is invalid — for example, it uses a reserved built-in agent name — Kilo shows the validation error and disables the import.
+
+Imported instruction files appear on the profile's **Instructions** tab.
 
 ## Environment Variables & Secrets & Startup Commands
 
@@ -184,6 +293,10 @@ Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#ski
 {% callout type="note" %}
 Global skills (`~/.kilo/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
 {% /callout %}
+
+### Skills from skills.sh
+
+An [agent environment profile](#agent-environment-profiles) can also install public skills from [skills.sh](https://skills.sh). Open the profile's **Skills** tab and add a qualified reference such as `anthropics/skills@frontend-design` or a skills.sh skill URL. Cloud Agent installs the referenced skill and its companion files when it prepares a session, so the contents always come from upstream rather than a snapshot saved in the profile. Because there is no Markdown snapshot to edit, you enable, disable, or delete a referenced skill instead of editing it. Manual skills and ZIP uploads work the same as before.
 
 ## Remote Connections
 
@@ -248,17 +361,45 @@ When creating a trigger, you choose an **activation mode** that cannot be change
 
 ### Configuration
 
-Triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+Triggers can use an [agent environment profile](#agent-environment-profiles) to configure the execution environment for triggered sessions, or run without one and use the repository and account defaults. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+
+Which profiles a trigger offers depends on how it runs. Organization triggers run as the organization webhook bot by default and select organization profiles; a trigger created with **Run as webhook creator** selects personal profiles instead. Clearing a profile returns the trigger to the repository and account defaults, and existing triggers keep the profile they already have until you change it.
+
+Webhook and scheduled triggers can run a specific [agent](/docs/code-with-ai/agents/using-agents) instead of the default. Enter the agent slug in the **Custom agent** field. Agents defined in the trigger's [agent environment profile](#agent-environment-profiles) are validated when you save. An agent that exists only in the repository cannot be checked until the triggered session clones the repository, so a missing agent fails that run promptly with a message naming the agent instead of timing out later. Leave the field empty to use the default agent. Clear it to return to the default.
 
 For models that support it, webhook and scheduled triggers can set a **reasoning effort** next to the model selector. **Default** leaves the model's behavior unchanged; a specific effort applies to each session the trigger starts.
 
 Triggers do not support manual env var or setup command overrides at this time.
+
+### Request body validation
+
+Webhook triggers can validate each request body against a JSON Schema before the request is captured. When a body does not match the schema, Kilo rejects it with HTTP 400 and does not capture or queue it.
+
+The schema editor supports standard JSON Schema keywords, including `pattern`, `const`, `enum`, nested objects and arrays, required fields, and value limits. Matching uses native ECMAScript regular expressions, which are not bounded in matching time, so prefer `const` for a fixed value such as a URL and `enum` for a fixed list over a complex pattern.
+
+### Sandbox selection
+
+When your account can choose a sandbox, the trigger form shows a **Sandbox** field. Choices are grouped by provider and filtered to the runtimes available for the selected repository, including the Cloudflare Containers runtime where it applies. **Automatic** keeps the default Cloud Agent routing.
+
+Existing triggers keep any allocation they already have. Legacy allocations are not offered when you create a trigger or change its sandbox.
+
+### Run as webhook creator
+
+By default, organization triggers run as the organization webhook bot. When you create an organization trigger, you can instead select **Run as webhook creator** so each session runs with your identity. Organization billing and repository scope stay with the organization.
+
+Creator-run sessions also resolve GitHub credentials with your own authorization when it is available, so commits and pushes are attributed to your GitHub identity instead of the organization bot. This matches interactive Cloud Agent web sessions. If your account has not authorized the GitHub App, or the repository permissions do not allow it, the session falls back to the installation bot. Organization-bot triggers keep using the organization bot identity.
+
+This is a create-time choice and cannot be changed later. Only you, the creator, can edit a creator-run trigger or run it on demand. Existing triggers keep using the organization webhook bot; create a new trigger to use creator mode.
+
+Creator-run webhooks require shared-secret authentication. Set a header name and a secret of at least 16 characters when you create the trigger, and send the same header with every request. Kilo revalidates your account, the organization, and your direct membership before each delivery and retry. If that authorization fails, the request fails instead of falling back to the organization bot.
 
 ### Scheduled Triggers
 
 Scheduled triggers fire on a recurring schedule using cron expressions. You can configure them with a simple frequency picker (every 10 minutes, hourly, daily, weekly) or enter a raw cron expression for full control. Each trigger has a configurable timezone (default: UTC) and handles daylight saving time transitions automatically.
 
 The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
+
+Scheduled triggers do not accept inbound requests. They run only from their schedule or from the invoke action described below.
 
 ### Invoking a scheduled trigger on demand
 
@@ -316,6 +457,8 @@ You can reference data in a trigger’s prompt template using these placeholders
 
 - `{{scheduledTime}}` - the time the schedule fired (ISO string)
 - `{{timestamp}}` - capture timestamp (ISO string)
+
+Kilo expands placeholders in the prompt template once. A placeholder that arrives inside captured request data, such as `{{headers}}` within a webhook body, stays as literal text and is not expanded again.
 
 {% callout type="warning" title="Security Considerations" %}
 Care should be taken when deciding to use webhooks as they are susceptible to prompt injection attacks. Especially in scenarios where webhook payloads may contain untrusted input. At this time we recommend using webhooks only for trusted sources.
