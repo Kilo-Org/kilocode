@@ -419,6 +419,7 @@ export function Session() {
   const [showScrollbar, setShowScrollbar] = kv.signal("scrollbar_visible", false)
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
+  const [optimizing, setOptimizing] = createSignal(false)
 
   const wide = createMemo(() => dimensions().width > 120)
   const sidebarVisible = createMemo(() => {
@@ -634,6 +635,149 @@ export function Session() {
     }
     const child = scroll.getChildren().find((c) => c.id === targetID)
     if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
+
+  // Retry: inject a machine-dense prompt that resumes the last turn
+  // without preamble and without looping on the same tool call.
+  const retryLastTurn = () => {
+    if (!prompt) return
+    if (!visible()) return
+    const RETRY_PROMPT = "RESUME_PREV. CONTINUE_FROM_LAST. NO_PREAMBLE. NO_LOOPING. EXECUTE_NOW."
+    prompt.set({ input: RETRY_PROMPT, parts: [] })
+    // Give SolidJS time to flush the prompt state before submitting
+    setTimeout(() => {
+      if (!prompt) return
+      const p = prompt as any
+      if (typeof p.submit === "function") {
+        p.submit()
+      } else if (typeof p.focus === "function") {
+        p.focus()
+      }
+    }, 100)
+  }
+
+  // Magic Prompt: spawn a throwaway side session, ask LLM to optimize
+  // the prompt, then delete the session. No context pollution.
+  const optimizePrompt = async () => {
+    if (!prompt || optimizing()) return
+
+    const currentInput = prompt.current?.input ?? ""
+    if (!currentInput.trim()) {
+      toast.show({ message: "Prompt is empty. Type something first.", variant: "warning", duration: 3000 })
+      return
+    }
+
+    setOptimizing(true)
+    let sideSessionID: string | undefined
+
+    try {
+      // Escape triple-quote if input accidentally contains it (rare edge case)
+      const safeInput = currentInput.replace(/"""/g, '\\"\\"\\"')
+      const OPTIMIZER_PROMPT = `You are a prompt optimizer for an AI coding agent. Rewrite the user's draft to be clearer and more actionable WITHOUT changing its intent or language.
+
+OUTPUT_RULES:
+- Output ONLY the rewritten prompt. No intro, no quotes, no markdown fences.
+- Same language as input. Preserve code/paths/names/URLs verbatim.
+- If the input is already clear, return it as-is.
+
+IMPROVEMENT_RULES:
+- Make implicit requirements explicit (what "done" looks like).
+- Add concrete constraints ONLY if obvious from context.
+- Prefer specific verbs over vague ones ("extract" not "handle").
+- If ambiguous, ask ONE clarifying question inline instead of guessing.
+- For file-reading tasks, append: report path if not found.
+
+INPUT:
+"""
+${safeInput}
+"""
+
+REWRITTEN:`
+
+      // Step 1: create a throwaway session
+      const createResult: any = await sdk.client.session.create({})
+      sideSessionID =
+        createResult?.data?.id ??
+        createResult?.data?.session?.id ??
+        createResult?.id ??
+        createResult?.session?.id
+      if (!sideSessionID) {
+        throw new Error("Failed to create side session")
+      }
+
+      // Step 2: send prompt (try known method names in order)
+      const api: any = sdk.client.session
+      const sendFn =
+        api.prompt ??
+        api.promptAsync ??
+        api.prompt_async ??
+        api.send ??
+        api.command
+      if (typeof sendFn !== "function") {
+        throw new Error("SDK has no prompt/send method")
+      }
+
+      await sendFn.call(api, {
+        sessionID: sideSessionID,
+        parts: [{ type: "text", text: OPTIMIZER_PROMPT }],
+      })
+
+      // Step 3: poll messages until assistant responds
+      const timeoutMs = 30_000
+      const pollIntervalMs = 500
+      const start = Date.now()
+      let optimized: string | undefined
+
+      while (Date.now() - start < timeoutMs) {
+        await new Promise((r) => setTimeout(r, pollIntervalMs))
+        try {
+          const msgsResult: any = await sdk.client.session.messages({ sessionID: sideSessionID })
+          const msgs: any[] = msgsResult?.data ?? msgsResult ?? []
+          const assistant = [...msgs].reverse().find((m) => {
+            const info = m?.info ?? m
+            return info?.role === "assistant"
+          })
+          if (assistant) {
+            const parts = assistant?.parts ?? []
+            const text = parts
+              .filter((p: any) => p?.type === "text")
+              .map((p: any) => p?.text ?? "")
+              .join("\n")
+              .trim()
+            if (text) {
+              optimized = text
+              break
+            }
+          }
+        } catch {
+          // ignore individual poll errors
+        }
+      }
+
+      if (!optimized) {
+        throw new Error("Timeout waiting for optimized prompt")
+      }
+
+      prompt.set({ input: optimized, parts: [] })
+      toast.show({ message: "Prompt optimized", variant: "success", duration: 2000 })
+    } catch (e) {
+      console.error("optimizePrompt failed", e)
+      toast.show({
+        message: `Optimize failed: ${e instanceof Error ? e.message : "unknown"}`,
+        variant: "error",
+        duration: 6000,
+      })
+    } finally {
+      // Cleanup: delete side session
+      if (sideSessionID) {
+        const api: any = sdk.client.session
+        const deleteFn = api.delete ?? api.remove ?? api.destroy
+        if (typeof deleteFn === "function") {
+          void Promise.resolve(deleteFn.call(api, { sessionID: sideSessionID })).catch(() => {})
+        }
+      }
+      setOptimizing(false)
+    }
   }
 
   const local = useLocal()
@@ -1610,6 +1754,10 @@ export function Session() {
                             <b>raw-all</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => retryLastTurn()} fg={theme.text}>
+                            <b>⟳</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => jumpPrev()} fg={theme.text}>
                             <b>↑</b>
                           </text>
@@ -1641,7 +1789,14 @@ export function Session() {
                       }}
                       sessionID={route.sessionID}
                       directory={session()?.directory}
-                      right={<pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
+                      right={
+                        <box flexDirection="row" gap={1}>
+                          <text onMouseDown={() => optimizePrompt()} fg={optimizing() ? theme.warning : theme.text}>
+                            <b>{optimizing() ? "..." : "[+]"}</b>
+                          </text>
+                          <pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />
+                        </box>
+                      }
                     />
                   </pluginRuntime.Slot>
                 </Show>
