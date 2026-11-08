@@ -27,9 +27,29 @@ describe("legacy CLI agent config JSON schema", () => {
 
     const fields = found.at(0)
     expect(fields).toBeDefined()
-    const code = fields?.code as { description?: string } | undefined
-    const build = fields?.build as { description?: string } | undefined
+    const code = fields?.code as Record<string, unknown> | undefined
+    const build = fields?.build as Record<string, unknown> | undefined
     expect(code?.description).toContain("Primary coding agent")
     expect(build?.description).toContain("alias for 'code'")
+
+    // Both agent names expose the same full AgentConfig schema, not a
+    // reduced subset of properties that breaks editor completion.
+    expect(code).toBeDefined()
+    expect(build).toBeDefined()
+    const { description: _codeDescription, ...codeShape } = code!
+    const { description: _buildDescription, ...buildShape } = build!
+    expect(codeShape).toEqual(buildShape)
+  })
+
+  test.each(["code", "build"] as const)("accepts %s config without dropping agent options", (name) => {
+    const cfg = Schema.decodeUnknownSync(ConfigV1.Info)({
+      agent: {
+        [name]: { prompt: "Use this agent", mode: "primary", temperature: 0.4 },
+      },
+    })
+
+    expect(cfg.agent?.[name]?.prompt).toBe("Use this agent")
+    expect(cfg.agent?.[name]?.mode).toBe("primary")
+    expect(cfg.agent?.[name]?.temperature).toBe(0.4)
   })
 })
