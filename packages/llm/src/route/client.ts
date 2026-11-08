@@ -184,8 +184,8 @@ const resolveRequestOptions = (request: LLMRequest) => {
   const modelRateLimit = modelDefaults?.rateLimit
   const requestRateLimit = request.rateLimit
   const rateLimit = RateLimit.make({
-    rpm: modelRateLimit?.rpm ?? requestRateLimit?.rpm,
-    rps: modelRateLimit?.rps ?? requestRateLimit?.rps,
+    rpm: requestRateLimit?.rpm ?? modelRateLimit?.rpm, // kilocode_change - request overrides model
+    rps: requestRateLimit?.rps ?? modelRateLimit?.rps, // kilocode_change - request overrides model
   })
   const hasRateLimit = rateLimit.rpm !== undefined || rateLimit.rps !== undefined
   return LLMRequest.update(request, {
