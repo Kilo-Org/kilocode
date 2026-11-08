@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { existsSync } from "node:fs"
 import { Script } from "@opencode-ai/script"
 import { Manifest, Policy } from "../../../script/kilocode/sbom/index"
+import { upload } from "../../../script/kilocode/release"
 import { CHECKSUMS } from "./sbom"
 
 const prerelease = process.env.KILO_PRE_RELEASE === "true"
@@ -71,7 +72,7 @@ for (const target of targets) {
 
 if (Script.release) {
   console.log(`\n📤 Uploading VSIX files to GitHub release v${Script.version}...`)
-  await $`gh release upload v${Script.version} ${[...vsixFiles, ...evidence]} --clobber`
+  await upload({ tag: `v${Script.version}`, files: [...vsixFiles, ...evidence] })
   console.log(`  ✅ Uploaded all VSIX files and SBOM evidence to GitHub release`)
 }
 

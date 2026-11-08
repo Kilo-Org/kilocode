@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 
@@ -87,6 +87,7 @@ function coveredLines(text: string): Set<number> {
 }
 
 const SCRIPT = path.resolve(import.meta.dir, "../../../script/check-opencode-annotations.ts")
+const WORKFLOW = path.resolve(import.meta.dir, "../../../.github/workflows/check-opencode-annotations.yml")
 
 function exec(root: string, args: string[]) {
   const out = spawnSync("git", args, { cwd: root, encoding: "utf8" })
@@ -259,6 +260,69 @@ describe("CLI worktree mode", () => {
       const local = check(root, ["--worktre"])
       expect(local.status).toBe(1)
       expect(local.stderr).toContain("Unknown argument: --worktre")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+// ─── default mode (--base) ───────────────────────────────────────────────────
+
+describe("CLI default mode", () => {
+  test("judges the committed revision, never a worktree dirty with the round's edits", () => {
+    const root = repo()
+    try {
+      const file = path.join(root, "packages/opencode/src/shared.ts")
+      // A committed Kilo change: two marked lines inserted above the upstream
+      // body. Both added lines are covered in HEAD.
+      writeFileSync(
+        file,
+        "const kilo1 = 1 // kilocode_change\nconst kilo2 = 2 // kilocode_change\nexport const value = 1\n",
+      )
+      exec(root, ["add", "packages/opencode/src/shared.ts"])
+      exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "kilo change"])
+      // The round's own edits are still uncommitted: one marked line is gone, so
+      // the committed line numbers no longer point at the committed lines. A
+      // checker that reads this file's content while numbering from HEAD accuses
+      // the untouched upstream line that slid into the gap.
+      writeFileSync(file, "const kilo2 = 2 // kilocode_change\nexport const value = 1\n")
+
+      const result = check(root)
+      expect(result.stderr).not.toContain("shared.ts:2")
+      expect(result.status).toBe(0)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+// ─── workflow paths filter ───────────────────────────────────────────────────
+
+describe("CLI workflow paths filter", () => {
+  function workflow(root: string, text: string) {
+    mkdirSync(path.join(root, ".github/workflows"), { recursive: true })
+    writeFileSync(path.join(root, ".github/workflows/check-opencode-annotations.yml"), text)
+  }
+
+  test("the real workflow triggers on every checked scope", () => {
+    const root = repo()
+    try {
+      workflow(root, readFileSync(WORKFLOW, "utf8"))
+      const result = check(root, ["--worktree"])
+      expect(result.stderr).not.toContain("missing from the `paths:` filter")
+      expect(result.status).toBe(0)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("fails when a checked scope is missing from the workflow trigger", () => {
+    const root = repo()
+    try {
+      workflow(root, readFileSync(WORKFLOW, "utf8").replace(/^\s*- "packages\/tui\/\*\*"\n/m, ""))
+      const result = check(root, ["--worktree"])
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('- "packages/tui/**"')
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

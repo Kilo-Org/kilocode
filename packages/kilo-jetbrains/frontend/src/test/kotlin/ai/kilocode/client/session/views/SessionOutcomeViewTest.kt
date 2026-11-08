@@ -258,6 +258,88 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
     private fun retryButton(root: Container) =
         findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.retry") }
 
+    private fun dismissButton(root: Container) =
+        findAll<JButton>(root).firstOrNull { it.text == KiloBundle.message("session.outcome.dismiss") }
+
+    // ------ dismiss action ------
+
+    fun `test error card offers dismiss`() {
+        edt {
+            var dismissed = 0
+            val view = SessionOutcomeView(dismiss = { dismissed++ })
+            view.showError("Provider balance is too low", "APIError")
+
+            val button = dismissButton(view)
+            assertNotNull("Error card should offer Dismiss", button)
+            button!!.doClick()
+            assertEquals(1, dismissed)
+        }
+    }
+
+    fun `test dismiss is the primary action when retry is unavailable`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, retryable = { false }, dismiss = {})
+            view.showError("invalid kilo.json", "UnknownError")
+
+            assertNull("A dead Retry must not be painted", retryButton(view))
+            assertNotNull("A standalone error with no Retry still needs a way out", dismissButton(view))
+        }
+    }
+
+    fun `test retry and dismiss can appear together`() {
+        edt {
+            var retried = 0
+            var dismissed = 0
+            val view = SessionOutcomeView(retry = { retried++ }, dismiss = { dismissed++ })
+            view.showError("Provider balance is too low", "APIError")
+
+            retryButton(view)!!.doClick()
+            dismissButton(view)!!.doClick()
+            assertEquals(1, retried)
+            assertEquals(1, dismissed)
+        }
+    }
+
+    fun `test readonly error card offers no dismiss`() {
+        edt {
+            val view = SessionOutcomeView(dismiss = null)
+            view.showError("Provider balance is too low", "APIError")
+
+            assertNull("Readonly sessions have no dismiss handler", dismissButton(view))
+        }
+    }
+
+    fun `test showRetry and showOutcome never offer dismiss`() {
+        edt {
+            val view = SessionOutcomeView(retry = {}, dismiss = {})
+            view.showRetry()
+            assertNull("The transcript card already explains a continuable failure", dismissButton(view))
+
+            view.showOutcome(Outcome.FAILED)
+            assertNull("A failed turn with a transcript tail uses Retry, not Dismiss", dismissButton(view))
+
+            view.showOutcome(Outcome.INTERRUPTED)
+            assertNull(dismissButton(view))
+        }
+    }
+
+    fun `test toggling outcomes does not accumulate dismiss buttons`() {
+        edt {
+            var dismissed = 0
+            val view = SessionOutcomeView(dismiss = { dismissed++ })
+            repeat(3) {
+                view.showError("Provider balance is too low", "APIError")
+                view.showOutcome(Outcome.INTERRUPTED)
+            }
+            view.showError("Provider balance is too low", "APIError")
+
+            val buttons = findAll<JButton>(view).filter { it.text == KiloBundle.message("session.outcome.dismiss") }
+            assertEquals("Exactly one live Dismiss button", 1, buttons.size)
+            buttons.single().doClick()
+            assertEquals(1, dismissed)
+        }
+    }
+
     // ------ action-only failures (the transcript owns the reason) ------
 
     fun `test showRetry offers the action with no message of its own`() {

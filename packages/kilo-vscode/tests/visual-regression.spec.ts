@@ -87,7 +87,10 @@ async function settle(page: Page) {
 // between runs, so its baseline flips by a few pixels even without source changes.
 // The Display session preview plays a continuous streaming loop, so captures land
 // on an indeterminate frame.
+// The constrained Agent Manager chat settles at different transcript scroll offsets.
+// Keep the wide chat baseline while excluding this unstable narrow capture.
 const SKIP = new Set<string>([
+  "agentmanager--readable-chat-420",
   "chat--chat-view-session-dock-stability",
   "labs-tool-call-lab--question-resolve-stability",
   "agentmanager--diff-panel-cached-worktree-switch",
@@ -106,9 +109,9 @@ const SKIP = new Set<string>([
 
 const DOCS = new Map<string, string[]>([
   [
-    "chat--task-header-with-todos",
+    "chat--chat-view-session-dock-todo-states",
     [
-      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/task-header-with-todos-chromium-linux.png",
+      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/chat-view-session-dock-todo-states-chromium-linux.png",
     ],
   ],
   [

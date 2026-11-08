@@ -167,6 +167,49 @@ describe("WorktreeStateManager sections", () => {
     })
   })
 
+  describe("setWorktreePinned", () => {
+    it("pins multi-version siblings together and keeps the section", () => {
+      const wt1 = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main", groupId: "g1" })
+      const wt2 = mgr.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main", groupId: "g1" })
+      const wt3 = mgr.addWorktree({ branch: "c", path: "/tmp/c", parentBranch: "main" })
+      const sec = mgr.addSection("Work", null, [wt1.id, wt2.id])
+
+      mgr.setWorktreePinned(wt1.id, true)
+      expect(mgr.getWorktree(wt1.id)?.pinned).toBe(true)
+      expect(mgr.getWorktree(wt2.id)?.pinned).toBe(true)
+      expect(mgr.getWorktree(wt3.id)?.pinned).toBeUndefined()
+      expect(mgr.getWorktree(wt1.id)?.sectionId).toBe(sec.id)
+
+      mgr.setWorktreePinned(wt2.id, false)
+      expect(mgr.getWorktree(wt1.id)?.pinned).toBeUndefined()
+      expect(mgr.getWorktree(wt2.id)?.pinned).toBeUndefined()
+    })
+
+    it("keeps pinned section members with top-level worktrees so their order sticks", () => {
+      const wt1 = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const wt2 = mgr.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main" })
+      const sec = mgr.addSection("Work", null, [wt2.id])
+
+      mgr.setWorktreePinned(wt2.id, true)
+      mgr.setWorktreePinned(wt1.id, true)
+      mgr.setWorktreeOrder([wt2.id, wt1.id, sec.id])
+      expect(mgr.getWorktreeOrder()).toEqual([wt2.id, wt1.id, sec.id])
+
+      mgr.setWorktreePinned(wt2.id, false)
+      expect(mgr.getWorktreeOrder()).toEqual([wt1.id, sec.id, wt2.id])
+    })
+
+    it("persists the pin", async () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      mgr.setWorktreePinned(wt.id, true)
+      await mgr.flush()
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getWorktree(wt.id)?.pinned).toBe(true)
+    })
+  })
+
   describe("getSections", () => {
     it("returns all sections", () => {
       mgr.addSection("A", null)

@@ -144,32 +144,26 @@ try {
   global.click()
   assert.equal(document.querySelector(".install-modal-destination code")?.textContent, "~/.config/kilo/")
   complete({ filePath: "/custom/config/tui.json" })
-  assert.match(document.querySelector(".install-modal-result-path")?.textContent ?? "", /\/custom\/config\/tui\.json$/)
+  assert.equal(document.querySelector(".install-modal-result-path"), null)
   const request = messages.findLast((message) => message.type === "installMarketplaceItem")
   assert.equal(request?.mpInstallOptions?.target, "global")
 
   await mount("/workspace")
   complete({ filePath: "/workspace/.kilo/tui.jsonc" })
-  assert.match(
-    document.querySelector(".install-modal-result-path")?.textContent ?? "",
-    /\/workspace\/\.kilo\/tui\.jsonc$/,
-  )
+  assert.equal(document.querySelector(".install-modal-result-path"), null)
 
   await mount("/workspace")
   complete({
     filePath: "/workspace/.kilo/opencode.jsonc",
     filePaths: ["/workspace/.kilo/opencode.jsonc", "/workspace/.kilo/tui.jsonc"],
   })
-  assert.deepEqual(
-    Array.from(document.querySelectorAll(".install-modal-result-path"), (node) => node.textContent),
-    ["Installed to /workspace/.kilo/opencode.jsonc", "Installed to /workspace/.kilo/tui.jsonc"],
-  )
+  assert.equal(document.querySelector(".install-modal-result-path"), null)
 
   await mount("")
   assert.equal(document.querySelector(".install-modal-destination code")?.textContent, "~/.config/kilo/")
   assert.equal(document.querySelector('input[value="project"]'), null)
   complete({})
-  assert.equal(document.querySelector(".install-modal-result-path")?.textContent, "Installed to ~/.config/kilo/")
+  assert.equal(document.querySelector(".install-modal-result-path"), null)
 
   await mount("/workspace", mcp)
   const section = document.querySelector('[data-slot="marketplace-companion-skills"]')
@@ -201,14 +195,7 @@ try {
   const bundled = messages.findLast((message) => message.type === "installMarketplaceItem")
   assert.deepEqual(bundled?.mpItem, mcp)
   assert.equal(bundled?.mpInstallOptions?.target, "global")
-  assert.deepEqual(
-    Array.from(document.querySelectorAll(".install-modal-result-path"), (node) => node.textContent),
-    [
-      "Installed to /home/test/.config/kilo/kilo.json",
-      "Installed to /home/test/.kilo/skills/query-workflow/SKILL.md",
-      "Installed to /home/test/.kilo/skills/data-checks/SKILL.md",
-    ],
-  )
+  assert.equal(document.querySelector(".install-modal-result-path"), null)
 
   await mount("", mcp)
   assert.equal(document.querySelector('input[value="project"]'), null)
@@ -240,6 +227,46 @@ try {
   }
   await mount("/workspace", plugin, true)
   assert.equal(document.querySelector('[data-slot="marketplace-companion-removal"]'), null)
+
+  // Post-install MCP OAuth sign-in step
+  await mount("/workspace", mcp)
+  complete({ needsAuth: true })
+  assert.equal(
+    document.querySelector(".install-modal-mcp-signin-msg")?.textContent,
+    `${mcp.name} is installed but needs sign-in before its tools can be used.`,
+  )
+  assert.equal(document.querySelector(".dialog-confirm-actions")?.textContent, "LaterSign In")
+  const signInButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+    (button) => button.textContent?.trim() === "Sign In",
+  )
+  assert.equal(signInButton?.dataset.variant, "primary")
+  assert.equal(signInButton?.dataset.size, "large")
+  click("Sign In")
+  const signIn = messages.findLast((message) => message.type === "signInMcp")
+  assert.equal(signIn?.name, mcp.id)
+  assert.equal(signIn?.notify, false)
+  post({ type: "mcpAuthState", directory: "/workspace", needsAuth: [], busy: [mcp.id] })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-mcp-signin-msg")?.textContent?.includes("Waiting"), true)
+  post({ type: "mcpAuthState", directory: "/workspace", needsAuth: [], busy: [] })
+  post({ type: "mcpAuthResult", name: mcp.id, status: "connected" })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-mcp-signin-success")?.textContent, `Signed in to ${mcp.name}.`)
+  assert.equal(document.querySelector(".dialog-confirm-actions")?.textContent, "Done")
+
+  await mount("/workspace", mcp)
+  complete({ needsAuth: true })
+  click("Sign In")
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-mcp-signin-success"), null)
+  assert.equal(
+    document.querySelector(".install-modal-mcp-signin-msg")?.textContent,
+    `${mcp.name} is installed but needs sign-in before its tools can be used.`,
+  )
+  post({ type: "mcpAuthResult", name: mcp.id, status: "failed", error: "denied by server" })
+  await window.happyDOM.waitUntilComplete()
+  assert.equal(document.querySelector(".install-modal-error-msg")?.textContent, "denied by server")
+
   assert.deepEqual(errors, [])
 } finally {
   dispose()

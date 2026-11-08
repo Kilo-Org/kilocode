@@ -1,7 +1,6 @@
-import { Show, For, useContext, type Component } from "solid-js"
+import { Show, For, lazy, useContext, type Component } from "solid-js"
 import type { EnrichedModel } from "../../context/provider"
 import { SessionContext } from "../../context/session"
-import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
@@ -15,6 +14,8 @@ import {
   sanitizeName,
 } from "./model-selector-utils"
 import { avgPrice, fmtAttemptCost, fmtCachedPrice, fmtPrice, fmtTerminalBenchScore } from "./model-preview-utils"
+
+const Markdown = lazy(() => import("./ModelDescription"))
 
 interface Props {
   model: EnrichedModel | null

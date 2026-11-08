@@ -2,6 +2,7 @@ package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
+import kotlinx.serialization.json.JsonPrimitive
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
@@ -12,6 +13,7 @@ import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
@@ -27,6 +29,7 @@ import ai.kilocode.rpc.dto.SkillsPatchDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import org.junit.jupiter.api.Nested
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -55,6 +58,78 @@ class KiloCliDataParserTest {
 
     @Nested
     inner class SseEvents {
+
+        @Test
+        fun `Cloud terminal events parse flat and wrapped public envelopes`() {
+            for (status in listOf("failed", "interrupted", "completed")) {
+                val type = if (status == "completed") "cloud.message.completed" else "cloud.message.failed"
+                val props = """{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"$status","delivery":"sent","accepted":true,"directory":"/cloud"}"""
+                val flat = """{"type":"$type","properties":$props}"""
+                val expected = ChatEventDto.MessageTerminal("ses_cloud", "msg_prompt", status, "sent", true)
+                assertEquals(expected, KiloCliDataParser.parseChatEvent(type, flat))
+                assertEquals(expected, KiloCliDataParser.parseChatEvent(type, """{"directory":"/cloud","payload":$flat}"""))
+                assertEquals(listOf(expected), KiloCliDataParser.ChatEventNormalizer().parse(type, flat))
+            }
+        }
+
+        @Test
+        fun `Cloud failed terminal preserves public delivery and acceptance independently`() {
+            for (delivery in listOf("queued", "sent")) {
+                for (accepted in listOf(false, true)) {
+                    val data = """{"properties":{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"failed","delivery":"$delivery","accepted":$accepted}}"""
+                    assertEquals(
+                        ChatEventDto.MessageTerminal("ses_cloud", "msg_prompt", "failed", delivery, accepted),
+                        KiloCliDataParser.parseChatEvent("cloud.message.failed", data),
+                    )
+                }
+            }
+        }
+
+        @Test
+        fun `Cloud terminals ignore private reason error and unknown fields`() {
+            val data = """{"properties":{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"failed","delivery":"queued","accepted":false,"reason":"private provider details","error":{"message":"private credentials"},"unknown":{"nested":true}}}"""
+            val event = KiloCliDataParser.parseChatEvent("cloud.message.failed", data)
+            assertEquals(ChatEventDto.MessageTerminal("ses_cloud", "msg_prompt", "failed", "queued", false), event)
+            assertFalse(event.toString().contains("private"))
+            assertNull(KiloCliDataParser.parseChatEvent("cloud.message.rejected", data))
+        }
+
+        @Test
+        fun `Cloud terminals reject malformed fields without throwing`() {
+            val props = """{"sessionID":"ses_cloud","messageId":"msg_prompt","status":"failed","delivery":"sent","accepted":true}"""
+            val invalid = listOf(
+                props.replace("\"ses_cloud\"", "\"\""),
+                props.replace("\"ses_cloud\"", "{}"),
+                props.replace("\"msg_prompt\"", "\" \""),
+                props.replace("\"msg_prompt\"", "123"),
+                props.replace("\"messageId\"", "\"messageID\""),
+                props.replace("\"failed\"", "\"completed\""),
+                props.replace("\"failed\"", "{}"),
+                props.replace("\"sent\"", "\"unknown\""),
+                props.replace("\"sent\"", "[]"),
+                props.replace("true", "\"true\""),
+                props.replace("true", "null"),
+                props.replace(",\"accepted\":true", ""),
+            )
+            for (value in invalid) {
+                assertNull(KiloCliDataParser.parseChatEvent("cloud.message.failed", """{"properties":$value}"""), value)
+            }
+            for (data in listOf("{}", """{"properties":[]}""", """{"payload":false}""", """{"payload":{"properties":null}}""")) {
+                assertNull(KiloCliDataParser.parseChatEvent("cloud.message.failed", data), data)
+            }
+        }
+
+        @Test
+        fun `Cloud completed terminal rejects inconsistent completion`() {
+            for (props in listOf(
+                """{"status":"failed","delivery":"sent","accepted":true}""",
+                """{"status":"completed","delivery":"queued","accepted":true}""",
+                """{"status":"completed","delivery":"sent","accepted":false}""",
+            )) {
+                val data = """{"properties":{"sessionID":"ses_cloud","messageId":"msg_prompt",${props.removeSurrounding("{", "}")}}}"""
+                assertNull(KiloCliDataParser.parseChatEvent("cloud.message.completed", data))
+            }
+        }
 
         // ---- extractEventType ----
 
@@ -1296,6 +1371,43 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - mcp oauth absent`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test"}}}"""
+            )
+
+            assertNull(cfg.mcp["remote"]?.oauth)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth disabled`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":false}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(false, oauth.enabled)
+            assertNull(oauth.clientId)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth custom client object`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":{"clientId":"abc","clientSecret":"shh","scope":"read","callbackPort":19999,"redirectUri":"http://127.0.0.1:19999/cb"}}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(true, oauth.enabled)
+            assertEquals("abc", oauth.clientId)
+            assertEquals("shh", oauth.clientSecret)
+            assertEquals("read", oauth.scope)
+            assertEquals(19999, oauth.callbackPort)
+            assertEquals("http://127.0.0.1:19999/cb", oauth.redirectUri)
+        }
+
+        @Test
         fun `parseConfig - scalars instructions and skills`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{
@@ -1722,6 +1834,22 @@ class KiloCliDataParserTest {
             assertEquals(true, result.parts[0].synthetic)
             assertEquals("src/a.kt", result.parts[1].source?.path)
             assertEquals("@src/a.kt", result.parts[1].source?.text?.value)
+        }
+
+        @Test
+        fun `parseMessages - reads injected prompt title from text metadata`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "Update the branch", "metadata": { "kilo": { "injected": { "title": "Update from main" } } } }
+                    ]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw).single()
+
+            assertEquals("Update from main", result.parts[0].injectedTitle)
         }
 
         @Test
@@ -2193,6 +2321,163 @@ class KiloCliDataParserTest {
         }
     }
 
+    @Nested
+    inner class McpAuth {
+
+        // ---- parseMcpAuthResult ----
+
+        @Test
+        fun `parseMcpAuthResult - 200 with connected status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"connected"}""")
+
+            assertEquals("connected", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 200 with failed status and error`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"failed","error":"denied"}""")
+
+            assertEquals("failed", result.status)
+            assertEquals("denied", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 400 maps to unsupported`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(400, """{"error":"UnsupportedOAuthError"}""")
+
+            assertEquals("unsupported", result.status)
+            assertEquals("UnsupportedOAuthError", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 404 maps to not_found`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(404, """{"message":"no such server"}""")
+
+            assertEquals("not_found", result.status)
+            assertEquals("no such server", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - non-JSON body falls back to HTTP status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(500, "not json")
+
+            assertEquals("failed", result.status)
+            assertEquals("HTTP 500", result.error)
+        }
+
+        /**
+         * The CLI owns the "is this really a sign-in problem" decision and reports `needs_auth`
+         * itself, so the parser must pass the status through untouched rather than re-deriving it
+         * from the human-readable error text.
+         */
+        @Test
+        fun `parseMcpStatus - needs_auth is taken from the CLI status`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"needs_auth","error":"Unauthorized: authentication required"}}""",
+            ).single()
+
+            assertEquals("needs_auth", result.status)
+            assertEquals("Unauthorized: authentication required", result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - needs_auth without an error is preserved`() {
+            val result = KiloCliDataParser.parseMcpStatus("""{"anaconda":{"status":"needs_auth"}}""").single()
+
+            assertEquals("needs_auth", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - needs_client_registration is preserved`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"needs_client_registration","error":"no dynamic registration"}}""",
+            ).single()
+
+            assertEquals("needs_client_registration", result.status)
+            assertEquals("no dynamic registration", result.error)
+        }
+
+        /**
+         * Auth-shaped error text on a `failed` status must NOT be upgraded to `needs_auth` here.
+         * The CLI already classifies those; re-doing it client-side would duplicate the rules and
+         * drift from them.
+         */
+        @Test
+        fun `parseMcpStatus - failed is never reclassified from its error text`() {
+            val reasons = listOf(
+                "Unauthorized: authentication required",
+                "Browser authorization failed: Authorization cancelled",
+                "Token exchange failed: invalid client",
+                "Error POSTing to endpoint (HTTP 401): missing bearer token",
+                "SSE error: Non-200 status code (403)",
+                "OAuth discovery failed",
+                "Server rejected the request: invalid_grant",
+                "Connection closed",
+                "spawn npx ENOENT",
+            )
+
+            for (reason in reasons) {
+                val json = """{"anaconda":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("failed", result.status, "must stay failed for: $reason")
+                assertEquals(reason, result.error, "the reason must survive parsing")
+            }
+        }
+
+        // ---- parseMcpAuthEvent ----
+
+        @Test
+        fun `parseMcpAuthEvent - wrapped payload shape`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"directory":"/test","payload":{"type":"mcp.browser.open.failed","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+            assertFalse(event.external)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - flat payload shape`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+        }
+
+        /** `mcp.auth.url` means the client owns opening the URL, which the DTO has to carry. */
+        @Test
+        fun `parseMcpAuthEvent - external marks the client-owned variant`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"payload":{"type":"mcp.auth.url","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}""",
+                external = true,
+            )
+
+            assertNotNull(event)
+            assertTrue(event.external)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - missing url returns null`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"properties":{"mcpName":"linear"}}"""
+            )
+
+            assertNull(event)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - malformed JSON returns null`() {
+            assertNull(KiloCliDataParser.parseMcpAuthEvent("not json"))
+        }
+    }
+
     // ================================================================
     // Group 3 — Request / body builders and local model state
     // ================================================================
@@ -2425,6 +2710,18 @@ class KiloCliDataParserTest {
 
             assertEquals(
                 """{"parts":[{"type":"text","text":"Explain this selection"},{"type":"text","text":"Note: the user selected lines 2-3","synthetic":true},{"type":"file","mime":"text/plain","url":"file:///tmp/App.kt?start=2&end=3","filename":"App.kt"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - writes injected title as text metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(type = "text", text = "update", injectedTitle = "Update from main")))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"update","metadata":{"kilo":{"injected":{"title":"Update from main"}}}}]}""",
                 result,
             )
         }
@@ -2700,6 +2997,118 @@ class KiloCliDataParserTest {
                 "{\"mcp\":{\"local\":{\"type\":\"local\",\"command\":[\"node\",\"server.js\"],\"environment\":{\"TOKEN\":\"x\"},\"headers\":{\"X-Test\":\"1\"},\"enabled\":false,\"timeout\":12000},\"old\":null}}",
                 KiloCliDataParser.buildConfigPatch(patch),
             )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth disabled writes false`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = false),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":false}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        /**
+         * Unset fields are emitted as explicit nulls, not omitted: the config schema deep-merges on
+         * PATCH, so an omitted key would keep whatever the user just cleared.
+         */
+        fun `buildConfigPatch - mcp oauth custom client writes object`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc", scope = "read"),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"," +
+                    "\"oauth\":{\"clientId\":\"abc\",\"clientSecret\":null,\"scope\":\"read\"," +
+                    "\"callbackPort\":null,\"redirectUri\":null}}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth clear writes null`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(clear = true),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":null}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp without oauth omits the key`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(type = "remote", url = "https://mcp.example.test"),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - sets a project MCP`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(type = "remote", url = "https://anaconda.com/api/mcp"),
+            )
+
+            assertEquals(
+                "{\"scope\":\"project\",\"set\":{\"mcp\":{\"anaconda\":{\"type\":\"remote\",\"url\":\"https://anaconda.com/api/mcp\"}}}}",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - unsets a project MCP`() {
+            assertEquals(
+                "{\"scope\":\"project\",\"unset\":[[\"mcp\",\"anaconda\"]]}",
+                KiloCliDataParser.buildMcpOverlayPatch("anaconda", "workspace", null),
+            )
+        }
+
+        /**
+         * The config schema deep-merges on PATCH, so an omitted key keeps its old value on disk. A
+         * field the user cleared has to go out as an explicit null or the previous client
+         * id/secret/scope survives and gets reused after a restart.
+         */
+        @Test
+        fun `buildMcpOverlayPatch - cleared oauth fields are written as explicit nulls`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(
+                    type = "remote",
+                    url = "https://anaconda.com/api/mcp",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc"),
+                ),
+            )
+
+            assertContains(result, "\"clientId\":\"abc\"")
+            assertContains(result, "\"clientSecret\":null")
+            assertContains(result, "\"scope\":null")
+            assertContains(result, "\"callbackPort\":null")
+            assertContains(result, "\"redirectUri\":null")
         }
 
         @Test

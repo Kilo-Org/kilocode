@@ -596,6 +596,13 @@
   min-width: 120px;
 }
 
+.thinking-selector-heading {
+  padding: 8px 12px 4px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  user-select: none;
+}
+
 .thinking-selector-item {
   padding: 8px 12px;
   cursor: pointer;

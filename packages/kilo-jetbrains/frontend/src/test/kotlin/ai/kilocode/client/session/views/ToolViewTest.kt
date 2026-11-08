@@ -1,10 +1,14 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolApproval
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.FileLinkLabel
@@ -33,9 +37,72 @@ class ToolViewTest : BasePlatformTestCase() {
         try {
             views.forEach(Disposer::dispose)
             views.clear()
+            KiloPluginSettings.unsetMcpToolDisplay()
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test expanded display opens generic tool when output is available`() {
+        val tool = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(tool, display = BlockDisplay.EXPANDED))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
+    }
+
+    fun `test expanded display waits for output then opens once expandable`() {
+        val view = track(ToolView(
+            tool("p1", "custom_tool", ToolExecState.RUNNING),
+            display = BlockDisplay.EXPANDED,
+        ))
+
+        assertFalse(view.isExpanded())
+
+        view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" })
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test manual generic tool collapse is not undone by later updates`() {
+        val initial = tool("p1", "custom_tool", ToolExecState.RUNNING).also { it.output = "first" }
+        val view = track(ToolView(initial, display = BlockDisplay.EXPANDED))
+
+        view.toggle()
+        view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "second" })
+
+        assertFalse(view.isExpanded())
+    }
+
+    fun `test live setting expands untouched generic tool`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED)))
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test force expands a generic tool the user manually collapsed`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.EXPANDED))
+        view.toggle()
+        assertFalse("manual collapse must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED), force = true))
+
+        assertTrue("force must expand past a manual collapse", view.isExpanded())
+    }
+
+    fun `test force collapses a generic tool the user manually expanded`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue("manual expand must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.COLLAPSED), force = true))
+
+        assertFalse("force must collapse past a manual expand", view.isExpanded())
     }
 
     // ---- state icons ------
@@ -473,6 +540,8 @@ class ToolViewTest : BasePlatformTestCase() {
         views.add(view)
         return view
     }
+
+    private fun toolDisplay(mcpTool: BlockDisplay) = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, mcpTool = mcpTool)
 
     private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.transcriptFont.name, font.name)

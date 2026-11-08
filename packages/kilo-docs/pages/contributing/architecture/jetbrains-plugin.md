@@ -149,7 +149,7 @@ Paths below are relative to [`Kilo-Org/kilocode`](https://github.com/Kilo-Org/ki
 | Concern | Source path |
 |---|---|
 | Split modules | `packages/kilo-jetbrains/settings.gradle.kts` and module XML descriptors |
-| Contributor constraints | `packages/kilo-jetbrains/AGENTS.md` |
+| Contributor constraints | `packages/kilo-jetbrains/AGENTS.md` and the `jetbrains-ui`/`jetbrains-session`/`jetbrains-arch`/`jetbrains-dev` skills under `.kilo/skills/` |
 | CLI lifecycle | `packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloBackendCliManager.kt` |
 | Connection recovery | `packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendConnectionService.kt` |
 | Workspace cache | `packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspaceManager.kt` |

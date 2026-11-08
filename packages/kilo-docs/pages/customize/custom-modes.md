@@ -175,7 +175,7 @@ Pin a specific model using the `provider/model` format:
 model: anthropic/claude-sonnet-4-20250514
 ```
 
-The model selector also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the **reset button** in the model selector (visible when your active model differs from what the config specifies).
+The model selector remembers the model you picked for each agent within a session or draft. A config-pinned `model` is the default for new sessions; a manual pick beats config only for the agent and session or draft where it was made. Switching to another agent uses that agent's pick or configured default, and switching back restores your choice. Existing sessions recover each agent's model from its latest user message rather than a shared model preference.
 
 ### `steps`
 

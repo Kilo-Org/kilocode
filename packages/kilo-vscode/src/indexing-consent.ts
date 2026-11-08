@@ -1,6 +1,6 @@
 import * as path from "path"
 import type * as vscode from "vscode"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./agent-manager/project/paths"
 import { ProjectRegistry } from "./agent-manager/project/registry"
 

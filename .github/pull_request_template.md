@@ -1,3 +1,5 @@
+<!-- Community PRs are triaged by maintainers. See docs/community-triage.md for what to expect. -->
+
 ## Issue
 
 <!-- Reference an existing issue with `Fixes #123`, `Closes #123`, or equivalent linked issue wording. -->

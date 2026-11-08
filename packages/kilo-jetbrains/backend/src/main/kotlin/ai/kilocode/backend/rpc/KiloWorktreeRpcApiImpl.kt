@@ -79,10 +79,12 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.awt.Frame
 import java.io.IOException
 import java.net.URLEncoder
@@ -129,6 +131,7 @@ class KiloWorktreeRpcApiImpl(
         // Above this, a caller waiting on the per-repo mutation lock is worth a log line — most waits
         // are a few ms and would just be noise.
         private const val LOCK_WAIT_LOG_THRESHOLD_MS = 200L
+        private const val GIT_METADATA_FILE = "kilo-agent-manager-metadata.json"
 
         private fun defaultTrash(): WorktreeTrash? {
             if (ApplicationManager.getApplication() == null) return null
@@ -322,8 +325,90 @@ class KiloWorktreeRpcApiImpl(
                 parseWorktreeList(again.stdout)
             }
         }
-        val items = live(managedWorktrees(all).filter { Files.isDirectory(Path.of(it.path)) })
+        val items = withWorktreeBases(live(managedWorktrees(all).filter { Files.isDirectory(Path.of(it.path)) }))
         return Reconciled(items, orphanDirs(all, main(all)))
+    }
+
+    /**
+     * Adds the saved base branch recorded by the Agent Manager metadata. Worktrees created before
+     * that metadata existed get the current main branch as an unconfirmed candidate; the update
+     * prompt asks the user to confirm it before merging instead of treating it as the saved base.
+     */
+    private fun withWorktreeBases(items: List<WorktreeDto>): List<WorktreeDto> {
+        val root = items.firstOrNull()?.path?.let { Path.of(it) } ?: return items
+        val fallback = baseBranch(items)
+        var known: Set<String>? = null
+        val remotes = {
+            known ?: runGit(root, "remote").stdout.lines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+                .also { known = it }
+        }
+        return items.map { item ->
+            if (item.main) return@map item
+            val meta = readWorktreeMeta(Path.of(item.path), remotes)
+            when {
+                meta != null -> item.copy(
+                    parentBranch = meta.parentBranch,
+                    remote = meta.remote,
+                    parentBranchRecorded = true,
+                )
+                fallback != null -> item.copy(parentBranch = fallback, parentBranchRecorded = false)
+                else -> item
+            }
+        }
+    }
+
+    private data class WorktreeMeta(val parentBranch: String, val remote: String?)
+
+    private fun readWorktreeMeta(path: Path, remotes: () -> Set<String>): WorktreeMeta? {
+        val file = worktreeGitDir(path)?.resolve(GIT_METADATA_FILE) ?: return null
+        if (!Files.isRegularFile(file)) return null
+        val obj = runCatching { Json.parseToJsonElement(Files.readString(file)) as? JsonObject }.getOrNull() ?: return null
+        var branch = obj["parentBranch"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        var remote = obj["remote"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+        if (remote == null) {
+            // Older VS Code metadata stored "origin/main" in parentBranch without a remote field.
+            // Split only when the prefix is a real remote, so "release/1.0" stays a branch name.
+            val slash = branch.indexOf('/')
+            if (slash > 0) {
+                val prefix = branch.substring(0, slash)
+                if (prefix in remotes()) {
+                    remote = prefix
+                    branch = branch.substring(slash + 1)
+                }
+            }
+        }
+        return WorktreeMeta(branch, remote)
+    }
+
+    private fun worktreeGitDir(path: Path): Path? {
+        val dot = path.resolve(".git")
+        if (Files.isDirectory(dot)) return dot
+        if (!Files.isRegularFile(dot)) return null
+        val pointer = runCatching { Files.readString(dot) }.getOrNull() ?: return null
+        val target = pointer.lineSequence().firstOrNull { it.startsWith("gitdir:") }
+            ?.removePrefix("gitdir:")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+        return path.resolve(target).normalize()
+    }
+
+    private fun writeWorktreeMeta(path: Path, parentBranch: String, remote: String?) {
+        val dir = worktreeGitDir(path) ?: return
+        val body = buildJsonObject {
+            put("parentBranch", parentBranch)
+            if (remote != null) put("remote", remote)
+        }
+        runCatching { Files.writeString(dir.resolve(GIT_METADATA_FILE), body.toString()) }
+            .onFailure { LOG.warn("worktree metadata write failed: path=$path reason=${it.message}") }
+    }
+
+    private fun branchRemote(root: Path, branch: String): String? {
+        val remote = runGit(root, "config", "--get", "branch.$branch.remote").stdout.trim()
+        return remote.takeIf { it.isNotEmpty() && it != "." }
     }
 
     private fun main(all: List<WorktreeDto>): Path? =
@@ -393,9 +478,16 @@ class KiloWorktreeRpcApiImpl(
         probeGh(Path.of(directory).normalize(), "rpc", github, maxAge)
     }
 
-    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto = withContext(Dispatchers.IO) {
+    override suspend fun prStatus(directory: String, maxAge: Long?, fresh: List<String>): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        prs[directory]?.takeIf { usable(it.time, now, prTtl(it.value.availability), maxAge) }?.let { return@withContext it.value }
+        val named = prPaths(fresh)
+        // A caller naming paths knows something about them this cache cannot: it was written before
+        // whatever prompted the call. Only the shared list is refused, though — every path it did
+        // not name still answers from the resolver's own caches below, which is what makes this
+        // cheaper than the `maxAge = 0` it replaces.
+        if (named.isEmpty()) {
+            prs[directory]?.takeIf { usable(it.time, now, prTtl(it.value.availability), maxAge) }?.let { return@withContext it.value }
+        }
         val root = Path.of(directory).normalize()
         // A gone directory reports nothing and is not cached, so a real availability problem found
         // from a live directory still reaches the UI.
@@ -417,7 +509,7 @@ class KiloWorktreeRpcApiImpl(
         var status = GhAvailability.OK
         val data = parallel(items) { item ->
             if (status != GhAvailability.OK) return@parallel null
-            val lookup = runCatching { resolver.resolve(item.path, item.branch, base, maxAge) }.getOrElse { err ->
+            val lookup = runCatching { resolver.resolve(item.path, item.branch, base, prAge(item.path, named, maxAge)) }.getOrElse { err ->
                 if (err is CancellationException) throw err
                 LOG.warn("worktree poll failed: op=pr path=${item.path} message=${err.message}", err)
                 return@parallel null
@@ -627,7 +719,35 @@ class KiloWorktreeRpcApiImpl(
             val base = Path.of(directory).normalize()
             val branch = request.branch.trim()
             if (branch.isEmpty()) return@withContext CreateWorktreeResultDto(error = "Branch name is required")
-            lock(base, "create") { addWorktree(base, branch, request.existingBranch, request.baseBranch) }
+            lock(base, "create") {
+                var parent = if (request.existingBranch) null else request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
+                var parentRemote: String? = null
+                val ref = if (request.fetchBase && !request.existingBranch) {
+                    val target = request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: return@lock CreateWorktreeResultDto(error = "Base branch is required to fetch latest")
+                    val upstreamRemote = runGit(base, "config", "--get", "branch.$target.remote").stdout.trim()
+                    val merge = runGit(base, "config", "--get", "branch.$target.merge").stdout.trim()
+                    if (upstreamRemote.isEmpty() || upstreamRemote == "." || !merge.startsWith("refs/heads/")) {
+                        return@lock addWorktree(base, branch, false, target, target)
+                    }
+                    val tracked = merge.removePrefix("refs/heads/")
+                    val fetched = runGit(
+                        base,
+                        listOf("fetch", "--quiet", "--no-tags", upstreamRemote, "+$merge:refs/remotes/$upstreamRemote/$tracked"),
+                        GIT_WRITE_TIMEOUT_MS,
+                    )
+                    if (!fetched.ok) {
+                        LOG.warn("base fetch failed: branch=$target upstream=$upstreamRemote/$tracked exit=${fetched.exit} stderr=${fetched.stderr.trim()}")
+                        return@lock CreateWorktreeResultDto(error = reason(fetched, "Could not fetch $upstreamRemote/$tracked"))
+                    }
+                    parent = tracked
+                    parentRemote = upstreamRemote
+                    "$upstreamRemote/$tracked"
+                } else {
+                    request.baseBranch
+                }
+                addWorktree(base, branch, request.existingBranch, ref, parent, parentRemote)
+            }
         }
 
     override suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto =
@@ -693,7 +813,14 @@ class KiloWorktreeRpcApiImpl(
         }
 
     /** Runs `git worktree add` under `<base>/.kilo/worktrees/<slug>` and records list bookkeeping. */
-    private fun addWorktree(base: Path, branch: String, existing: Boolean, baseRef: String?): CreateWorktreeResultDto {
+    private fun addWorktree(
+        base: Path,
+        branch: String,
+        existing: Boolean,
+        baseRef: String?,
+        parentBranch: String? = null,
+        parentRemote: String? = null,
+    ): CreateWorktreeResultDto {
         val root = mainWorktree(base)
         val storage = root.resolve(".kilo").resolve("worktrees").normalize()
         val parts = branch.split('/')
@@ -724,10 +851,23 @@ class KiloWorktreeRpcApiImpl(
         val path = dir.toRealPath().toString()
         val list = runGit(base, "worktree", "list", "--porcelain")
         val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
+        val parent = if (existing) null else parentBranch ?: baseBranch(items)
+        val remote = parentRemote ?: parent?.let { branchRemote(base, it) }
+        if (!existing && parent != null) writeWorktreeMeta(Path.of(path), parent, remote)
         val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
         val paths = worktreePaths(items).ifEmpty { listOf(path) }
         prependWorktreeOrder(store, path, paths)
-        return CreateWorktreeResultDto(worktree = WorktreeDto(path, dir.fileName.toString(), branch, path))
+        return CreateWorktreeResultDto(
+            worktree = WorktreeDto(
+                path,
+                dir.fileName.toString(),
+                branch,
+                path,
+                parentBranch = parent,
+                remote = remote,
+                parentBranchRecorded = !existing && parent != null,
+            ),
+        )
     }
 
     override suspend fun remove(directory: String, path: String, branch: String?, force: Boolean): RemoveWorktreeResultDto =
@@ -1810,6 +1950,24 @@ internal fun staleWorktrees(items: List<WorktreeDto>, trash: WorktreeTrash? = nu
  */
 internal fun prTargets(items: List<WorktreeDto>): List<WorktreeDto> {
     return items.filter { !it.prunable && it.branch != "(detached)" }
+}
+
+/**
+ * The paths a `prStatus` caller named as no longer covered by any cache, in the shape the worktree
+ * list reports them, so a trailing separator or a `..` segment on the way in still matches a row.
+ */
+internal fun prPaths(fresh: List<String>): Set<String> =
+    fresh.mapTo(HashSet()) { Path.of(it).normalize().toString() }
+
+/**
+ * The freshness ceiling one worktree's lookup runs under: nothing cached at all for a path the
+ * caller named, and whatever the caller allowed for the rest. Keeping this per path is the whole
+ * point of naming them — a repository with a dozen worktrees would otherwise re-run every
+ * PR-less checkout's full `gh` ladder to notice a pull request on one of them.
+ */
+internal fun prAge(path: String, fresh: Set<String>, maxAge: Long?): Long? {
+    if (fresh.isEmpty()) return maxAge
+    return if (Path.of(path).normalize().toString() in fresh) 0 else maxAge
 }
 
 /** Branch checked out in the main working tree, or null when it is missing or detached. */

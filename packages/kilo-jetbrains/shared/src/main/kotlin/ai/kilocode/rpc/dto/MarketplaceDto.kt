@@ -23,6 +23,13 @@ data class MarketplaceSkillDto(
     val content: String,
 )
 
+@Serializable
+data class MarketplaceBundleDto(
+    val id: String,
+    val scope: String,
+    val skills: List<String>,
+)
+
 // `content` carries the marketplace catalog item's raw `content` field as JSON text
 // (a string for skills, an AgentContent object for agents, a string or an array of
 // installation methods for MCP servers) so it can be replayed verbatim on install

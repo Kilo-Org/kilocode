@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.settings.ReasoningDisplay
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -16,7 +17,7 @@ class ReasoningViewStressTest : BasePlatformTestCase() {
 
     fun `test streaming reasoning retains markdown body and disposes editors`() {
         val base = EditorFactory.getInstance().allEditors.size
-        val view = ReasoningView(reasoning("r1", done = false, text = "intro\n\n```kotlin\n"))
+        val view = ReasoningView(reasoning("r1", done = false, text = "intro\n\n```kotlin\n"), mode = ReasoningDisplay.PREVIEW)
         val component = view.md.component
         val scroll = scrolls(view).first()
         val editor = editors(view).single()

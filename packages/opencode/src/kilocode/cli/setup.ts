@@ -6,6 +6,7 @@ import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { hasLazyCommandSelection } from "@/kilocode/cli/lazy-commands"
 import {
+  AutoCommand,
   CloudCommand,
   ConfigCLICommand,
   DaemonCommand,
@@ -47,6 +48,7 @@ export namespace KiloCli {
       .command(CloudCommand)
       .command(RollCallCommand)
       .command(ProfileCommand)
+      .command(AutoCommand)
       .command(RemoteCommand)
       .command(DaemonCommand)
       .command(ConfigCLICommand)

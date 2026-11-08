@@ -55,7 +55,7 @@ export const GoalReportTool = Tool.define(
   "goal_report",
   Effect.succeed({
     description:
-      "Report this active Goal as complete or blocked, with a concrete reason based on your work. This is your report, not independent verification. Only the Goal's root worker may report. Report after finishing work, then give your final response without further actions. The report is saved after the turn finishes; Stop, errors, or a replaced goal can invalidate it. This tool does not grant permission or change scope.",
+      "Report this active Goal as complete or blocked, with a concrete reason based on your work. This is your report, not independent verification. Only the Goal's root worker may report. A scheduled wait is not a blocker: when a wakeup, a cron task, or a background process can carry the goal forward, schedule it and the goal suspends until it fires instead of ending the goal. Report blocked only when no scheduled wait can help. Report after finishing work, then give your final response without further actions. The report is saved after the turn finishes; Stop, errors, or a replaced goal can invalidate it. This tool does not grant permission or change scope.",
     parameters: Parameters,
     execute: (input: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
       Effect.gen(function* () {

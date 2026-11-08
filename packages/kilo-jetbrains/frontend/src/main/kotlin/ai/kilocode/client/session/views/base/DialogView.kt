@@ -8,6 +8,8 @@ import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -41,7 +43,7 @@ open class DialogView(
     private val selection: SessionSelection? = null,
     private val focus: (() -> Unit)? = null,
     // Insets are owned by syncInsets(); the super border is a placeholder it overwrites.
-) : RoundedContentPanel(0, 0), SessionEditorStyleTarget {
+) : RoundedContentPanel(0, 0), SessionEditorStyleTarget, UiDataProvider {
 
     // ---- Action descriptor ----
 
@@ -117,6 +119,16 @@ open class DialogView(
     private val actionButtons = mutableMapOf<String, JButton>()
     private val actionHandlers = mutableMapOf<String, () -> Unit>()
     private val actionOrder = mutableListOf<String>()
+    private var defaultActionId: String? = null
+
+    private val defaultAction = object : DefaultDialogAction {
+        override val enabled: Boolean
+            get() = defaultButton()?.let { it.isEnabled && it.isVisible } == true
+
+        override fun submit() {
+            defaultButton()?.takeIf { it.isEnabled && it.isVisible }?.doClick()
+        }
+    }
 
     private val mainActions = Stack.horizontal(gap = UiStyle.Gap.sm())
 
@@ -248,6 +260,7 @@ open class DialogView(
             actionHandlers.remove(it)
         }
         actionOrder.clear()
+        defaultActionId = actions.firstOrNull { it.primary }?.id
         mainActions.removeAll()
         for (action in actions) {
             val btn = actionButtons[action.id] ?: makeButton(action.id, action.text).also { actionButtons[action.id] = it }
@@ -260,6 +273,10 @@ open class DialogView(
             mainActions.next(btn)
         }
         syncFooter()
+    }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        if (defaultActionId != null) sink[DialogDataKeys.DEFAULT_ACTION] = defaultAction
     }
 
     /**
@@ -389,6 +406,8 @@ open class DialogView(
     override fun outlineColor(): Color? = if (outlined) SessionUiStyle.View.Dialog.outlineColor() else null
 
     // ---- private helpers ----
+
+    private fun defaultButton(): JButton? = defaultActionId?.let(actionButtons::get)
 
     private fun syncNorth() {
         north.removeAll()

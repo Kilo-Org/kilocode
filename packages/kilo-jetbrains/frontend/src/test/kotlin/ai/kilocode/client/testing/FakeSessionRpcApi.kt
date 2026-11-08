@@ -100,6 +100,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
      * fetch and its EDT commit, then release the gate to observe whether the stale snapshot won.
      */
     var pendingGate: CompletableDeferred<Unit>? = null
+    var pendingError: Exception? = null
     var pendingPermissionCalls = 0
         private set
     var pendingQuestionCalls = 0
@@ -389,6 +390,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("pendingPermissions")
         pendingPermissionCalls++
         pendingGate?.await()
+        pendingError?.let { throw it }
         return pendingPermissionList.toList()
     }
 
@@ -396,6 +398,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("pendingQuestions")
         pendingQuestionCalls++
         pendingGate?.await()
+        pendingError?.let { throw it }
         return pendingQuestionList.toList()
     }
 

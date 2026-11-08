@@ -48,6 +48,7 @@ export class TelemetryProxy {
     if (!this.url || !this.password) return
 
     const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
+    if (!built) return
     const payload = JSON.stringify(built)
     const auth = buildTelemetryAuthHeader(this.password)
 

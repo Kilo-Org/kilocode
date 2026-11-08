@@ -25,7 +25,7 @@ Mixlayer is available as a **built-in provider** in Kilo Code, so you can connec
 1. Open **Settings** (gear icon) and go to the **Providers** tab.
 2. Click **Connect provider**, search for **Mixlayer**, and select it.
 3. Enter your Mixlayer API key.
-4. Pick a model — Kilo Code fetches the available models automatically.
+4. Pick a model from the list.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -55,7 +55,7 @@ export MIXLAYER_API_KEY="your-api-key"
       "env": ["MIXLAYER_API_KEY"],
     },
   },
-  "model": "mixlayer/z-ai/glm-5.2",
+  "model": "mixlayer/z-ai/glm-5.3",
 }
 ```
 
@@ -66,14 +66,16 @@ export MIXLAYER_API_KEY="your-api-key"
 
 Mixlayer serves open models including:
 
-- `z-ai/glm-5.2` — 256K context
-- `qwen/qwen3.5-397b-a17b` and the Qwen 3.5 / 3.6 line (vision-capable)
-- `moonshotai/kimi-k2.7-code`
+- `z-ai/glm-5.3` — 256K context
+- `deepseek/deepseek-v4.1-flash` — 256K context
+- `qwen/qwen3.8-27b` — 256K context, vision-capable
+- `qwen/qwen3.6-35b-a3b` and `qwen/qwen3.5-9b` — 128K context, vision-capable
+- `qwen/qwen3.5-4b-free` — free, 128K context, vision-capable
 
 Tool calling and reasoning are supported across the model line. See the [Mixlayer docs](https://docs.mixlayer.com) for the full, current model list and supported parameters.
 
 ## Tips and Notes
 
-- **Model list:** Kilo Code auto-detects available models from Mixlayer's `/v1/models` endpoint, so the picker stays current with your account.
-- **Pricing:** See the [Mixlayer console](https://console.mixlayer.com/) for current per-model pricing.
+- **Model list:** The picker comes from the [models.dev](https://models.dev/providers/mixlayer) catalog. If a model you expect is missing, check Mixlayer's `/v1/models` endpoint for what your key can use.
+- **Pricing:** See [Mixlayer pricing](https://mixlayer.com/pricing) for current per-model pricing.
 - **Reasoning:** Qwen models support a thinking mode; reasoning tokens count against the output budget, so give responses enough room when reasoning is enabled.

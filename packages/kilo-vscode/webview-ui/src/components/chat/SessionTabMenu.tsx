@@ -13,6 +13,8 @@ export const SessionTabMenu: ParentComponent<{
   onTogglePin?: () => void
   closeable?: boolean
   closeShortcut?: JSX.Element
+  /** Extra items rendered above the fork/pin/close actions, e.g. per-tab copy actions. */
+  leading?: JSX.Element
 }> = (props) => {
   const { t } = useLanguage()
   return (
@@ -22,6 +24,14 @@ export const SessionTabMenu: ParentComponent<{
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content class="session-tab-menu am-ctx-menu">
+          <Show when={props.leading}>
+            {(items) => (
+              <>
+                {items()}
+                <ContextMenu.Separator />
+              </>
+            )}
+          </Show>
           <Show when={props.showFork}>
             <ContextMenu.Item disabled={!props.onFork} onSelect={() => props.onFork?.()}>
               <Icon name="fork" size="small" />
@@ -37,6 +47,7 @@ export const SessionTabMenu: ParentComponent<{
               <ContextMenu.ItemLabel>
                 {props.pinned ? t("agentManager.tab.unpin") : t("agentManager.tab.pin")}
               </ContextMenu.ItemLabel>
+              <span class="session-tab-menu-hint">{t("session.tabs.pinHint")}</span>
             </ContextMenu.Item>
             <Show when={props.closeable !== false || props.onCloseOthers}>
               <ContextMenu.Separator />

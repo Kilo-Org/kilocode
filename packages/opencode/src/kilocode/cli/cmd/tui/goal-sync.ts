@@ -47,7 +47,10 @@ export namespace GoalSync {
         for (const session of store.session) {
           if (foreign.has(session.id) || (session.workspaceID && session.workspaceID !== owner)) continue
           const goal = session.metadata?.["kilo.goal"]
-          if (!goal || typeof goal !== "object" || !("active" in goal) || goal.active !== true) continue
+          if (!goal || typeof goal !== "object") continue
+          const active = "active" in goal && goal.active === true
+          const waiting = "status" in goal && goal.status === "waiting"
+          if (!active && !waiting) continue
           const token = {}
           pending.set(session.id, token)
           void sdk.client.session

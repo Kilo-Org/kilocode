@@ -9,9 +9,10 @@ const SECTION_TYPES = new Set<string>([
   "agentManager.toggleSectionCollapsed",
   "agentManager.moveToSection",
   "agentManager.moveSection",
+  "agentManager.setWorktreePinned",
 ])
 
-/** Handle section CRUD messages. Returns true if handled. */
+/** Handle section CRUD and worktree pin messages. Returns true if handled. */
 export function handleSection(
   state: WorktreeStateManager | undefined,
   m: AgentManagerInMessage,
@@ -29,6 +30,7 @@ export function handleSection(
   else if (m.type === "agentManager.toggleSectionCollapsed") state.toggleSection(m.sectionId)
   else if (m.type === "agentManager.moveToSection") state.moveToSection(m.worktreeIds, m.sectionId)
   else if (m.type === "agentManager.moveSection") state.moveSection(m.sectionId, m.dir)
+  else if (m.type === "agentManager.setWorktreePinned") state.setWorktreePinned(m.worktreeId, m.pinned)
   else return false
   push()
   return true

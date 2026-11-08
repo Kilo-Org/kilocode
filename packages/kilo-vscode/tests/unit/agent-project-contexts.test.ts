@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { ProjectContexts } from "../../src/agent-manager/project/contexts"
-import { ProjectRegistry, type StoredProject } from "../../src/agent-manager/project/registry"
+import type { StoredProject } from "../../src/agent-manager/project/registry"
 import { projectIdFor } from "../../src/agent-manager/project/paths"
 import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
@@ -16,9 +16,7 @@ function stored(id: string): StoredProject {
   }
 }
 
-function setup(
-  opts: { workspace?: string; enabled?: boolean; projects?: StoredProject[]; expanded?: Record<string, boolean> } = {},
-) {
+function setup(opts: { workspace?: string; projects?: StoredProject[]; expanded?: Record<string, boolean> } = {}) {
   const registryProjects = opts.projects ?? []
   const registry = {
     list: () => registryProjects,
@@ -29,7 +27,6 @@ function setup(
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace,
     registry,
-    enabled: () => opts.enabled ?? false,
     deps: {
       log: () => {},
       exists: () => true,
@@ -51,27 +48,28 @@ describe("ProjectContexts", () => {
     expect(active?.pinned).toBe(true)
   })
 
-  it("has no active project without a workspace when the flag is off", () => {
-    const { contexts } = setup({ enabled: false })
+  it("has no active project without a workspace or registered projects", () => {
+    const { contexts } = setup()
     expect(contexts.active()).toBeUndefined()
+    expect(contexts.snapshots()).toEqual([])
   })
 
   it("falls back to the first registry project without a workspace", () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ enabled: true, projects: [extra] })
+    const { contexts } = setup({ projects: [extra] })
     expect(contexts.active()?.id).toBe("prj-extra")
   })
 
-  it("rejects activating registry projects when the flag is off", () => {
-    const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: false, projects: [extra] })
-    expect(contexts.activate("prj-extra")).toBeUndefined()
+  it("rejects unknown projects without changing the active project", () => {
+    const { contexts } = setup({ workspace: WORKSPACE })
+    expect(contexts.activate("prj-unknown")).toBeUndefined()
+    expect(contexts.expand("prj-unknown")).toBeUndefined()
     expect(contexts.active()?.id).toBe(PINNED)
   })
 
   it("activates registered projects", () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [extra] })
     const ctx = contexts.activate("prj-extra")
     expect(ctx?.root).toBe("/repo/prj-extra")
     expect(contexts.active()?.id).toBe("prj-extra")
@@ -80,7 +78,7 @@ describe("ProjectContexts", () => {
 
   it("keeps explicit accordion expansion unchanged after switching", () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [extra] })
     contexts.active()
     contexts.expand("prj-extra")
     contexts.activate("prj-extra")
@@ -92,7 +90,7 @@ describe("ProjectContexts", () => {
 
   it("expands without changing the active project", () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [extra] })
     expect(contexts.expand("prj-extra")?.id).toBe("prj-extra")
     expect(contexts.active()?.id).toBe(PINNED)
     expect(contexts.isExpanded("prj-extra")).toBe(true)
@@ -100,7 +98,7 @@ describe("ProjectContexts", () => {
 
   it("allows accordion collapse independently from active detail selection", () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [extra] })
     contexts.activate("prj-extra")
     contexts.collapse("prj-extra")
     expect(contexts.isExpanded("prj-extra")).toBe(false)
@@ -109,7 +107,7 @@ describe("ProjectContexts", () => {
 
   it("removes projects and falls back to the pinned project", async () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [extra] })
     contexts.activate("prj-extra")
     await contexts.remove("prj-extra")
     expect(contexts.get("prj-extra")).toBeUndefined()
@@ -163,7 +161,7 @@ describe("ProjectContexts", () => {
 
   it("isolates services between projects", () => {
     const extra = stored("prj-extra")
-    const { contexts, created } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts, created } = setup({ workspace: WORKSPACE, projects: [extra] })
     contexts.active()!.stateManager()
     contexts.activate("prj-extra")!.stateManager()
     expect(created).toEqual([WORKSPACE, "/repo/prj-extra"])
@@ -171,11 +169,9 @@ describe("ProjectContexts", () => {
 
   it("re-derives the pinned project when the workspace changes", () => {
     const ws: { root: string | undefined } = { root: undefined }
-    const { contexts } = setup({ enabled: false })
     const dynamic = new ProjectContexts({
       workspaceRoot: () => ws.root,
       registry: { list: () => [], get: () => undefined },
-      enabled: () => false,
       deps: { log: () => {}, exists: () => true },
     })
     expect(dynamic.active()).toBeUndefined()
@@ -186,11 +182,15 @@ describe("ProjectContexts", () => {
     ws.root = "/repo/other"
     expect(dynamic.syncPinned()).toBe(true)
     expect(dynamic.active()?.root).toBe("/repo/other")
+    ws.root = undefined
+    expect(dynamic.syncPinned()).toBe(true)
+    expect(dynamic.active()).toBeUndefined()
+    expect(dynamic.snapshots()).toEqual([])
   })
 
   it("snapshots pinned first with registry projects in order", () => {
     const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [extra] })
     const list = contexts.snapshots()
     expect(list.map((p) => p.id)).toEqual([PINNED, "prj-extra"])
     expect(list[0]!.pinned).toBe(true)
@@ -209,7 +209,6 @@ describe("ProjectContexts", () => {
     const extra = stored("prj-extra")
     const { contexts } = setup({
       workspace: WORKSPACE,
-      enabled: true,
       projects: [extra],
       expanded: { [extra.id]: true },
     })
@@ -227,30 +226,9 @@ describe("ProjectContexts", () => {
     expect(contexts.snapshots()[0]!.expanded).toBe(false)
   })
 
-  it("hides registry projects from snapshots when the flag is off", () => {
-    const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: false, projects: [extra] })
-    expect(contexts.snapshots().map((p) => p.id)).toEqual([PINNED])
-  })
-
-  it("returns active ownership to pinned Local when multi-project is disabled", () => {
-    const extra = stored("prj-extra")
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [extra] })
-    const secondary = contexts.expand("prj-extra")!
-    contexts.activate("prj-extra")
-
-    const pinned = contexts.disable()
-
-    expect(pinned?.id).toBe(PINNED)
-    expect(contexts.active()?.id).toBe(PINNED)
-    expect(contexts.isExpanded(PINNED)).toBe(true)
-    expect(contexts.isExpanded("prj-extra")).toBe(false)
-    expect(secondary.lifecycle).toBe("suspended")
-  })
-
   it("dedupes registry entries that match the pinned project", () => {
     const dupe = stored(PINNED)
-    const { contexts } = setup({ workspace: WORKSPACE, enabled: true, projects: [dupe] })
+    const { contexts } = setup({ workspace: WORKSPACE, projects: [dupe] })
     expect(contexts.snapshots().map((p) => p.id)).toEqual([PINNED])
   })
 })

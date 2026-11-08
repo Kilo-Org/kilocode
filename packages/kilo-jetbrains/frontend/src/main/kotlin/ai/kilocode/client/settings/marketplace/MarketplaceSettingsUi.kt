@@ -2,6 +2,7 @@ package ai.kilocode.client.settings.marketplace
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloMarketplaceService
+import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsBannerKind
 import ai.kilocode.client.settings.base.SettingsListPanel
@@ -13,11 +14,11 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.actionSystem.ActionManager
@@ -26,6 +27,7 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -43,16 +45,17 @@ import javax.swing.JSeparator
 import javax.swing.SwingConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
 internal class MarketplaceSettingsUi(
-    cs: CoroutineScope,
+    private val cs: CoroutineScope,
     dir: String,
     private val create: (MarketplaceItemDto, Boolean) -> MarketplaceInstallDialogHandle = ::MarketplaceInstallDialog,
     private val browse: (String) -> Unit = { BrowserUtil.browse(it) },
-) : SettingsListPanel(cs, ActiveListConfig.Preferred) {
+) : SettingsListPanel(cs, ActiveConfig.Preferred) {
     private var dir = dir
     private var items: List<MarketplaceItemDto> = emptyList()
     private val selectedTypes = ALL_TYPES.toMutableSet()
@@ -65,6 +68,8 @@ internal class MarketplaceSettingsUi(
     /** Set while a row action is in flight, so the finished reload hands focus back to the list. */
     private var refocus = false
 
+    /** An MCP item that just installed needing sign-in. Drained by [afterApply] once the reload lands. */
+    private var authPrompt: MarketplaceItemDto? = null
 
     private val allButton = textAction(this, allLabel()) { selectAllTypes() }
     private val agentChip = FilterChip(agentLabel(), UiStyle.Badge::typeAgent) { toggleType("agent") }
@@ -91,7 +96,10 @@ internal class MarketplaceSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    /** Installed state changes when MCP or Skills Settings removes a bundle this page listed. */
+    override fun refreshOnFocus(): Boolean = true
+
+    override suspend fun fetch(): List<ActiveItem> {
         val result = service<KiloMarketplaceService>().list(dir)
         items = result.items
         return withContext(edt) {
@@ -161,7 +169,7 @@ internal class MarketplaceSettingsUi(
         skillChip.selected = "skill" in selectedTypes
     }
 
-    private fun rows(): List<ActiveListItem> = items
+    private fun rows(): List<ActiveItem> = items
         .asSequence()
         .filter { it.type in selectedTypes }
         .filter { !installedOnly || it.installedProject || it.installedGlobal }
@@ -170,7 +178,7 @@ internal class MarketplaceSettingsUi(
         .map { row(it) }
         .toList()
 
-    private fun row(item: MarketplaceItemDto): ActiveListItem = object : ActiveListItem {
+    private fun row(item: MarketplaceItemDto): ActiveItem = object : ai.kilocode.client.ui.list.ActiveSection {
         override val key = rowKey(item)
         override val section = sectionLabel(item.type)
         override val title = item.name
@@ -185,23 +193,39 @@ internal class MarketplaceSettingsUi(
         override val cells = if (progress != null) emptyList() else cells(item)
     }
 
-    private fun badges(item: MarketplaceItemDto): List<ActiveListBadge> = listOfNotNull(
-        ActiveListBadge(typeLabel(item.type), typeStyle(item.type)),
-        ActiveListBadge(KiloBundle.message("settings.marketplace.badge.installedProject"), UiStyle.Badge.Highlight)
+    private fun badges(item: MarketplaceItemDto): List<ActiveBadge> = listOfNotNull(
+        typeBadge(item),
+        ActiveBadge(KiloBundle.message("settings.marketplace.badge.installedProject"), UiStyle.Badge.Highlight)
             .takeIf { item.installedProject },
-        ActiveListBadge(KiloBundle.message("settings.marketplace.badge.installedGlobal"), UiStyle.Badge.Highlight)
+        ActiveBadge(KiloBundle.message("settings.marketplace.badge.installedGlobal"), UiStyle.Badge.Highlight)
             .takeIf { item.installedGlobal },
-        ActiveListBadge(item.category, UiStyle.Badge.Secondary).takeIf { item.category.isNotBlank() },
+        ActiveBadge(item.category, UiStyle.Badge.Secondary).takeIf { item.category.isNotBlank() },
     )
 
-    private fun cells(item: MarketplaceItemDto): List<ActiveListCell> = listOfNotNull(
-        ActiveListCell(INSTALL_CELL, KiloBundle.message("settings.marketplace.install"), primary = true)
+    private fun typeBadge(item: MarketplaceItemDto): ActiveBadge {
+        if (item.type != "mcp" || item.skills.isEmpty()) {
+            return ActiveBadge(typeLabel(item.type), typeStyle(item.type))
+        }
+        val mcp = KiloBundle.message("settings.marketplace.tag.mcpShort")
+        val skill = typeLabel("skill")
+        return ActiveBadge(
+            "$mcp|$skill",
+            typeStyle(item.type),
+            segments = listOf(
+                FilledBadgeIcon.Segment(mcp, typeStyle("mcp")),
+                FilledBadgeIcon.Segment(skill, typeStyle("skill")),
+            ),
+        )
+    }
+
+    private fun cells(item: MarketplaceItemDto): List<ActiveCell> = listOfNotNull(
+        ActiveCell(INSTALL_CELL, KiloBundle.message("settings.marketplace.install"), primary = true)
             .takeIf { !installHidden(item) },
-        ActiveListCell(REMOVE_PROJECT_CELL, KiloBundle.message("settings.marketplace.remove.project"))
+        ActiveCell(REMOVE_PROJECT_CELL, KiloBundle.message("settings.marketplace.remove.project"))
             .takeIf { item.installedProject },
-        ActiveListCell(REMOVE_GLOBAL_CELL, KiloBundle.message("settings.marketplace.remove.global"))
+        ActiveCell(REMOVE_GLOBAL_CELL, KiloBundle.message("settings.marketplace.remove.global"))
             .takeIf { item.installedGlobal },
-        docsUrl(item)?.let { ActiveListCell(DOCS_CELL, KiloBundle.message("settings.marketplace.docs")) },
+        docsUrl(item)?.let { ActiveCell(DOCS_CELL, KiloBundle.message("settings.marketplace.docs")) },
     )
 
     private fun installHidden(item: MarketplaceItemDto): Boolean =
@@ -222,7 +246,7 @@ internal class MarketplaceSettingsUi(
         val request = dialog.result()
         Telemetry.send(
             if (request.remove) "Marketplace Uninstall Clicked" else "Marketplace Install Clicked",
-            mapOf("type" to item.type, "id" to item.id, "target" to request.target),
+            marketplaceProps(item, request),
         )
         act(item, request)
     }
@@ -238,11 +262,14 @@ internal class MarketplaceSettingsUi(
             ),
         )
         refocus = true
-        view.update(rows(), ActiveListSelection.Key(key))
-        mutateAndReload(ActiveListSelection.Key(key), overlay = false) {
+        view.update(rows(), ActiveSelection.Key(key))
+        mutateAndReload(ActiveSelection.Key(key), overlay = false) {
             var ok = false
             try {
                 val svc = service<KiloMarketplaceService>()
+                // Mirrors McpSettingsUi.remove(): drop any pending sign-in and the needs-auth
+                // indicator before the server disappears, while the CLI still recognizes the name.
+                if (request.remove && item.type == "mcp") service<KiloMcpAuthService>().forget(dir, item.id)
                 val result = if (request.remove) {
                     svc.remove(dir, item.id, item.type, request.target)
                 } else {
@@ -250,10 +277,12 @@ internal class MarketplaceSettingsUi(
                 }
                 if (!result.success) throw SettingsMessageException(result.error ?: failedText(request.remove))
                 if (item.type == "skill" || item.type == "mcp") service<KiloAgentBehaviorService>().reloadSkills(dir)
-                Telemetry.send(
-                    if (request.remove) "Marketplace Item Removed" else "Marketplace Item Installed",
-                    mapOf("type" to item.type, "id" to item.id, "target" to request.target),
-                )
+                // The CLI reports `Marketplace Item Installed`/`Removed` for every client; sending them here
+                // too would double count.
+                if (!request.remove && item.type == "mcp") {
+                    val needs = service<KiloMcpAuthService>().refresh(dir)
+                    if (item.id in needs) withContext(edt) { authPrompt = item }
+                }
                 ok = true
                 true
             } finally {
@@ -263,7 +292,7 @@ internal class MarketplaceSettingsUi(
                     // mutation, not the reload that mutateAndReload runs afterwards, so if that reload
                     // throws the row would otherwise stay on the progress text painted before it with
                     // no action cells. On success apply() simply repaints again with the fetched rows.
-                    view.update(rows(), ActiveListSelection.Key(key))
+                    view.update(rows(), ActiveSelection.Key(key))
                     if (!ok) {
                         // afterApply never runs for a failed mutation, so hand focus back here instead
                         // and clear the flag, or the next unrelated reload would steal it.
@@ -294,10 +323,47 @@ internal class MarketplaceSettingsUi(
 
     override fun afterApply() {
         syncFilters()
-        if (!refocus) return
-        refocus = false
-        // Puts the row's action overlay back after a mutation, without stealing focus on a plain reload.
-        view.focusList()
+        if (refocus) {
+            refocus = false
+            // Puts the row's action overlay back after a mutation, without stealing focus on a plain reload.
+            view.focusList()
+        }
+        val item = authPrompt ?: return
+        authPrompt = null
+        ApplicationManager.getApplication().invokeLater({ promptSignIn(item) }, ModalityState.any())
+    }
+
+    @RequiresEdt
+    private fun promptSignIn(item: MarketplaceItemDto) {
+        val answer = Messages.showYesNoDialog(
+            KiloBundle.message("settings.marketplace.mcp.signIn.message", item.name),
+            KiloBundle.message("settings.marketplace.mcp.signIn.title"),
+            KiloBundle.message("settings.marketplace.mcp.signIn.confirm"),
+            Messages.getCancelButton(),
+            Messages.getQuestionIcon(),
+        )
+        if (answer != Messages.YES) return
+        val name = item.id
+        val auth = service<KiloMcpAuthService>()
+        if (!launch("marketplace mcp sign in name=$name") { id ->
+            val result = auth.signIn(dir, name)
+            if (!withContext(edt) { active(id) }) return@launch
+            withContext(edt) { auth.report(name, result) }
+            if (result.status != "connected" && result.status != "cancelled") {
+                throw SettingsMessageException(
+                    result.error ?: KiloBundle.message("settings.agentBehavior.mcp.signIn.failed", name),
+                )
+            }
+            withContext(edt) {
+                if (!active(id)) return@withContext
+                setBusy(false)
+                clearProgress()
+            }
+        }) return
+        showProgress(
+            KiloBundle.message("settings.agentBehavior.mcp.signIn.progress", name),
+            KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel"),
+        ) { cs.launch { auth.cancel(dir, name) } }
     }
 
     /**

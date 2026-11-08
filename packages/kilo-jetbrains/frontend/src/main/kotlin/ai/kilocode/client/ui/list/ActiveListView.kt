@@ -1,8 +1,28 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.active.ActiveAnimation
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveHit
+import ai.kilocode.client.ui.active.ActiveHover
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveMove
+import ai.kilocode.client.ui.active.ActiveReorder
+import ai.kilocode.client.ui.active.ActiveRowHeight
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.activeHoverable
+import ai.kilocode.client.ui.active.activeRegions
+import ai.kilocode.client.ui.active.activeVisibleCells
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -10,7 +30,6 @@ import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.openapi.ui.popup.Balloon
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.awt.RelativePoint
@@ -42,28 +61,32 @@ import javax.swing.event.ListSelectionEvent
 
 internal class ActiveListView(
     empty: String,
-    private val cfg: ActiveListConfig = ActiveListConfig.Equal,
-    private val surface: ActiveListSurface = ActiveListSurface.Default,
-    private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
+    private val cfg: ActiveConfig = ActiveConfig.Equal,
+    private val surface: ActiveSurface = ActiveSurface.Default,
+    private val matcher: (String, ActiveItem) -> Boolean = ::activeListMatches,
     private val enter: () -> Boolean = ::activeListEnterFocus,
     private val openOnClick: Boolean = true,
-    private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
-    private val onActivate: ((ActiveListItem) -> Unit)? = null,
-    private val onClick: ((ActiveListItem) -> Unit)? = null,
-    private val menu: ActiveListMenu<*>? = null,
-    private val reorder: ActiveListReorder? = null,
-    private val onHover: ((ActiveListItem?) -> Unit)? = null,
+    private val onOpen: ((ActiveItem, Boolean) -> Unit)? = null,
+    private val onActivate: ((ActiveItem) -> Unit)? = null,
+    private val onClick: ((ActiveItem) -> Unit)? = null,
+    private val menu: ActiveMenu<*>? = null,
+    private val reorder: ActiveReorder? = null,
+    private val onHover: ((ActiveItem?) -> Unit)? = null,
+    private val options: ActiveListOptions = ActiveListOptions(),
+    timers: UiTimerSource = UiTimers,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
-    private val model = CollectionListModel<ActiveListItem>()
-    private val renderer = ActiveListRenderer(model, cfg, menu)
-    // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
-    // have to turn on the hover action bar to get it.
-    private val hover = cfg.hoverActions || menu != null || onHover != null
-    internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
+    private val model = CollectionListModel<ActiveItem>()
+    private val renderer = ActiveListRenderer(model, cfg, menu, options)
+    // Row and button-cell hover share one state holder, so only one element is ever hovered and the
+    // hit regions of the current row are rebuilt once per entry instead of on every mouse move.
+    private val hover = ActiveHover()
+    internal val list: JBList<ActiveItem> = object : JBList<ActiveItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
-        override fun hoveredIndex(): Int = hovered
+        override fun hoveredIndex(): Int = hover.row
+
+        override fun hoveredCell(): String? = hover.cell
 
         override fun processMouseEvent(e: MouseEvent) {
             if (e.id == MouseEvent.MOUSE_PRESSED && UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) {
@@ -73,7 +96,7 @@ internal class ActiveListView(
         }
 
         override fun getBackground(): Color {
-            if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+            if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
             return super.getBackground() ?: UIUtil.getListBackground(false, false)
         }
 
@@ -102,11 +125,11 @@ internal class ActiveListView(
             return UiStyle.Text.tipLines(note.lines())
         }
     }.apply {
-        selectionMode = cfg.selection
+        selectionMode = options.selection
         setExpandableItemsEnabled(false)
         emptyText.text = empty
     }
-    private var items = emptyList<ActiveListItem>()
+    private var items = emptyList<ActiveItem>()
     private var filter = ""
     private var press: Press? = null
     private var popups = 0
@@ -123,20 +146,27 @@ internal class ActiveListView(
     private var wired = false
     internal var onSelect: (() -> Unit)? = null
 
-    // Without a delegate every animation frame repaints the whole list, and every row re-renders and re-lays out
-    // its stamp at the frame rate of whichever spinner is running. Only rows that show an animated glyph need
-    // the next frame. REFRESH_DELEGATE is an experimental platform hook, installed/cleared with the view's own
-    // attach/detach (see addNotify/removeNotify) rather than once in init, because a worktree session editor
-    // tab switch detaches and re-attaches this exact view.
-    private val refreshDelegate = Runnable { repaintAnimated() }
+    private val animation = ActiveAnimation(list, timers) { clip ->
+        val first = list.locationToIndex(clip.location)
+        val last = list.locationToIndex(Point(clip.x, clip.y + clip.height - 1))
+        buildList {
+            if (first >= 0) for (index in first..last) {
+                val item = model.getElementAt(index)
+                val bounds = list.getCellBounds(index, index)
+                if (bounds?.intersects(clip) == true) {
+                    val state = renderer.state(list, item, index, list.isSelectedIndex(index), list.hasFocus())
+                    add(ActiveAnimation.Row(item, bounds, state.actionsVisible))
+                }
+            }
+        }
+    }
 
     fun setEmptyText(text: String) {
         list.emptyText.text = text
     }
 
     init {
-        if (surface == ActiveListSurface.ToolWindow) isOpaque = true
-        list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
+        if (surface == ActiveSurface.ToolWindow) isOpaque = true
         list.cellRenderer = renderer
         list.registerKeyboardAction(
             { open(enter()) },
@@ -202,39 +232,60 @@ internal class ActiveListView(
             }
 
             override fun mouseMoved(e: MouseEvent) {
-                if (hover && drag == null) {
-                    val idx = list.locationToIndex(e.point)
-                        .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
-                        ?: -1
-                    setHovered(idx)
+                if (drag != null) {
+                    syncCursor(cursorAt(e.point))
+                    return
                 }
-                syncCursor(cursorAt(e.point))
+                val idx = list.locationToIndex(e.point)
+                    .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
+                    ?: -1
+                val selected = idx >= 0 && list.isSelectedIndex(idx)
+                val oldCell = hover.cell
+                val hit = hover.move(idx, selected, e.point) { hoveredCells(idx, selected) }
+                if (hovered != idx) {
+                    setHovered(idx)
+                } else if (oldCell != hover.cell) {
+                    repaintRow(idx)
+                    animation.update()
+                }
+                syncCursor(hit?.let { Cursor.getPredefinedCursor(it.cursor) } ?: baseCursor)
             }
 
             override fun mouseExited(e: MouseEvent) {
-                if (hover) setHovered(-1)
+                setHovered(-1)
                 syncCursor(baseCursor)
             }
         }
         list.addMouseListener(mouse)
         list.addMouseMotionListener(mouse)
         list.addListSelectionListener { e: ListSelectionEvent ->
-            // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
-            // its selection flips instead of waiting for the next mouse move.
-            if (hover) repaintRow(hovered)
+            // Selection gates the hover-revealed action bar and can add cells, so repaint the hovered
+            // row and drop the cached regions as soon as its selection flips.
+            hover.invalidate()
+            repaintRow(hovered)
             if (!restoring && !e.valueIsAdjusting) {
                 anchor = identities()
                 mark = list.selectedIndex
                 onSelect?.invoke()
             }
+            if (!restoring) animation.update()
         }
         list.addFocusListener(object : FocusAdapter() {
-            override fun focusGained(e: FocusEvent) = list.repaint()
+            override fun focusGained(e: FocusEvent) {
+                animation.update()
+                list.repaint()
+            }
 
-            override fun focusLost(e: FocusEvent) = list.repaint()
+            override fun focusLost(e: FocusEvent) {
+                animation.update()
+                list.repaint()
+            }
         })
         list.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) {
+                // Cached button regions are laid out for the previous width. Drop them so the next
+                // pointer move rebuilds right-aligned hit targets for the new size.
+                hover.invalidate()
                 if (extent == list.width || !cfg.wrapDescription) return
                 extent = list.width
                 resetCellSizes()
@@ -244,24 +295,6 @@ internal class ActiveListView(
         ScrollingUtil.installActions(list)
         next(list)
         wired = true
-    }
-
-    // Symmetric with removeNotify below: the client property only matters while this view is actually showing
-    // (that is when the platform's own animation cycle reads it), and a tab switch detaches and re-attaches the
-    // same view, so installing it once in init would leave it cleared — and the whole-list repaint it exists to
-    // avoid back — for the rest of the view's life after the first switch.
-    override fun addNotify() {
-        super.addNotify()
-        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, refreshDelegate)
-    }
-
-    // The delegate closes over this view's model/renderer/items. It costs nothing while the view stays attached
-    // — the platform only reads it during its own paint/animation cycle — but clearing it on detach makes the
-    // delegate's lifetime match the view's instead of depending on how long the platform's animation registry
-    // happens to retain it.
-    override fun removeNotify() {
-        super.removeNotify()
-        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
     }
 
     /**
@@ -319,7 +352,7 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun selected(): ActiveListItem? {
+    fun selected(): ActiveItem? {
         checkEdt()
         return list.selectedValue
     }
@@ -333,7 +366,7 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun selectedItems(): List<ActiveListItem> {
+    fun selectedItems(): List<ActiveItem> {
         checkEdt()
         return list.selectedValuesList
     }
@@ -359,6 +392,13 @@ internal class ActiveListView(
         if (idx < 0) return false
         choose(idx, scroll)
         return true
+    }
+
+    /** True when row [index] is entirely inside the viewport. */
+    @RequiresEdt
+    fun indexFullyVisible(index: Int): Boolean {
+        checkEdt()
+        return index in 0 until model.size && ScrollingUtil.isIndexFullyVisible(list, index)
     }
 
     @RequiresEdt
@@ -392,23 +432,27 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun item(key: String): ActiveListItem? {
+    fun item(key: String): ActiveItem? {
         checkEdt()
         return model.items.firstOrNull { it.key == key }
     }
 
+    /**
+     * Anchor for a popup or balloon attached to [key]'s row, or to one [cell] of it. [leading] takes
+     * the target's bottom-left corner, which keeps a dropdown aligned with the cell it belongs to;
+     * the default takes its bottom middle for a balloon callout.
+     */
     @RequiresEdt
-    fun point(key: String, cell: String? = null): RelativePoint {
+    fun point(key: String, cell: String? = null, leading: Boolean = false): RelativePoint {
         checkEdt()
         val idx = activeListIndex(model.items, key)
         if (idx < 0) return RelativePoint(list, Point(0, 0))
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
-        // a center anchor would bury the callout under the balloon body and cover the row instead of
-        // pointing at it.
-        val x = target.x + target.width / 2
+        // Anchored to the target's bottom edge: the balloon opens below, so a center anchor would
+        // bury the callout under the balloon body and cover the row instead of pointing at it.
+        val x = if (leading) target.x else target.x + target.width / 2
         val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
@@ -421,18 +465,18 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
-    fun update(items: List<ActiveListItem>, selection: ActiveListSelection = ActiveListSelection.Preserve) {
+    fun update(items: List<ActiveItem>, selection: ActiveSelection = ActiveSelection.Preserve) {
         checkEdt()
         if (this.items != items) heightKey = null
         this.items = items
         when (selection) {
-            is ActiveListSelection.Key -> {
+            is ActiveSelection.Key -> {
                 anchor = setOf(selection.key)
                 mark = -1
                 sync(Absent.KEEP)
             }
-            ActiveListSelection.Slide -> sync(Absent.SLIDE)
-            ActiveListSelection.Preserve -> sync(Absent.KEEP)
+            ActiveSelection.Slide -> sync(Absent.SLIDE)
+            ActiveSelection.Preserve -> sync(Absent.KEEP)
         }
     }
 
@@ -453,6 +497,7 @@ internal class ActiveListView(
         if (value) setHovered(-1)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
+        animation.update()
         list.repaint()
     }
 
@@ -479,6 +524,7 @@ internal class ActiveListView(
     @RequiresEdt
     private fun sync(absent: Absent = Absent.KEEP, at: Int? = null) {
         checkEdt()
+        hover.invalidate()
         val q = filter.trim()
         val base = if (q.isBlank()) items else items.filter { matcher(q, it) }
         val state = drag
@@ -500,10 +546,11 @@ internal class ActiveListView(
             // rows must leave the viewport where the user left it, or a polling owner would drag the
             // view back to the selection on every tick.
             val idx = list.selectedIndex
-            if (idx >= 0 && identities() != before) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+            if (idx >= 0 && identities() != before) ensureVisible(idx)
         } finally {
             restoring = false
         }
+        animation.update()
     }
 
     /**
@@ -511,7 +558,7 @@ internal class ActiveListView(
      * slot. Falls back to [absent] once none of the anchored rows survive.
      */
     @RequiresEdt
-    private fun restore(rows: List<ActiveListItem>, absent: Absent, at: Int?) {
+    private fun restore(rows: List<ActiveItem>, absent: Absent, at: Int?) {
         checkEdt()
         val idx = at?.let { activeListIndex(rows, it) }?.takeIf { it >= 0 }
         if (idx != null) {
@@ -555,6 +602,7 @@ internal class ActiveListView(
     @RequiresEdt
     private fun setHovered(idx: Int) {
         checkEdt()
+        if (idx < 0) hover.clear()
         if (hovered == idx) return
         val old = hovered
         hovered = idx
@@ -563,6 +611,23 @@ internal class ActiveListView(
         // Single funnel for every hover transition — mouse move, mouse exit, and the clear that setBusy
         // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
         onHover?.invoke(model.items.getOrNull(idx))
+        animation.update()
+    }
+
+    /** Drops the row and button hover, for a scroll or resize that moves rows under the pointer. */
+    @RequiresEdt
+    internal fun resetHover() {
+        checkEdt()
+        setHovered(-1)
+    }
+
+    /** Hit regions of [idx]'s buttons, or none when the row has nothing interactive. */
+    private fun hoveredCells(idx: Int, selected: Boolean): List<ActiveHit> {
+        if (idx < 0 || idx >= model.size || !list.isEnabled) return emptyList()
+        val item = model.getElementAt(idx)
+        if (item is ActiveGap || item.disabled || item.progress != null) return emptyList()
+        if (!activeHoverable(item, menu)) return emptyList()
+        return activeListHits(list, idx, selected)
     }
 
     /**
@@ -596,26 +661,14 @@ internal class ActiveListView(
         list.getCellBounds(idx, idx)?.let { list.repaint(it) }
     }
 
-    /** Advances an animation frame: repaints only the visible rows that paint an animated glyph. */
     @RequiresEdt
-    private fun repaintAnimated() {
-        checkEdt()
-        val first = list.firstVisibleIndex
-        val last = list.lastVisibleIndex
-        if (first < 0 || last < first) return
-        for (idx in first..last) {
-            if (activeListAnimated(model.getElementAt(idx))) repaintRow(idx)
-        }
-    }
-
-    @RequiresEdt
-    private fun syncCellHeight(rows: List<ActiveListItem>) {
+    private fun syncCellHeight(rows: List<ActiveItem>) {
         checkEdt()
         val key = ActiveListHeightKey(cfg, list.width, rows.map(::activeListHeightRow))
         if (heightKey == key) return
         heightKey = key
         renderer.setBodyHeight(null)
-        if (cfg.height == ActiveListRowHeight.PREFERRED) {
+        if (cfg.height == ActiveRowHeight.PREFERRED) {
             if (list.fixedCellHeight == -1) return
             list.fixedCellHeight = -1
             list.revalidate()
@@ -646,7 +699,45 @@ internal class ActiveListView(
     private fun choose(idx: Int, scroll: Boolean = true) {
         checkEdt()
         list.selectedIndex = idx
-        if (scroll) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        if (scroll) ensureVisible(idx)
+    }
+
+    /**
+     * Scrolls row [idx] into view without moving it when it is already fully visible.
+     *
+     * The viewport's view is this panel, not the nested `JList`, so scrolling the list directly measures
+     * the offset in the wrong coordinate space: the list stays at 0,0 inside the panel while the viewport
+     * moves the panel. The view position is therefore computed against this panel's coordinates directly,
+     * which is also the only reliable path before the first layout has settled.
+     */
+    @RequiresEdt
+    private fun ensureVisible(idx: Int) {
+        val port = parent as? JViewport
+        // Tests and embedders can put the raw list in their own scroll pane; there the list is the view
+        // and the platform helper already measures the right space.
+        if (port == null) {
+            ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+            return
+        }
+        val extent = port.extentSize.height
+        if (extent <= 0) return
+        val cell = list.getCellBounds(idx, idx) ?: return
+        val row = SwingUtilities.convertRectangle(list, cell, this)
+        val top = port.viewPosition.y
+        val bottom = top + extent
+        val y = when {
+            row.y < top -> row.y
+            row.y + row.height > bottom -> row.y + row.height - extent
+            else -> return
+        }
+        // The view and list may not have been laid out yet, so their heights can still be zero even when
+        // the cells are measured. Convert the last cell into this panel's space so the clamp and [row]
+        // above use one coordinate system, even if the view later gains padding.
+        val last = list.getCellBounds(model.size - 1, model.size - 1)
+        val end = last?.let { SwingUtilities.convertRectangle(list, it, this) }?.let { it.y + it.height } ?: 0
+        val content = maxOf(height, end)
+        val max = (content - extent).coerceAtLeast(0)
+        port.viewPosition = Point(port.viewPosition.x, y.coerceIn(0, max))
     }
 
     @RequiresEdt
@@ -669,7 +760,7 @@ internal class ActiveListView(
 
     private fun open(focus: Boolean) {
         val item = active() ?: return
-        if (item is ActiveListGap) return
+        if (item is ActiveGap) return
         if (item.progress != null) return
         val action = onOpen
         if (action != null) {
@@ -681,12 +772,12 @@ internal class ActiveListView(
 
     private fun source() {
         val item = list.selectedValue ?: return
-        if (item is ActiveListGap) return
+        if (item is ActiveGap) return
         if (item.progress != null) return
         onOpen?.invoke(item, true)
     }
 
-    private fun active(): ActiveListItem? {
+    private fun active(): ActiveItem? {
         list.selectedValue?.let { return it }
         if (model.size == 0) return null
         choose(0, scroll = false)
@@ -695,12 +786,12 @@ internal class ActiveListView(
 
     /**
      * Default action for a double-click. Resolves to the row's explicit activation only: an
-     * [onActivate] handler, then the row's [ActiveListItem.doubleClick] cell, then a [primary] cell.
+     * [onActivate] handler, then the row's [ActiveItem.doubleClick] cell, then a [primary] cell.
      * Unlike Enter, it never falls back to firing an arbitrary first action cell, so a row whose only
      * action is destructive (e.g. delete) does nothing on double-click.
      */
-    private fun activate(item: ActiveListItem) {
-        if (item is ActiveListGap) return
+    private fun activate(item: ActiveItem) {
+        if (item is ActiveGap) return
         if (item.progress != null) return
         val action = onActivate
         if (action != null) {
@@ -711,15 +802,15 @@ internal class ActiveListView(
             fire(item, id)
             return
         }
-        activeListVisibleCells(item, true)
+        activeVisibleCells(item, true)
             .firstOrNull { it.enabled && it.primary }
             ?.let { fire(item, it.id) }
     }
 
-    private fun primary(item: ActiveListItem) {
-        if (item is ActiveListGap) return
+    private fun primary(item: ActiveItem) {
+        if (item is ActiveGap) return
         if (item.progress != null) return
-        val cells = activeListVisibleCells(item, true)
+        val cells = activeVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
         if (cell != null) {
             fire(item, cell.id)
@@ -734,18 +825,8 @@ internal class ActiveListView(
     }
 
     /** Dispatches a click from the row model, never the renderer stamp reused across rows. */
-    private fun fire(item: ActiveListItem, id: String) {
-        val cell = item.cells.firstOrNull { it.id == id }?.action
-        if (cell != null) {
-            cell()
-            return
-        }
-        val region = activeListRegions(item)[id]
-        if (region != null) {
-            region()
-            return
-        }
-        onCell(item.key, id)
+    private fun fire(item: ActiveItem, id: String) {
+        ai.kilocode.client.ui.active.activeDispatch(item, id, onCell)
     }
 
     @RequiresEdt
@@ -755,7 +836,7 @@ internal class ActiveListView(
         if (!list.isEnabled || filter.isNotBlank() || drag != null) return null
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap || item.disabled || item.progress != null) return null
+        if (item is ActiveGap || item.disabled || item.progress != null) return null
         if (!cfg.movable(item)) return null
         val selected = list.isSelectedIndex(idx)
         if (activeListCellAt(list, idx, point, selected, menu?.takeIf { it.available(item) } != null) != null) return null
@@ -772,7 +853,7 @@ internal class ActiveListView(
         checkEdt()
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return null
+        if (item is ActiveGap) return null
         val bounds = list.getCellBounds(idx, idx) ?: return null
         val (image, origin) = renderer.rowImage(list, item, idx, bounds.width) ?: return null
         // Clamp so grabbing the section-header band still anchors inside the body image.
@@ -831,7 +912,7 @@ internal class ActiveListView(
         mark = target
         sync(at = target)
         if (source == target) return
-        reorder?.onMove?.invoke(ActiveListMove(state.key, source, target, rows.map { it.key }))
+        reorder?.onMove?.invoke(ActiveMove(state.key, source, target, rows.map { it.key }))
     }
 
     @RequiresEdt
@@ -862,8 +943,8 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return baseCursor
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return baseCursor
-        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty()) return baseCursor
+        if (item is ActiveGap) return baseCursor
+        if (menu == null && item.cells.isEmpty() && activeRegions(item).isEmpty()) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor
@@ -875,15 +956,22 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return null
         if (!bounds.contains(e.point)) return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return null
+        if (item is ActiveGap) return null
         val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
-            activeListCellBounds(list, idx, selected)
-                .entries
-                .firstOrNull { it.value.contains(e.point) }
-                ?.key
+            // A hit-tested region without an action — a status pill with only an id for tooltip
+            // hit-testing — must not swallow a click/double-click that falls through to it. `action`
+            // is only the per-cell handler and is null for every cell routed through the panel-level
+            // `onCell` callback (Sign In, Connect, Delete, rename, the row menu glyph, ...), so
+            // blocking must key off whether the hit id is a real cell/region, not that field.
+            val ids = activeVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
+                .map { it.id }
+                .toSet() + activeRegions(item).keys
+            activeListHits(list, idx, selected)
+                .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
+                ?.id
         }
         return Hit(item, id)
     }
@@ -894,9 +982,9 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return false
         if (!bounds.contains(point)) return false
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return false
+        if (item is ActiveGap) return false
         if (item.disabled || item.progress != null || !cfg.available(item)) return false
-        val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_LIST_MENU_CELL] ?: return false
+        val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_MENU_CELL] ?: return false
         if (!rect.contains(point)) return false
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null,
@@ -917,6 +1005,7 @@ internal class ActiveListView(
             if (tracked) return
             tracked = true
             popups++
+            animation.update()
             list.repaint()
         }
         add(object : JBPopupListener {
@@ -926,6 +1015,7 @@ internal class ActiveListView(
                 if (!tracked) return
                 tracked = false
                 popups = maxOf(0, popups - 1)
+                animation.update()
                 list.repaint()
             }
         })
@@ -967,19 +1057,58 @@ internal class ActiveListView(
     }
 
     override fun getBackground(): Color {
-        if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
     }
 
     override fun getScrollableTracksViewportWidth() = true
 
     override fun getScrollableTracksViewportHeight(): Boolean {
-        if (surface != ActiveListSurface.ToolWindow) return false
+        if (surface != ActiveSurface.ToolWindow) return false
         val view = parent as? JViewport ?: return false
         return preferredSize.height < view.height
     }
 
-    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    /**
+     * Full rendered row height at [width], measured from every cell renderer.
+     *
+     * `JList.preferredSize` can be stale before the list enters a viewport: wrapped row height only
+     * becomes known once the final width reaches the renderer. Popup owners need this answer before
+     * building their balloon, so measure the same renderers the list will use and sum every cell.
+     */
+    @RequiresEdt
+    internal fun preferredRowsHeight(width: Int): Int {
+        checkEdt()
+        val old = list.size
+        list.setSize(width.coerceAtLeast(1), old.height.coerceAtLeast(1))
+        try {
+            val fixed = list.fixedCellHeight
+            val body = if (fixed > 0) {
+                fixed.toLong() * model.size
+            } else {
+                (0 until model.size).sumOf { idx ->
+                    list.cellRenderer.getListCellRendererComponent(
+                        list,
+                        model.getElementAt(idx),
+                        idx,
+                        false,
+                        false,
+                    ).preferredSize.height.toLong()
+                }
+            }
+            return (body + list.insets.top + list.insets.bottom)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
+        } finally {
+            list.size = old
+        }
+    }
+
+    override fun getPreferredScrollableViewportSize(): Dimension {
+        val pref = super.getPreferredSize()
+        val width = width.takeIf { it > 0 } ?: pref.width
+        return Dimension(pref.width, preferredRowsHeight(width))
+    }
 
     override fun getScrollableUnitIncrement(
         visibleRect: Rectangle,
@@ -996,14 +1125,14 @@ internal class ActiveListView(
         direction: Int,
     ) = if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width
 
-    private data class Hit(val item: ActiveListItem, val id: String?)
+    private data class Hit(val item: ActiveItem, val id: String?)
 
     private data class Press(val key: String, val id: String)
 
     private data class Drag(val key: String, val from: Int, val index: Int, val height: Int)
 
     private data class ActiveListHeightKey(
-        val cfg: ActiveListConfig,
+        val cfg: ActiveConfig,
         val width: Int,
         val rows: List<ActiveListHeightRow>,
     )
@@ -1021,13 +1150,13 @@ private data class ActiveListHeightRow(
     val section: String?,
     val badges: List<ActiveListHeightBadge>,
     val trailing: String?,
-    val cells: List<ActiveListCell>,
+    val cells: List<ActiveCell>,
     val disabled: Boolean,
     val progress: String?,
 )
 
 /**
- * The parts of a badge that can change how tall a row wants to be. [ActiveListBadge.action] and its
+ * The parts of a badge that can change how tall a row wants to be. [ActiveBadge.action] and its
  * tooltip are deliberately left out: an owner is free to build the handler while answering `badges`,
  * and a fresh lambda per read would make the height key miss on every sync.
  */
@@ -1036,9 +1165,10 @@ private data class ActiveListHeightBadge(
     val style: UiStyle.Badge.Style,
     val id: String?,
     val icon: Any?,
+    val segments: List<FilledBadgeIcon.Segment>,
 )
 
-private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
+private fun activeListHeightRow(item: ActiveItem): ActiveListHeightRow {
     return ActiveListHeightRow(
         item.key,
         item.title,
@@ -1046,7 +1176,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon, it.segments) },
         item.trailing,
         item.cells,
         item.disabled,
@@ -1054,41 +1184,20 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
     )
 }
 
-private fun activeListIndex(items: List<ActiveListItem>, key: String?): Int {
+private fun activeListIndex(items: List<ActiveItem>, key: String?): Int {
     if (key == null) return -1
     return items.indexOfFirst { it.key == key }
 }
 
-private fun activeListIdentityIndex(items: List<ActiveListItem>, id: Any): Int {
+private fun activeListIdentityIndex(items: List<ActiveItem>, id: Any): Int {
     return items.indexOfFirst { it.identity == id || it.key == id }
 }
 
-private fun activeListIndex(items: List<ActiveListItem>, index: Int): Int {
+private fun activeListIndex(items: List<ActiveItem>, index: Int): Int {
     if (items.isEmpty()) return -1
     return index.coerceIn(0, items.lastIndex)
 }
-
-/**
- * What a refresh should do with the selection. Every policy keeps the rows the user last selected
- * when they survive the refresh, and none of them scrolls in that case; they differ only in what
- * happens once those rows are gone.
- */
-internal sealed interface ActiveListSelection {
-    /** Select nothing while the remembered rows are absent, and pick them up again if they return. */
-    data object Preserve : ActiveListSelection
-
-    /**
-     * Select the row that took the remembered row's slot — the following row, or the last row when
-     * the removed one was last — so a deletion moves the highlight instead of dropping it. Clears
-     * only when nothing was selected or the list is now empty.
-     */
-    data object Slide : ActiveListSelection
-
-    /** Select [key] instead, now or as soon as a later refresh brings that row in. */
-    data class Key(val key: String) : ActiveListSelection
-}
-
-internal fun activeListMatches(query: String, item: ActiveListItem): Boolean {
+internal fun activeListMatches(query: String, item: ActiveItem): Boolean {
     if (query.isBlank()) return true
     if (activeListTextMatches(query, item.title)) return true
     val extra = item.search ?: return false

@@ -56,7 +56,6 @@ export const dict = {
     "Dodatak dodaje prilagođene alate i integracije u Kilo. Dodaci se izvršavaju sa svim dozvolama.",
   "marketplace.install.plugin.warning":
     "Dodaci izvršavaju kod sa svim dozvolama. Mogu čitati i mijenjati vaše datoteke, pokretati naredbe i pristupati vašim pristupnim podacima i mreži. Instalirajte samo dodatke kojima vjerujete.",
-  "marketplace.install.installedAt": "Instalirano u {{path}}",
   "marketplace.intro": "Instalirajte višekratne agente, vještine, MCP alate i dodatke za jedan ili sve projekte.",
   "marketplace.intro.learnMore": "O Marketplaceu",
   "marketplace.install.prerequisites": "Preduslovi",
@@ -66,6 +65,13 @@ export const dict = {
   "marketplace.install.failed": "Instalacija nije uspjela",
   "marketplace.install.done": "Završeno",
   "marketplace.install.close": "Zatvori",
+  "marketplace.install.mcp.signIn.message": "{{name}} je instaliran, ali zahtijeva prijavu prije nego što se njegovi alati mogu koristiti.",
+  "marketplace.install.mcp.signIn.button": "Prijava",
+  "marketplace.install.mcp.signIn.waiting": "Čekanje na prijavu putem preglednika…",
+  "marketplace.install.mcp.signIn.cancel": "Otkaži",
+  "marketplace.install.mcp.signIn.skip": "Kasnije",
+  "marketplace.install.mcp.signIn.success": "Prijavljeni ste na {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Prijava na {{name}} nije uspjela.",
   "marketplace.remove.title": "Ukloniti {{name}}?",
   "marketplace.remove.confirm":
     "Jeste li sigurni da želite ukloniti ovaj {{type}}? Ovo će ga ukloniti iz vaše {{scope}} konfiguracije.",

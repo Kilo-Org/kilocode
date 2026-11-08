@@ -249,6 +249,70 @@ class KiloSessionRpcApiImplTest {
         }
     }
 
+    @Test
+    fun `events replays pending question before live events`() = runBlocking(Dispatchers.Default) {
+        mock.pendingQuestions = """[{
+            "id": "q_pending",
+            "sessionID": "ses_test",
+            "questions": [{"question": "Ready?", "header": "Plan"}]
+        }]"""
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        val first = withTimeout(10_000) {
+            api.events("ses_test", "/test").first()
+        }
+
+        assertIs<ChatEventDto.QuestionAsked>(first)
+        assertEquals("q_pending", first.request.id)
+        assertEquals("ses_test", first.request.sessionID)
+    }
+
+    @Test
+    fun `events replays pending permission before live events`() = runBlocking(Dispatchers.Default) {
+        mock.pendingPermissions = """[{
+            "id": "p_pending",
+            "sessionID": "ses_test",
+            "permission": "write",
+            "patterns": ["*.ts"]
+        }]"""
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        val first = withTimeout(10_000) {
+            api.events("ses_test", "/test").first()
+        }
+
+        assertIs<ChatEventDto.PermissionAsked>(first)
+        assertEquals("p_pending", first.request.id)
+        assertEquals("ses_test", first.request.sessionID)
+    }
+
+    @Test
+    fun `events does not replay prompts from other sessions`() = runBlocking(Dispatchers.Default) {
+        mock.pendingQuestions = """[{
+            "id": "q_other",
+            "sessionID": "ses_other",
+            "questions": [{"question": "Ready?", "header": "Plan"}]
+        }]"""
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        // The replay should filter out the other session's question. Collecting should
+        // block indefinitely (no matching events), so a short timeout proves nothing was emitted.
+        val result = withTimeoutOrNull(1_000) {
+            api.events("ses_test", "/test").first()
+        }
+
+        assertNull(result)
+    }
+
     private suspend fun app(server: MockCliServer): KiloBackendAppService {
         val app = KiloBackendAppService.create(scope, FakeCliServer(server), TestLog()).also { apps.add(it) }
         app.connect()

@@ -801,7 +801,9 @@ function createLayer(input: StreamInput) {
           Effect.promise(() => input.sdk.session.status()).pipe(
             Effect.map((out) => {
               const item = out.data?.[input.sessionID]
-              return !item || item.type === "idle"
+              // kilocode_change start - a session asleep on a pending wakeup has finished its turn
+              return !item || item.type === "idle" || item.type === "scheduled"
+              // kilocode_change end
             }),
             Effect.orElseSucceed(() => fallback),
           ),

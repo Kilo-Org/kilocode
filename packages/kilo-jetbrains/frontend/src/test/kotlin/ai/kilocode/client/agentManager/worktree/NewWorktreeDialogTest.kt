@@ -27,6 +27,7 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.tabs.JBTabs
 import com.intellij.ui.tabs.TabInfo
@@ -60,11 +61,13 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         workspaces = KiloWorkspaceService(scope, ws)
         sessionRpc = FakeSessionRpcApi()
         KiloPluginSettings.unsetAgent()
+        KiloPluginSettings.unsetFetchWorktreeBase()
     }
 
     override fun tearDown() {
         try {
             KiloPluginSettings.unsetGithub()
+            KiloPluginSettings.unsetFetchWorktreeBase()
             dialog?.let { d -> edt { Disposer.dispose(d.disposable) } }
             dialog = null
             scope.cancel()
@@ -182,6 +185,17 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertEquals("kilo", payload.provider)
         assertEquals("gpt-5", payload.model)
         assertEquals("low", payload.variant)
+        assertTrue(entry.fetchBase)
+    }
+
+    fun `test fetch base choice persists across dialogs`() {
+        open()
+        edt { fetch().isSelected = false }
+        edt { submit() }
+        assertFalse((taken() as NewWorktreePlan.Create).fetchBase)
+
+        open()
+        edt { assertFalse(fetch().isSelected) }
     }
 
     fun `test creating sends the visible reasoning fallback instead of an invalid saved value`() {
@@ -470,6 +484,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     private fun combo(): ComboBox<*> = descendants(newTab()).filterIsInstance<ComboBox<*>>().single()
 
     private fun field(): JTextField = combo().editor.editorComponent as JTextField
+
+    private fun fetch(): JBCheckBox = descendants(newTab()).filterIsInstance<JBCheckBox>().single()
 
     private fun popup(): BasicComboPopup = combo().accessibleContext.getAccessibleChild(0) as BasicComboPopup
 

@@ -159,9 +159,30 @@ class EmptySessionPanel(
         }
 
         add(header, BorderLayout.NORTH)
-        if (!minimal && recent.hasSessions()) add(recent, BorderLayout.CENTER)
+        syncRecent()
         add(south, BorderLayout.SOUTH)
         syncTip()
+    }
+
+    /**
+     * Replace the recent-sessions list shown on the empty screen. Called when the controller reloads
+     * recents (e.g. after the CLI reconnects), so the visible panel updates in place rather than
+     * waiting for a new one to be built.
+     */
+    @RequiresEdt
+    fun setRecents(sessions: List<SessionDto>) {
+        recent.update(sessions)
+        syncRecent()
+    }
+
+    /** Attach the recents list only when it has rows and this surface shows it. */
+    private fun syncRecent() {
+        val show = !minimal && recent.hasSessions()
+        val attached = recent.parent != null
+        if (show == attached) return
+        if (show) add(recent, BorderLayout.CENTER) else remove(recent)
+        revalidate()
+        repaint()
     }
 
     /**

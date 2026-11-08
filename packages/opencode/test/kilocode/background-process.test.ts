@@ -1,6 +1,9 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, mock, spyOn, test } from "bun:test"
 import { Bus } from "@/bus"
 import { BackgroundProcess } from "@/kilocode/background-process"
+import { BackgroundProcessWindows } from "@/kilocode/background-process/windows"
+import { BackgroundProcessRunner } from "@/kilocode/background-process/runner"
+import { Process } from "@/util/process"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@opencode-ai/core/shell"
 import { Filesystem } from "@/util/filesystem"
@@ -10,6 +13,7 @@ import { Effect } from "effect"
 import { spawn } from "child_process"
 import { once } from "node:events"
 import fs from "fs/promises"
+import * as allfs from "fs/promises"
 import path from "path"
 import { provideTestInstance, TestInstance, tmpdir } from "../fixture/fixture"
 import { it } from "../lib/effect"
@@ -64,6 +68,50 @@ async function until(check: () => boolean | Promise<boolean>, message: string, t
   throw new Error(message)
 }
 
+async function cleanupFixture(childState: string, childFile: string, text: typeof Process.text) {
+  if (!(await Bun.file(childState).exists())) return
+  const owned: unknown = JSON.parse(await Bun.file(childState).text())
+  if (
+    !owned ||
+    typeof owned !== "object" ||
+    !("pid" in owned) ||
+    !("started" in owned) ||
+    typeof owned.pid !== "number" ||
+    typeof owned.started !== "number"
+  )
+    throw new Error("own fixture record invalid")
+  const query = `Get-CimInstance Win32_Process -Filter "ProcessId = ${owned.pid}" | Select-Object ProcessId,CreationDate,CommandLine | ConvertTo-Json -Compress`
+  const found = await text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
+    nothrow: true,
+    timeout: 30_000,
+  })
+  if (found.code !== 0) throw new Error("own fixture identity could not be checked for cleanup")
+  if (found.text.trim()) {
+    const row: unknown = JSON.parse(found.text)
+    if (
+      !row ||
+      typeof row !== "object" ||
+      !("ProcessId" in row) ||
+      !("CreationDate" in row) ||
+      !("CommandLine" in row) ||
+      typeof row.CreationDate !== "string" ||
+      typeof row.CommandLine !== "string"
+    )
+      throw new Error("own fixture identity invalid")
+    const birth = Number(row.CreationDate.match(/\d+/)?.at(0))
+    if (row.ProcessId !== owned.pid || !row.CommandLine.includes(childFile) || Math.abs(birth - owned.started) > 2_000)
+      throw new Error("own fixture identity changed; refusing cleanup")
+    await Process.run(["taskkill", "/pid", String(owned.pid), "/f"], { nothrow: true })
+  }
+  const pid = owned.pid
+  await until(() => !alive(pid), "own fixture remained after cleanup", 10_000)
+  if (process.env.RUNNER_CLEANUP_PROOF)
+    await Bun.write(
+      process.env.RUNNER_CLEANUP_PROOF,
+      JSON.stringify({ pid: owned.pid, beforeAlive: true, afterAlive: false, birthVerified: true, childFile }),
+    )
+}
+
 function update(sessionID: SessionID) {
   const state: { off?: () => void; timer?: ReturnType<typeof setTimeout> } = {}
   const promise = new Promise<BackgroundProcess.Info>((resolve, reject) => {
@@ -90,6 +138,288 @@ function update(sessionID: SessionID) {
 }
 
 describe("BackgroundProcess", () => {
+  test("process exit and persistent stop remove each artifact once", async () => {
+    await using tmp = await tmpdir()
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const item = await BackgroundProcess.start({
+          sessionID: SessionID.descending(),
+          command: await script(tmp.path, "cleanup.mjs", 'console.log("ready"); setInterval(() => {}, 1000)'),
+          cwd: tmp.path,
+          lifetime: "persistent",
+          ready: { pattern: "ready", timeout: 10_000 },
+        })
+        const original = { ...allfs }
+        const removed: string[] = []
+        const remove: typeof fs.rm = async (...args) => {
+          removed.push(String(args[0]))
+          await Bun.sleep(100)
+          return original.rm(...args)
+        }
+        await mock.module("fs/promises", () => ({ ...original, rm: remove }))
+        try {
+          await BackgroundProcess.stop(item.id)
+          const files = removed.filter((file) => file.includes(item.id))
+          expect(files.length).toBeGreaterThan(0)
+          expect(new Set(files).size).toBe(files.length)
+        } finally {
+          await mock.module("fs/promises", () => original)
+          await BackgroundProcess.stop(item.id)
+        }
+      },
+    })
+  }, 30_000)
+
+  test.skipIf(process.platform !== "win32")(
+    "rollback waits for a persistent runner that exits five seconds after stop",
+    async () => {
+      await using tmp = await tmpdir()
+      const source = path.join(tmp.path, "rollback.mjs")
+      const captured: { control?: string } = {}
+      const input = spyOn(BackgroundProcessRunner, "command").mockImplementation((value) => {
+        captured.control = value.control
+        return [process.execPath, source, "__background-process", value.token, value.control]
+      })
+      await Bun.write(
+        source,
+        `console.log("ready")
+const timer = setInterval(async () => {
+  if (!(await Bun.file(process.argv[4]).exists())) return
+  clearInterval(timer)
+  await Bun.sleep(5_000)
+  process.exit(0)
+}, 20)
+`,
+      )
+      const pids: number[] = []
+      const probe = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) => {
+        if (!pids.includes(pid)) pids.push(pid)
+        return alive(pid) ? { live: true, terminating: true } : { live: false }
+      })
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            let error: unknown
+            try {
+              await BackgroundProcess.start({
+                sessionID: SessionID.descending(),
+                command: "synthetic rollback runner",
+                cwd: tmp.path,
+                lifetime: "persistent",
+              })
+            } catch (cause) {
+              error = cause
+            }
+            expect(String(error)).toContain("Persistent process identity could not be verified")
+            expect(captured.control).toBeTruthy()
+            expect(pids.length).toBeGreaterThan(0)
+            expect(pids.every((pid) => !alive(pid))).toBe(true)
+            expect(await BackgroundProcess.list()).toEqual([])
+          },
+        })
+      } finally {
+        input.mockRestore()
+        probe.mockRestore()
+        for (const pid of pids) if (alive(pid)) process.kill(pid, "SIGKILL")
+      }
+    },
+    30_000,
+  )
+
+  test.skipIf(process.platform !== "win32")(
+    "waits for a persistent runner that exits five seconds after stop",
+    async () => {
+      await using tmp = await tmpdir()
+      const sessionID = SessionID.descending()
+      const id = BackgroundProcess.ID.ascending()
+      const files = artifacts(tmp.path, id)
+      const scope = `global\0${Filesystem.resolve(tmp.path)}`
+      const token = `late-${process.pid}-${Date.now()}`
+      const control = files.manifest.slice(0, -5) + ".stop"
+      const source = path.join(tmp.path, "late.mjs")
+      await fs.mkdir(path.dirname(files.manifest), { recursive: true })
+      await fs.mkdir(path.dirname(files.log), { recursive: true })
+      await Bun.write(
+        source,
+        `console.log("ready")
+const timer = setInterval(async () => {
+  if (!(await Bun.file(${JSON.stringify(control)}).exists())) return
+  clearInterval(timer)
+  await Bun.sleep(5_000)
+  process.exit(0)
+}, 20)
+`,
+      )
+      const child = spawn(process.execPath, [source, "__background-process", token], {
+        stdio: "ignore",
+        windowsHide: true,
+      })
+      const exit = once(child, "exit")
+      if (!child.pid) throw new Error("fixture runner did not start")
+      const now = Date.now()
+      await Bun.write(files.log, "ready\n")
+      await Bun.write(
+        files.manifest,
+        JSON.stringify({
+          scope: `scope:${Hash.fast(scope)}`,
+          token,
+          info: {
+            id,
+            sessionID,
+            pid: child.pid,
+            command: "synthetic late runner",
+            cwd: tmp.path,
+            ports: [],
+            status: "running",
+            lifetime: "persistent",
+            ready: false,
+            output: "",
+            time: { started: now, updated: now },
+          },
+          start: { sessionID, command: "synthetic late runner", cwd: tmp.path, lifetime: "persistent" },
+        }),
+      )
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            expect((await BackgroundProcess.get(id))?.pid).toBe(child.pid)
+            const command = BackgroundProcessWindows.command
+            const probe = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) =>
+              pid === child.pid && (await Bun.file(control).exists()) && alive(pid)
+                ? { live: true, terminating: true }
+                : command(pid),
+            )
+            const walk = spyOn(Process, "text")
+            const started = Date.now()
+            try {
+              const stopped = await BackgroundProcess.stop(id)
+              expect(stopped?.status).toBe("stopped")
+              expect(Date.now() - started).toBeGreaterThanOrEqual(5_000)
+              expect(alive(child.pid)).toBe(false)
+              expect(await Bun.file(files.manifest).exists()).toBe(false)
+              expect(walk.mock.calls.filter(([args]) => args[0] === "powershell.exe")).toHaveLength(0)
+            } finally {
+              probe.mockRestore()
+              walk.mockRestore()
+            }
+          },
+        })
+      } finally {
+        if (alive(child.pid)) child.kill("SIGKILL")
+        await exit
+        await fs.rm(files.manifest, { force: true })
+        await fs.rm(files.log, { force: true })
+        await fs.rm(control, { force: true })
+      }
+    },
+    30_000,
+  )
+
+  test.skipIf(process.platform !== "win32")(
+    "an unconfirmed stop is reported before its guarded runner ends",
+    async () => {
+      await using tmp = await tmpdir()
+      const file = path.join(tmp.path, "unconfirmed.ts")
+      const childFile = path.join(tmp.path, "owned-child.mjs")
+      const childState = path.join(tmp.path, "owned-child.json")
+      await Bun.write(
+        childFile,
+        `import fs from "node:fs"
+fs.writeFileSync(${JSON.stringify(childState)}, JSON.stringify({ pid: process.pid, started: Date.now() - process.uptime() * 1000 }))
+setInterval(() => {}, 1000)
+`,
+      )
+      const processFile = path.resolve(import.meta.dirname, "../../src/util/process.ts")
+      const runnerFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/runner.ts")
+      const windowsFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/windows.ts")
+      await Bun.write(
+        file,
+        `import { mock } from "bun:test"
+import fs from "node:fs/promises"
+import * as helpers from ${JSON.stringify(processFile)}
+const original = { ...helpers }
+const text = async () => ({ code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" })
+mock.module(${JSON.stringify(processFile)}, () => ({ ...original, text, Process: { ...original, text } }))
+const windows = await import(${JSON.stringify(windowsFile)})
+mock.module(${JSON.stringify(windowsFile)}, () => ({ BackgroundProcessWindows: { ...windows.BackgroundProcessWindows, job: async () => ({ reason: "test startup fallback" }) } }))
+const { BackgroundProcessRunner } = await import(${JSON.stringify(runnerFile)})
+await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-started.json"))}, JSON.stringify({ pid: process.pid, argv: process.argv }))
+await BackgroundProcessRunner.maybe(process.argv)
+await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-outcome.json"))}, JSON.stringify({ code: process.exitCode, pid: process.pid }))
+process.exit(process.exitCode ?? 0)
+`,
+      )
+      const original = BackgroundProcessRunner.command
+      let launched: string[] = []
+      const command = spyOn(BackgroundProcessRunner, "command").mockImplementation((value) => {
+        const argv = original(value)
+        launched = [process.execPath, file, ...argv.slice(argv.indexOf("__background-process-runner"))]
+        return launched
+      })
+      let pid: number | undefined
+      const text = Process.text
+      const identity = spyOn(Process, "text").mockImplementation(async (args, opts) => {
+        const query = args.find((arg) => arg.includes("Win32_Process") && arg.includes("-Filter"))
+        const match = query?.match(/ProcessId = (\d+)/)
+        const target = match ? Number(match[1]) : undefined
+        if (target && alive(target)) {
+          return {
+            code: 0,
+            stdout: Buffer.alloc(0),
+            stderr: Buffer.alloc(0),
+            text: JSON.stringify({ ProcessId: target, CommandLine: launched.join(" ") }),
+          }
+        }
+        return text(args, opts)
+      })
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            const item = await BackgroundProcess.start({
+              sessionID: SessionID.descending(),
+              command: `& "${process.execPath}" "${childFile}"`,
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "process walk failed", timeout: 10_000 },
+            })
+            pid = item.pid
+            let error: unknown
+            try {
+              await BackgroundProcess.stop(item.id)
+            } catch (cause) {
+              error = cause
+            }
+            expect(String(error)).toContain("Persistent process runner did not stop safely")
+            expect(alive(pid)).toBe(true)
+            await until(() => !alive(pid), "guarded runner did not end", 35_000)
+            await until(
+              async () => (await BackgroundProcess.get(item.id))?.exitCode !== undefined,
+              "runner completion was not surfaced",
+              10_000,
+            )
+            const outcome = JSON.parse(await Bun.file(path.join(tmp.path, "fixture-outcome.json")).text())
+            // Stored codes depend on whether the exit event or liveness watch wins; check the runner's own exit here.
+            expect(outcome.code).toBe(1)
+            const info = await BackgroundProcess.get(item.id)
+            expect(info?.output).toContain(`id=${item.id}`)
+            expect(info?.output).toContain("process table unavailable, descendants not verified")
+            expect(info?.output).toContain("walks=")
+          },
+        })
+      } finally {
+        identity.mockRestore()
+        command.mockRestore()
+        if (alive(pid)) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true })
+        await cleanupFixture(childState, childFile, text)
+      }
+    },
+    120_000,
+  )
+
   it.instance("starts, reports readiness, and stops a process", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
@@ -720,9 +1050,74 @@ if (process.platform === "win32") setTimeout(() => {}, 5_000)
           })
         }
       }),
-    // Windows process-tree ownership uses PowerShell/CIM probes and intentionally
-    // keeps the leader alive for five seconds, so it needs a larger outer budget.
+    // The Windows leader intentionally stays alive for five seconds, so it needs a larger outer budget.
     process.platform === "win32" ? 60_000 : 30_000,
+  )
+  ;(process.platform === "win32" ? it.instance : it.instance.skip)(
+    "ends the Windows runner once the last descendant is gone",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        const child = path.join(test.directory, "last.mjs")
+        yield* Effect.promise(() => Bun.write(child, "setInterval(() => {}, 1_000)\n"))
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "last-leader.cjs",
+            `const { spawn } = require("child_process")
+const child = spawn(process.execPath, [${JSON.stringify(child)}], { stdio: "ignore", detached: true, windowsHide: true })
+child.unref()
+console.log("child:" + child.pid)
+`,
+            "node",
+          ),
+        )
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            lifetime: "persistent",
+            ready: { pattern: "child:", timeout: 15_000 },
+          }),
+        )
+        const pid = Number(info.output.match(/child:(\d+)/)?.[1])
+        const runner = info.pid
+        try {
+          expect(pid).toBeGreaterThan(0)
+          // The leader has exited by now; the detached child keeps the runner alive.
+          yield* Effect.promise(() => Bun.sleep(1_500))
+          expect(alive(runner)).toBe(true)
+          process.kill(pid, "SIGKILL")
+          yield* Effect.promise(() =>
+            until(() => !alive(runner), "runner did not end after its last descendant", 5_000),
+          )
+          // Poll inside the instance context: `get` reads instance state and must not run in a
+          // detached promise callback.
+          const end = Date.now() + 5_000
+          while (Date.now() < end) {
+            const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+            if (!current || current.status === "exited") break
+            yield* Effect.promise(() => Bun.sleep(100))
+          }
+          const last = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          expect(!last || last.status === "exited").toBe(true)
+        } finally {
+          yield* Effect.promise(async () => {
+            await Promise.allSettled([BackgroundProcess.stop(info.id)])
+            for (const item of [pid, runner]) {
+              if (!item || !alive(item)) continue
+              try {
+                process.kill(item, "SIGKILL")
+              } catch (err) {
+                if (alive(item)) throw err
+              }
+            }
+          })
+        }
+      }),
+    30_000,
   )
 
   it.instance("rejects invalid readiness patterns before launching", () =>

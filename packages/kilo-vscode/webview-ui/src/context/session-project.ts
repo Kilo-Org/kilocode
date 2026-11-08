@@ -6,5 +6,10 @@ export function agentProject(message: ExtensionMessage): string | undefined {
 }
 
 export function isStaleAgentSession(message: ExtensionMessage, projectId: string | undefined): boolean {
-  return message.type === "sessionCreated" && !!message.projectId && !!projectId && message.projectId !== projectId
+  return (
+    (message.type === "sessionCreated" || message.type === "sessionsLoaded") &&
+    !!message.projectId &&
+    !!projectId &&
+    message.projectId !== projectId
+  )
 }

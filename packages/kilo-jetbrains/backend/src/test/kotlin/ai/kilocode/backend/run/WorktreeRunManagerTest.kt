@@ -1,6 +1,7 @@
 package ai.kilocode.backend.run
 
 import ai.kilocode.backend.testing.PlainApplicationConfig
+import ai.kilocode.backend.testing.ConfigTypes
 import ai.kilocode.backend.testing.PlainApplicationType
 import ai.kilocode.backend.testing.StubbornJvm
 import ai.kilocode.rpc.dto.RunProcessState
@@ -70,8 +71,11 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     private val launched = mutableListOf<RunnerAndConfigurationSettings>()
     private val added = mutableListOf<RunnerAndConfigurationSettings>()
 
+    private lateinit var types: ConfigTypes
+
     override fun setUp() {
         super.setUp()
+        types = ConfigTypes(testRootDisposable).also { it.mask() }
         cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         launched.clear()
     }
@@ -842,8 +846,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     private fun start(clone: RunnerAndConfigurationSettings) = start(clone, NopProcessHandler())
 
     private fun <T : ConfigurationType> register(type: T): T {
-        ConfigurationType.CONFIGURATION_TYPE_EP.point.registerExtension(type, testRootDisposable)
-        return type
+        return types.add(type)
     }
 
     /** Marks the test module as imported by Gradle, which is what makes a config delegable. */

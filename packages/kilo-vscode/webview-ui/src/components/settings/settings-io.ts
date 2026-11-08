@@ -14,6 +14,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "subagent_model",
   "subagent_variant",
   "subagent_variant_overrides",
+  "memory_model",
   "default_agent",
   "agent",
   "provider",

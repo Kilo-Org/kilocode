@@ -71,6 +71,14 @@ internal class SidePopupController(
         showTimer.restart()
     }
 
+    /** Shows [request] immediately, without the normal hover dwell. */
+    @RequiresEdt
+    fun showNow(key: Any, owner: Disposable, request: () -> SidePopupRequest?) {
+        show(key, owner, request)
+        showTimer.stop()
+        display()
+    }
+
     @RequiresEdt
     fun notifyExit(key: Any) {
         if (target != key) return
@@ -88,17 +96,30 @@ internal class SidePopupController(
         hideTimer.stop()
         onSubject = false
         onPopup = false
-        val popup = balloon
-        val item = body
         val hook = guard
         // Cleared before disposing: Disposer.dispose can re-enter through the balloon's own onClosed, and
         // that reentry has to find clean state and no-op rather than tear down a newer popup.
         target = null
         source = null
-        balloon = null
-        body = null
         guard = null
         hook?.let(Disposer::dispose)
+        close()
+    }
+
+    /**
+     * Takes down the balloon that is on screen, leaving the pending [target] and [source] alone.
+     *
+     * Separate from [hideAll] so opening can guarantee at most one balloon per controller without
+     * discarding the request it is in the middle of serving.
+     */
+    @RequiresEdt
+    private fun close() {
+        val popup = balloon
+        val item = body
+        // Cleared before disposing, for the same re-entrancy reason as [hideAll]: the balloon's own
+        // onClosed runs during hide and must find state that no longer points at this body.
+        balloon = null
+        body = null
         popup?.hide()
         item?.let(Disposer::dispose)
     }
@@ -148,6 +169,9 @@ internal class SidePopupController(
 
     @RequiresEdt
     private fun open(req: SidePopupRequest, built: SidePopupContent, spot: SidePopupSpot) {
+        // At most one balloon per controller. [showNow] can reach here while one is already on screen,
+        // and overwriting the field without this would strand the previous balloon visible.
+        close()
         val popup = JBPopupFactory.getInstance()
             .createBalloonBuilder(built.component)
             .setFillColor(built.background)
@@ -156,6 +180,8 @@ internal class SidePopupController(
             .setPointerSize(UiStyle.Balloon.pointer())
             .setCornerToPointerDistance(spot.distance)
             .setCornerRadius(UiStyle.Balloon.arc())
+            .setShowCallout(spot.callout)
+            .setShadow(spot.shadow)
             .setHideOnClickOutside(true)
             .setHideOnKeyOutside(true)
             .setHideOnFrameResize(true)

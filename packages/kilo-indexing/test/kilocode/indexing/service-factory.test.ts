@@ -68,7 +68,7 @@ describe("CodeIndexServiceFactory", () => {
       modelDimension: 4096,
     })
 
-    const testEmbedding = new Float32Array([0.25, 0.5])
+    const testEmbedding = new Float32Array(4096).fill(0.25)
     const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
 
     mockEmbeddingsCreate.mockResolvedValue({
@@ -330,7 +330,7 @@ describe("CodeIndexServiceFactory", () => {
     })
 
     mockEmbeddingsCreate.mockResolvedValue({
-      data: [{ embedding: [0.1, 0.2] }],
+      data: [{ embedding: Array.from({ length: 1024 }, () => 0.25) }],
       usage: { prompt_tokens: 1, total_tokens: 1 },
     })
 

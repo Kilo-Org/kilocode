@@ -34,7 +34,7 @@ This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybin
 
 Autocomplete requests are routed through the **Kilo Gateway**. You can pick the FIM model under **Settings → Models → Autocomplete model**:
 
-- **Codestral** (`mistralai/codestral-2508`) — the default. Billed through your Kilo account, or free when you add your own Mistral Codestral key via BYOK. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
+- **Codestral** (`mistralai/codestral-2508`) is the default. It uses Kilo credits unless you add a Mistral API key via BYOK. With BYOK, your Mistral plan and usage limits apply; autocomplete is not guaranteed to be free. See [Setting up Mistral for autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
 - **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception. Temporarily requires an **Inception BYOK key** until Kilo Gateway support lands. Add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
 
 {% callout type="note" %}

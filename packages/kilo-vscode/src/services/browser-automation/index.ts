@@ -4,6 +4,7 @@ export type {
   BrowserContextFactory,
   BrowserElement,
   BrowserInspection,
+  BrowserOwner,
   BrowserRoute,
   BrowserState,
   BrowserStatus,

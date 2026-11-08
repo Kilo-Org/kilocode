@@ -1,7 +1,10 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change - synchronous precheck for undecodable attachments
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
+import { mergeScheduled } from "@/kilocode/session/scheduled" // kilocode_change
+import { Wakeup } from "@/kilocode/wakeup" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
@@ -44,7 +47,7 @@ import {
   UpdatePayload,
   ViewedPayload, // kilocode_change
 } from "../groups/session"
-import { PermissionNotFoundError } from "../errors"
+import { InvalidRequestError, PermissionNotFoundError } from "../errors" // kilocode_change - InvalidRequestError carries a readable message for rejected attachments
 import * as SessionError from "./session-errors"
 
 const tryParseJson = (text: string) =>
@@ -64,6 +67,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const agentSvc = yield* Agent.Service
     const permissionSvc = yield* Permission.Service
     const statusSvc = yield* SessionStatus.Service
+    const wake = yield* Wakeup.Service // kilocode_change
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
@@ -84,7 +88,13 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     })
 
     const status = Effect.fn("SessionHttpApi.status")(function* () {
-      return Object.fromEntries(yield* statusSvc.list())
+      // kilocode_change start - fold in a future wakeup so a session asleep on a
+      // schedule is reported as `scheduled` instead of `idle`
+      return mergeScheduled(
+        Object.fromEntries(yield* statusSvc.list()),
+        yield* wake.scheduled(yield* InstanceState.directory),
+      )
+      // kilocode_change end
     })
 
     const requireSession = Effect.fn("SessionHttpApi.requireSession")(function* (sessionID: SessionID) {
@@ -301,11 +311,25 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return true
     })
 
+    // kilocode_change start - reject an undecodable attachment synchronously, before either prompt route
+    // promises acceptance. Without this, prompt_async returns 204 and clears the client's draft, then
+    // fails ~1s later with no way to recover the typed text (see Image.DecodeError handling below).
+    const rejectBadAttachments = (payload: typeof PromptPayload.Type) =>
+      Effect.gen(function* () {
+        for (const part of payload.parts) {
+          if (part.type !== "file") continue
+          const reason = KiloAttachment.precheck(part)
+          if (reason) return yield* Effect.fail(new InvalidRequestError({ message: reason, kind: "attachment" }))
+        }
+      })
+    // kilocode_change end
+
     const prompt = Effect.fn("SessionHttpApi.prompt")(function* (ctx: {
       params: { sessionID: SessionID }
       payload: typeof PromptPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      yield* rejectBadAttachments(ctx.payload) // kilocode_change
       const message = yield* promptSvc
         .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput) // kilocode_change
         .pipe(
@@ -317,7 +341,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               error instanceof Image.DecodeError ||
               error instanceof Image.SizeError
             )
-              return Effect.fail(new HttpApiError.BadRequest({}))
+              return Effect.fail(new InvalidRequestError({ message: error.message, kind: "attachment" })) // kilocode_change - carry a readable message instead of an empty BadRequest
             return Effect.die(error)
           }),
           // kilocode_change end
@@ -332,6 +356,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof PromptPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
+      yield* rejectBadAttachments(ctx.payload) // kilocode_change - synchronous 400 instead of a post-204 session.error
       yield* promptSvc
         .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput)
         .pipe(
@@ -346,12 +371,20 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               }
               if (!busy) yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
               // kilocode_change end
+              // kilocode_change start - a readable message for known Image.* defects instead of a raw stack trace
+              const imageError =
+                error instanceof Image.InvalidDataUrlError ||
+                error instanceof Image.DecodeError ||
+                error instanceof Image.SizeError
+                  ? error
+                  : undefined
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
-                error: busy // kilocode_change
-                    ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
-                    : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
+                error: busy
+                  ? new NamedError.Unknown({ message: busyMessage }).toObject()
+                  : new NamedError.Unknown({ message: imageError?.message ?? Cause.pretty(cause) }).toObject(),
               })
+              // kilocode_change end
             })
           }),
           Effect.forkIn(scope, { startImmediately: true }),

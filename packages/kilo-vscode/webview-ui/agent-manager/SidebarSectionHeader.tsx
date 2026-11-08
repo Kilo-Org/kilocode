@@ -1,23 +1,30 @@
 import { Show, type Component, type JSX } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 interface Props {
   label: JSX.Element
+  /** Leading icon that takes the chevron's place. On hover it turns into the chevron. */
+  icon?: JSX.Element
   expanded?: boolean
   onToggle?: () => void
   onClick?: () => void
   count?: JSX.Element
+  /** Decorative badge between the label and the count, used by the splash preview. */
+  marker?: JSX.Element
   actions?: JSX.Element
   class?: string
   title?: string
   ariaLabel?: string
   disabled?: boolean
+  ref?: (el: HTMLDivElement) => void
 }
 
 /** Shared layout for sidebar headings with a fixed leading control column. */
 export const SidebarSectionHeader: Component<Props> = (props) => {
   return (
     <div
+      ref={props.ref}
       class={`am-sidebar-header${props.onToggle ? " am-sidebar-header-toggleable" : ""}${props.class ? ` ${props.class}` : ""}`}
       title={props.title}
       onClick={(event) => {
@@ -25,7 +32,28 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
       }}
     >
       <div class="am-sidebar-header-main">
-        <Show when={props.onToggle}>
+        <Show when={props.onToggle && props.icon}>
+          {/* The project icon takes the chevron's place and is the toggle, so
+              no separate chevron button is needed. The row click stays for
+              activation (see the onClick prop); this click does not bubble. */}
+          <button
+            type="button"
+            class="am-sidebar-header-icon"
+            aria-expanded={props.expanded}
+            aria-label={props.ariaLabel ?? "Toggle section"}
+            disabled={props.disabled}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (!props.disabled) props.onToggle?.()
+            }}
+          >
+            <span class="am-sidebar-header-icon-image">{props.icon}</span>
+            <span class="am-sidebar-header-icon-chevron">
+              <Icon name="chevron-right" size="small" />
+            </span>
+          </button>
+        </Show>
+        <Show when={props.onToggle && !props.icon}>
           <IconButton
             icon="chevron-right"
             variant="ghost"
@@ -42,6 +70,7 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
         </Show>
         <div class="am-sidebar-header-label">{props.label}</div>
       </div>
+      {props.marker}
       <Show when={props.count !== undefined}>
         <span class="am-sidebar-header-count">{props.count}</span>
       </Show>

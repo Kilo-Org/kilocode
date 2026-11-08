@@ -108,7 +108,7 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Send a prompt to a session (fire-and-forget). */
     suspend fun prompt(id: String, directory: String, prompt: PromptDto)
 
-    /** Run a configured slash command/workflow in a session. */
+    /** Run a configured slash command in a session. */
     suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto)
 
     /** Abort ongoing processing for a session. */

@@ -12,6 +12,8 @@ import { useServer } from "../../../context/server"
 interface GoalDockProps {
   actions: Accessor<boolean>
   working: Accessor<boolean>
+  /** Set by the dock when it plans the trailing group itself. */
+  compact?: Accessor<boolean | undefined>
   readonly?: boolean
 }
 
@@ -158,7 +160,11 @@ export function useGoalDock(props: GoalDockProps) {
     status: () => (
       <Show when={working() && goal()?.active}>
         <Tooltip class="session-goal-status" value={detail()} placement="top">
-          <span class="session-goal-status-content" ref={setBadge} data-compact={compact() ? "" : undefined}>
+          <span
+            class="session-goal-status-content"
+            ref={setBadge}
+            data-compact={(props.compact?.() ?? compact()) ? "" : undefined}
+          >
             <Icon name="target" size="small" />
             <span class="session-goal-status-label" ref={setText} aria-hidden="true">
               {label()}

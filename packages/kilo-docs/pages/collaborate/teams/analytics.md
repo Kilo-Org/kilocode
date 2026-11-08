@@ -13,6 +13,8 @@ Access your organization’s usage analytics through the **Usage Details** secti
 
 {% callout type="info" title="Usage Scope" %}
 This usage overview includes all of your usage of the Kilo Gateway provider. It does **NOT** include any usage made via the Kilo Code extension to other, non-Kilo Code providers. You can choose which API provider to use from the extension's main settings page.
+
+Sign in with ChatGPT requests routed through Kilo are included. Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and token totals. Cost is **$0** for every Sign in with ChatGPT request.
 {% /callout %}
 
 ## Summary Metrics

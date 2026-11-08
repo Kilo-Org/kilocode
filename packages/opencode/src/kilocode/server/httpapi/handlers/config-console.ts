@@ -14,7 +14,6 @@ import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecy
 import { Event } from "@/server/event"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { markInstanceForDisposal } from "@/server/routes/instance/httpapi/lifecycle"
-import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Effect, Option } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -23,10 +22,13 @@ import {
   ConfigOverlayConflictError,
   ConfigOverlayPatch,
   ConfigOverlayQuery,
+  ConfigOverlayShadowedError,
+  ConfigOverlayWriteError,
   ConfigRulesPatch,
   TuiConfigPatch,
   TuiConfigQuery,
 } from "../groups/config-console"
+import { ConfigErrorV1 } from "@opencode-ai/core/v1/config/error"
 
 export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "config-console", (handlers) =>
   Effect.gen(function* () {
@@ -81,30 +83,65 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       }
       const expected = body.expected ? { ...body.expected } : undefined
       const instance = yield* InstanceState.context
-      const result = yield* flock
-        .withLock(
-          Effect.promise(() =>
-            KilocodeConfigWriter.write({
-              ...body,
-              directory: instance.directory,
-              worktree: instance.worktree,
-              expected,
-            }),
-          ),
-          `config:${body.scope}:${expected?.path ?? "target"}`,
+      const patch = KilocodeConfigOverlay.patch(body)
+      // A later config file can already define the value, so a write would silently not apply.
+      const shadow = yield* Effect.promise(() =>
+        KilocodeConfigOverlay.shadow({
+          scope: body.scope,
+          directory: instance.directory,
+          worktree: instance.worktree,
+          patch,
+        }),
+      )
+      if (shadow) {
+        return yield* Effect.fail(
+          new ConfigOverlayShadowedError({
+            message: `Not saved: ${shadow.path} takes precedence over ${shadow.target}. Remove or edit the conflicting value there.`,
+            path: shadow.target,
+            shadowedBy: shadow.path,
+          }),
         )
-        .pipe(Effect.orDie)
+      }
+      const writing = Effect.tryPromise({
+        try: () =>
+          KilocodeConfigWriter.write({
+            ...body,
+            directory: instance.directory,
+            worktree: instance.worktree,
+            expected,
+          }),
+        catch: (error: unknown) => {
+          // Config validation and JSON parse failures must reach the client as a typed
+          // error with the file and issues instead of an opaque 500 defect.
+          if (error instanceof ConfigErrorV1.InvalidError) {
+            return new ConfigOverlayWriteError({
+              message: error.data.message ?? `Config is invalid in ${error.data.path}`,
+              path: error.data.path,
+              issues: error.data.issues?.map((issue: { message: string; path: unknown[] }) => ({
+                message: issue.message,
+                path: issue.path.map(String),
+              })),
+            })
+          }
+          if (error instanceof ConfigErrorV1.JsonError) {
+            return new ConfigOverlayWriteError({
+              message: error.data.message ?? `Config file contains invalid JSON: ${error.data.path}`,
+              path: error.data.path,
+            })
+          }
+          const message = error instanceof Error ? error.message : String(error)
+          return new ConfigOverlayWriteError({ message: `Failed to write config: ${message}` })
+        },
+      })
+      const result = yield* flock.withLock(writing, `config:${body.scope}:${expected?.path ?? "target"}`)
       if (!result.ok) {
         if (result.code === "target-not-writable") {
-          return yield* Effect.fail(
-            new InvalidRequestError({ message: result.message, kind: result.code, field: result.target.path }),
-          )
+          return yield* Effect.fail(new ConfigOverlayWriteError({ message: result.message, path: result.target.path }))
         }
         return yield* Effect.fail(
           new ConfigOverlayConflictError({ code: result.code, message: result.message, target: result.target }),
         )
       }
-      const patch = KilocodeConfigOverlay.patch(body)
       const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
       if (body.scope === "global") {
         yield* config.invalidate()

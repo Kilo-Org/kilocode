@@ -1,0 +1,114 @@
+# kilocode_change - new file
+# Reproduce the release-only compiled TUI PTY smoke on any branch, without cutting a release.
+#
+# publish.yml owns the `validate-cli-unix` / `validate-cli-windows` jobs that run
+# `kilo --pure __pty-smoke` against the compiled binary, but publish.yml is
+# workflow_dispatch-only and goes on to publish, so that gate never runs on a branch
+# or PR. test.yml only covers the pty-smoke *unit* tests (synthetic renderers from
+# source), not the standalone binary.
+#
+# This builds the CLI for the host platform only (--single) and runs the same smoke
+# step, covering the four targets that failed in runs 37371543591 / 37336767041:
+# darwin-arm64, darwin-x64, windows-x64, linux-x64. No signing, no release, no
+# publish, no ~1 GB artifact hand-off.
+#
+# Bubblewrap bundling is skipped so the Linux build does not need the Zig toolchain
+# that publish.yml installs; the PTY smoke does not exercise the sandbox helper.
+
+name: validate-cli-smoke
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Compiled PTY smoke (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-15
+            package: "@kilocode/cli-darwin-arm64"
+          - target: darwin-x64
+            runner: macos-15-intel
+            package: "@kilocode/cli-darwin-x64"
+          - target: linux-x64
+            runner: ubuntu-24.04
+            package: "@kilocode/cli-linux-x64"
+          - target: windows-x64
+            runner: windows-2025
+            package: "@kilocode/cli-windows-x64"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-bun
+
+      - name: Build CLI for this host
+        working-directory: packages/opencode
+        run: bun run script/build.ts --single --skip-install
+        env:
+          KILO_VERSION: 0.0.0-smoke
+          KILO_SKIP_BUNDLED_BWRAP: "1"
+
+      - name: Run compiled PTY smoke
+        if: runner.os != 'Windows'
+        working-directory: packages/opencode
+        run: |
+          binary="./dist/${{ matrix.package }}/bin/kilo"
+          "$binary" --version
+          root="$(mktemp -d)"
+          trap 'rm -rf "$root"' EXIT
+          (
+            unset KILO_MODELS_PATH KILO_MODELS_URL KILO_CONFIG KILO_CONFIG_DIR
+            export XDG_DATA_HOME="$root/data"
+            export XDG_CACHE_HOME="$root/cache"
+            export XDG_CONFIG_HOME="$root/config"
+            export XDG_STATE_HOME="$root/state"
+            export KILO_PTY_SMOKE=1
+            export KILO_DISABLE_MODELS_FETCH=1
+            export KILO_DISABLE_PROJECT_CONFIG=1
+            export KILO_CONFIG_CONTENT='{"enabled_providers":["anthropic"]}'
+            export ANTHROPIC_API_KEY=dummy
+            "$binary" --pure __pty-smoke
+          )
+
+      - name: Run compiled PTY smoke (Windows)
+        if: runner.os == 'Windows'
+        working-directory: packages/opencode
+        shell: pwsh
+        run: |
+          $package = "${{ matrix.package }}".Replace("/", "\")
+          $binary = ".\dist\$package\bin\kilo.exe"
+          & $binary --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $root = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          try {
+            foreach ($name in "KILO_MODELS_PATH", "KILO_MODELS_URL", "KILO_CONFIG", "KILO_CONFIG_DIR") {
+              Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+            }
+            $env:XDG_DATA_HOME = Join-Path $root "data"
+            $env:XDG_CACHE_HOME = Join-Path $root "cache"
+            $env:XDG_CONFIG_HOME = Join-Path $root "config"
+            $env:XDG_STATE_HOME = Join-Path $root "state"
+            $env:KILO_PTY_SMOKE = "1"
+            $env:KILO_DISABLE_MODELS_FETCH = "1"
+            $env:KILO_DISABLE_PROJECT_CONFIG = "1"
+            $env:KILO_CONFIG_CONTENT = '{"enabled_providers":["anthropic"]}'
+            $env:ANTHROPIC_API_KEY = "dummy"
+            & $binary --pure __pty-smoke
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
+          }

@@ -7,3 +7,4 @@ Use this tool to:
 Call `cron_list` first to find the id.
 Deleting an id that is already gone is safe: the tool reports it and does not fail.
 Only tasks scheduled for this session can be deleted.
+In a session goal, a task the goal waits for suspends the goal until it fires; deleting it resumes the goal with a goal turn, or settles it with a reason the user can read.

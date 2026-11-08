@@ -55,8 +55,38 @@ export function providerKey(providerID: string, auth: Auth.Info) {
 }
 
 const VERTEX_CREDENTIALS = "kiloVertexCredentials"
+const TOOL_CONTENT = "kiloOpenAICompatibleToolCallContent"
+
+type RequestBody = Record<string, unknown>
+type RequestTransform = (body: RequestBody) => RequestBody
+
+function isRequestTransform(value: unknown): value is RequestTransform {
+  return typeof value === "function"
+}
+
+function patchToolContent(npm: string, options: Record<string, unknown>) {
+  const mode = options[TOOL_CONTENT]
+  delete options[TOOL_CONTENT]
+  if (!npm.includes("@ai-sdk/openai-compatible") || mode !== "empty-string") return
+
+  const prev = isRequestTransform(options.transformRequestBody) ? options.transformRequestBody : undefined
+  options.transformRequestBody = (body: RequestBody) => {
+    const next = prev?.(body) ?? body
+    if (!Array.isArray(next.messages)) return next
+    return {
+      ...next,
+      messages: next.messages.map((msg) => {
+        if (!record(msg)) return msg
+        if (msg.role !== "assistant" || msg.content !== null) return msg
+        if (!Array.isArray(msg.tool_calls) || msg.tool_calls.length === 0) return msg
+        return { ...msg, content: "" }
+      }),
+    }
+  }
+}
 
 export function vertexOptions(providerID: string, npm: string, options: Record<string, unknown>) {
+  patchToolContent(npm, options)
   const getter = options[VERTEX_CREDENTIALS]
   delete options[VERTEX_CREDENTIALS]
   if (providerID !== "google-vertex" || npm.includes("@ai-sdk/openai-compatible")) return

@@ -167,6 +167,7 @@ class WorktreeController(
         existingBranch: Boolean = false,
         prompt: PendingPrompt? = null,
         kind: CreateKind = CreateKind.CREATE,
+        fetchBase: Boolean = false,
     ) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
@@ -177,7 +178,10 @@ class WorktreeController(
             onSelect?.invoke(temp.id)
         }
         cs.launch {
-            val result = service.create(directory, CreateWorktreeRequestDto(branch, base, existingBranch))
+            val result = service.create(
+                directory,
+                CreateWorktreeRequestDto(branch, base, existingBranch = existingBranch, fetchBase = fetchBase),
+            )
             finishCreate(temp, branch, prompt, result, kind)
         }
     }

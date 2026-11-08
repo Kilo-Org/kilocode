@@ -1,6 +1,8 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { UserMessageDisplay, AssistantParts } from "../components/message-part"
+import { For } from "solid-js"
+import { Dynamic } from "solid-js/web"
+import { UserMessageDisplay, AssistantParts, ToolRegistry } from "../components/message-part"
 import { AgentAvatarPalette } from "../components/agent-avatar"
 import { DataProvider } from "@opencode-ai/ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -337,9 +339,9 @@ const boardBroadcastPart: ToolPart = {
 
 const mockDataBoardBroadcast = createMockData([boardBroadcastPart])
 
-function AllProviders(props: { children: any; data?: MockData; onOpenDiff?: () => void }) {
+function AllProviders(props: { children: any; data?: MockData; directory?: string; onOpenDiff?: () => void }) {
   return (
-    <DataProvider data={props.data ?? mockData} directory="/project" onOpenDiff={props.onOpenDiff}>
+    <DataProvider data={props.data ?? mockData} directory={props.directory ?? "/project"} onOpenDiff={props.onOpenDiff}>
       <DiffComponentProvider component={Diff}>
         <CodeComponentProvider component={Code}>
           <FileComponentProvider component={File}>
@@ -366,6 +368,81 @@ const meta: Meta = {
 
 export default meta
 type Story = StoryObj
+
+export const GrepTargets: Story = {
+  render: () => (
+    <AllProviders>
+      <For each={["pending", "running", "completed"]}>
+        {(status) => (
+          <section data-status={status}>
+            <h3>{status}</h3>
+            <For
+              each={[
+                "C:\\Sources",
+                "C:\\Sources\\Program.cs",
+                "C:/Sources/",
+                "C:\\",
+                "\\\\server\\share\\Sources",
+                "/project/src",
+                "/project/src/index.ts",
+                "/project",
+                "/",
+                "src",
+                "src/nested",
+                ".",
+                undefined,
+              ]}
+            >
+              {(path) => (
+                <div data-target={path ?? "omitted"}>
+                  <Dynamic
+                    component={ToolRegistry.render("grep")}
+                    tool="grep"
+                    status={status}
+                    input={{ path, pattern: "Понятно", include: "*.cs" }}
+                    metadata={{}}
+                  />
+                </div>
+              )}
+            </For>
+          </section>
+        )}
+      </For>
+    </AllProviders>
+  ),
+}
+
+// The VS Code webview appends `/` to the workspace directory, so Windows roots arrive as `C:\Sources/`
+export const GrepWindowsWorkspace: Story = {
+  render: () => (
+    <For
+      each={[
+        { name: "plain", directory: "C:\\Sources" },
+        { name: "webview", directory: "C:\\Sources/" },
+      ]}
+    >
+      {(workspace) => (
+        <section data-workspace={workspace.name}>
+          <AllProviders directory={workspace.directory}>
+            <For
+              each={["C:\\Sources", "C:\\Sources\\Program.cs", "C:/Sources/Program.cs", "C:\\SourcesOld\\Program.cs"]}
+            >
+              {(path) => (
+                <Dynamic
+                  component={ToolRegistry.render("grep")}
+                  tool="grep"
+                  status="completed"
+                  input={{ path, pattern: "Понятно" }}
+                  metadata={{}}
+                />
+              )}
+            </For>
+          </AllProviders>
+        </section>
+      )}
+    </For>
+  ),
+}
 
 // --- User message bubble ---
 

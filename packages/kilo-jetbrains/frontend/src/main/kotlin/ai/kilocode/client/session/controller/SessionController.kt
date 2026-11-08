@@ -58,6 +58,8 @@ import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.Disposable
@@ -73,6 +75,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -146,8 +150,8 @@ class SessionController(
 
     private val listeners = mutableListOf<SessionControllerListener>()
     private var ref: SessionRef? = ref
-    private val sid: String? get() = (ref as? SessionRef.Local)?.id
-    private val directory: String get() = workspace.directory
+    private val sid: String? get() = (ref as? SessionRef.Local)?.id ?: (ref as? SessionRef.Hosted)?.id
+    private val directory: String get() = (ref as? SessionRef.Hosted)?.workspaceKey ?: workspace.directory
     private val updates = SessionUpdateQueue(
       parent,
       cs,
@@ -186,11 +190,22 @@ class SessionController(
     // DISCONNECTED -> READY on their initial connection, which history recovery already covers.
     private var lastAppStatus: KiloAppStatusDto? = null
     private var seenReady = false
+    // Whether a READY workspace has been seen, and the previous workspace status. A later
+    // non-READY -> READY edge means the CLI reconnected, so recents that failed or went stale during
+    // the gap must be refetched even though they already reached a terminal state.
+    private var seenWorkspaceReady = false
+    private var lastWorkspaceStatus: KiloWorkspaceStatusDto? = null
     // Bumped whenever a live prompt event or local resolution is handled. recoverPending snapshots
     // this before its suspending REST calls and discards the result if it changed before the EDT
     // commit, so a stale reconnect snapshot cannot overwrite or resurrect a fresher prompt state.
     private var promptRevision = 0L
     private var reconnectRecoveryJob: Job? = null
+    // Convergence recoveries (activity mismatch, stuck-busy watchdog), separate from the reconnect
+    // path above so a reconnect pass is never cancelled by a routine convergence probe.
+    private var promptRecoveryJob: Job? = null
+    // The last (activity kind, promptRevision) an activity-mismatch probe was started for, so the
+    // same unchanged signal cannot refetch repeatedly.
+    private var activityProbe: Pair<SessionActivityKindDto, Long>? = null
     private var recentsState: RecentsState = RecentsState.Idle
     private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
@@ -218,6 +233,9 @@ class SessionController(
     // reason may land before or after the error and both orders have to end up in the same place.
     private var cancelReason: String? = null
     private val snapshots = mutableMapOf<PartKey, String>()
+    private var replay: MutableList<ChatEventDto>? = null
+    private var epoch = 0L
+    private var hydration: Job? = null
 
     val ready: Boolean get() = model.isReady()
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
@@ -301,11 +319,12 @@ class SessionController(
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
+        injectedTitle: String? = null,
     ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files, editorContext, select)
+        val dto = promptDto(text, files, editorContext, select, injectedTitle)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
@@ -826,6 +845,7 @@ class SessionController(
 
     fun selectModel(provider: String, id: String) {
         assertEdt()
+        if (ref is SessionRef.Hosted && provider != KILO_PROVIDER) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model=$provider/$id" }
         val agent = model.agent ?: return
         val key = "$provider/$id"
@@ -843,12 +863,21 @@ class SessionController(
         capture("Model Selected", sessionProps() + mapOf("agent" to agent, "provider" to provider, "modelId" to id, "isOverride" to "true"))
     }
 
+    /**
+     * Reset this mode back to its computed default.
+     *
+     * Also forgets the persisted per-agent pick in the CLI's shared model state. That pick outranks
+     * every config default in [resolveSessionModel], so clearing only the in-session fields left it
+     * on disk and the next mode switch or new session resurrected it — the reset looked like it had
+     * worked until the picker reverted on its own.
+     */
     fun clearModelOverride() {
         assertEdt()
         val agent = model.agent ?: return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
         prefVariantKey = null
         prefVariant = null
+        if (app.models.value.model.containsKey(agent)) app.clearModel(agent)
         val auto = resolvedDefaultModel(agent)?.key
         prefModel = auto
         prefAgent = agent
@@ -862,6 +891,7 @@ class SessionController(
 
     fun selectVariant(value: String) {
         assertEdt()
+        if (ref is SessionRef.Hosted) return
         val key = model.model ?: return
         if (value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
@@ -1120,11 +1150,31 @@ class SessionController(
                 loadSession(token)
                 subscribeEvents()
             }
+            is SessionRef.Hosted -> {
+                val token = SessionLoadState.Loading()
+                startSessionLoading(token)
+                loadSession(token)
+                subscribeEvents()
+            }
             null -> Unit
         }
 
         model.addListener(this) { event ->
             LOG.debug { "session=${sid ?: ref?.key ?: "pending"} model: $event" }
+        }
+
+        // The Agent Manager badges a worktree row from the backend's global activity map, which the
+        // transcript never consumes. A `question.asked` the per-session stream dropped (the backend
+        // flow has no replay) leaves the badge showing while the session stays Busy forever. Probe
+        // the authoritative pending-prompt endpoints whenever the backend says this session waits
+        // but the model does not.
+        cs.launch {
+            sessions.activity.collect { map ->
+                edt {
+                    if (disposed) return@edt
+                    reconcilePrompt(map)
+                }
+            }
         }
 
         app.connect()
@@ -1164,6 +1214,8 @@ class SessionController(
 
         cs.launch {
             workspace.state.collect { state ->
+                val prevStatus = lastWorkspaceStatus
+                lastWorkspaceStatus = state.status
                 fire(SessionControllerEvent.WorkspaceChanged) {
                     model.workspace = state
                     syncConnectionState()
@@ -1182,6 +1234,7 @@ class SessionController(
                     model.models = state.providers?.let { providers ->
                         providers.providers
                             .filter { it.id == KILO_PROVIDER || it.id in providers.connected }
+                            .filter { ref !is SessionRef.Hosted || it.id == KILO_PROVIDER }
                             .flatMap { provider ->
                                 provider.models.map { (id, info) ->
                                     ModelItem(
@@ -1220,9 +1273,13 @@ class SessionController(
                 }
 
                 if (state.status == KiloWorkspaceStatusDto.READY) {
+                    // A READY after an earlier READY that followed a non-READY status is a reconnect:
+                    // force a refetch so a recents load that failed during the outage is retried.
+                    val recovered = seenWorkspaceReady && prevStatus != null && prevStatus != KiloWorkspaceStatusDto.READY
+                    seenWorkspaceReady = true
                     fire(SessionControllerEvent.WorkspaceReady)
                     edt {
-                        if (canUseRecents()) refreshRecents()
+                        if (canUseRecents()) refreshRecents(force = recovered)
                     }
                 }
             }
@@ -1242,18 +1299,21 @@ class SessionController(
     }
 
     private fun loadSession(token: SessionLoadState.Loading) {
-        val target = ref as? SessionRef.Local ?: return
+        val target = ref ?: return
         val id = target.id
         val revision = promptRevision
+        val generation = epoch
         cs.launch {
             try {
-                val session = target.session ?: runCatching { sessions.get(id, directory) }.getOrNull()
+                val session = (target as? SessionRef.Local)?.session
+                    ?: runCatching { sessions.get(id, directory) }.getOrNull()
                 val items = sessions.messages(id, directory)
                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(items)}" }
                 val discovered = children(items)
                 runEdt {
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
+                    if (ref is SessionRef.Hosted && epoch != generation) return@runEdt
                     updateModel {
                         snapshots.clear()
                         childParts.clear()
@@ -1391,10 +1451,10 @@ class SessionController(
             try {
                 sessions.events(id, directory).collect { event ->
                     if (!matchesSession(event, id)) {
-                        LOG.debug { "${ChatLogSummary.sid(id)} pass=false ${ChatLogSummary.eventBody(event)}" }
+                        logEvent(id, "pass=false", event)
                         return@collect
                     }
-                    LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
+                    logEvent(id, "pass=true", event)
                     updates.enqueue(event)
                 }
             } catch (e: CancellationException) {
@@ -1637,15 +1697,76 @@ class SessionController(
         reconnectRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "reconnect") }
     }
 
+    /**
+     * Converge a session whose backend activity says it is waiting for a prompt the transcript is
+     * not showing. The Agent Manager badge and the transcript read the same backend event stream,
+     * but only the badge keeps a collector alive for the whole session, so a `question.asked` the
+     * per-session subscription missed shows the badge and leaves the session Busy forever. Only
+     * probes when the model is not already showing a prompt, and only once per (kind, revision) so
+     * an unchanged signal cannot refetch. Runs on the EDT.
+     */
+    @RequiresEdt
+    private fun reconcilePrompt(map: Map<String, SessionActivityDto>) {
+        val id = sid ?: return
+        val dto = map[id] ?: return
+        if (!waiting(dto.kind)) return
+        if (reconcilable()) return logProbe("activity", dto.kind, "state")
+        if (sessionLoadState !is SessionLoadState.Idle) return logProbe("activity", dto.kind, "loading")
+        val key = dto.kind to promptRevision
+        if (activityProbe == key) return
+        activityProbe = key
+        // Capture the revision on the EDT, like recoverOnReconnect: reading it inside the
+        // coroutine would let the debounce key and the guard token diverge.
+        val revision = promptRevision
+        LOG.info("${ChatLogSummary.sid(id)} kind=prompt-reconcile trigger=activity activity=${dto.kind} state=${model.state::class.simpleName} action=recover")
+        promptRecoveryJob?.cancel()
+        promptRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "activity") }
+    }
+
+    /** True when the transcript already shows something the backend activity map only mirrors. */
+    @RequiresEdt
+    private fun reconcilable(): Boolean = when (model.state) {
+        is SessionState.AwaitingQuestion,
+        is SessionState.AwaitingPermission,
+        is SessionState.Reverting,
+        is SessionState.LoginRequired -> true
+        else -> false
+    }
+
+    private fun waiting(kind: SessionActivityKindDto): Boolean =
+        kind == SessionActivityKindDto.QUESTION ||
+            kind == SessionActivityKindDto.PLAN ||
+            kind == SessionActivityKindDto.PERMISSION
+
+    private fun logProbe(trigger: String, activity: SessionActivityKindDto, reason: String) {
+        LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=prompt-reconcile trigger=$trigger activity=$activity state=${model.state::class.simpleName} action=skip reason=$reason" }
+    }
+
+    /** Prompt delivery is rare and high-signal, so log it at INFO; everything else stays on DEBUG. */
+    private fun logEvent(id: String, tag: String, event: ChatEventDto) {
+        if (promptEvent(event)) LOG.info("${ChatLogSummary.sid(id)} $tag ${ChatLogSummary.eventBody(event)}")
+        else LOG.debug { "${ChatLogSummary.sid(id)} $tag ${ChatLogSummary.eventBody(event)}" }
+    }
+
     /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
-    private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
+    private suspend fun recoverPending(
+        id: String,
+        revision: Long,
+        trigger: String = "history",
+        resolved: Set<String> = emptySet(),
+    ) {
+        val generation = epoch
         try {
-            val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
-            val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
+            val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id && it.id !in resolved }
+            val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id && it.id !in resolved }
             val status = sessions.statuses.value[id]
             // replyAll auto-approves ordinary permissions and skips sensitive ones. A sensitive
             // request must then fall through to a human card rather than go Busy.
             val prompt = card(permissions)
+            val current = withContext(Dispatchers.Main) {
+                !disposed && sid == id && promptRevision == revision && epoch == generation
+            }
+            if (!current) return
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
                 if (count > 0 && prompt == null) {
@@ -1653,6 +1774,7 @@ class SessionController(
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
                         if (promptRevision != revision) return@runEdt
+                        if (epoch != generation) return@runEdt
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                     return
@@ -1681,20 +1803,32 @@ class SessionController(
                 // taken but before this commit — the model already reflects the fresher truth, so
                 // applying the stale snapshot now could only overwrite it (e.g. Busy over a newly
                 // asked question) or resurrect something already answered/rejected. Discard instead.
-                if (promptRevision != revision) {
+                if (promptRevision != revision || epoch != generation) {
                     LOG.debug { "${ChatLogSummary.sid(id)} kind=recovery trigger=$trigger stale=true" }
                     return@runEdt
                 }
                 updateModel {
                     pending.entries.removeIf { it.value.sessionId == id }
+                    if (ref is SessionRef.Hosted &&
+                        (model.state is SessionState.AwaitingPermission || model.state is SessionState.AwaitingQuestion)) {
+                        model.setState(SessionState.Idle)
+                    }
                     if (queue.isNotEmpty()) {
                         queue.map(::toPermission).forEach(::enqueue)
                         promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (live != null) {
-                        model.setState(live)
+                        // A convergence probe must not reset a more specific busy label (one set on
+                        // PartUpdated) back to "Considering next steps…"; it only needs to surface a
+                        // prompt, and the status is already correct when the model is Busy.
+                        if (!(live is SessionState.Busy && model.state is SessionState.Busy)) model.setState(live)
                     } else {
+                        if (ref is SessionRef.Hosted && (model.state is SessionState.Busy ||
+                            model.state is SessionState.AwaitingPermission || model.state is SessionState.AwaitingQuestion)) {
+                            model.setState(pending.values.firstOrNull()?.let { SessionState.AwaitingPermission(it) }
+                                ?: SessionState.Idle)
+                        }
                         seedOutcome()
                     }
                 }
@@ -1747,6 +1881,15 @@ class SessionController(
     }
 
     private fun handle(event: ChatEventDto) {
+        if (event is ChatEventDto.Resnapshot && ref is SessionRef.Hosted) {
+            resnapshot(event.phase)
+            return
+        }
+        replay?.let {
+            it.add(event)
+            return
+        }
+        if (ref is SessionRef.Hosted) promptRevision++
         LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.MessageUpdated -> {
@@ -1856,6 +1999,8 @@ class SessionController(
                 model.removeMessage(event.messageID)
             }
 
+            is ChatEventDto.MessageTerminal -> model.setTerminal(event)
+
             is ChatEventDto.PermissionAsked -> {
                 asked(event)
             }
@@ -1895,6 +2040,133 @@ class SessionController(
             is ChatEventDto.SessionDiffChanged -> model.setDiff(event.diff)
             is ChatEventDto.TodoUpdated -> model.setTodos(event.todos)
             is ChatEventDto.SessionInterrupted -> interrupted(event)
+            is ChatEventDto.Resnapshot -> Unit
+        }
+    }
+
+    /** Commit a materialized hosted replay at its fence, before applying the buffered live tail. */
+    @RequiresEdt
+    private fun resnapshot(phase: String) {
+        val target = ref as? SessionRef.Hosted ?: return
+        val id = target.id
+        if (phase == "start") {
+            epoch++
+            promptRevision++
+            hydration?.cancel()
+            hydration = null
+            updates.holdFlush(false)
+            replay = mutableListOf()
+            return
+        }
+        if (hydration?.isActive == true) return
+        val events = replay
+        if (events != null) {
+            replay = null
+            val messages = linkedMapOf<String, MessageDto>()
+            val parts = linkedMapOf<PartKey, PartDto>()
+            events.forEach { event ->
+                when (event) {
+                    is ChatEventDto.MessageUpdated -> messages[event.info.id] = event.info
+                    is ChatEventDto.PartUpdated -> parts[PartKey(event.part.messageID, event.part.id)] = event.part
+                    is ChatEventDto.MessageRemoved -> {
+                        messages.remove(event.messageID)
+                        parts.keys.removeIf { it.messageId == event.messageID }
+                    }
+                    is ChatEventDto.PartRemoved -> parts.remove(PartKey(event.messageID, event.partID))
+                    else -> Unit
+                }
+            }
+            val items = messages.values.sortedBy { it.time.created }.map { message ->
+                MessageWithPartsDto(message, parts.filterKeys { it.messageId == message.id }.values.toList())
+            }
+            snapshots.clear()
+            pending.entries.removeIf { it.value.sessionId == id }
+            childParts.clear()
+            childParts.putAll(children(items))
+            model.loadHistory(items)
+            events.filterIsInstance<ChatEventDto.MessageTerminal>().forEach(model::setTerminal)
+            syncHistoryAgent(items)
+            events.filterIsInstance<ChatEventDto.SessionDiffChanged>().lastOrNull()?.let { model.setDiff(it.diff) }
+            events.filterIsInstance<ChatEventDto.TodoUpdated>().lastOrNull()?.let { model.setTodos(it.todos) }
+            val dto = events.filterIsInstance<ChatEventDto.SessionStatusChanged>().lastOrNull()
+            if (dto != null) status(dto.status)
+            val permissions = linkedMapOf<String, PermissionRequestDto>()
+            val questions = linkedMapOf<String, QuestionRequestDto>()
+            val resolved = mutableSetOf<String>()
+            events.forEach { event ->
+                when (event) {
+                    is ChatEventDto.PermissionAsked -> {
+                        resolved.remove(event.request.id)
+                        permissions[event.request.id] = event.request
+                    }
+                    is ChatEventDto.PermissionReplied -> {
+                        permissions.remove(event.requestID)
+                        resolved.add(event.requestID)
+                    }
+                    is ChatEventDto.QuestionAsked -> {
+                        resolved.remove(event.request.id)
+                        questions[event.request.id] = event.request
+                    }
+                    is ChatEventDto.QuestionReplied -> {
+                        questions.remove(event.requestID)
+                        resolved.add(event.requestID)
+                    }
+                    is ChatEventDto.QuestionRejected -> {
+                        questions.remove(event.requestID)
+                        resolved.add(event.requestID)
+                    }
+                    else -> Unit
+                }
+            }
+            // Replay must never auto-approve historical requests; only the successful live probe may do that.
+            permissions.values.map(::toPermission).forEach(::enqueue)
+            if (questions.isNotEmpty()) model.setState(SessionState.AwaitingQuestion(toQuestion(questions.values.last())))
+            else if (permissions.isNotEmpty()) promote()
+            events.filterIsInstance<ChatEventDto.SessionUpdated>().lastOrNull()?.let { model.setSession(it.session) }
+            if (sessionLoadState is SessionLoadState.Loading) setSessionLoadState(SessionLoadState.Idle)
+            showSession()
+            promptRevision++
+            val revision = promptRevision
+            cs.launch { recoverPending(id, revision, "hosted-fence", resolved) }
+            return
+        }
+        val generation = ++epoch
+        val revision = promptRevision
+        replay = mutableListOf()
+        updates.holdFlush(true)
+        hydration = cs.launch {
+            try {
+                val session = runCatching { sessions.get(id, directory) }.getOrNull()
+                val items = sessions.messages(id, directory)
+                runEdt {
+                    if (disposed) return@runEdt
+                    if (sid != id) return@runEdt
+                    if (generation != epoch) return@runEdt
+                    val tail = replay.orEmpty().toList()
+                    replay = null
+                    updateModel {
+                        snapshots.clear()
+                        this@SessionController.model.loadHistory(items)
+                        if (session != null) this@SessionController.model.setSession(session)
+                        tail.forEach(::handle)
+                    }
+                    showSession()
+                }
+                recoverPending(id, revision, "hosted-reconnect")
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                LOG.warn("${ChatLogSummary.sid(id)} kind=hosted-resnapshot failed message=${e.message}", e)
+            } finally {
+                runEdt {
+                    if (generation == epoch) {
+                        val tail = replay.orEmpty().toList()
+                        replay = null
+                        if (!disposed) updateModel { tail.forEach(::handle) }
+                        updates.holdFlush(false)
+                        updates.requestFlush(true)
+                    }
+                }
+            }
         }
     }
 
@@ -1918,29 +2190,35 @@ class SessionController(
         else -> null
     }
 
-    private fun handleHidden(event: ChatEventDto): Boolean = when (event) {
-        is ChatEventDto.Error,
-        is ChatEventDto.SessionInterrupted,
-        is ChatEventDto.PermissionAsked,
-        is ChatEventDto.PermissionReplied,
-        is ChatEventDto.QuestionAsked,
-        is ChatEventDto.QuestionReplied,
-        is ChatEventDto.QuestionRejected,
-        is ChatEventDto.SessionStatusChanged,
-        is ChatEventDto.SessionUpdated,
-        is ChatEventDto.SessionIdle,
-        is ChatEventDto.SessionQueueChanged -> {
-            edt {
-                if (disposed) return@edt
-                updateModel { handleMetadata(event) }
+    private fun handleHidden(event: ChatEventDto): Boolean {
+        return when (event) {
+            is ChatEventDto.Error,
+            is ChatEventDto.MessageTerminal,
+            is ChatEventDto.SessionInterrupted,
+            is ChatEventDto.PermissionAsked,
+            is ChatEventDto.PermissionReplied,
+            is ChatEventDto.QuestionAsked,
+            is ChatEventDto.QuestionReplied,
+            is ChatEventDto.QuestionRejected,
+            is ChatEventDto.SessionStatusChanged,
+            is ChatEventDto.SessionUpdated,
+            is ChatEventDto.SessionIdle,
+            is ChatEventDto.SessionQueueChanged -> {
+                edt {
+                    if (disposed) return@edt
+                    updateModel {
+                        if (ref is SessionRef.Hosted) handle(event) else handleMetadata(event)
+                    }
+                }
+                true
             }
-            true
+            else -> false
         }
-        else -> false
     }
 
     private fun handleMetadata(event: ChatEventDto) {
-        LOG.debug { ChatLogSummary.event(event) }
+        if (promptEvent(event)) LOG.info("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} evt=${ChatLogSummary.eventBody(event)}")
+        else LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.Error -> error(event, false)
             is ChatEventDto.SessionInterrupted -> interrupted(event)
@@ -2274,6 +2552,7 @@ class SessionController(
      */
     private fun retryPrompt(): PromptDto? {
         val msg = model.messages().lastOrNull { it.info.role == "user" } ?: return null
+        if (ref is SessionRef.Hosted) return null
         return PromptDto(
             parts = emptyList(),
             messageID = msg.info.id,
@@ -2337,6 +2616,7 @@ class SessionController(
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
         select: PromptSelection? = null,
+        injectedTitle: String? = null,
     ): PromptDto {
         val sel = model.model?.let(::parseModel)
         val provider = select?.provider ?: sel?.first
@@ -2346,7 +2626,9 @@ class SessionController(
         // be validated against model.variants yet; only the fallback is filtered.
         val variant = select?.variant ?: model.variant?.takeIf { it in model.variants }
         val parts = buildList {
-            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+            text.takeIf { it.isNotBlank() }?.let {
+                add(PromptPartDto(type = "text", text = it, injectedTitle = injectedTitle))
+            }
             addAll(files)
         }
         return PromptDto(
@@ -2354,8 +2636,8 @@ class SessionController(
             providerID = provider,
             modelID = modelId,
             agent = agent,
-            variant = variant,
-            editorContext = editorContext,
+            variant = if (ref is SessionRef.Hosted) null else variant,
+            editorContext = if (ref is SessionRef.Hosted) null else editorContext,
         )
     }
 
@@ -2391,6 +2673,16 @@ class SessionController(
     }
 
     private fun selectResolvedModel(key: String?) {
+        if (ref is SessionRef.Hosted) {
+            val selected = key?.takeIf { it.startsWith("$KILO_PROVIDER/") && item(it) != null }
+                ?: model.models.firstOrNull { it.id == "kilo-auto/free" }?.key
+                ?: model.models.firstOrNull()?.key
+            model.model = selected
+            model.variants = emptyList()
+            model.variant = null
+            model.refreshHeader()
+            return
+        }
         model.model = key
         val item = key?.let(::item)
         model.variants = item?.variants ?: emptyList()
@@ -2634,6 +2926,18 @@ class SessionController(
         }
     }
 
+    /**
+     * Clears a standalone error card (one with no transcript tail to Retry -- see [canRetry] /
+     * [retryTarget]) back to idle. Without this, a send that failed before any message was
+     * created (a rejected attachment, or a prompt_async send that failed asynchronously) has no
+     * action that ever dismisses it: it just sits there until the next unrelated state change.
+     */
+    fun dismissError() {
+        assertEdt()
+        if (model.state !is SessionState.Error) return
+        updateModel { model.setState(SessionState.Idle) }
+    }
+
     private fun accountSnapshot(): SessionControllerEvent.AccountOverlaySnapshot {
         val state = model.app
         val prof = state.profile
@@ -2697,21 +3001,28 @@ class SessionController(
                     if (recentsState != state) return@edt
                     setRecentSessionsState(RecentsState.Loaded)
                     if (!canUseRecents()) return@edt
-                    recentsSnapshot = items
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    publishRecents(items)
                 }
             } catch (e: Exception) {
                 LOG.warn("kind=session-recent dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (!canUseRecents()) return@edt
                     if (recentsState != state) return@edt
-                    setRecentSessionsState(RecentsState.Loaded)
+                    // Failed, not Loaded: a later refresh (e.g. after the CLI reconnects) must retry
+                    // instead of assuming the empty snapshot is final.
+                    setRecentSessionsState(RecentsState.Failed)
                     if (!canUseRecents()) return@edt
-                    recentsSnapshot = emptyList()
-                    setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
+                    publishRecents(emptyList())
                 }
             }
         }
+    }
+
+    private fun publishRecents(items: List<SessionDto>) {
+        assertEdt()
+        recentsSnapshot = items
+        fire(SessionControllerEvent.RecentsChanged)
+        setControllerViewState(SessionControllerEvent.ViewChanged.ShowEmpty)
     }
 
     private fun canUseRecents(): Boolean {
@@ -2907,8 +3218,15 @@ class SessionController(
         runEdt {
             if (disposed) return@runEdt
             disposed = true
+            replay = null
+            hydration?.cancel()
+            hydration = null
             connectionDelay.dispose()
             cancelSubscriptions()
+            promptRecoveryJob?.cancel()
+            promptRecoveryJob = null
+            reconnectRecoveryJob?.cancel()
+            reconnectRecoveryJob = null
             drainJob?.cancel()
             drainJob = null
             revertWatchdog?.stop()
@@ -3017,6 +3335,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionCreated -> true
     is ChatEventDto.Error -> event.sessionID == null || event.sessionID == id
     is ChatEventDto.MessageRemoved -> event.sessionID == id
+    is ChatEventDto.MessageTerminal -> event.sessionID == id
     is ChatEventDto.PermissionAsked -> event.sessionID == id
     is ChatEventDto.PermissionReplied -> event.sessionID == id
     is ChatEventDto.QuestionAsked -> event.sessionID == id
@@ -3030,6 +3349,17 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
     is ChatEventDto.TodoUpdated -> event.sessionID == id
+    is ChatEventDto.Resnapshot -> event.sessionID == id
+}
+
+/** Returns true for the rare prompt events whose delivery is worth logging at INFO. */
+private fun promptEvent(event: ChatEventDto): Boolean = when (event) {
+    is ChatEventDto.PermissionAsked,
+    is ChatEventDto.PermissionReplied,
+    is ChatEventDto.QuestionAsked,
+    is ChatEventDto.QuestionReplied,
+    is ChatEventDto.QuestionRejected -> true
+    else -> false
 }
 
 private fun summary(count: Int): String {
@@ -3078,6 +3408,9 @@ private sealed interface RecentsState {
     data object Idle : RecentsState
     data class Loading(val id: Any = Any()) : RecentsState
     data object Loaded : RecentsState
+    // The last fetch failed. Unlike Loaded this does not short-circuit a non-forced refresh, so the
+    // next workspace-ready (or session change) retries instead of leaving the list permanently empty.
+    data object Failed : RecentsState
 }
 
 private sealed interface SessionLoadState {

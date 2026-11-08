@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloMarketplaceRpcApi
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.MarketplaceItemDto
 import ai.kilocode.rpc.dto.MarketplaceListDto
 import ai.kilocode.rpc.dto.MarketplaceResultDto
@@ -47,6 +48,10 @@ class KiloMarketplaceService internal constructor(
     }
 
     suspend fun list(directory: String): MarketplaceListDto = call("list dir=$directory", LIST_TIMEOUT_MS) { list(directory) }
+
+    suspend fun bundles(directory: String): List<MarketplaceBundleDto> = call("bundles dir=$directory", LIST_TIMEOUT_MS) {
+        bundles(directory)
+    }
 
     suspend fun install(
         directory: String,

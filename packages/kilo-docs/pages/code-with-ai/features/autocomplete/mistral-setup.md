@@ -1,77 +1,63 @@
-# Setting Up Mistral for Free Autocomplete
+# Setting up Mistral for autocomplete
 
-This guide walks you through setting up Mistral's Codestral model for free autocomplete in Kilo Code. Mistral offers a free tier that's perfect for getting started with AI-powered code completions.
+Use a Mistral API key with Kilo Gateway to run Codestral autocomplete through your own Mistral account.
+
+Mistral's [Free mode includes limited usage](https://docs.mistral.ai/admin/billing-usage/usage-limits). Your account's plan, usage limits, and pay-as-you-go settings determine whether requests incur charges. Adding a BYOK key does not guarantee free autocomplete. Check [Mistral's current pricing](https://docs.mistral.ai/inference/pricing) before use.
 
 ## Prerequisites
 
-- A [Kilo Code account](https://app.kilo.ai) (free to create)
-- A Mistral AI account with a Codestral API key
+- A [Kilo Code account](https://app.kilo.ai)
+- A [Mistral AI account](https://console.mistral.ai/)
 
-## Step 1: Navigate to Codestral in Mistral AI Studio
+## Step 1: Create a Mistral API key
 
-Go to the [Mistral AI console](https://console.mistral.ai/) and sign up or sign in to your account. In the sidebar, click **Codestral** under the Code section.
+1. Sign in to [Mistral AI Studio](https://console.mistral.ai/).
+2. Open **API Keys** and click **Create new key**.
+3. Complete the key settings and create the key.
+4. Copy the key and store it securely. Mistral only shows the full key once.
 
-![Select Codestral](/docs/img/mistral-setup/06-navigate-to-codestral.png)
+Use a standard Studio API key. You do not need a separate Codestral key. See Mistral's [API key setup guide](https://docs.mistral.ai/getting-started/quickstarts/studio/activate-and-generate-api-key) for the current console steps.
 
-## Step 2: Generate API Key
+## Step 2: Add your key via BYOK in Kilo
 
-Click the **Generate API Key** button to create your new Codestral API key.
-
-![Confirm Generate](/docs/img/mistral-setup/07-confirm-key-generation.png)
-
-## Step 3: Copy Your API Key
-
-Once generated, click the **copy** button next to your API key to copy it to your clipboard.
-
-![Copy API Key](/docs/img/mistral-setup/08-copy-api-key.png)
-
-{% callout type="note" %}
-The Codestral API key is separate from the standard Mistral La Plateforme API key. Make sure you generate a key specifically from the **Codestral** section of the Mistral console.
-{% /callout %}
-
-## Step 4: Add Your Key via BYOK in Kilo
-
-1. Log into the [Kilo platform](https://app.kilo.ai).
-2. Navigate to the [Bring Your Own Key (BYOK) page](https://app.kilo.ai/byok), available in the sidebar under **Account**.
-3. Click **Add Your First Key** (or **Add Key** if you already have keys configured).
-4. Select **Codestral** as the provider.
-5. Paste your Codestral API key.
+1. Log into the [Kilo platform](https://app.kilo.ai) and select the account or organization you use in the extension.
+2. Open the [Bring Your Own Key (BYOK) page](https://app.kilo.ai/byok), available in the sidebar under **Account**.
+3. Click **Add Your First Key** or **Add Key** if you already have keys configured.
+4. Select **Mistral AI** as the provider.
+5. Paste your Mistral API key.
 6. Click **Save**.
 
-{% callout type="tip" %}
-For more details on BYOK, see the [Bring Your Own Key documentation](/docs/getting-started/byok).
+{% callout type="note" %}
+If you previously added a **Legacy Codestral-only key**, Kilo Gateway gives that entry precedence over your Mistral AI key. Remove an obsolete legacy entry before retrying with your standard Mistral key.
 {% /callout %}
 
-## Step 5: Verify Autocomplete is Working
+For more details, see the [Bring Your Own Key documentation](/docs/getting-started/byok).
 
-Once your BYOK key is saved, Kilo Code's autocomplete will automatically use your Codestral key through the Kilo Gateway. No additional configuration is needed in the extension.
+## Step 3: Verify autocomplete
 
-1. Open VS Code with the Kilo Code extension installed.
-2. Start typing in any code file — you should see inline ghost-text suggestions powered by Codestral.
-3. Press `Tab` to accept a suggestion.
+1. Open VS Code with the Kilo Code extension installed and sign in to your Kilo account.
+2. In Kilo Code settings, open **Models** and set **Autocomplete model** to **Codestral** under **Kilo Gateway**.
+3. Start typing in a code file and check for inline suggestions.
+4. Press `Tab` to accept a suggestion.
 
-The autocomplete status bar in VS Code shows the current provider ("Kilo Gateway") and tracks cumulative cost. With BYOK, requests are billed directly by Mistral at their rates (Codestral has a free tier) and show as $0.00 on your Kilo balance.
+Kilo Gateway uses your saved Mistral AI key for these requests. Check usage in your Mistral account to confirm requests use that account's allowance or billing.
 
-## How It Works
+## How it works
 
-When you add a Codestral BYOK key, the request flow is:
+Kilo Gateway sends autocomplete requests to Mistral using your BYOK key. Standard Mistral AI keys use Mistral's [FIM completions endpoint](https://docs.mistral.ai/api/endpoint/fim).
 
-```
-Your Editor → Kilo Gateway (with your key) → Mistral
-```
-
-- The Kilo Gateway detects your BYOK key and routes autocomplete requests using it.
-- You are billed directly by Mistral — Kilo does not add any markup.
-- If your BYOK key is invalid, the request will fail (it does not fall back to Kilo's keys).
+- Mistral applies your account's plan and usage limits.
+- If your BYOK key is invalid, the request fails. Kilo does not fall back to its own keys.
+- Without a matching BYOK key, Gateway autocomplete uses your Kilo credits.
 
 ## Troubleshooting
 
-- **Autocomplete not appearing?** Check that autocomplete is enabled in Kilo Code settings (it is on by default). Also verify you are signed into Kilo Code in the extension.
-- **Key not working?** Ensure you copied the **Codestral** API key (not the standard La Plateforme key). You can verify your key at [console.mistral.ai/codestral](https://console.mistral.ai/codestral).
-- **Seeing charges on your Kilo balance?** If you haven't configured BYOK, autocomplete defaults to using your Kilo credits. Add your Codestral key via BYOK to route requests through your own Mistral account.
+- **Autocomplete not appearing?** Check that autocomplete is enabled in Kilo Code settings and that you are signed in. Confirm the autocomplete model is Codestral under Kilo Gateway.
+- **Key not working?** Check that you saved your standard Studio API key under **Mistral AI** in Kilo BYOK. Check for an expired key, account usage limits, or an obsolete legacy Codestral entry.
+- **Seeing charges on your Kilo balance?** Confirm you added the key to the same Kilo account or organization used by the extension.
 
-## Next Steps
+## Next steps
 
-- Learn more about [Autocomplete features](/docs/code-with-ai/features/autocomplete)
-- Explore [triggering options](/docs/code-with-ai/features/autocomplete#triggering-options) for autocomplete
-- Check out [best practices](/docs/code-with-ai/features/autocomplete#best-practices) for optimal results
+- Learn more about [autocomplete features](/docs/code-with-ai/features/autocomplete)
+- Explore [triggering options](/docs/code-with-ai/features/autocomplete#triggering-options)
+- Check [best practices](/docs/code-with-ai/features/autocomplete#best-practices)

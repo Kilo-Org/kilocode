@@ -267,7 +267,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           </Tooltip>
           <Tooltip value="Open in browser" placement="bottom">
             <IconButton
-              icon="link"
+              icon="square-arrow-top-right"
               size="small"
               variant="ghost"
               label="Open in browser"

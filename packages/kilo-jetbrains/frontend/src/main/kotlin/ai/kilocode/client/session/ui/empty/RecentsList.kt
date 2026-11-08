@@ -77,7 +77,7 @@ internal class RecentsList(
         border = JBUI.Borders.empty(0, UiStyle.Gap.pad(), 0, UiStyle.Gap.pad())
         add(title, BorderLayout.NORTH)
         add(list, BorderLayout.CENTER)
-        setSessions(sessions)
+        update(sessions)
     }
 
     fun count() = model.size()
@@ -124,7 +124,9 @@ internal class RecentsList(
         repaint()
     }
 
-    private fun setSessions(sessions: List<SessionDto>) {
+    /** Replace the listed sessions in place. Called from [EmptySessionPanel.setRecents] after a reload. */
+    @RequiresEdt
+    fun update(sessions: List<SessionDto>) {
         model.clear()
         sessions.take(SessionUiStyle.RecentSessions.LIMIT).map(::LocalHistoryItem).forEach(model::addElement)
         revalidate()

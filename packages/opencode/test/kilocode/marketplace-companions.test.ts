@@ -23,7 +23,12 @@ function input(directory: string) {
 function services(directory: string) {
   // File-backed installs only invalidate Config. The archive, config, receipts,
   // locks, and cleanup operations below all use their real implementations.
-  return { directory, worktree: directory, config: { invalidate: () => Effect.void } } as Parameters<typeof install>[0]
+  return {
+    directory,
+    worktree: directory,
+    config: { invalidate: () => Effect.void },
+    mcp: { remove: () => Effect.void },
+  } as unknown as Parameters<typeof install>[0]
 }
 
 async function archive(id = "guide", files: Record<string, string> = {}) {
@@ -396,6 +401,25 @@ describe("marketplace MCP companions", () => {
       )
     }),
   )
+
+  // kilocode_change start - removeMarketplaceItemFromAllScopes calls remove()
+  // for every scope regardless of which one owns the entry. A scope with
+  // nothing to remove (no receipt, no matching config key) must not purge
+  // MCP runtime status: that would disconnect a server actually defined in
+  // another scope, leaving it stuck "disabled" until something reconnects it.
+  it.live("does not purge MCP runtime status when a scope has nothing to remove", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const removed: string[] = []
+      const svc = { ...services(tmp), mcp: { remove: (name: string) => Effect.sync(() => removed.push(name)) } }
+
+      const out = yield* remove(svc, { id: "server", type: "mcp" }, "project")
+
+      expect(out.success).toBe(true)
+      expect(removed).toEqual([])
+    }),
+  )
+  // kilocode_change end
 
   it.live("serializes competing MCP bundles that claim the same skill", () =>
     Effect.gen(function* () {

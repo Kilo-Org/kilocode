@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import {
+  integratedBrowserFallback,
   integratedBrowserUseSystemChrome,
   migrateIntegratedBrowserUseSystemChrome,
 } from "../../src/services/browser-automation/chrome-setting"
@@ -39,6 +40,19 @@ describe("Integrated Browser Chrome preference", () => {
   test("defaults to system Chrome when the key is unset", () => {
     config({})
     expect(integratedBrowserUseSystemChrome()).toBe(true)
+  })
+
+  test("allows fallback only in WSL without an explicit preference", () => {
+    config({})
+    expect(integratedBrowserFallback("wsl")).toBe(true)
+    expect(integratedBrowserFallback("ssh-remote")).toBe(false)
+    expect(integratedBrowserFallback("dev-container")).toBe(false)
+    expect(integratedBrowserFallback("local")).toBe(false)
+    for (const current of [true, false]) {
+      config({ current })
+      expect(integratedBrowserFallback("wsl")).toBe(false)
+    }
+    expect(writes).toEqual([])
   })
 
   test("copies a legacy preference once when the key is unset", async () => {

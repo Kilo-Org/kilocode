@@ -44,3 +44,23 @@ data class McpServerConfigDto(
     val config: McpConfigDto,
     val scope: String,
 )
+
+@Serializable
+data class McpAuthResultDto(
+    val status: String,
+    val error: String? = null,
+)
+
+/**
+ * An MCP authorization URL the client has to put in front of the user.
+ *
+ * [external] is true for `mcp.auth.url`, which the CLI emits when the plugin asked to own the
+ * browser hand-off, so the client opens [url] itself. It is false for `mcp.browser.open.failed`,
+ * where the CLI already tried and failed, so the URL goes straight to the fallback dialog.
+ */
+@Serializable
+data class McpAuthEventDto(
+    val name: String,
+    val url: String,
+    val external: Boolean = false,
+)

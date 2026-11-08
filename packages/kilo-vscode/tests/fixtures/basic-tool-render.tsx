@@ -83,6 +83,100 @@ try {
     assert.ok(root.querySelector('[data-testid="custom-trigger"]'))
     dispose()
   }
+
+  // A restored open card reserves its height without building the body in
+  // the selection task. The reservation disappears once the body mounts.
+  const seed = mount(() => (
+    <BasicTool icon="task" status="completed" trigger={{ title: "Measured card" }} defaultOpen>
+      <div>Measured content</div>
+    </BasicTool>
+  ))
+  const measured = seed.root.querySelector<HTMLElement>('[data-slot="collapsible-content"]')!
+  const size = { height: 240, width: measured.getBoundingClientRect().width, font: getComputedStyle(measured).font }
+  seed.dispose()
+  {
+    let built = 0
+    const body = () => {
+      built += 1
+      return <div data-testid="deferred-body">Restored diff</div>
+    }
+    const { root, dispose } = mount(() => (
+      <BasicTool
+        icon="task"
+        status="completed"
+        trigger={{ title: "Restored diff" }}
+        defaultOpen
+        defer
+        deferredSize={size}
+      >
+        {body()}
+      </BasicTool>
+    ))
+    const content = root.querySelector<HTMLElement>('[data-slot="collapsible-content"]')
+    assert.ok(content)
+    assert.equal(built, 0)
+    assert.equal(content.style.minHeight, "240px")
+    assert.ok(content.hasAttribute("data-deferred-height"))
+    await settle()
+    assert.equal(built, 1)
+    assert.ok(root.querySelector('[data-testid="deferred-body"]'))
+    assert.equal(content.style.minHeight, "")
+    assert.equal(content.hasAttribute("data-deferred-height"), true)
+    root.querySelector<HTMLButtonElement>('[data-slot="collapsible-trigger"]')!.click()
+    await settle()
+    assert.equal(content.hasAttribute("data-deferred-height"), false)
+    dispose()
+  }
+
+  // A rapid switch away must cancel the scheduled body construction.
+  {
+    let built = 0
+    const body = () => {
+      built += 1
+      return <div>Cancelled diff</div>
+    }
+    const { root, dispose } = mount(() => (
+      <BasicTool
+        icon="task"
+        status="completed"
+        trigger={{ title: "Cancelled diff" }}
+        defaultOpen
+        defer
+        deferredSize={size}
+      >
+        {body()}
+      </BasicTool>
+    ))
+    assert.ok(root.querySelector("[data-deferred-height]"))
+    dispose()
+    await settle()
+    assert.equal(built, 0)
+  }
+
+  // An old measurement from another width must take the eager fallback.
+  {
+    let built = 0
+    const body = () => {
+      built += 1
+      return <div data-testid="resized-body">Resized diff</div>
+    }
+    const { root, dispose } = mount(() => (
+      <BasicTool
+        icon="task"
+        status="completed"
+        trigger={{ title: "Resized diff" }}
+        defaultOpen
+        defer
+        deferredSize={{ ...size, width: size.width + 100 }}
+      >
+        {body()}
+      </BasicTool>
+    ))
+    assert.equal(built, 1)
+    assert.ok(root.querySelector('[data-testid="resized-body"]'))
+    assert.equal(root.querySelector("[data-deferred-height]"), null)
+    dispose()
+  }
 } finally {
   await win.happyDOM.cancelAsync()
   await win.happyDOM.close()

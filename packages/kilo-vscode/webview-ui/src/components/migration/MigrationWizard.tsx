@@ -2,6 +2,7 @@ import { Show, createSignal, onMount, onCleanup } from "solid-js"
 import type { Component, JSX } from "solid-js"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import SessionMigrationProgress, { type SessionMigrationProgressState } from "./SessionMigrationProgress"
@@ -226,7 +227,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
       </Show>
       <Show when={running()}>
         <div class="migration-wizard__status-icon">
-          <div class="migration-wizard__spinner" />
+          <Spinner class="migration-wizard__spinner" />
         </div>
       </Show>
       <Show when={status() === "success" && !running()}>

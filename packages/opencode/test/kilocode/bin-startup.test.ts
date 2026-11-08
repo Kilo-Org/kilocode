@@ -67,7 +67,9 @@ const trace = { probes: [], spawns: [], signals: [] }
 const signals = ["SIGINT", "SIGTERM", "SIGHUP"]
 const listeners = () => signals.map((signal) => process.listenerCount(signal))
 os.platform = () => "win32"
-os.arch = () => "x64"
+// kilocode_change start
+os.arch = () => input.arch ?? "x64"
+// kilocode_change end
 os.hostname = () => input.host ?? "test-host"
 os.release = () => "10.0.26100"
 os.cpus = () => [{ model: "test CPU" }]
@@ -242,4 +244,28 @@ describe("npm launcher startup", () => {
     expect(await Bun.file(join(root, "kilo", "bin", "windows-avx2.json")).exists()).toBe(true)
     expect((await item.run({ cache })).probes).toEqual([])
   })
+
+// kilocode_change start
+  test("prints helpful emulation message for missing binary on Windows ARM64", async () => {
+    await using item = await fixture()
+    await rm(item.optimized)
+    await rm(item.baseline)
+    const pkg = join(item.root, "node_modules", "@kilocode", "cli")
+    const wrapper = join(pkg, "bin", "kilo")
+    const preload = join(item.root, "preload.cjs")
+    
+    // Run the script directly to capture stderr, since findBinary will fail and call process.exit(1)
+    const proc = Bun.spawnSync([node, "--require", preload, wrapper], {
+      cwd: item.root,
+      env: {
+        KILO_STARTUP_TEST: JSON.stringify({ arch: "arm64" }),
+        KILO_STARTUP_LOG: item.root + "/trace.json",
+      },
+    })
+    const stderr = proc.stderr.toString()
+    expect(proc.exitCode).toBe(1)
+    expect(stderr).toContain("The Kilo CLI native binary for Windows ARM64 could not be found.")
+    expect(stderr).toContain("GitHub Releases page to run under Windows 11 emulation")
+  })
+// kilocode_change end
 })

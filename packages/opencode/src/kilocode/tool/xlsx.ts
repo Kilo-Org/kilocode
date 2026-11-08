@@ -27,7 +27,7 @@ export async function open(filepath: string, input: Buffer) {
   }
 
   try {
-    const book = read(bytes, { type: "array", cellDates: true })
+    const book = read(bytes, { type: "array", cellDates: true, cellNF: true })
     return Readable.from(lines(book, ods ? visibility(bytes) : new Set(), ods))
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -44,7 +44,20 @@ function cell(value: CellObject | undefined) {
   }
   if (value.v === undefined || value.v === null) return ""
   if (value.t === "e") return `[Error: ${value.w ?? String(value.v)}]`
-  if (value.t === "d") return value.v instanceof Date ? value.v.toISOString().slice(0, 10) : String(value.v)
+  if (value.t === "d") {
+    if (!(value.v instanceof Date)) return String(value.v)
+    // Round away SheetJS's floating-point error: 14:05 parses as 14:04:59.999.
+    const iso = new Date(Math.round(value.v.getTime() / 1000) * 1000).toISOString()
+    // A time of day or a duration is stored as a day in 1899 or 1900. Its format is an elapsed [h], [m]
+    // or [s] one, or shows an hour or a second and no day or year outside quoted text, escaped
+    // characters and [...] sections, so read it as the cell shows it. An m alone is a month (mmm).
+    const code = String(value.z ?? "")
+    const format = code.replace(/"[^"]*"|\\.|\[[^\]]*\]/g, "")
+    const timeOnly = /\[(h+|m+|s+)\]/i.test(code) || (!/[dy]/i.test(format) && /[hs]/i.test(format))
+    if (value.z != null && timeOnly) return value.w ?? iso.slice(11, 19)
+    if (iso.endsWith("T00:00:00.000Z")) return iso.slice(0, 10)
+    return iso.slice(0, 19).replace("T", " ")
+  }
   if (value.l?.Target) return `${value.w ?? String(value.v)} (${value.l.Target})`
   return value.w ?? String(value.v)
 }

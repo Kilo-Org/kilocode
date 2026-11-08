@@ -9,6 +9,7 @@ import { attribute } from "./prompt-attribution"
 import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
 import { Timing } from "./creation-timing"
 import { plan } from "./creation-plan"
+import { sessionCreateBody } from "./session-create"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -17,6 +18,8 @@ export interface ToolTask {
   prompt?: string
   name?: string
   branchName?: string
+  baseBranch?: string
+  agent?: string
   model?: { providerID: string; modelID: string }
   variant?: string
 }
@@ -52,6 +55,7 @@ export interface ToolDeps {
   waitReady: (context: string) => Promise<void>
   createWorktree: (opts: {
     groupId?: string
+    baseBranch?: string
     branchName?: string
     name?: string
     label?: string
@@ -67,6 +71,7 @@ export interface ToolDeps {
     source?: ToolSource,
     boot?: CreationBoot,
     timing?: Timing,
+    agent?: string,
   ) => Promise<Session | null>
   sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   registerWorktreeSession: (sid: string, dir: string) => void
@@ -130,6 +135,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       parts: [{ type: "text", text: attribute(body, source?.sessionID) }],
       model: task.model,
       variant: task.variant,
+      agent: task.agent,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
@@ -171,12 +177,12 @@ async function local(
   const target = wt?.path ?? root
   const metadata = await deps.sessionMetadata(client, target)
   const { data } = await client.session.create(
-    {
+    sessionCreateBody({
       directory: target,
-      platform: PLATFORM,
       metadata,
-      ...(source?.sandboxInheritanceToken ? { sandboxInheritanceToken: source.sandboxInheritanceToken } : {}),
-    },
+      agent: task.agent,
+      sandboxInheritanceToken: source?.sandboxInheritanceToken,
+    }),
     { throwOnError: true },
   )
   const session = data
@@ -206,12 +212,13 @@ async function worktree(
   versions?: boolean,
   source?: ToolSource,
 ) {
-  const baseBranch = task.branchName ?? branch(task.name)
+  const seed = task.branchName ?? branch(task.name)
   const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
-  const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
+  const version = versionedName(seed, versions ? index : 0, versions ? total : 1)
   const timing = Timing.start(`create ${version.branch ?? "worktree"}`, deps.log)
   const created = await deps.createWorktree({
     groupId,
+    baseBranch: clean(task.baseBranch),
     branchName: version.branch,
     name: version.branch,
     label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
@@ -237,6 +244,7 @@ async function worktree(
         source,
         boot,
         timing,
+        task.agent,
       )
     },
   )
@@ -357,10 +365,16 @@ function model(value: unknown): ToolTask["model"] {
   return { providerID, modelID }
 }
 
+// The server resolves the agent by exact key, so keep the canonical trimmed name.
+function agent(value: unknown): Pick<ToolTask, "agent"> {
+  if (typeof value !== "string" || !value.trim()) return {}
+  return { agent: value.trim() }
+}
+
 function task(value: unknown): ToolTask | undefined {
   if (!record(value)) return undefined
-  const out: ToolTask = {}
-  for (const key of ["prompt", "name", "branchName"] as const) {
+  const out: ToolTask = { ...agent(value.agent) }
+  for (const key of ["prompt", "name", "branchName", "baseBranch"] as const) {
     if (Object.hasOwn(value, key) && typeof value[key] === "string" && value[key].trim()) out[key] = value[key]
   }
   const hasModel = Object.hasOwn(value, "model")
@@ -387,7 +401,7 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
   if (value.worktreeID != null) {
     if (typeof value.worktreeID !== "string" || !value.worktreeID.trim()) return undefined
     if (mode !== "local" || value.versions === true) return undefined
-    if (tasks.some((item) => record(item) && item.branchName != null)) return undefined
+    if (tasks.some((item) => record(item) && (item.branchName != null || item.baseBranch != null))) return undefined
   }
   const parsed = limited.map(task).filter((item): item is ToolTask => !!item)
   if (parsed.length !== limited.length) return undefined

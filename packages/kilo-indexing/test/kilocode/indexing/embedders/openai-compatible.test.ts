@@ -840,6 +840,195 @@ describe("OpenAICompatibleEmbedder", () => {
     })
   })
 
+  describe("dimension fallback", () => {
+    const rejection = () => Object.assign(new Error("Unrecognized request argument: dimensions"), { status: 400 })
+
+    test("retries without dimensions when the endpoint rejects them", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      const testEmbedding = new Float32Array([0.25, 0.5])
+      const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+      mockEmbeddingsCreate.mockRejectedValueOnce(rejection()).mockResolvedValueOnce({
+        data: [{ embedding: base64String }],
+        usage: { prompt_tokens: 1, total_tokens: 1 },
+      })
+
+      const result = await embedder.createEmbeddings(["hello"])
+
+      expect(result.embeddings).toEqual([[0.25, 0.5]])
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2)
+      expect(mockEmbeddingsCreate.mock.calls.at(0)?.at(0)).toEqual({
+        input: ["hello"],
+        model: "custom-embed",
+        encoding_format: "base64",
+        dimensions: 2,
+      })
+      expect(mockEmbeddingsCreate.mock.calls.at(1)?.at(0)).toEqual({
+        input: ["hello"],
+        model: "custom-embed",
+        encoding_format: "base64",
+      })
+    })
+
+    test("stops sending dimensions after the first rejection", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      const testEmbedding = new Float32Array([0.25, 0.5])
+      const base64String = Buffer.from(testEmbedding.buffer).toString("base64")
+      const success = { data: [{ embedding: base64String }], usage: { prompt_tokens: 1, total_tokens: 1 } }
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(rejection())
+        .mockResolvedValueOnce(success)
+        .mockResolvedValueOnce(success)
+
+      await embedder.createEmbeddings(["hello"])
+      await embedder.createEmbeddings(["hello"])
+
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(3)
+      expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0)).toEqual({
+        input: ["hello"],
+        model: "custom-embed",
+        encoding_format: "base64",
+      })
+    })
+
+    test("validates successfully when dimensions are rejected", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 3,
+      })
+
+      mockEmbeddingsCreate.mockRejectedValueOnce(rejection()).mockResolvedValueOnce({
+        data: [{ embedding: [0.1, 0.2, 0.3] }],
+        usage: { prompt_tokens: 2, total_tokens: 2 },
+      })
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(true)
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(2)
+    })
+
+    test("keeps the server error for a 200 response without data", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, testModelId)
+
+      mockEmbeddingsCreate.mockResolvedValue({ error: { message: "model not found" } } as never)
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(result.error).toBe("model not found")
+    })
+
+    test("keeps the server error for a 200 response without data when dimensions are configured", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      mockEmbeddingsCreate.mockResolvedValue({ error: { message: "model not found" } } as never)
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(result.error).toBe("model not found")
+    })
+
+    test("reports a clear error when a batch response has no data", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, {
+        dimensions: 2,
+      })
+
+      mockEmbeddingsCreate.mockResolvedValue({ error: { message: "model not found" } } as never)
+
+      await expect(embedder.createEmbeddings(["hello"])).rejects.toThrow(/Invalid response from embedding endpoint/)
+    })
+
+    test("does not retry a 400 when no dimensions are configured", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, testModelId)
+
+      mockEmbeddingsCreate.mockRejectedValue(rejection())
+
+      const result = await embedder.validateConfiguration()
+
+      expect(result.valid).toBe(false)
+      expect(result.error).toBe("Configuration error. Please verify your embedder settings.")
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(1)
+    })
+
+    test.each([401, 403, 429, 500])("does not retry a %s error without dimensions", async (status) => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      mockEmbeddingsCreate.mockRejectedValue(Object.assign(new Error("Unsupported dimensions"), { status }))
+
+      expect((await embedder.validateConfiguration()).valid).toBe(false)
+      expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(1)
+    })
+
+    test("does not cache omission when the fallback fails", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(rejection())
+        .mockRejectedValueOnce(Object.assign(new Error("Server error"), { status: 500 }))
+        .mockResolvedValueOnce({ data: [{ embedding: [0.25, 0.5] }] })
+
+      expect((await embedder.validateConfiguration()).valid).toBe(false)
+      expect((await embedder.validateConfiguration()).valid).toBe(true)
+      expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0).dimensions).toBe(2)
+    })
+
+    test("does not cache omission when the fallback returns no usable data", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(rejection())
+        .mockResolvedValueOnce({ error: { message: "model not found" } } as never)
+        .mockResolvedValueOnce({ data: [{ embedding: [0.25, 0.5] }] })
+
+      expect((await embedder.validateConfiguration()).valid).toBe(false)
+      expect((await embedder.validateConfiguration()).valid).toBe(true)
+      expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0).dimensions).toBe(2)
+    })
+
+    test("does not apply one model's omission to another model", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(rejection())
+        .mockResolvedValueOnce({ data: [{ embedding: [0.25, 0.5] }] })
+        .mockResolvedValueOnce({ data: [{ embedding: [0.25, 0.5] }] })
+
+      await embedder.createEmbeddings(["hello"])
+      await embedder.createEmbeddings(["hello"], "another-model")
+      expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0)).toEqual({
+        input: ["hello"],
+        model: "another-model",
+        encoding_format: "base64",
+        dimensions: 2,
+      })
+    })
+
+    test.each(["numeric", "base64"])("rejects a mismatched %s fallback without caching omission", async (format) => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      const vector = new Float32Array([0.25, 0.5, 0.75])
+      const embedding = format === "numeric" ? Array.from(vector) : Buffer.from(vector.buffer).toString("base64")
+      mockEmbeddingsCreate
+        .mockRejectedValueOnce(rejection())
+        .mockResolvedValueOnce({ data: [{ embedding }] })
+        .mockResolvedValueOnce({ data: [{ embedding: [0.25, 0.5] }] })
+
+      expect((await embedder.validateConfiguration()).error).toContain("3 dimensions, but 2 are configured")
+      expect((await embedder.validateConfiguration()).valid).toBe(true)
+      expect(mockEmbeddingsCreate.mock.calls.at(2)?.at(0).dimensions).toBe(2)
+    })
+
+    test("checks every vector in a batch", async () => {
+      embedder = new OpenAICompatibleEmbedder(testBaseUrl, testApiKey, "custom-embed", undefined, { dimensions: 2 })
+      mockEmbeddingsCreate.mockResolvedValue({ data: [{ embedding: [0.25, 0.5] }, { embedding: [0.25] }] })
+
+      await expect(embedder.createEmbeddings(["hello", "world"])).rejects.toThrow("1 dimensions, but 2 are configured")
+    })
+  })
+
   describe("validateConfiguration", () => {
     let embedder: OpenAICompatibleEmbedder
 

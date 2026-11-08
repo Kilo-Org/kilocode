@@ -247,3 +247,158 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Settings search */
+[data-slot="settings-search-slot"] {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  margin-bottom: 4px;
+}
+
+[data-component="settings-search"] {
+  width: 100%;
+}
+
+/* While searching, hide the tab bodies and show the results pane instead.
+   Keeping the content in place avoids remounting the active tab. */
+[data-searching="true"]
+  [data-component="tabs"]
+  > [data-slot="tabs-content"]:not([data-component="settings-search-results"]) {
+  display: none;
+}
+
+[data-slot="settings-search-box"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  min-height: 28px;
+  border: 1px solid var(--vscode-input-border, var(--border-weak-base));
+  border-radius: 4px;
+  background: var(--vscode-input-background, var(--background-base));
+  color: var(--vscode-input-foreground, var(--text-base));
+
+  &:focus-within {
+    border-color: var(--vscode-focusBorder);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font-size: var(--font-size-base);
+    font-family: inherit;
+
+    &::placeholder {
+      color: var(--vscode-input-placeholderForeground, var(--text-weak-base));
+    }
+  }
+
+  [data-slot="icon"] {
+    flex-shrink: 0;
+    color: var(--vscode-input-placeholderForeground, var(--text-weak-base));
+  }
+}
+
+[data-slot="settings-search-shortcut"] {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Inline results replace the tab body while a query is active, so the
+   matching settings stay visible instead of being covered by a popup. */
+[data-component="settings-search-results"] {
+  [data-slot="settings-search-group"] {
+    margin-bottom: 12px;
+  }
+
+  [data-slot="settings-search-group-title"] {
+    margin: 4px 0 2px;
+    padding: 4px 8px;
+    font-size: var(--font-size-x-small, 11px);
+    font-weight: 500;
+    letter-spacing: normal;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+}
+
+[data-slot="settings-search-result"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  }
+
+  &[data-active="true"] {
+    background: var(
+      --surface-interactive-active,
+      var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+    );
+    color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+  }
+}
+
+[data-slot="settings-search-result"][data-active="true"] [data-slot="settings-search-result-description"],
+[data-slot="settings-search-result"][data-active="true"] [data-slot="settings-search-match"] {
+  color: inherit;
+}
+
+[data-slot="settings-search-result-title"] {
+  font-size: var(--font-size-base);
+}
+
+[data-slot="settings-search-result-description"] {
+  font-size: var(--font-size-small);
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="settings-search-match"] {
+  background: transparent;
+  color: var(--vscode-list-highlightForeground, var(--vscode-textLink-foreground, #3794ff));
+  font-weight: 600;
+}
+
+[data-slot="settings-search-empty"] {
+  padding: 10px 8px;
+  font-size: var(--font-size-small);
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+}
+
+/* Flash the found row with a ring that sits outside the row, so it keeps a
+   margin from the content instead of overlaying or clipping it. */
+@keyframes settings-search-flash-ring {
+  0%,
+  40% {
+    outline-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.7));
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+.settings-search-flash {
+  border-radius: 6px;
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  animation: settings-search-flash-ring 1.4s ease-out;
+}
+
+/* Cards clip their overflow. Some have no padding, so let the ring paint past the card edge. */
+[data-component="card"]:has(.settings-search-flash) {
+  overflow-clip-margin: 6px;
+}

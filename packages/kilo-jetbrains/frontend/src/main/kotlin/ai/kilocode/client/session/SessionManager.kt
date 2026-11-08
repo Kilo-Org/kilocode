@@ -52,6 +52,24 @@ interface SessionManager {
 
     val hostedInEditorTab: Boolean get() = false
 
+    /**
+     * True for a live Cloud session reached through Session Host. Remote prompt/command/stream/Stop,
+     * questions, permissions, and diff stay available; local Git/PR/files/terminal/run/worktree/fork/
+     * compact/revert actions do not exist for it.
+     */
+    val hosted: Boolean get() = false
+
+    val supportsShare: Boolean get() = !hosted
+
+    val supportsCompact: Boolean get() = !hosted
+
+    val supportsRevert: Boolean get() = !hosted
+
+    val supportsBoard: Boolean get() = !hosted
+
+    /** Whether session attachments and file links may open local files. */
+    val localFiles: Boolean get() = !hosted
+
     val readonly: Boolean get() = false
 
     fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(

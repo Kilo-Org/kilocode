@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.marketplace
 
+import ai.kilocode.client.settings.base.WrapBanner
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.MarketplaceItemDto

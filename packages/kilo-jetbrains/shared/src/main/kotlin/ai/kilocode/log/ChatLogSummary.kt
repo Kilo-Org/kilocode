@@ -17,6 +17,7 @@ object ChatLogSummary {
 
     fun sid(event: ChatEventDto): String? = when (event) {
         is ChatEventDto.MessageUpdated -> event.sessionID
+        is ChatEventDto.MessageTerminal -> event.sessionID
         is ChatEventDto.PartUpdated -> event.sessionID
         is ChatEventDto.PartDelta -> event.sessionID
         is ChatEventDto.PartRemoved -> event.sessionID
@@ -38,6 +39,7 @@ object ChatLogSummary {
         is ChatEventDto.SessionDiffChanged -> event.sessionID
         is ChatEventDto.TodoUpdated -> event.sessionID
         is ChatEventDto.SessionInterrupted -> event.sessionID
+        is ChatEventDto.Resnapshot -> event.sessionID
     }
 
     fun dir(dir: String): String = "dirHash=${hash(dir)}"
@@ -119,6 +121,15 @@ object ChatLogSummary {
     }
 
     fun event(event: ChatEventDto): String = when (event) {
+        is ChatEventDto.MessageTerminal -> join(
+            sid(event.sessionID),
+            "evt=cloud.message.terminal",
+            "mid=${event.messageID}",
+            "status=${event.status}",
+            "delivery=${event.delivery}",
+            "accepted=${event.accepted}",
+        )
+
         is ChatEventDto.MessageUpdated -> join(
             sid(event.sessionID),
             "evt=message.updated",
@@ -252,6 +263,12 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.interrupted",
             "reason=${event.reason}",
+        )
+
+        is ChatEventDto.Resnapshot -> join(
+            sid(event.sessionID),
+            "evt=hosted.resnapshot",
+            "phase=${event.phase}",
         )
     }
 

@@ -3,10 +3,17 @@ import * as Stream from "effect/Stream"
 import type { LLMEvent } from "@opencode-ai/llm"
 import type { Logger } from "@opencode-ai/core/util/log"
 import type { Provider } from "@/provider/provider"
+import { ProviderTransform } from "@/provider/transform"
 import { KiloSessionOverflow } from "./overflow"
 
 const SAFETY = 2048
 const MIN_OUTPUT = 1024
+const CLAUDE = new Set([
+  "@kilocode/kilo-gateway",
+  "@ai-sdk/anthropic",
+  "@ai-sdk/amazon-bedrock",
+  "@ai-sdk/google-vertex/anthropic",
+])
 
 export namespace KiloLLM {
   // Stream failures and interruptions propagate while text deltas are collected.
@@ -31,6 +38,37 @@ export namespace KiloLLM {
     if (!value) return {}
     input.log?.debug("chunk idle timeout configured", { chunkTimeout: value })
     return { timeout: { chunkMs: value } }
+  }
+
+  /**
+   * Requested output tokens for one step.
+   *
+   * Claude counts thinking tokens inside `max_tokens`. With adaptive thinking
+   * there is no separate budget that the AI SDK adds on top, so the shared
+   * 32k default can be used up by thinking before any text or tool call is
+   * written. For Claude on first-party routes, request the model's output
+   * limit instead. `max_tokens` is a ceiling, not a cache key, so this does
+   * not invalidate prompt caching.
+   *
+   * The shared default stays in place when the user sets
+   * KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX, for small requests, for other
+   * providers, and when an explicit thinking budget is set (the SDK adds
+   * that budget to `max_tokens` itself).
+   */
+  export function outputTokens(input: {
+    model: Provider.Model
+    options: Record<string, any>
+    max: number | undefined
+    small?: boolean
+  }) {
+    const base = ProviderTransform.maxOutputTokens(input.model, input.max)
+    if (input.max !== undefined || input.small) return base
+    if (!CLAUDE.has(input.model.api.npm)) return base
+    if (!input.model.family?.toLowerCase().startsWith("claude") && !input.model.api.id.toLowerCase().includes("claude"))
+      return base
+    if (typeof input.options.thinking?.budgetTokens === "number") return base
+    if (typeof input.options.reasoningConfig?.budgetTokens === "number") return base
+    return Math.max(base, input.model.limit.output)
   }
 
   export function needsEstimate(input: { model: Provider.Model; configured: number | undefined }) {

@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { appendSessionDiffs, mergeSessionDiffs } from "../../src/kilocode/session-portability/cumulative-diff"
 import { extractSessionDiffs, restoreSessionDiffs } from "../../src/kilocode/session-portability/session-diff-restore"
+import { fetchCloudSessionForImport } from "@kilocode/kilo-gateway"
 
 const dirs: string[] = []
 
@@ -137,5 +138,34 @@ describe("session diff restore", () => {
 
     expect(result).toEqual({ applied: 0, skipped: 1, total: 1 })
     expect(fs.existsSync(out)).toBe(false)
+  })
+
+  test("a cut import restores only pre-cut file edits even when the server ignores the cut", async () => {
+    const dir = tmp()
+    const msg = (id: string, file: string, after: string) => ({
+      info: { id, sessionID: "ses_cloud", summary: { diffs: [{ file, after, additions: 1, deletions: 0 }] } },
+      parts: [],
+    })
+    // An old server returns the full export, including the post-cut sessionDiff.
+    const full = {
+      info: { id: "ses_cloud" },
+      messages: [msg("msg_001", "a.txt", "first"), msg("msg_002", "a.txt", "second"), msg("msg_003", "b.txt", "late")],
+      sessionDiff: [
+        { file: "a.txt", after: "final", additions: 1, deletions: 0 },
+        { file: "b.txt", after: "late", additions: 1, deletions: 0 },
+      ],
+    }
+    const fetcher = globalThis.fetch
+    globalThis.fetch = Object.assign(async () => Response.json(full), { preconnect: fetcher.preconnect })
+    const fetched = await fetchCloudSessionForImport("token", "ses_cloud", { upToMessageId: "msg_002" }).finally(() => {
+      globalThis.fetch = fetcher
+    })
+    if (!fetched.ok) throw new Error(fetched.error)
+
+    const diffs = extractSessionDiffs(fetched.data)
+    expect(diffs).toEqual([{ file: "a.txt", after: "second", additions: 1, deletions: 0 }])
+    expect(restoreSessionDiffs({ directory: dir, diffs })).toEqual({ applied: 1, skipped: 0, total: 1 })
+    expect(fs.readFileSync(path.join(dir, "a.txt"), "utf8")).toBe("second")
+    expect(fs.existsSync(path.join(dir, "b.txt"))).toBe(false)
   })
 })

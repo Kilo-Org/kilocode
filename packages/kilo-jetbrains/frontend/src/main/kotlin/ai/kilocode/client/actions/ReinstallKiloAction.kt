@@ -10,6 +10,7 @@ import com.intellij.openapi.project.DumbAware
 
 class ReinstallKiloAction : AnAction(), DumbAware {
     override fun actionPerformed(e: AnActionEvent) {
+        if (!confirmCoreLifecycle(e.project, KiloBundle.message("action.Kilo.Reinstall.cli.text"))) return
         Telemetry.send("CLI Reinstall Clicked", mapOf("surface" to "settings"))
         service<KiloAppService>().reinstallAsync()
     }

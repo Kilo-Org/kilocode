@@ -8,6 +8,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { NpmPublish } from "./kilocode/npm-publish"
 import * as KiloSbom from "./kilocode/sbom"
+import * as KiloRelease from "../../../script/kilocode/release"
 import type { Manifest } from "../../../script/kilocode/sbom/index"
 // kilocode_change end
 
@@ -165,6 +166,11 @@ if (!Script.preview) {
   const metadata = path.resolve("dist", "oci-metadata.json")
   await $`docker buildx build --platform ${platforms} ${tagFlags} --provenance=mode=max --sbom=true --metadata-file ${metadata} --push .`
   evidence.push(...(await describeImages(metadata)))
+  // The OpenShell variant is the Dockerfile's openshell stage, built, pushed and described like the main image.
+  const variantMetadata = path.resolve("dist", "oci-metadata-openshell.json")
+  const variantTagFlags = tags.flatMap((t) => ["-t", `${t}-openshell`])
+  await $`docker buildx build --platform ${platforms} ${variantTagFlags} --target openshell --provenance=mode=max --sbom=true --metadata-file ${variantMetadata} --push .`
+  evidence.push(...(await describeImages(variantMetadata)))
   // kilocode_change end
   // Calculate SHA values
   const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
@@ -309,14 +315,18 @@ if (Script.release) {
   // Expected coverage is derived from what this release had to produce, not from
   // what happened to be recorded, so a missing package or image is a shortfall.
   const packages = Object.keys(binaries).length + 1
-  const images = Script.preview ? 0 : platforms.split(",").length + 1
+  const images = Script.preview ? 0 : 2 * (platforms.split(",").length + 1) // main image and OpenShell variant
   const described = await KiloSbom.distribution({
     dir: path.resolve("dist"),
     release: { version, channel: Script.channel },
     entries: evidence,
     expected: packages + images,
   })
-  await $`gh release upload v${Script.version} ${described.files} --clobber`.nothrow()
+  // Evidence is a record of a release that already shipped, so a failure here is
+  // reported rather than rolled back onto an npm publish that cannot be undone.
+  await KiloRelease.upload({ tag: `v${Script.version}`, files: described.files }).catch((err) =>
+    console.error("sbom: could not publish the distribution evidence", err),
+  )
 }
 
 /**

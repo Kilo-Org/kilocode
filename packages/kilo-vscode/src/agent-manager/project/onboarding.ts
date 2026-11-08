@@ -13,13 +13,11 @@ export interface Onboarding {
   pickFolder: Host["pickFolder"]
   primary?: string
   git: GitOps
-  enabled: () => boolean
   /** True when the folder already resolves to a registered project. */
   registered: (dir: string) => boolean
 }
 
 function trusted(deps: Onboarding) {
-  if (!deps.enabled()) throw new Error("Multi-project Agent Manager is disabled.")
   if (!deps.host.isTrusted()) throw new Error("Trust this VS Code window before creating or initializing a repository.")
 }
 
@@ -112,7 +110,7 @@ export async function onboard(deps: Onboarding): Promise<string | undefined> {
     defaultPath: primary,
     title: "Open local project",
   })
-  if (!dir || !deps.enabled()) return
+  if (!dir) return
   trusted(deps)
   return prepareTarget(dir, "local", deps)
 }
@@ -127,7 +125,7 @@ export async function cloneProject(url: string, parent: string, deps: Onboarding
   const candidate = name ? path.join(parent, name) : undefined
   if (candidate && deps.registered(candidate)) return candidate
   const dir = await deps.host.cloneRepository(url, parent)
-  if (!dir || !deps.enabled()) return
+  if (!dir) return
   trusted(deps)
   return prepareTarget(dir, "clone", deps)
 }

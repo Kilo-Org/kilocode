@@ -19,7 +19,10 @@ export namespace MemoryPrompt {
     toast: ToastContext
     dialog: DialogContext
     done(): void
+    /** Leave the text alone, e.g. in a subagent view where slash commands are off. */
+    skip?: boolean
   }) {
+    if (input.skip) return false
     const handled = await runMemoryCommand({
       text: input.text,
       client: input.client,

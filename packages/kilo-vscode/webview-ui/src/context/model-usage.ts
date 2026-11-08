@@ -1,4 +1,4 @@
-import type { Provider, SessionModelUsage } from "../types/messages"
+import type { Message, Provider, SessionModelUsage } from "../types/messages"
 
 const DATE_SUFFIX = /(?:-(?:20\d{6}|20\d{2}-\d{2}-\d{2}))(?:-v\d+(?::\d+)?)?$/i
 
@@ -44,6 +44,18 @@ export function tokenSummary(usage: SessionModelUsage): TokenSummary {
     output: usage.totals.tokens.output,
     cached: usage.totals.tokens.cache.read,
   }
+}
+
+/** Model and variant of the latest message that names a model. */
+export function sessionModel(messages: Message[]) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.role === "assistant" && msg.providerID && msg.modelID) {
+      return { providerID: msg.providerID, modelID: msg.modelID, variant: msg.variant ?? msg.model?.variant }
+    }
+    if (msg.model?.providerID && msg.model.modelID) return msg.model
+  }
+  return undefined
 }
 
 export function cacheRate(model: SessionModelUsage["models"][number]) {

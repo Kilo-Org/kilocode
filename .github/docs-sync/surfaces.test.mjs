@@ -132,7 +132,6 @@ test("isSurfaceBranch separates surface branches from the integration and dated 
 
 test("unmatched doc and source paths fall to other", () => {
   assert.equal(surfaceForDoc("packages/kilo-docs/pages/community/index.md", map), OTHER)
-  assert.equal(surfaceForDoc("packages/kilo-docs/pages/kiloclaw/index.md", map), OTHER)
   assert.equal(surfaceForDoc("packages/kilo-docs/pages/contributing/index.md", map), OTHER)
   assert.equal(surfaceForDoc("packages/kilo-docs/LEARNINGS.md", map), OTHER)
   assert.equal(surfaceForDoc("packages/kilo-docs/pages/never-seen/new.md", map), OTHER)

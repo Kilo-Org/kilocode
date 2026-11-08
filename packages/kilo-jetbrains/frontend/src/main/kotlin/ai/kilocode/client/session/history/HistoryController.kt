@@ -7,10 +7,14 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -20,11 +24,13 @@ class HistoryController(
     private val sessions: KiloSessionService,
     private val workspace: Workspace,
     private val cs: CoroutineScope,
+    app: Flow<KiloAppStateDto>? = null,
     open: (SessionRef) -> Unit = {},
     private val deleted: (String) -> Unit = {},
     private val gitUrlProvider: () -> String? = { resolveGitRemoteUrl(workspace.directory) },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    refreshes: Flow<Long>? = null,
 ) {
     companion object {
         const val CLOUD_LIMIT = 50
@@ -58,6 +64,28 @@ class HistoryController(
 
     private val deleting = mutableSetOf<String>()
     private val opener = open
+
+    init {
+        // A load that failed while the CLI was down sticks until the panel is re-shown. Reload when
+        // the app reaches READY again after a non-READY status, so the list recovers on reconnect.
+        val source = app
+        if (source != null) {
+            cs.launch {
+                var prev: KiloAppStatusDto? = null
+                source.collect { state ->
+                    if (state.status == KiloAppStatusDto.READY && prev != null && prev != KiloAppStatusDto.READY) {
+                        edt { reload() }
+                    }
+                    prev = state.status
+                }
+            }
+        }
+        if (refreshes != null) {
+            cs.launch {
+                refreshes.drop(1).collect { edt { reloadCloud() } }
+            }
+        }
+    }
 
     fun reload() {
         reloadLocal()

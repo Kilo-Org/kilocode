@@ -7,6 +7,7 @@
 
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
+import { useData } from "@kilocode/kilo-ui/context/data"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -16,6 +17,7 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
+import type { ManagerContext } from "../../utils/shortcut-hint"
 import { PermissionDock } from "./PermissionDock"
 import { SessionDock } from "./SessionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
@@ -29,7 +31,9 @@ import { useServer } from "../../context/server"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { taskChildren } from "./background-agents"
+import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
+import { forcesExternalBrowser } from "../../utils/link-modifier"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
 
 interface ChatViewProps {
@@ -56,10 +60,13 @@ interface ChatViewProps {
   emptyState?: () => JSX.Element
   introduction?: boolean
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Agent Manager state for the prompt shortcut hint. */
+  manager?: () => ManagerContext | undefined
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
+  const data = useData()
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
@@ -73,10 +80,30 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const ownsPrompts = () => props.interactivePrompts !== false
 
   const id = () => session.currentSessionID()
+  const openLink = (event: MouseEvent) => {
+    if (!data.openUrl || !(event.target instanceof Element)) return
+    const anchor = event.target.closest("a[href]")
+    if (!anchor || anchor.closest(".chat-view") !== event.currentTarget) return
+    const url = anchor.getAttribute("href") ?? ""
+    if (!/^https?:\/\//i.test(url)) return
+    // Claim the click before renderer handlers and VS Code's window listener.
+    event.preventDefault()
+    event.stopPropagation()
+    if (forcesExternalBrowser(event, data.browserLinks)) {
+      vscode.postMessage({ type: "openExternal", url })
+      return
+    }
+    data.openUrl(url, id())
+  }
+  // Keeps the background job list fresh for the dock's agent stack and the
+  // swarm board, which both read the replies.
+  pollBackgroundJobs()
   const goal = () => session.currentSession()?.goal
   // Counts the in-flight first message too, so the dock reserves the same row on
   // the very first send instead of growing once the message lands.
-  const hasMessages = () => session.messages().length > 0 || session.submitting()
+  // A memo, so the dock's actions row rebuilds only when this flips, not on
+  // every new message. A rebuild re-inserts the row and skips its transitions.
+  const hasMessages = createMemo(() => session.messages().length > 0 || session.submitting())
 
   const [editable, setEditable] = createSignal(false)
   const [editing, setEditing] = createSignal<{ sessionID: string; messageID: string }>()
@@ -253,10 +280,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const hasActions = (hasChat: boolean) =>
     canStartSession(hasChat) || canFork(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
 
-  const renderActions = (hasChat: boolean, control: () => JSX.Element) => (
+  const renderActions = (hasChat: boolean, control: () => JSX.Element, agents: JSX.Element, todos: JSX.Element) => (
     <Show when={hasActions(hasChat) || !!goal()}>
       <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
         <div class="session-actions-row">
+          {agents}
           <Show when={canStartSession(hasChat)}>
             <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
               <Button
@@ -369,6 +397,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               </Tooltip>
             </>
           </Show>
+          {todos}
           {control()}
         </div>
       </div>
@@ -381,11 +410,18 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   return (
     <AgentAvatarPalette ids={siblings()}>
       <TranscriptSearchProvider>
-        <div class="chat-view">
+        <div
+          class="chat-view"
+          data-browser-links={data.browserLinks ? "true" : undefined}
+          ref={(node) => {
+            node.addEventListener("click", openLink, true)
+            onCleanup(() => node.removeEventListener("click", openLink, true))
+          }}
+        >
           <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
             <SessionTabStrip />
           </Show>
-          <TaskHeader readonly={props.readonly} projectId={props.projectId} />
+          <TaskHeader readonly={props.readonly} />
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
               <MessageList
@@ -426,9 +462,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               <SessionDock
                 blocked={dockBlocked()}
                 hasActions={() => !props.readonly && (hasActions(hasMessages()) || !!goal())}
-                actions={(control) => renderActions(hasMessages(), control)}
+                actions={(control, agents, todos) => renderActions(hasMessages(), control, agents, todos)}
                 onScrollToBottom={scrollToBottom}
                 readonly={props.readonly}
+                projectId={props.projectId}
               />
               <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput
@@ -448,6 +485,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   focusOnDraftChange={props.focusOnDraftChange}
                   onFocusChange={props.onFocusChange}
                   resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  manager={props.manager}
                 />
               </Show>
             </div>

@@ -11,6 +11,7 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
@@ -201,6 +202,7 @@
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.google.com/chrome/>
   <!-- packages/kilo-vscode/webview-ui/agent-manager/BrowserPanel.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/browser-tab/BrowserTabApp.tsx -->
 - <https://www.googleapis.com/auth/cloud-platform>
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>

@@ -3,7 +3,6 @@ package ai.kilocode.client.session.ui.model
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.client.ui.picker.PickerPopup
-import ai.kilocode.client.ui.picker.popupBackground
 import ai.kilocode.rpc.dto.ModelAutoRoutingDto
 import ai.kilocode.rpc.dto.ModelCapabilitiesDto
 import ai.kilocode.rpc.dto.ModelCostDto
@@ -12,17 +11,11 @@ import ai.kilocode.rpc.dto.ModelOptionsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import com.intellij.ide.util.PropertiesComponent
-import com.intellij.ui.CollectionListModel
 import com.intellij.util.ui.JBUI
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.SwingConstants
-
-private const val MODEL_PICKER_MIN_WIDTH = 420
-private const val MODEL_PICKER_MAX_WIDTH = 760
-private const val MODEL_PICKER_MAX_VISIBLE_ROWS = 10
-private const val MODEL_PICKER_EMPTY_LIST_HEIGHT = 120
 
 class ModelPicker : PickerButton() {
 
@@ -171,69 +164,23 @@ class ModelPicker : PickerButton() {
     }
 
     private fun showPopup() {
-        val data = CollectionListModel(modelPickerRows(items, favorites(), "", allowEmpty, emptyText, includeSmall))
-        var popup: PickerPopup<ModelPickerRow>? = null
-        val renderer = ModelPickerRenderer(
-            model = data,
-            active = { selected?.key },
-            favorites = { favoriteKeys() },
-        )
-        var refreshFavorite: (Item) -> Unit = {}
-        val details = ModelDetailsPanel(
-            favorites = { favoriteKeys() },
-            toggle = { refreshFavorite(it) },
-        ).apply {
-            background = popupBackground
-        }
-
-        fun activate(row: ModelPickerRow) {
-            val item = row.item
-            if (item == null) {
-                clear()
-                return
-            }
-            activate(item)
-        }
-
-        fun toggle(row: ModelPickerRow) {
-            val item = row.item ?: return
-            onFavoriteToggle(item)
-        }
-
-        refreshFavorite = { item ->
-            onFavoriteToggle(item)
-            popup?.refresh(prefer = item.key)
-            popup?.repaint()
-        }
-
-        popup = PickerPopup(
+        restoreFocusOnPick(ModelPopup(
             anchor = this,
+            items = { items },
+            selected = { selected?.key },
+            onSelect = ::activate,
+            onClear = ::clear,
+            favorites = { favorites() },
+            onFavoriteToggle = { onFavoriteToggle(it) },
             placement = when (placement) {
                 Placement.ABOVE -> PickerPopup.Placement.ABOVE
                 Placement.BELOW -> PickerPopup.Placement.BELOW
             },
-            rows = { q -> modelPickerRows(items, favorites(), q, allowEmpty, emptyText, includeSmall) },
-            model = data,
-            renderer = renderer,
-            key = { it.key },
-            mode = PickerPopup.Mode.Single,
-            onPrimary = ::activate,
-            sectionTitle = ::modelPickerSectionTitle,
-            trailingHit = ModelPickerRenderer::isFavoriteClick,
-            onTrailing = ::toggle,
-            search = true,
-            details = details,
-            onPreview = { details.update(it?.item ?: selected) },
-            expandStateKey = MODEL_PICKER_EXPANDED_KEY,
-            minWidth = MODEL_PICKER_MIN_WIDTH,
-            maxWidth = MODEL_PICKER_MAX_WIDTH,
-            maxVisibleRows = MODEL_PICKER_MAX_VISIBLE_ROWS,
-            emptyListHeight = MODEL_PICKER_EMPTY_LIST_HEIGHT,
-        )
-        restoreFocusOnPick(popup.show())
+            allowEmpty = allowEmpty,
+            emptyText = emptyText,
+            includeSmall = includeSmall,
+        ).show())
     }
-
-    private fun favoriteKeys(): Set<String> = favorites().mapTo(mutableSetOf()) { "${it.providerID}/${it.modelID}" }
 
     internal fun expandedForTest(): Boolean = props.getBoolean(MODEL_PICKER_EXPANDED_KEY, false)
 }

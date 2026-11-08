@@ -24,6 +24,7 @@ import com.intellij.ui.NewUI
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.ui.popup.AbstractPopup
 import com.intellij.util.ui.JBUI
@@ -57,6 +58,11 @@ private val COLLAPSE: Icon = IconLoader.getIcon("/icons/collapse.svg", PickerPop
 internal class PickerPopup<T>(
     private val anchor: JComponent,
     private val placement: Placement,
+    /**
+     * Explicit screen anchor, overriding [placement]. Needed by a list row cell, which is a renderer
+     * stamp rather than a live component, so there is nothing to place the popup underneath.
+     */
+    private val at: RelativePoint? = null,
     private val rows: (String) -> List<T>,
     private val model: CollectionListModel<T>,
     private val renderer: PickerListRenderer<T>,
@@ -157,11 +163,7 @@ internal class PickerPopup<T>(
             .setMovable(false)
             .createPopup()
         if (details is Disposable) Disposer.register(popup, details)
-        when (placement) {
-            Placement.ABOVE -> popup.show(PopupShowOptions.aboveComponent(anchor))
-            Placement.BELOW,
-            Placement.UNDERNEATH -> popup.showUnderneathOf(anchor)
-        }
+        place()
         shown = true
         SwingUtilities.invokeLater {
             field?.let {
@@ -191,6 +193,19 @@ internal class PickerPopup<T>(
 
     fun repaint() {
         list.repaint()
+    }
+
+    private fun place() {
+        val point = at
+        if (point != null) {
+            popup.show(point)
+            return
+        }
+        when (placement) {
+            Placement.ABOVE -> popup.show(PopupShowOptions.aboveComponent(anchor))
+            Placement.BELOW,
+            Placement.UNDERNEATH -> popup.showUnderneathOf(anchor)
+        }
     }
 
     private fun header(): JComponent {

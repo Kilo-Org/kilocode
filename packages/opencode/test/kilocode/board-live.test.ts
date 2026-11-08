@@ -49,12 +49,14 @@ const mcp = Layer.succeed(
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
+    remove: () => Effect.void, // kilocode_change
     getPrompt: () => Effect.succeed(undefined),
     readResource: () => Effect.succeed(undefined),
     startAuth: () => Effect.die("unexpected MCP auth in board live test"),
     authenticate: () => Effect.die("unexpected MCP auth in board live test"),
     finishAuth: () => Effect.die("unexpected MCP auth in board live test"),
     removeAuth: () => Effect.void,
+    cancelAuth: () => Effect.void,
     supportsOAuth: () => Effect.succeed(false),
     hasStoredTokens: () => Effect.succeed(false),
     getAuthStatus: () => Effect.succeed("not_authenticated" as const),
@@ -229,7 +231,9 @@ for (const enabled of [false, true]) {
         expect(JSON.stringify(tools).includes("Cursor from your last board_read, not an ID from board_post")).toBe(
           enabled,
         )
-        expect(JSON.stringify(tools).includes("main is the board root, not necessarily your parent")).toBe(enabled)
+        expect(
+          JSON.stringify(tools).includes("your own row is flagged self: true (the main row is the board root)"),
+        ).toBe(enabled)
       }),
       { config: (url) => ({ ...config(url), shared_agent_board: enabled }) },
     ),

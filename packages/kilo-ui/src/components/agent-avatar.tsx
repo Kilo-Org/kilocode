@@ -29,6 +29,17 @@ export function useAgentAvatarIds() {
 // Corner cells are dropped so the dot grid reads as a circle.
 const GRID = Array.from({ length: 25 }, (_, index) => index).filter((index) => ![0, 4, 20, 24].includes(index))
 
+// Every avatar pins its looping animations to the document timeline, so all
+// avatars of one agent (task card, strip, dock) pulse in phase. Without this each
+// copy starts its loop when it mounts or moves, and copies drift apart.
+function sync(event: AnimationEvent) {
+  if (!(event.target instanceof Element)) return
+  for (const animation of event.target.getAnimations()) {
+    if (animation.effect?.getTiming().iterations !== Infinity) continue
+    animation.startTime = 0
+  }
+}
+
 // Same cell geometry as the loading spinner, drawn as round dots on a 1px gap grid.
 export function AgentAvatar(props: { id: string; status?: AgentAvatarStatus }) {
   const shared = useContext(Palette)
@@ -44,6 +55,7 @@ export function AgentAvatar(props: { id: string; status?: AgentAvatarStatus }) {
       height="18"
       viewBox="0 0 19 19"
       aria-hidden="true"
+      onAnimationStart={sync}
     >
       <For each={GRID}>
         {(cell) => (

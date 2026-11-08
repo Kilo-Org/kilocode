@@ -37,6 +37,24 @@ Before enabling Code Reviews:
     - [Kilo Discord](https://discord.gg/hZnd57qN)
 - **Kilo Code credits are still used** when the agent performs model reasoning during a review.
 
+## Concurrent reviews
+
+Cloud Code Reviews limit how many reviews one owner can run at the same time. Reviews past that limit wait, then start when a slot opens. Local `/review` commands do not count toward this limit.
+
+The limit is per owner. For a personal account, it follows credit balance, not whether the selected model is free.
+
+{% callout type="note" %}
+A funded personal account running a free model still gets 3 concurrent reviews.
+{% /callout %}
+
+| Owner | Concurrent reviews |
+|---|---|
+| Personal account, credit balance of $5 or less | 1. Reviews run one at a time. |
+| Personal account, credit balance above $5 | Up to 3 |
+| Organization | Up to 20 |
+
+Organization reviews use the organization as the owner. A member's personal balance does not set the organization limit.
+
 ## Getting Started
 
 1. Go to the **Code Reviews** page in your [personal dashboard](https://app.kilo.ai/profile) or [organization dashboard](https://app.kilo.ai/organizations).
@@ -234,6 +252,7 @@ The Review Agent is ideal for:
 
 ## Limitations and Guidance
 
+- Cloud reviews are limited per owner. See [Concurrent reviews](#concurrent-reviews).
 - Reviews are subject to a fixed time limit — consider splitting very large PRs into smaller ones.
 - The agent reviews **only the changed files**, not the entire repository.
 - Some highly dynamic or domain-specific code may require additional context in `REVIEW.md`.

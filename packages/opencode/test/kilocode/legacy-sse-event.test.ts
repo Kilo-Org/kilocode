@@ -13,6 +13,7 @@ import { httpApiLayer, requestInDirectory } from "../server/httpapi-layer"
 
 type Frame = {
   type?: string
+  metadata?: { phase?: string }
   properties?: Record<string, unknown>
   syncEvent?: {
     type?: string
@@ -113,7 +114,7 @@ describe("legacy instance SSE", () => {
   )
 
   it.instance(
-    "delivers versioned sync envelopes from EventV2",
+    "delivers versioned sync envelopes and admission error metadata",
     () =>
       Effect.gen(function* () {
         const { directory } = yield* TestInstance
@@ -131,6 +132,12 @@ describe("legacy instance SSE", () => {
           aggregateID: session.id,
           data: { sessionID: session.id, info: { id: session.id } },
         })
+        yield* requestInDirectory(`/session/${session.id}/command`, directory, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ command: "gaol", arguments: "" }),
+        })
+        expect((yield* take(reader, (event) => event.type === "session.error")).metadata?.phase).toBe("admission")
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )

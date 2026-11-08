@@ -1,13 +1,16 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.kiloRoot
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -29,8 +32,14 @@ class WorktreeStatusService internal constructor(
     private val project: Project,
     private val cs: CoroutineScope,
     private val timers: UiTimerSource = UiTimers,
+    // Live session activity, as a lambda so the platform constructor below does not reach into
+    // another project service while this one is still being built — it is called from a coroutine
+    // instead. Defaults to a flow that never emits, so a test only wires this up when it is about
+    // turn endings.
+    activity: () -> StateFlow<Map<String, SessionActivityDto>> = { MutableStateFlow(emptyMap()) },
 ) {
-    constructor(project: Project, cs: CoroutineScope) : this(project, cs, UiTimers)
+    constructor(project: Project, cs: CoroutineScope) :
+        this(project, cs, UiTimers, { project.service<KiloSessionService>().activity })
 
     companion object {
         private val LOG = KiloLog.create(WorktreeStatusService::class.java)
@@ -51,10 +60,12 @@ class WorktreeStatusService internal constructor(
     /** In-flight stats/dirty polls, so a slow repository cannot stack fan-outs. See [loadStats]. */
     private var statsJob: Job? = null
     private var dirtyJob: Job? = null
-    /** Trailing lookup for a return held back by the spend floor. See [hold]. */
+    /** Trailing lookup for a request held back by the spend floor. See [hold]. */
     private var trail: UiTimer? = null
-    /** Freshness ceiling the held return is waiting to spend, or null when none is held. */
-    private var pending: Long? = null
+    /** The request waiting to be spent, or null when none is held. */
+    private var want: Want? = null
+    /** Worktree activity as of the previous snapshot, so an agent that stopped can be spotted. */
+    private var kinds = emptyMap<String, SessionActivityKind>()
     private var refs = 0
     private var lastPr = 0L
     private var github = KiloPluginSettings.getGithub()
@@ -85,7 +96,16 @@ class WorktreeStatusService internal constructor(
 
             override fun applicationDeactivated(ideFrame: IdeFrame) = away.left()
         })
+        cs.launch { activity().collect { snap -> edt { turned(aggregateWorktreeActivity(snap)) } } }
     }
+
+    /** A refresh waiting for the spend floor, or for the lookup already running, to clear. */
+    private data class Want(
+        /** The strictest freshness ceiling held, or null to accept whatever the backend's TTL allows. */
+        val age: Long?,
+        /** Worktree paths whose cached answers are refused however loose [age] is. */
+        val paths: Set<String>,
+    )
 
     fun attach(): AutoCloseable {
         refs++
@@ -109,8 +129,11 @@ class WorktreeStatusService internal constructor(
      *
      * The two are separate because they guard different costs: the throttle guards the RPC round
      * trip, [maxAge] guards the per-worktree `gh` fan-out behind it.
+     *
+     * [fresh] names worktrees whose cached answers the backend must refuse whatever [maxAge] says,
+     * for a caller that learned something about those rows in particular. See [stopped].
      */
-    fun refreshPr(force: Boolean = false, maxAge: Long? = null) {
+    fun refreshPr(force: Boolean = false, maxAge: Long? = null, fresh: List<String> = emptyList()) {
         if (project.isDisposed || refs == 0 || !github) return
         // One lookup at a time, whatever the caller asked for. [force] bypasses the throttle, so
         // without this a caller returning to the IDE every few seconds could stack lookups faster than
@@ -119,7 +142,10 @@ class WorktreeStatusService internal constructor(
         // spawned; the poll and the next focus correct whatever the running lookup began too early to
         // observe.
         if (prJob?.isActive == true) {
-            LOG.info("worktree PR refresh skipped, lookup in flight force=$force maxAge=${maxAge ?: "default"}")
+            LOG.info(
+                "worktree PR refresh skipped, lookup in flight force=$force " +
+                    "maxAge=${maxAge ?: "default"} fresh=${fresh.size}",
+            )
             return
         }
         val now = timers.now()
@@ -128,7 +154,55 @@ class WorktreeStatusService internal constructor(
             return
         }
         lastPr = now
-        loadPr(maxAge)
+        loadPr(maxAge, fresh)
+    }
+
+    /**
+     * Records that the agent working in [path] has stopped, so the next lookup resolves that
+     * worktree from `gh` rather than from anything cached for it.
+     *
+     * This is the signal nothing else carries. A pull request opened from inside a worktree — the
+     * usual way one appears in Agent Manager — changes neither the branch nor the head commit, which
+     * is exactly what the backend keys its "this checkout has no pull request" answer by, so the
+     * badge stayed hidden for as long as that answer was allowed to live. Nothing local moved, so
+     * neither the poll nor a return to the IDE could tell the difference.
+     *
+     * Held rather than spent, so a repository full of busy agents cannot cost a lookup per turn
+     * ending: the floor collapses a burst of them onto one lookup carrying every path they named.
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun stopped(path: String) {
+        if (project.isDisposed || refs == 0 || !github) return
+        // Same reasoning as the focus path: the fan-out this would pay for is the one GitHub is
+        // refusing, and the poll stays the single probe that notices the budget reset.
+        if (ghFlow.value == GhAvailability.RATE_LIMITED) {
+            LOG.info("worktree PR lookup skipped, github budget spent path=$path")
+            return
+        }
+        LOG.info("worktree PR lookup owed, agent stopped path=$path")
+        // No ceiling of its own: naming the path is what makes this lookup fresh, and the other rows
+        // have had nothing happen to them worth re-running their `gh` ladder for.
+        hold(null, setOf(path))
+    }
+
+    /**
+     * Spots the worktrees whose agents stopped between [kinds] and [next], then adopts [next].
+     *
+     * Leaving [SessionActivityKind.RUNNING] is the transition that matters, whichever way it goes: to
+     * no activity at all when the turn simply ended, or to a question, a permission or an error when
+     * it stopped on something. Every one of those is a point where an agent has finished doing work
+     * and may have opened a pull request on the way there. Entering RUNNING is not — nothing has
+     * happened yet — and a row that was already not running has no new work to account for.
+     */
+    @RequiresEdt(generateAssertion = false)
+    private fun turned(next: Map<String, SessionActivityKind>) {
+        val was = kinds
+        kinds = next
+        for ((path, kind) in was) {
+            if (kind != SessionActivityKind.RUNNING) continue
+            if (next[path] == SessionActivityKind.RUNNING) continue
+            stopped(path)
+        }
     }
 
     /**
@@ -162,56 +236,67 @@ class WorktreeStatusService internal constructor(
     }
 
     /**
-     * Records a return that deserves fresh data, then tries to spend it. The record is what makes a
-     * return that cannot run right now survive: the strictest ceiling wins, and the newest return can
-     * never make an earlier one cheaper.
+     * Records a request that deserves fresh data, then tries to spend it. The record is what makes a
+     * request that cannot run right now survive: the strictest ceiling wins, every named path
+     * accumulates, and a newer request can never make an earlier one cheaper.
      */
     @RequiresEdt(generateAssertion = false)
-    private fun hold(max: Long) {
-        pending = pending?.let { minOf(it, max) } ?: max
+    private fun hold(age: Long?, paths: Set<String> = emptySet()) {
+        val held = want
+        want = if (held == null) Want(age, paths) else Want(strict(held.age, age), held.paths + paths)
         spend()
     }
 
+    /** The stricter of two freshness ceilings, where null is the loosest there is. */
+    private fun strict(a: Long?, b: Long?): Long? {
+        if (a == null) return b
+        if (b == null) return a
+        return minOf(a, b)
+    }
+
     /**
-     * Spends the held return when nothing stands in the way, and otherwise leaves it held for whichever
+     * Spends the held request when nothing stands in the way, and otherwise leaves it held for whichever
      * trigger clears first — the floor timer, or the completion of the lookup already running.
      *
      * Both blockers must hold rather than drop. The spend floor is the cheap case: the request only has
      * to wait out the rest of the window. The in-flight lookup is the dangerous one, because it may have
-     * started *before* the departure, so its answer can predate the very change the return came back to
-     * see; dropping the request there would leave that stale answer standing until the next [PR_POLL].
+     * started *before* the departure or the turn ending, so its answer can predate the very change the
+     * request came back to see; dropping it there would leave that stale answer standing until the next
+     * [PR_POLL].
      */
     @RequiresEdt(generateAssertion = false)
     private fun spend() {
-        val max = pending ?: return
+        val held = want ?: return
         if (project.isDisposed || refs == 0 || !github) {
-            pending = null
+            want = null
             return
         }
-        // Re-checked here and not only at focus time: a lookup that landed while the return was held can
-        // report the budget spent, and the fan-out it would pay for is the one GitHub is refusing.
+        // Re-checked here and not only when the request was recorded: a lookup that landed while it was
+        // held can report the budget spent, and the fan-out it would pay for is the one GitHub is refusing.
         if (ghFlow.value == GhAvailability.RATE_LIMITED) {
-            LOG.info("worktree PR focus dropped, github budget spent maxAge=$max")
-            pending = null
+            LOG.info("worktree PR request dropped, github budget spent ${describe(held)}")
+            want = null
             return
         }
-        // Its completion calls back here, so the return stays held instead of stacking a second fan-out.
+        // Its completion calls back here, so the request stays held instead of stacking a second fan-out.
         if (prJob?.isActive == true) {
-            LOG.info("worktree PR focus held, lookup in flight maxAge=$max")
+            LOG.info("worktree PR request held, lookup in flight ${describe(held)}")
             return
         }
         val since = timers.now() - lastPr
         if (since < PR_THROTTLE) {
-            LOG.info("worktree PR focus deferred maxAge=$max sinceMs=$since")
+            LOG.info("worktree PR request deferred ${describe(held)} sinceMs=$since")
             arm(PR_THROTTLE - since)
             return
         }
-        pending = null
+        want = null
         trail?.stop()
         trail = null
-        LOG.info("worktree PR focus resumed maxAge=$max")
-        refreshPr(force = true, maxAge = max)
+        LOG.info("worktree PR request resumed ${describe(held)}")
+        refreshPr(force = true, maxAge = held.age, fresh = held.paths.toList())
     }
+
+    private fun describe(held: Want): String = "maxAge=${held.age ?: "default"} fresh=${held.paths.size}"
 
     /**
      * Arms the trailing lookup at the end of the current floor window. Deliberately not a sliding
@@ -253,7 +338,7 @@ class WorktreeStatusService internal constructor(
         statsTimer = null
         prTimer = null
         trail = null
-        pending = null
+        want = null
         prJob = null
         statsJob = null
         dirtyJob = null
@@ -274,11 +359,11 @@ class WorktreeStatusService internal constructor(
             prJob = null
             generation++
             lastPr = 0
-            // A return held from before the toggle has nothing left to ask about, and must not survive
+            // A request held from before the toggle has nothing left to ask about, and must not survive
             // to spend a fan-out once the integration is switched back on.
             trail?.stop()
             trail = null
-            pending = null
+            want = null
             prFlow.value = emptyMap()
             ghFlow.value = GhAvailability.OK
             return
@@ -328,11 +413,11 @@ class WorktreeStatusService internal constructor(
         }
     }
 
-    private fun loadPr(maxAge: Long? = null) {
+    private fun loadPr(maxAge: Long? = null, fresh: List<String> = emptyList()) {
         val gen = ++generation
         val job = cs.launch {
             val dir = project.kiloRoot() ?: return@launch
-            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge) }
+            runCatching { service<KiloWorktreeService>().prStatus(dir, maxAge, fresh) }
                 .onSuccess { dto ->
                     // KiloWorktreeService.prStatus swallows the cancellation and answers with an
                     // empty DTO, so a lookup cancelled by a disable still lands here — and after a
@@ -340,7 +425,10 @@ class WorktreeStatusService internal constructor(
                     // publish, or a stale empty result would wipe fresh badges and report a false OK
                     // over a real UNAUTH.
                     if (gen != generation) return@onSuccess
-                    LOG.info("worktree PR refresh done items=${dto.items.size} value=${dto.availability} maxAge=${maxAge ?: "default"}")
+                    LOG.info(
+                        "worktree PR refresh done items=${dto.items.size} value=${dto.availability} " +
+                            "maxAge=${maxAge ?: "default"} fresh=${fresh.size}",
+                    )
                     // A spent GitHub budget carries no pull request data and says nothing about the
                     // pull requests themselves, so the rows keep what they had and the banner explains
                     // why it stopped moving. Publishing the empty list would instead blank every badge

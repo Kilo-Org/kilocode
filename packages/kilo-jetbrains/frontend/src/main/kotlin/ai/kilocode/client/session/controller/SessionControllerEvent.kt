@@ -21,6 +21,10 @@ sealed class SessionControllerEvent {
     // Workspace ready (pickers populated)
     data object WorkspaceReady : SessionControllerEvent()
 
+    // Recent sessions for the empty view were (re)loaded, including a load that failed and left an
+    // empty snapshot. Lets the already-visible empty panel refresh in place after a CLI reconnect.
+    data object RecentsChanged : SessionControllerEvent()
+
     sealed class ViewChanged : SessionControllerEvent() {
         data object ShowProgress : ViewChanged() {
             override fun toString() = "ViewChanged progress"

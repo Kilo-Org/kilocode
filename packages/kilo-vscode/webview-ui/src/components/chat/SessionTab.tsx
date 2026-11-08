@@ -26,8 +26,22 @@ export const SessionTab: Component<{
   onMiddleClick?: (event: MouseEvent) => void
   onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>
   onClose: () => void
+  onTogglePin?: () => void
 }> = (props) => {
   const { t } = useLanguage()
+  const hint = () => (props.onTogglePin ? t("session.tabs.pinHint") : "")
+  const tooltip = () => {
+    const base = props.state === "idle" ? props.title : `${props.title}: ${t(description(props.state))}`
+    return hint() ? `${base} · ${hint()}` : base
+  }
+  const click = (event: MouseEvent) => {
+    if (event.shiftKey && props.onTogglePin) {
+      event.preventDefault()
+      props.onTogglePin()
+      return
+    }
+    props.onSelect()
+  }
   return (
     <div
       class={`am-tab ${props.active ? "am-tab-active" : ""}`}
@@ -40,12 +54,12 @@ export const SessionTab: Component<{
         aria-selected={props.selected}
         aria-keyshortcuts={props.keyShortcuts}
         tabIndex={props.tabIndex}
-        onClick={props.onSelect}
+        onClick={click}
         onMouseDown={props.onMiddleClick}
         onKeyDown={props.onKeyDown}
       >
         <TooltipKeybind
-          title={props.state === "idle" ? props.title : `${props.title}: ${t(description(props.state))}`}
+          title={tooltip()}
           keybind={props.keybind ?? ""}
           placement="bottom"
           gutter={8}
@@ -70,7 +84,7 @@ export const SessionTab: Component<{
       {/* A pinned tab has no close button. The click that needed guarding is the
           one on a control already sitting under the cursor, so the control is
           removed rather than replaced. Close and Unpin live on the context
-          menu, which is also the only place Pin lives. */}
+          menu; Shift+click on the tab also toggles the pin. */}
       <Show when={!props.pinned}>
         <TooltipKeybind
           title={props.closeTitle}

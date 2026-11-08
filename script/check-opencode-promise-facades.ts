@@ -47,7 +47,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
     reason: "production default snapshot hooks require the shared runtime and instance context",
   },
   "kilocode/kilo-sessions.test.ts": {
-    count: 46,
+    count: 49,
     reason:
       "K1 W1: real integration test for SessionStatus→detach→heartbeat-fence; " +
       "the test creates a session and sets its status via the global AppRuntime, " +
@@ -75,7 +75,11 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "The PR poll wiring test creates its session through that same global AppRuntime to " +
       "drive the production init/bootstrap/attach path that starts the 5-minute check, then " +
       "asserts the scheduler start count on the module-level pr-link-poller seam, so the " +
-      "global-runtime coupling is what the test observes.",
+      "global-runtime coupling is what the test observes. " +
+      "The migration-settle test lists and removes leftover sessions through that " +
+      "same global AppRuntime so the persisted migration candidate set contains only " +
+      "its own session; the sweep's settle behavior is otherwise masked by sessions " +
+      "earlier tests left in the shared project.",
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },
@@ -86,8 +90,19 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
   "kilocode/server/cloud-session-import.test.ts": { count: 5, reason: "full app cloud import transaction integration" },
   "kilocode/server/listener-runtime.test.ts": { count: 4, reason: "listener and AppRuntime integration test" },
+  "kilocode/wakeup/wakeup-cron.test.ts": {
+    count: 13,
+    reason:
+      "the cron goal-resume integration tests drive SessionPrompt.command and InstanceStore.reload through the " +
+      "production Wakeup Fire/resume path (src/kilocode/wakeup/resume.ts). That path resolves Session and " +
+      "SessionPrompt from the global AppRuntime because a static layer dependency is impossible: Wakeup.node <- " +
+      "kilocode/tool/registry.ts (via schedule_wakeup/cancel_wakeup/cron_*) <- SessionPrompt.node <- " +
+      "ToolRegistry.node, which already depends on Wakeup.node. A one-shot cron fire and a reloaded-instance " +
+      "wakeup fire must create the instance, session, and goal on that same runtime so the production timer " +
+      "resumes the waiting goal; scoped layers cannot express the boundary under test.",
+  },
   "kilocode/wakeup/wakeup-resume.test.ts": {
-    count: 11,
+    count: 53,
     reason:
       "the wakeup resume integration test schedules through the production Wakeup service and asserts the mock " +
       "model receives the scheduled prompt, so it must run the production Fire/resume path " +
@@ -97,16 +112,56 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "The test therefore creates the instance, session, and wakeup through that same global runtime and asserts the " +
       "pending list on it; scoped layers cannot express the boundary under test. The paused-session case pauses the " +
       "session and reads SessionPrompt.paused through the same runtime to prove resume refuses and logs instead of " +
-      "dropping the wake.",
+      "dropping the wake. Goal-wait cases start or seed a waiting goal, fire or cancel the awaited wakeup, and " +
+      "assert GoalState through that same runtime because resume.ts hydrates and resumes via GoalLink against " +
+      "Session.Service in AppRuntime; a waiting goal with no in-memory handler, a cancel of the awaited id, " +
+      "an archived session that must settle paused with a readable reason, and an in-flight goal turn that must " +
+      "queue a fire onto the next goal cycle all observe that production path. The session-removal case drives " +
+      "KiloSession.cancelWakeups, which resolves the Wakeup service from the same global runtime to cancel the " +
+      "removed session's timers.",
   },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
+  "kilocode/session-hosting/continuation-run.test.ts": {
+    count: 13,
+    reason:
+      "Continue-in-Cloud preparation is a legacy module boundary: the test drives the exported Continuation.run and the real " +
+      "KiloSessions.syncForContinuation against a temporary instance, and that path resolves Session, Database, Question, " +
+      "Permission, and Provider from the global AppRuntime — exactly as the HTTP route handler does (handlers/session-host.ts " +
+      "runs the same effect on AppRuntime). The test builds the sessions, messages, and durable intent rows, and reads them " +
+      "back, through that same runtime, so a scoped layer cannot express the boundary under test.",
+  },
+  "kilocode/sessions/continuation-sync.test.ts": {
+    count: 6,
+    reason:
+      "syncForContinuation is a legacy module-level async boundary whose fullSync reads Session, MessageV2, and Provider from " +
+      "the global AppRuntime while it persists through Storage; the test creates the session and its messages through that " +
+      "same runtime so the acknowledged-transcript contract is observed on the production path. A scoped layer cannot express " +
+      "it because the module resolves the runtime internally.",
+  },
+  "kilocode/server/session-host-httpapi.test.ts": {
+    count: 2,
+    reason:
+      "The continue route test seeds one durable continuation intent through the global AppRuntime Database — the same Database " +
+      "the route's replay path reads — so the generated SDK client can be driven against the real handler's typed 409/402 " +
+      "responses without a scoped-layer copy of that runtime.",
+  },
+  "kilocode/server/session-host-continuation-sync.test.ts": {
+    count: 7,
+    reason:
+      "Regression for the real continuation route: the request instance exists only as the route's directory-derived InstanceRef " +
+      "(no ambient ALS), and the fixture seeds sessions/messages/diffs through the same global AppRuntime the route resolves. " +
+      "The nested Session/Storage reads inside syncForContinuation/fullSync run on that runtime, so a scoped layer would not " +
+      "reproduce the Effect→Promise→AppRuntime boundary this test guards.",
+  },
 }
 
 const owned = (file: string) => file.startsWith("kilocode/") || file.startsWith("kilo-sessions/")
 const hits: Array<{ file: string; line: number }> = []
 const glob = new Bun.Glob("**/*.ts")
+// Bun.Glob returns backslash-separated paths on Windows; the allowlists use forward slashes.
+const scan = (cwd: string) => Array.from(glob.scanSync({ cwd, onlyFiles: true }), (file) => file.replaceAll("\\", "/"))
 
-for (const file of glob.scanSync({ cwd: DIR, onlyFiles: true })) {
+for (const file of scan(DIR)) {
   if (owned(file)) continue
   const text = await Bun.file(path.join(DIR, file)).text()
   for (const match of text.matchAll(PATTERN)) {
@@ -123,7 +178,7 @@ const drift = Object.entries(allow).flatMap(([file, reason]) => {
 })
 
 const testHits: Array<{ file: string; line: number }> = []
-for (const file of glob.scanSync({ cwd: TEST_DIR, onlyFiles: true })) {
+for (const file of scan(TEST_DIR)) {
   const text = await Bun.file(path.join(TEST_DIR, file)).text()
   for (const match of text.matchAll(TEST_PATTERN)) {
     const line = text.slice(0, match.index ?? 0).split("\n").length

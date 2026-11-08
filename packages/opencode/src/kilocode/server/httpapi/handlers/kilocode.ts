@@ -17,6 +17,7 @@ import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { Config } from "@/config/config"
+import { MCP } from "@/mcp"
 import { WorkspaceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
@@ -28,6 +29,10 @@ import { ModelUsage } from "@/kilocode/session/model-usage"
 import * as MarketplaceApi from "@/kilocode/marketplace/api"
 import * as MarketplaceDetection from "@/kilocode/marketplace/detection"
 import * as MarketplaceInstaller from "@/kilocode/marketplace/installer"
+import * as MarketplaceRelevance from "@/kilocode/marketplace/relevance"
+import * as MarketplaceTelemetry from "@/kilocode/marketplace/telemetry"
+import { isSafeId } from "@/kilocode/marketplace/paths"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import {
   MarketplaceInstallPayload,
   MarketplaceRemovePayload,
@@ -82,7 +87,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const agents = yield* Agent.Service
     const commands = yield* Command.Service
     const skills = yield* Skill.Service
+    const ripgrep = yield* Ripgrep.Service
     const config = yield* Config.Service
+    const mcp = yield* MCP.Service
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
@@ -251,10 +258,13 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     }) {
       const instance = yield* InstanceState.context
       const entries = yield* skills.all()
-      yield* Effect.tryPromise({
+      const remove = Effect.tryPromise({
         try: () => KiloSkill.remove(ctx.payload.location, entries),
         catch: () => new HttpApiError.BadRequest({}),
       })
+      // Marketplace skills live in `<skills>/<catalog id>/SKILL.md`; other skills never match a scope.
+      const id = path.basename(path.dirname(ctx.payload.location))
+      yield* isSafeId(id) ? MarketplaceTelemetry.removal(instance, { id, type: "skill" }, remove) : remove
       yield* store.dispose(instance)
       return true
     })
@@ -265,7 +275,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const instance = yield* InstanceState.context
       const agent = yield* agents.get(ctx.payload.name)
       const dirs = yield* config.directories()
-      yield* Effect.tryPromise({
+      const remove = Effect.tryPromise({
         try: () =>
           KiloAgent.remove({
             name: ctx.payload.name,
@@ -283,6 +293,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
           return Effect.die(err)
         }),
       )
+      yield* MarketplaceTelemetry.removal(instance, { id: ctx.payload.name, type: "agent" }, remove)
       yield* store.dispose(instance)
       return true
     })
@@ -296,17 +307,26 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const installed = yield* Effect.promise(() =>
         MarketplaceDetection.detect({ directory: instance.directory, worktree: instance.worktree, skills: entries }),
       )
+      const scanned = Date.now()
+      const filenames = yield* MarketplaceRelevance.detect({
+        ripgrep,
+        directory: instance.directory,
+        items: items.items,
+      })
       yield* Effect.logInfo("marketplace request complete", {
         endpoint: "list",
         directory: instance.directory,
         outcome: "success",
         count: items.items.length,
         errors: items.errors.length,
+        filenames: filenames.length,
+        relevanceMs: Date.now() - scanned,
         durationMs: Date.now() - started,
       })
       return {
         items: items.items,
         installed,
+        filenames,
         ...(items.errors.length > 0 ? { errors: items.errors } : {}),
       }
     })
@@ -331,12 +351,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
           config,
           agents,
           skills,
+          mcp: { remove: mcp.remove }, // kilocode_change
           directory: instance.directory,
           worktree: instance.worktree,
           vcs: instance.project.vcs,
         },
         ctx.payload,
       )
+      if (result.success) yield* MarketplaceTelemetry.installed(ctx.payload)
       // Plugin and MCP bundle writes can partially succeed, including on a failed request.
       if (result.success || ctx.payload.item.type === "plugin" || ctx.payload.item.type === "mcp")
         yield* store.dispose(instance)
@@ -365,17 +387,22 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         itemType: ctx.payload.item.type,
         scope: ctx.payload.scope,
       })
-      const result: MarketplaceRemoveResult = yield* MarketplaceInstaller.remove(
-        {
-          config,
-          agents,
-          skills,
-          directory: instance.directory,
-          worktree: instance.worktree,
-          vcs: instance.project.vcs,
-        },
+      const result: MarketplaceRemoveResult = yield* MarketplaceTelemetry.removal(
+        instance,
         ctx.payload.item,
-        ctx.payload.scope,
+        MarketplaceInstaller.remove(
+          {
+            config,
+            agents,
+            skills,
+            mcp: { remove: mcp.remove }, // kilocode_change
+            directory: instance.directory,
+            worktree: instance.worktree,
+            vcs: instance.project.vcs,
+          },
+          ctx.payload.item,
+          ctx.payload.scope,
+        ),
       )
       if (result.success || ctx.payload.item.type === "plugin" || ctx.payload.item.type === "mcp")
         yield* store.dispose(instance)

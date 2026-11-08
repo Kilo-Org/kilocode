@@ -88,6 +88,7 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 - **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
+- **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -279,6 +280,7 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 - **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
+- **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
 
 ## MCP Tool Permissions
 

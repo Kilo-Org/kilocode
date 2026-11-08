@@ -17,6 +17,32 @@ describe("mergeFileSearchItems", () => {
     ])
   })
 
+  it("does not promote an added folder because the query matches its filesystem prefix", () => {
+    // "dev" appears only in the absolute path of the added folder, never in the
+    // path within it. Scoring the absolute form lifted every folder beneath
+    // that root above folders the query matches just as little.
+    const result = mergeFileSearchItems({
+      query: "dev",
+      files: [],
+      folders: ["src/auth", "/home/dev/other/src/lib"],
+      relative: new Map([["/home/dev/other/src/lib", "src/lib"]]),
+    })
+    expect(result.map((item) => item.path)).toEqual(["src/auth", "/home/dev/other/src/lib"])
+  })
+
+  it("lets an added folder earn the path-prefix boost", () => {
+    // An absolute path never starts with a typed relative path, so this boost
+    // was unreachable for added folders and they fell back to an incidental
+    // substring hit, tying with folders that only matched by coincidence.
+    const result = mergeFileSearchItems({
+      query: "src/a",
+      files: [],
+      folders: ["x/src/all", "/home/dev/other/src/auth"],
+      relative: new Map([["/home/dev/other/src/auth", "src/auth"]]),
+    })
+    expect(result.map((item) => item.path)).toEqual(["/home/dev/other/src/auth", "x/src/all"])
+  })
+
   it("keeps file ordering before non-prefix folder matches", () => {
     const result = mergeFileSearchItems({
       query: "test",

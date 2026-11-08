@@ -363,7 +363,7 @@ Every hook is optional. Return only the ones you care about.
 
 | Hook | Description |
 |---|---|
-| `config` | Receives the fully-resolved config at startup. Read-only — useful for inspection. |
+| `config` | Receives the fully-resolved config at startup. Mutate it in place to add or change agents, commands, providers, and other config — this is how a plugin contributes its own slash commands. A command named `goal` is reserved for [session goals](/docs/code-with-ai/agents/goals): Kilo ignores it under that name, warns, and exposes it as `/goal:command` instead. |
 | `event` | Called for **every** event on the internal bus (see [Events](#events)). |
 
 ### Tools

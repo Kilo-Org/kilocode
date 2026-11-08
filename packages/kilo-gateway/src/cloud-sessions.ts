@@ -120,8 +120,7 @@ const exportSchema = z
 
     for (const msg of data.messages) {
       const parent = msg.info.parentID
-      if (parent !== undefined && !ids.has(parent))
-        ctx.addIssue({ code: "custom", message: "Dangling message parent" })
+      if (parent !== undefined && !ids.has(parent)) ctx.addIssue({ code: "custom", message: "Dangling message parent" })
 
       const seen = new Set([msg.info.id])
       let current = parent
@@ -151,13 +150,41 @@ function completed(part: z.infer<typeof partSchema>) {
 const INGEST_BASE = process.env.KILO_SESSION_INGEST_URL ?? "https://ingest.kilosessions.ai"
 const TIMEOUT = 30_000
 
-function exportUrl(sessionId: string) {
-  return UUID_RE.test(sessionId)
+function exportUrl(sessionId: string, cut?: string) {
+  const base = UUID_RE.test(sessionId)
     ? `${INGEST_BASE}/session/${sessionId}`
     : `${INGEST_BASE}/api/session/${sessionId}/export`
+  return cut === undefined ? base : `${base}?upToMessageId=${encodeURIComponent(cut)}`
 }
 
-export type FetchResult = { ok: true; data: any } | { ok: false; status: number; error: string }
+export type FetchResult =
+  | { ok: true; data: any }
+  | { ok: false; status: number; error: string; code?: "clone_cut_not_found" }
+
+const cutSchema = z
+  .object({ messages: z.array(z.object({ info: z.object({ id: z.string() }).passthrough() }).passthrough()) })
+  .passthrough()
+
+// Keep only messages whose ID is <= the inclusive cut (message IDs ascend, so
+// string order is time order); their parts are nested and go with them. Drop
+// the session-level diff so files are rebuilt from the kept messages' summary
+// diffs only. Returns undefined when the cut message is not in the export.
+// Applied client-side as well as by ingest so an older server that ignores
+// upToMessageId cannot replay post-cut edits.
+function cutSessionExport(data: unknown, cut: string) {
+  const parsed = cutSchema.safeParse(data)
+  if (!parsed.success) return
+  if (!parsed.data.messages.some((msg) => msg.info.id === cut)) return
+  const { sessionDiff: _sessionDiff, session_diff: _session_diff, ...rest } = parsed.data
+  return { ...rest, messages: parsed.data.messages.filter((msg) => msg.info.id <= cut) }
+}
+
+const missing: FetchResult = {
+  ok: false,
+  status: 404,
+  error: "Cut message not found in cloud session",
+  code: "clone_cut_not_found",
+}
 
 export async function fetchCloudSession(token: string, sessionId: string): Promise<FetchResult> {
   const response = await fetch(exportUrl(sessionId), {
@@ -175,8 +202,13 @@ export async function fetchCloudSession(token: string, sessionId: string): Promi
   return { ok: true, data }
 }
 
-export async function fetchCloudSessionForImport(token: string, sessionId: string): Promise<FetchResult> {
-  const response = await fetch(exportUrl(sessionId), {
+export async function fetchCloudSessionForImport(
+  token: string,
+  sessionId: string,
+  opts?: { upToMessageId?: string },
+): Promise<FetchResult> {
+  const cut = opts?.upToMessageId
+  const response = await fetch(exportUrl(sessionId, cut), {
     signal: AbortSignal.timeout(TIMEOUT),
     headers: {
       Authorization: `Bearer ${token}`,
@@ -184,7 +216,10 @@ export async function fetchCloudSessionForImport(token: string, sessionId: strin
     },
   })
 
-  if (response.status === 404) return { ok: false, status: 404, error: "Session not found in cloud" }
+  if (response.status === 404) {
+    if (cut !== undefined && (await response.text()).includes("clone_cut_not_found")) return missing
+    return { ok: false, status: 404, error: "Session not found in cloud" }
+  }
   if (!response.ok) {
     const text = await response.text()
     console.error("[Kilo Gateway] cloud/session/import: export failed", {
@@ -195,7 +230,10 @@ export async function fetchCloudSessionForImport(token: string, sessionId: strin
   }
 
   const data = await response.json()
-  return { ok: true, data }
+  if (cut === undefined) return { ok: true, data }
+  const kept = cutSessionExport(data, cut)
+  if (!kept) return missing
+  return { ok: true, data: kept }
 }
 
 export interface ImportDeps extends PrepareDeps {
@@ -211,16 +249,26 @@ export interface ImportDeps extends PrepareDeps {
   SessionCreatedEvent: { type: string; properties: unknown }
 }
 
+function byID(a: { id: string }, b: { id: string }) {
+  if (a.id === b.id) return 0
+  return a.id < b.id ? -1 : 1
+}
+
 export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
   const parsed = exportSchema.safeParse(data)
   if (!parsed.success)
     throw new SessionImportValidationError(parsed.error.issues[0]?.message ?? "Invalid session export")
   const source = parsed.data
+  // The export lists items in ingest order, not transcript order. Fresh IDs ascend in
+  // issue order, so issue them in source-ID order to keep the transcript in order.
+  const ordered = source.messages
+    .map((msg) => ({ ...msg, parts: msg.parts.toSorted(byID) }))
+    .toSorted((a, b) => byID(a.info, b.info))
 
   const sessionID = deps.Identifier.descending("session")
   const ids = new Map<string, string>()
   const pids = new Map<string, string>()
-  for (const msg of source.messages) {
+  for (const msg of ordered) {
     ids.set(msg.info.id, deps.Identifier.ascending("message"))
     for (const part of msg.parts) {
       pids.set(part.id, deps.Identifier.ascending("part"))
@@ -273,7 +321,7 @@ export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
     session_id: string
     data: Record<string, unknown>
   }> = []
-  for (const msg of source.messages) {
+  for (const msg of ordered) {
     const id = ids.get(msg.info.id)!
     const parentID = msg.info.parentID === undefined ? undefined : ids.get(msg.info.parentID)!
     const next = {
@@ -287,9 +335,7 @@ export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
     for (const part of msg.parts) {
       const partID = pids.get(part.id)!
       const tail =
-        part.type === "compaction" && typeof part.tail_start_id === "string"
-          ? ids.get(part.tail_start_id)!
-          : undefined
+        part.type === "compaction" && typeof part.tail_start_id === "string" ? ids.get(part.tail_start_id)! : undefined
       const data: Record<string, unknown> = {
         ...part,
         id: partID,

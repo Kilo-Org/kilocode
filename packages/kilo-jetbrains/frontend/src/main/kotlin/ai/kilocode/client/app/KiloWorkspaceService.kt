@@ -162,6 +162,18 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
+    fun reloadCoreSettings(directory: String, done: (CoreReloadResult) -> Unit = {}): Job = cs.launch {
+        val result = try {
+            if (call { reloadCoreSettings(directory) }) CoreReloadResult.SUCCESS else CoreReloadResult.BUSY
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Core settings reload failed for directory=$directory", e)
+            CoreReloadResult.FAILED
+        }
+        edt { done(result) }
+    }
+
     suspend fun models(directory: String): ModelsWorkspaceDto {
         return try {
             call { this.models(directory) }
@@ -377,4 +389,10 @@ class KiloWorkspaceService internal constructor(
         edt { found(target) }
     }
 
+}
+
+enum class CoreReloadResult {
+    SUCCESS,
+    BUSY,
+    FAILED,
 }

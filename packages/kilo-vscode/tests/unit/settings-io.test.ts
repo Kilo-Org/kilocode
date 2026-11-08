@@ -187,6 +187,13 @@ describe("parseImport", () => {
     }
   })
 
+  it("preserves the memory model setting", () => {
+    const json = JSON.stringify({ memory_model: "kilo/kilo-auto/small" })
+    const result = parseImport(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.config.memory_model).toBe("kilo/kilo-auto/small")
+  })
+
   it("strips _meta before returning config", () => {
     const json = JSON.stringify({
       _meta: { version: 1, exportedAt: "2026-01-01", secretsStripped: true },
@@ -299,6 +306,13 @@ describe("round-trip", () => {
       expect(result.config.permission).toEqual({ read: "allow" })
       expect(result.config.instructions).toEqual(["rules.md"])
     }
+  })
+
+  it("export then import preserves the memory model setting", () => {
+    const original: Config = { memory_model: "kilo/kilo-auto/small" }
+    const result = parseImport(JSON.stringify(buildExport(original)))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.config.memory_model).toBe("kilo/kilo-auto/small")
   })
 })
 

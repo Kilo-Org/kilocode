@@ -333,9 +333,9 @@ manage pull requests
 
 Commands:
   kilo pr checkout <number>  fetch and checkout a GitHub PR branch, then run kilo
-  kilo pr link <url>         link the current worktree to a pull request
-  kilo pr unlink             clear the linked pull request
-  kilo pr status             show the linked pull request
+  kilo pr link <url>         link a session to a pull request
+  kilo pr unlink             clear a session's linked pull request
+  kilo pr status             show a session's linked pull request
 
 Options:
   -h, --help        show help                                                              [boolean]

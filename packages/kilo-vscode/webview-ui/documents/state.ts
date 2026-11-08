@@ -36,6 +36,11 @@ function key(context: string, file: string): string {
   return `${context}:${file}`
 }
 
+/** Tabs keep the path they were opened with (possibly absolute); loaded data carries the canonical relative path. */
+export function documentPath(tab: DocumentTab, get: (file: string) => DocumentData | undefined): string {
+  return get(tab.file)?.file ?? tab.file
+}
+
 export function isMarkdownPath(file: string): boolean {
   return /\.(md|mdx|markdown)$/i.test(file)
 }
@@ -180,6 +185,11 @@ export function createDocumentInspector(
     vscode.postMessage({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
     return true
   }
+  const copyPath = (file: string, sessionId = context()) => {
+    if (!sessionId) return false
+    vscode.postMessage({ type: "agentManager.copyFilePath", sessionId, filePath: file })
+    return true
+  }
   onMount(() => {
     const handler = (event: Event) => handleDocumentOpen(event, open, openFile)
     const message = vscode.onMessage((item) => {
@@ -197,7 +207,7 @@ export function createDocumentInspector(
   // and stays visible while the panel is open so it can still be toggled shut.
   const available = () => documents.tabs().length > 0 || isOpen()
   const toggle = () => (isOpen() ? closePanel() : open())
-  return { documents, comments, open, openFile, toggle, available, isOpen, scope }
+  return { documents, comments, open, openFile, copyPath, toggle, available, isOpen, scope }
 }
 
 export function handleDocumentOpen(

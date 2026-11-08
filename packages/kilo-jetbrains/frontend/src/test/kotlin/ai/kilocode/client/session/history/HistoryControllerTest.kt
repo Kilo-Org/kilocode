@@ -13,10 +13,12 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
+import ai.kilocode.client.ui.active.ACTIVE_DELETE_CELL
+import ai.kilocode.client.ui.active.ACTIVE_RENAME_CELL
 import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -42,6 +44,7 @@ import javax.swing.Scrollable
 import javax.swing.ScrollPaneConstants
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Suppress("UnstableApiUsage")
 class HistoryControllerTest : BasePlatformTestCase() {
@@ -87,6 +90,27 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals("loading=true size=0 error=null\nloading=false size=1 error=null", events.joinToString("\n"))
     }
 
+    fun `test local history reloads when the app reconnects`() {
+        val app = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.READY))
+        val controller = HistoryController(
+            sessions,
+            workspace,
+            coroutines.scope,
+            app,
+            gitUrlProvider = { null },
+            io = coroutines.dispatcher,
+        )
+        rpc.listed += session("ses_1", "One")
+
+        // The CLI drops, a session is created elsewhere, then it comes back.
+        app.value = KiloAppStateDto(KiloAppStatusDto.ERROR)
+        flush()
+        rpc.listed += session("ses_2", "Two")
+        app.value = KiloAppStateDto(KiloAppStatusDto.READY)
+
+        waitFor { controller.local.items.size == 2 }
+    }
+
     fun `test cloud load maps sessions and supports load more`() {
         rpc.cloud += cloud("cloud_1", "Cloud One")
         rpc.cloudCursor = "next_1"
@@ -108,6 +132,34 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         assertEquals(listOf("cloud_1", "cloud_2"), controller.cloud.items.map { it.id })
         assertEquals(FakeSessionRpcApi.CloudCall("/test", "next_1", 50, null), rpc.cloudCalls[1])
+    }
+
+    fun `test cloud refresh signal reloads cloud history without reloading local sessions`() {
+        val refreshes = MutableStateFlow(0L)
+        val controller = HistoryController(
+            sessions,
+            workspace,
+            coroutines.scope,
+            gitUrlProvider = { null },
+            io = coroutines.dispatcher,
+            refreshes = refreshes,
+        )
+        flush()
+        assertTrue(rpc.cloudCalls.isEmpty())
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+
+        refreshes.value = 1L
+        flush()
+
+        assertEquals(listOf("cloud_1"), controller.cloud.items.map { it.id })
+        assertEquals(1, rpc.cloudCalls.size)
+        assertTrue(rpc.lists.isEmpty())
+        rpc.cloud.clear()
+        rpc.cloud += cloud("cloud_2", "Cloud Two")
+        refreshes.value = 2L
+        flush()
+        assertEquals(listOf("cloud_2"), controller.cloud.items.map { it.id })
+        assertEquals(2, rpc.cloudCalls.size)
     }
 
     fun `test cloud load records page telemetry`() {
@@ -204,7 +256,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         val row = localHistoryRows(listOf(item), HistoryActivitySnapshot()) { false }[0]
 
         assertEquals(HistoryTime.relative(item), row.trailing)
-        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertEquals(listOf(ACTIVE_RENAME_CELL, ACTIVE_DELETE_CELL), row.cells.map { it.id })
         assertTrue(row.cells.all { it.iconOnly })
     }
 
@@ -215,7 +267,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         val row = localHistoryRows(listOf(item), snapshot) { true }[0]
 
         assertEquals(KiloBundle.message("common.deleting"), row.progress)
-        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertEquals(listOf(ACTIVE_RENAME_CELL, ACTIVE_DELETE_CELL), row.cells.map { it.id })
         assertEquals(listOf(SessionActivityKind.RUNNING.label()), row.badges.map { it.text })
     }
 
@@ -936,6 +988,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
             val id = when (open) {
                 is SessionRef.Local -> open.id
                 is SessionRef.Cloud -> "cloud:${open.id}"
+                is SessionRef.Hosted -> open.id
             }
             opened.add(id)
         },

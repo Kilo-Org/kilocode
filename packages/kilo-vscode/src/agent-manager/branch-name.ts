@@ -1,20 +1,10 @@
 import friendlyWords from "friendly-words"
+import { sanitizeBranchName } from "../shared/branch-slug"
+
+export { sanitizeBranchName }
 
 const MAX_ATTEMPTS = 10
 const FALLBACK_MAX_SUFFIX = 100
-
-/**
- * Sanitize a string into a valid git branch name segment.
- * Keeps lowercase alphanumeric chars and hyphens, collapses runs, strips edges.
- */
-export function sanitizeBranchName(name: string, maxLength = 50): string {
-  return name
-    .slice(0, maxLength)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-")
-}
 
 export function semanticBranchName(title: string, prefix = "", maxLength = 50): string {
   const parts = prefix

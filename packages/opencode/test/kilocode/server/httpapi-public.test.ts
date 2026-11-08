@@ -9,6 +9,7 @@ import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodePaths } from "../../../src/kilocode/server/httpapi/groups/kilocode"
 import { MemoryPaths } from "../../../src/kilocode/server/httpapi/groups/memory"
+import { SessionHostPaths } from "../../../src/kilocode/server/httpapi/groups/session-host"
 import { NetworkPaths } from "../../../src/kilocode/server/httpapi/groups/network"
 import { TelemetryPaths } from "../../../src/kilocode/server/httpapi/groups/telemetry"
 import { ExperimentalPaths } from "../../../src/server/routes/instance/httpapi/groups/experimental"
@@ -32,7 +33,7 @@ type Parameter = {
   schema?: Schema
 }
 
-type Method = "get" | "post" | "patch" | "put"
+type Method = "get" | "post" | "patch" | "put" | "delete"
 
 type Body = {
   content?: Record<string, { schema?: Schema }>
@@ -58,6 +59,113 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       "ownerSessionID",
       "revision",
     ])
+  }, 20_000)
+
+  test("exposes only the proven hosted session surface with opaque attachment ids", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const routes = [
+      { method: "get" as const, path: SessionHostPaths.provider, id: "sessionHost.providers" },
+      { method: "get" as const, path: SessionHostPaths.session, id: "sessionHost.list" },
+      { method: "post" as const, path: SessionHostPaths.session, id: "sessionHost.start" },
+      { method: "get" as const, path: SessionHostPaths.sessionDetail, id: "sessionHost.get" },
+      { method: "get" as const, path: SessionHostPaths.message, id: "sessionHost.transcript" },
+      { method: "post" as const, path: SessionHostPaths.attach, id: "sessionHost.attach" },
+      { method: "delete" as const, path: SessionHostPaths.attachment, id: "sessionHost.detach" },
+      { method: "get" as const, path: SessionHostPaths.workspace, id: "sessionHost.listWorkspaces" },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspaceProfiles,
+        id: "sessionHost.listWorkspaceProfiles",
+      },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspaceProfilePersonalDefault,
+        id: "sessionHost.setWorkspacePersonalDefaultProfile",
+      },
+      {
+        method: "delete" as const,
+        path: SessionHostPaths.workspaceProfilePersonalDefaultDetail,
+        id: "sessionHost.clearWorkspacePersonalDefaultProfile",
+      },
+      { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
+      { method: "post" as const, path: SessionHostPaths.workspaceContinue, id: "sessionHost.continueWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.getWorkspaceStatus" },
+      { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.listWorkspaceSessions" },
+      { method: "post" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.startWorkspaceSession" },
+    ]
+
+    for (const route of routes) {
+      const path = route.path.replace(/:([A-Za-z0-9_]+)/g, "{$1}")
+      expect(spec.paths[path]?.[route.method]?.operationId).toBe(route.id)
+    }
+
+    const detach = SessionHostPaths.attachment.replace(":attachmentID", "{attachmentID}")
+    const params = spec.paths[detach]?.delete?.parameters as Parameter[] | undefined
+    expect(params?.find((param) => param.name === "attachmentID")?.schema).toMatchObject({
+      type: "string",
+    })
+
+    // The hosted surface must not grow M2 contracts.
+    const hosted = Object.entries(spec.paths)
+      .filter(([path]) => path.startsWith("/kilocode/session-host"))
+      .flatMap(([, item]) => Object.values(item as Record<string, { operationId?: string }>))
+      .map((operation) => operation.operationId)
+      .sort()
+    expect(hosted).toEqual(routes.map((route) => route.id).sort())
+  })
+
+  test("keeps authorized workspace profile descriptions and defaults nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const summary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
+    const description = summary ? Object.entries(summary).find(([field]) => field === "description")?.[1] : undefined
+    expect(description).toEqual({
+      anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
+    })
+
+    const page = spec.components?.schemas?.SessionHostWorkspaceProfilePage?.properties
+    for (const field of [
+      "personalDefaultProfileID",
+      "organizationDefaultProfileID",
+      "effectiveDefaultProfileID",
+    ]) {
+      const value = page ? Object.entries(page).find(([key]) => key === field)?.[1] : undefined
+      expect(value).toEqual({
+        anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
+      })
+    }
+  })
+
+  test("keeps passive hosted workspace status fields nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    type Node = { properties?: Record<string, Node>; anyOf?: unknown[] }
+    const status = (spec.components?.schemas?.SessionHostWorkspaceStatus as Node | undefined)?.properties
+    const nullable = { anyOf: [expect.objectContaining({}), { type: "null" }] }
+
+    expect(status?.compute?.properties?.estimatedSleepAt).toEqual(nullable)
+    expect(status?.wakeOnInput?.properties?.blockedReason).toEqual(nullable)
+    expect(status?.billing?.properties?.payer).toEqual({
+      anyOf: [{ type: "string", enum: ["user", "org"] }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.sku).toEqual(nullable)
+    expect(status?.billing?.properties?.blocked).toEqual({
+      anyOf: [{ type: "boolean" }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.intervalStartedAt).toEqual({
+      anyOf: [{ type: "number" }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.rate).toEqual(nullable)
+    expect(status?.deletion?.properties?.startedAt).toEqual({
+      anyOf: [{ type: "number" }, { type: "null" }],
+    })
+  })
+
+  test("publishes hosted availability and keeps native turn events off the global stream", () => {
+    const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
+
+    expect(spec).toContain("session.host.availability")
+    expect(spec).toContain("sessionHost.attach")
   })
 
   test("uses Kilo branding", () => {
@@ -68,12 +176,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
   test("includes legacy Kilo events in the generated SDK contract", () => {
     const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
-    for (const type of [
-      "suggestion.shown",
-      "session.network.asked",
-      "background_process.updated",
-      "indexing.status",
-    ]) {
+    for (const type of ["suggestion.shown", "session.network.asked", "background_process.updated", "indexing.status"]) {
       expect(spec).toContain(type)
     }
   })
@@ -302,4 +405,32 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(query).toEqual(["directory", "workspace"])
     expect(route?.responses?.["200"]?.content?.["application/json"]?.schema).toMatchObject({ type: "array" })
   })
+})
+
+test("types the continuation route with the 409 and 402 continuation errors", () => {
+  const spec = OpenApi.fromApi(PublicApi)
+  const entry = Object.entries(spec.paths).find(([, item]) =>
+    Object.values(item as Record<string, { operationId?: string }>).some(
+      (operation) => operation.operationId === "sessionHost.continueWorkspace",
+    ),
+  )
+  expect(entry).toBeDefined()
+  const operation = Object.values(
+    entry![1] as Record<string, { operationId?: string; responses?: Record<string, unknown> }>,
+  ).find((item) => item.operationId === "sessionHost.continueWorkspace")
+  const responses = operation?.responses ?? {}
+  expect(Object.keys(responses)).toContain("409")
+  expect(Object.keys(responses)).toContain("402")
+
+  const schemas = (spec.components?.schemas ?? {}) as Record<string, { properties?: Record<string, unknown> }>
+  expect(Object.keys(schemas["SessionHostContinuationError"]?.properties ?? {}).sort()).toEqual([
+    "code",
+    "message",
+    "retryable",
+  ])
+  expect(Object.keys(schemas["SessionHostInsufficientBalanceError"]?.properties ?? {}).sort()).toEqual([
+    "code",
+    "message",
+    "retryable",
+  ])
 })

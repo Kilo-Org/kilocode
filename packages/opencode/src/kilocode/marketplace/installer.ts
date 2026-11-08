@@ -27,14 +27,21 @@ import type {
   SkillInstallItem,
 } from "./schema"
 import * as Paths from "./paths"
+import { buildMcpEntry } from "./mcp-entry"
 
 export { isSafeId } from "./paths"
+export { buildMcpEntry, normalizeMcpEntry, substituteParams } from "./mcp-entry"
 export { findEscapedPaths } from "./skill-archive"
 
 type Services = {
   config: Config.Interface
   agents: Agent.Interface
   skills: Skill.Interface
+  // kilocode_change start - purges a removed MCP server's cached runtime
+  // status (see MCP.remove); accepted here, not via Effect context, so
+  // install()/remove() stay usable from callers without the full MCP layer
+  mcp: { remove: (name: string) => Effect.Effect<void> }
+  // kilocode_change end
   directory: string
   worktree?: string
   vcs?: string
@@ -54,48 +61,6 @@ function contains(dir: string, file: string) {
   return path.resolve(file).startsWith(path.resolve(dir) + path.sep)
 }
 
-function escapeJsonValue(raw: string) {
-  return raw
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")
-    .replace(/\t/g, "\\t")
-}
-
-export function substituteParams(template: string, params: Record<string, unknown>) {
-  return Object.entries(params).reduce((text, [key, value]) => {
-    const escaped = escapeJsonValue(String(value ?? ""))
-    return text.replaceAll(`{{${key}}}`, escaped).replaceAll(`\${${key}}`, escaped)
-  }, template)
-}
-
-export function normalizeMcpEntry(raw: Record<string, unknown>): Record<string, unknown> {
-  if (raw.type === "local" || raw.type === "remote") return raw
-
-  if (typeof raw.url === "string") {
-    const { url, headers, ...rest } = raw
-    const entry: Record<string, unknown> = { type: "remote", url }
-    if (headers && typeof headers === "object") entry.headers = headers
-    for (const key of ["enabled", "timeout", "oauth"] as const) {
-      if (key in rest) entry[key] = rest[key]
-    }
-    return entry
-  }
-
-  if (typeof raw.command === "string") {
-    const args = Array.isArray(raw.args) ? raw.args.filter((arg): arg is string => typeof arg === "string") : []
-    const entry: Record<string, unknown> = { type: "local", command: [raw.command, ...args] }
-    if (raw.env && typeof raw.env === "object" && Object.keys(raw.env).length > 0) entry.environment = raw.env
-    for (const key of ["enabled", "timeout"] as const) {
-      if (key in raw) entry[key] = raw[key]
-    }
-    return entry
-  }
-
-  return raw
-}
-
 function resolveMcpContent(item: McpInstallItem, opts: MarketplaceInstallPayload) {
   if (typeof item.content === "string") return item.content
   if (!Array.isArray(item.content) || item.content.length === 0) return undefined
@@ -105,13 +70,6 @@ function resolveMcpContent(item: McpInstallItem, opts: MarketplaceInstallPayload
     if (found) return found.content
   }
   return item.content[0]?.content
-}
-
-export function buildMcpEntry(content: string, params?: Record<string, unknown>) {
-  const filtered = Object.fromEntries(Object.entries(params ?? {}).filter(([key]) => key !== "__method"))
-  const replaced = Object.keys(filtered).length > 0 ? substituteParams(content, filtered) : content
-  const raw = JSON.parse(replaced) as Record<string, unknown>
-  return normalizeMcpEntry(raw)
 }
 
 function scopedConfig(scope: Scope, svc: Services) {
@@ -401,14 +359,24 @@ function removeMcp(svc: Services, item: MarketplaceItemRef, scope: Scope) {
       try: () => Companions.read(scope, svc.directory, item.id, svc.worktree),
       catch: (err) => err,
     })
-    if (receipt) {
-      yield* Companions.remove({ ...svc, scope }, receipt)
-      yield* svc.config.invalidate().pipe(Effect.catchCause((cause) => Effect.logWarning(Cause.pretty(cause))))
-      return { success: true, slug: item.id }
-    }
-    const cfg = yield* scopedConfig(scope, svc)
-    if (!cfg.mcp?.[item.id]) return { success: true, slug: item.id }
-    yield* writeMcp(scope, svc, item.id, null)
+    // kilocode_change start - only purge cached runtime status when this
+    // scope actually owned the entry. MCP runtime state is per instance and
+    // merges global + project config, so purging it for a scope that had
+    // nothing to remove (e.g. the server is actually defined in the other
+    // scope) would disconnect a still-configured server; see MCP.remove.
+    const removed = yield* Effect.gen(function* () {
+      if (receipt) {
+        yield* Companions.remove({ ...svc, scope }, receipt)
+        yield* svc.config.invalidate().pipe(Effect.catchCause((cause) => Effect.logWarning(Cause.pretty(cause))))
+        return true
+      }
+      const cfg = yield* scopedConfig(scope, svc)
+      if (!cfg.mcp?.[item.id]) return false
+      yield* writeMcp(scope, svc, item.id, null)
+      return true
+    })
+    if (removed) yield* svc.mcp.remove(item.id)
+    // kilocode_change end
     return { success: true, slug: item.id }
   }).pipe(Effect.catchCause((cause) => Effect.succeed({ success: false, slug: item.id, error: failure(cause) })))
 }

@@ -589,6 +589,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
               href="https://blog.kilo.ai/p/kilo-gateway-now-supports-byok-20-providers"
               onClick={(e) => {
                 e.preventDefault()
+                e.stopPropagation()
                 openExternal("https://blog.kilo.ai/p/kilo-gateway-now-supports-byok-20-providers")
               }}
               class="provider-connect-byok-link"
@@ -638,6 +639,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
             href={state.authorization?.url ?? "#"}
             onClick={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               if (!state.authorization?.url) return
               openExternal(state.authorization.url)
             }}
@@ -737,6 +739,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
             href={state.authorization?.url ?? "#"}
             onClick={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               if (!state.authorization?.url) return
               openExternal(state.authorization.url)
             }}

@@ -47,7 +47,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import "dotenv/config"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 
@@ -89,7 +89,7 @@ import OpenAI from "openai"
 
 const client = new OpenAI({
   apiKey: process.env.KILO_API_KEY,
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
 })
 
 const response = await client.chat.completions.create({
@@ -109,7 +109,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    base_url="https://ai-gateway.kilo.ai/api/v1",
 )
 
 response = client.chat.completions.create(
@@ -128,7 +128,7 @@ print(response.choices[0].message.content)
 ## Using cURL
 
 ```bash
-curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
+curl -X POST "https://ai-gateway.kilo.ai/api/v1/chat/completions" \
   -H "Authorization: Bearer $KILO_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

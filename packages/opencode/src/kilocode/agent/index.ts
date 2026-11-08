@@ -383,6 +383,10 @@ export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experi
       ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
       : {}),
     ...(Flag.KILO_CLIENT === "vscode" ? { browser_open: "ask" as const } : {}),
+    // JetBrains surfaces a dedicated edit-approval card, so edits ask by default there.
+    // This lives in the defaults layer (below user config) so global, project, per-agent,
+    // and the plugin's Auto-Approve page all override it.
+    ...(Flag.KILO_CLIENT === "jetbrains" ? { edit: "ask" as const } : {}),
     kilo_memory_recall: "ask",
     kilo_memory_save: "ask",
   })

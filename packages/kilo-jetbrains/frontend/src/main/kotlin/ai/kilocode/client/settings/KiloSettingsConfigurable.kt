@@ -10,6 +10,7 @@ import ai.kilocode.client.settings.marketplace.MarketplaceConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.settings.transcript.TranscriptConfigurable
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.DataManager
@@ -93,6 +94,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         autoApprove.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(autoApprove)
+
+        val transcript = ActionLink(KiloBundle.message("settings.transcript.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, TranscriptConfigurable.ID)
+        }
+        transcript.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(transcript)
 
         val context = ActionLink(KiloBundle.message("settings.context.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink

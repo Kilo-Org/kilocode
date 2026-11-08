@@ -85,6 +85,51 @@ const request = (id: string): AgentManagerInMessage => ({
 })
 
 describe("browser inspection responses", () => {
+  test("routes cursor reports with project, session, and viewport identity and drops revoked ownership", async () => {
+    const view = await fixture()
+    const messages: AgentManagerOutMessage[] = []
+    const lifecycle = createBrowserLifecycle({
+      browser: view.broker,
+      host: view.host,
+      contexts: () => view.contexts,
+      post: (message) => messages.push(message),
+      openPanel: () => {},
+      log: () => {},
+    })
+    let source = ""
+    view.protocol.on("Page.addScriptToEvaluateOnNewDocument", (params: { source: string }) => {
+      source = params.source
+    })
+    const viewport = { width: 400, height: 300, revision: 1, active: true }
+    await view.broker.viewport("session", "project", view.current.browserId, view.current.navigation, viewport)
+    view.protocol.emit("Runtime.executionContextCreated", { context: { id: 7, name: "kilo-cursor" } })
+    const report = (cursor: string) =>
+      view.protocol.emit("Runtime.bindingCalled", {
+        name: "__kiloCursor",
+        payload: `${source.match(/\)\("__kiloCursor", (\d+),/)?.at(1)}:${cursor}`,
+        executionContextId: 7,
+      })
+    report("pointer")
+    report("url(https://example.com/cursor), text")
+    expect(messages).toEqual([
+      {
+        type: "agentManager.browserCursor",
+        projectId: "project",
+        sessionId: "session",
+        browserId: view.current.browserId,
+        navigation: view.current.navigation,
+        revision: 1,
+        cursor: "pointer",
+      },
+    ])
+    view.contexts.byDirectory = () => undefined
+    report("text")
+    expect(messages).toHaveLength(1)
+    await lifecycle.dispose()
+    report("grab")
+    expect(messages.filter((message) => message.type === "agentManager.browserCursor")).toHaveLength(1)
+  })
+
   test.each([true, false])("forwards a missing browser before an entry exists (system Chrome: %s)", async (system) => {
     const view = await fixture()
     const broker = new BrowserBroker({

@@ -37,6 +37,7 @@ import {
   removeProjectWorktree,
   resetProjectWorktree,
   resolveServer,
+  running,
   saveCached,
   subscribeProjectEvents,
   viewProjectSessions,
@@ -314,7 +315,7 @@ export function ProjectConsoleRoute() {
 
   function terminalState(item: ProjectTerminalItem) {
     if (item.attention) return "attention"
-    if (item.sessionStatus && item.sessionStatus.type !== "idle") return "busy"
+    if (item.sessionStatus && running(item.sessionStatus)) return "busy"
     const id = sessionID(item)
     if (id && unread().has(id)) return "unread"
     return "idle"

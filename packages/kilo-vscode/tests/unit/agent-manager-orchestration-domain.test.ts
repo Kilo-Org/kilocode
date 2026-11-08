@@ -197,19 +197,38 @@ describe("Agent Manager orchestration domain", () => {
       },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_prompt" })
+    await prompt({ client, root, state, sessionID: "ses_target", text: "Continue" })
 
     expect(get).toHaveBeenCalledWith({ sessionID: "ses_target", directory: worktree })
     expect(promptAsync).toHaveBeenCalledWith(
       {
         sessionID: "ses_target",
         directory: worktree,
-        messageID: "msg_agent_manager_amr_prompt",
         parts: [{ type: "text", text: "Continue" }],
         snapshotInitialization: "wait",
       },
       { throwOnError: true },
     )
+  })
+
+  it("lets the backend assign a chronological message ID so peer prompts are never scoped out (#14643)", async () => {
+    const promptAsync = mock(async (_input: { messageID?: string }) => ({ data: undefined }))
+    const client = {
+      session: {
+        get: mock(async () => ({
+          data: { id: "ses_caller", directory: fs.realpathSync(root), title: "Caller" } as Session,
+        })),
+        promptAsync,
+      },
+      permission: { list: mock(async () => ({ data: [] })) },
+      question: { list: mock(async () => ({ data: noQuestions })) },
+    } as unknown as KiloClient
+
+    await prompt({ client, root, state, sessionID: "ses_caller", directory: root, text: "Peer" })
+
+    const sent = promptAsync.mock.calls.at(0)?.at(0)
+    expect(sent).toBeDefined()
+    expect(sent?.messageID).toBeUndefined()
   })
 
   it("delivers a reply to a verified original session outside Agent Manager state", async () => {
@@ -230,7 +249,6 @@ describe("Agent Manager orchestration domain", () => {
       sessionID: "ses_caller",
       directory: root,
       text: "Reply",
-      messageID: "amr_reply",
     })
 
     expect(get).toHaveBeenCalledWith({ sessionID: "ses_caller", directory: root })
@@ -238,7 +256,6 @@ describe("Agent Manager orchestration domain", () => {
       {
         sessionID: "ses_caller",
         directory: root,
-        messageID: "msg_agent_manager_amr_reply",
         parts: [{ type: "text", text: "Reply" }],
         snapshotInitialization: "wait",
       },
@@ -282,7 +299,7 @@ describe("Agent Manager orchestration domain", () => {
       question: { list: mock(async () => ({ data: questions })), reply: replied },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: session.id, text: "Continue", messageID: "amr_discovered", managed })
+    await prompt({ client, root, state, sessionID: session.id, text: "Continue", managed })
     expect(delivered).toHaveBeenCalledWith(expect.objectContaining({ sessionID: session.id, directory: worktree }), {
       throwOnError: true,
     })
@@ -332,7 +349,7 @@ describe("Agent Manager orchestration domain", () => {
       question: { list: mock(async () => ({ data: [] })) },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: "ses_live", text: "Continue", messageID: "amr_live", managed })
+    await prompt({ client, root, state, sessionID: "ses_live", text: "Continue", managed })
     expect(delivered).toHaveBeenCalledWith(expect.objectContaining({ directory: worktree }), { throwOnError: true })
   })
 
@@ -351,7 +368,7 @@ describe("Agent Manager orchestration domain", () => {
       question: { list: mock(async () => ({ data: noQuestions })) },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: "ses_queue", text: "Continue", messageID: "amr_queue" })
+    await prompt({ client, root, state, sessionID: "ses_queue", text: "Continue" })
 
     expect(client.session.status).not.toHaveBeenCalled()
     expect(client.session.abort).not.toHaveBeenCalled()
@@ -360,7 +377,6 @@ describe("Agent Manager orchestration domain", () => {
       {
         sessionID: "ses_queue",
         directory: worktree,
-        messageID: "msg_agent_manager_amr_queue",
         parts: [{ type: "text", text: "Continue" }],
         snapshotInitialization: "wait",
       },
@@ -381,9 +397,7 @@ describe("Agent Manager orchestration domain", () => {
       question: { list: mock(async () => ({ data: noQuestions })) },
     } as unknown as KiloClient
 
-    await expect(
-      prompt({ client, root, state, sessionID: "ses_blocked", text: "Continue", messageID: "amr_permission" }),
-    ).rejects.toMatchObject({
+    await expect(prompt({ client, root, state, sessionID: "ses_blocked", text: "Continue" })).rejects.toMatchObject({
       code: "unavailable_session",
       message: expect.stringContaining("pending permission request"),
     })
@@ -414,7 +428,6 @@ describe("Agent Manager orchestration domain", () => {
       state,
       sessionID: "ses_cancelled",
       text: "Continue",
-      messageID: "amr_cancelled",
       signal: controller.signal,
     })
 
@@ -461,9 +474,7 @@ describe("Agent Manager orchestration domain", () => {
       },
     } as unknown as KiloClient
 
-    await expect(
-      prompt({ client, root, state, sessionID: "ses_blocked", text: "Continue", messageID: "amr_blocked" }),
-    ).rejects.toMatchObject({
+    await expect(prompt({ client, root, state, sessionID: "ses_blocked", text: "Continue" })).rejects.toMatchObject({
       code: "unavailable_session",
       message: expect.stringContaining('sessionID "ses_blocked"'),
     })
@@ -474,7 +485,6 @@ describe("Agent Manager orchestration domain", () => {
       state,
       sessionID: "ses_blocked",
       text: "Continue",
-      messageID: "amr_blocked2",
     }).then(
       () => undefined,
       (error: OrchestrationError) => error,
@@ -507,7 +517,7 @@ describe("Agent Manager orchestration domain", () => {
     } as unknown as KiloClient
 
     await expect(
-      prompt({ client, root, state, sessionID: "ses_blocker_error", text: "Continue", messageID: "amr_error" }),
+      prompt({ client, root, state, sessionID: "ses_blocker_error", text: "Continue" }),
     ).rejects.toMatchObject({
       code: "host_error",
       message: "The managed session blockers could not be read",
@@ -532,9 +542,7 @@ describe("Agent Manager orchestration domain", () => {
       },
     } as unknown as KiloClient
 
-    await expect(
-      prompt({ client, root, state, sessionID: "ses_unknown", text: "Continue", messageID: "amr_unknown" }),
-    ).rejects.toMatchObject({
+    await expect(prompt({ client, root, state, sessionID: "ses_unknown", text: "Continue" })).rejects.toMatchObject({
       code: "unknown_session",
     } satisfies Partial<OrchestrationError>)
     await expect(
@@ -544,7 +552,6 @@ describe("Agent Manager orchestration domain", () => {
         state,
         sessionID: "ses_unknown",
         text: "Continue",
-        messageID: "amr_mismatch",
         managed: { id: "ses_target", worktreeId: managed.id, createdAt: "" },
       }),
     ).rejects.toMatchObject({ code: "unknown_session" } satisfies Partial<OrchestrationError>)
@@ -555,20 +562,15 @@ describe("Agent Manager orchestration domain", () => {
         state,
         sessionID: "ses_foreign",
         text: "Continue",
-        messageID: "amr_foreign",
         managed: { id: "ses_foreign", worktreeId: "wt_foreign", createdAt: "" },
       }),
     ).rejects.toMatchObject({ code: "stale_session" } satisfies Partial<OrchestrationError>)
-    await expect(
-      prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_cross" }),
-    ).rejects.toMatchObject({
+    await expect(prompt({ client, root, state, sessionID: "ses_target", text: "Continue" })).rejects.toMatchObject({
       code: "cross_workspace",
     } satisfies Partial<OrchestrationError>)
 
     fs.rmSync(worktree, { recursive: true, force: true })
-    await expect(
-      prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_stale" }),
-    ).rejects.toMatchObject({
+    await expect(prompt({ client, root, state, sessionID: "ses_target", text: "Continue" })).rejects.toMatchObject({
       code: "stale_session",
     } satisfies Partial<OrchestrationError>)
     expect(promptAsync).not.toHaveBeenCalled()

@@ -58,12 +58,14 @@ import { SubagentFooter } from "./subagent-footer.tsx"
 import { filetype } from "../../util/filetype"
 import parsers from "../../parsers-config"
 import { errorMessage } from "../../util/error"
+import { running } from "../../util/session" // kilocode_change
 import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
+import { KiloSteer } from "../../kilocode/steer" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -158,9 +160,6 @@ const sessionBindingCommands = [
   "session.copy",
   "session.export",
   "session.child.first",
-  "session.parent",
-  "session.child.next",
-  "session.child.previous",
 ] as const
 
 const sessionGlobalBindingCommands = [
@@ -277,7 +276,7 @@ export function Session() {
   const blockingSuggestion = createMemo(() => blockingSuggestions()[0])
   const visible = createMemo(
     () =>
-      !session()?.parentID &&
+      KiloSteer.open(session(), sync.data.session_status?.[route.sessionID]?.type) &&
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
@@ -712,7 +711,10 @@ export function Session() {
       },
       run: async () => {
         const status = sync.data.session_status?.[route.sessionID]
-        if (status?.type !== "idle") await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change start - a scheduled session is asleep on a wakeup, with no turn to abort
+        if (status?.type !== "idle" && status?.type !== "scheduled")
+          await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change end
         const message = messagesBeforeRevert().findLast((item) => item.role === "user")
         if (!message) return
         void sdk.client.session
@@ -1915,6 +1917,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
 
 function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMessage }) {
   const ctx = use()
+  const sync = useSync() // kilocode_change
   const display = createMemo(() => toolDisplay(props.part.tool))
 
   // Hide tool if showDetails is false and tool completed successfully
@@ -1966,6 +1969,16 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         </Match>
         <Match when={display() === "semantic_search"}>
           <SemanticSearch {...toolprops} />
+        </Match>
+        <Match when={display() === "suggest"}>
+          <Suggest
+            {...toolprops}
+            InlineTool={InlineTool}
+            BlockTool={BlockTool}
+            pendingRequest={sync.data.suggestion[props.part.sessionID]?.find(
+              (item) => item.tool?.callID === props.part.callID && item.tool?.messageID === props.part.messageID,
+            )}
+          />
         </Match>
         {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
@@ -2552,7 +2565,7 @@ function Task(props: ToolProps) {
     const value = status()
     return (
       props.part.state.status === "running" ||
-      (props.metadata.background === true && value !== undefined && value.type !== "idle")
+      (props.metadata.background === true && value !== undefined && running(value.type)) // kilocode_change
     )
   })
   const retry = createMemo(() => {
@@ -3018,6 +3031,7 @@ const toolDisplays = new Set([
   "execute",
   "background_process",
   "semantic_search",
+  "suggest",
   // kilocode_change end
 ])
 

@@ -5,8 +5,10 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsPathDialog
 import ai.kilocode.client.settings.base.SettingsRow
@@ -19,10 +21,10 @@ import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import com.intellij.icons.AllIcons
@@ -66,7 +68,7 @@ internal class RulesSettingsUi(
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
     private val agent: KiloAgentBehaviorService = service(),
-) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private val cs = scope
     private val state = SettingsDraftState(rulesDraft(app.state.value.config, false), ::savedMatches)
     private val draft get() = state.draft
@@ -80,7 +82,7 @@ internal class RulesSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    override suspend fun fetch(): List<ActiveItem> {
         val compat = agent.claudeCodeCompat()
         return withContext(edt) {
             state.accept(rulesDraft(app.state.value.config, compat))
@@ -107,6 +109,12 @@ internal class RulesSettingsUi(
     )
 
     override fun showRefresh(): Boolean = false
+
+    override fun info(): JComponent = SettingsInfo(
+        KiloBundle.message("settings.rules.info"),
+        KiloBundle.message("settings.rules.info.more"),
+        KiloDocs.RULES,
+    )
 
     override fun searchPlaceholder() = KiloBundle.message("settings.rules.files.search")
 
@@ -173,7 +181,7 @@ internal class RulesSettingsUi(
             return
         }
         state.update { copy(instructions = instructions + value) }
-        view.update(rows(), ActiveListSelection.Key(value))
+        view.update(rows(), ActiveSelection.Key(value))
     }
 
     private fun editFile(path: String) {
@@ -185,7 +193,7 @@ internal class RulesSettingsUi(
         val dialog = editor(path, content)
         if (!dialog.showAndGet()) return
         state.update { copy(edited = edited + (path to dialog.content())) }
-        view.update(rows(), ActiveListSelection.Key(path))
+        view.update(rows(), ActiveSelection.Key(path))
     }
 
     private fun remove(path: String) {
@@ -198,7 +206,7 @@ internal class RulesSettingsUi(
         )
         if (result != Messages.YES) return
         state.update { copy(instructions = instructions - path, edited = edited - path) }
-        view.update(rows(), ActiveListSelection.Slide)
+        view.update(rows(), ActiveSelection.Slide)
     }
 
     private fun open(path: String) {
@@ -229,23 +237,23 @@ internal class RulesSettingsUi(
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(): List<ActiveListItem> = draft.instructions.map { item(it) }
+    private fun rows(): List<ActiveItem> = draft.instructions.map { item(it) }
 
-    private fun item(value: String) = object : ActiveListItem {
+    private fun item(value: String) = object : ActiveItem {
         override val key = value
         override val title = value
         override val doubleClick = EDIT_CELL
         override val cells = listOf(
-            ActiveListCell(
+            ActiveCell(
                 OPEN_CELL,
                 KiloBundle.message("settings.rules.files.openInEditor"),
                 primary = true,
             ),
-            ActiveListCell(
+            ActiveCell(
                 EDIT_CELL,
                 KiloBundle.message("settings.agentBehavior.edit"),
             ),
-            ActiveListCell(
+            ActiveCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,

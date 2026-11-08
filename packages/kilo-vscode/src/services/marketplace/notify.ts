@@ -23,7 +23,7 @@ export function selectSuggestions(
 }
 
 export interface SuggestionChoice {
-  action: "install" | "dismiss"
+  action: "install" | "dismiss" | "details"
   item: MarketplaceItem
 }
 
@@ -35,19 +35,23 @@ function describe(item: MarketplaceItem): string {
 }
 
 /**
- * Show a native VS Code notification for a matched item, offering a direct install
- * and a persistent "Don't show again" dismissal. Resolves with the user's choice,
- * or `undefined` if the toast was closed without picking an action.
+ * Show a native VS Code notification for a matched item, offering a direct install,
+ * a "View details" action that opens the item in the Kilo Marketplace panel, and a
+ * persistent "Don't show again" dismissal. Resolves with the user's choice, or
+ * `undefined` if the toast was closed without picking an action.
  */
 export async function showSuggestionNotification(item: MarketplaceItem): Promise<SuggestionChoice | undefined> {
   const install = "Install"
+  const details = "View details"
   const dismiss = "Don't show again"
   const picked = await vscode.window.showInformationMessage(
     `Kilo found ${describe(item)} that matches this workspace. Install it?`,
     install,
+    details,
     dismiss,
   )
   if (picked === install) return { action: "install", item }
+  if (picked === details) return { action: "details", item }
   if (picked === dismiss) return { action: "dismiss", item }
   return undefined
 }

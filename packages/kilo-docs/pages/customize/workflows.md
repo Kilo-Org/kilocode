@@ -60,6 +60,10 @@ You are helping submit a pull request...
 | `variant` | Reasoning effort variant override (for example `low` or `high`), for models that support variants |
 | `subtask` | When `true`, runs as a sub-agent session |
 
+### Reserved Names
+
+`goal` is reserved for [session goals](/docs/code-with-ai/agents/goals). A command named `goal` in your config or from a plugin is ignored under that name — Kilo reports a configuration warning and keeps `/goal` for its own command, but the command you defined is still reachable as `/goal:command`, the same way a skill that collides with a command is offered as `/name:skill`.
+
 ### Model and Reasoning Variant
 
 Each workflow can run with its own model and reasoning effort variant. In the VS Code extension, open **Settings → Agent Behaviour → Workflows**, expand a workflow, and choose a model and variant. The selection is saved as a command override in your global config, so the workflow's template file stays unchanged.

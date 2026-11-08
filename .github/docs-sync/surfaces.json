@@ -5,7 +5,6 @@
     "reviewers": ["lambertjosh", "intentionally-left-nil"],
     "docs": [
       "packages/kilo-docs/pages/community/",
-      "packages/kilo-docs/pages/kiloclaw/",
       "packages/kilo-docs/pages/contributing/",
       "packages/kilo-docs/LEARNINGS.md",
       "docs/"

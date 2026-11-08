@@ -103,7 +103,7 @@ Goal-composer mode accepts multiline objectives and file or image attachments. I
 
 ## Limits and integration
 
-- A custom command or an MCP prompt named `goal` is reserved. Kilo rejects it and reports an error; rename it.
+- A custom command named `goal` (from your config or a plugin) is reserved for this feature. Kilo ignores it, reports a configuration warning, and makes it available as `/goal:command` instead of running it as `/goal`.
 - The goal is stored under the `kilo.goal` session metadata key.
 - Headless mode supports only status and controls through `kilo run --command goal`, which accepts no argument, `pause`, or `clear`. The agent can still start or resume a goal itself with the `goal` tool.
 

@@ -97,7 +97,8 @@ export class AutocompleteServiceManager {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
 
     // Register the providers
-    this.codeActionProvider = new AutocompleteCodeActionProvider()
+    this.nextEditSuggestionManager = new NextEditSuggestionManager()
+    this.codeActionProvider = new AutocompleteCodeActionProvider(() => this.nextEditSuggestionManager.isPending())
     this.inlineCompletionProvider = new AutocompleteInlineCompletionProvider(
       this.context,
       DEFAULT_AUTOCOMPLETE_MODEL.id,
@@ -113,7 +114,6 @@ export class AutocompleteServiceManager {
       this.ignoreControllerSync = ic
     })
 
-    this.nextEditSuggestionManager = new NextEditSuggestionManager()
     this.nextEditProvider = new NextEditInlineCompletionProvider({
       connectionService,
       suggestionManager: this.nextEditSuggestionManager,

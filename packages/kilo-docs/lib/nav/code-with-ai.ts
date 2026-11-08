@@ -35,7 +35,6 @@ export const CodeWithAiNav: NavSection[] = [
   {
     title: "Features",
     links: [
-      { href: "/code-with-ai/app-builder", children: "App Builder" },
       {
         href: "/code-with-ai/gastown",
         children: "Gas Town by Kilo",

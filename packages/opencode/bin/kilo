@@ -207,14 +207,25 @@ function findBinary(startDir) {
   }
 }
 
+// kilocode_change start
 const resolved = envPath || (fs.existsSync(cached) ? cached : findBinary(scriptDir))
 if (!resolved) {
-  console.error(
-    "It seems that your package manager failed to install the right version of the Kilo CLI for your platform. You can try manually installing " +
-      names.map((n) => `\"${n}\"`).join(" or ") +
-      " package",
-  )
+  if (platform === "windows" && arch === "arm64") {
+    console.error(
+      "The Kilo CLI native binary for Windows ARM64 could not be found.\n" +
+      "If the native package is unavailable, you can try downloading the pre-built x64 binary from the GitHub Releases page to run under Windows 11 emulation.\n" +
+      "Alternatively, use WSL2 with the Linux ARM64 build."
+    )
+  } else {
+    console.error(
+      "It seems that your package manager failed to install the right version of the Kilo CLI for your platform.\n" +
+      "You can try manually installing the " +
+        names.map((n) => `"${n}"`).join(" or ") +
+        " package, or download a pre-built binary from the GitHub Releases page."
+    )
+  }
   process.exit(1)
 }
+// kilocode_change end
 
 run(resolved, resolved === cached ? () => findBinary(scriptDir) : undefined) // kilocode_change - preserve cached binary fallback

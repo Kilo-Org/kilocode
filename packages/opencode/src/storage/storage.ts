@@ -3,6 +3,7 @@ import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Exit, Layer, Option, RcMap, Schema, Context, TxReentrantLock } from "effect"
+import { Fiber, Scope } from "effect" // kilocode_change
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Git } from "@/git"
 
@@ -225,7 +226,10 @@ const make = (root?: string) =>
         lookup: () => TxReentrantLock.make(),
         idleTimeToLive: 0,
       })
-      const state = yield* Effect.cached(
+      // kilocode_change - run the one-time init in the layer scope. Effect.cached keeps the first
+      // exit, so a first caller that was interrupted during init made every later call fail.
+      const scope = yield* Scope.Scope // kilocode_change
+      const boot = yield* Effect.cached(
         Effect.gen(function* () {
           const dir = root ?? path.join(Global.Path.data, "storage")
           const marker = path.join(dir, "migration")
@@ -245,8 +249,12 @@ const make = (root?: string) =>
             yield* fs.writeWithDirs(marker, String(i + 1))
           }
           return { dir }
-        }),
+        }).pipe(Effect.forkIn(scope)), // kilocode_change
       )
+      // kilocode_change - callers only wait for the init fiber, so an interrupted caller cannot stop or poison it
+      const state = Effect.uninterruptibleMask((restore) =>
+        boot.pipe(Effect.flatMap((fiber) => restore(Fiber.join(fiber)))),
+      ) // kilocode_change
 
       const fail = (target: string): Effect.Effect<never, NotFoundError> =>
         Effect.fail(new NotFoundError({ message: `Resource not found: ${target}` }))

@@ -22,6 +22,7 @@ export const DocumentPanelHost: Component<Props> = (props) => (
     onCloseOthers={props.inspector.documents.closeOthers}
     onReorder={props.inspector.documents.reorder}
     onOpenFile={props.inspector.openFile}
+    onCopyPath={props.inspector.copyPath}
     onClosePanel={props.onClosePanel}
     onSendAll={props.onSendAll}
     activeTerminalId={props.activeTerminalId}

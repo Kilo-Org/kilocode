@@ -3,11 +3,14 @@ package ai.kilocode.client.settings.agents
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloMarketplaceService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.DirectoryReadyConfigurable
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.SettingsPathDialog
@@ -19,14 +22,15 @@ import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.CodeViewField
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
 import ai.kilocode.rpc.dto.SkillDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.SkillsPatchDto
@@ -85,10 +89,11 @@ internal class SkillsSettingsUi(
         SettingsPathDialog(sourceDialogTitle(adding, path), value, if (path) choose else null)
     },
     private val edit: (SkillDto, Boolean) -> SkillEditDialogHandle = ::SkillEditDialog,
-) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveConfig.Equal.copy(tooltip = false, keepActions = true)), SettingsDraftPage {
     private val cs = scope
     private var dir = dir
     private var skills = emptyMap<String, SkillDto>()
+    private var bundles = emptyList<MarketplaceBundleDto>()
     private val app get() = service<KiloAppService>()
     private val state = SettingsDraftState(skillsDraft(app.state.value.config?.skills ?: SkillsConfigDto()), ::saved)
     private var draft: SkillsDraft
@@ -110,16 +115,27 @@ internal class SkillsSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    /** A Marketplace install or removal can add or drop skills while this page sits open. */
+    override fun refreshOnFocus(): Boolean = true
+
+    override suspend fun fetch(): List<ActiveItem> {
         val items = withTimeoutOrNull(SKILL_LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadSkills(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.skills.load.timeout"))
+        val owned = ownedBundles(dir)
         withContext(edt) {
             val dirty = state.modified()
             val edit = draft
             state.accept(skillsDraft(config()))
-            if (dirty) draft = state.draft.copy(edited = edit.edited, deleted = edit.deleted)
+            if (dirty) {
+                draft = state.draft.copy(
+                    edited = edit.edited,
+                    deleted = edit.deleted,
+                    uninstalls = edit.uninstalls,
+                )
+            }
             skills = items.associateBy { key(it) }
+            bundles = owned
             sources.refresh(draft.sources)
         }
         LOG.info("skills settings fetch dir=$dir total=${items.size}")
@@ -145,6 +161,12 @@ internal class SkillsSettingsUi(
 
     override fun tailActions(): List<AnAction> = listOf(marketplaceAction("settings_skills"))
 
+    override fun info(): JComponent = SettingsInfo(
+        KiloBundle.message("settings.agentBehavior.skills.info"),
+        KiloBundle.message("settings.agentBehavior.skills.info.more"),
+        KiloDocs.SKILLS,
+    )
+
     internal fun updateSources(paths: List<String>, urls: List<String>) {
         state.update { copy(sources = SkillsConfigDto(paths = paths, urls = urls)) }
         sources.refresh(draft.sources)
@@ -169,6 +191,15 @@ internal class SkillsSettingsUi(
             LOG.info("skills settings apply start dir=$dir edited=${target.edited.size} deleted=${target.deleted.size} paths=${target.sources.paths.size} urls=${target.sources.urls.size}")
             if (target.edited.isNotEmpty() && !behavior.saveSkills(dir, target.edited)) {
                 failed = KiloBundle.message("settings.agentBehavior.save.failed")
+            }
+            if (failed == null) {
+                for (bundle in target.uninstalls) {
+                    val result = service<KiloMarketplaceService>().remove(dir, bundle.id, "mcp", bundle.scope)
+                    if (!result.success) {
+                        failed = result.error ?: KiloBundle.message("settings.marketplace.remove.failed")
+                        break
+                    }
+                }
             }
             if (failed == null) {
                 for (location in target.deleted) {
@@ -217,37 +248,37 @@ internal class SkillsSettingsUi(
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(items: List<SkillDto> = skills.values.toList()): List<ActiveListItem> = items.mapNotNull { skill ->
-        if (skill.location in draft.deleted) return@mapNotNull null
+    private fun rows(items: List<SkillDto> = skills.values.toList()): List<ActiveItem> = items.mapNotNull { skill ->
+        if (skill.location in draft.deleted || draft.uninstalls.any { skill.location in it.skills }) return@mapNotNull null
         item(skill)
     }
 
     private fun skillFallback(target: SkillsDraft): List<SkillDto> = skills.values.mapNotNull { skill ->
-        if (skill.location in target.deleted) return@mapNotNull null
+        if (skill.location in target.deleted || target.uninstalls.any { skill.location in it.skills }) return@mapNotNull null
         target.edited[skill.location]?.let { skill.copy(content = it) } ?: skill
     }
 
-    private fun item(skill: SkillDto) = object : ActiveListItem {
+    private fun item(skill: SkillDto) = object : ActiveItem {
         override val key = key(skill)
         override val title = skill.name
         override val note = skill.location.takeUnless { builtin(it) }
         override val description = skill.description
         override val doubleClick = EDIT_CELL
         override val badges = listOf(
-            ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
+            ActiveBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
         ).takeIf { builtin(skill.location) } ?: emptyList()
         override val cells = listOfNotNull(
-            ActiveListCell(
+            ActiveCell(
                 OPEN_CELL,
                 KiloBundle.message("settings.agentBehavior.skills.openInEditor"),
                 primary = true,
             ).takeIf { skill.editable },
-            ActiveListCell(
+            ActiveCell(
                 EDIT_CELL,
                 KiloBundle.message(if (skill.editable) "settings.agentBehavior.edit" else "common.open"),
                 primary = !skill.editable,
             ),
-            ActiveListCell(
+            ActiveCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,
@@ -265,7 +296,7 @@ internal class SkillsSettingsUi(
         }
         if (!dialog.showAndGet()) return
         state.update { copy(edited = edited + (skill.location to dialog.content())) }
-        view.update(rows(), ActiveListSelection.Key(key(skill)))
+        view.update(rows(), ActiveSelection.Key(key(skill)))
     }
 
     private fun open(skill: SkillDto) {
@@ -279,16 +310,32 @@ internal class SkillsSettingsUi(
     }
 
     private fun remove(skill: SkillDto) {
+        val bundle = bundles.singleOrNull { skill.location in it.skills }
         val result = Messages.showYesNoDialog(
-            KiloBundle.message("settings.agentBehavior.skills.delete.message", skill.name),
+            if (bundle == null) {
+                KiloBundle.message("settings.agentBehavior.skills.delete.message", skill.name)
+            } else {
+                KiloBundle.message("settings.agentBehavior.skills.delete.bundle.message", skill.name, bundle.id)
+            },
             KiloBundle.message("settings.agentBehavior.skills.delete.title"),
             KiloBundle.message("common.delete"),
             Messages.getCancelButton(),
             Messages.getQuestionIcon(),
         )
         if (result != Messages.YES) return
+        if (bundle != null) {
+            state.update {
+                copy(
+                    deleted = deleted - bundle.skills.toSet(),
+                    edited = edited - bundle.skills.toSet(),
+                    uninstalls = uninstalls + bundle,
+                )
+            }
+            view.update(rows(), ActiveSelection.Slide)
+            return
+        }
         state.update { copy(deleted = deleted + skill.location, edited = edited - skill.location) }
-        view.update(rows(), ActiveListSelection.Slide)
+        view.update(rows(), ActiveSelection.Slide)
     }
 
     private fun content(skill: SkillDto) = draft.edited[skill.location] ?: skill.content
@@ -317,6 +364,7 @@ private data class SkillsDraft(
     val sources: SkillsConfigDto,
     val edited: Map<String, String> = emptyMap(),
     val deleted: Set<String> = emptySet(),
+    val uninstalls: Set<MarketplaceBundleDto> = emptySet(),
 )
 
 private fun skillsDraft(sources: SkillsConfigDto) = SkillsDraft(sources)
@@ -357,7 +405,8 @@ internal class SkillSourcesView(
 ) : Stack(ai.kilocode.client.ui.layout.StackAxis.VERTICAL, UiStyle.Gap.sm()) {
     private val view = ActiveListView(
         KiloBundle.message("settings.agentBehavior.skills.sources.empty"),
-        ActiveListConfig(description = false, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
+        ActiveConfig(description = false),
+        options = ai.kilocode.client.ui.list.ActiveListOptions(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
     ) { key, id ->
         if (id == EDIT_CELL) edit(key)
     }
@@ -409,13 +458,13 @@ internal class SkillSourcesView(
         parent.updateSources(cfg.paths, cfg.urls + url)
     }
 
-    private fun rows(config: SkillsConfigDto): List<ActiveListItem> {
+    private fun rows(config: SkillsConfigDto): List<ActiveItem> {
         val paths = config.paths.map { source(PATH_PREFIX, it) }
         val urls = config.urls.map { source(URL_PREFIX, it) }
         return paths + urls
     }
 
-    private fun source(prefix: String, value: String) = object : ActiveListItem {
+    private fun source(prefix: String, value: String) = object : ActiveItem {
         override val key = prefix + value
         override val title = value
         override val doubleClick = EDIT_CELL

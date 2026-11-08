@@ -32,7 +32,7 @@ import { streamText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 
@@ -60,7 +60,7 @@ import OpenAI from "openai"
 
 const client = new OpenAI({
   apiKey: process.env.KILO_API_KEY,
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
 })
 
 const stream = await client.chat.completions.create({
@@ -85,7 +85,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    base_url="https://ai-gateway.kilo.ai/api/v1",
 )
 
 stream = client.chat.completions.create(
@@ -141,7 +141,7 @@ You can cancel a streaming request by aborting the connection. This stops token 
 ```typescript
 const controller = new AbortController()
 
-const response = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
+const response = await fetch("https://ai-gateway.kilo.ai/api/v1/chat/completions", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${process.env.KILO_API_KEY}`,
