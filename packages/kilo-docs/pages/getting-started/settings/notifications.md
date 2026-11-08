@@ -5,7 +5,7 @@ description: "Configure sounds and alerts when Kilo needs your attention"
 
 # Notifications
 
-Kilo can play a sound, show a VS Code notification, or show a native operating system notification when a session needs your attention. All three are off by default.
+Kilo can play a sound, show a VS Code notification, or show a native operating system notification when a session needs your attention. VS Code notifications are on by default. Sounds and native notifications are off by default.
 
 {% tabs %}
 {% tab label="VS Code" %}
@@ -17,7 +17,7 @@ Open Kilo Code Settings with the gear icon ({% codicon name="gear" /%}) and sele
 | Enable Sound Notifications | `kilo-code.new.attention.enabled` | `false` | Play a sound when a session completes, errors, or needs input. |
 | Sound | `kilo-code.new.attention.sound` | `default` | Select the sound. `default` uses a different sound per event; other choices use one sound for every event. |
 | Enable OS Notifications | `kilo-code.new.attention.OSNotifications` | `false` | Show a native notification when the VS Code window is not focused. |
-| Enable VS Code Notifications | `kilo-code.new.attention.notifications` | `false` | Show a VS Code notification when the affected session is not visible. |
+| Enable VS Code Notifications | `kilo-code.new.attention.notifications` | `true` | Show a VS Code notification when the affected session is not visible. |
 
 The sound picker and its **Test** button appear when sound notifications are enabled. **Test** plays the selected sound.
 
