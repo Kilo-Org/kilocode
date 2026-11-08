@@ -17,9 +17,13 @@ import type {
  * Only runs on Linux to avoid blocking startup on other platforms.
  */
 let TERMINAL_WINDOW_ID: string | undefined
+let TERMINAL_DESKTOP_ID: string | undefined
 if (process.platform === "linux") {
   try {
     TERMINAL_WINDOW_ID = execSync("xdotool getactivewindow", { encoding: "utf-8" }).trim()
+    if (TERMINAL_WINDOW_ID) {
+      TERMINAL_DESKTOP_ID = execSync(`xdotool get_desktop_for_window ${TERMINAL_WINDOW_ID}`, { encoding: "utf-8" }).trim()
+    }
   } catch {
     // xdotool not available; window focus on click will be skipped
   }
@@ -231,6 +235,11 @@ export function createTuiAttention(input: {
                       return
                     }
                     if (stdout?.trim() === "default" && TERMINAL_WINDOW_ID) {
+                      // First, switch to the workspace where the terminal is located
+                      if (TERMINAL_DESKTOP_ID) {
+                        execFile("xdotool", ["set_desktop", TERMINAL_DESKTOP_ID], () => {})
+                      }
+                      // Then, activate the terminal window itself
                       execFile("xdotool", ["windowactivate", TERMINAL_WINDOW_ID], () => {})
                     }
                     resolve(true)
