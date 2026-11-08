@@ -1790,7 +1790,7 @@ REWRITTEN:`
                       sessionID={route.sessionID}
                       directory={session()?.directory}
                       right={
-                        <box flexDirection="row" gap={1}>
+                        <box flexDirection="row" justifyContent="flex-end" marginRight={-1}>
                           <text onMouseDown={() => optimizePrompt()} fg={optimizing() ? theme.warning : theme.text}>
                             <b>{optimizing() ? "..." : "[+]"}</b>
                           </text>
