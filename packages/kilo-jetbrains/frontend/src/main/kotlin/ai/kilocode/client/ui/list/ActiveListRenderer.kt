@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveHit
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMenu
 import ai.kilocode.client.ui.active.ActiveRenderState
@@ -23,6 +24,7 @@ import java.awt.image.BufferedImage
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
+import javax.swing.SwingUtilities
 
 /**
  * List adapter around the container-neutral [ActiveRenderer]. It owns the list-only section band,
@@ -121,6 +123,12 @@ internal class ActiveListRenderer(
         bodyHeight = height
     }
 
+    /** Hit regions of the row body's buttons, in cell coordinates. */
+    fun buttons(x: Int, y: Int): List<ActiveHit> {
+        val origin = SwingUtilities.convertPoint(body, 0, 0, this)
+        return body.buttons(x + origin.x, y + origin.y)
+    }
+
     fun bodyPreferredHeight(
         list: JList<out ActiveItem>,
         value: ActiveItem,
@@ -163,7 +171,8 @@ internal class ActiveListRenderer(
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val selection = UIUtil.getListBackground(true, active)
-        val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
+        val hover = list as? ActiveListActive
+        val hovered = hover?.hoveredIndex() == index
         val show = when {
             cfg.hoverActions -> list.isEnabled && selected && hovered
             cfg.keepActions -> selected && list.isEnabled
@@ -185,6 +194,7 @@ internal class ActiveListRenderer(
             width = list.width,
             actionsVisible = show,
             menuVisible = list.isEnabled && hovered && menu?.available(value) == true,
+            hoveredCell = if (hovered) hover?.hoveredCell() else null,
             opaque = true,
             bodyHeight = bodyHeight,
         )
@@ -195,4 +205,6 @@ internal interface ActiveListActive {
     fun active(): Boolean
 
     fun hoveredIndex(): Int = -1
+
+    fun hoveredCell(): String? = null
 }

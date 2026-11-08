@@ -31,6 +31,8 @@ data class TranscriptDisplay(
     val terminal: BlockDisplay = BlockDisplay.EXPANDED,
     val codeEdit: BlockDisplay = BlockDisplay.COLLAPSED,
     val mcpTool: BlockDisplay = BlockDisplay.COLLAPSED,
+    /** JetBrains-only: VS Code has no display setting for answered question cards to mirror. */
+    val question: BlockDisplay = BlockDisplay.EXPANDED,
     val approvalReason: Boolean = true,
     val hoverPreview: Boolean = true,
 )

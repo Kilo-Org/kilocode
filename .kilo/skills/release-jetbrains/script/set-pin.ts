@@ -139,7 +139,7 @@ async function pushLock(version: string, previous: string, branch: string) {
     // approaching. Write the raw bytes to a file so the guard's byte-for-byte
     // comparison sees exactly what GitHub stores; reading through command
     // substitution can normalize the trailing newline.
-    await $`gh api ${`${api}?ref=${branch}`} -H "Accept: application/vnd.github.raw" --output ${tmp}`.quiet()
+    await $`gh api ${`${api}?ref=${branch}`} -H ${"Accept: application/vnd.github.raw"} > ${tmp}`.quiet()
     const text = await readFile(tmp, "utf8")
     // Replace the workspace entry's current version rather than anchoring on
     // origin/main's version: an already-stale lockfile must heal, not silently

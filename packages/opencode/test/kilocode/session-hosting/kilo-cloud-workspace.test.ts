@@ -35,7 +35,7 @@ type State = {
   status: "ok" | "mismatch" | "invalid" | "unauthorized" | "conflict" | "unavailable"
   create: "ok" | "forbidden" | "conflict" | "notfound" | "payment" | "unavailable" | "mismatch"
   session: "ok" | "mismatch"
-  profiles: "ok" | "direct" | "unauthorized" | "unavailable" | "invalid"
+  profiles: "ok" | "unauthorized" | "unavailable" | "invalid"
   membership: "default" | "nested" | "outer" | "wrong" | "flat" | "failure"
   remove: "ok" | "invalid"
   creates: number
@@ -165,30 +165,47 @@ function harness() {
         return Response.json(sessionInfo(SESSION))
       }
 
-      if (url.pathname === "/api/trpc/agentProfiles.list") {
+      if (url.pathname === "/trpc/listHostedWorkspaceProfiles") {
         if (state.profiles === "unauthorized") return error("UNAUTHORIZED", 401)
         if (state.profiles === "unavailable") return error("SERVICE_UNAVAILABLE", 503)
-        if (state.profiles === "invalid") return envelope({ json: [{ nope: true }] })
-        if (state.profiles === "direct") {
-          return Response.json({
-            result: { data: [{ id: "profile_2", name: "Direct", description: "Visible", isDefault: false }] },
-          })
-        }
+        if (state.profiles === "invalid") return envelope({ personalProfiles: [{ nope: true }] })
+        const scoped = Object(JSON.parse(new URL(url).searchParams.get("input") ?? "{}")).kilocodeOrganizationId
         return envelope({
-          json: [
+          personalProfiles: [
             {
               id: "profile_1",
-              name: "Default",
+              name: "Personal",
               description: null,
-              isDefault: true,
-              varCount: 2,
-              varValues: ["SECRET_VALUE"],
-              envVars: { SECRET: "SECRET_VALUE" },
-              setupCommands: ["echo SECRET_VALUE"],
-              appendSystemPrompt: "SECRET_VALUE",
+              ownerType: "user",
+              isPersonalDefault: true,
+              isOrganizationDefault: false,
             },
           ],
+          organizationProfiles:
+            scoped === undefined
+              ? []
+              : [
+                  {
+                    id: "profile_2",
+                    name: "Organization",
+                    description: "Visible",
+                    ownerType: "organization",
+                    isPersonalDefault: false,
+                    isOrganizationDefault: true,
+                  },
+                ],
+          personalDefaultProfileId: "profile_1",
+          organizationDefaultProfileId: scoped === undefined ? null : "profile_2",
+          effectiveDefaultProfileId: "profile_1",
         })
+      }
+
+      if (url.pathname === "/trpc/setHostedWorkspacePersonalDefaultProfile") {
+        return envelope({ success: true })
+      }
+
+      if (url.pathname === "/trpc/clearHostedWorkspacePersonalDefaultProfile") {
+        return envelope({ success: true })
       }
 
       if (url.pathname === "/trpc/listHostedWorkspaces") {
@@ -282,7 +299,9 @@ function harness() {
           workspaceId: WORKSPACE,
           cloudAgentSessionId: CLOUD,
           kiloSessionId: SESSION,
-          messageId: state.create === "mismatch" ? "msg_000000000000000000000000ff" : input.message.id,
+          ...(input.message === undefined
+            ? {}
+            : { messageId: state.create === "mismatch" ? "msg_000000000000000000000000ff" : input.message.id }),
           replayed: state.creates > 1,
         })
       }
@@ -528,6 +547,61 @@ it.effect("creates a workspace with a fixed provenance and never returns a Cloud
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
+it.effect("creates an empty workspace without a profile or initial prompt", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    const result = yield* cloud.createWorkspace({
+      repository: repo,
+      agent,
+      operationKey: OPERATION,
+      organizationID: ORG,
+    })
+    expect(result).toEqual({
+      workspace: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      session: { providerID: PROVIDER, sessionID: SESSION },
+      replayed: false,
+    })
+
+    const body = Object(JSON.parse(app.calls[0].body))
+    expect(body).toMatchObject({
+      operationKey: OPERATION,
+      clientProvenance: "agent-manager",
+      repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
+      agent,
+      options: { kilocodeOrganizationId: ORG },
+    })
+    expect(body).not.toHaveProperty("profile")
+    expect(body).not.toHaveProperty("message")
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("rejects a workspace create that supplies only one of prompt and messageID", () =>
+  Effect.gen(function* () {
+    const cloud = client("http://127.0.0.1:1")
+    expect(
+      yield* cloud
+        .createWorkspace({
+          repository: repo,
+          prompt: "Do the thing",
+          agent,
+          operationKey: OPERATION,
+        })
+        .pipe(Effect.flip),
+    ).toMatchObject({ code: "invalid_request", retryable: false })
+    expect(
+      yield* cloud
+        .createWorkspace({
+          repository: repo,
+          messageID: MESSAGE,
+          agent,
+          operationKey: OPERATION,
+        })
+        .pipe(Effect.flip),
+    ).toMatchObject({ code: "invalid_request", retryable: false })
+  }),
+)
+
 it.effect("replays an idempotent create and rejects a different message identity", () => {
   const app = harness()
   const input = {
@@ -652,27 +726,53 @@ it.effect("maps membership, payment, conflict, not-found and unavailable failure
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
-it.effect("lists authorized profile summaries with the resolved organization and no secret inputs", () => {
+it.effect("lists personal and organization profiles with their default flags and no secret inputs", () => {
   const app = harness()
   return Effect.gen(function* () {
     const cloud = client(app.url)
     const page = yield* cloud.listWorkspaceProfiles({ organizationID: ORG })
     expect(page).toEqual({
-      items: [{ id: "profile_1", name: "Default", description: null, isDefault: true }],
+      personalProfiles: [
+        {
+          id: "profile_1",
+          name: "Personal",
+          description: null,
+          ownerType: "user",
+          isPersonalDefault: true,
+          isOrganizationDefault: false,
+        },
+      ],
+      organizationProfiles: [
+        {
+          id: "profile_2",
+          name: "Organization",
+          description: "Visible",
+          ownerType: "organization",
+          isPersonalDefault: false,
+          isOrganizationDefault: true,
+        },
+      ],
+      personalDefaultProfileID: "profile_1",
+      organizationDefaultProfileID: "profile_2",
+      effectiveDefaultProfileID: "profile_1",
     })
 
     expect(app.calls).toHaveLength(1)
     const scoped = app.calls[0]
     expect(scoped).toMatchObject({
       method: "GET",
-      path: "/api/trpc/agentProfiles.list",
-      auth: `Bearer ${TOKEN}`,
+      path: "/trpc/listHostedWorkspaceProfiles",
+      auth: `Bearer ${CONTROL}`,
       org: ORG,
     })
-    expect(JSON.parse(new URL(scoped.search, app.url).searchParams.get("input")!)).toEqual({ organizationId: ORG })
+    expect(JSON.parse(new URL(scoped.search, app.url).searchParams.get("input")!)).toEqual({
+      kilocodeOrganizationId: ORG,
+    })
 
     const unscoped = yield* cloud.listWorkspaceProfiles()
-    expect(unscoped.items).toEqual(page.items)
+    expect(unscoped.organizationProfiles).toEqual([])
+    expect(unscoped.organizationDefaultProfileID).toBe(null)
+    expect(unscoped.effectiveDefaultProfileID).toBe("profile_1")
     expect(JSON.parse(new URL(app.calls[1].search, app.url).searchParams.get("input")!)).toEqual({})
     expect(app.calls[1].org).toBe(null)
 
@@ -683,15 +783,28 @@ it.effect("lists authorized profile summaries with the resolved organization and
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
-it.effect("accepts a result.data profile array and maps profile failures", () => {
+it.effect("sets and clears the personal default profile with the caller identity", () => {
   const app = harness()
   return Effect.gen(function* () {
     const cloud = client(app.url)
 
-    app.state.profiles = "direct"
-    expect((yield* cloud.listWorkspaceProfiles()).items).toEqual([
-      { id: "profile_2", name: "Direct", description: "Visible", isDefault: false },
+    expect(yield* cloud.setWorkspacePersonalDefaultProfile({ id: PROFILE })).toEqual({ success: true })
+    expect(yield* cloud.clearWorkspacePersonalDefaultProfile({ id: PROFILE })).toEqual({ success: true })
+
+    expect(app.calls).toMatchObject([
+      { method: "POST", path: "/trpc/setHostedWorkspacePersonalDefaultProfile" },
+      { method: "POST", path: "/trpc/clearHostedWorkspacePersonalDefaultProfile" },
     ])
+    expect(JSON.parse(app.calls[0].body)).toEqual({ profileId: PROFILE })
+    expect(JSON.parse(app.calls[1].body)).toEqual({ profileId: PROFILE })
+    expect(app.calls[0].auth).toBe(`Bearer ${CONTROL}`)
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("maps profile failures", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
 
     app.state.profiles = "unauthorized"
     expect(yield* cloud.listWorkspaceProfiles().pipe(Effect.flip)).toMatchObject({

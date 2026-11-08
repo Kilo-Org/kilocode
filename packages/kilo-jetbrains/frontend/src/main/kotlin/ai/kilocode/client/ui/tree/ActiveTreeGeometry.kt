@@ -1,7 +1,6 @@
 package ai.kilocode.client.ui.tree
 
 import ai.kilocode.client.ui.active.ActiveHit
-import ai.kilocode.client.ui.active.activeHitCells
 import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.active.activePlaceholder
 import ai.kilocode.client.session.ui.PickerRow
@@ -167,7 +166,7 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
             val comp = renderer.component(view.state(entry, selected, view.hasFocus(), cell.width))
             comp.setBounds(0, 0, cell.width, cell.height)
             activeLayout(comp)
-            activeHitCells(comp, cell.x, cell.y)
+            renderer.buttons(cell.x, cell.y)
         }.orEmpty()
     }
 

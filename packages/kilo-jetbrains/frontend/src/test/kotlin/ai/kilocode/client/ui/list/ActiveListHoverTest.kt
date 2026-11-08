@@ -1,10 +1,20 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ACTIVE_MENU_CELL
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.actionSystem.DataKey
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.CollectionListModel
 import com.intellij.util.ui.UIUtil
+import java.awt.Point
 import java.awt.event.MouseEvent
 import javax.swing.JPanel
+
+private const val BADGE = "pull-request"
 
 /**
  * The hover seam a row popup hangs off. Every path that clears hover has to report it, or a popup opened
@@ -86,6 +96,75 @@ class ActiveListHoverTest : BasePlatformTestCase() {
         assertNull(view.hoveredBounds(pane))
     }
 
+    fun `test a badge under the pointer is the only hovered cell`() {
+        val view = view()
+        view.update(listOf(badgeRow("a"), badgeRow("b")))
+        layout(view)
+        val first = activeListCellBounds(view.list, 0, false).getValue(BADGE)
+        val second = activeListCellBounds(view.list, 1, false).getValue(BADGE)
+
+        move(view, Point(first.centerX.toInt(), first.centerY.toInt()))
+        assertEquals(BADGE, state(view, 0).hoveredCell)
+        assertNull(state(view, 1).hoveredCell)
+
+        move(view, Point(second.centerX.toInt(), second.centerY.toInt()))
+        assertNull(state(view, 0).hoveredCell)
+        assertEquals(BADGE, state(view, 1).hoveredCell)
+    }
+
+    fun `test leaving a badge clears the hovered cell`() {
+        val view = view()
+        view.update(listOf(badgeRow("a")))
+        layout(view)
+        val badge = activeListCellBounds(view.list, 0, false).getValue(BADGE)
+        move(view, Point(badge.centerX.toInt(), badge.centerY.toInt()))
+        assertEquals(BADGE, state(view, 0).hoveredCell)
+
+        exit(view)
+
+        assertNull(state(view, 0).hoveredCell)
+    }
+
+    fun `test moving off the badge clears the cell but keeps the row`() {
+        val view = view()
+        view.update(listOf(badgeRow("a")))
+        val pane = layout(view)
+        val badge = activeListCellBounds(view.list, 0, false).getValue(BADGE)
+        move(view, Point(badge.centerX.toInt(), badge.centerY.toInt()))
+
+        move(view, 0)
+
+        assertNull(state(view, 0).hoveredCell)
+        assertNotNull(view.hoveredBounds(pane))
+    }
+
+    fun `test the row menu glyph is the hovered cell under the pointer`() {
+        val key = DataKey.create<ActiveItem>("test.activeList.hover.menu")
+        val menu = ActiveMenu(key, DefaultActionGroup(), element = { it })
+        val view = ActiveListView("", menu = menu) { _, _ -> }
+        view.update(rows("a"))
+        layout(view)
+        // The glyph is revealed by row hover first, then becomes a hit target.
+        move(view, 0)
+        val area = activeListCellBounds(view.list, 0, false).getValue(ACTIVE_MENU_CELL)
+        move(view, Point(area.centerX.toInt(), area.centerY.toInt()))
+
+        assertEquals(ACTIVE_MENU_CELL, state(view, 0).hoveredCell)
+    }
+
+    private fun state(view: ActiveListView, index: Int) =
+        ActiveListRenderer(CollectionListModel<ActiveItem>())
+            .state(view.list, view.list.model.getElementAt(index), index, false, false)
+
+    private fun badgeRow(key: String): ActiveItem = object : ActiveItem {
+        override val key = key
+        override val title = key
+        override val search = key
+        override val secondaryBadges = listOf(
+            ActiveBadge("#1", UiStyle.Badge.PullRequestOpen, id = BADGE, action = {}),
+        )
+    }
+
     private fun view(): ActiveListView {
         return ActiveListView("", onHover = { item -> seen.add(item?.key) }) { _, _ -> }
     }
@@ -104,9 +183,11 @@ class ActiveListHoverTest : BasePlatformTestCase() {
 
     private fun move(view: ActiveListView, index: Int) {
         val bounds = view.list.getCellBounds(index, index) ?: error("row $index has no bounds")
-        val x = bounds.x + bounds.width / 2
-        val y = bounds.y + bounds.height / 2
-        view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, x, y, 0, false))
+        move(view, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
+    }
+
+    private fun move(view: ActiveListView, point: Point) {
+        view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false))
     }
 
     private fun exit(view: ActiveListView) {
