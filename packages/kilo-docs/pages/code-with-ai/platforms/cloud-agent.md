@@ -215,6 +215,10 @@ When a Cloud Agent session has failed runs, open the session's info dialog from 
 
 Use **Download diagnostics** to save the same data as JSON, or **Download CSV** to save it as a spreadsheet. The exports include the Cloud Agent session ID, the Kilo session ID, and timestamps you can paste into a support ticket. Diagnostics past their retention window are left out of the export, and you can read failure data only for sessions you own.
 
+## Sending feedback
+
+Use the feedback dialog to report a problem or share an idea from a Cloud Agent session. Under the form, **Your recent feedback** lists the feedback your account has already sent, newest first, so you can tell whether you already reported something and what you said. It shows up to five entries with relative timestamps, and the list refreshes as soon as you send new feedback.
+
 ## Pull request status
 
 When a session is linked to a GitHub pull request, a PR badge appears on its row in the sidebar. Hover the badge to see the linked pull request's cached status without leaving the session:
