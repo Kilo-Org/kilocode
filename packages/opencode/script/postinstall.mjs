@@ -5,13 +5,11 @@ import fs from "fs"
 import os from "os"
 import path from "path"
 import { createRequire } from "module"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
-const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
 
-// kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
   darwin: "darwin",
   linux: "linux",
@@ -77,28 +75,52 @@ function supportsAvx2() {
   return false
 }
 
-function isMusl() {
-  if (platform !== "linux") return false
+// kilocode_change start - three-state libc detection ("unknown" never blocks an install)
+export function detectLibc() {
+  if (platform !== "linux") return "unknown"
 
   try {
-    if (fs.existsSync("/etc/alpine-release")) return true
+    const header = process.report?.getReport?.().header
+    if (header?.glibcVersionRuntime) return "glibc"
+  } catch {
+    // process.report can be unavailable or blocked; fall through to other probes.
+  }
+
+  try {
+    if (fs.existsSync("/etc/alpine-release")) return "musl"
   } catch {
     // Ignore filesystem probes that are blocked by the host.
   }
 
+  for (const dir of ["/lib", "/usr/lib"]) {
+    try {
+      if (fs.readdirSync(dir).some((file) => file.startsWith("ld-musl-"))) return "musl"
+    } catch {
+      // Directory may not exist on this host.
+    }
+  }
+
   try {
     const result = childProcess.spawnSync("ldd", ["--version"], { encoding: "utf8" })
-    return `${result.stdout || ""}${result.stderr || ""}`.toLowerCase().includes("musl")
+    const text = `${result.stdout || ""}${result.stderr || ""}`.toLowerCase()
+    if (text.includes("musl")) return "musl"
+    if (text.includes("glibc") || text.includes("gnu libc")) return "glibc"
   } catch {
-    return false
+    // ldd missing: libc stays unknown.
   }
+
+  return "unknown"
 }
 
-function packageNames() {
+function isMusl(libc = detectLibc()) {
+  return libc === "musl"
+}
+// kilocode_change end
+function packageNames(libc = detectLibc()) {
   const baseline = arch === "x64" && !supportsAvx2()
 
   if (platform === "linux") {
-    if (isMusl()) {
+    if (isMusl(libc)) {
       if (arch === "x64")
         return baseline
           ? [`${base}-baseline-musl`, `${base}-musl`, `${base}-baseline`, base]
@@ -170,37 +192,68 @@ function copyBinary(source) {
 }
 // kilocode_change end
 
-function verifyBinary() {
-  const result = childProcess.spawnSync(targetBinary, ["--version"], {
-    stdio: "ignore",
+// kilocode_change start - capture output so verification failures are diagnosable
+function verifyBinary(spawn = childProcess.spawnSync) {
+  const result = spawn(targetBinary, ["--version"], {
+    stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   })
-  return result.status === 0
+  if (result.status === 0) return true
+  console.error(`[kilo] binary verification failed: status=${result.status} signal=${result.signal}`)
+  const out = (result.stdout || "").toString().trim()
+  const err = (result.stderr || "").toString().trim()
+  if (out) console.error(`[kilo] binary verification stdout: ${out}`)
+  if (err) console.error(`[kilo] binary verification stderr: ${err}`)
+  if (result.error) console.error(`[kilo] binary verification error: ${result.error.message}`)
+  return false
 }
+// kilocode_change end
 
-function main() {
-  if (platform === "windows") {
+// kilocode_change start - only skip a package when its libc is confirmed to mismatch the host
+export function isLibcCompatible(name, libc = detectLibc()) {
+  if (libc === "unknown") return true
+  if (!name.startsWith("@kilocode/cli-linux-")) return true
+  const nameIsMusl = name.endsWith("-musl") || name.includes("-musl-")
+  return nameIsMusl === (libc === "musl")
+}
+// kilocode_change end
+
+export function main(deps = {}) {
+  if ((deps.platform ?? platform) === "windows") {
     console.log("Windows detected: binary setup not needed (using packaged wrapper)")
     return
   }
 
-  for (const name of packageNames()) {
+  const libc = deps.libc ?? detectLibc()
+  const spawn = deps.spawn ?? childProcess.spawnSync
+  const resolve = deps.resolve ?? resolveBinary
+  const copy = deps.copy ?? copyBinary
+  const names = deps.names ?? packageNames(libc)
+
+  for (const name of names) {
     try {
-      copyBinary(resolveBinary(name))
-      if (verifyBinary()) return
+      copy(resolve(name))
+      if (verifyBinary(spawn)) return
     } catch {
+      // kilocode_change start - never npm-install a package built for the other libc (EBADPLATFORM)
+      if (!isLibcCompatible(name, libc)) {
+        console.log(`[kilo] skipping ${name}: incompatible libc (${libc})`)
+        continue
+      }
+      // kilocode_change end
       const temp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-install-"))
       try {
+        const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
         const version = packageJson.optionalDependencies?.[name]
         if (!version) continue
-        const result = childProcess.spawnSync(
+        const result = spawn(
           "npm",
           ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
           { stdio: "inherit", windowsHide: true },
         )
         if (result.status !== 0) continue
-        copyBinary(path.join(temp, "node_modules", name, "bin", sourceBinary))
-        if (verifyBinary()) return
+        copy(path.join(temp, "node_modules", name, "bin", sourceBinary))
+        if (verifyBinary(spawn)) return
       } finally {
         fs.rmSync(temp, { recursive: true, force: true })
       }
@@ -209,16 +262,29 @@ function main() {
 
   // kilocode_change start
   throw new Error(
-    `It seems your package manager failed to install the right Kilo CLI package. Try manually installing ${packageNames()
+    `It seems your package manager failed to install the right Kilo CLI package. Try manually installing ${names
       .map((name) => JSON.stringify(name))
       .join(" or ")}. Or download the pre-built binary from the GitHub Releases page.`,
   )
 // kilocode_change end
 }
-
-try {
-  main()
-} catch (error) {
-  console.error("Failed to setup kilo binary:", error.message)
-  process.exit(1)
+// kilocode_change start - only run main if executed directly (allows importing in tests)
+function checkMain() {
+  if (!process.argv[1]) return false
+  try {
+    return fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))
+  } catch (err) {
+    console.error(`[kilo] script path resolution failed: ${err.message}`)
+    return import.meta.url === pathToFileURL(process.argv[1]).href
+  }
 }
+
+if (checkMain()) {
+  try {
+    main()
+  } catch (error) {
+    console.error("Failed to setup kilo binary:", error.message)
+    process.exit(1)
+  }
+}
+// kilocode_change end
