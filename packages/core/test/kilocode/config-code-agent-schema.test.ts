@@ -25,10 +25,11 @@ describe("legacy CLI agent config JSON schema", () => {
     visit(document)
     expect(found).toHaveLength(1)
 
-    const fields = found[0]!
-    const code = fields.code as { description?: string }
-    const build = fields.build as { description?: string }
-    expect(code.description).toContain("Primary coding agent")
-    expect(build.description).toContain("alias for 'code'")
+    const fields = found.at(0)
+    expect(fields).toBeDefined()
+    const code = fields?.code as { description?: string } | undefined
+    const build = fields?.build as { description?: string } | undefined
+    expect(code?.description).toContain("Primary coding agent")
+    expect(build?.description).toContain("alias for 'code'")
   })
 })
