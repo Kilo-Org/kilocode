@@ -34,11 +34,11 @@ describe("legacy CLI agent config JSON schema", () => {
 
     // Both agent names expose the same full AgentConfig schema, not a
     // reduced subset of properties that breaks editor completion.
+    const shape = (value: Record<string, unknown> | undefined) =>
+      Object.fromEntries(Object.entries(value ?? {}).filter(([key]) => key !== "description"))
     expect(code).toBeDefined()
     expect(build).toBeDefined()
-    const { description: _codeDescription, ...codeShape } = code!
-    const { description: _buildDescription, ...buildShape } = build!
-    expect(codeShape).toEqual(buildShape)
+    expect(shape(code)).toEqual(shape(build))
   })
 
   test.each(["code", "build"] as const)("accepts %s config without dropping agent options", (name) => {
