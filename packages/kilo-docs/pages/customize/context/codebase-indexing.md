@@ -38,7 +38,7 @@ This enables natural language queries like "user authentication logic" or "datab
 
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
 2. Turn on **Global Enable** to index every workspace, or turn on **Enable for This Project** to index only the current workspace. Both toggles are off until explicitly enabled.
-3. Pick an **Embedding Provider** and fill in its required fields.
+3. Pick an **Embedding Provider**. If you are signed in to Kilo, **Kilo** is preselected and needs no extra fields; otherwise fill in the selected provider's required fields.
 4. Pick a **Vector Store** (`LanceDB` or `Qdrant`) and configure it.
 5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
 6. Save to start the initial scan.
@@ -63,6 +63,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 
 | Provider | How to use | Notes |
 |---|---|---|
+| **Kilo** | Sign in to Kilo | Uses Kilo-hosted embedding models through your Kilo account, so no separate API key is needed. Preselected for signed-in users who have not set another provider. |
 | **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
 | **OpenAI-Compatible** | Base URL + optional API key | For self-hosted or third-party OpenAI-compatible endpoints, including unauthenticated local servers. |
@@ -108,7 +109,7 @@ Open a Kilo TUI session and run:
 This opens an interactive configuration dialog where you can:
 
 - **Toggle** indexing on/off
-- Choose an **Embedding Provider** and fill in provider settings (API key, base URL, AWS region, etc.)
+- Choose an **Embedding Provider** and fill in provider settings (API key, base URL, AWS region, etc.). **Kilo** is offered when you are signed in to Kilo and needs no provider settings.
 - Set the **Embedding Model** (blank = provider default)
 - Set the **Vector Dimension** (blank = auto-detect from the model)
 - Choose a **Vector Store** (`LanceDB` or `Qdrant`) and configure its connection
@@ -143,6 +144,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 
 | Provider | Config key | Settings | Notes |
 |---|---|---|---|
+| **Kilo** | `kilo` | — | Uses Kilo-hosted embedding models through your Kilo account. No separate API key is needed. |
 | **OpenAI** | `openai` | `{ apiKey }` | Default: `text-embedding-3-small`. |
 | **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
 | **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |

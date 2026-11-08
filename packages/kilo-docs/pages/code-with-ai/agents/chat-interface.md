@@ -92,6 +92,12 @@ When more than one session is open, the sidebar and Kilo editor tabs show a sess
 
 Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
 
+**Recalling sent prompts:**
+
+Press `ArrowUp` when the cursor is at the start of the prompt to reuse a prompt you sent earlier, and `ArrowDown` when the cursor is at the end to move back toward your draft. A recalled prompt replaces the draft and places the cursor at the start; pressing `ArrowDown` past the newest entry restores the draft, including any collapsed pastes. Recall does not replace an active text selection.
+
+History is shared across conversations by default. Turn on **Per-Conversation Prompt History** in [Settings > Experimental](/docs/getting-started/settings#experimental-features) to keep a separate recall list for each conversation. The setting is off by default and is also available as `kilo-code.new.experimental.conversationPromptHistory`.
+
 {% /tab %}
 {% tab label="CLI" %}
 

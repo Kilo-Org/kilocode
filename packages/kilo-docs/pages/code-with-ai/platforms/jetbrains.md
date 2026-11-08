@@ -15,6 +15,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
+- **Transcript** — choose how blocks render in the session transcript: the reasoning block mode, and whether terminal command, code edit, MCP and generic tool, and question blocks start expanded. Answered question cards start expanded by default. A sample transcript previews each change as you make it.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
@@ -50,6 +51,12 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 ### Forking a session
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
+
+## Prompt navigator
+
+A prompt navigator runs along the right edge of the transcript. Hover it to list the session's entries and select one to jump to that prompt. The rail stays visible even when the session has only a single prompt.
+
+Answered `question` cards appear as their own entries, titled with the question header and previewing your answers. Selecting one expands the card and scrolls to it.
 
 ## Cloud sessions
 

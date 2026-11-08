@@ -129,6 +129,10 @@ Valid values are `expanded`, `preview`, and `headline`. The default is `expanded
 
 Older configs that set `auto_collapse_reasoning: true` map to `preview`. That boolean is deprecated, so use `reasoning_display` instead.
 
+### Show Auto-Approval Reason
+
+**Show Auto-Approval Reason** in the Display tab controls the reason line on an auto-approved tool call, such as the permission rule or agent default that allowed it. It is on by default and does not change which actions are approved; turn it off to hide the explanation.
+
 ### Terminal Command Blocks
 
 Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:
@@ -161,7 +165,7 @@ Onboarding asks you to pick a work style. The choice sets display defaults and, 
 - **Review first** expands reasoning, terminal, and code edit blocks, collapses MCP and generic tool blocks, and shows auto-approval reasons. It also allows read-only commands and asks before edits, external directory access, and other commands.
 - **High autonomy** uses a reasoning preview, collapses terminal, code edit, and tool blocks, and hides auto-approval reasons. It leaves permissions unchanged.
 
-Onboarding only fills settings and permission rules that are not already configured, so an existing `kilo.jsonc` or customized settings are preserved.
+Onboarding only fills settings and permission rules that are not already configured, so an existing `kilo.jsonc` or customized settings are preserved. A project that already has sessions is marked as skipped, so the picker does not appear again; set `kilo-code.new.agentWorkStyle` to `unset` in your VS Code settings to show it.
 
 You can change both choices later:
 
@@ -173,6 +177,8 @@ Display changes apply as a draft. Click **Save** to keep them or **Discard** to 
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
+The diff viewer's unified/split layout toggle is remembered in `kilo-code.new.diff.style` (`unified` or `split`). Kilo sets this the first time you toggle the layout, so later diff viewers open in the same style.
 
 ### Web Search
 
@@ -276,6 +282,7 @@ Available experimental settings include:
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **Search Ignored Paths** - list folders or files the agent's `glob` tool should search even when `.gitignore` or other ignore files exclude them, such as `packages/*/dist` (`experimental.glob_include_ignored`, empty by default). Patterns are gitignore-style and relative to the workspace: a pattern without a slash matches folders at any depth, and a single file inside an ignored folder is listed by its path (for example `build/report.json`). Ignored or hidden folders inside a listed folder stay skipped, and `.git` is never searched
 - **Claude Code Migration** - import supported global Claude Code configuration once (off by default)
+- **Per-Conversation Prompt History** - keep `ArrowUp`/`ArrowDown` prompt recall separate for each conversation instead of sharing one history across all conversations (off by default)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
