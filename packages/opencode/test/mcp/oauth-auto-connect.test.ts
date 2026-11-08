@@ -273,21 +273,7 @@ mcpTest.instance("auth status only reports credentials stored for the configured
   }),
 )
 
-mcpTest.instance("authenticate() stores a connected client when auth completes without redirect", () =>
-  Effect.gen(function* () {
-    yield* stopOAuthCallback
-    const server = yield* serveOAuthMcp()
-    const mcp = yield* MCP.Service
-    const name = "test-oauth-connect"
-    const added = yield* mcp.add(name, remote(server.url))
-    expect((added.status as Record<string, { status: string }>)[name]?.status).toBe("needs_auth")
-
-    server.allowAnonymous()
-    expect((yield* mcp.authenticate(name)).status).toBe("connected")
-    expect((yield* mcp.status())[name]?.status).toBe("connected")
-  }),
-)
-
+// kilocode_change - an anonymous connection without credentials is not a sign-in (see test/kilocode/mcp/sign-in.test.ts)
 mcpTest.instance("authenticate() connects a resource-only server without listing tools", () =>
   Effect.gen(function* () {
     yield* stopOAuthCallback
@@ -297,8 +283,10 @@ mcpTest.instance("authenticate() connects a resource-only server without listing
     const added = yield* mcp.add(name, remote(server.url))
     expect((added.status as Record<string, { status: string }>)[name]?.status).toBe("needs_auth")
 
-    server.allowAnonymous()
-    expect((yield* mcp.authenticate(name)).status).toBe("connected")
+    // kilocode_change start - sign-in completes through the authorization flow
+    expect((yield* mcp.startAuth(name)).authorizationUrl).toContain("/authorize")
+    expect((yield* mcp.finishAuth(name, "valid-code")).status).toBe("connected")
+    // kilocode_change end
     expect(server.listToolsCalls()).toBe(0)
     expect(Object.keys(yield* mcp.resources())).toEqual([`${name}:docs://readme`])
   }),
