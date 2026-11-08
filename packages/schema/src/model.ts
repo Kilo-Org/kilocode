@@ -83,6 +83,10 @@ export const Info = Schema.Struct({
     input: Schema.Int.pipe(optional),
     output: Schema.Int,
   }),
+  rateLimit: Schema.Struct({
+    rpm: Schema.Number.pipe(optional),
+    rps: Schema.Number.pipe(optional),
+  }).pipe(optional),
 })
   .annotate({ identifier: "ModelV2.Info" })
   .pipe(
