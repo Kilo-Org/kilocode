@@ -1595,19 +1595,19 @@ export function Session() {
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => copyTurnText()} fg={theme.text}>
-                            <b>1-text</b>
+                            <b>copy</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => copyTurnRaw()} fg={theme.text}>
-                            <b>1-raw</b>
+                            <b>raw</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => copyAllText()} fg={theme.text}>
-                            <b>all-text</b>
+                            <b>copy-all</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => copyAllRaw()} fg={theme.text}>
-                            <b>all-raw</b>
+                            <b>raw-all</b>
                           </text>
                           <text fg={theme.textMuted}>  |  </text>
                           <text onMouseDown={() => jumpPrev()} fg={theme.text}>
