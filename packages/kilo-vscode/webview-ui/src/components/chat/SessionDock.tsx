@@ -33,6 +33,7 @@ import { SwarmBoardButton, useSwarmBoard } from "./SwarmBoard"
 import { stackFit, stackPlace, stackWidth } from "./background-agents"
 import { TodoChip, useTodoDock } from "./todo/TodoChip"
 import { TODO_TITLE_MAX, todoFit, type TodoFit } from "./todo/todo-dock"
+import { reduceMotionEnabled } from "../../animations"
 
 interface SessionDockProps {
   /** Idle-state content. Renders nothing when no action applies. */
@@ -409,7 +410,7 @@ function badge(box: HTMLElement) {
  */
 function glide(items: HTMLElement[], first: Map<HTMLElement, DOMRect>) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-  if (document.body.classList.contains("vscode-reduce-motion")) return
+  if (reduceMotionEnabled()) return
   for (const item of items) {
     const prev = first.get(item)
     if (!prev) continue

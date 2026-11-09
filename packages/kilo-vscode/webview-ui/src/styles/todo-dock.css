@@ -441,7 +441,7 @@
   }
 }
 
-body.vscode-reduce-motion
+body:is(.vscode-reduce-motion, .kilo-reduce-motion)
   :is([data-component="todo-chip"], [data-component="todo-chip"] *, [data-slot="todo-panel"] *) {
   animation: none !important;
   transition: none !important;
