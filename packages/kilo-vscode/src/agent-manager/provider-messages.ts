@@ -83,6 +83,7 @@ export interface MessageHost {
   trackOpenSessions: (sessionIds: string[]) => void
   trackVisibleSession: (sessionId: string | null) => void
   setCaffeination: (enabled: boolean) => Promise<void>
+  toggleCaffeination: () => Promise<void>
   postCaffeination: () => void
   setReviewMarkdownRender: (value: boolean) => Promise<void>
 }
@@ -211,6 +212,10 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
   }
   if (m.type === "agentManager.setCaffeination") {
     await host.setCaffeination(m.enabled)
+    return true
+  }
+  if (m.type === "agentManager.toggleCaffeination") {
+    await host.toggleCaffeination()
     return true
   }
   return false

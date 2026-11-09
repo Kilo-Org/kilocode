@@ -625,6 +625,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.postCaffeination()
   }
 
+  public async toggleCaffeination(): Promise<void> {
+    const state = this.caffeination.getState()
+    await this.setCaffeination(!(state.enabled || state.active))
+  }
+
   public postCaffeination(): void {
     this.postToWebview({ type: "agentManager.caffeination", ...this.caffeination.getState() })
   }

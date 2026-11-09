@@ -1224,6 +1224,10 @@ export interface SetCaffeinationRequest {
   enabled: boolean
 }
 
+export interface ToggleCaffeinationRequest {
+  type: "agentManager.toggleCaffeination"
+}
+
 /** Persist the review diff style preference. */
 export interface SetReviewDiffStyleRequest {
   type: "agentManager.setReviewDiffStyle"
@@ -1508,6 +1512,7 @@ export type AgentManagerWebviewMessage =
   | SetSidebarCollapsedRequest
   | RequestCaffeinationMessage
   | SetCaffeinationRequest
+  | ToggleCaffeinationRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
   | RequestBranchesMessage

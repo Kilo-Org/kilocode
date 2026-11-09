@@ -123,6 +123,9 @@ export type SidebarWorktree =
   | { type: "agentManager.requestRepoInfo" }
   | { type: "openAdvancedWorktree" }
 
+/** Toggles Keep Awake from the composer slash menu. The Agent Manager provider owns the state. */
+export type AgentManagerCaffeination = { type: "agentManager.toggleCaffeination" }
+
 export type ToHost =
   | Request
   | BrowserTab
@@ -134,6 +137,7 @@ export type ToHost =
   | Speech
   | Indexing
   | SidebarWorktree
+  | AgentManagerCaffeination
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }

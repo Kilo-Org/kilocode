@@ -1059,6 +1059,10 @@ interface SetCaffeinationIn {
   enabled: boolean
 }
 
+interface ToggleCaffeinationIn {
+  type: "agentManager.toggleCaffeination"
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -1420,6 +1424,7 @@ export type AgentManagerInMessage =
   | PromptSentIn
   | RequestCaffeinationIn
   | SetCaffeinationIn
+  | ToggleCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
   | RequestDocumentIn

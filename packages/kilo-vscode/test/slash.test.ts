@@ -80,6 +80,19 @@ describe("slash actions", () => {
       ["reload", "t:common.reloadDescription", ["refresh"]],
     ])
   })
+
+  test("offers caffeinate with the shared Keep Awake description and the TUI alias", () => {
+    const calls: number[] = []
+    const list = slashActions({ caffeinate: () => calls.push(1) }, (key) => `t:${key}`)
+    expect(list.map((entry) => [entry.name, entry.description, entry.hints])).toEqual([
+      ["caffeinate", "t:agentManager.caffeination.toggle", ["caffenate", "keep-awake", "awake", "sleep"]],
+    ])
+    expect(parseSlash(list, "/caffeinate")?.entry.name).toBe("caffeinate")
+    expect(parseSlash(list, "/caffenate")?.entry.name).toBe("caffeinate")
+    const entry = list[0]
+    if (entry?.kind === "action") entry.run()
+    expect(calls).toEqual([1])
+  })
 })
 
 describe("slash matching", () => {

@@ -11,6 +11,7 @@ import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
+import { caffeinateLayer } from "./caffeinate"
 import { aboutCommand } from "./dialog-about"
 import { indexingCommand } from "./components/dialog-indexing"
 import { watchIndexingWarnings } from "./indexing-notifications"
@@ -166,6 +167,7 @@ export default Plugin.define({
           ],
         }))
         privacyLayer(context)
+        caffeinateLayer(context)
         return null
       },
     })
