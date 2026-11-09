@@ -6,6 +6,7 @@ import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { useLanguage } from "../context/language"
+import { focusPrompt } from "../utils/tab-navigation"
 import { useModelPreferences } from "../context/model-preferences"
 import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
@@ -309,8 +310,15 @@ export function SessionView(props: {
   const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
   const handlers = (): SlashHandlers => {
     const id = session()
+    const start = props.onNewSession
     return {
-      new: props.onNewSession,
+      // The new tab remounts the composer that had focus, so the focus moves to the new composer after it mounts.
+      new: start
+        ? () => {
+            start()
+            requestAnimationFrame(focusPrompt)
+          }
+        : undefined,
       sessions: props.onShowHistory,
       models: picker("openModelPicker"),
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
