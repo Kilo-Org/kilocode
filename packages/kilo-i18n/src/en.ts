@@ -85,6 +85,8 @@ export const dict = {
   "marketplace.badge.skills": "Includes skills",
   "marketplace.card.by": "by {{author}}",
   "marketplace.install.method": "Installation Method",
+  "marketplace.install.agent.mode": "mode: {{mode}}",
+  "marketplace.install.agent.steps": "steps: {{steps}}",
   "marketplace.install.parameters": "Parameters",
   "marketplace.install.optional": "(optional)",
   "marketplace.scope.project": "project",

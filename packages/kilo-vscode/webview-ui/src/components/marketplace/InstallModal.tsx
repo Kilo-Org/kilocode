@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal } from "solid-js"
+import { For, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
@@ -50,6 +50,11 @@ export const InstallModal = (props: Props) => {
   const [serverError, setServerError] = createSignal<string>()
   const [signing, setSigning] = createSignal(false)
   const [signedIn, setSignedIn] = createSignal(false)
+  // The post-install poll outlives the dialog otherwise, so stop it when the modal unmounts.
+  let disposed = false
+  onCleanup(() => {
+    disposed = true
+  })
 
   const isMcp = () => props.item.kind === "mcp"
   const option = createMemo(() => optionFor(props.item, optionName()))
@@ -115,8 +120,9 @@ export const InstallModal = (props: Props) => {
 
   const waitForServer = async (name: string) => {
     setServerState("checking")
-    for (let attempt = 0; attempt < 15; attempt++) {
+    for (let attempt = 0; attempt < 15 && !disposed; attempt++) {
       await props.mcp.sync().catch(() => undefined)
+      if (disposed) return
       const status = props.mcp.status(name)
       if (status && status.status !== "pending" && status.status !== "disabled") {
         if (status.status === "needs_auth") setServerState("needsAuth")
@@ -129,7 +135,7 @@ export const InstallModal = (props: Props) => {
       }
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
-    setServerState("unknown")
+    if (!disposed) setServerState("unknown")
   }
 
   const signIn = async () => {
@@ -145,6 +151,15 @@ export const InstallModal = (props: Props) => {
     } finally {
       setSigning(false)
     }
+  }
+
+  const requestSignIn = () => {
+    const name = record()?.server
+    if (!name) return
+    setError(undefined)
+    void signIn().then(() => {
+      if (!signedIn()) setError(language.t("marketplace.install.mcp.signIn.failed", { name }))
+    })
   }
 
   const openDocs = (url: string) => props.onOpen(url)
@@ -205,8 +220,12 @@ export const InstallModal = (props: Props) => {
               <div class="install-modal-section">
                 <span class="install-modal-label">{language.t("marketplace.remove.type.agent")}</span>
                 <p class="install-modal-help">
-                  {agent().mode ? `mode: ${agent().mode}` : ""}
-                  {agent().steps ? ` · steps: ${agent().steps}` : ""}
+                  <Show when={agent().mode}>
+                    {(mode) => language.t("marketplace.install.agent.mode", { mode: mode() })}
+                  </Show>
+                  <Show when={agent().steps}>
+                    {(steps) => ` · ${language.t("marketplace.install.agent.steps", { steps: steps() })}`}
+                  </Show>
                 </p>
                 <Show when={agent().permissions}>
                   <pre class="install-modal-code">{JSON.stringify(agent().permissions, null, 2)}</pre>
@@ -347,14 +366,28 @@ export const InstallModal = (props: Props) => {
                     <Show
                       when={serverState() === "connected" || signedIn()}
                       fallback={
-                        <p class="install-modal-mcp-signin-msg">
-                          <Show when={serverState() === "checking"}>
-                            <Spinner /> {language.t("marketplace.install.mcp.signIn.waiting")}
-                          </Show>
+                        <>
+                          <p class="install-modal-mcp-signin-msg">
+                            <Show when={serverState() === "checking"}>
+                              <Spinner /> {language.t("marketplace.install.mcp.signIn.waiting")}
+                            </Show>
+                            <Show when={serverState() === "unknown"}>
+                              {language.t("marketplace.install.mcp.signIn.message", { name: record()!.server! })}
+                            </Show>
+                          </p>
                           <Show when={serverState() === "unknown"}>
-                            {language.t("marketplace.install.mcp.signIn.message", { name: record()!.server! })}
+                            <div class="dialog-confirm-actions">
+                              <Show when={props.mcp.canSignIn(record()!.server!)}>
+                                <Button variant="ghost" size="large" onClick={requestSignIn}>
+                                  {language.t("marketplace.install.mcp.signIn.button")}
+                                </Button>
+                              </Show>
+                              <Button variant="primary" size="large" onClick={props.onClose}>
+                                {language.t("marketplace.install.done")}
+                              </Button>
+                            </div>
                           </Show>
-                        </p>
+                        </>
                       }
                     >
                       <p class="install-modal-mcp-signin-success">
@@ -388,22 +421,7 @@ export const InstallModal = (props: Props) => {
                       <Show
                         when={signing() || props.mcp.busy().includes(record()!.server!)}
                         fallback={
-                          <Button
-                            variant="primary"
-                            size="large"
-                            onClick={() => {
-                              setError(undefined)
-                              void signIn().then(() => {
-                                if (!signedIn()) {
-                                  setError(
-                                    language.t("marketplace.install.mcp.signIn.failed", {
-                                      name: record()!.server!,
-                                    }),
-                                  )
-                                }
-                              })
-                            }}
-                          >
+                          <Button variant="primary" size="large" onClick={requestSignIn}>
                             {language.t("marketplace.install.mcp.signIn.button")}
                           </Button>
                         }

@@ -77,6 +77,7 @@ const calls = {
 const mcp = {
   servers: () => [],
   status: () => ({ status: serverStatus, error: "" }),
+  canSignIn: () => false,
   sync: async () => undefined,
   busy: () => [],
   cancel: () => undefined,
@@ -185,4 +186,60 @@ button("Done")!.click()
 assert.equal(closed, 1)
 
 dispose()
+
+// Repair: a record installed with a non-default method opens the dialog on that method, not the item's first option.
+const repairCalls: unknown[] = []
+const repairItem = {
+  ...item,
+  id: "repair",
+  name: "Repair Docs",
+  prerequisites: [],
+  parameters: [],
+  options: [
+    { name: "remote", description: "Hosted endpoint", prerequisites: [], parameters: [] },
+    { name: "local", description: "Runs on this machine", prerequisites: [], parameters: [] },
+  ],
+}
+const repairRoot = document.createElement("div")
+document.body.append(repairRoot)
+const RepairHarness = () => {
+  const dialog = useDialog()
+  onMount(() =>
+    dialog.show(() => (
+      <InstallModal
+        item={repairItem}
+        workspace={true}
+        defaultOption="local"
+        mcp={mcp}
+        onClose={() => dialog.close()}
+        onPreview={async (_, input) => {
+          repairCalls.push(input)
+          return { config: "/tmp/project/.kilo/kilo.json", server: "{}", parameters: [], secrets: [] }
+        }}
+        onInstall={async () => record}
+        onOpen={() => undefined}
+      />
+    )),
+  )
+  return null
+}
+const disposeRepair = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <DialogProvider>
+          <RepairHarness />
+        </DialogProvider>
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  repairRoot,
+)
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.ok(text().includes("local"), "the recorded method is preselected")
+button("Review")!.click()
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.equal((repairCalls[0] as { option?: string }).option, "local")
+
+disposeRepair()
 await window.happyDOM.close()

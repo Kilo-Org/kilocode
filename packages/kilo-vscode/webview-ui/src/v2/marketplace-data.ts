@@ -61,6 +61,7 @@ export function createMarketplaceData(input: { directory: string; rpc: Marketpla
   const [installedError, setInstalledError] = createSignal<string>()
   const location: Location = { directory: input.directory }
   let token = 0
+  let installedToken = 0
 
   async function load(refresh = false) {
     const current = ++token
@@ -85,14 +86,18 @@ export function createMarketplaceData(input: { directory: string; rpc: Marketpla
   }
 
   async function refreshInstalled() {
+    const current = ++installedToken
     setInstalledFetching(true)
     try {
-      setRecords([...(await input.rpc.installed({}, { location }))])
+      const next = await input.rpc.installed({}, { location })
+      if (current !== installedToken) return
+      setRecords([...next])
       setInstalledError(undefined)
     } catch (error) {
+      if (current !== installedToken) return
       setInstalledError(message(error))
     } finally {
-      setInstalledFetching(false)
+      if (current === installedToken) setInstalledFetching(false)
     }
   }
 
