@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { dirname } from "node:path"
 import { batchMutations, decorateFileSystem, enabled, ensureDirectory, prepareCommand } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
-import { Context, Effect, FileSystem, Layer, PlatformError } from "effect"
+import { Context, Effect, FileSystem, Layer, PlatformError, Redacted } from "effect"
 import { ChildProcess } from "effect/process"
 import { make } from "effect/process/ChildProcessSpawner"
 
@@ -28,7 +28,14 @@ export function release(token: string) {
 }
 
 function environment(options: ChildProcess.CommandOptions) {
-  return options.extendEnv ? { ...process.env, ...options.env } : options.env
+  const env = options.extendEnv ? { ...process.env, ...options.env } : options.env
+  // A command can carry redacted values; the confined launcher needs their plain text.
+  return (
+    env &&
+    Object.fromEntries(
+      Object.entries(env).map(([key, value]) => [key, Redacted.isRedacted(value) ? Redacted.value(value) : value]),
+    )
+  )
 }
 
 function denied(command: string, description: string) {

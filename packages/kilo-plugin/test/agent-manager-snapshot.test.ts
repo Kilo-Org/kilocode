@@ -305,7 +305,7 @@ it.effect("rejects a dangling managed worktree symlink", () =>
     const error = yield* remove(input).pipe(Effect.flip)
     expect(error._tag).toBe("AgentManager.InvalidWorktreeError")
     const entries = yield* FSUtil.Service.use((fs) => fs.readDirectoryEntries(path.dirname(input.worktree)))
-    expect(entries.find((entry) => entry.name === path.basename(input.worktree))?.type).toBe("symlink")
+    expect(entries.find((entry) => entry.name === path.basename(input.worktree))?.type).toBe("SymbolicLink")
     expect(yield* exist(path.join(base, "outside"))).toBe(true)
   }),
 )

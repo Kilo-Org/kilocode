@@ -2,7 +2,7 @@ export * as ConfigDiscovery from "./discovery.js"
 
 import os from "os"
 import path from "path"
-import { Context, Effect, Layer } from "effect" // kilocode_change(config) seam - discovery layout service
+import { Context, Effect, Layer, Option } from "effect" // kilocode_change(config) seam - discovery layout service
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node" // kilocode_change(config) seam - discovery layout node
@@ -91,7 +91,7 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const fs = yield* FSUtil.Service
   const global = yield* Global.Service
   const location = yield* Location.Service
-  const layout = yield* LayoutService // kilocode_change(config) seam
+  const layout = Option.getOrElse(yield* Effect.serviceOption(LayoutService), () => defaults) // kilocode_change(config) seam - callers without the node keep the defaults
   const system = (() => {
     if (options?.system === false) return
     if (typeof options?.system === "string") return AbsolutePath.make(path.resolve(options.system))
