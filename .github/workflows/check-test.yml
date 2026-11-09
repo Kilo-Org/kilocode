@@ -154,8 +154,7 @@ jobs:
           fi
           if [ "${{ matrix.shard }}" = "packages" ]; then
             # The Kilo host suite is the slowest one. It runs in parallel with the other packages, unsplit, so its
-            # one heavy file is not a long pole in a shard job and the two lanes share one setup. On the 4 vCPU
-            # Windows runner it uses 2 processes next to the 3 turbo tasks, so its child processes are not starved.
+            # one heavy file is not a long pole in a shard job and the two lanes share one setup.
             KILO_TEST_CONCURRENCY=${{ runner.os == 'Windows' && 2 || 4 }} GITHUB_ACTIONS=false bun turbo test:ci --concurrency=1 "${affected[@]}" --filter='@kilocode/kilo-cli' &
             host=$!
             other=0
