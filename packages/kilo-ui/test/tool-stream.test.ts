@@ -50,6 +50,13 @@ describe("inputChanges", () => {
     expect(inputChanges("write", { path: "a.ts", content: "a\nb\n" })).toEqual({ additions: 2, deletions: 0 })
   })
 
+  test("counts a streamed edit before its path arrives", () => {
+    const value = streamedTool("edit", '{"oldString":"x","newString":"y\\nz')
+
+    expect(value.input).toEqual({})
+    expect(value.changes).toEqual({ additions: 2, deletions: 1 })
+  })
+
   test("counts a complete edit", () => {
     expect(inputChanges("edit", { oldString: "x", newString: "y\nz" })).toEqual({ additions: 2, deletions: 1 })
   })

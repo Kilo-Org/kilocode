@@ -288,6 +288,16 @@ test("a streaming write card shows counts before its path streams", async () => 
   expect(counts(card.host)).toEqual({ additions: "+3", deletions: "-0" })
 })
 
+test("a streaming edit card shows counts before its path streams", async () => {
+  const item = liveTool("edit", { status: "streaming", input: '{"oldString":"x","newString":"y\\nz' })
+  const card = mountRich(() => <ContentPart item={item} message={liveMessage} index={0} />)
+  mounted.push(card)
+
+  await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]'))
+  expect(card.host.querySelector('[data-slot="message-part-title-filename"]')).toBeNull()
+  expect(counts(card.host)).toEqual({ additions: "+2", deletions: "-1" })
+})
+
 test("running edit and patch cards show provisional counts until the final diff arrives", async () => {
   const edit = liveTool("edit", {
     status: "running",

@@ -1306,6 +1306,7 @@ ToolRegistry.register({
                 directory={props.directory}
                 changes={changes()}
                 onOpen={props.actions?.openFile ? openFile : undefined}
+                fallback={<Show when={live()}>{(counts) => <DiffChanges changes={counts()} />}</Show>}
               />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
