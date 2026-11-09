@@ -31,6 +31,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/trustedrouter", children: "TrustedRouter" },
       { href: "/ai-providers/requesty", children: "Requesty" },
       { href: "/ai-providers/daoxe", children: "DaoXE" },
+      { href: "/ai-providers/gisoo", children: "Gisoo" },
       { href: "/ai-providers/unbound", children: "Unbound" },
       { href: "/ai-providers/zenmux", children: "ZenMux" },
       {
