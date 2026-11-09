@@ -4,6 +4,30 @@ import type { ProjectStore } from "./project/store"
 import { LOCAL, nextSelectionAfterDelete } from "./navigate"
 import { buildSidebarOrder, buildTopLevelItems, sortWorktrees } from "./section-helpers"
 
+const MODIFIERS = new Set(["Alt", "AltGraph", "Control", "Meta", "Shift"])
+
+/**
+ * Delete/Backspace on a selected worktree triggers inline delete confirmation.
+ * Two separate key presses (within the 2500ms window) confirm the delete.
+ */
+export function createDeleteKey(opts: {
+  guard: (target: EventTarget | null) => boolean
+  selection: () => string | null | undefined
+  close: () => void
+}) {
+  return (e: KeyboardEvent) => {
+    if (e.key !== "Delete" && e.key !== "Backspace") return
+    if (opts.guard(e.target)) return
+    const tag = (e.target as HTMLElement)?.tagName
+    if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
+    const sel = opts.selection()
+    if (!sel || sel === LOCAL) return
+    e.preventDefault()
+    if (e.repeat) return
+    opts.close()
+  }
+}
+
 export function createWorktreeDelete(opts: {
   store: (projectId: string) => ProjectStore | undefined
   project: () => string | undefined
@@ -13,6 +37,7 @@ export function createWorktreeDelete(opts: {
   select: (target: AgentManagerSidebarTarget) => void
   remove: (projectId: string, worktreeId: string) => void
   reveal: (projectId: string, worktreeId: string) => void
+  view?: Window
 }) {
   const [pending, setPending] = createSignal<{ projectId: string; worktreeId: string }>()
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -20,6 +45,16 @@ export function createWorktreeDelete(opts: {
     clearTimeout(timer)
     setPending(undefined)
   }
+  // VS Code also runs keybinding commands for auto-repeat keydowns, and host actions
+  // cannot see `repeat`. Each repeat opens a short window that covers the host round
+  // trip. Held modifiers do not count, so a held Ctrl+Shift before W still works.
+  const view = opts.view ?? window
+  let held = 0
+  const hold = (e: KeyboardEvent) => {
+    if (e.repeat && !MODIFIERS.has(e.key)) held = performance.now() + 300
+  }
+  view.addEventListener("keydown", hold, true)
+  onCleanup(() => view.removeEventListener("keydown", hold, true))
   // Catalog refreshes can recompute accessors without changing the selected target.
   createEffect(
     on(
@@ -63,6 +98,7 @@ export function createWorktreeDelete(opts: {
   }
 
   const confirm = (projectId: string, worktreeId: string) => {
+    if (performance.now() < held) return
     const store = opts.store(projectId)
     const run = store?.runStatuses()[worktreeId]?.state
     if (
