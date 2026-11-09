@@ -149,9 +149,11 @@ export function MessageList(props: {
   const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameKeys })
   const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
   // A fork keeps the messages before the chosen one, so a fork at the first user message is an empty session.
-  // Only a loaded start proves which user message is the first.
+  // Only a transcript without older pages proves which user message is the first. A session created in this view
+  // has no history cursor, and a fetched one reports when its loaded page reaches the start.
   const firstUser = createMemo(() =>
-    props.session && v2.data.session.message.startLoaded(props.session)
+    props.session &&
+    (!v2.data.session.message.more(props.session) || v2.data.session.message.startLoaded(props.session))
       ? rows().find((row) => row.type === "user")?.message.id
       : undefined,
   )

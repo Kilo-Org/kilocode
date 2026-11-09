@@ -1686,7 +1686,6 @@ export function createData(config: CreateDataInput) {
           sync.complete(`session.family:${id}`)
           sync.complete(`session.pending:${id}`)
           sync.complete(`session.message:${id}`)
-          markStart(id, true) // kilocode_change(session-history) - a new session has no earlier history
         }
         // Wrapped so even a synchronous client failure reaches the rollback.
         const request = Promise.resolve()
