@@ -144,8 +144,7 @@ export const layer = Layer.effectDiscard(
       // Instance-bound plugins come last: later activation can override earlier
       // container writes, so the instance's explicit choices win over globals.
       const pre = [...internal.pre, ...sdk.all().map(internal.provide), ...instance.all()] // kilocode_change(gateway) seam - provide Location services to embedder plugins
-      const post = internal.post
-      ;(post as Plugin.Generation[]).push(...sdk.all("post").map(internal.provide)) // kilocode_change(agent) seam - host plugins after the internal post plugins; kilocode_change(gateway) seam - provide Location services
+      const post = [...internal.post, ...sdk.all("post").map(internal.provide)] // kilocode_change(agent) seam - host plugins after the internal post plugins, in a new list per activation; kilocode_change(gateway) seam - provide Location services
       const operations = yield* sources.operations()
       // Activate everything available locally before waiting on missing package installs.
       const immediate = yield* resolve(modules, pre, post, operations, false, running)
