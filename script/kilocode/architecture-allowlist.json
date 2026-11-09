@@ -141,10 +141,20 @@
           "owner": "kilo-vscode",
           "reason": "Mocks solid-js to run webview state outside a renderer. Target: run the state under a Solid root, or move the logic out of Solid."
         },
+        "packages/kilo-vscode/test/agent-manager-session-busy.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Mocks solid-js with the client build to run webview state outside a renderer. Target: run the state under a Solid root, or move the logic out of Solid."
+        },
         "packages/kilo-vscode/test/kilo-catalog.test.ts": {
           "count": 1,
           "owner": "kilo-vscode",
           "reason": "Mocks solid-js to run webview state outside a renderer. Target: run the state under a Solid root, or move the logic out of Solid."
+        },
+        "packages/kilo-vscode/test/settings-chat-split.test.ts": {
+          "count": 1,
+          "owner": "kilo-vscode",
+          "reason": "Mocks solid-js with the client build to run webview state outside a renderer. Target: run the state under a Solid root, or move the logic out of Solid."
         }
       }
     },
@@ -241,6 +251,11 @@
     "kilo-module-state": {
       "description": "Top-level let, Map and Set in Kilo-owned source, counted per package. Co-located test files are not counted. Module-level state is shared by every caller in the process and needs reset hooks that couple tests. Target: keep state in an instance that a service, layer or runtime owns.",
       "allowed": {
+        "packages/core": {
+          "count": 2,
+          "owner": "core",
+          "reason": "Read-only lookup Sets of known and refused config keys in src/kilocode/config/policy.ts. They are built once from the schema and never change, so they hold no state between callers."
+        },
         "packages/kilo-cli": {
           "count": 9,
           "owner": "kilo-cli",
