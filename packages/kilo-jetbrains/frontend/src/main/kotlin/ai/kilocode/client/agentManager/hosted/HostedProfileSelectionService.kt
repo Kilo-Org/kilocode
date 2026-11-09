@@ -25,7 +25,7 @@ internal interface HostedProfileSelectionStore {
 internal class HostedProfileSelectionService :
     PersistentStateComponent<HostedProfileSelectionService.State>, HostedProfileSelectionStore {
 
-    data class State(var profiles: Map<String, String> = emptyMap())
+    data class State(var profiles: MutableMap<String, String> = LinkedHashMap())
 
     @Volatile
     private var state = State()
@@ -33,7 +33,7 @@ internal class HostedProfileSelectionService :
     override fun getState(): State = state
 
     override fun loadState(state: State) {
-        this.state = State(state.profiles.toMap())
+        this.state = State(LinkedHashMap(state.profiles))
     }
 
     override suspend fun selected(repositoryUrl: String): String? = state.profiles[hostedRepositoryKey(repositoryUrl)]
@@ -41,7 +41,8 @@ internal class HostedProfileSelectionService :
     override fun remember(repositoryUrl: String, selectedProfileID: String?, backendDefaultProfileID: String?) {
         val key = hostedRepositoryKey(repositoryUrl)
         val id = selectedProfileID?.takeIf { it.isNotBlank() && it != backendDefaultProfileID }
-        val profiles = if (id == null) state.profiles - key else state.profiles + (key to id)
+        val profiles = LinkedHashMap(state.profiles)
+        if (id == null) profiles.remove(key) else profiles[key] = id
         state = State(profiles)
     }
 }

@@ -399,6 +399,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     fun `test repository preference failure falls back to the backend default`() {
         selection.error = IllegalStateException("Preference backend unavailable")
         open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+        ready()
 
         edt {
             assertTrue(profile().isEnabled)

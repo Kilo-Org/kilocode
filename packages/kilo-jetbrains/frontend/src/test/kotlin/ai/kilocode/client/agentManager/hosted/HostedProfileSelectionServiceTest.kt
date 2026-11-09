@@ -42,7 +42,7 @@ class HostedProfileSelectionServiceTest {
         val service = HostedProfileSelectionService()
         service.remember("https://github.com/Kilo-Org/kilocode.git", "profile-a", null)
 
-        val xml = XmlSerializer.serialize(service.state)
+        val xml = XmlSerializer.serialize(service.getState())
         val state = XmlSerializer.deserialize(xml, HostedProfileSelectionService.State::class.java)
         val restored = HostedProfileSelectionService().apply { loadState(state) }
 
