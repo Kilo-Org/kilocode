@@ -8,12 +8,12 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**1887 / 9765 cells done (19.3%)**, 89 dropped. `███░░░░░░░░░░░░░`
+**1888 / 9765 cells done (19.3%)**, 89 dropped. `███░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 1390 | 3518 | 39.5% |
-| api | 11 | 36 | 30.6% |
+| api | 12 | 36 | 33.3% |
 | patch | 110 | 3440 | 3.2% |
 | test | 376 | 2771 | 13.6% |
 
@@ -43,8 +43,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-30 | 646 | 9817 | 6.6% |
 | 2026-11-05 | 1609 | 9786 | 16.4% |
 | 2026-11-06 | 1874 | 9765 | 19.2% |
-| 2026-11-09 | 1886 | 9765 | 19.3% |
-| now | 1887 | 9765 | 19.3% |
+| 2026-11-09 | 1887 | 9765 | 19.3% |
+| now | 1888 | 9765 | 19.3% |
 
 ## Features
 
@@ -53,7 +53,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | Feature | Modules | API | Patches | Tests | Done | % | | Landed |
 |---|---:|---:|---:|---:|---:|---:|---|---|
 | acp | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| agent | 1/3 | 0/1 | 1/1 | 4/8 | 6/13 | 46.2% | `███████░░░░░░░░░` | 1 plugin |
+| agent | 1/3 | 1/1 | 1/1 | 4/8 | 7/13 | 53.8% | `█████████░░░░░░░` | 1 plugin |
 | agent-manager | 4/4 | 3/3 | 1/1 | 4/4 | 12/12 | 100% | `████████████████` | 1 plugin |
 | anaconda-desktop | 0/7 | 0/3 |  | 0/7 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | archive-security |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |

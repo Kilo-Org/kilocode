@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1887,
+    "done": 1888,
     "total": 9765,
     "percent": 19.3,
     "dropped": 89,
@@ -16,7 +16,7 @@
       },
       {
         "kind": "api",
-        "done": 11,
+        "done": 12,
         "total": 36
       },
       {
@@ -132,7 +132,7 @@
     },
     {
       "feature": "agent",
-      "done": 6,
+      "done": 7,
       "total": 13,
       "dropped": 2,
       "kinds": {
@@ -141,7 +141,7 @@
           "total": 3
         },
         "api": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "patch": {
@@ -6341,6 +6341,7 @@
     "api:GET /kilocode/provider-usage",
     "api:POST /kilocode/agent-manager/{requestID}/reject",
     "api:POST /kilocode/agent-manager/{requestID}/reply",
+    "api:POST /kilocode/agent/remove",
     "api:POST /kilocode/marketplace/install",
     "api:POST /kilocode/marketplace/remove",
     "api:POST /kilocode/provider-usage/refresh",
