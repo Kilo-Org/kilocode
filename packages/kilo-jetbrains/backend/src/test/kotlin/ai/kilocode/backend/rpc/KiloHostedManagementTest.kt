@@ -58,8 +58,18 @@ class KiloHostedManagementTest {
         val api = KiloHostedRpcApiImpl(app)
 
         val profiles = api.workspaceProfiles(null)
-        assertEquals("Default", profiles.items.single().name)
+        assertEquals(listOf("Default", "Org"), profiles.items.map { it.name })
+        assertEquals("00000000-0000-4000-8000-000000000001", profiles.personalDefaultProfileID)
+        assertEquals("00000000-0000-4000-8000-000000000002", profiles.organizationDefaultProfileID)
         assertTrue(mock.lastHostedProfilesPath.orEmpty().contains("/kilocode/session-host/workspace/profiles"))
+
+        val default = api.setPersonalDefaultProfile("00000000-0000-4000-8000-000000000002")
+        assertTrue(default.success)
+        assertEquals("/kilocode/session-host/workspace/profiles/personal-default", mock.lastHostedProfileDefaultPath)
+        assertEquals(
+            "00000000-0000-4000-8000-000000000002",
+            Json.parseToJsonElement(assertNotNull(mock.lastHostedProfileDefaultBody)).jsonObject["id"]?.jsonPrimitive?.content,
+        )
 
         val request = HostedCreateWorkspaceDto(
             repository = HostedRepositoryDto("github", repo = "Kilo-Org/kilocode", branch = "main"),
@@ -126,6 +136,28 @@ class KiloHostedManagementTest {
         val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedCreateBody)).jsonObject
         assertEquals(setOf("repository", "prompt", "agent", "operationKey", "messageID"), body.keys)
         assertFalse(body.containsKey("profile"))
+    }
+
+    @Test
+    fun `workspace creation omits an empty initial message`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+
+        val created = KiloHostedRpcApiImpl(app).createWorkspace(
+            HostedCreateWorkspaceDto(
+                repository = HostedRepositoryDto("git", url = "https://example.com/repo.git"),
+                prompt = "",
+                agent = HostedAgentDto("code", "kilo/kilo-auto/free"),
+                operationKey = "00000000-0000-4000-8000-000000000004",
+                messageID = "msg_empty",
+            ),
+        )
+
+        assertNull(created.failure)
+        val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedCreateBody)).jsonObject
+        assertEquals(setOf("repository", "agent", "operationKey"), body.keys)
+        assertFalse(body.containsKey("prompt"))
+        assertFalse(body.containsKey("messageID"))
     }
 
     @Test

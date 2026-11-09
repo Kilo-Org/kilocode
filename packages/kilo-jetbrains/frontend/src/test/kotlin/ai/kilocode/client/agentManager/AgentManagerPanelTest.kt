@@ -1846,6 +1846,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto) =
                 ai.kilocode.rpc.dto.HostedMutationResultDto()
             override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
@@ -1941,6 +1943,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
                 assertNull(request.profileID)
                 createGate.await()
@@ -2030,6 +2034,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
                 create.await()
                 createdOnce = true
@@ -2097,6 +2103,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
                 createdOnce = true
                 return HostedMutationResultDto(workspace = created, session = session)
@@ -2181,6 +2189,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto =
                 HostedMutationResultDto(workspace = created, session = session)
             override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
@@ -2241,6 +2251,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto =
                 HostedMutationResultDto(workspace = created, session = session)
             override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: ai.kilocode.rpc.dto.HostedStartSessionDto) =
@@ -2290,6 +2302,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
                 createdOnce = true
                 return HostedMutationResultDto(workspace = created, session = session)
@@ -2343,6 +2357,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = emptyFlow()
             override suspend fun workspaceProfiles(organizationID: String?) =
                 ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
             override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
                 gate.await()
                 createdOnce = true

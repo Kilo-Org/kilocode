@@ -3,6 +3,7 @@ package ai.kilocode.rpc
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedDeleteResultDto
 import ai.kilocode.rpc.dto.HostedMutationResultDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
@@ -45,6 +46,9 @@ interface KiloHostedRpcApi : RemoteApi<Unit> {
 
     /** Authorized, sanitized profile choices for workspace creation. */
     suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto
+
+    /** Set the authenticated user's personal default workspace profile. */
+    suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto
 
     /** Create a workspace and its first root session. Retry with the same operation/message IDs. */
     suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto

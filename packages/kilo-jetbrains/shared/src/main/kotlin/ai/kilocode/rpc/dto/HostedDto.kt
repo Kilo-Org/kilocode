@@ -136,13 +136,25 @@ data class HostedWorkspaceProfileDto(
     val id: String,
     val name: String,
     val description: String? = null,
-    val isDefault: Boolean = false,
+    val ownerType: String? = null,
+    val isPersonalDefault: Boolean = false,
+    val isOrganizationDefault: Boolean = false,
+    val isDefault: Boolean = isPersonalDefault || isOrganizationDefault,
 )
 
 @Serializable
 data class HostedWorkspaceProfileListDto(
     val items: List<HostedWorkspaceProfileDto> = emptyList(),
     val error: HostedFailureDto? = null,
+    val personalDefaultProfileID: String? = null,
+    val organizationDefaultProfileID: String? = null,
+    val effectiveDefaultProfileID: String? = null,
+)
+
+@Serializable
+data class HostedProfileDefaultDto(
+    val success: Boolean = false,
+    val failure: HostedFailureDto? = null,
 )
 
 @Serializable

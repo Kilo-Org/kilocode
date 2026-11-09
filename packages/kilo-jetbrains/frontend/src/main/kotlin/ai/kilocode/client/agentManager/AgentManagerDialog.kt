@@ -47,7 +47,8 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     private val app: KiloAppService,
     private val workspaces: KiloWorkspaceService,
 ) : DialogWrapper(parent, false) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    protected open val allowEmptyPrompt: Boolean get() = false
     private val completion = if (local) KiloPromptCompletionProvider(
         workspace = workspaces.workspace(directory),
         service = workspaces,
@@ -67,6 +68,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
         showSubmit = false,
         approve = false,
         showEnhance = false,
+        framed = true,
         files = local,
     )
     private var agent: String? = null
@@ -122,7 +124,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     @RequiresEdt
     protected fun pending(text: String = prompt.text()): PendingPrompt? {
         val body = text.trim()
-        if (body.isEmpty()) return null
+        if (body.isEmpty() && !allowEmptyPrompt) return null
         val item = items.firstOrNull { it.key == model }
         return PendingPrompt(body, agent, item?.provider, item?.id, variant)
     }

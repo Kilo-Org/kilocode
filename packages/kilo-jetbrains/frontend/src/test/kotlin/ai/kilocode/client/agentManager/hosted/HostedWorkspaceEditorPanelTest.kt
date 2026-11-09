@@ -703,6 +703,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             return HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0, rateMicrodollarsPerHour = 1_200_000)
         }
         override suspend fun workspaceProfiles(organizationID: String?) = HostedWorkspaceProfileListDto()
+        override suspend fun setPersonalDefaultProfile(profileID: String) = ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
         override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) = mutation
         override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: HostedStartSessionDto) =
             HostedMutationResultDto()

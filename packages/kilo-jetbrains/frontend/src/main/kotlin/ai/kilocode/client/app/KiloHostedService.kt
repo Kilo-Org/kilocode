@@ -6,6 +6,7 @@ import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedDeleteResultDto
 import ai.kilocode.rpc.dto.HostedFailureDto
 import ai.kilocode.rpc.dto.HostedMutationResultDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedStartSessionDto
@@ -345,6 +346,14 @@ class KiloHostedService internal constructor(
         HostedWorkspaceProfileListDto(error = failure(e, "Cloud profiles unavailable"))
     }
 
+    suspend fun setDefaultProfile(profileID: String): HostedProfileDefaultDto = try {
+        call { setPersonalDefaultProfile(profileID) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        HostedProfileDefaultDto(failure = failure(e, "Cloud profile default update failed"))
+    }
+
     suspend fun create(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
         val run = epoch
         return try {
@@ -375,6 +384,7 @@ class KiloHostedService internal constructor(
     fun takePrompt(session: String): PromptDto? = synchronized(lock) { prompts.remove(session) }
 
     private fun seed(result: HostedMutationResultDto, text: String, agent: HostedAgentDto, message: String, run: Long) = synchronized(lock) {
+        if (text.isBlank()) return@synchronized
         val session = result.session ?: return@synchronized
         if (result.failure != null || run != epoch || !gate()) return@synchronized
         prompts[session.id] = PromptDto(

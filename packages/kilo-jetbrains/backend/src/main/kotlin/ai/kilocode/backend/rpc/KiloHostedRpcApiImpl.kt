@@ -8,6 +8,7 @@ import ai.kilocode.rpc.KiloHostedRpcApi
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedDeleteResultDto
 import ai.kilocode.rpc.dto.HostedMutationResultDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
@@ -63,6 +64,11 @@ class KiloHostedRpcApiImpl internal constructor(
     override suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto {
         app.requireReady()
         return app.hosted.workspaceProfiles(organizationID ?: organization())
+    }
+
+    override suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto {
+        app.requireReady()
+        return app.hosted.setPersonalDefaultProfile(profileID)
     }
 
     override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {

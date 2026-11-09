@@ -432,7 +432,7 @@ class AgentManagerPanel(
                     target,
                     controller.directory,
                     repo,
-                    profiles.items,
+                    profiles,
                     withWorkspace = true,
                 )
                 if (!dialog.showAndGet()) return@edt
@@ -530,7 +530,7 @@ class AgentManagerPanel(
             target,
             controller.directory,
             workspace.repositoryUrl.orEmpty(),
-            emptyList(),
+            ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto(),
             withWorkspace = false,
         )
         if (!dialog.showAndGet()) return

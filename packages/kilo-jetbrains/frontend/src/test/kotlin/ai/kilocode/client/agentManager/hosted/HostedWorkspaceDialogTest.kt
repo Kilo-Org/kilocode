@@ -9,11 +9,15 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelDto
@@ -26,14 +30,18 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.tabs.JBTabs
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CompletableDeferred
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
+import javax.swing.JLabel
+import javax.swing.JList
 
 class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private lateinit var coroutines: TestCoroutines
@@ -42,10 +50,11 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private lateinit var rpc: FakeWorkspaceRpcApi
     private lateinit var workspaces: KiloWorkspaceService
     private var dialog: HostedWorkspaceDialog? = null
-    private val profiles = listOf(
-        HostedWorkspaceProfileDto("profile-dev", "Standard", isDefault = true),
-        HostedWorkspaceProfileDto("profile-prod", "Standard"),
+    private val profileItems = listOf(
+        HostedWorkspaceProfileDto("profile-dev", "Standard", ownerType = "user"),
+        HostedWorkspaceProfileDto("profile-prod", "Standard", ownerType = "organization"),
     )
+    private val profiles = HostedWorkspaceProfileListDto(items = profileItems)
 
     override fun setUp() {
         super.setUp()
@@ -89,7 +98,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
         edt { Disposer.dispose(requireNotNull(dialog).disposable) }
         dialog = null
-        open(profiles = emptyList(), withWorkspace = false)
+        open(profiles = HostedWorkspaceProfileListDto(), withWorkspace = false)
         ready()
         edt { assertPromptCentered() }
     }
@@ -113,13 +122,14 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         )
     }
 
-    fun `test a non-default profile is never selected implicitly`() {
-        open(profiles = profiles.map { it.copy(isDefault = false) })
+    fun `test no profile default leaves no profile selected`() {
+        open()
         ready()
 
         edt {
             assertEquals(0, profile().selectedIndex)
             assertSame(profile().getItemAt(0), profile().selectedItem)
+            assertFalse(setDefault().isEnabled)
             assertNull(requireNotNull(dialog).validationForTest())
             assertTrue(okButton().isEnabled)
             profile().selectedIndex = 2
@@ -130,19 +140,114 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         assertEquals("profile-prod", created().profileID)
     }
 
-    fun `test a declared default never overrides the no profile selection`() {
-        open(profiles = profiles.map { it.copy(isDefault = it.id == "profile-prod") })
+    fun `test personal default profile is preselected before organization default`() {
+        open(profiles = profiles.copy(
+            personalDefaultProfileID = "profile-dev",
+            organizationDefaultProfileID = "profile-prod",
+        ))
+
+        edt {
+            assertEquals(1, profile().selectedIndex)
+            assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertFalse(setDefault().isEnabled)
+            assertFalse(useDefault().isVisible)
+        }
+    }
+
+    fun `test organization default profile is preselected without a personal default`() {
+        open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+
+        edt {
+            assertEquals(2, profile().selectedIndex)
+            assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertFalse(setDefault().isEnabled)
+            assertFalse(useDefault().isVisible)
+        }
+    }
+
+    fun `test profile flags preselect and label defaults without list defaults`() {
+        val flagged = listOf(
+            HostedWorkspaceProfileDto("profile-dev", "Cloud Agent", isPersonalDefault = true),
+            HostedWorkspaceProfileDto("profile-prod", "Cloud Team", isOrganizationDefault = true),
+        )
+        open(profiles = HostedWorkspaceProfileListDto(items = flagged))
+
+        edt {
+            assertEquals(1, profile().selectedIndex)
+            assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertEquals(
+                KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", "Cloud Agent"),
+                cell(flagged[0], 0),
+            )
+            assertEquals(
+                KiloBundle.message("hosted.workspace.dialog.profile.organizationDefault", "Cloud Team"),
+                cell(flagged[1], 1),
+            )
+            assertFalse(setDefault().isEnabled)
+            assertFalse(useDefault().isVisible)
+        }
+    }
+
+    fun `test prompt uses a standard dialog border`() {
+        open()
         ready()
 
         edt {
-            assertEquals(3, profile().itemCount)
-            assertEquals(0, profile().selectedIndex)
-            assertSame(profile().getItemAt(0), profile().selectedItem)
-            assertTrue(okButton().isEnabled)
-            submit()
+            assertEquals(JBUI.scale(1), prompt().insets.top)
+            assertEquals(JBUI.scale(1), prompt().insets.left)
+            assertEquals(JBUI.scale(1), prompt().insets.bottom)
+            assertEquals(JBUI.scale(1), prompt().insets.right)
+        }
+    }
+
+    fun `test profile actions use the standard button gap`() {
+        open()
+        ready()
+
+        edt {
+            val links = controls().filterIsInstance<Stack>().single()
+            assertEquals(UiStyle.Gap.pad(), links.space)
+        }
+    }
+
+    fun `test use default returns to the personal default`() {
+        open(profiles = profiles.copy(personalDefaultProfileID = "profile-dev"))
+
+        edt {
+            assertFalse(useDefault().isVisible)
+            profile().selectedIndex = 2
+            assertTrue(useDefault().isVisible)
+            useDefault().doClick()
+            assertEquals(1, profile().selectedIndex)
+            assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertFalse(useDefault().isVisible)
+        }
+    }
+
+    fun `test set as default link saves the selected profile`() {
+        var saved: String? = null
+        open(
+            profiles = profiles,
+            saveDefault = { id ->
+                saved = id
+                HostedProfileDefaultDto(success = true)
+            },
+        )
+        ready()
+
+        edt {
+            profile().selectedIndex = 1
+            assertTrue(setDefault().isEnabled)
+            setDefault().doClick()
         }
 
-        assertNull(created().profileID)
+        assertTrue("Set-as-default link did not save the selected profile", coroutines.pumpUntil { saved == "profile-dev" })
+        assertTrue("Set-as-default link did not update its state", coroutines.pumpUntil {
+            edt { !setDefault().isEnabled }
+        })
+        assertTrue("Set-as-default link did not mark the saved profile", coroutines.pumpUntil {
+            edt { cell(profileItems[0], 1).endsWith("(personal default)") }
+        })
     }
 
     fun `test prompt send retains chosen mode model reasoning branch and profile ID`() {
@@ -174,6 +279,18 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         )
         assertNull(KiloPluginSettings.getAgent())
         assertEmpty(appRpc.configPatches)
+    }
+
+    fun `test empty prompt creates a cloud workspace plan`() {
+        open()
+        ready()
+        edt { prompt().setText("") }
+
+        assertTrue("Empty prompt must be allowed for workspace creation", coroutines.pumpUntil {
+            edt { requireNotNull(dialog).validationForTest() == null }
+        })
+        edt { submit() }
+        assertEquals("", created().prompt)
     }
 
     fun `test remembered cloud mode model and valid saved reasoning are used`() {
@@ -273,7 +390,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     }
 
     fun `test a cloud session needs no workspace profile or branch`() {
-        open(profiles = emptyList(), withWorkspace = false, branch = "ignored/branch")
+        open(profiles = HostedWorkspaceProfileListDto(), withWorkspace = false, branch = "ignored/branch")
         ready()
 
         edt {
@@ -289,25 +406,20 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         assertEquals("kilo/gpt-5", plan.model)
     }
 
-    fun `test blank prompt validation leaves the dialog open without a plan`() {
+    fun `test whitespace prompt creates an empty cloud workspace plan`() {
         open()
         ready()
 
         edt {
             prompt().setText(" \n\t ")
-            assertFalse(prompt().isSendEnabled)
-            assertFalse(okButton().isEnabled)
-            assertEquals(
-                KiloBundle.message("hosted.workspace.dialog.prompt.required"),
-                requireNotNull(dialog).validationForTest()?.message,
-            )
+            assertTrue(okButton().isEnabled)
             submit()
-            rejected()
         }
+        assertEquals("", created().prompt)
     }
 
     fun `test an empty profile list allows workspace creation without a profile`() {
-        open(profiles = emptyList())
+        open(profiles = HostedWorkspaceProfileListDto())
         ready()
 
         edt {
@@ -391,9 +503,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
                 "local", "local.kt", "text/plain", "file:///test/local.kt", reference = true,
             )))
             assertEmpty(prompt().attachments())
-            assertFalse(prompt().isSendEnabled)
-            submit()
-            rejected()
             prompt().setText("Read @src/App.kt")
             prompt().send()
         }
@@ -446,14 +555,15 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     }
 
     private fun open(
-        profiles: List<HostedWorkspaceProfileDto> = this.profiles,
+        profiles: HostedWorkspaceProfileListDto = this.profiles,
         withWorkspace: Boolean = true,
         branch: String = "",
+        saveDefault: suspend (String) -> HostedProfileDefaultDto = { HostedProfileDefaultDto(success = true) },
     ) {
         dialog = edt {
             HostedWorkspaceDialog(
                 JBPanel<Nothing>(), project, "/test", "https://github.com/kilo-org/kilocode.git",
-                profiles, withWorkspace, branch, app, workspaces,
+                profiles, withWorkspace, branch, app, workspaces, saveDefault,
             )
         }
     }
@@ -493,6 +603,19 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
     private fun profile(): ComboBox<*> =
         controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) !is String }
+
+    private fun setDefault(): HyperlinkLabel = controls().filterIsInstance<HyperlinkLabel>()
+        .single { it.text == KiloBundle.message("hosted.workspace.dialog.profile.setDefault") }
+
+    private fun useDefault(): HyperlinkLabel = controls().filterIsInstance<HyperlinkLabel>()
+        .single { it.text == KiloBundle.message("hosted.workspace.dialog.profile.useDefault") }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun cell(item: Any, index: Int): String {
+        val renderer = profile().renderer as javax.swing.ListCellRenderer<Any>
+        val component = renderer.getListCellRendererComponent(JList<Any>(), item, index, false, false)
+        return (component as JLabel).text
+    }
 
     private fun assertPromptCentered() {
         val layout = requireNotNull(prompt().parent).layout as java.awt.BorderLayout

@@ -237,6 +237,8 @@ class RefreshHostedWorkspaceActionTest : BasePlatformTestCase() {
 
         override suspend fun workspaceProfiles(organizationID: String?) =
             ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+        override suspend fun setPersonalDefaultProfile(profileID: String) =
+            ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
 
         override suspend fun createWorkspace(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto) =
             ai.kilocode.rpc.dto.HostedMutationResultDto()

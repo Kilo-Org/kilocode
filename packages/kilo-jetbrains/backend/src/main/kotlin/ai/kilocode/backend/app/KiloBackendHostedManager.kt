@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.HostedDeletionDto
 import ai.kilocode.rpc.dto.HostedFailureDto
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedMutationResultDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
@@ -59,6 +60,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -446,18 +448,47 @@ class KiloBackendHostedManager(
             val root = parse(response.body) ?: return@withContext HostedWorkspaceProfileListDto(
                 error = HostedFailureDto("invalid_response", "Cloud profiles unavailable", retryable = true),
             )
-            val items = root["items"]?.jsonArray.orEmpty().mapNotNull { item ->
-                val obj = item.jsonObject
-                val id = obj.string("id") ?: return@mapNotNull null
-                HostedWorkspaceProfileDto(
-                    id = id,
-                    name = obj.string("name") ?: id,
-                    description = obj["description"]?.jsonPrimitive?.contentOrNull,
-                    isDefault = obj["isDefault"]?.jsonPrimitive?.contentOrNull == "true",
-                )
+            val personal = root["personalProfiles"]?.jsonArray.orEmpty().mapNotNull { profile(it.jsonObject) }
+            val organization = root["organizationProfiles"]?.jsonArray.orEmpty().mapNotNull { profile(it.jsonObject) }
+            val items = if (personal.isNotEmpty() || organization.isNotEmpty()) {
+                personal + organization
+            } else {
+                root["items"]?.jsonArray.orEmpty().mapNotNull { profile(it.jsonObject) }
             }
-            HostedWorkspaceProfileListDto(items)
+            HostedWorkspaceProfileListDto(
+                items = items,
+                personalDefaultProfileID = root.string("personalDefaultProfileID"),
+                organizationDefaultProfileID = root.string("organizationDefaultProfileID"),
+                effectiveDefaultProfileID = root.string("effectiveDefaultProfileID"),
+            )
         }
+
+    suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto =
+        withContext(Dispatchers.IO) {
+            val body = buildJsonObject { put("id", profileID) }.toString()
+            val response = control("POST", "/kilocode/session-host/workspace/profiles/personal-default", body)
+            if (response.code !in 200..299) {
+                return@withContext HostedProfileDefaultDto(failure = failure(response, "set default profile"))
+            }
+            val root = parse(response.body)
+                ?: return@withContext HostedProfileDefaultDto(
+                    failure = HostedFailureDto("invalid_response", "Cloud profile default unavailable", retryable = true),
+                )
+            HostedProfileDefaultDto(success = root["success"]?.jsonPrimitive?.booleanOrNull == true)
+        }
+
+    private fun profile(obj: JsonObject): HostedWorkspaceProfileDto? {
+        val id = obj.string("id") ?: return null
+        return HostedWorkspaceProfileDto(
+            id = id,
+            name = obj.string("name") ?: id,
+            description = obj["description"]?.jsonPrimitive?.contentOrNull,
+            ownerType = obj.string("ownerType"),
+            isPersonalDefault = obj["isPersonalDefault"]?.jsonPrimitive?.booleanOrNull == true,
+            isOrganizationDefault = obj["isOrganizationDefault"]?.jsonPrimitive?.booleanOrNull == true,
+            isDefault = obj["isDefault"]?.jsonPrimitive?.booleanOrNull == true,
+        )
+    }
 
     suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto =
         withContext(Dispatchers.IO) {
@@ -1190,14 +1221,16 @@ class KiloBackendHostedManager(
             request.repository.branch?.takeIf { it.isNotBlank() }?.let { put("branch", it) }
         }
         request.profileID?.let { putJsonObject("profile") { put("id", it) } }
-        put("prompt", request.prompt)
+        if (request.prompt.isNotBlank()) {
+            put("prompt", request.prompt)
+            put("messageID", request.messageID)
+        }
         putJsonObject("agent") {
             put("mode", request.agent.mode)
             put("model", request.agent.model)
             request.agent.variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
         }
         put("operationKey", request.operationKey)
-        put("messageID", request.messageID)
         request.organizationID?.takeIf { it.isNotBlank() }?.let { put("organizationID", it) }
     }.toString()
 

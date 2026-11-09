@@ -373,7 +373,7 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
             project,
             project.basePath.orEmpty(),
             dto.repositoryUrl.orEmpty(),
-            emptyList(),
+            ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto(),
             withWorkspace = false,
         )
         if (!dialog.showAndGet()) return
