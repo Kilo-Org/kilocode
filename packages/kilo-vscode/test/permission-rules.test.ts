@@ -8,6 +8,7 @@ import {
   effectiveConfigLevel,
   effectiveRuleLevel,
   inheritedTool,
+  keepsExceptions,
   mostRestrictive,
   removeExceptionLevel,
   setExceptionLevel,
@@ -161,6 +162,12 @@ describe("rows without an exception editor", () => {
     { action: "browser_open", resource: "*", effect: "ask" },
     { action: "browser_open", resource: "navigate:https://example.com", effect: "allow" },
   ]
+
+  test("only rows that keep their rules list exceptions", () => {
+    expect(keepsExceptions("browser_open")).toBe(true)
+    expect(keepsExceptions("webfetch")).toBe(false)
+    expect(keepsExceptions("websearch")).toBe(false)
+  })
 
   test("a browser_open level change keeps a saved origin approval", () => {
     expect(setRowLevel(approved, "browser_open", "deny")).toEqual([
