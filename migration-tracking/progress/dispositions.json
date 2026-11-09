@@ -1932,7 +1932,7 @@
   },
   "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-vscode/test/slash.test.ts carries the ranking cases of sortByScore for the v2 matchSlash: exact before prefix before substring, description and hint matches, and case-insensitive queries. v2 also keeps the Actions, Commands and Skills groups contiguous, so ranking applies within each group.",
+    "note": "packages/kilo-vscode/test/slash.test.ts carries the sortByScore cases for the v2 matchSlash within one group: exact before prefix before substring before a description match (commit, commit-all, recommit, notes), case-insensitive queries, and hint matches (/clear finds /new, /review fast finds /review quick). v2 also keeps the Actions, Commands and Skills groups contiguous, which a separate test covers.",
     "by": "slash-commands"
   }
 }

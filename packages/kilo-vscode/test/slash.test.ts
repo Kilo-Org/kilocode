@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { CommandInfo, ModelRef, SkillInfo } from "@opencode/client"
 import { matchSlash, mergeCatalog, parseSlash, slashQuery, type SlashEntry } from "../webview-ui/src/v2/slash"
+import { createModelAttribution } from "../webview-ui/src/v2/attribution"
 import { reviewScopes, slashActions } from "../webview-ui/src/v2/slash-actions"
 import { createSlashCatalog } from "../webview-ui/src/v2/slash-catalog"
 import { dispatchSlash, type SlashDeps } from "../webview-ui/src/v2/slash-dispatch"
@@ -37,6 +38,16 @@ describe("slash catalog merge", () => {
       skills: [skill("review"), skill("new"), skill("pdf")],
     })
     expect(names(list)).toEqual(["new", "init", "review", "deploy", "review:skill", "new:skill", "pdf"])
+  })
+
+  test("a suffixed skill name never collides with a command of that name", () => {
+    const list = mergeCatalog({
+      actions: [],
+      commands: [{ name: "foo" }, { name: "foo:skill" }],
+      skills: [skill("foo")],
+    })
+    expect(names(list)).toEqual(["foo", "foo:skill", "foo:skill2"])
+    expect(parseSlash(list, "/foo:skill2")?.entry.kind).toBe("skill")
   })
 
   test("an action hides a server command of the same name", () => {
@@ -83,7 +94,22 @@ describe("slash matching", () => {
     expect(names(matchSlash(entries, ""))).toEqual(["new", "init", "review", "deploy", "reviewer", "pdf"])
   })
 
-  test("ranks exact, prefix, substring and description or hint matches within each group", () => {
+  test("ranks exact before prefix before substring before description or hint within one group", () => {
+    const list = mergeCatalog({
+      actions: [],
+      commands: [
+        { name: "recommit", description: "" },
+        { name: "notes", description: "commit notes" },
+        { name: "commit-all", description: "" },
+        { name: "commit", description: "" },
+      ],
+      skills: [],
+    })
+    expect(names(matchSlash(list, "commit"))).toEqual(["commit", "commit-all", "recommit", "notes"])
+    expect(names(matchSlash(list, "COMMIT"))).toEqual(["commit", "commit-all", "recommit", "notes"])
+  })
+
+  test("keeps the group order across ranks", () => {
     expect(names(matchSlash(entries, "review"))).toEqual(["review", "reviewer"])
     expect(names(matchSlash(entries, "dep"))).toEqual(["deploy", "pdf"])
     expect(names(matchSlash(entries, "CLEAR"))).toEqual(["new"])
@@ -92,6 +118,16 @@ describe("slash matching", () => {
   test("a nested query lists the children of its command", () => {
     expect(names(matchSlash(entries, "review "))).toEqual(["review staged", "review quick"])
     expect(names(matchSlash(entries, "review q"))).toEqual(["review quick"])
+    expect(names(matchSlash(entries, "review fast"))).toEqual(["review quick"])
+    expect(slashQuery(entries, "/review --quick")).toBe("review --quick")
+    // Free guidance that only appears in a scope description keeps the menu closed, so Enter sends it.
+    const described = mergeCatalog({
+      actions: [],
+      commands,
+      nested: reviewScopes(commands, false, () => "Review the current branch"),
+      skills: [],
+    })
+    expect(slashQuery(described, "/review the")).toBeUndefined()
   })
 
   test("opens at a leading slash and for a command with matching children", () => {
@@ -160,12 +196,11 @@ describe("slash catalog refresh", () => {
 describe("slash dispatch", () => {
   const high: ModelRef = { providerID: "kilo", id: "claude", variant: "high" }
 
-  const deps = (current: ModelRef | undefined, selected: ModelRef | undefined = high) => {
+  const deps = (selected: ModelRef | undefined = high) => {
     const calls: unknown[] = []
     const value: SlashDeps = {
       session: async () => "ses_1",
-      current: () => current,
-      selected,
+      selected: () => selected,
       switchModel: async (input) => void calls.push(["switchModel", input.model]),
       command: async (input) => void calls.push(["command", input]),
       prompt: async (input) => void calls.push(["prompt", input]),
@@ -180,37 +215,40 @@ describe("slash dispatch", () => {
   const entry = (name: string) => entries.find((item) => item.name === name)!
 
   test("runs a server command with its text, files and delivery on the session", async () => {
-    const run = deps(high)
+    const run = deps()
     const files = [{ uri: "file:///a.ts", name: "a.ts" }]
     await dispatchSlash({ entry: entry("review"), args: "staged", files, delivery: "queue" }, run.value)
     expect(run.calls).toEqual([
+      ["switchModel", high],
       ["command", { sessionID: "ses_1", name: "review", text: "staged", files, delivery: "queue" }],
     ])
   })
 
-  test("applies the selected model with its variant before a command without a model", async () => {
-    const run = deps({ providerID: "kilo", id: "claude" })
-    await dispatchSlash({ entry: entry("init"), args: "" }, run.value)
-    expect(run.calls).toEqual([
-      ["switchModel", high],
-      ["command", { sessionID: "ses_1", name: "init", text: "", files: undefined, delivery: undefined }],
-    ])
-  })
-
   test("sends the default variant explicitly and leaves a command with its own model to the server", async () => {
-    const plain = deps(high, { providerID: "kilo", id: "claude" })
+    const plain = deps({ providerID: "kilo", id: "claude" })
     await dispatchSlash({ entry: entry("init"), args: "" }, plain.value)
     expect(plain.calls[0]).toEqual(["switchModel", { providerID: "kilo", id: "claude", variant: "default" }])
-    const own = deps({ providerID: "kilo", id: "claude" })
+    const own = deps()
     await dispatchSlash({ entry: entry("fast"), args: "" }, own.value)
     expect(own.calls.map((call) => (call as unknown[])[0])).toEqual(["command"])
   })
 
+  test("keeps a settled variant switch that the store does not report yet", async () => {
+    // The composer switched to high; the request settled, but the store still reports the old variant.
+    const attribution = createModelAttribution()
+    attribution.request("ses_1", high)
+    const run = deps()
+    run.value.selected = (id) => attribution.read(id, { providerID: "kilo", id: "claude", variant: "low" })
+    await dispatchSlash({ entry: entry("init"), args: "" }, run.value)
+    expect(run.calls[0]).toEqual(["switchModel", high])
+  })
+
   test("a review scope runs the review command with the scope as its first argument", async () => {
-    const run = deps(high)
+    const run = deps()
     const scope = reviewScopes(commands, true, (key) => key).find((item) => item.name === "review worktree")!
     await dispatchSlash({ entry: scope, args: "focus on tests" }, run.value)
     expect(run.calls).toEqual([
+      ["switchModel", high],
       [
         "command",
         { sessionID: "ses_1", name: "review", text: "worktree focus on tests", files: undefined, delivery: undefined },
@@ -219,9 +257,10 @@ describe("slash dispatch", () => {
   })
 
   test("runs a skill as a prompt that attaches it under its slash name", async () => {
-    const run = deps(high)
+    const run = deps()
     await dispatchSlash({ entry: entry("pdf"), args: "summarize" }, run.value)
     expect(run.calls).toEqual([
+      ["switchModel", high],
       [
         "prompt",
         {
@@ -237,7 +276,7 @@ describe("slash dispatch", () => {
 
   test("runs a client action from the registry in the webview without a session", async () => {
     const ran: string[] = []
-    const run = deps(high)
+    const run = deps()
     run.value.session = async () => {
       throw new Error("no session for an action")
     }

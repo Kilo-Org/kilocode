@@ -36,9 +36,10 @@ export function mergeCatalog(input: {
     })
   const seen = new Set<string>()
   const skills = input.skills.flatMap((skill): SlashEntry[] => {
-    const name = taken.has(skill.name) ? `${skill.name}:skill` : skill.name
-    if (seen.has(name)) return []
-    seen.add(name)
+    if (seen.has(skill.name)) return []
+    seen.add(skill.name)
+    const name = free(taken, skill.name)
+    taken.add(name)
     return [{ kind: "skill", name, description: skill.description, hints: [], skill }]
   })
   const all = [...input.actions, ...commands, ...(input.nested ?? []), ...skills]
@@ -51,8 +52,17 @@ export function matchSlash(entries: readonly SlashEntry[], query: string): Slash
   const lower = query.toLowerCase()
   const space = lower.indexOf(" ")
   if (space !== -1) {
-    const children = entries.filter((entry) => entry.name.toLowerCase().startsWith(lower))
-    return group(lower.length > space + 1 ? rank(children, lower) : children)
+    // A nested query matches the children of its command on the words after the command, hints included.
+    const head = lower.slice(0, space)
+    const rest = lower.slice(space + 1).trimStart()
+    const children = entries.filter((entry) => nested(entry) && parent(entry.name).toLowerCase() === head)
+    if (!rest) return group(children)
+    return group(
+      rank(
+        children.filter((entry) => score(entry, rest) > 0),
+        rest,
+      ),
+    )
   }
   const roots = entries.filter((entry) => !nested(entry))
   if (!lower) return group(roots)
@@ -74,7 +84,7 @@ export function slashQuery(entries: readonly SlashEntry[], before: string): stri
   const child = before.match(/^\/(\S+)[ \t]+([^\n]*)$/)
   if (!child) return
   const value = `${child[1]} ${child[2]}`.toLowerCase()
-  if (!entries.some((entry) => nested(entry) && entry.name.toLowerCase().startsWith(value))) return
+  if (matchSlash(entries, value).length === 0) return
   return value
 }
 
@@ -107,12 +117,23 @@ function parent(name: string) {
   return name.slice(0, name.indexOf(" "))
 }
 
+// A skill whose name is taken gets `:skill`, then a number when that is taken too, so every row stays reachable.
+function free(taken: ReadonlySet<string>, name: string) {
+  if (!taken.has(name)) return name
+  const base = `${name}:skill`
+  if (!taken.has(base)) return base
+  const index = Array.from({ length: taken.size }, (_, item) => item + 2).find((item) => !taken.has(`${base}${item}`))
+  return `${base}${index}`
+}
+
+// Scores the name a query is typed against: the whole name of a root entry, the words after the command of a child.
 function score(entry: SlashEntry, lower: string) {
-  const name = entry.name.toLowerCase()
+  const name = (nested(entry) ? entry.name.slice(entry.name.indexOf(" ") + 1) : entry.name).toLowerCase()
   if (name === lower) return 3
   if (name.startsWith(lower)) return 2
   if (name.includes(lower)) return 1
-  if (entry.description?.toLowerCase().includes(lower)) return 1
+  // A child's description is not matched: free review guidance after the command would select a scope on Enter.
+  if (!nested(entry) && entry.description?.toLowerCase().includes(lower)) return 1
   if (entry.hints.some((hint) => hint.toLowerCase().includes(lower))) return 1
   return 0
 }
