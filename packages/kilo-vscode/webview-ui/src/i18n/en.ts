@@ -824,6 +824,11 @@ export const dict = {
   "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
+  "prompt.slash.empty": "No commands found",
+  "prompt.slash.group.actions": "Actions",
+  "prompt.slash.group.commands": "Commands",
+  "prompt.slash.group.skills": "Skills",
+
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",
   "context.stats.thisSession": "This session",
