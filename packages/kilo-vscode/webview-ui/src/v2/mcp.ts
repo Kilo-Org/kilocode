@@ -162,6 +162,7 @@ export function createMcp() {
   return {
     servers,
     status: (name: string) => server(name)?.status,
+    sync,
     busy,
     removing,
     resetting,

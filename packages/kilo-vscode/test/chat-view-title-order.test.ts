@@ -12,11 +12,12 @@ const ORDER = [
   "kilo-code.v2.history",
   "kilo-code.v2.agentManager.open",
   "kilo-code.v2.profile",
+  "kilo-code.v2.marketplace",
   "kilo-code.v2.settings",
 ]
 
 describe("chat view title", () => {
-  it("keeps the sidebar button order new session, history, agent manager, profile, settings", () => {
+  it("keeps the sidebar button order new session, history, agent manager, profile, marketplace, settings", () => {
     const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
       contributes: { menus: { "view/title": MenuEntry[] } }
     }

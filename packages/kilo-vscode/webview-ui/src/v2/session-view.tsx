@@ -329,6 +329,7 @@ export function SessionView(props: {
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
+      marketplace: () => getVSCodeAPI().postMessage({ type: "openMarketplace" } satisfies ToHost as never),
       settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
       reload: () => void v2.api.location.reload().catch(v2.report),
     }

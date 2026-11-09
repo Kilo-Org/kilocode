@@ -22,6 +22,8 @@
   ],
   "exclude": [
     "src/shared",
-    "test/fixtures/browser-panel-render.tsx"
+    "test/fixtures/browser-panel-render.tsx",
+    "test/fixtures/marketplace-render.tsx",
+    "test/fixtures/marketplace-install-modal.tsx"
   ]
 }

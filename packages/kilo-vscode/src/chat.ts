@@ -56,6 +56,7 @@ const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   chat: new Set(["showTaskTimeline", "indexing.showButtonWhenDisabled"]),
   settings: new Set(),
   profile: new Set(),
+  marketplace: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
   documents: new Set(),
   diffViewer: new Set(),
@@ -466,6 +467,10 @@ export function wire(input: {
       void commands.executeCommand("kilo-code.v2.profile")
       return true
     }
+    if (message.type === "openMarketplace") {
+      void commands.executeCommand("kilo-code.v2.marketplace")
+      return true
+    }
     if (message.type === "requestIndexingSettings") {
       void indexing.requestSettings(message.projectId)
       return true
@@ -559,12 +564,13 @@ export function composerState(context: ExtensionContext): ToWebview[] {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The sidebar and the Agent Manager load their own bundles; the Settings and Profile panels share a third one that
-// does not carry the chat transcript or its rich content.
+// The sidebar and the Agent Manager load their own bundles; the Settings, Profile and Marketplace panels share a third
+// one that does not carry the chat transcript or its rich content.
 const ENTRY = {
   chat: "webview",
   settings: "settings",
   profile: "settings",
+  marketplace: "settings",
   agentManager: "agent-manager",
   documents: "documents",
   diffViewer: "diff-viewer",
@@ -587,8 +593,9 @@ export function html(input: {
   globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
-  // The Settings and Profile panels load an ES module that imports its lazy tab chunks from the webview origin.
-  const module = input.view === "settings" || input.view === "profile"
+  // The Settings, Profile and Marketplace panels load an ES module that imports its lazy tab chunks from the webview
+  // origin.
+  const module = input.view === "settings" || input.view === "profile" || input.view === "marketplace"
   const policy = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
@@ -635,7 +642,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "marketplace" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -693,7 +700,7 @@ export function routeWorktreeMessage(
   return false
 }
 
-type View = "chat" | "settings" | "profile" | "agentManager" | "documents" | "diffViewer"
+type View = "chat" | "settings" | "profile" | "marketplace" | "agentManager" | "documents" | "diffViewer"
 
 /** The Changes editor tab: the session, working tree and turn diffs with review comments. */
 export type ChangesTab = {
