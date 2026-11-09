@@ -11,6 +11,7 @@ const ACTIONS = [
   { name: "agents", key: "settings.agentBehaviour.subtab.agents", hints: ["modes"] },
   { name: "variant", key: "prompt.thinking.tooltip", hints: ["variants", "reasoning", "thinking"] },
   { name: "compact", key: "command.session.compact", hints: ["smol", "condense"] },
+  { name: "caffeinate", key: "agentManager.caffeination.toggle", hints: ["caffenate", "keep-awake", "awake", "sleep"] },
   { name: "help", hints: [] },
   { name: "settings", key: "sidebar.topBar.settings", hints: [] },
   { name: "reload", key: "common.reloadDescription", hints: ["refresh"] },

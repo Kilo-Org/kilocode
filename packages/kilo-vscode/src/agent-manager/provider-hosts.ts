@@ -93,6 +93,7 @@ export interface ProviderHostsSource {
   trackOpenSessions(ids: string[]): void
   trackVisibleSession(id: string | null): void
   setCaffeination(enabled: boolean): Promise<void>
+  toggleCaffeination(): Promise<void>
   postCaffeination(): void
   setReviewMarkdownRender(value: boolean): Promise<void>
   messageProject(m: AgentManagerInMessage): ProjectContext | undefined
@@ -146,6 +147,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     trackOpenSessions: (ids) => p.trackOpenSessions(ids),
     trackVisibleSession: (id) => p.trackVisibleSession(id),
     setCaffeination: (enabled) => p.setCaffeination(enabled),
+    toggleCaffeination: () => p.toggleCaffeination(),
     postCaffeination: () => p.postCaffeination(),
     setReviewMarkdownRender: (value) => p.setReviewMarkdownRender(value),
   }

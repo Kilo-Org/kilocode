@@ -326,6 +326,8 @@ export function SessionView(props: {
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
       compact: id ? () => void v2.data.session.compact({ sessionID: id }).catch(v2.report) : undefined,
+      caffeinate: () =>
+        getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
       settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
       reload: () => void v2.api.location.reload().catch(v2.report),
