@@ -1325,6 +1325,11 @@ export const dict = {
     "Velg om blokker for MCP- og generiske verktøy skal være utvidet eller skjult fra start.",
   "settings.display.mcpTool.expanded": "Utvidet",
   "settings.display.mcpTool.collapsed": "Skjult",
+  "settings.display.codeMode.title": "Blokker for Code Mode",
+  "settings.display.codeMode.description":
+    "Velg om blokker for Code Mode starter med verktøykallene oppført eller som én linje. Skriptet forblir alltid skjult til du åpner det.",
+  "settings.display.codeMode.expanded": "Utvidet",
+  "settings.display.codeMode.collapsed": "Skjult",
 
   "settings.display.shortcutHints.title": "Vis snarveitips",
   "settings.display.shortcutHints.description":

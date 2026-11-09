@@ -15,6 +15,7 @@
   },
   "files": [
     "src/index.tsx",
+    "settings/index.tsx",
     "agent-manager/index.tsx",
     "documents/index.tsx",
     "browser-tab/index.tsx",

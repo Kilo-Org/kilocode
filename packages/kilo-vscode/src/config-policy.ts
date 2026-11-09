@@ -57,6 +57,7 @@ export function displaySettings(documents: PolicyDocument[]): DisplaySettings {
     result.terminalCommandDisplay = layout(value.terminal_command_display) ?? result.terminalCommandDisplay
     result.codeEditDisplay = layout(value.code_edit_display) ?? result.codeEditDisplay
     result.mcpToolDisplay = layout(value.mcp_tool_display) ?? result.mcpToolDisplay
+    result.codeModeDisplay = layout(value.code_mode_display) ?? result.codeModeDisplay
     explicitReasoning = reasoning(value.reasoning_display) ?? explicitReasoning
     if (typeof value.auto_collapse_reasoning === "boolean") autoCollapse = value.auto_collapse_reasoning
   }

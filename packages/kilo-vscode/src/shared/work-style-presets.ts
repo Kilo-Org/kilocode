@@ -16,6 +16,7 @@ export type DisplayPreset = {
   terminal_command_display: "expanded" | "collapsed"
   code_edit_display: "expanded" | "collapsed"
   mcp_tool_display: "expanded" | "collapsed"
+  code_mode_display: "expanded" | "collapsed"
 }
 
 export type WorkStyleSettings = {
@@ -89,6 +90,8 @@ function display(style: WorkStyle): DisplayPreset {
     terminal_command_display: human ? "expanded" : "collapsed",
     code_edit_display: human ? "expanded" : "collapsed",
     mcp_tool_display: "collapsed",
+    // Review first lists each tool call a script makes; high autonomy keeps it to one line.
+    code_mode_display: human ? "expanded" : "collapsed",
   }
 }
 
@@ -138,6 +141,9 @@ export function buildWorkStylePlan(input: {
   }
   if (input.config.mcp_tool_display === undefined) {
     config.mcp_tool_display = preset.display.mcp_tool_display
+  }
+  if (input.config.code_mode_display === undefined) {
+    config.code_mode_display = preset.display.code_mode_display
   }
   if (input.config.reasoning_display === undefined && input.config.auto_collapse_reasoning === undefined) {
     config.reasoning_display = preset.display.reasoning_display

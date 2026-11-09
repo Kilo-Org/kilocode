@@ -12,6 +12,7 @@ import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { Model } from "@opencode/core/model"
+import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SessionProjector } from "@opencode/core/session/projector"
@@ -51,17 +52,31 @@ const plugins = makeGlobalNode({
         Bus.Service,
         FSUtil.Service,
         Global.Service,
+        Schedule.Service,
         KiloSessionSync.Service,
         KiloRemote.Service,
         SessionStore.Service,
       )(
         yield* Effect.context<
-          Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | KiloRemote.Service | SessionStore.Service
+          | Bus.Service
+          | FSUtil.Service
+          | Global.Service
+          | Schedule.Service
+          | KiloSessionSync.Service
+          | KiloRemote.Service
+          | SessionStore.Service
         >(),
       )
       const register = (
         plugin: Plugin<
-          Bus.Service | FSUtil.Service | Global.Service | KiloSessionSync.Service | KiloRemote.Service | SessionStore.Service | Scope.Scope
+          | Bus.Service
+          | FSUtil.Service
+          | Global.Service
+          | Schedule.Service
+          | KiloSessionSync.Service
+          | KiloRemote.Service
+          | SessionStore.Service
+          | Scope.Scope
         >,
         phase?: "post",
       ) =>
@@ -83,7 +98,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, SessionSync.node, Remote.node, SessionStore.node],
+  deps: [Bus.node, FSUtil.node, Global.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
 })
 
 /**

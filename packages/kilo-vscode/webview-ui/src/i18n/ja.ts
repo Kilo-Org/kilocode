@@ -1319,6 +1319,11 @@ export const dict = {
   "settings.display.mcpTool.description": "MCPおよび汎用ツールブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
+  "settings.display.codeMode.title": "Code Mode ブロック",
+  "settings.display.codeMode.description":
+    "Code Mode ブロックを、ツール呼び出しを一覧表示した状態で開始するか 1 行で開始するかを選択します。スクリプトは開くまで常に非表示です。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "折りたたみ",
 
   "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
   "settings.display.shortcutHints.description":

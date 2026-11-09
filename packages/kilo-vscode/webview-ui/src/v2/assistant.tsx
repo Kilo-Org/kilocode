@@ -64,13 +64,12 @@ export function AssistantMessage(props: {
         if (!metadata || !turn || !lastChunk()) return
         const cached = turnDiffs.read(props.session, turn)
         if (cached) return setTurnFiles(cached)
-        void turnDiffs.request(props.session, turn, (query) => v2.api.session.diff(query)).then(
-          setTurnFiles,
-          (error: unknown) => {
+        void turnDiffs
+          .request(props.session, turn, (query) => v2.api.session.diff(query))
+          .then(setTurnFiles, (error: unknown) => {
             console.error("[Kilo New] Failed to read the turn changes", error)
             setTurnFiles([])
-          },
-        )
+          })
       },
     ),
   )
@@ -174,22 +173,28 @@ export function AssistantMessage(props: {
                 }}
               >
                 <div ref={setBody} data-slot="tool-part-body">
-                  <ContentPart
-                    item={item}
-                    message={props.message}
-                    index={at()}
-                    session={props.session}
-                    directory={v2.directory}
-                    open={v2.open}
-                    copy={at() === copy()}
-                    throughput={at() === copy() ? throughputEl() : undefined}
-                    turnMeta={at() === copy() ? turnMetaEl() : undefined}
-                    settled={at() < props.message.content.length - 1}
-                    defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
-                    reasoningDisplay={displaySettings().reasoningDisplay}
-                    actions={props.actions}
-                    errorAction={errorAction}
-                  />
+                  {/* A card reads its open state once. Keying it on its own layout remounts only the cards whose
+                      layout changed, so a settings change shows in open sessions at once. */}
+                  <Show when={item.type === "tool" ? `layout:${defaultOpen(item.name)}` : "content"} keyed>
+                    {(_layout) => (
+                      <ContentPart
+                        item={item}
+                        message={props.message}
+                        index={at()}
+                        session={props.session}
+                        directory={v2.directory}
+                        open={v2.open}
+                        copy={at() === copy()}
+                        throughput={at() === copy() ? throughputEl() : undefined}
+                        turnMeta={at() === copy() ? turnMetaEl() : undefined}
+                        settled={at() < props.message.content.length - 1}
+                        defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
+                        reasoningDisplay={displaySettings().reasoningDisplay}
+                        actions={props.actions}
+                        errorAction={errorAction}
+                      />
+                    )}
+                  </Show>
                 </div>
               </div>
             )

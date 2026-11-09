@@ -1,6 +1,7 @@
 // The expanded model picker preview of v1: the highlighted model's badges, prices, context, Terminal Bench,
 // capabilities, description and auto routing choices, from the v2 catalog and the Kilo Gateway metadata.
-import { Show, For, lazy, type Component } from "solid-js"
+import { Show, For, type Component } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import { useModelPreferences } from "../../context/model-preferences"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -17,13 +18,16 @@ import {
 } from "./model-selector-utils"
 import { avgPrice, fmtAttemptCost, fmtCachedPrice, fmtPrice, fmtTerminalBenchScore } from "./model-preview-utils"
 
-const Markdown = lazy(() => import("./ModelDescription"))
-
 interface Props {
   model: PickerModel | null
   models?: readonly PickerModel[]
   /** Show the favorite star; false for pickers without favorites, as the rows. */
   favorites?: boolean
+  /**
+   * Renders a description as Markdown. The chat and the Agent Manager pass it; the Settings panel shows the raw
+   * description, so its bundle does not carry the Markdown, code and diff stack.
+   */
+  description?: Component<{ text: string }>
 }
 
 function fmtContext(n: number): string {
@@ -203,7 +207,9 @@ export const ModelPreview: Component<Props> = (props) => {
               {/* Description */}
               <Show when={model().options?.description}>
                 <div class="model-preview-description">
-                  <Markdown text={model().options!.description!} />
+                  <Show when={props.description} fallback={model().options!.description!}>
+                    {(description) => <Dynamic component={description()} text={model().options!.description!} />}
+                  </Show>
                 </div>
               </Show>
 

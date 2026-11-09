@@ -1285,6 +1285,11 @@ export const dict = {
     "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
+  "settings.display.codeMode.title": "Code Mode Blokları",
+  "settings.display.codeMode.description":
+    "Code Mode bloklarının araç çağrıları listelenmiş halde mi yoksa tek satır olarak mı başlayacağını seçin. Betik, siz açana kadar her zaman gizli kalır.",
+  "settings.display.codeMode.expanded": "Genişletilmiş",
+  "settings.display.codeMode.collapsed": "Daraltılmış",
 
   "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
   "settings.display.shortcutHints.description":

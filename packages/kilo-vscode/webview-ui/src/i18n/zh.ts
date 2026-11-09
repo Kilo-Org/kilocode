@@ -1250,6 +1250,11 @@ export const dict = {
   "settings.display.mcpTool.description": "选择 MCP 与通用工具块的初始状态：展开或折叠。",
   "settings.display.mcpTool.expanded": "展开",
   "settings.display.mcpTool.collapsed": "折叠",
+  "settings.display.codeMode.title": "Code Mode 块",
+  "settings.display.codeMode.description":
+    "选择 Code Mode 块的初始状态：列出工具调用或显示为一行。脚本在您打开之前始终保持隐藏。",
+  "settings.display.codeMode.expanded": "展开",
+  "settings.display.codeMode.collapsed": "折叠",
 
   "settings.display.shortcutHints.title": "显示快捷键提示",
   "settings.display.shortcutHints.description":

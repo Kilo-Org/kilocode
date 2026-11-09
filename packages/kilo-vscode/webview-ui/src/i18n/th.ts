@@ -1299,6 +1299,11 @@ export const dict = {
   "settings.display.mcpTool.description": "เลือกว่าบล็อกเครื่องมือ MCP และเครื่องมือทั่วไปจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
+  "settings.display.codeMode.title": "บล็อก Code Mode",
+  "settings.display.codeMode.description":
+    "เลือกว่าบล็อก Code Mode จะเริ่มต้นด้วยรายการการเรียกใช้เครื่องมือหรือเป็นบรรทัดเดียว สคริปต์จะถูกซ่อนไว้เสมอจนกว่าคุณจะเปิด",
+  "settings.display.codeMode.expanded": "ขยาย",
+  "settings.display.codeMode.collapsed": "ยุบ",
 
   "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
   "settings.display.shortcutHints.description":

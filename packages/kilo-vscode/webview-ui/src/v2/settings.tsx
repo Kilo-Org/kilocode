@@ -33,7 +33,6 @@ export function createSettings() {
     loaded: () => v2.data.location.integration.list() !== undefined,
     integration: (id: string) => integrations().find((item) => item.id === id),
     connection: v2.connection.status,
-    kiloFailure: v2.kiloFailure,
     connectionError: v2.connection.error,
     version: v2.version,
     extensionVersion: () => v2.extensionVersion,

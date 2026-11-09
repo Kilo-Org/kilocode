@@ -8,6 +8,8 @@ export interface SettingsSearchResultsProps {
   active: number
   listId: string
   tabs: SettingsTab[]
+  /** The query is newer than the results, so an empty list is not the final answer yet. */
+  pending?: boolean
   onHover: (index: number) => void
   onSelect: (result: SettingsSearchResult) => void
 }
@@ -19,9 +21,20 @@ interface SearchGroup {
   items: SettingsSearchResult[]
 }
 
+function scrollParent(el: HTMLElement): HTMLElement | undefined {
+  let node = el.parentElement
+  while (node) {
+    const overflow = getComputedStyle(node).overflowY
+    if (overflow === "auto" || overflow === "scroll") return node
+    node = node.parentElement
+  }
+  return undefined
+}
+
 const SettingsSearchResults: Component<SettingsSearchResultsProps> = (props) => {
   const language = useLanguage()
   let rootRef: HTMLDivElement | undefined
+  let scroller: HTMLElement | undefined
 
   const highlight = createMemo(() => createHighlighter(props.query))
 
@@ -50,14 +63,25 @@ const SettingsSearchResults: Component<SettingsSearchResultsProps> = (props) => 
     const id = `${props.listId}-${props.active}`
     if (props.results.length === 0) return
     const row = rootRef?.querySelector<HTMLElement>(`[id="${id}"]`)
-    row?.scrollIntoView({ block: "nearest" })
+    if (!row) return
+    // Every keystroke and hover changes the active row. Scroll only when it is
+    // outside the pane, so the common case does not force a layout and scroll.
+    scroller ??= scrollParent(row)
+    const box = row.getBoundingClientRect()
+    const view = scroller?.getBoundingClientRect()
+    if (box.top >= (view?.top ?? 0) && box.bottom <= (view?.bottom ?? window.innerHeight)) return
+    row.scrollIntoView({ block: "nearest" })
   })
 
   return (
     <div ref={rootRef} data-slot="tabs-content" data-component="settings-search-results">
       <Show
         when={props.results.length > 0}
-        fallback={<div data-slot="settings-search-empty">{language.t("settings.search.noResults")}</div>}
+        fallback={
+          <Show when={!props.pending}>
+            <div data-slot="settings-search-empty">{language.t("settings.search.noResults")}</div>
+          </Show>
+        }
       >
         <div role="listbox" id={props.listId} aria-label={language.t("settings.search.placeholder")}>
           <For each={groups()}>
