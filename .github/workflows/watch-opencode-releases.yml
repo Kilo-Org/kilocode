@@ -69,7 +69,16 @@ jobs:
           prev=$(printf '%s' "$sync" | sed -E 's/^chore\(upstream\): sync (v[0-9.]+) .*/\1/')
 
           if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            git fetch --no-tags upstream "$base" || true
+            full=$(gh api "repos/anomalyco/opencode/commits/$base" --jq .sha 2>/dev/null || true)
+            if [ -n "$full" ]; then
+              git fetch --no-tags upstream "$full" || true
+            fi
+          fi
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git fetch --no-tags upstream "+refs/tags/$prev:refs/tags/$prev" || true
+            if git cat-file -e "$prev^{commit}" 2>/dev/null; then
+              base=$(git rev-parse "$prev^{commit}")
+            fi
           fi
           if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
             echo "::warning::Cannot resolve last sync commit $base"
@@ -137,11 +146,11 @@ jobs:
           webhook-type: incoming-webhook
           payload-file-path: ${{ steps.stats.outputs.payload }}
 
-      - if: steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true' && steps.stats.outputs.payload != ''
         name: Mark tag as seen
         run: mkdir -p .cache/last-seen && echo "${{ steps.tag.outputs.tag }}" > .cache/last-seen/tag.txt
 
-      - if: success() && steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: success() && steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true' && steps.stats.outputs.payload != ''
         name: Save seen-tag cache
         uses: actions/cache/save@v4
         with:
