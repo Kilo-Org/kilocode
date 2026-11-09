@@ -15,6 +15,7 @@ import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestLog
+import ai.kilocode.client.testing.pumpEdt
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.client.ui.active.ActiveBadgeCell
@@ -25,6 +26,7 @@ import javax.swing.SwingUtilities
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.session.ui.ProgressPanel
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.SessionOutcomeView
@@ -425,7 +427,12 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
             PartDto("native", key, id, "text", text = "Native prompt accepted"))))
         gate.completeExceptionally(IllegalStateException("HTTP 503"))
 
-        assertTrue("Settling initial history must release queued native content", coroutines.pumpUntil { edtWait {
+        assertTrue("Settling initial history must release queued native content", coroutines.pumpUntil(
+            pump = {
+                flushChat()
+                pumpEdt()
+            },
+        ) { edtWait {
             descendants(panel).filterIsInstance<TextView>().any { it.markdown() == "Native prompt accepted" }
         } })
         edtWait {
@@ -666,6 +673,24 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     private fun emit(event: HostedSystemEventDto) { assertTrue(rpc.events.tryEmit(event)) }
+
+    /**
+     * This test's SessionUi is never showing, so the controller's update queue defers message/part
+     * events instead of flushing them on enqueue. A chat event emitted around history settling can
+     * land after that settle flush and stay pending, which depends on subscription scheduling. Force
+     * the flush while waiting, matching `SessionUiTestBase`, so the assertion does not race delivery.
+     */
+    private fun flushChat() {
+        val ui = edtWait { descendants(panel).filterIsInstance<SessionUi>().singleOrNull() } ?: return
+        edtWait { controller(ui).flushEvents() }
+    }
+
+    private fun controller(ui: SessionUi): SessionController {
+        val field = SessionUi::class.java.getDeclaredField("controller")
+        field.isAccessible = true
+        return field.get(ui) as SessionController
+    }
+
     private fun labels() = descendants(panel).filterIsInstance<JBLabel>().filter { it.text != null }
     private fun badge(): FilledBadgeIcon = descendants(panel).filterIsInstance<ActiveBadgeCell>()
         .single { it.cellId == "cloud-compute" }.icon as FilledBadgeIcon
