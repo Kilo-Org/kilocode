@@ -150,11 +150,18 @@ function collapse(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "")
 }
 
+// Keep dots inside version tokens ("5.5"), so a version query does not split into
+// loose number words that also match an older "4.5". Every other separator splits.
 function words(value: string): string[] {
   return value
     .toLowerCase()
-    .split(/[^a-z0-9]+/)
+    .split(/[^a-z0-9.]+/)
+    .map((word) => word.replace(/^\.+|\.+$/g, ""))
     .filter(Boolean)
+}
+
+function isVersionToken(token: string): boolean {
+  return /^\d+(?:\.\d+)+$/.test(token)
 }
 
 /** Per-model search text, normalized once because the same catalog is scanned on every keystroke. */
@@ -204,6 +211,8 @@ function tokenScore(
   if (list.includes(token)) return 1000
   if (list.some((word) => word.startsWith(token))) return 700
   if (valueCollapsed.includes(collapsed)) return 400
+  // A version needs a literal match ("5.5" must not fuzzy-match the "5" in "4.5").
+  if (isVersionToken(token)) return -1
   if (searchMatch(token, value)) return 250
   return -1
 }
