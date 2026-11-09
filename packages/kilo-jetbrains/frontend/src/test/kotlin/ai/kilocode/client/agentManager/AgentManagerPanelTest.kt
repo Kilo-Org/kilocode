@@ -1086,11 +1086,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         timers.advanceBy(300)
         flush()
 
+        waitUntil { row(panel, 0).metrics?.action != null }
         edt { row(panel, 0).metrics!!.action!!() }
         waitUntil { opened().isNotEmpty() }
         assertEquals("branch", opened().single().path.params["source"])
         edt { FileEditorManager.getInstance(project).openFiles.forEach { FileEditorManager.getInstance(project).closeFile(it) } }
 
+        waitUntil { row(panel, 1).metrics?.action != null }
         edt { row(panel, 1).metrics!!.action!!() }
         // The local comparison passes no branch, so the tab waits on a branch-name lookup for its title.
         waitUntil { opened().isNotEmpty() }
