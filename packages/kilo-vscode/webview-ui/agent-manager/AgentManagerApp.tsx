@@ -286,6 +286,13 @@ const AgentManagerContent: Component = () => {
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
   const appSession = createAppSession({ vscode, directories, rootDirectory })
   const panel = appSession.panel
+  // The open session is visible, so its directory loads a session list before the worktree card selection settles.
+  createEffect(() => {
+    const id = appSession.sessions.currentSessionID()
+    if (!id) return
+    const directory = directories.directoryOf(id)
+    if (directory) panel.show([directory])
+  })
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
   createEffect(
@@ -798,6 +805,17 @@ const AgentManagerContent: Component = () => {
     managed: managedSessions,
     locals: localSet,
   })
+  // Past-chat mentions use the loaded session lists plus the host catalog, so a worktree whose store is not shown yet
+  // still offers its sessions.
+  const mentionSessions = createMemo(() => {
+    const known = new Map<string, { id: string; title: string; updated: number }>()
+    const add = (info: { id: string; title?: string; time: { updated: number } }) => {
+      if (info.title) known.set(info.id, { id: info.id, title: info.title, updated: info.time.updated })
+    }
+    for (const info of sessions.sessions()) add(info)
+    for (const info of projectSessionsLive()[currentProjectId() ?? ""] ?? []) add(info)
+    return [...known.values()].toSorted((a, b) => b.updated - a.updated)
+  })
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
@@ -807,15 +825,22 @@ const AgentManagerContent: Component = () => {
     if (!list) return new Set<string>()
     return new Set(list.filter(isKnownRootSession).map((item) => item.id))
   })
-  // Every root session the panel knows; the history tabs narrow it to the project or its worktrees.
-  const historyList = createMemo(() =>
-    sessions
-      .sessions()
+  // Every root session the panel knows; the history tabs narrow it to the project or its worktrees. The host catalog
+  // keeps the sessions of worktrees whose store has not loaded a session list yet.
+  const historyList = createMemo(() => {
+    const known = new Map<string, SessionInfo>()
+    for (const session of sessions.sessions()) known.set(session.id, session)
+    const projects = new Set([currentProjectId(), historyProject()].filter((id): id is string => !!id))
+    for (const project of projects)
+      for (const session of projectSessionsLive()[project] ?? [])
+        if (!known.has(session.id)) known.set(session.id, session)
+    return [...known.values()]
       .filter(
         (session) =>
           isKnownRootSession(session) || managedSessions().some((item) => item.id === session.id && item.worktreeId),
-      ),
-  )
+      )
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+  })
   const localSessions = createLocalSessions({
     ids: localSessionIDs,
     sessions: () => {
@@ -1710,7 +1735,7 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
-            sessions={appSession.mentionSessions()}
+            sessions={mentionSessions()}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
@@ -2168,9 +2193,11 @@ const AgentManagerContent: Component = () => {
           when={chatStore()}
           keyed
           fallback={
-            <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
-              {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
-            </Show>
+            <div class="am-intro-fallback">
+              <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
+                {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
+              </Show>
+            </div>
           }
         >
           {(store) => (

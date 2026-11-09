@@ -1302,6 +1302,11 @@ export const dict = {
   "settings.display.mcpTool.description": "MCP 및 범용 도구 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.mcpTool.expanded": "펼침",
   "settings.display.mcpTool.collapsed": "접힘",
+  "settings.display.codeMode.title": "Code Mode 블록",
+  "settings.display.codeMode.description":
+    "Code Mode 블록을 도구 호출이 나열된 상태로 시작할지 한 줄로 시작할지 선택합니다. 스크립트는 열기 전까지 항상 숨겨집니다.",
+  "settings.display.codeMode.expanded": "펼침",
+  "settings.display.codeMode.collapsed": "접힘",
 
   "settings.display.shortcutHints.title": "단축키 힌트 표시",
   "settings.display.shortcutHints.description":

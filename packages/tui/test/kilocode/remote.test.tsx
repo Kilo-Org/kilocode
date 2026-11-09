@@ -5,11 +5,11 @@ import { Effect, FileSystem } from "effect"
 import { Global } from "@opencode/util/global"
 import { mkdir } from "node:fs/promises"
 import path from "node:path"
-import { createEventStream, createFetch, json } from "../fixture/tui-client"
+import { createEventStream, createFetch, directory, json } from "../fixture/tui-client"
 import { run } from "../../src/app"
 import { tmpdir } from "../fixture/fixture"
 
-async function launch(initial = { enabled: false, connected: true }, fail = false, holdStatus = false) {
+async function launch(initial = { enabled: false, connected: true }, fail = false, holdStatus = false, resume = false) {
   const state = await tmpdir()
   const plugin = path.join(state.path, "remote-plugin")
   await mkdir(plugin)
@@ -23,13 +23,39 @@ async function launch(initial = { enabled: false, connected: true }, fail = fals
   Object.defineProperty(setup.renderer, "capabilities", { get: () => null })
   const status = { ...initial }
   const methods: string[] = []
+  const locations: string[] = []
+  const inputs: unknown[] = []
+  const attachWaiters: Array<{ after: number; resolve: () => void }> = []
+  const restored = {
+    id: "ses_restored",
+    title: "Restored without local input",
+    projectID: "proj_test",
+    location: { directory: `${directory}/child` },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 0, updated: 0 },
+  }
   const held: Array<() => void> = []
   const events = createEventStream()
   const calls = createFetch(async (url, request) => {
+    if (resume && url.pathname === "/api/session") return json({ data: [restored], cursor: {} })
+    if (resume && url.pathname === `/api/session/${restored.id}`) return json({ data: restored })
+    if (resume && /^\/api\/session\/[^/]+\/(message|inbox|permission)$/.test(url.pathname))
+      return json({ data: [], cursor: {} })
     if (!url.pathname.startsWith("/api/rpc/kilocode.remote/")) return undefined
     const method = url.pathname.split("/").at(-1)!
-    expect(await request.json()).toMatchObject({ input: {} })
+    const body = await request.json()
+    expect(body).toMatchObject({ input: method === "attach" ? { sessionID: restored.id } : {} })
+    inputs.push(body.input)
+    locations.push(url.searchParams.get("location[directory]")!)
     methods.push(method)
+    if (method === "attach") {
+      const count = methods.filter((value) => value === "attach").length
+      for (const waiter of attachWaiters.splice(0)) {
+        if (count > waiter.after) waiter.resolve()
+        else attachWaiters.push(waiter)
+      }
+    }
     if (holdStatus && method === "status") {
       const pending = Promise.withResolvers<Response>()
       held.push(() => pending.resolve(json({ output: { ...status } })))
@@ -57,17 +83,26 @@ async function launch(initial = { enabled: false, connected: true }, fail = fals
       config: { get: async () => ({ animations: false, plugins: [plugin] }), update: async () => ({}) },
       packages: { prepare: async () => ({ directory: "" }) },
       terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
-      args: {},
+      args: resume ? { sessionID: restored.id } : {},
       log: () => {},
     }).pipe(Effect.provide(Global.layerWith({ state: state.path })), Effect.provide(FileSystem.layerNoop({}))),
   )
   return {
     setup,
     methods,
+    inputs,
+    locations,
+    reconnect: () => events.disconnect(),
+    waitForAttach: (after: number) => {
+      if (methods.filter((method) => method === "attach").length > after) return Promise.resolve()
+      const next = Promise.withResolvers<void>()
+      attachWaiters.push({ after, resolve: next.resolve })
+      return next.promise
+    },
     toggle: async () => {
       await setup.waitFor(() => setup.renderer.currentFocusedEditor instanceof TextareaRenderable)
       setup.mockInput.typeText("/remote")
-      await setup.waitForFrame((frame) => frame.includes("Allow or stop remote commands for this process"))
+      await setup.waitForFrame((frame) => frame.includes("Allow or stop remote commands for this workspace"))
       setup.mockInput.pressEnter()
     },
     dispose: async () => {
@@ -96,6 +131,27 @@ test("/remote enables and disables through the typed RPC and shows a process hea
       (frame) => frame.includes("Remote control disabled") && !frame.includes("● Remote control"),
     )
     expect(app.methods.filter((method) => method === "disable")).toHaveLength(1)
+  } finally {
+    await app.dispose()
+  }
+})
+
+test("a restored session is announced in the launch workspace without a local prompt", async () => {
+  const app = await launch({ enabled: true, connected: true }, false, false, true)
+  try {
+    await app.waitForAttach(0)
+    await app.setup.waitForFrame((frame) => frame.includes("● Remote control"))
+    expect(app.inputs[app.methods.indexOf("attach")]).toEqual({ sessionID: "ses_restored" })
+    expect(app.locations[app.methods.indexOf("attach")]).toBe(directory)
+    const beforeReconnect = app.methods.filter((method) => method === "attach").length
+    const reattached = app.waitForAttach(beforeReconnect)
+    app.reconnect()
+    await reattached
+    const afterReconnect = app.methods.filter((method) => method === "attach").length
+    await app.toggle()
+    await app.setup.waitForFrame((frame) => frame.includes("Remote control disabled"))
+    expect(app.methods.filter((method) => method === "attach")).toHaveLength(afterReconnect)
+    expect(app.locations.every((location) => location === directory)).toBe(true)
   } finally {
     await app.dispose()
   }

@@ -7,6 +7,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
+import ModelDescription from "../components/shared/ModelDescription"
 import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
@@ -310,6 +311,7 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
           gateway={v2.kiloModels().entries}
           value={model()}
           blocked={props.blocked}
+          descriptionRenderer={ModelDescription}
           failure={failureMessage(language.t, v2.kiloFailure())}
           onSelect={props.selection.selectModel}
           onPick={restore}

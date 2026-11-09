@@ -295,7 +295,13 @@ export function wire(input: {
     void input.server
       .get()
       .then((server) => readDisplaySettings({ server, directory: input.directory }))
-      .then((values) => post({ type: "displaySettingsLoaded", values }))
+      .then((values) => {
+        // Every surface that renders a transcript shares these settings, so a change in Settings must reach the
+        // sidebar and the Agent Manager too; answering only the requester left them on the old layout.
+        const message = { type: "displaySettingsLoaded", values } as const
+        post(message)
+        others(message)
+      })
       .catch((error: unknown) =>
         post({
           type: "displaySettingsLoaded",
@@ -535,11 +541,12 @@ export function composerState(context: ExtensionContext): ToWebview[] {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The Agent Manager panel loads its own bundle; the sidebar, the Settings and Profile panels, and Documents share one.
+// The sidebar and the Agent Manager load their own bundles; the Settings and Profile panels share a third one that
+// does not carry the chat transcript or its rich content.
 const ENTRY = {
   chat: "webview",
-  settings: "webview",
-  profile: "webview",
+  settings: "settings",
+  profile: "settings",
   agentManager: "agent-manager",
   documents: "documents",
   diffViewer: "diff-viewer",
@@ -562,10 +569,12 @@ export function html(input: {
   globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
+  // The Settings and Profile panels load an ES module that imports its lazy tab chunks from the webview origin.
+  const module = input.view === "settings" || input.view === "profile"
   const policy = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
-    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
     `worker-src ${input.csp}`,
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
@@ -616,7 +625,7 @@ export function html(input: {
 <body>
 <div id="root" data-directory="${escape(input.directory)}" data-view="${input.view ?? "chat"}"></div>
 <script nonce="${nonce}">${script}</script>
-<script nonce="${nonce}" src="${input.script}"></script>
+<script nonce="${nonce}"${module ? ' type="module"' : ""} src="${input.script}"></script>
 </body>
 </html>`
 }

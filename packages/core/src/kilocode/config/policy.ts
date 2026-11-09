@@ -8,6 +8,7 @@ import { optional } from "@opencode/schema/schema"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
+import { KiloConfigExcess } from "./excess.js"
 
 // Allowed hosts are checked by the sandbox plugin, which owns the destination parser.
 const Sandbox = Schema.Struct({
@@ -54,6 +55,10 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   mcp_tool_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
+  code_mode_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
+    description:
+      "Controls whether Code Mode blocks list their tool calls (expanded) or show one line (collapsed) by default in the VS Code chat UI. The script stays hidden until opened",
   }),
   // kilo_port(unattributed:core/v1:159079a2d8a3)
   remote_control: Schema.Boolean.pipe(optional).annotate({
@@ -102,6 +107,10 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   // kilo_port(indexing:fe813c19ebaf) kilo_port(indexing:987c9e6c9e85) kilo_port(indexing:854fbb30ce6c)
   indexing: KiloIndexingRpc.Config.pipe(optional),
 }) {}
+
+// The recognized top-level keys: the full v2 schema without the derived `workflow_models` (built from model-only
+// `commands`). The writer (`validate.ts`) shares this set so a read and a write cannot drift.
+export const known = new Set(Object.keys(Info.fields).filter((key) => key !== "workflow_models"))
 
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
@@ -153,6 +162,9 @@ function kiloSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diag
 const refused = {
   console: "ignored console; Kilo Console settings are not carried on this build",
 } as const
+
+// `workflow_models` is derived from model-only `commands` entries; `refused` keys have their own diagnostic.
+const skipExcess = new Set(["workflow_models", ...Object.keys(refused)])
 
 const refusedExperimental = {
   semantic_indexing: "ignored retired experimental.semantic_indexing; use indexing.enabled instead",
@@ -226,6 +238,7 @@ export function parse(
       message: "ignored invalid commit_message; expected an object with an optional string prompt",
     })
   const models = input instanceof Info ? input.workflow_models : record(input) ? workflowModels(input) : undefined
+  KiloConfigExcess.report(input, known, skipExcess, report)
   refusedSettings(input, report)
   const decodedSettings = kiloSettings(input, report)
   const synchronization = Schema.decodeUnknownOption(sync)(input)
@@ -261,7 +274,7 @@ export function parse(
           ...Option.getOrElse(synchronization, () => ({})),
           ...Option.getOrElse(indexingField, () => ({})),
           ...Option.getOrElse(sandboxField, () => ({})),
-          ...displaySettings(input),
+          ...displaySettings(input, report),
           ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
@@ -270,13 +283,16 @@ export function parse(
   )
 }
 
-/** The display layouts, ignoring an invalid value instead of failing the whole document. */
-function displaySettings(input: unknown) {
+/** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */
+function displaySettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
   if (!record(input)) return {}
   const decodeLayout = Schema.decodeUnknownOption(Schema.Literals(["expanded", "collapsed"]))
   return Object.fromEntries(
-    ["terminal_command_display", "code_edit_display", "mcp_tool_display"].flatMap((key) => {
+    ["terminal_command_display", "code_edit_display", "mcp_tool_display", "code_mode_display"].flatMap((key) => {
+      if (input[key] === undefined) return []
       const value = Option.getOrUndefined(decodeLayout(input[key]))
+      if (value === undefined)
+        report?.({ path: [key], kind: "invalid", message: `ignored invalid ${key}; expected "expanded" or "collapsed"` })
       return value === undefined ? [] : [[key, value]]
     }),
   )

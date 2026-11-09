@@ -174,11 +174,12 @@ const Settings: Component<SettingsProps> = (props) => {
 
         <Show when={search.searching()}>
           <SettingsSearchResults
-            query={search.query()}
+            query={search.resultsQuery()}
             results={search.results()}
             active={search.active()}
             listId={search.listId}
             tabs={searchTabs()}
+            pending={search.pending()}
             onHover={search.setActive}
             onSelect={search.select}
           />

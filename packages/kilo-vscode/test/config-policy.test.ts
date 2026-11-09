@@ -50,6 +50,7 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "collapsed",
+      codeModeDisplay: "collapsed",
       reasoningDisplay: "expanded",
     })
   })
@@ -66,6 +67,7 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "expanded",
       mcpToolDisplay: "expanded",
+      codeModeDisplay: "collapsed",
       reasoningDisplay: "expanded",
     })
   })
@@ -79,6 +81,7 @@ describe("displaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "expanded",
+      codeModeDisplay: "collapsed",
       reasoningDisplay: "expanded",
     })
   })
