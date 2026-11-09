@@ -2220,6 +2220,7 @@ const AgentManagerContent: Component = () => {
                     actions={toolActions}
                     onShowHistory={() => openHistory()}
                     onNewSession={handleNewTabForCurrentSelection}
+                    worktree={!!selection() && selection() !== LOCAL}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}

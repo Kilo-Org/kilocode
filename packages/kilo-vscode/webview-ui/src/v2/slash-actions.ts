@@ -1,5 +1,6 @@
 // The client actions of the slash menu. Each action runs a handler that the surface already has; an action without a
 // handler on this surface is not listed. Kept free of JSX and webview contexts, so the extension tests can load it.
+import type { CommandInfo } from "@opencode/client"
 import type { SlashEntry } from "./slash"
 
 const ACTIONS = [
@@ -25,4 +26,34 @@ export function slashActions(handlers: SlashHandlers, t: (key: string) => string
     if (!run) return []
     return [{ kind: "action", name: action.name, description: t(action.key), hints: [...action.hints], run }]
   })
+}
+
+const SCOPES = [
+  { scope: "worktree", key: "prompt.slash.review.worktree", hints: [] },
+  { scope: "uncommitted", key: "prompt.slash.review.uncommitted", hints: [] },
+  { scope: "staged", key: "prompt.slash.review.staged", hints: [] },
+  { scope: "unpushed", key: "prompt.slash.review.unpushed", hints: [] },
+  { scope: "branch", key: "prompt.slash.review.branch", hints: [] },
+  { scope: "quick", key: "prompt.slash.review.quick", hints: ["--quick", "fast"] },
+] as const
+
+/**
+ * The nested scopes of the server `/review` command, which reads the scope word as the first argument. The worktree
+ * scope needs Agent Manager worktree metadata, so it is listed only for a worktree session.
+ */
+export function reviewScopes(
+  commands: readonly CommandInfo[],
+  worktree: boolean,
+  t: (key: string) => string,
+): SlashEntry[] {
+  const command = commands.find((item) => item.name === "review")
+  if (!command) return []
+  return SCOPES.filter((item) => worktree || item.scope !== "worktree").map((item) => ({
+    kind: "command",
+    name: `review ${item.scope}`,
+    description: t(item.key),
+    hints: [...item.hints],
+    command,
+    args: item.scope,
+  }))
 }

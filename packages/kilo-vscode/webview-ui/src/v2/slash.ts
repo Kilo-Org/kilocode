@@ -10,7 +10,8 @@ export type SlashEntry = {
   hints: string[]
 } & (
   | { kind: "action"; run: () => void }
-  | { kind: "command"; command: CommandInfo }
+  /** `args` leads the text of a nested entry, for example "staged" for /review staged. */
+  | { kind: "command"; command: CommandInfo; args?: string }
   | { kind: "skill"; skill: SkillInfo }
 )
 
@@ -22,6 +23,8 @@ export type SlashEntry = {
 export function mergeCatalog(input: {
   actions: SlashEntry[]
   commands: readonly CommandInfo[]
+  /** Nested entries of server commands, listed after their parents. */
+  nested?: SlashEntry[]
   skills: readonly SkillInfo[]
 }): SlashEntry[] {
   const taken = new Set(input.actions.map((entry) => entry.name))
@@ -38,7 +41,7 @@ export function mergeCatalog(input: {
     seen.add(name)
     return [{ kind: "skill", name, description: skill.description, hints: [], skill }]
   })
-  const all = [...input.actions, ...commands, ...skills]
+  const all = [...input.actions, ...commands, ...(input.nested ?? []), ...skills]
   const roots = new Set(all.filter((entry) => !nested(entry)).map((entry) => entry.name))
   return all.filter((entry) => !nested(entry) || roots.has(parent(entry.name)))
 }

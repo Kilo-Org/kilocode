@@ -31,7 +31,7 @@ import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
-import { slashActions, type SlashHandlers } from "./slash-actions"
+import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 
@@ -46,6 +46,8 @@ export function SessionView(props: {
   onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
+  /** True for a session in an Agent Manager worktree, which can run /review worktree. */
+  worktree?: boolean
   /** Opens a new session draft; the /new slash action is listed only when set. */
   onNewSession?: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
@@ -324,6 +326,7 @@ export function SessionView(props: {
       actions: slashActions(handlers(), language.t),
       // Goal mode needs its own composer state and banner, which this client does not have yet.
       commands: catalog.commands().filter((command) => command.name !== "goal"),
+      nested: reviewScopes(catalog.commands(), props.worktree === true, language.t),
       skills: catalog.skills(),
     }),
   )

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { CommandInfo, ModelRef, SkillInfo } from "@opencode/client"
 import { matchSlash, mergeCatalog, parseSlash, slashQuery, type SlashEntry } from "../webview-ui/src/v2/slash"
-import { slashActions } from "../webview-ui/src/v2/slash-actions"
+import { reviewScopes, slashActions } from "../webview-ui/src/v2/slash-actions"
 import { createSlashCatalog } from "../webview-ui/src/v2/slash-catalog"
 import { dispatchSlash, type SlashDeps } from "../webview-ui/src/v2/slash-dispatch"
 
@@ -44,11 +44,20 @@ describe("slash catalog merge", () => {
     expect(list.filter((entry) => entry.name === "init").map((entry) => entry.kind)).toEqual(["action"])
   })
 
-  test("drops nested entries without their parent command", () => {
-    const children = [action("review staged"), action("memory show")]
-    expect(names(mergeCatalog({ actions: children, commands, skills: [] }))).toContain("review staged")
-    expect(names(mergeCatalog({ actions: children, commands, skills: [] }))).not.toContain("memory show")
-    expect(names(mergeCatalog({ actions: children, commands: [], skills: [] }))).toEqual([])
+  test("lists review scopes only under a review command, and worktree only for a worktree", () => {
+    const local = reviewScopes(commands, false, (key) => key)
+    expect(names(local)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+    expect(names(reviewScopes(commands, true, (key) => key))[0]).toBe("review worktree")
+    expect(reviewScopes([], true, (key) => key)).toEqual([])
+    const orphan = [action("memory show")]
+    expect(names(mergeCatalog({ actions: orphan, commands, nested: local, skills: [] }))).not.toContain("memory show")
+    expect(names(mergeCatalog({ actions: [], commands, nested: local, skills: [] }))).toContain("review staged")
   })
 })
 
@@ -64,8 +73,9 @@ describe("slash actions", () => {
 
 describe("slash matching", () => {
   const entries = mergeCatalog({
-    actions: [action("new", ["clear"]), action("review staged"), action("review quick", ["fast"])],
+    actions: [action("new", ["clear"])],
     commands,
+    nested: reviewScopes(commands, false, (key) => key).filter((entry) => /staged|quick/.test(entry.name)),
     skills: [skill("reviewer", "second opinion"), skill("pdf", "read a deploy log")],
   })
 
@@ -194,6 +204,18 @@ describe("slash dispatch", () => {
     const own = deps({ providerID: "kilo", id: "claude" })
     await dispatchSlash({ entry: entry("fast"), args: "" }, own.value)
     expect(own.calls.map((call) => (call as unknown[])[0])).toEqual(["command"])
+  })
+
+  test("a review scope runs the review command with the scope as its first argument", async () => {
+    const run = deps(high)
+    const scope = reviewScopes(commands, true, (key) => key).find((item) => item.name === "review worktree")!
+    await dispatchSlash({ entry: scope, args: "focus on tests" }, run.value)
+    expect(run.calls).toEqual([
+      [
+        "command",
+        { sessionID: "ses_1", name: "review", text: "worktree focus on tests", files: undefined, delivery: undefined },
+      ],
+    ])
   })
 
   test("runs a skill as a prompt that attaches it under its slash name", async () => {

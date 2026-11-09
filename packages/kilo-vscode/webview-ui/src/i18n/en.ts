@@ -836,6 +836,12 @@ export const dict = {
   "prompt.slash.compact": "Summarize and compact the session",
   "prompt.slash.help": "Open help documentation",
   "prompt.slash.settings": "Open settings",
+  "prompt.slash.review.worktree": "Review committed and uncommitted worktree changes against its base",
+  "prompt.slash.review.uncommitted": "Review uncommitted changes (staged, unstaged, untracked)",
+  "prompt.slash.review.staged": "Review staged changes only",
+  "prompt.slash.review.unpushed": "Review local commits ahead of upstream",
+  "prompt.slash.review.branch": "Review the current branch against its base branch",
+  "prompt.slash.review.quick": "Fast single-pass review with minimal token usage",
 
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",

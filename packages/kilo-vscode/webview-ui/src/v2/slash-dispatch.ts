@@ -43,7 +43,7 @@ export async function dispatchSlash(input: SlashInput, deps: SlashDeps) {
     return deps.command({
       sessionID,
       name: entry.command.name,
-      text: input.args,
+      text: [entry.args, input.args].filter(Boolean).join(" "),
       files: input.files,
       delivery: input.delivery,
     })
