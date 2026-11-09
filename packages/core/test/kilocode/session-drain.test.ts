@@ -1,9 +1,10 @@
 import { expect } from "bun:test"
-import { Context, Deferred, Effect, Exit, Fiber, Layer, Scheduler, Scope } from "effect"
+import { Context, Deferred, Effect, Exit, Fiber, Layer, Option, Scheduler, Scope } from "effect"
 import { AppNodeBuilder } from "../../src/effect/app-node-builder"
 import { LayerNode } from "../../src/effect/layer-node"
 import { BackgroundJob } from "../../src/background-job"
 import { Database } from "../../src/database/database"
+import { reserve } from "../../src/kilocode/session/background-drain"
 import { SessionDrain } from "../../src/kilocode/session/drain"
 import { ProjectTable } from "../../src/project/sql"
 import { Project } from "../../src/project"
@@ -12,6 +13,7 @@ import { SessionSchema } from "../../src/session/schema"
 import { SessionTable } from "../../src/session/sql"
 import { SessionRunCoordinator } from "../../src/session/run-coordinator"
 import { testEffect } from "../lib/effect"
+import { link } from "./drain-family"
 
 const it = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, SessionDrain.node, BackgroundJob.node])))
 const parent = SessionSchema.ID.make("ses_drain_parent")
@@ -327,5 +329,35 @@ it.effect("closing the tracker interrupts observers instead of reporting drained
     const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
     yield* Scope.close(scope, Exit.void)
     expect(Exit.hasInterrupts(yield* Fiber.await(waiting))).toBe(true)
+  }),
+)
+
+it.effect("idle descendants are unlinked so a durable reparent is followed", () =>
+  Effect.gen(function* () {
+    yield* family
+    const drain = yield* SessionDrain.Service
+    const previous = yield* drain.hold(grandchild)
+    previous()
+    yield* link(grandchild, other)
+    const release = yield* drain.hold(grandchild)
+    yield* drain.wait(parent)
+    const waiting = yield* drain.wait(other).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
+    release()
+    yield* Fiber.join(waiting)
+  }),
+)
+
+it.effect("a failed background reservation rolls back holds it already acquired", () =>
+  Effect.gen(function* () {
+    yield* family
+    yield* link(parent, grandchild)
+    const drain = yield* SessionDrain.Service
+    const exit = yield* reserve(Option.some(drain), "job", { sessionID: other, parentSessionID: parent }).pipe(
+      Effect.exit,
+    )
+    expect(Exit.isFailure(exit)).toBe(true)
+    const waiting = yield* drain.wait(other).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeDefined()
   }),
 )

@@ -44,19 +44,28 @@ const layer = Layer.effect(
       return value
     }
 
+    // Idle entries are unlinked; ancestry is re-resolved from the store on the next hold.
     function prune(value: Entry) {
-      if (value.count || value.pins || value.parent || value.children) return
+      if (value.count || value.pins || value.children) return
+      const parent = value.parent
+      value.parent = undefined
       if (entries.get(value.id) === value) entries.delete(value.id)
+      if (!parent) return
+      parent.children--
+      prune(parent)
     }
 
     function update(value: Entry, delta: number) {
-      for (let current: Entry | undefined = value; current; current = current.parent) {
+      for (let current: Entry | undefined = value; current; ) {
+        const next: Entry | undefined = current.parent
         current.count += delta
-        if (current.count !== 0) continue
-        const done = current.done
-        current.done = Deferred.makeUnsafe<void>()
-        Deferred.doneUnsafe(done, Effect.void)
-        prune(current)
+        if (current.count === 0) {
+          const done = current.done
+          current.done = Deferred.makeUnsafe<void>()
+          Deferred.doneUnsafe(done, Effect.void)
+          prune(current)
+        }
+        current = next
       }
     }
 
@@ -73,10 +82,13 @@ const layer = Layer.effect(
       for (const [index, value] of chain.entries()) {
         const parent = chain.at(index + 1)
         if (!parent || value.parent === parent) continue
-        if (value.parent) return yield* Effect.die(new Error("Session drain parent changed"))
+        if (value.parent) {
+          for (const item of chain) prune(item)
+          return yield* Effect.die(new Error("Session drain parent changed"))
+        }
         value.parent = parent
         parent.children++
-        update(parent, value.count)
+        if (value.count) update(parent, value.count)
       }
       const value = entry(id)
       update(value, 1)
