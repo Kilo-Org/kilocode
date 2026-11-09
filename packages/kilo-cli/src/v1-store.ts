@@ -82,18 +82,24 @@ export function requireV1Store(file: string) {
  * - A v1 workspace is a git worktree record that the v2 migrations replace with a different workspace model, so a v1
  *   workspace ID points at nothing in v2. Without it the conversion resolves the session by its directory, like any
  *   other session; Agent Manager keeps its own state in the project's `.kilo` directory.
+ * - The v1 credentials and account tokens are removed before the v2 migrations touch their rows (see `clearCredentials`).
+ * Rows with malformed JSON stay for the upstream conversion, which skips and reports them.
  */
 function prepare(file: string) {
   const db = new SQLite(file)
   try {
+    db.run("PRAGMA secure_delete = ON")
     db.transaction(() => {
       db.run(`
         DELETE FROM part
-        WHERE json_extract(data, '$.type') = 'text'
-          AND (json_extract(data, '$.ignored') = 1
-            OR json_extract(data, '$.metadata."kilocode.lifecycle"') = 'transient')
+        WHERE CASE WHEN json_valid(data) THEN
+          json_extract(data, '$.type') = 'text'
+            AND (json_extract(data, '$.ignored') = 1
+              OR json_extract(data, '$.metadata."kilocode.lifecycle"') = 'transient')
+        ELSE 0 END
       `)
       db.run("UPDATE session SET workspace_id = NULL WHERE workspace_id IS NOT NULL")
+      clearCredentials(db)
     })()
   } finally {
     db.close()
@@ -104,8 +110,8 @@ function prepare(file: string) {
  * The Kilo-specific steps after the upstream conversion:
  * - The editor context the VS Code client sent with each v1 prompt (open files, active file, shell) has no field in the
  *   v2 user message, so it moves to the message metadata under `kilocode.editorContext`.
- * - Credentials stay in the v1 store: whether the import brings them is a product decision that is still open, so the
- *   copy keeps no provider credential or account token.
+ * - Credentials are cleared again: the v2 migration `import_legacy_credentials` adds the ones of an `auth.json` in the
+ *   data directory, which after the release rename is v1's own.
  * - The WAL is folded into the file, so the file is complete without a `-wal` file when ./database links it into place.
  *   It stays in WAL mode: servers that open it at the same time would otherwise race to switch it back, and that switch
  *   fails with "database is locked".
@@ -113,27 +119,44 @@ function prepare(file: string) {
 function finish(file: string) {
   const db = new SQLite(file)
   try {
+    db.run("PRAGMA secure_delete = ON")
     db.transaction(() => {
       db.run(`
         UPDATE session_message
         SET data = json_set(data, '$.metadata."kilocode.editorContext"', json(
-          (SELECT json_extract(message.data, '$.editorContext') FROM message WHERE message.id = session_message.id)
+          (SELECT json_extract(message.data, '$.editorContext') FROM message
+           WHERE message.id = session_message.id AND json_valid(message.data))
         ))
         WHERE type = 'user'
+          AND json_valid(data)
           AND EXISTS (
             SELECT 1 FROM message
-            WHERE message.id = session_message.id AND json_extract(message.data, '$.editorContext') IS NOT NULL
+            WHERE message.id = session_message.id
+              AND CASE WHEN json_valid(message.data) THEN json_extract(message.data, '$.editorContext') IS NOT NULL
+                ELSE 0 END
           )
       `)
-      for (const table of ["credential", "account", "account_state", "control_account", "kilo_continuation_intent"])
-        if (db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table))
-          db.run(`DELETE FROM "${table}"`)
+      clearCredentials(db)
     })()
     const result = db.query<{ busy: number }, []>("PRAGMA wal_checkpoint(TRUNCATE)").get()
     if (result?.busy) throw new Error("could not fold the WAL into the converted store")
   } finally {
     db.close()
   }
+}
+
+/**
+ * Whether the import brings credentials is a product decision that is still open, so the copy keeps no provider
+ * credential, account token or OAuth continuation; the v1 store keeps them. The connection runs with `secure_delete`, so
+ * SQLite overwrites the deleted content instead of leaving it in free pages of the file.
+ */
+function clearCredentials(db: SQLite) {
+  for (const table of ["credential", "account", "account_state", "control_account", "kilo_continuation_intent"])
+    if (db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table))
+      db.run(`DELETE FROM "${table}"`)
+  // The origins of the well-known credentials `import_legacy_credentials` added.
+  if (db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'kv'").get())
+    db.run("DELETE FROM kv WHERE key = 'wellknown:sources'")
 }
 
 function count(file: string, table: string) {

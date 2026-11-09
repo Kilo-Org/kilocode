@@ -1,7 +1,7 @@
 import { Database as SQLite } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
-import { mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, utimes, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../src/database"
@@ -23,6 +23,12 @@ async function root() {
 }
 
 const model = { providerID: "kilo", modelID: "kilo-auto/free" }
+const SECRET = {
+  credential: "v1-credential-key-0b6f41",
+  access: "v1-access-token-7d29ce",
+  refresh: "v1-refresh-token-c3a18e",
+  auth: "authjson-key-5e9b07",
+}
 const user = (time: number, extra: object = {}) =>
   JSON.stringify({ role: "user", time: { created: time }, agent: "code", model, ...extra })
 const assistant = (parent: string, time: number) =>
@@ -108,7 +114,12 @@ async function v1Store(file: string, work: string) {
   ] as const)
     db.run("INSERT INTO part VALUES (?, 'msg_ses_repo_reply', 'ses_repo', 20, 21, ?)", [id, JSON.stringify(part)])
   db.run(
-    "INSERT INTO credential (id, integration_id, label, value, active, time_created, time_updated) VALUES ('crd_v1', 'anthropic', 'v1 key', '{}', 1, 1, 1)",
+    "INSERT INTO credential (id, integration_id, label, value, active, time_created, time_updated) VALUES ('crd_v1', 'anthropic', 'v1 key', ?, 1, 1, 1)",
+    [JSON.stringify({ type: "key", key: SECRET.credential })],
+  )
+  db.run(
+    "INSERT INTO account (id, email, url, access_token, refresh_token, time_created, time_updated) VALUES ('acc_v1', 'user@example.com', 'https://kilo.ai', ?, ?, 1, 1)",
+    [SECRET.access, SECRET.refresh],
   )
   return { db, repo, plain }
 }
@@ -180,7 +191,13 @@ test("the first start converts the Kilo v1 store into v2 sessions before the sto
 test("the Kilo-specific steps: no hidden or transient text, editor context kept, no credentials", async () => {
   const { dir, data } = await root()
   await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  // The v2 migration `import_legacy_credentials` imports an `auth.json` of the data directory into the copy.
+  await writeFile(path.join(data, "auth.json"), JSON.stringify({ openai: { type: "api", key: SECRET.auth } }))
   const file = await KiloDatabase.select({}, { data, channel: "latest" })
+  // Deleted rows must not stay readable in free pages of the file that is linked into place.
+  const bytes = Buffer.from(await readFile(file)).toString("latin1")
+  for (const secret of Object.values(SECRET)) expect(bytes).not.toContain(secret)
+  expect(await Bun.file(`${file}-wal`).exists()).toBe(false)
   read(file, (db) => {
     const reply = db.query<{ data: string }, []>("SELECT data FROM session_message WHERE type = 'assistant'").get()!
     expect(reply.data).toContain("the real answer")
@@ -194,7 +211,41 @@ test("the Kilo-specific steps: no hidden or transient text, editor context kept,
       openTabs: ["src/app.ts"],
     })
     expect(db.query("SELECT count(*) AS n FROM credential").get()).toEqual({ n: 0 })
+    expect(db.query("SELECT count(*) AS n FROM account").get()).toEqual({ n: 0 })
+    expect(db.query("SELECT value FROM kv WHERE key = 'wellknown:sources'").get()).toBeNull()
   })
+})
+
+test("a part with malformed JSON does not stop the import", async () => {
+  const { dir, data } = await root()
+  const source = await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  source.db.run(
+    "INSERT INTO part VALUES ('prt_broken', 'msg_ses_plain_user', 'ses_plain', 11, 11, '{\"type\":\"text\",')",
+  )
+  const file = await KiloDatabase.select({}, { data, channel: "latest" })
+  read(file, (db) => expect(db.query("SELECT count(*) AS n FROM session_v2").get()).toEqual({ n: 2 }))
+})
+
+test("a lock that cannot be taken starts a new database instead of waiting", async () => {
+  const { dir, data } = await root()
+  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  const file = path.join(data, "kilo2.db")
+  await mkdir(`${file}.import.lock`)
+  expect(await KiloDatabase.select({}, { data, channel: "latest" })).toBe(file)
+  expect(await Bun.file(file).exists()).toBe(false)
+})
+
+test("a lock of a live process that stopped reporting progress is taken over", async () => {
+  const { dir, data } = await root()
+  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  const file = path.join(data, "kilo2.db")
+  // A live PID (this process) whose lock has not been touched for ten minutes: a stuck owner or a reused PID.
+  await writeFile(`${file}.import.lock`, String(process.pid))
+  const old = new Date(Date.now() - 10 * 60_000)
+  await utimes(`${file}.import.lock`, old, old)
+  await KiloDatabase.select({}, { data, channel: "latest" })
+  read(file, (db) => expect(db.query("SELECT count(*) AS n FROM session_v2").get()).toEqual({ n: 2 }))
+  expect(await strays(data)).toEqual([])
 })
 
 test("the v1 files stay byte-identical", async () => {

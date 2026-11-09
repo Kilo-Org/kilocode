@@ -3,7 +3,17 @@
 // file name never selects it, and a rebuild from another branch opens the same sessions.
 export * as KiloDatabase from "./database"
 
-import { chmodSync, existsSync, linkSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  existsSync,
+  linkSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs"
 import path from "node:path"
 import { Global } from "@opencode/util/global"
 
@@ -113,8 +123,8 @@ async function adopt(file: string, data: string, channel: string, shared: boolea
  */
 async function importV1(store: string, file: string, data: string) {
   const lock = `${file}.import.lock`
-  if (!(await acquire(lock, file))) return
   try {
+    if (!(await acquire(lock, file))) return
     if (existsSync(file)) return
     console.error(`kilo2: importing Kilo v1 sessions from ${store} once; ${store} stays as it is.`)
     const { KiloV1Store } = await import("./v1-store")
@@ -122,7 +132,10 @@ async function importV1(store: string, file: string, data: string) {
     await copy(store, file, (copy) =>
       KiloV1Store.convert(copy, {
         data,
-        progress: (done, total) => console.error(`kilo2: importing Kilo v1 sessions ${done}/${total}`),
+        progress: (done, total) => {
+          touch(lock)
+          console.error(`kilo2: importing Kilo v1 sessions ${done}/${total}`)
+        },
       }).then((total) =>
         console.error(`kilo2: importing Kilo v1 sessions done, ${total} sessions in ${Date.now() - started} ms.`),
       ),
@@ -139,8 +152,15 @@ async function importV1(store: string, file: string, data: string) {
 }
 
 /**
- * Takes the import lock. While another live process holds it, waits until that process ends or `file` exists, and
- * returns false when `file` appeared. A lock of a process that no longer runs is taken over.
+ * A lock whose owner has not reported progress for this long is stale: its process is stuck, or it died and its PID now
+ * belongs to another process. The owner touches the lock with every progress line, about every two seconds.
+ */
+const STALE = 120_000
+
+/**
+ * Takes the import lock. While another process holds it and keeps it fresh, waits until `file` exists, and returns false
+ * then. A lock of a process that no longer runs, or a stale one, is taken over. Any other failure to take the lock
+ * throws, so the caller starts with a new database instead of waiting.
  */
 async function acquire(lock: string, file: string) {
   const notice = { last: 0 }
@@ -149,18 +169,41 @@ async function acquire(lock: string, file: string) {
     try {
       writeFileSync(lock, String(process.pid), { flag: "wx" })
       return true
-    } catch {}
-    const owner = readOwner(lock)
-    if (owner === undefined || !alive(owner)) {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
+    }
+    const held = inspect(lock)
+    // The owner released the lock between the two calls.
+    if (!held) continue
+    if ((held.owner !== undefined && !alive(held.owner)) || Date.now() - held.touched > STALE) {
       rmSync(lock, { force: true })
       continue
     }
     if (Date.now() - notice.last >= 5_000) {
       notice.last = Date.now()
-      console.error(`kilo2: importing Kilo v1 sessions in process ${owner}, waiting for it.`)
+      console.error(`kilo2: importing Kilo v1 sessions in process ${held.owner ?? "?"}, waiting for it.`)
     }
     await Bun.sleep(250)
   }
+}
+
+/** The owner of an existing lock and when it last reported progress; undefined when the lock is gone. */
+function inspect(lock: string) {
+  try {
+    const stat = statSync(lock)
+    if (!stat.isFile()) throw new Error(`${lock} is not a lock file`)
+    return { owner: readOwner(lock), touched: stat.mtimeMs }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
+    throw error
+  }
+}
+
+function touch(lock: string) {
+  const now = new Date()
+  try {
+    utimesSync(lock, now, now)
+  } catch {}
 }
 
 function readOwner(lock: string) {

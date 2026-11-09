@@ -12,6 +12,8 @@ export type Server = { url: string; authorization: string; process: ChildProcess
 
 const ARGS = ["serve", "--port", "0", "--stdio"]
 const TIMEOUT = 60_000
+/** The longest first start while the server reports Kilo v1 import progress. */
+const IMPORT_LIMIT = 30 * 60_000
 const OUTPUT_LIMIT = 4096
 const RETRY = 10_000
 
@@ -168,10 +170,11 @@ export function start(input: {
     ready.reject(new Error([message, ...state.errors.slice(-20)].join("\n").trim()))
   }
   const expire = () => {
-    fail(`The Kilo server did not start within ${TIMEOUT / 1000} seconds.`)
+    fail(`The Kilo server did not start or report progress within ${TIMEOUT / 1000} seconds.`)
     stop(child)
   }
   const timer = { id: setTimeout(expire, TIMEOUT) }
+  const deadline = Date.now() + IMPORT_LIMIT
 
   child.stdout?.on("data", (chunk: Buffer) => {
     state.output = (state.output + chunk.toString()).slice(-OUTPUT_LIMIT)
@@ -190,10 +193,12 @@ export function start(input: {
     const text = chunk.toString()
     input.log?.(text)
     // The first start imports the Kilo v1 sessions before the server listens and reports progress every few seconds;
-    // the start only times out when the progress stops.
-    if (!state.done && importing(text)) {
+    // the start times out when the progress stops, and in any case after IMPORT_LIMIT. A server that waits for another
+    // process's import also reports; the CLI takes the import over when that process stops making progress.
+    const left = deadline - Date.now()
+    if (!state.done && importing(text) && left > 0) {
       clearTimeout(timer.id)
-      timer.id = setTimeout(expire, TIMEOUT)
+      timer.id = setTimeout(expire, Math.min(TIMEOUT, left))
     }
     // Only startup errors are reported; keep the tail and stop collecting once the server is ready.
     if (!state.done) state.errors = [...state.errors.slice(-19), text]
