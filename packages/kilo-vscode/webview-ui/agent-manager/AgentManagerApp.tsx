@@ -2267,6 +2267,8 @@ const AgentManagerContent: Component = () => {
                     onShowHistory={() => openHistory()}
                     row={sessionActions}
                     rowWhenEmpty={!!transfer.branch()}
+                    onNewSession={handleNewTabForCurrentSelection}
+                    worktree={!!selection() && selection() !== LOCAL}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}
