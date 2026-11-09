@@ -67,6 +67,10 @@ export interface MessageHost {
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ) => Promise<void>
+  continueInWorktree: (
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ) => Promise<void>
   configureSetupScript: () => Promise<void>
   sendRepoInfo: () => Promise<void>
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
@@ -165,10 +169,10 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     }
     return true
   }
-  if (m.type === "continueInWorktree") {
-    void host.continueFromSidebar(m.sessionId, (status, detail, error) => {
+  if (m.type === "agentManager.continueInWorktree") {
+    void host.continueInWorktree(m.sessionId, (status, detail, error) => {
       host.log(`continueInWorktree: ${status}${detail ? ` ${detail}` : ""}${error ? ` (${error})` : ""}`)
-      if (error) host.post({ type: "error", message: error })
+      host.post({ type: "continueInWorktreeProgress", status, detail, error })
     })
     return true
   }

@@ -689,6 +689,14 @@ export interface AgentManagerWorktreeStatsMessage {
   stats: WorktreeGitStats[]
 }
 
+/** Progress of a session moved into a new worktree, shown in the session actions row. */
+export interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** Local workspace git stats push. */
 export interface AgentManagerLocalStatsMessage {
   type: "agentManager.localStats"
@@ -758,6 +766,7 @@ export interface AgentManagerFocusContextRequestedMessage {
 }
 
 export type AgentManagerExtensionMessage =
+  | ContinueInWorktreeProgressMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserFrameMessage
@@ -822,6 +831,12 @@ export type AgentManagerExtensionMessage =
 // ---------------------------------------------------------------------------
 // Webview to extension
 // ---------------------------------------------------------------------------
+
+/** Move the open session into a new worktree; progress arrives as ContinueInWorktreeProgressMessage. */
+export interface ContinueInWorktreeRequest {
+  type: "agentManager.continueInWorktree"
+  sessionId: string
+}
 
 /** Create a new worktree with an auto-created first session. */
 export interface CreateWorktreeRequest {
@@ -1432,6 +1447,7 @@ export interface MoveSectionRequest {
 }
 
 export type AgentManagerWebviewMessage =
+  | ContinueInWorktreeRequest
   | BrowserRequestMessage
   | AgentManagerOpenExternalRequest
   | BaseUpdateRequest

@@ -571,8 +571,16 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
+interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | ContinueInWorktreeProgressMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserFrameMessage
@@ -1189,7 +1197,7 @@ interface AbortIn {
 }
 
 interface ContinueInWorktreeIn {
-  type: "continueInWorktree"
+  type: "agentManager.continueInWorktree"
   sessionId: string
 }
 
