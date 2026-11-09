@@ -118,7 +118,7 @@ export function SessionActionsRow(props: {
             </div>
           )}
         </Show>
-        <Show when={props.hasMessages && props.onMoveToWorktree}>
+        <Show when={props.hasMessages && props.branch && props.onMoveToWorktree}>
           <Tooltip value={moveTooltip()} placement="top">
             <Button
               variant="ghost"

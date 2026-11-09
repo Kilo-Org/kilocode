@@ -1759,7 +1759,7 @@ const AgentManagerContent: Component = () => {
     return (
       <SessionActionsRow
         hasMessages={hasMessages}
-        branch={transfer.branch()}
+        branch={isGitRepo() ? transfer.branch() : undefined}
         onNewWorktree={handleCreateWorktree}
         onNewWorktreeFromBranch={(branch) => {
           if (!loaded()) return
@@ -1777,7 +1777,16 @@ const AgentManagerContent: Component = () => {
     )
   }
   // The workspace branch changes with a checkout or a project switch, and the row's worktree actions follow it.
-  createEffect(on(activeProjectId, () => transfer.request(), { defer: true }))
+  createEffect(
+    on(
+      activeProjectId,
+      () => {
+        transfer.clear()
+        transfer.request()
+      },
+      { defer: true },
+    ),
+  )
   // The keyboard action updates the selected worktree in the session the user is reading, with its model and agent.
   const update = () => {
     const worktreeId = selection()

@@ -17,6 +17,19 @@ test("the Agent Manager chat wires the shared worktree actions row", () => {
   expect(app).toContain('to({ type: "agentManager.createWorktree", baseBranch: branch })')
 })
 
+test("the shared row shows Move to Worktree only with a known branch", () => {
+  const row = read("../webview-ui/src/v2/session-actions-row.tsx")
+
+  expect(row).toContain("props.hasMessages && props.branch && props.onMoveToWorktree")
+})
+
+test("the Agent Manager row needs a git repository and clears a stale branch on a project switch", () => {
+  const app = read("../webview-ui/agent-manager/AgentManagerApp.tsx")
+
+  expect(app).toContain("branch={isGitRepo() ? transfer.branch() : undefined}")
+  expect(app).toContain("transfer.clear()")
+})
+
 test("the sidebar chat uses the same worktree actions row", () => {
   const chat = read("../webview-ui/src/v2/chat.tsx")
 
