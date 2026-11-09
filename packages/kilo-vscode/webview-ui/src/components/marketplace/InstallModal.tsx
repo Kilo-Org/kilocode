@@ -292,7 +292,7 @@ export const InstallModal = (props: Props) => {
               {language.t("marketplace.install.cancel")}
             </Button>
             <Button variant="primary" onClick={() => void review()} disabled={busy() || !valid()}>
-              <Show when={busy()} fallback={isMcp() ? language.t("marketplace.install.review") : language.t("marketplace.install")}>
+              <Show when={busy()} fallback={isMcp() ? language.t("common.review") : language.t("marketplace.install")}>
                 <Spinner /> {language.t("marketplace.install.installing")}
               </Show>
             </Button>
@@ -333,7 +333,7 @@ export const InstallModal = (props: Props) => {
             </Show>
             <div class="install-modal-footer">
               <Button variant="secondary" onClick={reset} disabled={busy()}>
-                {language.t("marketplace.install.back")}
+                {language.t("common.goBack")}
               </Button>
               <Button variant="primary" onClick={() => void install()} disabled={busy()}>
                 <Show when={busy()} fallback={language.t("marketplace.install")}>

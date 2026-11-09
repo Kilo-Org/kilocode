@@ -125,7 +125,7 @@ export const MarketplaceListView = (props: Props) => {
           onSelect={(option: StatusOption | undefined) => option && setStatus(option.value)}
         />
         <Button size="small" variant="ghost" onClick={props.onRefresh}>
-          {language.t("marketplace.refresh")}
+          {language.t("common.refresh")}
         </Button>
       </div>
       <Show when={allKinds().length > 1}>

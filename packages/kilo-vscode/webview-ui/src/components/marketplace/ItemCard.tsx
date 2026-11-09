@@ -115,7 +115,7 @@ export const ItemCard = (props: Props) => {
                       when={signInBusy(record)}
                       fallback={
                         <Button size="small" onClick={() => props.onSignIn(record.server!)}>
-                          {language.t("marketplace.card.signIn")}
+                          {language.t("marketplace.install.mcp.signIn.button")}
                         </Button>
                       }
                     >
