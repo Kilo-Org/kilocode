@@ -3,8 +3,10 @@ export * as KiloPlan from "./index"
 import { Bus } from "@opencode/core/bus"
 import { SessionStore } from "@opencode/core/session/store"
 import { define } from "@opencode/plugin/effect/plugin"
+import type { Session } from "@opencode/schema/session"
+import type { SessionMessage } from "@opencode/schema/session-message"
 import { Global } from "@opencode/util/global"
-import { Cause, Effect, type Scope } from "effect"
+import { Cause, Effect, Stream, type Scope } from "effect"
 import path from "node:path"
 import { PlanFollowup } from "./plan-followup"
 import { planExit } from "./plan"
@@ -19,8 +21,12 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
     const global = yield* Global.Service
     // The native Plan reminder names this directory, so the Kilo tool accepts plans the model wrote there.
     const roots = [path.join(global.home, ".opencode", "plan")]
-    // Turns already handled, so a later idle from background work does not scan or ask again.
-    const handled = new Set<string>()
+    // The last handled turn per session. Bounded by the sessions that had a plan turn, not by turns.
+    const handled = new Map<Session.ID, SessionMessage.ID>()
+    yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
+      Stream.runForEach((event) => Effect.sync(() => handled.delete(event.data.sessionID))),
+      Effect.forkScoped({ startImmediately: true }),
+    )
 
     yield* ctx.tool.transform((editor) => editor.add(planExit(ctx, store, roots))).pipe(Effect.orDie)
 

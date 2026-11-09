@@ -80,7 +80,7 @@ export const ask = Effect.fn(function* (input: {
   ctx: Context
   store: SessionStore.Interface
   bus: Bus.Interface
-  handled: Set<string>
+  handled: Map<Session.ID, SessionMessage.ID>
   roots: readonly string[]
   sessionID: Session.ID
 }) {
@@ -90,10 +90,18 @@ export const ask = Effect.fn(function* (input: {
   const session = yield* input.store.get(input.sessionID)
   if (!session) return
 
-  const messages = yield* input.store.messages({ sessionID: input.sessionID, order: "asc" })
-  const exit = planExit(messages)
-  if (!exit || input.handled.has(exit.turn)) return
-  input.handled.add(exit.turn)
+  // Read one row for the current turn, then only that turn. A long Code history is not loaded.
+  const [lastUser] = yield* input.store.messages({ sessionID: input.sessionID, order: "desc", limit: 1, type: "user" })
+  if (!lastUser) return
+  if (input.handled.get(input.sessionID) === lastUser.id) return
+  const messages = yield* input.store.messages({
+    sessionID: input.sessionID,
+    order: "asc",
+    cursor: { id: lastUser.id, direction: "next" },
+  })
+  input.handled.set(input.sessionID, lastUser.id)
+  const exit = planExit(lastUser.id, messages)
+  if (!exit) return
   // The part's agent, not the session's current agent: the user can switch agents after plan_exit.
   if (!PlanFile.isPlanner(exit.agent)) return
 
@@ -120,16 +128,12 @@ export const ask = Effect.fn(function* (input: {
 })
 
 /** The completed plan_exit call of the turn that just ended, keyed by the user message that began it. */
-function planExit(messages: ReadonlyArray<SessionMessage.Info>) {
-  const lastUser = messages.findLastIndex((message) => message.type === "user")
-  if (lastUser === -1) return undefined
-  const turn = messages[lastUser]
-  if (!turn) return undefined
-  for (const message of messages.slice(lastUser + 1).toReversed()) {
+function planExit(turn: SessionMessage.ID, messages: ReadonlyArray<SessionMessage.Info>) {
+  for (const message of messages.toReversed()) {
     if (message.type !== "assistant") continue
     for (const part of message.content.toReversed()) {
       if (part.type !== "tool" || part.name !== "plan_exit" || part.state.status !== "completed") continue
-      return { turn: turn.id, part, agent: message.agent }
+      return { turn, part, agent: message.agent }
     }
   }
 }

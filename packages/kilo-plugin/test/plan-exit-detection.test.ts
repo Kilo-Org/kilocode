@@ -12,6 +12,7 @@ import { Session } from "@opencode/schema/session"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { Tool } from "@opencode/schema/tool"
+import { TuiEvent } from "@opencode/schema/tui-event"
 import { Global } from "@opencode/util/global"
 import { DateTime, Effect, Layer } from "effect"
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
@@ -28,29 +29,41 @@ const code = Agent.ID.make("code")
 const callID = Tool.CallID.make("call-plan-exit")
 const created = DateTime.makeUnsafe(1_000)
 
-/**
- * One plan turn: the agent writes the plan file, calls `plan_exit`, the user switches the session to Code
- * before the turn idles, the follow-up question is answered with "Continue here", and the session admits
- * the implementation prompt on the Code agent.
- */
-test("a plan_exit turn asks the follow-up after the session agent changes", async () => {
+const nextSessionID = Session.ID.make("ses_plan_new_test")
+
+function expectQuestion(asked: Form.CreateInput | undefined) {
+  expect(asked?.fields[0]).toMatchObject({ title: "Implement", description: "Ready to implement?" })
+  expect(asked?.fields[0]?.type === "string" ? asked.fields[0].options?.map((option) => option.value) : []).toEqual([
+    PlanFollowup.NEW_SESSION,
+    PlanFollowup.CONTINUE,
+    PlanFollowup.KEEP_REFINING,
+  ])
+  expect(asked?.metadata).toMatchObject({
+    kilocode: {
+      options: {
+        q0: { [PlanFollowup.CONTINUE]: { mode: "code", labelKey: "plan.followup.answer.continue" } },
+      },
+    },
+  })
+}
+
+/** One plan turn: the Plan agent writes the plan, calls plan_exit, the session is on Code, and the answer is given. */
+async function run(answer: string) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-plan-handoff-"))
   const planFile = path.join(directory, ".kilo2", "plans", "1000-plan.md")
   // The session's selected agent changed after plan_exit; the part's agent is still Plan.
   const session = { id: sessionID, agent: code, time: { created } } as Session.Info
-  const user: SessionMessage.Info = {
-    id: SessionMessage.ID.create(),
-    time: { created },
-    type: "user",
-    text: "Create a plan",
-  }
+  const next = { id: nextSessionID, agent: code, time: { created } } as Session.Info
+  const user: SessionMessage.Info = { id: SessionMessage.ID.create(), time: { created }, type: "user", text: "Create a plan" }
   let messages: SessionMessage.Info[] = [user]
 
   let added: Tool.Info | undefined
   let asked: Form.CreateInput | undefined
   let idle: ((input: { sessionID: Session.ID; background: readonly unknown[] }) => Effect.Effect<void>) | undefined
   let switched: Agent.ID | undefined
-  const prompted: string[] = []
+  let createdAgent: Agent.ID | undefined
+  let published: Session.ID | undefined
+  const prompted: { sessionID: Session.ID; text: string }[] = []
 
   try {
     await mkdir(path.dirname(planFile), { recursive: true })
@@ -100,9 +113,14 @@ test("a plan_exit turn asks the follow-up after the session agent changes", asyn
                   Effect.sync(() => {
                     switched = input.agent
                   }),
+                create: ((input: { agent?: Agent.ID }) =>
+                  Effect.sync(() => {
+                    createdAgent = input.agent
+                    return next
+                  })) as never,
                 prompt: (input) =>
                   Effect.sync(() => {
-                    prompted.push(input.text)
+                    prompted.push({ sessionID: input.sessionID, text: input.text })
                     return {
                       id: SessionMessage.ID.create(),
                       sessionID: input.sessionID,
@@ -161,16 +179,22 @@ test("a plan_exit turn asks the follow-up after the session agent changes", asyn
             Layer.succeed(Global.Service, Global.make({ home: directory })),
             Layer.mock(SessionStore.Service, {
               get: () => Effect.succeed(session),
-              messages: () => Effect.succeed(messages),
+              messages: (input) =>
+                Effect.succeed(input.type === "user" ? [user] : messages.filter((message) => message.type !== "user")),
             }),
             Layer.mock(Form.Service, {
               ask: (input) =>
                 Effect.sync(() => {
                   asked = input
-                  return { status: "answered" as const, answer: { q0: PlanFollowup.CONTINUE } }
+                  return { status: "answered" as const, answer: { q0: answer } }
                 }),
             }),
-            Layer.mock(Bus.Service, { publish: (() => Effect.void) as never }),
+            Layer.mock(Bus.Service, {
+              publish: ((event: unknown, data: { sessionID: Session.ID }) =>
+                Effect.sync(() => {
+                  if (event === TuiEvent.SessionSelect) published = data.sessionID
+                })) as never,
+            }),
           ),
         ),
       ),
@@ -179,21 +203,27 @@ test("a plan_exit turn asks the follow-up after the session agent changes", asyn
     await rm(directory, { recursive: true, force: true })
   }
 
-  expect(asked?.fields[0]).toMatchObject({ title: "Implement", description: "Ready to implement?" })
-  expect(asked?.fields[0]?.type === "string" ? asked.fields[0].options?.map((option) => option.value) : []).toEqual([
-    PlanFollowup.NEW_SESSION,
-    PlanFollowup.CONTINUE,
-    PlanFollowup.KEEP_REFINING,
-  ])
-  expect(asked?.metadata).toMatchObject({
-    kilocode: {
-      options: {
-        q0: { [PlanFollowup.CONTINUE]: { mode: "code", labelKey: "plan.followup.answer.continue" } },
-      },
+  return { asked, switched, createdAgent, published, prompted }
+}
+
+test("a plan_exit turn asks the follow-up after the session agent changes", async () => {
+  const result = await run(PlanFollowup.CONTINUE)
+  expectQuestion(result.asked)
+  expect(result.switched).toBe(code)
+  expect(result.prompted).toEqual([{ sessionID, text: "Implement the plan above." }])
+})
+
+test("Start new session creates, selects and prompts a new Code session", async () => {
+  const result = await run(PlanFollowup.NEW_SESSION)
+  expectQuestion(result.asked)
+  expect(result.createdAgent).toBe(code)
+  expect(result.published).toBe(nextSessionID)
+  expect(result.prompted).toEqual([
+    {
+      sessionID: nextSessionID,
+      text: "Plan file: .kilo2/plans/1000-plan.md\nRead this file first and treat it as the source of truth for implementation.",
     },
-  })
-  expect(switched).toBe(code)
-  expect(prompted).toEqual(["Implement the plan above."])
+  ])
 })
 
 test("a plan in the native plan directory is accepted when the directory is a plan root", async () => {
