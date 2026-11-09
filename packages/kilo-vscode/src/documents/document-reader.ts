@@ -31,17 +31,23 @@ export function isInsideWorktree(
   return target === base || target.startsWith(base + sep)
 }
 
-// The server's home, which can differ from this process's home (the isolated dev profile moves it).
-let serverHome: string | undefined
+// The server's plan directory, which can differ from this process's paths (the isolated dev profile moves it).
+let serverPlans: string | undefined
 
-/** Read plans from the home directory of the server this extension starts. */
-export function usePlanHome(home: string): void {
-  serverHome = home
+/** Read plans from the plan directory of the server this extension starts. */
+export function usePlanDir(dir: string): void {
+  serverPlans = dir
 }
 
-/** The server's plan directory, the one place outside the worktree whose files the preview shows. */
-export function plansDir(home = serverHome ?? process.env.OPENCODE_TEST_HOME ?? os.homedir()): string {
-  return path.join(home, ".opencode", "plan")
+/** The server's global plan directory, the one place outside the worktree whose files the preview shows. */
+export function plansDir(dir = serverPlans ?? dataPlans(process.env)): string {
+  return dir
+}
+
+/** The plan directory in the Kilo data directory: `<XDG data>/kilo2/plans`. */
+export function dataPlans(env: NodeJS.ProcessEnv, home = env.OPENCODE_TEST_HOME): string {
+  const base = home ? path.join(home, ".local", "share") : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
+  return path.join(base, "kilo2", "plans")
 }
 
 /** Whether `resolved` lives in the plan directory (realpath-folded for tmpfs/symlink cases). */

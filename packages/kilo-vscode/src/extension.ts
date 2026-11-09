@@ -26,8 +26,8 @@ import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, indexingEnvironment, manager, serverHome, settingsEnvironment } from "./server"
-import { usePlanHome } from "./documents/document-reader"
+import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment } from "./server"
+import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
@@ -165,8 +165,8 @@ export function activate(context: ExtensionContext) {
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
-  // Plan mode writes plans under the server's home, so plan links resolve there too.
-  usePlanHome(serverHome(serverCommand(), process.env))
+  // Plan mode writes plans outside a version-controlled project to the server's data directory, so plan links resolve there too.
+  usePlanDir(serverPlans(serverCommand(), process.env))
   let indexing: IndexingHost | undefined
   const server = manager({
     command: serverCommand,

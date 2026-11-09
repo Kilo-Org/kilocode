@@ -3,6 +3,7 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import {
+  dataPlans,
   documentExists,
   isInsideWorktree,
   plansDir,
@@ -214,9 +215,10 @@ describe("resolveDocumentPath", () => {
   })
 })
 
-describe("plansDir", () => {
-  it("uses the server's plan directory in the home", () => {
-    expect(plansDir("/tmp/home")).toEqual(path.join("/tmp/home", ".opencode", "plan"))
+describe("dataPlans", () => {
+  it("uses the Kilo data plan directory", () => {
+    expect(dataPlans({ XDG_DATA_HOME: "/tmp/data" }, undefined)).toEqual(path.join("/tmp/data", "kilo2", "plans"))
+    expect(dataPlans({}, "/tmp/home")).toEqual(path.join("/tmp/home", ".local", "share", "kilo2", "plans"))
   })
 })
 

@@ -48,6 +48,7 @@ import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
 import { createComposerQueue } from "../src/v2/composer"
+import { createPlanOpener } from "../src/v2/open-plan"
 import type { ToWebview } from "../../src/protocol"
 import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
@@ -1269,13 +1270,14 @@ const AgentManagerContent: Component = () => {
       ),
     ).then((results) => results.flat())
   }
+  // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
+  const openToolFile = (filePath: string, line?: number, column?: number, sessionID?: string) => {
+    const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
+    if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
+    to({ type: "agentManager.openFile", sessionId, filePath, line, column })
+  }
   const toolActions: ToolActions = {
-    openFile: (filePath, line, column, sessionID) => {
-      // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
-      const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
-      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
-      to({ type: "agentManager.openFile", sessionId, filePath, line, column })
-    },
+    openFile: openToolFile,
     validateFiles,
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
@@ -1283,6 +1285,30 @@ const AgentManagerContent: Component = () => {
       if (!focusExistingSession(id)) to({ type: "agentManager.openSessionLocally", sessionId: id })
     },
   }
+
+  // A completed open_plan call opens its plan file once its session is the visible one. Plan calls from inactive
+  // sessions stay deferred until that session is selected.
+  const planOpener = createPlanOpener(
+    () => sessions.currentSessionID(),
+    (plan) => openToolFile(plan.path, undefined, undefined, plan.sessionID),
+  )
+  createEffect(() => planOpener.flush(sessions.currentSessionID()))
+  createEffect(() => {
+    for (const directory of directories.sessionDirectories()) {
+      const store = panel.store(directory)
+      onCleanup(
+        store.data.on("session.tool.input.started", (event) =>
+          planOpener.started(event.data.sessionID, event.data.id, event.data.name),
+        ),
+      )
+      onCleanup(
+        store.data.on("session.tool.success", (event) =>
+          planOpener.completed(event.data.sessionID, event.data.id, event.data.metadata),
+        ),
+      )
+      onCleanup(store.data.on("session.tool.failed", (event) => planOpener.failed(event.data.sessionID, event.data.id)))
+    }
+  })
 
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
