@@ -409,19 +409,16 @@ const layer = Layer.effect(
       }
 
       const run = row.run_count + 1
-      // kilocode_change start - flows seam: preserve the deterministic native message identity without admitting it
-      const id = claimed || row.action.type === "hook"
-        ? SessionMessage.ID.make(`msg_${row.id}_${run}`)
-        : yield* admitWake(
-            row,
-            session.id,
-            run,
-            due,
-            late,
-            promptText(row.action.prompt, outcome.message),
-            check === null ? undefined : outcome.message === undefined ? {} : { message: outcome.message },
-          )
-      // kilocode_change end
+      const hooked = claimed || row.action.type === "hook" // kilocode_change(flows) seam - a claimed or hook occurrence keeps the deterministic native message identity without admitting it
+      const id = hooked ? SessionMessage.ID.make(`msg_${row.id}_${run}`) : yield* admitWake( // kilocode_change(flows) seam
+        row,
+        session.id,
+        run,
+        due,
+        late,
+        promptText(row.action.prompt, outcome.message),
+        check === null ? undefined : outcome.message === undefined ? {} : { message: outcome.message },
+      )
       const remaining = check?.mode === "until" ? 0 : row.remaining_runs === null ? null : row.remaining_runs - 1
       const done = check?.mode === "until" || finished(row, next, remaining)
       // Record the run even if a pause landed during the prompt, or the next firing would reuse this message id.

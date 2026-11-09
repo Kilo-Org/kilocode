@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 107,
-    "markedLines": 1751,
+    "markedLines": 1747,
     "unmarkedLines": 299,
     "deletedFiles": 0
   },
@@ -127,7 +127,7 @@
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService` supplies names, discovery, parsing and optional managed directories with upstream defaults. Optional input normalization and command document composition let a host validate extensions and apply overrides after command discovery. Without these hooks the upstream behavior is unchanged. The Kilo host supplies kilo2 paths and Kilo-owned policy. Rungs 1 and 2 cannot reach native normalization or update captured command definitions, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService` supplies names, discovery, parsing and optional managed directories with upstream defaults. Optional input normalization and command document composition let a host validate extensions and apply overrides after command discovery. Without these hooks the upstream behavior is unchanged; a caller that does not provide the layout node (upstream discovery tests) gets the upstream defaults. The Kilo host supplies kilo2 paths and Kilo-owned policy. Rungs 1 and 2 cannot reach native normalization or update captured command definitions, and replacing Config.node would lose the server's configured options."
     },
     "packages/core/src/command.ts": {
       "rung": 3,
@@ -341,7 +341,7 @@
     },
     "packages/core/src/generate.ts": {
       "rung": 3,
-      "seam": "Optional `system` and `generation` on the stateless `Generate.TextInput`, passed to the existing `ai.request` call. The branch-name plugin needs the naming instructions as a system prompt and temperature 0.1 for the stateless text call. Rung 1 cannot supply it: `experimental.generate.text` accepts only a prompt and a model, and no hook wraps a stateless generation request. Rung 2 cannot supply it: the plugin already receives `Generate.Service`, but the service input has no fields for a system prompt or generation settings. Omitted fields keep the upstream request unchanged and upstream tests pass unchanged."
+      "seam": "Optional `system` and `generation` on the stateless `Generate.TextInput`, passed to the existing `ai.request` call (`generation` holds the portable knobs, spread onto the flat request). The branch-name plugin needs the naming instructions as a system prompt and temperature 0.1 for the stateless text call. Rung 1 cannot supply it: `experimental.generate.text` accepts only a prompt and a model, and no hook wraps a stateless generation request. Rung 2 cannot supply it: the plugin already receives `Generate.Service`, but the service input has no fields for a system prompt or generation settings. Omitted fields keep the upstream request unchanged and upstream tests pass unchanged."
     },
     "packages/core/src/app.ts": {
       "rung": 3,
