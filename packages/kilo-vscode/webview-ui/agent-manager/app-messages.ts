@@ -12,9 +12,9 @@ import type {
   AgentManagerSendInitialMessage,
   AgentManagerSessionAddedMessage,
   AgentManagerSessionForkedMessage,
-  AgentManagerStateMessage,
   AgentManagerWorktreeSetupMessage,
   ManagedSessionState,
+  SessionInfo,
 } from "../src/types/messages/agent-manager"
 import type { SetupState } from "./project/progress"
 import { clearMultiVersionBusy, markMultiVersionBusy, updateSetup } from "./project/progress"
@@ -103,9 +103,11 @@ export function applySessionForked(msg: AgentManagerSessionForkedMessage, deps: 
   setSelection: (id: string) => void
   evictLocal: (id: string) => void
   selectSession: (id: string) => void
+  remember: (session: SessionInfo) => void
   requestChatFocus: (force?: boolean) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
+  deps.remember(msg.session)
   deps.insertAfter(msg.worktreeId, msg.forkedFromId, msg.sessionId)
   if (!msg.worktreeId) {
     deps.setLocal((prev) => {

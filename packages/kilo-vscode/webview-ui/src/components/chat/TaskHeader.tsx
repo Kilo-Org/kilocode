@@ -40,8 +40,6 @@ import { renderable } from "../../utils/timeline/timeline-parts"
 interface TaskHeaderProps {
   sessionID: string
   readonly?: boolean
-  /** Forks the session, for surfaces that can fork it from the header. */
-  onFork?: () => void
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -352,17 +350,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <span>{ctx().pct ?? ctx().tokens}</span>
               </Tooltip>
             )}
-          </Show>
-          <Show when={props.onFork}>
-            <Tooltip value={language.t("agentManager.tab.forkSession")} placement="bottom">
-              <IconButton
-                icon="fork"
-                size="small"
-                variant="ghost"
-                onClick={() => props.onFork?.()}
-                aria-label={language.t("agentManager.tab.forkSession")}
-              />
-            </Tooltip>
           </Show>
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
