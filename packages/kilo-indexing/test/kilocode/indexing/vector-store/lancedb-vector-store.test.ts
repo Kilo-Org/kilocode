@@ -441,7 +441,7 @@ describe("LocalVectorStore", () => {
       expect(options.cleanupOlderThan).toBeInstanceOf(Date)
       const age = Date.now() - options.cleanupOlderThan.getTime()
       expect(age).toBeGreaterThanOrEqual(LANCEDB_CLEANUP_RETENTION_MS - 1_000)
-      expect(age).toBeLessThan(LANCEDB_CLEANUP_RETENTION_MS + 60_000)
+      expect(age).toBeLessThan(LANCEDB_CLEANUP_RETENTION_MS + 10_000)
     })
 
     test("swallows optimization failures", async () => {

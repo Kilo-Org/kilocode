@@ -5,7 +5,7 @@ import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { compileDefine } from "./fixtures/compile-define"
-import { COMPILED_RUN_TIMEOUT, repo, run, temporary } from "./fixtures/branding-run"
+import { repo, run, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
@@ -101,7 +101,7 @@ for (const hosted of [false, true]) {
   test(`source OAuth pages ${hosted ? "use Kilo" : "keep upstream branding"}`, async () => {
     await using root = await temporary()
     checkPages(await run([process.execPath, entry], root.path, hosted), hosted)
-  }, 60_000)
+  })
 
   test(`compiled OAuth pages ${hosted ? "use Kilo" : "keep upstream branding"}`, async () => {
     await using root = await temporary()
@@ -113,7 +113,7 @@ for (const hosted of [false, true]) {
       define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
-    checkPages(await run([outfile], root.path, !hosted, 0, COMPILED_RUN_TIMEOUT), hosted)
+    checkPages(await run([outfile], root.path, !hosted), hosted)
   }, 60_000)
 }
 
@@ -122,7 +122,7 @@ for (const hosted of [false, true]) {
     await using root = await temporary()
     const fixture = path.join(import.meta.dir, "fixtures/branding-tsx.ts")
     checkOnboarding(await run([process.execPath, fixture], root.path, hosted), hosted)
-  }, 60_000)
+  }, 30_000)
 
   test(`compiled TSX renders ${hosted ? "Kilo" : "upstream"} branding`, async () => {
     await using root = await temporary()
@@ -134,7 +134,7 @@ for (const hosted of [false, true]) {
       define: compileDefine,
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
-    checkOnboarding(await run([outfile], root.path, !hosted, 0, COMPILED_RUN_TIMEOUT), hosted)
+    checkOnboarding(await run([outfile], root.path, !hosted), hosted)
   }, 60_000)
 }
 
@@ -153,7 +153,7 @@ for (const args of [["--help"], ["auth", "logout", "--help"]]) {
     expect(output).toContain("kilo2")
     expect(output).not.toContain("OpenCode")
     expect(output).not.toContain("opencode ")
-  }, 60_000)
+  }, 30_000)
 }
 
 for (const args of [["upgrade"], ["upgrade", "99.0.0", "--method", "npm"], ["update", "99.0.0", "--method", "curl"]]) {
@@ -163,7 +163,7 @@ for (const args of [["upgrade"], ["upgrade", "99.0.0", "--method", "npm"], ["upd
     expect(output).toContain("Kilo updates are disabled")
     expect(output).toContain("Update Kilo manually")
     expect(output).not.toContain("opencode.ai")
-  }, 60_000)
+  }, 30_000)
 }
 
 function checkPages(output: string, hosted: boolean) {

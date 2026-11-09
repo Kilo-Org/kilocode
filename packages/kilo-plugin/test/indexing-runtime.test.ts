@@ -413,7 +413,7 @@ describe("indexing runtime", () => {
     const plain = host({ directory: main, indexing: { enabled: true, provider: "ollama" }, primary })
     await settled(plain.runtime)
     expect(state.inits[1]?.baseline).toBeUndefined()
-  }, 60_000)
+  })
 
   test("does not classify an ordinary directory from its pathname", async () => {
     const state = engine()
