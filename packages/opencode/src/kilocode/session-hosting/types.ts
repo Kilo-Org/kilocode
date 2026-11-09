@@ -396,7 +396,6 @@ export type WorkspaceProfilePage = Schema.Schema.Type<typeof WorkspaceProfilePag
 
 export const WorkspaceProfileDefaultInput = Schema.Struct({
   id: Schema.String.check(Schema.isUUID()),
-  organizationID: Schema.optional(OrganizationID),
 }).annotate({ identifier: "SessionHostWorkspaceProfileDefaultInput" })
 export type WorkspaceProfileDefaultInput = Schema.Schema.Type<typeof WorkspaceProfileDefaultInput>
 

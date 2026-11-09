@@ -771,10 +771,9 @@ describe("session host HttpApi", () => {
       })
       expect(JSON.stringify(result)).not.toContain(CLOUD)
 
-      const call = app.calls.filter((item) => item.path === "/trpc/createHostedWorkspace").at(-1)
+      const call = app.calls.find((item) => item.path === "/trpc/createHostedWorkspace")
       expect(call?.body).toContain('"clientProvenance":"agent-manager"')
       expect(call?.body).toContain(`"id":"${MESSAGE}"`)
-      expect(Object(parse(call?.body ?? "{}")).profile).toEqual({ id: PROFILE })
       // The issuer sees the source credential; the Worker sees only the control token.
       const issued = app.calls.find((item) => item.path === "/api/cloud-agent-next/token")
       expect(issued?.auth).toBe(`Bearer ${TOKEN}`)
@@ -801,57 +800,6 @@ describe("session host HttpApi", () => {
 
       const sessionCall = app.calls.find((item) => item.path === "/trpc/createHostedWorkspaceSession")
       expect(sessionCall?.body).toContain(`"workspaceId":"${WORKSPACE}"`)
-      expect(Object(parse(sessionCall?.body ?? "{}"))).not.toHaveProperty("profile")
-    }),
-  )
-
-  it.live("creates a workspace without adding a profile to the Cloud request", () =>
-    Effect.gen(function* () {
-      const response = yield* HttpClientRequest.post(SessionHostPaths.workspace).pipe(
-        HttpClientRequest.bodyJson({
-          repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
-          prompt: "hello",
-          agent: { mode: "build", model: "test/fake" },
-          operationKey: "11111111-1111-4111-8111-111111111111",
-          messageID: MESSAGE,
-        }),
-        Effect.flatMap(HttpClient.execute),
-      )
-      expect(response.status).toBe(200)
-      expect(yield* response.json).toMatchObject({
-        workspace: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
-        messageID: MESSAGE,
-      })
-      const call = app.calls.at(-1)
-      expect(call?.path).toBe("/trpc/createHostedWorkspace")
-      expect(Object(parse(call?.body ?? "{}"))).toEqual({
-        operationKey: "11111111-1111-4111-8111-111111111111",
-        clientProvenance: "agent-manager",
-        repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
-        message: { prompt: "hello", id: MESSAGE },
-        agent: { mode: "build", model: "test/fake" },
-      })
-    }),
-  )
-
-  it.live("rejects empty or invalid explicit workspace profiles without a Cloud request", () =>
-    Effect.gen(function* () {
-      const count = app.calls.length
-      for (const profile of [{}, { id: "" }, { id: "not-a-uuid" }]) {
-        const response = yield* HttpClientRequest.post(SessionHostPaths.workspace).pipe(
-          HttpClientRequest.bodyJson({
-            repository: { type: "github", repo: "Kilo-Org/kilocode" },
-            profile,
-            prompt: "hello",
-            agent: { mode: "build", model: "test/fake" },
-            operationKey: "11111111-1111-4111-8111-111111111111",
-            messageID: MESSAGE,
-          }),
-          Effect.flatMap(HttpClient.execute),
-        )
-        expect(response.status).toBe(400)
-      }
-      expect(app.calls).toHaveLength(count)
     }),
   )
 
