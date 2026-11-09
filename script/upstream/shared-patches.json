@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 104,
-    "markedLines": 1696,
+    "files": 105,
+    "markedLines": 1736,
     "unmarkedLines": 299,
     "deletedFiles": 0
   },
@@ -132,6 +132,10 @@
     "packages/core/src/command.ts": {
       "rung": 3,
       "seam": "Keep optional template and model metadata on registered commands and return it from command.list. The command editor exposes only add and cannot recover a definition's captured config after registration. Definitions without metadata remain unchanged."
+    },
+    "packages/core/src/ripgrep.ts": {
+      "rung": 4,
+      "seam": "Accept ripgrep's base64 `bytes` shape alongside `text` for the matched path, line and submatch. Ripgrep emits `bytes` as soon as one byte of a record is not valid UTF-8, and the text-only schema then rejected the record and failed the whole search with `Invalid ripgrep match output`. Bytes decode as lossy UTF-8 with the replacement character, and the line and submatch limits still apply after decoding. No plugin hook or host composition reaches this parser: it runs inside the core ripgrep service before any tool result exists, and no knob can express an alternate decoder for the fixed `rg --json` shape. Records that carry `text` behave exactly as before."
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 3,
