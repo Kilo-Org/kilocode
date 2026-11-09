@@ -253,17 +253,17 @@ reset()
 // Timed-out poll: the post-install status is neither pending/disabled nor a known outcome, so the dialog lands on
 // `unknown` and has to offer a way out.
 const timedOutItem = { ...item, id: "timed-out", name: "Timed Out Docs", parameters: [], prerequisites: [], options: [] }
-const openResult = (signIn: boolean, id: string) => {
+const openResult = (canSignIn: boolean, id: string, signIn: () => Promise<void> = async () => undefined) => {
   const host = document.createElement("div")
   document.body.append(host)
   const mcpMock = {
     servers: () => [],
     status: () => ({ status: "stopped", error: "" }),
-    canSignIn: () => signIn,
+    canSignIn: () => canSignIn,
     sync: async () => undefined,
     busy: () => [],
     cancel: () => undefined,
-    signIn: async () => undefined,
+    signIn,
   }
   const Harness = () => {
     const dialog = useDialog()
@@ -305,7 +305,24 @@ button("Install")!.click()
 await tick()
 assert.ok(button("Done"), "a timed-out poll still offers Done")
 assert.ok(button("Sign In"), "sign-in is offered when the server has an OAuth method")
+// The attempt settles without connecting, so the branch's error paragraph is what tells the user it failed.
+button("Sign In")!.click()
+await tick()
+assert.ok(text().includes("Sign-in to docs failed."), "a failed sign-in from the timed-out branch is reported")
 withAuth()
+reset()
+
+const pending = openResult(true, "timed-out-pending", () => new Promise(() => undefined))
+await tick()
+button("Review")!.click()
+await tick()
+button("Install")!.click()
+await tick()
+button("Sign In")!.click()
+await tick()
+assert.equal(button("Sign In"), undefined, "sign-in is replaced while the attempt is in flight")
+assert.ok(button("Cancel"), "an in-flight attempt can be cancelled")
+pending()
 reset()
 
 const withoutAuth = openResult(false, "timed-out-plain")
