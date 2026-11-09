@@ -89,6 +89,14 @@ export function Chat() {
   requestRepoBranch()
   // A turn's changes belong to its tab, so switching tabs returns to that tab's chat.
   createEffect(on(tabs.active, () => setChanges(false), { defer: true }))
+  // The history search asks for autofocus, which a browser applies only on page load, so focus it on each open.
+  let history: HTMLDivElement | undefined
+  createEffect(
+    on(view, (value) => {
+      if (value !== "history") return
+      requestAnimationFrame(() => history?.querySelector<HTMLInputElement>('[data-slot="list-search"] input')?.focus())
+    }),
+  )
   const startSession = () => {
     work.skip()
     tabs.add()
@@ -97,6 +105,8 @@ export function Chat() {
   const open = (id: string) => {
     tabs.open(id)
     setView("chat")
+    // The history row that had focus is gone, so the opened session's composer takes it.
+    requestAnimationFrame(focusPrompt)
   }
   const step = (offset: -1 | 1) => {
     if (!document.hasFocus() || view() !== "chat") return
@@ -395,7 +405,7 @@ export function Chat() {
               {language.t("common.goBack")}
             </Button>
           </div>
-          <div class="history-view-content">
+          <div class="history-view-content" ref={history}>
             <SessionList onOpen={open} />
           </div>
         </div>
@@ -407,6 +417,7 @@ export function Chat() {
           onReferenceReady={(value) => (reference = value)}
           actions={toolActions}
           onShowHistory={() => setView("history")}
+          onNewSession={startSession}
           onViewTurnChanges={openTurnChanges}
           onForkMessage={forkSession}
           row={row}

@@ -3731,6 +3731,9 @@ body.am-wt-dragging-active * {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Stretch the ghost wrapper to the prompt area. Its percentage height does not
+     resolve against the flexed wrapper, which left the textarea bottom-aligned. */
+  align-items: stretch;
 }
 
 /* While any inline (non-portaled) selector popover is open, let it escape the
@@ -3760,7 +3763,8 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-dialog .am-prompt-input-ghost-wrapper {
-  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .am-nv-dialog [class~="prompt-input-hint"] {
