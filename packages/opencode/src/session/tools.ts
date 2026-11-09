@@ -36,6 +36,7 @@ import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { KiloToolLimit } from "@/kilocode/session/tool-limit" // kilocode_change
 
 const MCP_RESOURCE_TOOLS = {
   list: "list_mcp_resources",
@@ -63,6 +64,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   memoryCache: MemoryMarker.Cache // kilocode_change
   // kilocode_change start
   notify?: <T extends Tool.ExecuteResult>(tool: string, output: T, signal?: AbortSignal) => Effect.Effect<T>
+  // kilocode_change end
+  // kilocode_change start - reserve one outbound tool slot for StructuredOutput,
+  // which prompt.ts adds to the record after resolve returns
+  reserveStructuredOutput?: boolean
   // kilocode_change end
 }) {
   const tools: Record<string, AITool> = {}
@@ -471,7 +476,22 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   if (KiloCodeMode.wanted(flags, cfg)) return tools // kilocode_change
 
   const mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change
+  // kilocode_change start - providers reject requests whose tools array exceeds
+  // 128 items. Only the MCP catalog is unbounded, so deterministically trim MCP
+  // candidates; every built-in/resource tool already in the record is preserved.
+  // Colliding MCP keys are dropped (built-in wins) instead of silently replacing
+  // a core tool or consuming part of the tool budget.
+  const mcpBudget = KiloToolLimit.planMcpBudget({
+    existingCount: Object.keys(tools).length,
+    mcpKeys: Object.keys(mcpTools),
+    occupiedKeys: new Set(Object.keys(tools)),
+    reserveStructuredOutput: input.reserveStructuredOutput === true,
+  })
+  // kilocode_change end
+  KiloToolLimit.reportConflicts(mcpBudget.conflicts) // kilocode_change - name collisions are independent of the 128 ceiling
+  KiloToolLimit.report("mcp-resolve", mcpBudget.overBudget) // kilocode_change
   for (const [key, entry] of Object.entries(mcpTools)) {
+    if (mcpBudget.dropped.has(key)) continue // kilocode_change - keep the outbound request within the provider tool limit
     const item = McpCatalog.convertTool(entry.def, entry.client, entry.timeout)
     const execute = item.execute
     if (!execute) continue

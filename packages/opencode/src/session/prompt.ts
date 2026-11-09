@@ -1782,6 +1782,10 @@ export const layer = Layer.effect(
             goalOps: goals, // kilocode_change
             memoryCache, // kilocode_change
             notify, // kilocode_change
+            // kilocode_change start - StructuredOutput is appended to this record below; reserve
+            // its slot up front so the 128-tool provider ceiling is never exceeded by it
+            reserveStructuredOutput: lastUser.format?.type === "json_schema",
+            // kilocode_change end
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),

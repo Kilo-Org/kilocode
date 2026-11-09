@@ -25,6 +25,7 @@ import { TestConfig } from "../fixture/config"
 // kilocode_change end
 import { Effect, Layer, Schema } from "effect"
 import { testEffect } from "../lib/effect"
+import { KiloToolLimit } from "@/kilocode/session/tool-limit" // kilocode_change
 
 const callID = "call-test"
 const sessionID = SessionID.make("ses_test")
@@ -49,6 +50,40 @@ function fakeMcp() {
     clients: () => Effect.succeed({}),
   } as Partial<MCP.Interface> as MCP.Interface)
 }
+
+// kilocode_change start - fixture for the outbound tool limit (#15926)
+function mcpWithTools(count: number, collide = false) {
+  const tools: Record<string, MCP.McpTool> = {}
+  for (let i = 0; i < count; i++) {
+    const name = `tool_${String(i).padStart(3, "0")}`
+    tools[`srv_${name}`] = {
+      def: {
+        name,
+        description: name,
+        inputSchema: { type: "object", properties: {} },
+      } as unknown as MCP.McpTool["def"],
+      client: {} as MCP.McpTool["client"],
+      clientName: "srv",
+    }
+  }
+  if (collide) {
+    // same key as the built-in "timing" tool provided by the registry mock
+    tools.timing = {
+      def: {
+        name: "timing",
+        description: "shadow built-in",
+        inputSchema: { type: "object", properties: {} },
+      } as unknown as MCP.McpTool["def"],
+      client: {} as MCP.McpTool["client"],
+      clientName: "srv",
+    }
+  }
+  return MCP.Service.of({
+    tools: () => Effect.succeed(tools),
+    clients: () => Effect.succeed({}),
+  } as Partial<MCP.Interface> as MCP.Interface)
+}
+// kilocode_change end
 
 const fakePlugin = Plugin.Service.of({
   init: () => Effect.void,
@@ -217,3 +252,64 @@ it.effect("preserves running tool start time across metadata updates", () =>
     }
   }),
 )
+
+// kilocode_change start - providers reject tools arrays over 128 items (#15926)
+const limitProcessor = {
+  message: {
+    id: messageID,
+    sessionID,
+    role: "assistant",
+    parentID: MessageID.ascending(),
+    agent: "build",
+    mode: "build",
+    path: { cwd: "/tmp", root: "/tmp" },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    modelID: ModelV2.ID.make("test-model"),
+    providerID: ProviderV2.ID.make("test"),
+    time: { created: 1 },
+  } satisfies SessionV1.Assistant,
+  metadata: () => Effect.void,
+  completeToolCall: () => Effect.void,
+} satisfies Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall">
+
+it.effect("caps MCP tools at the 128-tool provider limit while preserving built-in tools", () =>
+  Effect.gen(function* () {
+    const resolve = (reserveStructuredOutput: boolean) =>
+      SessionTools.resolve({
+        agent,
+        model,
+        session: sessionInfo,
+        processor: limitProcessor,
+        bypassAgentCheck: false,
+        messages: [],
+        promptOps: {} as never,
+        memoryCache: {},
+        reserveStructuredOutput,
+      }).pipe(
+        Effect.provideService(MCP.Service, mcpWithTools(200, true)),
+        Effect.provideService(InstanceRef, instance),
+      )
+
+    const tools = yield* resolve(false)
+    const names = Object.keys(tools)
+    expect(names).toHaveLength(128)
+    expect(tools.timing).toBeDefined()
+    // a colliding MCP tool must not shadow the built-in of the same key
+    expect(tools.timing.description).toBe("updates metadata more than once")
+    expect(names.filter((name) => name !== "timing").every((name) => name.startsWith("srv_tool_"))).toBe(true)
+
+    // json_schema requests reserve one slot for StructuredOutput, appended after resolve
+    const reserved = yield* resolve(true)
+    const reservedNames = Object.keys(reserved)
+    expect(reservedNames).toHaveLength(127)
+    expect(reserved.timing).toBeDefined()
+    reserved[KiloToolLimit.STRUCTURED_OUTPUT_TOOL] = {} as never
+    expect(Object.keys(reserved)).toHaveLength(128)
+
+    // trimming is deterministic across resolutions
+    const again = yield* resolve(false)
+    expect(new Set(Object.keys(again))).toEqual(new Set(names))
+  }),
+)
+// kilocode_change end

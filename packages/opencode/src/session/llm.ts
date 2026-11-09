@@ -30,6 +30,7 @@ import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
+import { KiloToolLimit } from "@/kilocode/session/tool-limit" // kilocode_change
 import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
@@ -112,11 +113,18 @@ const live: Layer.Layer<
       const info = yield* auth.get(input.model.providerID)
       const providers = yield* provider.list()
       const machineId = yield* Effect.promise(() => Identity.getMachineId().catch(() => undefined))
+      // kilocode_change start - apply the same 128-tool ceiling to the routing
+      // worker request; a no-op reference pass when the record already fits
+      const routedTools = KiloToolLimit.capOutboundTools(input.tools, {
+        protected: new Set([KiloToolLimit.STRUCTURED_OUTPUT_TOOL]),
+      })
+      KiloToolLimit.report("outbound", routedTools.dropped)
       const pick = yield* Effect.promise(async () =>
         KiloCustomRouter.resolve({
           modelID: input.model.id,
           messages: openaiMessages(input.messages),
-          tools: await openaiTools(input.tools),
+          tools: await openaiTools(routedTools.tools),
+          // kilocode_change end
           sessionID: input.sessionID,
           requestID: input.user.id,
           mode: input.agent.name,
@@ -164,7 +172,17 @@ const live: Layer.Layer<
       })
 
       // kilocode_change start - compact at the configured threshold before contacting the provider
-      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
+      const sanitized = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
+      // Hard guard shared by the native runtime and the ai-sdk streamText path:
+      // OpenAI-compatible providers reject tools arrays over 128 items. The MCP
+      // merge already trims deterministically; this guarantees the invariant for
+      // every tool source (e.g. StructuredOutput added after resolve).
+      const capped = KiloToolLimit.capOutboundTools(sanitized, {
+        protected: new Set([KiloToolLimit.STRUCTURED_OUTPUT_TOOL]),
+      })
+      KiloToolLimit.report("outbound", capped.dropped)
+      const tools = capped.tools
+      // kilocode_change end
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
       const estimated: ModelMessage[] =
         isOpenaiOauth || isWorkflow
