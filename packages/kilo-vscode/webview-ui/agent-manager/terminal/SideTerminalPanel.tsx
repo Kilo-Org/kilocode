@@ -131,7 +131,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                 }}
               />
             </Tooltip>
-            <Tooltip value={t("common.close")} placement="bottom">
+            <Tooltip value={t("common.close")} placement="bottom" class="am-side-terminal-close">
               <IconButton
                 icon="close"
                 size="small"

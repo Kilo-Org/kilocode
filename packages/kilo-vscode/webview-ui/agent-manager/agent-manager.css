@@ -5713,12 +5713,19 @@ body.vscode-high-contrast-light {
   border-left-color: transparent;
 }
 
+/* The add button stays glued to the last tab, while the stretched area lets
+   the panel close button pin to the strip's far edge so it never drifts
+   rightward as tabs are added. */
 .am-side-terminal-add {
   display: flex;
   align-items: center;
   align-self: center;
-  flex-shrink: 0;
+  flex: 1 0 auto;
   padding: 0 2px;
+}
+
+.am-side-terminal-add .am-side-terminal-close {
+  margin-left: auto;
 }
 
 /* Hidden-but-alive side panel host: taken out of the flow so the chat
