@@ -8,6 +8,7 @@
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
 import { getErrorReported } from "effect/Runtime"
+import { Command } from "effect/cli"
 import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Observability } from "@opencode/util/observability"
@@ -50,7 +51,20 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
 }
 
 // Kilo-owned commands alongside the upstream commands.
-const KiloCommands = { ...Commands, commands: { ...Commands.commands, auto: AutoCommand, sync: SyncCommand, remote: RemoteCommand } }
+const KiloCommands = {
+  ...Commands,
+  commands: {
+    ...Commands.commands,
+    // Kilo: `daemon` aliases the upstream `service` group, so `daemon status|stop|restart` manage the native service.
+    service: {
+      ...Commands.commands.service,
+      spec: Commands.commands.service.spec.pipe(Command.withAlias("daemon")),
+    },
+    auto: AutoCommand,
+    sync: SyncCommand,
+    remote: RemoteCommand,
+  },
+}
 
 const Handlers = Runtime.handlers(KiloCommands, {
   $: () => import("@opencode/cli/commands/handlers/default"),

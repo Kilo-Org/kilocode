@@ -815,6 +815,24 @@
     "note": "Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server.",
     "by": "settings-mcp"
   },
+  "module:packages/opencode/src/kilocode/skills/builtin.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/skill/config.ts",
+    "note": "The Kilo plugin kilocode.skill-config registers the built-in kilo-config skill through the skill transform. It removes the upstream opencode and report built-in skills, and the config skill plugin runs after it so a user skill with the same ID still overrides the built-in content.",
+    "by": "builtin-config-skill"
+  },
+  "module:packages/opencode/src/kilocode/skills/kilo-config.md": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/skill/kilo-config.txt",
+    "note": "The Kilo config guide uses the v2 names: kilo2.json, kilo2.jsonc, .kilo2 and the kilo2 global directory, with the managed system directory on its stable names. It records config precedence, the linked-worktree primary-checkout fallback, config directory contents, common fields, environment variables and Agent Manager setup, run and state files. The v1 skill-shell injection, trust gates and v1 config-fallback sections are not carried.",
+    "by": "builtin-config-skill"
+  },
+  "module:packages/opencode/test/kilocode/builtin-skills.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/skill-config.test.ts",
+    "note": "packages/kilo-plugin/test/skill-config.test.ts covers the built-in kilo-config skill, the hidden upstream opencode and report skills, and the user override with the same ID.",
+    "by": "builtin-config-skill"
+  },
   "module:packages/opencode/src/kilocode/skill-remove.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/skill/remove.ts",
