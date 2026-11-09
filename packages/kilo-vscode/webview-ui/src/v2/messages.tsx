@@ -14,6 +14,7 @@ import { useNotificationsOptional } from "../context/notifications"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
+import { instructionFilesByRead } from "./instruction-files"
 import type { Selection } from "./selectors"
 import {
   anchorOffset,
@@ -111,6 +112,7 @@ export function MessageList(props: {
     const ids = new Set(queued().map((item) => item.id))
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
+  const instructionFiles = createMemo(() => instructionFilesByRead(messages(), v2.directory))
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
   // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
@@ -148,6 +150,15 @@ export function MessageList(props: {
   const virtualKeys = createMemo(() => partition().virtualKeys, undefined, { equals: sameKeys })
   const directKeys = createMemo(() => partition().directKeys, undefined, { equals: sameKeys })
   const lookup = createMemo(() => new Map(rows().map((row) => [row.key, row])))
+  // A fork keeps the messages before the chosen one, so a fork at the first user message is an empty session.
+  // Only a transcript without older pages proves which user message is the first. A session created in this view
+  // has no history cursor, and a fetched one reports when its loaded page reaches the start.
+  const firstUser = createMemo(() =>
+    props.session &&
+    (!v2.data.session.message.more(props.session) || v2.data.session.message.startLoaded(props.session))
+      ? rows().find((row) => row.type === "user")?.message.id
+      : undefined,
+  )
   const indexes = createMemo(() => new Map(virtualKeys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(virtualKeys()))
   // Virtua keeps the viewport on the same rows only when it knows that rows
@@ -422,9 +433,10 @@ export function MessageList(props: {
           row={row()}
           session={props.session ?? ""}
           actions={props.actions}
+          instructionFiles={(partID) => instructionFiles().get(partID)}
           highlight={() => highlight()}
           onViewTurnChanges={props.onViewTurnChanges}
-          onForkMessage={props.onForkMessage}
+          onForkMessage={row().message.id === firstUser() ? undefined : props.onForkMessage}
           pending={props.pending}
         />
       ) as HTMLElement

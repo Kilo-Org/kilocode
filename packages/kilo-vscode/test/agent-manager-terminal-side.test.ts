@@ -1,15 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import {
-  createSideTerminal,
-  readSavedDestination,
-  resolveRunScriptRequest,
-  resolveVscodeTerminalRequest,
-} from "../webview-ui/agent-manager/terminal/side"
+import { createSideTerminal } from "../webview-ui/agent-manager/terminal/side"
 
 function scene(
   opts: {
-    destination?: "vscode" | "agentManager"
-    saved?: "vscode" | "agentManager"
     visible?: boolean
     focusedId?: string
     count?: number
@@ -23,10 +16,6 @@ function scene(
     closed: [] as string[],
     hide: 0,
     refocus: 0,
-    openVscode: 0,
-    persisted: [] as string[],
-    posted: [] as Array<Record<string, unknown>>,
-    tracked: [] as string[],
   }
   let visible = opts.visible ?? false
   let focusedId = opts.focusedId as string | undefined
@@ -53,49 +42,43 @@ function scene(
       visible = false
     },
     refocus: () => calls.refocus++,
-    postMessage: (msg) => calls.posted.push(msg as Record<string, unknown>),
-    track: (button) => calls.tracked.push(button),
-    openVscode: () => calls.openVscode++,
-    saved: opts.saved,
-    save: (destination) => calls.persisted.push(destination),
     mac: opts.mac,
   })
-  if (opts.destination) ctl.syncDefault(opts.destination)
   return { ctl, calls }
 }
 
 describe("Agent Manager side terminal controller", () => {
   it("toggles the panel, focusing a visible terminal before hiding it", () => {
-    const focused = scene({ destination: "agentManager", visible: true, focusedId: "terminal:side" })
+    const focused = scene({ visible: true, focusedId: "terminal:side" })
     focused.ctl.toggle()
     expect(focused.calls.hide).toBe(1)
     expect(focused.calls.refocus).toBe(1)
 
-    const elsewhere = scene({ destination: "agentManager", visible: true })
+    const elsewhere = scene({ visible: true })
     elsewhere.ctl.toggle()
     expect(elsewhere.calls.requestSide).toBe(1)
     expect(elsewhere.calls.hide).toBe(0)
     expect(elsewhere.calls.refocus).toBe(0)
 
-    const hidden = scene({ destination: "agentManager", visible: false })
+    const hidden = scene({ visible: false })
     hidden.ctl.toggle()
     expect(hidden.calls.requestSide).toBe(1)
     expect(hidden.calls.hide).toBe(0)
   })
 
   it("toggles panel visibility from toolbar button without requiring focus", () => {
-    const visibleUnfocused = scene({ destination: "agentManager", visible: true })
-    visibleUnfocused.ctl.openPreferred("tab_toolbar")
+    const visibleUnfocused = scene({ visible: true })
+    visibleUnfocused.ctl.toggle("tab_toolbar")
     expect(visibleUnfocused.calls.hide).toBe(1)
     expect(visibleUnfocused.calls.requestSide).toBe(0)
 
-    const visibleFocused = scene({ destination: "agentManager", visible: true, focusedId: "terminal:side" })
-    visibleFocused.ctl.openPreferred("tab_toolbar")
+    const visibleFocused = scene({ visible: true, focusedId: "terminal:side" })
+    visibleFocused.ctl.toggle("tab_toolbar")
     expect(visibleFocused.calls.hide).toBe(1)
     expect(visibleFocused.calls.requestSide).toBe(0)
 
-    const hidden = scene({ destination: "agentManager", visible: false })
-    hidden.ctl.openPreferred("tab_toolbar")
+    const hidden = scene({ visible: false })
+    hidden.ctl.toggle("tab_toolbar")
     expect(hidden.calls.requestSide).toBe(1)
     expect(hidden.calls.hide).toBe(0)
   })
@@ -151,29 +134,10 @@ describe("Agent Manager side terminal controller", () => {
     expect(item.calls.refocus).toBe(0)
   })
 
-  it.each(["tab_toolbar", "keyboard_shortcut"] as const)(
-    "opens the Agent Manager panel by default from %s without saving a preference",
-    (trigger) => {
-      const item = scene()
-      expect(item.ctl.destination()).toBe("agentManager")
-      item.ctl.openPreferred(trigger)
-      expect(item.calls.requestSide).toBe(1)
-      expect(item.calls.openVscode).toBe(0)
-      expect(item.calls.persisted).toEqual([])
-      expect(item.calls.posted).toEqual([])
-    },
-  )
-
-  it("routes the primary action by destination", () => {
-    const vscodeFirst = scene({ destination: "vscode" })
-    vscodeFirst.ctl.openPreferred("tab_toolbar")
-    expect(vscodeFirst.calls.openVscode).toBe(1)
-    expect(vscodeFirst.calls.requestSide).toBe(0)
-
-    const panelFirst = scene({ destination: "agentManager" })
-    panelFirst.ctl.openPreferred("keyboard_shortcut")
-    expect(panelFirst.calls.requestSide).toBe(1)
-    expect(panelFirst.calls.openVscode).toBe(0)
+  it.each(["tab_toolbar", "keyboard_shortcut"] as const)("opens the Agent Manager panel from %s", (trigger) => {
+    const item = scene()
+    item.ctl.toggle(trigger)
+    expect(item.calls.requestSide).toBe(1)
   })
 
   it("handles the platform terminal shortcut locally", () => {
@@ -190,7 +154,7 @@ describe("Agent Manager side terminal controller", () => {
       }) as KeyboardEvent
 
     // macOS: the workbench binding is Cmd+/, so only Cmd is accepted.
-    const mac = scene({ destination: "agentManager", mac: true })
+    const mac = scene({ mac: true })
     expect(mac.ctl.press(press({ metaKey: true }))).toBe(true)
     expect(mac.calls.requestSide).toBe(1)
     expect(mac.ctl.press(press({ ctrlKey: true }))).toBe(false)
@@ -198,7 +162,7 @@ describe("Agent Manager side terminal controller", () => {
     expect(mac.calls.requestSide).toBe(1)
 
     // Windows/Linux: the workbench binding is Ctrl+/, so only Ctrl is accepted.
-    const win = scene({ destination: "agentManager", mac: false })
+    const win = scene({ mac: false })
     expect(win.ctl.press(press({ ctrlKey: true }))).toBe(true)
     expect(win.calls.requestSide).toBe(1)
     expect(win.ctl.press(press({ metaKey: true }))).toBe(false)
@@ -212,7 +176,7 @@ describe("Agent Manager side terminal controller", () => {
   })
 
   it("stops a handled press so the workbench keybinding cannot toggle a second time", () => {
-    const item = scene({ destination: "agentManager", mac: true })
+    const item = scene({ mac: true })
     const stopped: string[] = []
     const press = (opts: Partial<KeyboardEvent>) =>
       item.ctl.press({
@@ -233,112 +197,5 @@ describe("Agent Manager side terminal controller", () => {
     expect(stopped).toHaveLength(4)
     expect(item.calls.requestSide).toBe(1)
     expect(item.calls.hide).toBe(0)
-  })
-
-  it("persists the picked destination with a section-relative settings key", () => {
-    const item = scene()
-    item.ctl.choose("agentManager")
-    expect(item.ctl.destination()).toBe("agentManager")
-    expect(item.calls.posted).toEqual([
-      { type: "agentManager.terminal.destinationSelected", destination: "agentManager" },
-    ])
-    expect(item.calls.persisted).toEqual(["agentManager"])
-  })
-
-  it("follows the remote default while the panel has no explicit choice", () => {
-    const item = scene()
-    item.ctl.syncDefault("agentManager")
-    expect(item.ctl.destination()).toBe("agentManager")
-    item.ctl.syncDefault("vscode")
-    expect(item.ctl.destination()).toBe("vscode")
-  })
-
-  it("keeps the panel's explicit choice when another window rewrites the shared setting", () => {
-    const item = scene()
-    item.ctl.choose("agentManager")
-    // Echo of the application-scoped setting being rewritten elsewhere:
-    // worktree window B picked the VS Code terminal, which must not flip
-    // this panel's routing.
-    item.ctl.syncDefault("vscode")
-    expect(item.ctl.destination()).toBe("agentManager")
-    item.ctl.openPreferred("keyboard_shortcut")
-    expect(item.calls.requestSide).toBe(1)
-    expect(item.calls.openVscode).toBe(0)
-  })
-
-  it.each(["vscode", "agentManager"] as const)(
-    "restores a saved %s choice and ignores remote defaults",
-    (destination) => {
-      const item = scene({ saved: destination })
-      expect(item.ctl.destination()).toBe(destination)
-      expect(item.calls.posted).toEqual([{ type: "agentManager.terminal.destinationSelected", destination }])
-      item.ctl.syncDefault(destination === "vscode" ? "agentManager" : "vscode")
-      expect(item.ctl.destination()).toBe(destination)
-    },
-  )
-})
-
-describe("readSavedDestination", () => {
-  it("reads a valid choice and rejects anything else", () => {
-    expect(readSavedDestination({ terminalDestination: "agentManager" })).toBe("agentManager")
-    expect(readSavedDestination({ terminalDestination: "vscode" })).toBe("vscode")
-    expect(readSavedDestination({ terminalDestination: "bogus" })).toBeUndefined()
-    expect(readSavedDestination({})).toBeUndefined()
-    expect(readSavedDestination(undefined)).toBeUndefined()
-  })
-})
-
-describe("resolveRunScriptRequest", () => {
-  it("carries the current panel dropdown destination with every Run request", () => {
-    expect(resolveRunScriptRequest("wt-1", "agentManager")).toEqual({
-      type: "agentManager.runScript",
-      worktreeId: "wt-1",
-      destination: "agentManager",
-    })
-    expect(resolveRunScriptRequest("local", "vscode")).toEqual({
-      type: "agentManager.runScript",
-      worktreeId: "local",
-      destination: "vscode",
-    })
-  })
-})
-
-describe("resolveVscodeTerminalRequest", () => {
-  const sessions = new Map([
-    ["wt-1", "session-a"],
-    ["wt-2", "session-b"],
-  ])
-  const forWorktree = (id: string) => sessions.get(id)
-
-  it("prefers the current session", () => {
-    expect(resolveVscodeTerminalRequest("wt-1", "session-current", forWorktree)).toEqual({
-      type: "agentManager.showTerminal",
-      sessionId: "session-current",
-    })
-  })
-
-  it("falls back to a session of the selected worktree when the current session is cleared", () => {
-    // Terminal tab activation clears the current session; the shortcut
-    // must still open a terminal for the worktree, not dead-end.
-    expect(resolveVscodeTerminalRequest("wt-2", undefined, forWorktree)).toEqual({
-      type: "agentManager.showTerminal",
-      sessionId: "session-b",
-    })
-  })
-
-  it("opens a worktree-rooted terminal for sessionless worktrees", () => {
-    expect(resolveVscodeTerminalRequest("wt-3", undefined, forWorktree)).toEqual({
-      type: "agentManager.showWorktreeTerminal",
-      worktreeId: "wt-3",
-    })
-  })
-
-  it("opens the local terminal for the local context and unassigned selections", () => {
-    expect(resolveVscodeTerminalRequest("local", undefined, forWorktree)).toEqual({
-      type: "agentManager.showLocalTerminal",
-    })
-    expect(resolveVscodeTerminalRequest(null, undefined, forWorktree)).toEqual({
-      type: "agentManager.showLocalTerminal",
-    })
   })
 })

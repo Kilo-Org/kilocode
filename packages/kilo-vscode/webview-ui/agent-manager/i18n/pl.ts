@@ -129,7 +129,6 @@ export const dict = {
   "agentManager.tab.unpin": "Odepnij",
   "agentManager.tab.pinned": "Przypięta",
   "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Otwórz Terminal",
   "agentManager.tab.newOptions": "Więcej opcji nowej karty",
   "agentManager.sidebarSearch.label": "Wyszukaj Worktree i sesje",
   "agentManager.sidebarSearch.scope":
@@ -149,9 +148,6 @@ export const dict = {
   "agentManager.terminal.add": "Nowy terminal",
   "agentManager.terminal.empty": "Nie ma tu jeszcze terminala",
   "agentManager.terminal.start": "Uruchom terminal",
-  "agentManager.terminal.destination": "Wybierz, co otwiera przycisk terminala",
-  "agentManager.terminal.openInVscode": "Terminal VS Code",
-  "agentManager.terminal.openInPanel": "Panel Agent Manager",
   "agentManager.terminal.errorTitle": "Błąd terminala",
   "agentManager.setup.failed": "Konfiguracja worktree nie powiodła się",
   "agentManager.setup.settingUp": "Konfigurowanie worktree",

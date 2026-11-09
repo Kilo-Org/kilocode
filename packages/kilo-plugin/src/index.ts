@@ -19,17 +19,24 @@ import { KiloRemote } from "./remote"
 export { KiloSessionSync }
 export { KiloRemote }
 import { KiloPrivacyPlugin } from "./privacy"
+import { KiloFlowPlugin } from "./flow"
 import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
+import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
 import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
 import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
+import { KiloQuestionPlugin } from "./question"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloRecallPlugin } from "./recall"
+import { KiloIndexingPlugin } from "./indexing"
+import { KiloSandbox } from "./sandbox"
+
+export { KiloSandbox }
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -52,9 +59,12 @@ export const KiloPlugins = [
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloFlowPlugin,
   KiloSessionSync.plugin,
   KiloRemote.plugin,
   KiloSkillPlugin,
+  // Replaces the upstream OpenCode and report built-in skills with Kilo's config guide.
+  KiloSkillConfigPlugin.Plugin,
   KiloAgentRemovePlugin,
   // Rung 1: names the extracted formats in the native read tool description. The host swaps the
   // reader behind it for the filesystem service (rung 2).
@@ -69,8 +79,11 @@ export const KiloPlugins = [
   KiloBranchNamePlugin,
   KiloAgentManagerPlugin,
   KiloRecallPlugin,
+  // v1 enabled codebase indexing through a built-in plugin entry. kilo_port(indexing:2e5dfe2574c6)
+  KiloIndexingPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
+  KiloQuestionPlugin.Plugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */
@@ -79,4 +92,6 @@ export const KiloPostPlugins = [
   KiloAgentPlugin.Ceiling,
   GatewayOptions.Plugin,
   OpencodeFreeTier.Plugin,
+  // The sandbox wraps every tool, so it registers after the config plugins and their tools.
+  KiloSandbox.Plugin,
 ] as const

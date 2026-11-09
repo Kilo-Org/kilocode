@@ -16,10 +16,8 @@ import type { BranchNamingController } from "./branch-naming"
 import type { WorktreeImporter } from "./worktree-importer"
 import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { TerminalRouter } from "./terminal-routing"
-import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { RunController } from "./run/controller"
-import type { DestinationState } from "./terminal-destination"
 import type { RecoveryMessage } from "./worktree-recovery"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import type { GitStatsPoller } from "./GitStatsPoller"
@@ -39,10 +37,8 @@ export interface ProviderHostsSource {
   readonly importer: WorktreeImporter
   readonly diffs: WorktreeDiffController
   readonly terminalRouter: TerminalRouter
-  readonly terminalManager: SessionTerminalManager
   readonly scripts: { manager: ScriptTerminalManager }
   readonly run: RunController
-  readonly destination: DestinationState
   readonly statsPoller: GitStatsPoller
   readonly prBridge: PRStatusBridge
   readonly panel: PanelContext | undefined
@@ -51,7 +47,7 @@ export interface ProviderHostsSource {
   readonly stateReady: Promise<void> | undefined
   createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null>
   getSetupScriptService(): { hasScript(): boolean } | undefined
-  runSetupScriptForWorktree(path: string, branch?: string, id?: string, early?: () => Promise<void>): Promise<void>
+  runSetupScriptForWorktree(path: string, branch: string | undefined, id: string, early?: () => Promise<void>): Promise<void>
   createSessionInWorktree(
     path: string,
     branch: string,
@@ -86,6 +82,10 @@ export interface ProviderHostsSource {
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void>
+  continueInWorktree(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void>
   configureSetupScript(): Promise<void>
   sendRepoInfo(): Promise<void>
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
@@ -97,6 +97,7 @@ export interface ProviderHostsSource {
   trackOpenSessions(ids: string[]): void
   trackVisibleSession(id: string | null): void
   setCaffeination(enabled: boolean): Promise<void>
+  toggleCaffeination(): Promise<void>
   postCaffeination(): void
   setReviewMarkdownRender(value: boolean): Promise<void>
   messageProject(m: AgentManagerInMessage): ProjectContext | undefined
@@ -115,10 +116,8 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     importer: p.importer,
     diffs: p.diffs,
     terminals: p.terminalRouter,
-    integrated: p.terminalManager,
     scripts: p.scripts,
     run: p.run,
-    destination: p.destination,
     panel: () => p.panel,
     context: () => p.context,
     state: () => p.state,
@@ -140,6 +139,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     onCloseSession: (id) => p.onCloseSession(id),
     onCreateMultiVersion: (msg) => p.onCreateMultiVersion(msg),
     continueFromSidebar: (id, progress) => p.continueFromSidebar(id, progress),
+    continueInWorktree: (id, progress) => p.continueInWorktree(id, progress),
     configureSetupScript: () => p.configureSetupScript(),
     sendRepoInfo: () => p.sendRepoInfo(),
     sendDiffBranches: (id, scope, project) => p.sendDiffBranches(id, scope, project),
@@ -152,6 +152,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     trackOpenSessions: (ids) => p.trackOpenSessions(ids),
     trackVisibleSession: (id) => p.trackVisibleSession(id),
     setCaffeination: (enabled) => p.setCaffeination(enabled),
+    toggleCaffeination: () => p.toggleCaffeination(),
     postCaffeination: () => p.postCaffeination(),
     setReviewMarkdownRender: (value) => p.setReviewMarkdownRender(value),
   }

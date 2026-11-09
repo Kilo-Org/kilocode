@@ -7,7 +7,7 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiffInfo } from "@opencode/client"
+import type { FileDiffInfo, SessionInfo } from "@opencode/client"
 import type { BrowserElement } from "../services/browser-automation"
 import type { BrowserCursor, BrowserFrame, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { DiffImage } from "../diff/types"
@@ -21,7 +21,6 @@ import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { ProjectSessionView } from "./project/session-view"
 import type { SidebarTarget } from "./project/route"
-import type { TerminalDestination } from "./terminal-destination"
 
 type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
@@ -192,7 +191,6 @@ interface StateMessage {
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
-  terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
   browserAutomation?: boolean
@@ -262,11 +260,6 @@ interface TerminalErrorMessage {
   message: string
 }
 
-interface TerminalDestinationChangedMessage {
-  type: "agentManager.terminal.destinationChanged"
-  destination: TerminalDestination
-}
-
 interface TerminalFontChangedMessage {
   type: "agentManager.terminal.fontChanged"
   font: TerminalFont
@@ -317,6 +310,7 @@ interface SessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+  session: SessionInfo
 }
 
 interface SessionClosedMessage {
@@ -577,8 +571,16 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
+interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | ContinueInWorktreeProgressMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserFrameMessage
@@ -626,7 +628,6 @@ export type AgentManagerOutMessage =
   | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
-  | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
   | ScriptTerminalsMessage
   | TerminalSocketOpenedMessage
@@ -812,25 +813,10 @@ interface RunScriptIn {
   type: "agentManager.runScript"
   projectId?: string
   worktreeId: string
-  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {
   type: "agentManager.stopRunScript"
-  worktreeId: string
-}
-
-interface ShowTerminalIn {
-  type: "agentManager.showTerminal"
-  sessionId: string
-}
-
-interface ShowLocalTerminalIn {
-  type: "agentManager.showLocalTerminal"
-}
-
-interface ShowWorktreeTerminalIn {
-  type: "agentManager.showWorktreeTerminal"
   worktreeId: string
 }
 
@@ -843,10 +829,6 @@ interface OpenWorktreeIn {
 interface CopyToClipboardIn {
   type: "agentManager.copyToClipboard"
   text: string
-}
-
-interface ShowExistingLocalTerminalIn {
-  type: "agentManager.showExistingLocalTerminal"
 }
 
 interface RequestRepoInfoIn {
@@ -1077,6 +1059,10 @@ interface SetCaffeinationIn {
   enabled: boolean
 }
 
+interface ToggleCaffeinationIn {
+  type: "agentManager.toggleCaffeination"
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -1215,7 +1201,7 @@ interface AbortIn {
 }
 
 interface ContinueInWorktreeIn {
-  type: "continueInWorktree"
+  type: "agentManager.continueInWorktree"
   sessionId: string
 }
 
@@ -1332,11 +1318,6 @@ interface TerminalSocketCloseIn {
   reason?: string
 }
 
-interface TerminalDestinationSelectedIn {
-  type: "agentManager.terminal.destinationSelected"
-  destination: TerminalDestination
-}
-
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 interface BrowserRequestIn {
   type:
@@ -1408,12 +1389,8 @@ export type AgentManagerInMessage =
   | ConfigureRunScriptIn
   | RunScriptIn
   | StopRunScriptIn
-  | ShowTerminalIn
-  | ShowLocalTerminalIn
-  | ShowWorktreeTerminalIn
   | OpenWorktreeIn
   | CopyToClipboardIn
-  | ShowExistingLocalTerminalIn
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
@@ -1447,6 +1424,7 @@ export type AgentManagerInMessage =
   | PromptSentIn
   | RequestCaffeinationIn
   | SetCaffeinationIn
+  | ToggleCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
   | RequestDocumentIn
@@ -1477,4 +1455,3 @@ export type AgentManagerInMessage =
   | TerminalSocketOpenIn
   | TerminalSocketSendIn
   | TerminalSocketCloseIn
-  | TerminalDestinationSelectedIn

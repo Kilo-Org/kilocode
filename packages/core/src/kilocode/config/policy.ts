@@ -3,11 +3,14 @@ export * as KiloConfigPolicy from "./policy.js"
 import { Config } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { ConfigModel } from "@opencode/schema/config/model"
+import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import { optional } from "@opencode/schema/schema"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
+import { KiloConfigExcess } from "./excess.js"
 
+// Allowed hosts are checked by the sandbox plugin, which owns the destination parser.
 const Sandbox = Schema.Struct({
   enabled: Schema.Boolean.pipe(optional).annotate({ description: "Enable sandbox confinement for new sessions" }),
   network: Schema.Literals(["allow", "deny"]).pipe(optional).annotate({
@@ -53,6 +56,10 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     description:
       "Controls whether MCP and generic tool blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  code_mode_display: Schema.Literals(["expanded", "collapsed"]).pipe(optional).annotate({
+    description:
+      "Controls whether Code Mode blocks list their tool calls (expanded) or show one line (collapsed) by default in the VS Code chat UI. The script stays hidden until opened",
+  }),
   // kilo_port(unattributed:core/v1:159079a2d8a3)
   remote_control: Schema.Boolean.pipe(optional).annotate({
     description: "Enable remote control of sessions via Kilo Cloud",
@@ -97,13 +104,21 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   })
     .pipe(optional)
     .annotate({ description: "Configuration for AI-generated commit messages" }),
+  // kilo_port(indexing:fe813c19ebaf) kilo_port(indexing:987c9e6c9e85) kilo_port(indexing:854fbb30ce6c)
+  indexing: KiloIndexingRpc.Config.pipe(optional),
 }) {}
+
+// The recognized top-level keys: the full v2 schema without the derived `workflow_models` (built from model-only
+// `commands`). The writer (`validate.ts`) shares this set so a read and a write cannot drift.
+export const known = new Set(Object.keys(Info.fields).filter((key) => key !== "workflow_models"))
 
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
 const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
 const sync = Schema.Struct({ session_sync: Schema.optional(Schema.Boolean) })
 const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
+const indexing = Schema.Struct({ indexing: Schema.optional(KiloIndexingRpc.Config) })
+const sandboxSetting = Schema.Struct({ sandbox: Schema.optional(Sandbox) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -147,6 +162,9 @@ function kiloSettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diag
 const refused = {
   console: "ignored console; Kilo Console settings are not carried on this build",
 } as const
+
+// `workflow_models` is derived from model-only `commands` entries; `refused` keys have their own diagnostic.
+const skipExcess = new Set(["workflow_models", ...Object.keys(refused)])
 
 const refusedExperimental = {
   semantic_indexing: "ignored retired experimental.semantic_indexing; use indexing.enabled instead",
@@ -220,6 +238,7 @@ export function parse(
       message: "ignored invalid commit_message; expected an object with an optional string prompt",
     })
   const models = input instanceof Info ? input.workflow_models : record(input) ? workflowModels(input) : undefined
+  KiloConfigExcess.report(input, known, skipExcess, report)
   refusedSettings(input, report)
   const decodedSettings = kiloSettings(input, report)
   const synchronization = Schema.decodeUnknownOption(sync)(input)
@@ -228,6 +247,20 @@ export function parse(
       path: ["session_sync"],
       kind: "invalid",
       message: "ignored invalid session_sync; expected a boolean (true or false)",
+    })
+  const indexingField = Schema.decodeUnknownOption(indexing)(input)
+  if (Option.isNone(indexingField))
+    report?.({
+      path: ["indexing"],
+      kind: "invalid",
+      message: "ignored invalid indexing; expected the codebase indexing settings object",
+    })
+  const sandboxField = Schema.decodeUnknownOption(sandboxSetting)(input)
+  if (Option.isNone(sandboxField))
+    report?.({
+      path: ["sandbox"],
+      kind: "invalid",
+      message: "ignored invalid sandbox; expected an object with optional enabled, network, writable_paths and allowed_hosts",
     })
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
@@ -239,7 +272,9 @@ export function parse(
           ...Option.getOrElse(privacyField, () => ({})),
           ...Option.getOrElse(message, () => ({})),
           ...Option.getOrElse(synchronization, () => ({})),
-          ...displaySettings(input),
+          ...Option.getOrElse(indexingField, () => ({})),
+          ...Option.getOrElse(sandboxField, () => ({})),
+          ...displaySettings(input, report),
           ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
@@ -248,13 +283,16 @@ export function parse(
   )
 }
 
-/** The display layouts, ignoring an invalid value instead of failing the whole document. */
-function displaySettings(input: unknown) {
+/** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */
+function displaySettings(input: unknown, report?: (diagnostic: ConfigNormalize.Diagnostic) => void) {
   if (!record(input)) return {}
   const decodeLayout = Schema.decodeUnknownOption(Schema.Literals(["expanded", "collapsed"]))
   return Object.fromEntries(
-    ["terminal_command_display", "code_edit_display", "mcp_tool_display"].flatMap((key) => {
+    ["terminal_command_display", "code_edit_display", "mcp_tool_display", "code_mode_display"].flatMap((key) => {
+      if (input[key] === undefined) return []
       const value = Option.getOrUndefined(decodeLayout(input[key]))
+      if (value === undefined)
+        report?.({ path: [key], kind: "invalid", message: `ignored invalid ${key}; expected "expanded" or "collapsed"` })
       return value === undefined ? [] : [[key, value]]
     }),
   )
@@ -321,6 +359,24 @@ export function commitMessagePrompt(entries: readonly Config.Entry[]) {
     undefined,
   )
   return prompt || undefined
+}
+
+/** The `indexing` key of the effective entries: later documents win, and nested provider options merge. */
+export function indexingConfig(entries: readonly Config.Entry[]) {
+  return entries.reduce<KiloIndexingRpc.Config | undefined>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.indexing) return value
+    const next = entry.info.indexing
+    if (!value) return next
+    return Object.fromEntries(
+      [...new Set([...Object.keys(value), ...Object.keys(next)])].map((key) => {
+        const left = value[key as keyof KiloIndexingRpc.Config]
+        const right = next[key as keyof KiloIndexingRpc.Config]
+        if (right === undefined) return [key, left]
+        if (record(left) && record(right)) return [key, { ...left, ...right }]
+        return [key, right]
+      }),
+    ) as KiloIndexingRpc.Config
+  }, undefined)
 }
 
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))

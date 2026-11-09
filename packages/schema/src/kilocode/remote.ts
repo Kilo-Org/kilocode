@@ -2,6 +2,7 @@ export * as KiloRemoteRpc from "./remote.js"
 
 import { Schema } from "effect"
 import { Rpc } from "../rpc.js"
+import { Session } from "../session.js"
 
 const portable = Schema.toStandardSchemaV1
 
@@ -25,6 +26,11 @@ const method = {
 
 export const Definition = Rpc.define({
   id: "kilocode.remote",
-  methods: { status: method, enable: method, disable: method },
+  methods: {
+    status: method,
+    enable: method,
+    disable: method,
+    attach: { ...method, input: portable(Schema.Struct({ sessionID: Session.ID })) },
+  },
   events: {},
 })

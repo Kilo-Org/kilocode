@@ -9,7 +9,7 @@ export interface WorktreeImporterHost {
   state(): WorktreeStateManager | undefined
   post(msg: AgentManagerOutMessage): void
   push(): void
-  setup(path: string, branch?: string, worktreeId?: string): Promise<void>
+  setup(path: string, branch: string | undefined, worktreeId: string): Promise<void>
   session(path: string, branch: string, worktreeId?: string): Promise<SessionInfo | null>
   register(sessionId: string, directory: string): void
   acquirePtyCleanup?(directory: string): Promise<() => void>

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/sandbox",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "description": "OS-neutral sandbox profiles and launch preparation for Kilo Code",
+  "exports": {
+    ".": "./src/index.ts",
+    "./destination": "./src/destination.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "typecheck:tsc": "tsc --noEmit",
+    "test": "bun test --timeout 30000"
+  },
+  "dependencies": {
+    "@anthropic-ai/sandbox-runtime": "0.0.63",
+    "effect": "catalog:",
+    "ipaddr.js": "2.4.0"
+  },
+  "devDependencies": {
+    "@effect/platform-node": "catalog:",
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:"
+  }
+}

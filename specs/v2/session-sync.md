@@ -30,7 +30,7 @@ Kilo config directory's `kilo2.jsonc` (normally `~/.config/kilo2/kilo2.jsonc`):
 
 ```jsonc
 {
-  "session_sync": false
+  "session_sync": false,
 }
 ```
 
@@ -115,16 +115,16 @@ A restored database must not reuse an acknowledged position for different conten
 
 ## Portable entity set
 
-| Kind | Captured state |
-|---|---|
-| `session` | Encoded native session metadata and settings, excluding active machine bindings. |
-| `message` | Native transcript messages with stable identity and ordering; split assistants carry a body-free envelope. |
-| `message-part` | One persisted assistant part, addressed by `<messageID>/<ordinal>`, or an explicit deferred placeholder. |
-| `inbox` | Pending input needed to reconstruct the session. |
-| `instruction-entry` | API-managed instruction values and observed removals. |
-| `instruction-state` | Current and epoch-initial instruction state. |
-| `instruction-blob` | Referenced immutable instruction values. |
-| `asset` | Durable references and metadata for required attachment and tool-output bytes. |
+| Kind                | Captured state                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `session`           | Encoded native session metadata and settings, excluding active machine bindings.                           |
+| `message`           | Native transcript messages with stable identity and ordering; split assistants carry a body-free envelope. |
+| `message-part`      | One persisted assistant part, addressed by `<messageID>/<ordinal>`, or an explicit deferred placeholder.   |
+| `inbox`             | Pending input needed to reconstruct the session.                                                           |
+| `instruction-entry` | API-managed instruction values and observed removals.                                                      |
+| `instruction-state` | Current and epoch-initial instruction state.                                                               |
+| `instruction-blob`  | Referenced immutable instruction values.                                                                   |
+| `asset`             | Durable references and metadata for required attachment and tool-output bytes.                             |
 
 Normalize local references through an explicit asset mapping.
 Recorded paths are display information, not authority to read another machine's files.
@@ -314,18 +314,31 @@ An abrupt exit retains recoverable work on disk.
 `kilo2 remote` starts a private headless host, advertises kind `remote`, and waits until a signal.
 It requires Kilo sign-in and synchronization. It never enables control on an unrelated background daemon.
 The launch directory is the boundary for new sessions and directory discovery; canonical paths reject symlink escapes.
+The TUI supplies its launch workspace through the authenticated RPC location, explicitly rather than inheriting
+the managed server's working directory (which is normally the user's home directory). Hosts are cached by
+canonical launch root, and a session can have only one owning host in a server process.
 `create_session` accepts optional directory, title, agent, model, variant and matching organization.
 An organization argument cannot change the active signed-in organization.
 
-Ordinary processes default to control disabled. `/remote` toggles it and shows a header indicator.
+Ordinary hosts default to control disabled. `/remote` toggles the launch workspace host and shows a header indicator.
 `remote_control: true` in global `kilo2.jsonc` or `KILO_REMOTE=1` enables control at startup.
 The authenticated local API exposes `GET /remote/status`, `POST /remote/enable` and `POST /remote/disable`.
 Each returns `{enabled, connected}`; repeated enable/disable calls are idempotent.
 
-Signed-in processes with sync on keep one presence socket, independently of control acceptance.
+Signed-in workspace hosts with sync on keep one presence socket each, independently of control acceptance.
+The server caps workspace hosts, owned sessions and pending candidates at 100 each; empty CLI hosts become evictable after one idle minute, while owned/watched/pending work, in-flight requests and private headless hosts remain protected.
 Only sessions created or continued in this process are advertised as live; untouched synchronized history is not.
-Ownership and relay sockets are bounded to the 100-session presence advertisement limit.
-New activity evicts the least-recently active unwatched session; identity changes clear process ownership.
+On restore and server reconnect, the TUI calls typed `kilocode.remote.attach` with the persisted session ID.
+The host verifies its authoritative session directory against the canonical launch root and announces ownership
+without requiring a new local prompt or native event. Non-TUI local activity binds a host using that same
+authoritative session directory. Status reads do not enroll synchronized history or enable remote commands.
+Transient synchronization readiness failures retain candidates for the existing background poll to admit after
+identity verification; this retries local ownership only, never command execution. Deletion, terminal access
+denial, unavailable session directories, detach, host shutdown and verified owner changes discard the corresponding pending candidates.
+New activity evicts the least-recently active unwatched session. Verified account or tenant changes clear process
+ownership; credential rotation for the same owner refreshes transport without dropping session claims.
+Detach releases ownership after command admission. A process-wide fence retains the latest 100 detached session IDs,
+preventing their event-driven reattachment; older fences can be evicted by further detachments, as before.
 Native text/reasoning deltas, part/tool updates, permission/question requests and execution lifecycle events
 are published only while a viewer watches the session, including when remote control is disabled.
 Runner event bodies are `{version:1,syncPosition,sourceID,incarnation,runID?,data}`.
@@ -338,6 +351,9 @@ This inventory replaces the viewer's pending state; `fields` retain native form 
 The initial state follows relay hello even if the watch arrived before the session socket connected.
 
 Instance commands are `create_session`, `list_directories`, `list_models` and `list_agents`.
+`list_models` accepts an optional nonnegative numeric `cursor` and returns `models` with `nextCursor`.
+Read pages until `nextCursor` is null. Each page reserves transport envelope space.
+An individual oversized model fails with `model_too_large`; discovery never silently drops it.
 Session commands are `send_message`, `interrupt`, `drop_queued_message`, `permission_respond`,
 `question_reply`, `question_reject`, `send_command`, `list_commands`, `list_models`, `list_agents`,
 `detach` and `session.renamed`.
@@ -349,7 +365,8 @@ Slash dispatch allows only `/compact`, `/new` in the same workspace, `/skill <ID
 All other commands produce a visible failed `command.outcome`, never arbitrary shell or command execution.
 Outcomes are `{commandID,status,result?,error?,duplicate?,identity?}`; `status` is `succeeded`, `failed` or `unknown`.
 The SQLite ledger keeps command identities and fingerprints so retries cannot repeat effects after restart or result eviction.
-Result payloads expire after one day, with at most 256 retained globally and 64 KiB per result.
+Result payloads expire after one day, with at most 256 retained globally and 60 KiB per result.
+Larger results return `response_too_large`, including on replay, leaving room for the relay frame envelope.
 Startup and command settlement trim payloads; pending identities are never deleted.
 A duplicate whose result was evicted is reported unknown rather than repeating possible external effects.
 

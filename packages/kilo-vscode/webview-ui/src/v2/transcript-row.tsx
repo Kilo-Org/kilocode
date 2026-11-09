@@ -9,6 +9,8 @@ export function TranscriptRowView(props: {
   row: TranscriptRow
   session: string
   actions?: ToolActions
+  /** Instruction files one read loaded, by read tool part ID. */
+  instructionFiles?: (partID: string) => readonly string[] | undefined
   highlight?: () => TimelineHighlight | undefined
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
@@ -45,10 +47,12 @@ export function TranscriptRowView(props: {
               message={row().message}
               session={props.session}
               actions={props.actions}
+              instructionFiles={props.instructionFiles}
               highlight={props.highlight}
               parts={row().parts}
               start={row().start}
               metadata={row().metadata}
+              userTurn={row().userTurn}
               rowKey={row().key}
               onViewTurnChanges={viewTurnChanges()}
             />

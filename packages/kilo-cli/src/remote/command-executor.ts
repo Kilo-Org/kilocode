@@ -32,6 +32,10 @@ export const Payload = {
     orgId: Schema.optional(Text),
   }),
   list_directories: Schema.Struct({ directory: Schema.optional(Text) }),
+  list_models: Schema.Struct({
+    cursor: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
+    catalogRevision: Schema.optional(Text),
+  }),
   send_message: Schema.Struct({
     text: Text,
     delivery: Schema.optional(Schema.Literals(["queue", "steer"])),
@@ -74,6 +78,24 @@ export type Options = {
 }
 type Owner = { userID: string; organizationID: string | null | undefined }
 
+// Leave room for the presence reply or session-event envelope inside a 64 KiB frame.
+function encodeOutcome(outcome: Outcome): { outcome: Outcome; encoded: string } {
+  const encoded = JSON.stringify(outcome)
+  const replayBytes = outcome.duplicate ? 0 : Buffer.byteLength(',"duplicate":true')
+  if (Buffer.byteLength(encoded) + replayBytes <= 60 * 1024) return { outcome, encoded }
+  const bounded: Outcome = {
+    commandID: outcome.commandID,
+    status: "failed",
+    ...(outcome.identity ? { identity: outcome.identity } : {}),
+    ...(outcome.duplicate ? { duplicate: true } : {}),
+    error: {
+      code: "response_too_large",
+      message: "The command ran, but its result exceeds the remote response limit",
+    },
+  }
+  return { outcome: bounded, encoded: JSON.stringify(bounded) }
+}
+
 const decode = <S extends Schema.Top & { readonly DecodingServices: never }>(schema: S, input: unknown) =>
   Schema.decodeUnknownEffect(schema)(input ?? {}, { onExcessProperty: "error" }).pipe(
     Effect.mapError(() => new Failure({ code: "invalid_payload", message: "Invalid remote command payload" })),
@@ -111,9 +133,55 @@ const directory = Effect.fn("RemoteCommands.directory")(function* (root: string,
   return resolved
 })
 
-export const make = Effect.fn("RemoteCommands.make")(function* (options: Options) {
+// One durable run projection per native Bus/Database graph, shared by all workspace
+// executors. Host eviction must not leave another permanent set of projectors behind.
+const initializations = new WeakMap<Bus.Interface, Promise<void>>()
+export const initialize = Effect.fn("RemoteCommands.initialize")(function* () {
   const database = yield* Database.Service
   const bus = yield* Bus.Service
+  yield* Effect.promise(() => {
+    const existing = initializations.get(bus)
+    if (existing) return existing
+    const pending = Effect.runPromise(
+      Effect.gen(function* () {
+        yield* database.db
+          .run(
+            sql`CREATE TABLE IF NOT EXISTS _kilo_remote_run (
+            session_id TEXT PRIMARY KEY, run_id TEXT NOT NULL)`,
+          )
+          .pipe(Effect.orDie)
+        // Native event history is optional; keep the execution token in its native transaction.
+        yield* bus.project(SessionEvent.Execution.Started, (event) =>
+          database.db
+            .run(
+              sql`INSERT INTO _kilo_remote_run(session_id,run_id)
+              VALUES(${event.data.sessionID},${event.id})
+              ON CONFLICT(session_id) DO UPDATE SET run_id=excluded.run_id`,
+            )
+            .pipe(Effect.orDie),
+        )
+        for (const definition of [
+          SessionEvent.Execution.Succeeded,
+          SessionEvent.Execution.Failed,
+          SessionEvent.Execution.Interrupted,
+        ])
+          yield* bus.project(definition, (event) =>
+            database.db
+              .run(sql`DELETE FROM _kilo_remote_run WHERE session_id=${event.data.sessionID}`)
+              .pipe(Effect.orDie),
+          )
+      }),
+    ).catch((cause) => {
+      initializations.delete(bus)
+      throw cause
+    })
+    initializations.set(bus, pending)
+    return pending
+  })
+})
+
+export const make = Effect.fn("RemoteCommands.make")(function* (options: Options) {
+  const database = yield* Database.Service
   const sessions = yield* Session.Service
   const instances = yield* Instance.Service
   const locations = yield* LocationServiceMap.Service
@@ -123,6 +191,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
     try: () => realpath(options.launchDirectory),
     catch: () => new Failure({ code: "directory_unavailable", message: "Launch directory is unavailable" }),
   })
+  yield* initialize()
   yield* database.db
     .transaction((tx) =>
       Effect.gen(function* () {
@@ -140,38 +209,15 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
   // Trim result payloads, never command identities: old retries must not repeat effects.
   const prune = () =>
     database.db
-      .run(sql`UPDATE _kilo_remote_command SET outcome=NULL WHERE outcome IS NOT NULL
+      .run(
+        sql`UPDATE _kilo_remote_command SET outcome=NULL WHERE outcome IS NOT NULL
         AND (created_at < ${Date.now() - 86_400_000} OR rowid NOT IN (
           SELECT rowid FROM _kilo_remote_command WHERE outcome IS NOT NULL
           ORDER BY created_at DESC,rowid DESC LIMIT 256
-        ))`)
+        ))`,
+      )
       .pipe(Effect.orDie)
   yield* prune()
-  yield* database.db
-    .run(
-      sql`CREATE TABLE IF NOT EXISTS _kilo_remote_run (
-    session_id TEXT PRIMARY KEY, run_id TEXT NOT NULL)`,
-    )
-    .pipe(Effect.orDie)
-  // Native event history is optional. Project the execution token in the same
-  // transaction as its lifecycle instead of relying on the retained event log.
-  yield* bus.project(SessionEvent.Execution.Started, (event) =>
-    database.db
-      .run(
-        sql`INSERT INTO _kilo_remote_run(session_id,run_id)
-      VALUES(${event.data.sessionID},${event.id})
-      ON CONFLICT(session_id) DO UPDATE SET run_id=excluded.run_id`,
-      )
-      .pipe(Effect.orDie),
-  )
-  for (const definition of [
-    SessionEvent.Execution.Succeeded,
-    SessionEvent.Execution.Failed,
-    SessionEvent.Execution.Interrupted,
-  ])
-    yield* bus.project(definition, (event) =>
-      database.db.run(sql`DELETE FROM _kilo_remote_run WHERE session_id=${event.data.sessionID}`).pipe(Effect.orDie),
-    )
 
   const identity = Effect.fn("RemoteCommands.identity")(function* (
     sessionID: string,
@@ -236,19 +282,38 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
         return yield* failure("model_unavailable", "Model or variant is not selectable")
     }
   })
-  const discover = (type: string) =>
+  const discover = (type: string, cursor = 0, expectedRevision?: string) =>
     Effect.gen(function* () {
       if (type === "list_models") {
         const models = yield* Model.Service
-        return {
-          models: (yield* models.available()).map((model) => ({
-            id: model.id,
-            providerID: model.providerID,
-            name: model.name,
-            limit: model.limit,
-            variants: model.variants.map((variant) => ({ id: variant.id })),
-          })),
+        const available = (yield* models.available()).map((model) => ({
+          id: model.id,
+          providerID: model.providerID,
+          name: model.name,
+          limit: model.limit,
+          variants: model.variants.map((variant) => ({ id: variant.id })),
+        }))
+        const catalogRevision = hash(JSON.stringify(available))
+        if (
+          (cursor > 0 && expectedRevision === undefined) ||
+          (expectedRevision !== undefined && expectedRevision !== catalogRevision)
+        )
+          return yield* failure("catalog_changed", "Model catalog changed. Refresh host options to try again.")
+        const page = []
+        let bytes = 0
+        let next = cursor
+        for (; next < available.length; next++) {
+          const item = available[next]!
+          const size = Buffer.byteLength(JSON.stringify(item)) + 1
+          if (bytes + size > 48 * 1024) {
+            if (page.length === 0)
+              return yield* failure("model_too_large", "A model entry exceeds the discovery page limit")
+            break
+          }
+          page.push(item)
+          bytes += size
         }
+        return { models: page, nextCursor: next < available.length ? next : null, catalogRevision }
       }
       const agents = yield* Agent.Service
       return {
@@ -302,7 +367,14 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
       )
       return { directory: target, directories: directories.filter((entry) => entry !== undefined) }
     }
-    if (type === "list_models" || type === "list_agents") {
+    if (type === "list_models") {
+      const input = yield* decode(Payload.list_models, payload)
+      return yield* scoped(
+        Location.Ref.make({ directory: AbsolutePath.make(root) }),
+        discover(type, input.cursor, input.catalogRevision),
+      )
+    }
+    if (type === "list_agents") {
       yield* decode(Payload.empty, payload)
       return yield* scoped(Location.Ref.make({ directory: AbsolutePath.make(root) }), discover(type))
     }
@@ -409,7 +481,11 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
       yield* options.detach(sessionID)
       return { sessionID, detached: true }
     }
-    if (type === "list_models" || type === "list_agents") {
+    if (type === "list_models") {
+      const input = yield* decode(Payload.list_models, payload)
+      return yield* discover(type, input.cursor, input.catalogRevision).pipe(instances.provide(session))
+    }
+    if (type === "list_agents") {
       yield* decode(Payload.empty, payload)
       return yield* discover(type).pipe(instances.provide(session))
     }
@@ -501,7 +577,7 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
           error: { code: "command_conflict", message: "Command ID already addresses a different command" },
         }
       return row.outcome
-        ? { ...(JSON.parse(row.outcome) as Outcome), duplicate: true }
+        ? encodeOutcome({ ...(JSON.parse(row.outcome) as Outcome), duplicate: true }).outcome
         : { commandID, status: "unknown", duplicate: true }
     }
     // A crash between admission and settlement stays unknown. Replaying it could repeat a side effect.
@@ -520,17 +596,17 @@ export const make = Effect.fn("RemoteCommands.make")(function* (options: Options
         }
     const current = sessionID ? yield* identity(sessionID).pipe(Effect.orElseSucceed(() => undefined)) : undefined
     if (current) outcome.identity = current
+    const bounded = encodeOutcome(outcome)
     // Capacity is transient and checked before any creation, so the same command ID must be retryable.
-    const encoded = JSON.stringify(outcome)
     yield* database.db
       .run(
-        outcome.error?.code === "remote_capacity"
+        bounded.outcome.error?.code === "remote_capacity"
           ? sql`DELETE FROM _kilo_remote_command WHERE scope=${scope} AND command_id=${commandID}`
-          : sql`UPDATE _kilo_remote_command SET outcome=${Buffer.byteLength(encoded) <= 65_536 ? encoded : null} WHERE scope=${scope} AND command_id=${commandID}`,
+          : sql`UPDATE _kilo_remote_command SET outcome=${bounded.encoded} WHERE scope=${scope} AND command_id=${commandID}`,
       )
       .pipe(Effect.orDie)
     yield* prune()
-    return outcome
+    return bounded.outcome
   })
   return {
     incarnation,

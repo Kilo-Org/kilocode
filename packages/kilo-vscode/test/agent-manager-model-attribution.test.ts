@@ -28,6 +28,15 @@ describe("model attribution", () => {
     expect(attribution.read("ses_one", model("kilo-auto-free"))).toEqual(model("kilo-auto-free"))
   })
 
+  it("keeps a variant-only switch until the store reports that variant", () => {
+    const attribution = createModelAttribution()
+    attribution.request("ses_one", model("claude", "high"))
+
+    expect(attribution.read("ses_one", model("claude", "low"))).toEqual(model("claude", "high"))
+    expect(attribution.read("ses_one", model("claude", "high"))).toEqual(model("claude", "high"))
+    expect(attribution.read("ses_one", model("claude", "low"))).toEqual(model("claude", "low"))
+  })
+
   it("never names a prompt of another session", () => {
     const attribution = createModelAttribution()
     attribution.request("ses_one", model("deepseek-v4.1-flash"))

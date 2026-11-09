@@ -17,6 +17,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
+import ModelDescription from "../src/components/shared/ModelDescription"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import { PromptSelectors } from "../src/components/chat/PromptSelectors"
@@ -957,6 +958,7 @@ export const NewWorktreeDialog: Component<{
                         providers={props.providers}
                         gateway={props.store.kiloModels().entries}
                         value={model()}
+                        descriptionRenderer={ModelDescription}
                         onSelect={selectModel}
                         onPick={restorePrompt}
                         onCancel={restorePrompt}

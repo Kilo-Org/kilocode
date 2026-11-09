@@ -44,8 +44,6 @@ import { createWorktreeActivity } from "./worktree-activity"
 import { handleSessionLifecycle } from "./session-lifecycle"
 import { runningFromEvent } from "../session-status"
 import { WorktreeImporter } from "./worktree-importer"
-import { SessionTerminalManager } from "./SessionTerminalManager"
-import { createTerminalHost } from "./terminal-host"
 import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
 import { createBrowserLifecycle } from "./browser-lifecycle"
 import { routableProject } from "./browser-message"
@@ -55,7 +53,6 @@ import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { PtyRelay } from "./pty-relay"
 import { KiloAgentManagerRpc } from "@opencode/schema/kilocode/agent-manager"
-import { executeVscodeTask } from "./task-runner"
 import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import type { RunController } from "./run/controller"
 import { createOrchestrationBridge } from "./orchestration-setup"
@@ -66,7 +63,6 @@ import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
-import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { documentExists, readDocument } from "../documents/document-reader"
 import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
@@ -94,6 +90,7 @@ import {
 import {
   createFromSidebar,
   continueFromSidebar,
+  continueInActiveProject,
   diagnose,
   focusPanel,
   getSessionDirectories,
@@ -123,7 +120,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly projects: ProjectMessageDeps
   public readonly projectScope = new ProjectScope()
   public readonly importer: WorktreeImporter
-  public readonly terminalManager: SessionTerminalManager
   public readonly terminalRouter: TerminalRouter
   public readonly relay: PtyRelay
   public readonly scripts: ReturnType<typeof createScriptTerminalRuntime>
@@ -146,7 +142,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly activity: ReturnType<typeof createWorktreeActivity>
   public readonly unsubFont: () => void
   public readonly unsubProjects: () => void
-  public readonly unsubDestination: () => void
   public readonly unsubEvents: () => void
   public readonly autoApprove: ReturnType<typeof createHostAutoApprove>
   public readonly unsubAutoApprove: () => void
@@ -155,7 +150,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await this.reconcileAndPush(ctx)
     if (this.contexts.active()?.id === ctx.id) this.pushState(ctx)
   })
-  public destination = new DestinationState()
   public closing: Promise<void> | undefined
   public onVisibilityChange: ((visible: boolean) => void) | undefined
   public readonly panelSessions = new Set<string>()
@@ -173,10 +167,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     browser?: BrowserBroker,
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
-    this.terminalManager = new SessionTerminalManager(
-      (message) => this.outputChannel.appendLine(`[SessionTerminal] ${message}`),
-      createTerminalHost(),
-    )
     this.terminalRouter = new TerminalRouter({
       connection: this.connection,
       getRoot: () => this.getRoot(),
@@ -202,10 +192,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
       void this.scripts.manager.snapshot()
-    })
-    this.unsubDestination = watchTerminalDestination((destination) => {
-      this.destination.sync(destination)
-      this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
     this.run = createRunController({
       manager: this.scripts.manager,
@@ -609,8 +595,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.visibleSession = id
     if (id) {
       this.panelSessions.add(id)
-      // Follow the session with its integrated terminal while the terminal panel is open.
-      this.terminalManager.syncOnSessionSwitch(id)
     }
     // The poller follows the visible session so its fast poll and immediate fetch target the
     // worktree the user is reading. The PR poller belongs to the active project, so a session
@@ -639,6 +623,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async setCaffeination(enabled: boolean): Promise<void> {
     await this.caffeination.setEnabled(enabled)
     this.postCaffeination()
+  }
+
+  public async toggleCaffeination(): Promise<void> {
+    const state = this.caffeination.getState()
+    await this.setCaffeination(!(state.enabled || state.active))
   }
 
   public postCaffeination(): void {
@@ -688,7 +677,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async acquirePtyCleanup(directory: string): Promise<() => void> {
     return acquirePtyCleanup(directory, {
       terminals: this.terminalRouter,
-      integrated: this.terminalManager,
       scripts: this.scripts.manager,
       connection: this.connection,
     })
@@ -864,6 +852,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
             sessionId: session.id,
             forkedFromId: from,
             worktreeId: worktree,
+            session,
           }),
         log: (...args) => this.log(...args),
       },
@@ -909,8 +898,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async runSetupScriptForWorktree(
     worktreePath: string,
-    branch?: string,
-    worktreeId?: string,
+    branch: string | undefined,
+    worktreeId: string,
     early?: () => Promise<void>,
   ): Promise<void> {
     const root = this.getRoot()
@@ -918,13 +907,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await runLifecycleSetup(
       {
         service: this.getSetupScriptService(),
-        destination: this.destination.value(),
         projectId: this.context?.id,
         worktreeId,
         branch,
         trusted: () => this.host.isTrusted(),
         manager: this.scripts.manager,
-        vscode: executeVscodeTask,
         log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
         post: (message) => this.postToWebview(message),
       },
@@ -1155,15 +1142,48 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void> {
-    return continueFromSidebar(this.api(), sessionId, progress)
+    return this.inWorkspaceProject(() => continueFromSidebar(this.api(), sessionId, progress))
+  }
+
+  /** Continues a session of the project the Agent Manager panel shows in a new worktree of that project. */
+  public continueInWorktree(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void> {
+    return continueInActiveProject(this.api(), sessionId, progress)
   }
 
   public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
-    return createFromSidebar(this.api(), baseBranch, branchName)
+    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName))
   }
 
   public openAdvancedWorktree(): Promise<void> {
-    return openAdvancedWorktree(this.api())
+    return this.inWorkspaceProject(() => openAdvancedWorktree(this.api()))
+  }
+
+  /** The current branch of the workspace project, for the sidebar New Worktree menu. */
+  public workspaceBranch(): Promise<string | undefined> {
+    const manager = this.contexts.pinned()?.worktreeManager()
+    if (!manager) return Promise.resolve(undefined)
+    return manager
+      .currentBranch()
+      .then((branch) => branch || undefined)
+      .catch(() => undefined)
+  }
+
+  /**
+   * Runs a sidebar action on the workspace project, which the sidebar shows, and not on the project the panel shows.
+   * The panel switches to that project first, because the action opens it.
+   */
+  private inWorkspaceProject(action: () => Promise<void>): Promise<void> {
+    const context = this.contexts.pinned()
+    if (!context) return action()
+    if (this.contexts.active()?.id !== context.id) {
+      this.contexts.activate(context.id)
+      this.activateProject(context)
+      this.pushProjects()
+    }
+    return this.projectScope.run(context, action)
   }
 
   public diagnose(): Promise<void> {

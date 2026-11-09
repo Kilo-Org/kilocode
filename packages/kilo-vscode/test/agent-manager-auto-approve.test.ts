@@ -11,12 +11,11 @@ import type { Host } from "../src/agent-manager/host"
 import {
   createHostAutoApprove,
   setHostAutoApprove,
+  shouldApprove,
   type HostAutoApproveState,
 } from "../src/agent-manager/provider-auto-approve"
 
 const window = vscode.window as unknown as Record<string, unknown>
-window.onDidCloseTerminal ??= () => ({ dispose: () => undefined })
-window.onDidChangeActiveTerminal ??= () => ({ dispose: () => undefined })
 window.createTerminal ??= () => ({ show: () => undefined, dispose: () => undefined, exitStatus: undefined })
 window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () => undefined, dispose: () => undefined })
 
@@ -142,6 +141,13 @@ describe("host auto-approve sweep", () => {
     await tick()
 
     expect(replied).toEqual(["per_once"])
+  })
+
+  test("never approves a request whose action is sandbox_escalation", () => {
+    const escalation = { id: "per_action", sessionID: "ses_1", action: "sandbox_escalation", resources: [] } as never
+    const normal = { id: "per_bash", sessionID: "ses_1", action: "bash", resources: ["ls"] } as never
+    expect(shouldApprove(escalation, true, new Set())).toBe(false)
+    expect(shouldApprove(normal, true, new Set())).toBe(true)
   })
 })
 

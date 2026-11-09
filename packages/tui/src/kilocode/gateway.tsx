@@ -11,8 +11,13 @@ import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
+import { caffeinateLayer } from "./caffeinate"
 import { aboutCommand } from "./dialog-about"
+import { indexingCommand } from "./components/dialog-indexing"
+import { watchIndexingWarnings } from "./indexing-notifications"
 import { privacyMode } from "./pii"
+import { privacyLayer } from "./privacy"
+import { sidebarIndexing } from "./plugins/sidebar-indexing"
 
 type Profile = typeof KiloGatewayRpc.Definition.methods.profile.output.Type
 type Balance = typeof KiloGatewayRpc.Definition.methods.balance.output.Type
@@ -132,6 +137,7 @@ export function accountOptions(profile: Profile, current: string | null) {
 export default Plugin.define({
   id: "kilocode.teams",
   setup(context) {
+    sidebarIndexing(context)
     context.ui.slot({
       append: "app",
       render() {
@@ -157,11 +163,15 @@ export default Plugin.define({
               run: () => accountStatus(context),
             },
             aboutCommand(context),
+            indexingCommand(context),
           ],
         }))
+        privacyLayer(context)
+        caffeinateLayer(context)
         return null
       },
     })
+    return watchIndexingWarnings(context)
   },
 })
 

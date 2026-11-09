@@ -166,7 +166,6 @@ export function selectLocalAction<T extends SessionLike>(
     } else {
       deps.setActivePendingId(fallback && deps.isPending(fallback) ? fallback : undefined)
       deps.clearSession()
-      deps.post({ type: "agentManager.showExistingLocalTerminal" })
     }
     deps.setReviewActive(deps.isReviewTab(remembered, LOCAL))
   })

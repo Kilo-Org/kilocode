@@ -1178,6 +1178,11 @@ export const dict = {
   "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
+  "settings.display.codeMode.title": "Blocchi Code Mode",
+  "settings.display.codeMode.description":
+    "Scegli se i blocchi Code Mode iniziano con le chiamate agli strumenti elencate o su una sola riga. Lo script resta sempre nascosto finché non lo apri.",
+  "settings.display.codeMode.expanded": "Espansi",
+  "settings.display.codeMode.collapsed": "Compressi",
 
   "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
   "settings.display.shortcutHints.description":

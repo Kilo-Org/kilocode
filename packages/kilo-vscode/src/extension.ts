@@ -17,14 +17,16 @@ import { canonicalizePath, samePath } from "./agent-manager/project/paths"
 import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { createPanel, PANEL_TYPE } from "./agent-manager/panel"
-import { ensureCommandsSkipShell } from "./agent-manager/terminal-host"
+import { clearLegacyTerminalDestination, ensureCommandsSkipShell } from "./agent-manager/terminal-host"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
 import { chat } from "./chat"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, manager, serverHome, settingsEnvironment } from "./server"
+import { command, indexingEnvironment, manager, serverHome, settingsEnvironment } from "./server"
 import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -47,7 +49,9 @@ import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
-import { toolDiff } from "./tool-diff"
+import { indexingHost, type IndexingHost } from "./indexing/host"
+import { DiffVirtualProvider } from "./DiffVirtualProvider"
+import { gitChanges } from "./git-changes"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
@@ -156,12 +160,14 @@ export function activate(context: ExtensionContext) {
       }),
       ...browser,
       ...notebook,
+      ...indexingEnvironment(workspace.workspaceFolders?.length),
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
   // Plan mode writes plans under the server's home, so plan links resolve there too.
   usePlanHome(serverHome(serverCommand(), process.env))
+  let indexing: IndexingHost | undefined
   const server = manager({
     command: serverCommand,
     cwd: directory,
@@ -175,6 +181,8 @@ export function activate(context: ExtensionContext) {
       alerts.start(started)
       autocomplete.started()
       void automation.started()
+      // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
+      void indexing?.sync()
     },
     onStop: () => {
       shutdown.stopped()
@@ -190,7 +198,7 @@ export function activate(context: ExtensionContext) {
       })
     },
   })
-  const diffs = toolDiff()
+  const diffs = new DiffVirtualProvider(context.extensionUri)
   // Registers the optional Playwright MCP server in the v2 server. It is independent from the Integrated Browser.
   const automation = new BrowserAutomationService({
     server,
@@ -198,11 +206,34 @@ export function activate(context: ExtensionContext) {
   })
   void automation.syncWithSettings()
   context.subscriptions.push({ dispose: () => automation.dispose() })
+  const indexingService = indexingHost({
+    context,
+    server,
+    directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath,
+    log: (message, error) => {
+      output.appendLine(`Indexing: ${message}: ${String(error)}`)
+      console.error(`Kilo indexing: ${message}`, error)
+    },
+  })
+  indexing = indexingService
+  context.subscriptions.push(indexingService)
   const connection = createAgentManagerConnection({ server })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   registerAutocompleteProvider(context, autocomplete)
+  // The Changes editor tab diffs the workspace, the staged and unstaged tree, a session, or one turn. Its catalog
+  // reads server session diffs through the same connection as the Agent Manager.
+  const diffCatalog = new DiffSourceCatalog(connection)
+  // The view is created just below; comments arrive only after the user opens the panel and sends them.
+  const changes = new DiffViewerProvider({
+    context,
+    server,
+    directory,
+    catalog: diffCatalog,
+    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+  })
   let browserTab: BrowserTabProvider | undefined
+  // The Documents panel is an editor tab created after this view, so the view receives it through a lazy getter.
   const documentsRef: { current?: DocumentViewerProvider } = {}
   const view = chat({
     context,
@@ -210,6 +241,15 @@ export function activate(context: ExtensionContext) {
     directory,
     trackCostSession: alerts.track,
     diff: diffs,
+    changes,
+    gitStats: (onStats) => gitChanges({ directory, onStats }),
+    worktree: {
+      continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
+      create: (baseBranch, branchName) =>
+        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
+      advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
+      branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
+    },
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
   })
@@ -284,6 +324,9 @@ export function activate(context: ExtensionContext) {
   )
   const agentAction = (action: string) => agentManager.postMessage({ type: "action", action })
   ensureCommandsSkipShell()
+  void clearLegacyTerminalDestination().catch((error: unknown) =>
+    output.appendLine(`Terminal destination cleanup failed: ${String(error)}`),
+  )
   // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
   // The panel receives an action, so an open dialog handles it before the session behind the dialog.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
@@ -317,7 +360,15 @@ export function activate(context: ExtensionContext) {
     output,
     { dispose: () => void notebooks.dispose() },
     { dispose: () => diffs.dispose() },
-    workspace.registerTextDocumentContentProvider(diffs.scheme, diffs.provider),
+    diffCatalog,
+    changes,
+    commands.registerCommand(
+      "kilo-code.v2.showChanges",
+      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    ),
+    window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
+      deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
+    }),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
