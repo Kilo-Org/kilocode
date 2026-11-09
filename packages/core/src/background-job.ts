@@ -3,6 +3,8 @@ export * as BackgroundJob from "./background-job"
 import { Cause, Clock, Context, Deferred, Effect, Exit, Layer, Scope, SynchronizedRef } from "effect"
 import { Identifier } from "./id/id"
 import { makeGlobalNode } from "./effect/app-node"
+import { SessionDrain } from "./kilocode/session/drain" // kilocode_change
+import { reserve } from "./kilocode/session/background-drain" // kilocode_change
 
 export type Status = "running" | "completed" | "error" | "cancelled"
 
@@ -118,6 +120,7 @@ function errorText(error: unknown) {
  * those semantics.
  */
 export const make = Effect.gen(function* () {
+  const drain = yield* Effect.serviceOption(SessionDrain.Service) // kilocode_change - the legacy instance adapter retains its own drain tracker
   const state: State = {
     jobs: yield* SynchronizedRef.make(new Map()),
     scope: yield* Scope.Scope,
@@ -177,12 +180,15 @@ export const make = Effect.gen(function* () {
     sequence: number,
     run: Effect.Effect<string, unknown>,
   ) {
+    const job = (yield* SynchronizedRef.get(state.jobs)).get(id) // kilocode_change
+    const release = yield* reserve(drain, id, job?.info.metadata) // kilocode_change - reserve before the fork is acknowledged
     return yield* run.pipe(
       Effect.matchCauseEffect({
         onSuccess: (output) => settle(id, token, sequence, Exit.succeed(output)),
         onFailure: (cause) => settle(id, token, sequence, Exit.failCause(cause)),
       }),
       Effect.asVoid,
+      Effect.ensuring(Effect.sync(release)), // kilocode_change - include settlement and cancellation cleanup
       Effect.forkIn(scope, { startImmediately: true }),
     )
   })
@@ -362,4 +368,4 @@ export const make = Effect.gen(function* () {
 
 const layer = Layer.effect(Service, make)
 
-export const node = makeGlobalNode({ service: Service, layer, deps: [] })
+export const node = makeGlobalNode({ service: Service, layer, deps: [SessionDrain.node] }) // kilocode_change

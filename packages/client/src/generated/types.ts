@@ -493,6 +493,13 @@ export type SessionsWaitInput = { readonly sessionID: { readonly sessionID: stri
 
 export type SessionsWaitOutput = void
 
+export type SessionsDrainInput = {
+  readonly sessionID: { readonly sessionID: string }["sessionID"]
+  readonly token?: { readonly token?: string }["token"]
+}
+
+export type SessionsDrainOutput = void
+
 export type SessionsStageInput = {
   readonly sessionID: { readonly sessionID: string }["sessionID"]
   readonly messageID: { readonly messageID: string; readonly files?: boolean | undefined }["messageID"]

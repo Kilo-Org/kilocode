@@ -22,6 +22,7 @@ import { Location } from "@opencode-ai/schema/location"
 import { Revert } from "@opencode-ai/schema/revert"
 import { SessionEvent } from "@opencode-ai/schema/session-event"
 import { SessionDurable } from "@opencode-ai/schema/durable-event-manifest" // kilocode_change - released history keys
+import { drain } from "../kilocode/session-drain" // kilocode_change
 
 const SessionsQueryFields = {
   workspace: Workspace.ID.pipe(Schema.optional),
@@ -263,6 +264,7 @@ export const makeSessionGroup = <
           }),
         ),
     )
+    .add(drain.middleware(sessionLocationMiddleware)) // kilocode_change
     .add(
       HttpApiEndpoint.post("session.revert.stage", "/api/session/:sessionID/revert/stage", {
         params: { sessionID: Session.ID },

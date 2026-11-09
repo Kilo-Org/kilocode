@@ -38,6 +38,7 @@ import { SessionRevert } from "./session/revert"
 import { Revert } from "@opencode-ai/schema/revert"
 import { FSUtil } from "./fs-util"
 import { SessionDurable, type SessionDurableEvent } from "@opencode-ai/schema/durable-event-manifest" // kilocode_change
+import { SessionDrain } from "./kilocode/session/drain" // kilocode_change
 
 export const RevertState = Revert.State
 export type RevertState = Revert.State
@@ -166,6 +167,7 @@ export interface Interface {
   }) => Effect.Effect<void, OperationUnavailableError>
   readonly compact: (input: CompactInput) => Effect.Effect<void, NotFoundError | OperationUnavailableError>
   readonly wait: (id: SessionSchema.ID) => Effect.Effect<void, NotFoundError | OperationUnavailableError>
+  readonly drain: (id: SessionSchema.ID) => Effect.Effect<void, NotFoundError> // kilocode_change
   readonly active: Effect.Effect<ReadonlySet<SessionSchema.ID>>
   readonly resume: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | SessionRunner.RunError>
   readonly interrupt: (sessionID: SessionSchema.ID) => Effect.Effect<void>
@@ -190,6 +192,7 @@ const layer = Layer.effect(
     const events = yield* EventV2.Service
     const projects = yield* ProjectV2.Service
     const execution = yield* SessionExecution.Service
+    const drain = yield* SessionDrain.Service // kilocode_change
     const store = yield* SessionStore.Service
     const locations = yield* LocationServiceMap.Service
     const decodeMessage = Schema.decodeUnknownEffect(SessionMessage.Message)
@@ -391,6 +394,7 @@ const layer = Layer.effect(
             return admitted
           }),
         ),
+        (work, input) => drain.track(input.sessionID, work), // kilocode_change - include accepted intake before wakeup
       ),
       shell: Effect.fn("V2Session.shell")(function* () {
         return yield* new OperationUnavailableError({ operation: "shell" })
@@ -430,6 +434,12 @@ const layer = Layer.effect(
         yield* result.get(sessionID)
         return yield* new OperationUnavailableError({ operation: "wait" })
       }),
+      // kilocode_change start - keep Kilo quiescence separate from upstream wait
+      drain: Effect.fn("V2Session.drain")(function* (sessionID) {
+        yield* result.get(sessionID)
+        yield* drain.wait(sessionID)
+      }),
+      // kilocode_change end
       active: execution.active,
       resume: Effect.fn("V2Session.resume")(function* (sessionID) {
         yield* result.get(sessionID)
@@ -487,6 +497,7 @@ export const node = makeGlobalNode({
     EventV2.node,
     ProjectV2.node,
     SessionExecution.node,
+    SessionDrain.node, // kilocode_change
     SessionStore.node,
     LocationServiceMap.node,
     SessionProjector.node,

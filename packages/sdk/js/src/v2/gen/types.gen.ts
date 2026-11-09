@@ -21515,6 +21515,43 @@ export type V2SessionWaitResponses = {
 
 export type V2SessionWaitResponse = V2SessionWaitResponses[keyof V2SessionWaitResponses]
 
+export type V2SessionDrainData = {
+  body: {
+    token?: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/drain"
+}
+
+export type V2SessionDrainErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+}
+
+export type V2SessionDrainError = V2SessionDrainErrors[keyof V2SessionDrainErrors]
+
+export type V2SessionDrainResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2SessionDrainResponse = V2SessionDrainResponses[keyof V2SessionDrainResponses]
+
 export type V2SessionRevertStageData = {
   body: {
     messageID: string

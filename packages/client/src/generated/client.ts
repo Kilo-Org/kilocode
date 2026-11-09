@@ -21,6 +21,8 @@ import type {
   SessionsCompactOutput,
   SessionsWaitInput,
   SessionsWaitOutput,
+  SessionsDrainInput,
+  SessionsDrainOutput,
   SessionsStageInput,
   SessionsStageOutput,
   SessionsClearInput,
@@ -397,6 +399,18 @@ export function make(options: ClientOptions) {
             path: `/api/session/${encodeURIComponent(input.sessionID)}/wait`,
             successStatus: 204,
             declaredStatuses: [400, 401, 404, 503],
+            empty: true,
+          },
+          requestOptions,
+        ),
+      drain: (input: SessionsDrainInput, requestOptions?: RequestOptions) =>
+        request<SessionsDrainOutput>(
+          {
+            method: "POST",
+            path: `/api/session/${encodeURIComponent(input.sessionID)}/drain`,
+            body: { token: input["token"] },
+            successStatus: 204,
+            declaredStatuses: [400, 401, 404],
             empty: true,
           },
           requestOptions,

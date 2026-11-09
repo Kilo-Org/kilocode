@@ -626,6 +626,8 @@ import type {
   V2SessionContextResponses,
   V2SessionCreateErrors,
   V2SessionCreateResponses,
+  V2SessionDrainErrors,
+  V2SessionDrainResponses,
   V2SessionEventsErrors,
   V2SessionEventsResponse,
   V2SessionEventsResponses,
@@ -11358,6 +11360,41 @@ export class Session4 extends HeyApiClient {
       url: "/api/session/{sessionID}/wait",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Drain session work
+   *
+   * Wait until this process has no accepted intake, foreground execution, descendant execution, or related background work for the session. Does not start execution or wait for unrelated sessions. An optional token publishes a matching session.drained live event before the response. Cancelling the request does not cancel the work. Quiescence is process-local, not a guarantee against future work or successful output.
+   */
+  public drain<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      token?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "token" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SessionDrainResponses, V2SessionDrainErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/drain",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

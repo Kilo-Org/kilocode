@@ -12,6 +12,8 @@ import {
   UnknownError,
 } from "@opencode-ai/protocol/errors"
 import { Location } from "@opencode-ai/core/location" // kilocode_change
+import { drain } from "../kilocode/session-drain" // kilocode_change
+import { EventV2 } from "@opencode-ai/core/event" // kilocode_change
 
 const DefaultSessionsLimit = 50
 const DefaultSessionHistoryLimit = 50
@@ -19,8 +21,10 @@ const DefaultSessionHistoryLimit = 50
 export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handlers) =>
   Effect.gen(function* () {
     const session = yield* SessionV2.Service
+    const events = yield* EventV2.Service // kilocode_change
 
     return handlers
+      .handle("session.drain", drain(session, events)) // kilocode_change
       .handle(
         "session.list",
         Effect.fn(function* (ctx) {

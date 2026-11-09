@@ -772,6 +772,41 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(400),
   http.protected
+    .post("/api/session/{sessionID}/drain", "v2.session.drain")
+    .seeded((ctx) => ctx.session({ title: "Empty V2 drain" }))
+    .at((ctx) => ({
+      path: route("/api/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: {},
+    }))
+    .status(204, undefined, "none"),
+  http.protected
+    .post("/api/session/{sessionID}/drain", "v2.session.drain.token")
+    .seeded((ctx) => ctx.session({ title: "Correlated V2 drain" }))
+    .at((ctx) => ({
+      path: route("/api/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { token: "httpapi-v2-drain" },
+    }))
+    .status(204, undefined, "none"),
+  http.protected
+    .post("/api/session/{sessionID}/drain", "v2.session.drain.missing")
+    .at((ctx) => ({
+      path: route("/api/session/{sessionID}/drain", { sessionID: "ses_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: {},
+    }))
+    .json(404, object, "status"),
+  http.protected
+    .post("/api/session/{sessionID}/drain", "v2.session.drain.invalid")
+    .seeded((ctx) => ctx.session({ title: "Invalid V2 drain token" }))
+    .at((ctx) => ({
+      path: route("/api/session/{sessionID}/drain", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { token: "" },
+    }))
+    .status(400, undefined, "none"),
+  http.protected
     .post("/kilocode/session/{sessionID}/drain", "kilocode.drainSession")
     .seeded((ctx) => ctx.session({ title: "Empty drain" }))
     .at((ctx) => ({

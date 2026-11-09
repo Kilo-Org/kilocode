@@ -61,6 +61,7 @@ export const ServerDefinitions = Event.inventory(
   ...foundationDefinitions,
   ...featureDefinitions,
   ...SessionTodo.Event.Definitions,
+  SessionDrain.Drained, // kilocode_change - current drain acknowledgments use the canonical shared live event
 )
 
 export const Definitions = Event.inventory(

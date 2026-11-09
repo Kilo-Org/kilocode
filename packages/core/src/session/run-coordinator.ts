@@ -16,6 +16,7 @@ export interface Coordinator<Key, E> {
 
 type Entry<E> = {
   readonly done: Deferred.Deferred<void, E>
+  readonly release: () => void // kilocode_change - retain the reservation across coalesced drains
   owner?: Fiber.Fiber<void, never>
   pendingWake: boolean
   stopping: boolean
@@ -23,13 +24,15 @@ type Entry<E> = {
 
 export const make = <Key, E>(options: {
   readonly drain: (key: Key, force: boolean) => Effect.Effect<void, E>
+  readonly lease?: (key: Key) => Effect.Effect<() => void> // kilocode_change
 }): Effect.Effect<Coordinator<Key, E>, never, Scope.Scope> =>
   Effect.gen(function* () {
     const active = new Map<Key, Entry<E>>()
     const fork = yield* FiberSet.makeRuntime<never, void, never>()
 
-    const makeEntry = (): Entry<E> => ({
+    const makeEntry = (release: () => void): Entry<E> => ({ // kilocode_change
       done: Deferred.makeUnsafe<void, E>(),
+      release, // kilocode_change
       pendingWake: false,
       stopping: false,
     })
@@ -55,13 +58,14 @@ export const make = <Key, E>(options: {
         return
       }
 
-      const successor = entry.pendingWake ? makeEntry() : undefined
+      const successor = entry.pendingWake ? makeEntry(entry.release) : undefined // kilocode_change
       if (successor === undefined) active.delete(key)
       else {
         active.set(key, successor)
         start(key, successor, false, true)
       }
       Deferred.doneUnsafe(entry.done, exit)
+      if (!successor) entry.release() // kilocode_change
     }
 
     const run = (key: Key): Effect.Effect<void, E> =>
@@ -72,24 +76,47 @@ export const make = <Key, E>(options: {
           return restore(Deferred.await(entry.done))
         }
 
-        const next = makeEntry()
-        active.set(key, next)
-        start(key, next, true)
-        return restore(Deferred.await(next.done))
+        // kilocode_change start - reserve before publishing/forking, then recheck after async acquisition
+        return Effect.gen(function* () {
+          const release = options.lease ? yield* options.lease(key) : () => {}
+          const entry = active.get(key)
+          if (entry) {
+            release()
+            return yield* restore(
+              entry.stopping ? Deferred.await(entry.done).pipe(Effect.andThen(run(key))) : Deferred.await(entry.done),
+            )
+          }
+          const next = makeEntry(release)
+          active.set(key, next)
+          start(key, next, true)
+          return yield* restore(Deferred.await(next.done))
+        })
+        // kilocode_change end
       })
 
+    // kilocode_change start - reserve before publishing a wake-started drain
     const wake = (key: Key) =>
-      Effect.sync(() => {
-        const entry = active.get(key)
-        if (entry !== undefined) {
-          entry.pendingWake = true
-          return
-        }
+      Effect.uninterruptible(
+        Effect.gen(function* () {
+          const entry = active.get(key)
+          if (entry !== undefined) {
+            entry.pendingWake = true
+            return
+          }
 
-        const next = makeEntry()
-        active.set(key, next)
-        start(key, next, false)
-      })
+          const release = options.lease ? yield* options.lease(key) : () => {}
+          const current = active.get(key)
+          if (current) {
+            release()
+            current.pendingWake = true
+            return
+          }
+          const next = makeEntry(release)
+          active.set(key, next)
+          start(key, next, false)
+        }),
+      )
+    // kilocode_change end
 
     const interrupt = (key: Key): Effect.Effect<void> =>
       Effect.suspend(() => {
