@@ -37,6 +37,53 @@ describe("indexing config state", () => {
     expect(shouldSync("global", "project", true, "shared", "shared")).toBe(true)
   })
 
+  test("preserves empty prompt overrides when saving an unrelated indexing change", () => {
+    const before = {
+      provider: "openai-compatible" as const,
+      "openai-compatible": { baseUrl: "http://localhost:8080/v1", documentPrompt: "", queryPrompt: "" },
+    }
+    const after = clean(merge(before, { searchMaxResults: 25 }))
+
+    expect(after).toEqual({ ...before, searchMaxResults: 25 })
+    expect(removed(before, after)).toEqual([])
+  })
+
+  test("retains prompt-only options and exact prompt names while pruning empty connection settings", () => {
+    expect(clean({ "openai-compatible": { documentPrompt: "", queryPrompt: "", apiKey: " " } })).toEqual({
+      "openai-compatible": { documentPrompt: "", queryPrompt: "" },
+    })
+    expect(
+      clean({
+        model: " ",
+        "openai-compatible": {
+          baseUrl: " http://localhost:8080/v1 ",
+          documentPrompt: " document ",
+          queryPrompt: "CodeRetrieval",
+          apiKey: "",
+        },
+      }),
+    ).toEqual({
+      "openai-compatible": {
+        baseUrl: "http://localhost:8080/v1",
+        documentPrompt: " document ",
+        queryPrompt: "CodeRetrieval",
+      },
+    })
+  })
+
+  test("still removes prompt overrides when explicitly unset", () => {
+    const before = {
+      "openai-compatible": { baseUrl: "http://localhost:8080/v1", documentPrompt: "", queryPrompt: "" },
+    }
+    const after = clean(merge(before, { "openai-compatible": { documentPrompt: undefined, queryPrompt: undefined } }))
+
+    expect(after).toEqual({ "openai-compatible": { baseUrl: "http://localhost:8080/v1" } })
+    expect(removed(before, after)).toEqual([
+      ["indexing", "openai-compatible", "documentPrompt"],
+      ["indexing", "openai-compatible", "queryPrompt"],
+    ])
+  })
+
   test("builds provider patches for custom selector changes", () => {
     expect(providerPatch("kilo", "default-embedding")).toEqual({
       provider: "kilo",

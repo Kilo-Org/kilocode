@@ -40,7 +40,16 @@ function prune(input: unknown): unknown {
 }
 
 export function clean(input: IndexingConfig): IndexingConfig {
-  return (prune(input) ?? {}) as IndexingConfig
+  const result = (prune(input) ?? {}) as IndexingConfig
+  const opts = input["openai-compatible"]
+  if (!opts) return result
+  // Prompt names are exact values; an empty name can disable the server default.
+  for (const key of ["documentPrompt", "queryPrompt"] as const) {
+    if (opts[key] === undefined) continue
+    result["openai-compatible"] ??= {}
+    result["openai-compatible"][key] = opts[key]
+  }
+  return result
 }
 
 export function providerPatch(provider: IndexingConfig["provider"] | "", model?: string): IndexingConfig {

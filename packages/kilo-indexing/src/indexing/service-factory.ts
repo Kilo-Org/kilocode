@@ -109,7 +109,11 @@ export class CodeIndexServiceFactory {
         config.openAiCompatibleOptions.apiKey,
         config.modelId,
         undefined,
-        { dimensions: config.modelDimension },
+        {
+          dimensions: config.modelDimension,
+          documentPrompt: config.openAiCompatibleOptions.documentPrompt,
+          queryPrompt: config.openAiCompatibleOptions.queryPrompt,
+        },
       )
     }
     if (provider === "gemini") {
@@ -191,7 +195,12 @@ export class CodeIndexServiceFactory {
 
   public createVectorStore(workspacePath = this.workspacePath): IVectorStore {
     const config = this.configManager.getConfig()
-    const profile = resolveEmbeddingProfile(config.embedderProvider, config.modelId, config.modelDimension)
+    const profile = resolveEmbeddingProfile(
+      config.embedderProvider,
+      config.modelId,
+      config.modelDimension,
+      config.openAiCompatibleOptions?.documentPrompt,
+    )
 
     if (!profile || profile.dimension <= 0) {
       throw new Error(

@@ -485,6 +485,10 @@ export const dict = {
     "Lista de permitidos separada por comas. Déjala vacía para usar los valores predeterminados integrados.",
   "settings.indexing.fileExtensions.invalid": "Extensión no válida: {{extension}}",
   "settings.indexing.providerField.description": "Configuración de conexión específica del proveedor.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "prompt_name opcional para indexar código y actualizar archivos. Requiere compatibilidad con el endpoint. Al cambiarlo, se reconstruye el índice.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "prompt_name opcional para búsquedas de código. Requiere compatibilidad con el endpoint.",
   "settings.indexing.status.title": "Estado",
   "settings.indexing.tuning.description": "Parámetro avanzado de búsqueda y procesamiento por lotes.",
 

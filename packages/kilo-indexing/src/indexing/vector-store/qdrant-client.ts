@@ -5,7 +5,7 @@ import type { IVectorStore } from "../interfaces/vector-store"
 import type { Payload, VectorStoreSearchResult } from "../interfaces"
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
 import { Log } from "../../util/log"
-import type { EmbeddingProfile } from "../embedding-profile"
+import { isEmbeddingProfileEqual, type EmbeddingProfile } from "../embedding-profile"
 
 const log = Log.create({ service: "qdrant-store" })
 
@@ -16,6 +16,7 @@ const KEY = {
   provider: "embedding_provider",
   model: "embedding_model_id",
   dimension: "embedding_dimension",
+  prompt: "embedding_document_prompt",
 }
 
 const METADATA_ID = "f946a536-9af4-4f1f-9f95-7d6efb4647d5"
@@ -190,6 +191,7 @@ export class QdrantVectorStore implements IVectorStore {
     const provider = payload[KEY.provider]
     const modelId = payload[KEY.model]
     const dimension = payload[KEY.dimension]
+    const prompt = payload[KEY.prompt]
     if (typeof provider !== "string" || typeof modelId !== "string") return undefined
     const dim = this.parseDimension(dimension)
     if (!dim) return undefined
@@ -197,15 +199,12 @@ export class QdrantVectorStore implements IVectorStore {
       provider: provider as EmbeddingProfile["provider"],
       modelId,
       dimension: dim,
+      ...(typeof prompt === "string" ? { documentPrompt: prompt } : {}),
     }
   }
 
   private isProfileMatch(profile: EmbeddingProfile): boolean {
-    return (
-      profile.provider === this.profile.provider &&
-      profile.modelId === this.profile.modelId &&
-      profile.dimension === this.profile.dimension
-    )
+    return isEmbeddingProfileEqual(profile, this.profile)
   }
 
   private async createCollection(): Promise<void> {
@@ -732,6 +731,7 @@ export class QdrantVectorStore implements IVectorStore {
               [KEY.provider]: this.profile.provider,
               [KEY.model]: this.profile.modelId,
               [KEY.dimension]: this.profile.dimension,
+              ...(this.profile.documentPrompt !== undefined ? { [KEY.prompt]: this.profile.documentPrompt } : {}),
               completed_at: Date.now(),
             },
           },
@@ -763,6 +763,7 @@ export class QdrantVectorStore implements IVectorStore {
               [KEY.provider]: this.profile.provider,
               [KEY.model]: this.profile.modelId,
               [KEY.dimension]: this.profile.dimension,
+              ...(this.profile.documentPrompt !== undefined ? { [KEY.prompt]: this.profile.documentPrompt } : {}),
               started_at: Date.now(),
             },
           },

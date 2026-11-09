@@ -768,6 +768,10 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.tuning.description": "Parâmetro avançado de busca e lote.",
   "settings.indexing.providerField.description": "Configuração de conexão específica do provedor.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "prompt_name opcional para indexar código e atualizar arquivos. Requer suporte do endpoint. Alterar esse valor recria o índice.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "prompt_name opcional para pesquisas de código. Requer suporte do endpoint.",
   "settings.aboutKiloCode.title": "Sobre o Kilo Code",
 
   "session.messages.welcome":

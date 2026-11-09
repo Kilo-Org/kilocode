@@ -467,6 +467,10 @@ export const dict = {
   "settings.indexing.kiloSignIn.description": "ホスト型埋め込みを使用するにはKiloにサインインしてください。",
   "settings.indexing.provider.title": "埋め込みプロバイダー",
   "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
+  "settings.indexing.providerField.documentPrompt.description":
+    "コードのインデックス作成とファイル更新に使用する任意の prompt_name。エンドポイント側の対応が必要です。変更するとインデックスが再構築されます。",
+  "settings.indexing.providerField.queryPrompt.description":
+    "コード検索に使用する任意の prompt_name。エンドポイント側の対応が必要です。",
   "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
   "settings.indexing.qdrantApiKey.placeholder": "オプションのAPIキー",
   "settings.indexing.fileExtensions.title": "ファイル拡張子",

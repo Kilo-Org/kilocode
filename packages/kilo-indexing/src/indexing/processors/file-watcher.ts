@@ -921,7 +921,7 @@ export class FileWatcher implements IFileWatcher {
       let pointsToUpsert: PointStruct[] = []
       if (this.embedder && blocks.length > 0) {
         const texts = blocks.map((block) => block.content)
-        const { embeddings } = await this.embedder.createEmbeddings(texts)
+        const { embeddings } = await this.embedder.createEmbeddings(texts, undefined, "document")
         if (embeddings.length !== blocks.length) {
           return {
             path: filePath,

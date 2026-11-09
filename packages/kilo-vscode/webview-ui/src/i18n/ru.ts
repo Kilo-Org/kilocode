@@ -479,6 +479,10 @@ export const dict = {
     "Список разрешённых значений, разделённых запятыми. Оставьте пустым, чтобы использовать встроенные значения по умолчанию.",
   "settings.indexing.fileExtensions.invalid": "Недопустимое расширение: {{extension}}",
   "settings.indexing.providerField.description": "Настройка подключения, специфичная для провайдера.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Необязательный prompt_name для индексации кода и обновления файлов. Требуется поддержка со стороны конечной точки. Изменение приводит к перестроению индекса.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Необязательный prompt_name для поиска по коду. Требуется поддержка со стороны конечной точки.",
   "settings.indexing.tuning.description": "Параметры расширенного поиска и пакетной обработки.",
 
   "settings.providers.title": "Провайдеры",
