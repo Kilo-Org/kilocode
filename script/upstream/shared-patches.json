@@ -183,7 +183,7 @@
     },
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
-      "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. Provides the existing Location-service context to embedder plugins in both phases, as internal plugins already receive it. No boot-order or upstream default change. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself, and host-global registration cannot supply Location-scoped services such as Config."
+      "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. Each activation builds a new list, because `internal.post` is shared across reloads. Provides the existing Location-service context to embedder plugins in both phases, as internal plugins already receive it. No boot-order or upstream default change. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself, and host-global registration cannot supply Location-scoped services such as Config."
     },
     "packages/core/test/plugin/supervisor-reload.test.ts": {
       "rung": 3,
