@@ -17,7 +17,7 @@ import type { AgentManagerOutMessage } from "./types"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { revealManagedSession } from "./reveal-session"
-import { continueInWorktree } from "./continue-in-worktree"
+import { continueInWorktree, type ContinueContext } from "./continue-in-worktree"
 import { runDoctor } from "./worktree-doctor"
 import { reconcileProject } from "./project/init"
 import { samePath } from "./project/paths"
@@ -132,33 +132,51 @@ export async function continueFromSidebar(
   }
   p.openPanel()
   await p.waitForStateReady("continueFromSidebar")
-  await continueInWorktree(
-    {
-      root,
-      binary: p.gitOps.path,
-      client: () => p.connection.client(),
-      createWorktreeOnDisk: (opts) => p.createWorktreeOnDisk(opts),
-      runSetupScript: (target, branch, id) => p.runSetupScriptForWorktree(target, branch, id),
-      cleanupWorktree: async (id) => {
-        await p.onDeleteWorktree(id)
-      },
-      notifyError: (error, result, id) => {
-        p.postToWebview({
-          type: "agentManager.worktreeSetup",
-          status: "error",
-          message: error,
-          branch: result.branch,
-          worktreeId: id,
-        })
-      },
-      getStateManager: () => p.getStateManager(),
-      registerWorktreeSession: (sid, dir) => p.registerWorktreeSession(sid, dir),
-      notifyReady: (sid, result, wid) => p.notifyWorktreeReady(sid, result, wid),
-      log: (...args) => p.log(...args),
+  await continueInWorktree(worktreeContext(p, root), sessionId, progress)
+}
+
+/**
+ * Continues a session in a new worktree of the project the request targets. The sidebar continues its own project;
+ * the Agent Manager panel continues a session of whichever project it shows.
+ */
+export async function continueInActiveProject(
+  p: ProviderApiHost,
+  sessionId: string,
+  progress: (status: string, detail?: string, error?: string) => void,
+): Promise<void> {
+  const root = p.getRoot()
+  if (!root) {
+    progress("error", undefined, "No workspace folder open")
+    return
+  }
+  await p.waitForStateReady("continueInWorktree")
+  await continueInWorktree(worktreeContext(p, root), sessionId, progress)
+}
+
+function worktreeContext(p: ProviderApiHost, root: string): ContinueContext {
+  return {
+    root,
+    binary: p.gitOps.path,
+    client: () => p.connection.client(),
+    createWorktreeOnDisk: (opts) => p.createWorktreeOnDisk(opts),
+    runSetupScript: (target, branch, id) => p.runSetupScriptForWorktree(target, branch, id),
+    cleanupWorktree: async (id) => {
+      await p.onDeleteWorktree(id)
     },
-    sessionId,
-    progress,
-  )
+    notifyError: (error, result, id) => {
+      p.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: error,
+        branch: result.branch,
+        worktreeId: id,
+      })
+    },
+    getStateManager: () => p.getStateManager(),
+    registerWorktreeSession: (sid, dir) => p.registerWorktreeSession(sid, dir),
+    notifyReady: (sid, result, wid) => p.notifyWorktreeReady(sid, result, wid),
+    log: (...args) => p.log(...args),
+  }
 }
 
 export async function createFromSidebar(p: ProviderApiHost, baseBranch?: string, branchName?: string): Promise<void> {

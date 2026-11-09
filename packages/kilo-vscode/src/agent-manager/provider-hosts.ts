@@ -82,6 +82,10 @@ export interface ProviderHostsSource {
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void>
+  continueInWorktree(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void>
   configureSetupScript(): Promise<void>
   sendRepoInfo(): Promise<void>
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
@@ -134,6 +138,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     onCloseSession: (id) => p.onCloseSession(id),
     onCreateMultiVersion: (msg) => p.onCreateMultiVersion(msg),
     continueFromSidebar: (id, progress) => p.continueFromSidebar(id, progress),
+    continueInWorktree: (id, progress) => p.continueInWorktree(id, progress),
     configureSetupScript: () => p.configureSetupScript(),
     sendRepoInfo: () => p.sendRepoInfo(),
     sendDiffBranches: (id, scope, project) => p.sendDiffBranches(id, scope, project),

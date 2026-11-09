@@ -131,4 +131,32 @@ describe("sidebar worktree project routing", () => {
       await provider.dispose()
     }
   })
+
+  it("continues an Agent Manager session in the project the panel shows and reports progress", async () => {
+    const sidebar = repo("sidebar", "sidebar")
+    const other = repo("other", "other")
+    const provider = providerFor(sidebar, [other])
+    try {
+      provider.contexts.activate(projectIdFor(canonicalizePath(other)))
+      const posts: unknown[] = []
+      let rooted: string | undefined
+      provider.postToWebview = (message) => posts.push(message)
+      provider.continueInWorktree = async (_sessionId, progress) => {
+        rooted = provider.context?.root
+        progress("capturing")
+        progress("done")
+      }
+
+      await provider.handlePanelMessage({ type: "agentManager.continueInWorktree", sessionId: "ses_panel" })
+
+      expect(rooted).toBe(canonicalizePath(other))
+      expect(provider.contexts.active()?.root).toBe(canonicalizePath(other))
+      expect(posts).toEqual([
+        { type: "continueInWorktreeProgress", status: "capturing", detail: undefined, error: undefined },
+        { type: "continueInWorktreeProgress", status: "done", detail: undefined, error: undefined },
+      ])
+    } finally {
+      await provider.dispose()
+    }
+  })
 })
