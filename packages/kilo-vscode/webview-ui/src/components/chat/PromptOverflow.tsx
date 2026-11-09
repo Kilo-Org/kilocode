@@ -18,7 +18,7 @@ export interface OverflowItem {
   tone?: Tone
   /** State that needs a dot on the menu button while the action is folded. */
   dot?: Tone
-  /** Work in progress (for example enhance). Shows a spinner. */
+  /** Work in progress (for example enhance). Shows a spinner. The item stays clickable so it can stop the work. */
   busy?: boolean
   disabled?: boolean
   run: () => void
@@ -60,7 +60,7 @@ export const PromptOverflow: Component<Props> = (props) => {
         <DropdownMenu.Content class="prompt-more-menu">
           <For each={props.items}>
             {(item) => (
-              <DropdownMenu.Item disabled={item.disabled || item.busy} onSelect={item.run} data-tone={item.tone}>
+              <DropdownMenu.Item disabled={item.disabled} onSelect={item.run} data-tone={item.tone}>
                 <span class="prompt-more-icon">
                   <Show when={item.busy} fallback={<Icon name={item.icon} size="small" />}>
                     <Spinner />
