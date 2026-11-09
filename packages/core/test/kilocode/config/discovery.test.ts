@@ -31,12 +31,14 @@ function configLayer(input: {
   directory: string
   global: string
   project?: string
+  canonical?: string
   git?: boolean
   options?: Config.Options
   overrides?: LayerNode.Replacements
 }) {
   const project = AbsolutePath.make(input.project ?? input.directory)
   const vcs = input.git ? { type: "git" as const, store: AbsolutePath.make(path.join(project, ".git")) } : undefined
+  const located = location({ directory: AbsolutePath.make(input.directory) }, { projectDirectory: project, vcs })
   const built = AppNodeBuilder.build(LayerNode.group([Config.node, Bus.node]), [
     Config.node.replace(Config.configured({ system: false, ...input.options })),
     ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
@@ -44,7 +46,9 @@ function configLayer(input: {
       Layer.succeed(
         Location.Service,
         Location.Service.of(
-          location({ directory: AbsolutePath.make(input.directory) }, { projectDirectory: project, vcs }),
+          input.canonical === undefined
+            ? located
+            : { ...located, project: { ...located.project, canonical: AbsolutePath.make(input.canonical) } },
         ),
       ),
     ),
@@ -466,6 +470,71 @@ describe("Kilo config discovery", () => {
       expect(yield* shells.pipe(Effect.provide(configLayer({ directory: path.join(project, "app"), global })))).toEqual(
         ["outside", "root", "outside-dot"],
       )
+    }),
+  )
+
+  it.live("reads a linked worktree's config first and falls back to the primary checkout", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const primary = path.join(tmp.path, "repo")
+      const worktree = path.join(primary, ".kilo", "worktrees", "feature")
+      const directory = path.join(worktree, "packages", "app")
+      const global = path.join(tmp.path, "global")
+      yield* write(path.join(primary, "kilo2.json"), { model: "kilo/primary" })
+      yield* write(path.join(primary, ".kilo2", "kilo2.json"), { shell: "primary-dir", username: "primary-user" })
+      yield* write(path.join(primary, "packages", "app", ".kilo2", "kilo2.json"), { timezone: "Europe/Berlin" })
+      yield* write(path.join(worktree, ".kilo2", "kilo2.json"), { shell: "worktree-dir" })
+
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        const entries = yield* config.entries()
+        expect(yield* shells).toEqual(["primary-dir", "worktree-dir"])
+        expect(Config.latest(entries, "shell")).toBe("worktree-dir")
+        expect(Config.latest(entries, "username")).toBe("primary-user")
+        expect(Config.latest(entries, "timezone")).toBe("Europe/Berlin")
+        expect(String(Config.latest(entries, "model")?.providerID)).toBe("kilo")
+        expect(String(Config.latest(entries, "model")?.model)).toBe("primary")
+      }).pipe(Effect.provide(configLayer({ directory, project: worktree, canonical: primary, global, git: true })))
+    }),
+  )
+
+  it.live("a normal checkout reads no primary fallback", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const other = path.join(tmp.path, "other")
+      const global = path.join(tmp.path, "global")
+      yield* write(path.join(project, ".kilo2", "kilo2.json"), { shell: "project" })
+      yield* write(path.join(other, ".kilo2", "kilo2.json"), { shell: "other", username: "other-user" })
+
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* shells).toEqual(["project"])
+        expect(Config.latest(yield* config.entries(), "username")).toBeUndefined()
+      }).pipe(Effect.provide(configLayer({ directory: project, global, git: true })))
+    }),
+  )
+
+  it.live("a linked worktree falls back only to the primary checkout's kilo2 config", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const primary = path.join(tmp.path, "repo")
+      const worktree = path.join(primary, ".kilo", "worktrees", "feature")
+      const global = path.join(tmp.path, "global")
+      yield* write(path.join(primary, ".kilo2", "kilo2.json"), { shell: "primary-kilo2" })
+      yield* write(path.join(primary, ".kilo", "kilo2.json"), { shell: "primary-v1-dir" })
+      yield* write(path.join(primary, ".kilo", "kilo.json"), { shell: "primary-v1-dir-json" })
+      yield* write(path.join(primary, ".kilocode", "kilo.json"), { shell: "primary-kilocode" })
+      yield* write(path.join(primary, "kilo.json"), { shell: "primary-v1-root" })
+      yield* write(path.join(primary, "kilo.jsonc"), { shell: "primary-v1-root-jsonc" })
+      yield* write(path.join(primary, "opencode.json"), { shell: "primary-opencode" })
+      yield* write(path.join(worktree, ".kilo2", "kilo2.json"), { shell: "worktree-kilo2" })
+
+      expect(
+        yield* shells.pipe(
+          Effect.provide(configLayer({ directory: worktree, project: worktree, canonical: primary, global, git: true })),
+        ),
+      ).toEqual(["primary-kilo2", "worktree-kilo2"])
     }),
   )
 

@@ -1,0 +1,117 @@
+# Kilo Configuration
+
+Kilo configures itself with `kilo2.json` and `kilo2.jsonc`. This guide covers the file names, the search order, the project directories that hold commands, agents and skills, and the settings an agent may edit. Use it for Kilo configuration questions, for finding a loaded setting, and for changing settings.
+
+## Config files
+
+Kilo reads JSON or JSONC. The root files of a config directory are `kilo2.json` and `kilo2.jsonc`; `.jsonc` wins. A project directory can also hold a `.kilo2` directory with `kilo2.json` or `kilo2.jsonc`; there `.json` wins, and the `.kilo2` file overrides the root files of the same directory.
+
+Search order, lowest precedence to highest:
+
+1. Global directory: `~/.config/kilo2/`, `$XDG_CONFIG_HOME/kilo2/` when that variable is set, or the path in `KILO2_CONFIG_DIR`.
+2. Explicit file: the path in `KILO2_CONFIG`.
+3. Project directories: the current directory and each ancestor up to the git worktree root, or to the filesystem root outside version control. Farther directories load first, so the nearest directory wins.
+4. Inline content: `KILO_CONFIG_CONTENT`.
+5. Managed policy: `/etc/kilo/` on Linux, `/Library/Application Support/kilo/` on macOS, `%ProgramData%\kilo\` on Windows. The managed directory keeps the stable names `kilo.json` and `kilo.jsonc`.
+6. macOS MDM preferences with the `ai.opencode.managed` plist.
+
+A linked git worktree reads its own `kilo2` config first. It then reads the primary checkout as a lower-priority fallback, so a key the worktree does not set still applies. A normal checkout does not read another checkout.
+
+Outside the managed system directory, Kilo does not read `kilo.json`, `kilo.jsonc`, `.kilo`, `.kilocode` or OpenCode config as a fallback. Use only the `kilo2` names.
+
+Do not guess a field name. Read the configuration file before editing it, preserve unrelated keys, and use the loaded configuration as the source of truth.
+
+## Config directories
+
+Each project directory on the walk is a config directory. It loads its root files and a `.kilo2` child directory. The global directory loads its root files and its own command, agent and skill directories, but not a `.kilo2` child. Kilo scans these roots for:
+
+| Content | Pattern |
+|---|---|
+| Commands | `{command,commands}/**/*.md` |
+| Agents and modes | `{agent,agents}/**/*.md`, `{mode,modes}/*.md` |
+| Skills | `{skill,skills}/<name>/SKILL.md`, or a flat `{skill,skills}/*.md` |
+| Instructions | `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, and paths from `instructions` |
+
+A skill file has `name` and `description` in frontmatter. A user skill with the same ID as a built-in skill overrides the built-in skill.
+
+## Common fields
+
+```jsonc
+{
+  "model": "anthropic/claude-sonnet", // provider/model, or the object form
+  "default_agent": "code",
+  "permissions": [
+    { "action": "shell", "resource": "rm *", "effect": "deny" },
+    { "action": "read", "resource": "secrets/*", "effect": "ask" }
+  ],
+  "agents": {
+    "reviewer": {
+      "description": "Reviews changes",
+      "mode": "subagent",
+      "permissions": [{ "action": "edit", "resource": "*", "effect": "deny" }]
+    }
+  },
+  "commands": {
+    "test": { "template": "Run the tests in $ARGUMENTS" }
+  },
+  "skills": ["./my-skills", "https://example.com/skills/"],
+  "instructions": ["docs/*.md"],
+  "mcp": {
+    "servers": {
+      "local": { "type": "local", "command": ["node", "server.js"] },
+      "remote": { "type": "remote", "url": "https://mcp.example.com" }
+    }
+  },
+  "plugins": ["@acme/kilo-plugin"],
+  "worktree": { "directory": "worktrees" }
+}
+```
+
+`permissions` is an ordered array of rules. The last matching rule wins. `effect` is `allow`, `ask` or `deny`. An agent has the same `permissions` array.
+
+`mcp.servers` holds local and remote server definitions. A local server has `type`, `command` and optional `environment`. A remote server has `type`, `url` and optional `headers` and `oauth`.
+
+`skills` and `instructions` hold paths or URLs. Relative paths resolve from the current location directory. `~` expands from the home directory.
+
+## Environment variables
+
+| Variable | Effect |
+|---|---|
+| `KILO2_CONFIG` | Path to an additional config file. |
+| `KILO2_CONFIG_DIR` | Global config directory, instead of `~/.config/kilo2/`. |
+| `KILO_CONFIG_CONTENT` | Inline JSON config, after project directories. |
+| `KILO_DISABLE_PROJECT_CONFIG` | Skip project config files and directories. |
+
+v1 `KILO_CONFIG`, `KILO_CONFIG_DIR` and `KILO_DB` have no effect on `kilo2`.
+
+## Agent Manager
+
+Agent Manager keeps worktrees under `.kilo/worktrees/` and its UI and recovery state in `.kilo2/agent-manager.json`. Do not edit `agent-manager.json` to configure behavior.
+
+Project setup and run scripts stay in the main checkout's `.kilo/` directory:
+
+| Script | Files, in order |
+|---|---|
+| Setup | `.kilo/setup-script`, `.kilo/setup-script.sh` (`.ps1`, `.cmd`, `.bat` on Windows) |
+| Run | `.kilo/run-script`, `.kilo/run-script.sh` (`.ps1`, `.cmd`, `.bat` on Windows) |
+
+Setup runs once when a worktree is created, with `WORKTREE_PATH` and `REPO_PATH` set. Run runs from the selected context with the same variables. Setup has a 5 minute timeout.
+
+## Related settings
+
+Kilo adds these top-level settings to the shared schema:
+
+- `session_sync`
+- `hide_prompt_training_models`
+- `privacy_mode`
+- `reasoning_display`
+- `shared_agent_board`
+- `subagent_model`, `subagent_variant`, `subagent_variant_overrides`
+- `memory_model`
+- `web_search`
+- `retention`
+- `commit_message`
+- `indexing`
+- `sandbox`
+
+Full product documentation is at <https://kilo.ai/docs>.
