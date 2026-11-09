@@ -9,33 +9,114 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   check-release:
     if: vars.OPENCODE_WATCH_ENABLED != 'false' && (github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode') # kilocode_change
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - id: fetch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Find newest upstream v2 tag
+        id: tag
         run: |
-          data=$(gh release view --repo anomalyco/opencode --json tagName,name,url 2>/dev/null || echo '{}')
-          tag=$(echo "$data" | jq -r '.tagName // empty')
-          [ -z "$tag" ] && { echo "tag=" >> "$GITHUB_OUTPUT"; exit 0; }
+          tag=$(git ls-remote --tags --refs https://github.com/anomalyco/opencode.git 'refs/tags/v2.*' \
+            | awk '{print $2}' \
+            | sed 's|^refs/tags/||' \
+            | sort -V \
+            | tail -n1)
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "name=$(echo "$data" | jq -r '.name // .tagName')" >> "$GITHUB_OUTPUT"
-          echo "url=$(echo "$data" | jq -r '.url')" >> "$GITHUB_OUTPUT"
 
-      - if: steps.fetch.outputs.tag != ''
+      - if: steps.tag.outputs.tag != ''
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          fetch-depth: 0
+
+      - if: steps.tag.outputs.tag != ''
         id: cache
         uses: actions/cache/restore@v4
         with:
           path: .cache/last-seen
-          key: last-seen-${{ steps.fetch.outputs.tag }}
+          key: last-seen-${{ steps.tag.outputs.tag }}
           restore-keys: last-seen-
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+        name: Collect release stats
+        id: stats
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          git remote add upstream https://github.com/anomalyco/opencode.git 2>/dev/null \
+            || git remote set-url upstream https://github.com/anomalyco/opencode.git
+          git fetch --no-tags upstream "+refs/tags/$TAG:refs/tags/$TAG"
+          git fetch --no-tags origin v2
+
+          target=$(git rev-parse "$TAG^{commit}^")
+
+          sync=$(git log --format=%s origin/v2 \
+            | grep -m1 -E '^chore\(upstream\): sync v[0-9]+\.[0-9]+\.[0-9]+ \([0-9a-f]{11}\)$' \
+            || true)
+          if [ -z "$sync" ]; then
+            echo "::warning::No upstream sync commit found on origin/v2"
+            exit 0
+          fi
+          base=$(printf '%s' "$sync" | sed -E 's/.*\(([0-9a-f]{11})\)$/\1/')
+          prev=$(printf '%s' "$sync" | sed -E 's/^chore\(upstream\): sync (v[0-9.]+) .*/\1/')
+
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git fetch --no-tags upstream "$base" || true
+          fi
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "::warning::Cannot resolve last sync commit $base"
+            exit 0
+          fi
+
+          group() { printf '%s' "$1" | sed -e :a -e 's/\(.*[0-9]\)\([0-9]\{3\}\)/\1,\2/;ta'; }
+
+          count=$(git rev-list --count "$base..$target")
+          shortstat=$(git diff --shortstat "$base..$target" || true)
+          files=$(printf '%s' "$shortstat" | sed -nE 's/.* ([0-9]+) files? changed.*/\1/p')
+          ins=$(printf '%s' "$shortstat" | sed -nE 's/.* ([0-9]+) insertions?\(\+\).*/\1/p')
+          del=$(printf '%s' "$shortstat" | sed -nE 's/.* ([0-9]+) deletions?\(-\).*/\1/p')
+          files=${files:-0}
+          ins=${ins:-0}
+          del=${del:-0}
+
+          if git merge-base --is-ancestor "$target" origin/v2; then
+            status="already merged into v2"
+          else
+            pr=$(gh pr list --base v2 --state open --search "sync $TAG in:title" \
+              --json number --jq '.[0].number // empty' 2>/dev/null || true)
+            if [ -n "$pr" ]; then
+              status="not merged into v2, sync PR #$pr open"
+            else
+              status="not merged into v2, needs a sync PR"
+            fi
+          fi
+
+          short_target=$(printf '%s' "$target" | cut -c1-11)
+          text=$(
+            printf ':rocket: OpenCode %s is out\n' "$TAG"
+            printf '%s commits, %s files, +%s / -%s since our last sync %s\n' \
+              "$(group "$count")" "$(group "$files")" "$(group "$ins")" "$(group "$del")" "$prev"
+            printf 'Merge target: %s\n' "$short_target"
+            printf 'Status: %s' "$status"
+          )
+          if [ -n "$prev" ]; then
+            link="https://github.com/anomalyco/opencode/compare/$prev...$TAG"
+            text="$text"$'\n'"Compare: <$link|$prev...$TAG>"
+          fi
+
+          jq -n --arg text "$text" '{text: $text}' > slack-payload.json
+          echo "$text"
+          echo "payload=slack-payload.json" >> "$GITHUB_OUTPUT"
+
+      - if: steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
         name: Trigger opencode sync
         env:
           URL: ${{ secrets.OPENCODE_WATCH_SYNC_URL }}
@@ -48,24 +129,21 @@ jobs:
             curl -sf -X POST "$URL" "${headers[@]}" -d '{}' || true
           fi
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true' && steps.stats.outputs.payload != ''
         name: Notify Slack
         uses: slackapi/slack-github-action@v2.0.0
         with:
-          webhook: ${{ secrets.OPENCODE_WATCH_SLACK_WEBHOOK }}
+          webhook: ${{ secrets.OPENCODE_MERGE_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
-          payload: |
-            name: "${{ steps.fetch.outputs.name }}"
-            tag: "${{ steps.fetch.outputs.tag }}"
-            url: "${{ steps.fetch.outputs.url }}"
+          payload-file-path: ${{ steps.stats.outputs.payload }}
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
         name: Mark tag as seen
-        run: mkdir -p .cache/last-seen && echo "${{ steps.fetch.outputs.tag }}" > .cache/last-seen/tag.txt
+        run: mkdir -p .cache/last-seen && echo "${{ steps.tag.outputs.tag }}" > .cache/last-seen/tag.txt
 
-      - if: success() && steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: success() && steps.tag.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
         name: Save seen-tag cache
         uses: actions/cache/save@v4
         with:
           path: .cache/last-seen
-          key: last-seen-${{ steps.fetch.outputs.tag }}
+          key: last-seen-${{ steps.tag.outputs.tag }}
