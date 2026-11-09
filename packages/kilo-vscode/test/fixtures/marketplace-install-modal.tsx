@@ -151,6 +151,9 @@ const button = (label: string) =>
   [...document.body.querySelectorAll("button")].find((node) => node.textContent?.trim() === label) as
     | HTMLButtonElement
     | undefined
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+// A disposed render root does not remove the dialog it portalled to document.body, so every scenario starts clean.
+const reset = () => document.body.replaceChildren()
 
 assert.ok(text().includes("Node.js"))
 assert.ok(text().includes("Where should this be available?"))
@@ -186,6 +189,7 @@ button("Done")!.click()
 assert.equal(closed, 1)
 
 dispose()
+reset()
 
 // Repair: a record installed with a non-default method opens the dialog on that method, not the item's first option.
 const repairCalls: unknown[] = []
@@ -235,11 +239,84 @@ const disposeRepair = render(
   ),
   repairRoot,
 )
-await new Promise((resolve) => setTimeout(resolve, 0))
-assert.ok(text().includes("local"), "the recorded method is preselected")
+await tick()
+// The selected method's own description is rendered, and only the `local` option has it, so this fails if the
+// recorded method is not preselected.
+assert.ok(text().includes("Runs on this machine"), "the recorded method is preselected")
 button("Review")!.click()
-await new Promise((resolve) => setTimeout(resolve, 0))
+await tick()
 assert.equal((repairCalls[0] as { option?: string }).option, "local")
 
 disposeRepair()
+reset()
+
+// Timed-out poll: the post-install status is neither pending/disabled nor a known outcome, so the dialog lands on
+// `unknown` and has to offer a way out.
+const timedOutItem = { ...item, id: "timed-out", name: "Timed Out Docs", parameters: [], prerequisites: [], options: [] }
+const openResult = (signIn: boolean, id: string) => {
+  const host = document.createElement("div")
+  document.body.append(host)
+  const mcpMock = {
+    servers: () => [],
+    status: () => ({ status: "stopped", error: "" }),
+    canSignIn: () => signIn,
+    sync: async () => undefined,
+    busy: () => [],
+    cancel: () => undefined,
+    signIn: async () => undefined,
+  }
+  const Harness = () => {
+    const dialog = useDialog()
+    onMount(() =>
+      dialog.show(() => (
+        <InstallModal
+          item={timedOutItem}
+          workspace={true}
+          mcp={mcpMock}
+          onClose={() => dialog.close()}
+          onPreview={async () => ({ config: "/tmp/project/.kilo/kilo.json", server: "{}", parameters: [], secrets: [] })}
+          onInstall={async () => ({ ...record, id })}
+          onOpen={() => undefined}
+        />
+      )),
+    )
+    return null
+  }
+  const disposeHost = render(
+    () => (
+      <VSCodeProvider>
+        <LanguageProvider>
+          <DialogProvider>
+            <Harness />
+          </DialogProvider>
+        </LanguageProvider>
+      </VSCodeProvider>
+    ),
+    host,
+  )
+  return disposeHost
+}
+
+const withAuth = openResult(true, "timed-out-auth")
+await tick()
+button("Review")!.click()
+await tick()
+button("Install")!.click()
+await tick()
+assert.ok(button("Done"), "a timed-out poll still offers Done")
+assert.ok(button("Sign In"), "sign-in is offered when the server has an OAuth method")
+withAuth()
+reset()
+
+const withoutAuth = openResult(false, "timed-out-plain")
+await tick()
+button("Review")!.click()
+await tick()
+button("Install")!.click()
+await tick()
+assert.ok(button("Done"), "a timed-out poll still offers Done")
+assert.equal(button("Sign In"), undefined, "sign-in is hidden when the server has no OAuth method")
+withoutAuth()
+reset()
+
 await window.happyDOM.close()

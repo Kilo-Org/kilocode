@@ -376,16 +376,32 @@ export const InstallModal = (props: Props) => {
                             </Show>
                           </p>
                           <Show when={serverState() === "unknown"}>
-                            <div class="dialog-confirm-actions">
-                              <Show when={props.mcp.canSignIn(record()!.server!)}>
-                                <Button variant="ghost" size="large" onClick={requestSignIn}>
-                                  {language.t("marketplace.install.mcp.signIn.button")}
+                            <Show when={error()}>
+                              <p class="install-modal-error-msg">{error()}</p>
+                            </Show>
+                            <Show when={props.mcp.canSignIn(record()!.server!)} fallback={done()}>
+                              <div class="dialog-confirm-actions">
+                                <Button variant="ghost" size="large" onClick={props.onClose}>
+                                  {language.t("marketplace.install.done")}
                                 </Button>
-                              </Show>
-                              <Button variant="primary" size="large" onClick={props.onClose}>
-                                {language.t("marketplace.install.done")}
-                              </Button>
-                            </div>
+                                <Show
+                                  when={signing() || props.mcp.busy().includes(record()!.server!)}
+                                  fallback={
+                                    <Button variant="primary" size="large" onClick={requestSignIn}>
+                                      {language.t("marketplace.install.mcp.signIn.button")}
+                                    </Button>
+                                  }
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="large"
+                                    onClick={() => props.mcp.cancel(record()!.server!)}
+                                  >
+                                    {language.t("marketplace.install.mcp.signIn.cancel")}
+                                  </Button>
+                                </Show>
+                              </div>
+                            </Show>
                           </Show>
                         </>
                       }
