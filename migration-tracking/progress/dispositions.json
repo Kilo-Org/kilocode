@@ -231,7 +231,7 @@
   "module:packages/opencode/src/kilocode/agent/index.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/agent/index.ts",
-    "note": "Agent set (Code, hidden build copy, Ask, Debug, Orchestrator, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units), agent remove (open API cell).",
+    "note": "Agent set (Code, hidden build copy, Ask, Debug, Orchestrator, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units). Agent remove lives in packages/kilo-plugin/src/agent/plugin.ts (kilocode.agent RPC) and deletes only the markdown file that defines the agent.",
     "by": "agents-plugin"
   },
   "module:packages/opencode/src/kilocode/agent/scout.txt": {
@@ -844,6 +844,12 @@
     "v2": "packages/kilo-plugin/test/skill-remove.test.ts",
     "note": "The v2 tests cover the v1 cases (built-in, unregistered, relative, non-manifest, URL cache, accepted registered manifest) plus configured roots, flat skills, nested non-manifest files, traversal, the root itself, non-markdown files, and the removable list.",
     "by": "skill-removal"
+  },
+  "api:POST /kilocode/agent/remove": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/agent.ts",
+    "note": "The Kilo plugin RPC kilocode.agent remove replaces the v1 POST /kilocode/agent/remove route. It deletes the markdown file the config agent plugin discovered (under <root>/{agent,agents,mode,modes}/ in the project .kilo2 or the global config directory) and publishes config.updated so the registry rescans. A config-only or built-in agent has no file and is never offered. A config-defined agent (`agents.<id>` in kilo2.jsonc) is still a real agent on v2 and is removed by unsetting that key, which the Agents subtab keeps on the config path. The VS Code Agents subtab calls remove for the agents the RPC lists.",
+    "by": "agent-removal"
   },
   "api:POST /kilocode/skill/remove": {
     "state": "ported",

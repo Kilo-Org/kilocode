@@ -77,7 +77,12 @@ const SkillsSubtab: Component = () => {
       .remove({ path: file }, { location })
       .then(() => {
         v2.data.location.skill.invalidate()
-        return v2.data.location.skill.sync()
+        // The server reloads commands from `config.updated`, so drop the cached list too; a slash command a
+        // removed skill defined would otherwise stay in the composer.
+        v2.data.location.command.invalidate()
+        // Report a command refresh on its own, so its failure does not read as a failed skill removal.
+        const commands = v2.data.location.command.sync().catch(v2.report)
+        return Promise.all([v2.data.location.skill.sync(), commands])
       })
       .then(refreshRemovable)
       .catch(v2.report)
