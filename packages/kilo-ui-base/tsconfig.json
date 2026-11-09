@@ -10,7 +10,6 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-<<<<<<<< HEAD:packages/kilo-ui-base/tsconfig.json
     "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
@@ -20,16 +19,4 @@
     "types": ["vite/client", "bun"]
   },
   "exclude": ["**/*.stories.*", "**/*.mdx"]
-|||||||| 958f965d35e:packages/console/app/tsconfig.json
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  }
-========
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  },
-  "exclude": ["node_modules", "textjs", ".output", "dist"]
->>>>>>>> 33f94fce967367888bd3108682b22d557c119102:services/site/tsconfig.json
 }
