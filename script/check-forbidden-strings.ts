@@ -25,6 +25,7 @@ const forbidden: { pattern: string; reason: string; allow?: string[] }[] = [
     pattern: "github.com/anomalyco/opencode",
     reason: "upstream repo URL -- should be Kilo-Org/kilocode",
     allow: [
+      ".github/workflows/watch-opencode-releases.yml",
       "AGENTS.md",
       "README.md",
       "translations/README.",
