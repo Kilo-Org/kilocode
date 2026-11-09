@@ -5,6 +5,7 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
 import { focusPrompt } from "../utils/tab-navigation"
 import { useModelPreferences } from "../context/model-preferences"
@@ -231,9 +232,9 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, and a
-  // pending question is dismissed.
-  const begin = async () => {
+  // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
+  // question is dismissed, and a send that should stop the running model call stops it.
+  const begin = async (mode: SendMode) => {
     const key = draftKey()
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
@@ -253,6 +254,15 @@ export function SessionView(props: {
     for (const form of questions) {
       void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
     }
+    // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
+    // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
+    // and the stop would then end that answer. The partial response stays in the transcript and the run continues
+    // with the prompt. A failed stop still sends the prompt as a steer.
+    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
+    const interrupt =
+      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
+    if (interrupt)
+      await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
     return { id, gate, model }
   }
 
@@ -268,15 +278,7 @@ export function SessionView(props: {
     mode: SendMode = "steer",
     input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
   ) => {
-    const { id, gate, model } = await begin()
-    // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
-    // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
-    // and the stop would then end that answer. The partial response stays in the transcript and the run continues
-    // with the prompt. A failed stop still sends the prompt as a steer.
-    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
-    const interrupt =
-      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
-    if (interrupt) await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
+    const { id, gate, model } = await begin(mode)
     return v2.data.session
       .prompt({
         sessionID: id,
@@ -340,8 +342,10 @@ export function SessionView(props: {
   )
 
   const runSlash = async (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => {
-    const { id, gate, model } = await begin()
+    const { id, gate } = await begin(mode)
     const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
+    // A command with its own model runs on that model, which the server switches the session to.
+    const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
     return dispatchSlash(
       {
         entry,
@@ -355,14 +359,13 @@ export function SessionView(props: {
           await gate
           return id
         },
-        current: (sessionID) => selection.attributed(sessionID),
-        selected: model,
+        selected: (sessionID) => selection.attributed(sessionID),
         switchModel: (input) => v2.api.session.switchModel(input),
         command: (input) => v2.api.session.command(input),
         prompt: (input) => v2.data.session.prompt(input),
       },
     )
-      .then(() => prompted(id, text, gate ? selection.attributed(id) : model))
+      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : selection.attributed(id)))
       .catch((err: unknown) => {
         v2.report(err)
         return false

@@ -17,10 +17,11 @@ export type SlashInput = {
 export type SlashDeps = {
   /** The session to run in. Resolves when it exists on the server and every pending model switch has settled. */
   session: () => Promise<string>
-  /** The model the server session runs on now. */
-  current: (sessionID: string) => ModelRef | undefined
-  /** The model and reasoning variant the composer shows. */
-  selected: ModelRef | undefined
+  /**
+   * The model and reasoning variant the composer shows for the session, read after its pending switch settled, so
+   * a switch that the store does not report yet is not reverted.
+   */
+  selected: (sessionID: string) => ModelRef | undefined
   switchModel: (input: { sessionID: string; model: ModelRef }) => Promise<unknown>
   command: (input: SessionCommandInput) => Promise<unknown>
   prompt: (input: {
@@ -57,15 +58,10 @@ export async function dispatchSlash(input: SlashInput, deps: SlashDeps) {
   })
 }
 
+// The server ignores a switch to the model the session already runs on, so the selection is always sent.
 async function applyModel(sessionID: string, deps: SlashDeps) {
-  const selected = deps.selected
+  const selected = deps.selected(sessionID)
   if (!selected) return
-  const current = deps.current(sessionID)
-  if (current && same(current, selected)) return
   // Send the variant explicitly: a model without one means "default" to the server and would reset the effort.
   await deps.switchModel({ sessionID, model: { ...selected, variant: selected.variant ?? DEFAULT } })
-}
-
-function same(a: ModelRef, b: ModelRef) {
-  return a.providerID === b.providerID && a.id === b.id && (a.variant ?? DEFAULT) === (b.variant ?? DEFAULT)
 }
