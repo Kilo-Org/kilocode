@@ -3,15 +3,16 @@
 import type { CommandInfo } from "@opencode/client"
 import type { SlashEntry } from "./slash"
 
+// Descriptions reuse strings that every locale already translates. An action without a matching string has none.
 const ACTIONS = [
-  { name: "new", key: "prompt.slash.new", hints: ["clear"] },
-  { name: "sessions", key: "prompt.slash.sessions", hints: ["resume", "continue", "history"] },
-  { name: "models", key: "prompt.slash.models", hints: ["model"] },
-  { name: "agents", key: "prompt.slash.agents", hints: ["modes"] },
-  { name: "variant", key: "prompt.slash.variant", hints: ["variants", "reasoning", "thinking"] },
-  { name: "compact", key: "prompt.slash.compact", hints: ["smol", "condense"] },
-  { name: "help", key: "prompt.slash.help", hints: [] },
-  { name: "settings", key: "prompt.slash.settings", hints: [] },
+  { name: "new", key: "command.session.new", hints: ["clear"] },
+  { name: "sessions", key: "sidebar.topBar.history", hints: ["resume", "continue", "history"] },
+  { name: "models", key: "settings.models.title", hints: ["model"] },
+  { name: "agents", key: "settings.agentBehaviour.subtab.agents", hints: ["modes"] },
+  { name: "variant", key: "prompt.thinking.tooltip", hints: ["variants", "reasoning", "thinking"] },
+  { name: "compact", key: "command.session.compact", hints: ["smol", "condense"] },
+  { name: "help", hints: [] },
+  { name: "settings", key: "sidebar.topBar.settings", hints: [] },
   { name: "reload", key: "common.reloadDescription", hints: ["refresh"] },
 ] as const
 
@@ -24,34 +25,31 @@ export function slashActions(handlers: SlashHandlers, t: (key: string) => string
   return ACTIONS.flatMap((action): SlashEntry[] => {
     const run = handlers[action.name]
     if (!run) return []
-    return [{ kind: "action", name: action.name, description: t(action.key), hints: [...action.hints], run }]
+    const description = "key" in action ? t(action.key) : undefined
+    return [{ kind: "action", name: action.name, description, hints: [...action.hints], run }]
   })
 }
 
+// The scope word of the command name already says what the row does, so a scope has no description to translate.
 const SCOPES = [
-  { scope: "worktree", key: "prompt.slash.review.worktree", hints: [] },
-  { scope: "uncommitted", key: "prompt.slash.review.uncommitted", hints: [] },
-  { scope: "staged", key: "prompt.slash.review.staged", hints: [] },
-  { scope: "unpushed", key: "prompt.slash.review.unpushed", hints: [] },
-  { scope: "branch", key: "prompt.slash.review.branch", hints: [] },
-  { scope: "quick", key: "prompt.slash.review.quick", hints: ["--quick", "fast"] },
+  { scope: "worktree", hints: [] },
+  { scope: "uncommitted", hints: [] },
+  { scope: "staged", hints: [] },
+  { scope: "unpushed", hints: [] },
+  { scope: "branch", hints: [] },
+  { scope: "quick", hints: ["--quick", "fast"] },
 ] as const
 
 /**
  * The nested scopes of the server `/review` command, which reads the scope word as the first argument. The worktree
  * scope needs Agent Manager worktree metadata, so it is listed only for a worktree session.
  */
-export function reviewScopes(
-  commands: readonly CommandInfo[],
-  worktree: boolean,
-  t: (key: string) => string,
-): SlashEntry[] {
+export function reviewScopes(commands: readonly CommandInfo[], worktree: boolean): SlashEntry[] {
   const command = commands.find((item) => item.name === "review")
   if (!command) return []
   return SCOPES.filter((item) => worktree || item.scope !== "worktree").map((item) => ({
     kind: "command",
     name: `review ${item.scope}`,
-    description: t(item.key),
     hints: [...item.hints],
     command,
     args: item.scope,

@@ -81,20 +81,15 @@ export type SlashMenuState = ReturnType<typeof createSlashMenu>
 export function SlashMenu(props: { menu: SlashMenuState; onSelect: (entry: SlashEntry) => void }) {
   const language = useLanguage()
   let list: HTMLDivElement | undefined
+  // Actions, then server commands, then skills, the same order the keyboard index follows.
   const groups = createMemo(() => {
     const all = props.menu.results()
-    const kinds = [
-      { kind: "action", label: language.t("prompt.slash.group.actions") },
-      { kind: "command", label: language.t("prompt.slash.group.commands") },
-      { kind: "skill", label: language.t("prompt.slash.group.skills") },
-    ] as const
-    return kinds
-      .map((item) => ({
-        label: item.label,
-        offset: all.findIndex((entry) => entry.kind === item.kind),
-        items: all.filter((entry) => entry.kind === item.kind),
+    return (["action", "command", "skill"] as const)
+      .map((kind) => ({
+        offset: all.findIndex((entry) => entry.kind === kind),
+        items: all.filter((entry) => entry.kind === kind),
       }))
-      .filter((item) => item.items.length > 0)
+      .filter((group) => group.items.length > 0)
   })
   // Keep the active row visible while the arrow keys move through a list taller than the dropdown.
   createEffect(
@@ -106,7 +101,7 @@ export function SlashMenu(props: { menu: SlashMenuState; onSelect: (entry: Slash
     <div class="slash-command-dropdown" role="listbox" ref={list}>
       <Show
         when={props.menu.results().length > 0}
-        fallback={<div class="slash-command-empty">{language.t("prompt.slash.empty")}</div>}
+        fallback={<div class="slash-command-empty">{language.t("chat.search.noResults")}</div>}
       >
         <For each={groups()}>
           {(group, position) => (
@@ -114,7 +109,6 @@ export function SlashMenu(props: { menu: SlashMenuState; onSelect: (entry: Slash
               <Show when={position() > 0}>
                 <div class="slash-command-separator" />
               </Show>
-              <div class="slash-command-group-label">{group.label}</div>
               <For each={group.items}>
                 {(entry, row) => (
                   <div

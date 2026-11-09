@@ -132,7 +132,8 @@ function score(entry: SlashEntry, lower: string) {
   if (name === lower) return 3
   if (name.startsWith(lower)) return 2
   if (name.includes(lower)) return 1
-  // A child's description is not matched: free review guidance after the command would select a scope on Enter.
+  // Only a root entry matches its description: free guidance typed after a command keeps the menu closed, so Enter
+  // sends it instead of selecting a child.
   if (!nested(entry) && entry.description?.toLowerCase().includes(lower)) return 1
   if (entry.hints.some((hint) => hint.toLowerCase().includes(lower))) return 1
   return 0

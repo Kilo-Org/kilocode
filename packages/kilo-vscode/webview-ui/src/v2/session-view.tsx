@@ -336,7 +336,7 @@ export function SessionView(props: {
       actions: slashActions(handlers(), language.t),
       // Goal mode needs its own composer state and banner, which this client does not have yet.
       commands: catalog.commands().filter((command) => command.name !== "goal"),
-      nested: reviewScopes(catalog.commands(), props.worktree === true, language.t),
+      nested: reviewScopes(catalog.commands(), props.worktree === true),
       skills: catalog.skills(),
     }),
   )

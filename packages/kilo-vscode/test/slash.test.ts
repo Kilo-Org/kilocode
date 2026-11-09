@@ -56,7 +56,7 @@ describe("slash catalog merge", () => {
   })
 
   test("lists review scopes only under a review command, and worktree only for a worktree", () => {
-    const local = reviewScopes(commands, false, (key) => key)
+    const local = reviewScopes(commands, false)
     expect(names(local)).toEqual([
       "review uncommitted",
       "review staged",
@@ -64,8 +64,8 @@ describe("slash catalog merge", () => {
       "review branch",
       "review quick",
     ])
-    expect(names(reviewScopes(commands, true, (key) => key))[0]).toBe("review worktree")
-    expect(reviewScopes([], true, (key) => key)).toEqual([])
+    expect(names(reviewScopes(commands, true))[0]).toBe("review worktree")
+    expect(reviewScopes([], true)).toEqual([])
     const orphan = [action("memory show")]
     expect(names(mergeCatalog({ actions: orphan, commands, nested: local, skills: [] }))).not.toContain("memory show")
     expect(names(mergeCatalog({ actions: [], commands, nested: local, skills: [] }))).toContain("review staged")
@@ -76,7 +76,7 @@ describe("slash actions", () => {
   test("lists only the actions this surface handles, in menu order", () => {
     const list = slashActions({ reload: () => {}, new: () => {}, compact: undefined }, (key) => `t:${key}`)
     expect(list.map((entry) => [entry.name, entry.description, entry.hints])).toEqual([
-      ["new", "t:prompt.slash.new", ["clear"]],
+      ["new", "t:command.session.new", ["clear"]],
       ["reload", "t:common.reloadDescription", ["refresh"]],
     ])
   })
@@ -86,7 +86,7 @@ describe("slash matching", () => {
   const entries = mergeCatalog({
     actions: [action("new", ["clear"])],
     commands,
-    nested: reviewScopes(commands, false, (key) => key).filter((entry) => /staged|quick/.test(entry.name)),
+    nested: reviewScopes(commands, false).filter((entry) => /staged|quick/.test(entry.name)),
     skills: [skill("reviewer", "second opinion"), skill("pdf", "read a deploy log")],
   })
 
@@ -120,11 +120,19 @@ describe("slash matching", () => {
     expect(names(matchSlash(entries, "review q"))).toEqual(["review quick"])
     expect(names(matchSlash(entries, "review fast"))).toEqual(["review quick"])
     expect(slashQuery(entries, "/review --quick")).toBe("review --quick")
-    // Free guidance that only appears in a scope description keeps the menu closed, so Enter sends it.
+    // Only a root entry matches its description, so free guidance typed after a command keeps the menu closed.
     const described = mergeCatalog({
       actions: [],
       commands,
-      nested: reviewScopes(commands, false, () => "Review the current branch"),
+      nested: [
+        {
+          kind: "command",
+          name: "review branch",
+          description: "Review the current branch",
+          hints: [],
+          command: commands[1]!,
+        },
+      ],
       skills: [],
     })
     expect(slashQuery(described, "/review the")).toBeUndefined()
@@ -245,7 +253,7 @@ describe("slash dispatch", () => {
 
   test("a review scope runs the review command with the scope as its first argument", async () => {
     const run = deps()
-    const scope = reviewScopes(commands, true, (key) => key).find((item) => item.name === "review worktree")!
+    const scope = reviewScopes(commands, true).find((item) => item.name === "review worktree")!
     await dispatchSlash({ entry: scope, args: "focus on tests" }, run.value)
     expect(run.calls).toEqual([
       ["switchModel", high],
