@@ -3,18 +3,20 @@ import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test"
 import { CodeIndexOllamaEmbedder } from "../../../../src/indexing/embedders/ollama"
 
 const mockFetch = mock() as unknown as typeof fetch
-global.fetch = mockFetch
+const originalFetch = global.fetch
 
 describe("CodeIndexOllamaEmbedder", () => {
   let embedder: CodeIndexOllamaEmbedder
 
   beforeEach(() => {
+    global.fetch = mockFetch
     ;(mockFetch as any).mockReset()
 
     embedder = new CodeIndexOllamaEmbedder("http://localhost:11434", "nomic-embed-text")
   })
 
   afterEach(() => {
+    global.fetch = originalFetch
     ;(mockFetch as any).mockReset()
   })
 

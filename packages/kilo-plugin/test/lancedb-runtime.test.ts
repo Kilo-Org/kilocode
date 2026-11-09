@@ -14,7 +14,7 @@ afterEach(async () => {
   installed.length = 0
   if (previous === undefined) delete process.env[env]
   if (previous !== undefined) process.env[env] = previous
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true, maxRetries: 5 })))
 })
 
 // An npm installer that records the request and lays out a package with a `main` entry.

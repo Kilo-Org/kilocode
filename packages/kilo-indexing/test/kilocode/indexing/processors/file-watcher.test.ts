@@ -387,7 +387,7 @@ describe("FileWatcher", () => {
       expect(result.status).toBe("skipped")
       expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 })
@@ -519,7 +519,7 @@ describe("FileWatcher subscription", () => {
     } finally {
       await watcher.shutdown()
       await rm(alias, { force: true })
-      await rm(real, { recursive: true, force: true })
+      await rm(real, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -546,8 +546,8 @@ describe("FileWatcher subscription", () => {
       expect(cache.getHash(file)).toBeUndefined()
     } finally {
       await watcher.shutdown()
-      await rm(root, { recursive: true, force: true })
-      await rm(outside, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
+      await rm(outside, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -572,7 +572,7 @@ describe("FileWatcher subscription", () => {
       expect(cache.getHash(file)).not.toBe(hash)
     } finally {
       await watcher.shutdown()
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -608,7 +608,7 @@ describe("FileWatcher subscription", () => {
       expect(Object.keys(cache.getAllHashes()).sort()).toEqual([moved, sibling].sort())
       expect(store.deletions).toEqual([[file]])
 
-      await rm(next, { recursive: true })
+      await rm(next, { recursive: true, force: true, maxRetries: 5 })
       await mkdir(next)
       const replacement = path.join(next, "replacement.md")
       await writeFile(replacement, "replacement content ".repeat(30))
@@ -620,14 +620,14 @@ describe("FileWatcher subscription", () => {
       expect(Object.keys(cache.getAllHashes()).sort()).toEqual([replacement, sibling].sort())
       expect(store.deletions).toEqual([[file], [moved]])
 
-      await rm(next, { recursive: true })
+      await rm(next, { recursive: true, force: true, maxRetries: 5 })
       backend.emit([{ path: next, type: "delete" }])
       await drain()
       expect(Object.keys(cache.getAllHashes())).toEqual([sibling])
       expect(store.deletions).toEqual([[file], [moved], [replacement]])
     } finally {
       await watcher.shutdown()
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -667,7 +667,7 @@ describe("FileWatcher subscription", () => {
       expect(backend.lastIgnore).toEqual(expect.arrayContaining(["**/node_modules", "**/.venv", "pkg/**/build"]))
       await watcher.shutdown()
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -686,7 +686,7 @@ describe("FileWatcher subscription", () => {
       expect(backend.lastIgnore).toContain("**/node_modules")
       await watcher.shutdown()
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 
@@ -709,7 +709,7 @@ describe("FileWatcher subscription", () => {
       // No negation glob and nothing derived from the "!scope" tree.
       expect(globs.some((g) => g.startsWith("!") || g.includes("!scope") || g.includes("cache"))).toBe(false)
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 

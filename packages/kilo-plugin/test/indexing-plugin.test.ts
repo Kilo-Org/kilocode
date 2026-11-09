@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, test } from "bun:test"
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
@@ -19,7 +19,9 @@ import { IndexingRuntime } from "../src/indexing/runtime"
 const dirs: string[] = []
 // A shell inside VS Code exports KILO_PLATFORM=vscode, which gates indexing on consent.
 const platform = process.env.KILO_PLATFORM
-delete process.env.KILO_PLATFORM
+beforeEach(() => {
+  delete process.env.KILO_PLATFORM
+})
 afterAll(() => {
   if (platform !== undefined) process.env.KILO_PLATFORM = platform
 })
@@ -27,7 +29,7 @@ afterEach(async () => {
   delete process.env.KILO_PLATFORM
   IndexingRuntime.resetConsent()
   IndexingWorker.override()
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true, maxRetries: 5 })))
 })
 
 type Editor = {

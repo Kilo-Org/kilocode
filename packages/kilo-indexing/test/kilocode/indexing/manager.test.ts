@@ -220,7 +220,7 @@ describe("CodeIndexManager", () => {
       expect(requests).toEqual([{ authorization: null, apiKey: null }])
     } finally {
       server.stop(true)
-      await rm(root, { recursive: true, force: true })
+      await rm(root, { recursive: true, force: true, maxRetries: 5 })
     }
   })
 

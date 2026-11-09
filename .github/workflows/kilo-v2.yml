@@ -476,9 +476,10 @@ jobs:
         working-directory: packages/kilo-cli
         run: bun test test/sandbox.test.ts
 
+      # `bun run test` keeps the package's own test flags, such as its timeout, in every lane.
       - name: Test the Kilo plugin
         working-directory: packages/kilo-plugin
-        run: bun test
+        run: bun run test
 
       - name: Test the Kilo Flows plugin
         working-directory: packages/kilo-flows-plugin
@@ -497,7 +498,7 @@ jobs:
 
       - name: Test the VS Code extension
         working-directory: packages/kilo-vscode
-        run: bun test
+        run: bun run test
 
       # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
       - name: Startup ratchet

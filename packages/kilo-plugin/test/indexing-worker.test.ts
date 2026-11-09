@@ -7,7 +7,7 @@ import { IndexingWorker } from "../src/indexing/indexing-worker-client"
 
 async function tmpdir() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-indexing-worker-"))
-  return { path: dir, [Symbol.asyncDispose]: () => rm(dir, { recursive: true, force: true }) }
+  return { path: dir, [Symbol.asyncDispose]: () => rm(dir, { recursive: true, force: true, maxRetries: 5 }) }
 }
 
 test("runs indexing engine requests in its worker", async () => {

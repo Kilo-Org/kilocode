@@ -15,7 +15,7 @@ describe("loadIgnore", () => {
     if (!root) {
       return
     }
-    await rm(root, { recursive: true, force: true })
+    await rm(root, { recursive: true, force: true, maxRetries: 5 })
   })
 
   test("loads root .kilocodeignore in addition to root .gitignore", async () => {

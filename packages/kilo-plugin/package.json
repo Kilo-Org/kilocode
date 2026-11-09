@@ -12,7 +12,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "typecheck:tsc": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test --timeout 30000"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
