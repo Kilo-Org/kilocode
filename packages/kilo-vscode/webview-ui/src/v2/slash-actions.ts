@@ -9,6 +9,7 @@ const ACTIONS = [
   { name: "sessions", key: "sidebar.topBar.history", hints: ["resume", "continue", "history"] },
   { name: "models", key: "settings.models.title", hints: ["model"] },
   { name: "agents", key: "settings.agentBehaviour.subtab.agents", hints: ["modes"] },
+  { name: "marketplace", key: "sidebar.topBar.marketplace", hints: ["extensions", "skills", "mcp"] },
   { name: "variant", key: "prompt.thinking.tooltip", hints: ["variants", "reasoning", "thinking"] },
   { name: "compact", key: "command.session.compact", hints: ["smol", "condense"] },
   { name: "caffeinate", key: "agentManager.caffeination.toggle", hints: ["caffenate", "keep-awake", "awake", "sleep"] },

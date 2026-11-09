@@ -1,5 +1,5 @@
 // A singleton editor-area webview panel for one Kilo root view: one tab, revealed again when it exists and restored
-// after a window reload. The Settings and Profile panels share this host wiring.
+// after a window reload. The Settings, Profile and Marketplace panels share this host wiring.
 import { Uri, ViewColumn, window, type Disposable, type ExtensionContext, type WebviewPanel } from "vscode"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { wire } from "./chat"
@@ -12,10 +12,12 @@ export function editorPanel(input: {
   directory: string
   type: string
   title: string
-  view: "settings" | "profile"
+  view: "settings" | "profile" | "marketplace"
   handle?: (message: ToHost) => boolean
   onReset?: () => void
   agentManager?: () => SettingsHandler
+  /** Extra window globals of the webview bundle. */
+  globals?: Record<string, unknown>
 }) {
   const state: { panel?: WebviewPanel; post?: (message: ToWebview) => void } = {}
   const serializer: Disposable = window.registerWebviewPanelSerializer(input.type, {
@@ -62,6 +64,7 @@ export function editorPanel(input: {
       handle: input.handle,
       onReset: input.onReset,
       agentManager: input.agentManager,
+      globals: input.globals,
     })
     state.post = surface.post
     panel.onDidDispose(() => {

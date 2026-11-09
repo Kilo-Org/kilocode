@@ -270,6 +270,7 @@ export type Ui =
   | { type: "saveImage"; dataUrl: string; filename: string }
   | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
+  | { type: "openMarketplace" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
