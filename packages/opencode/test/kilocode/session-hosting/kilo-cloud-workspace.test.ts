@@ -1,6 +1,6 @@
 import { Auth } from "@/auth"
 import { PROVIDER, provider as kiloCloud } from "@/kilocode/session-hosting/kilo-cloud"
-import { deletionDispatched } from "@/kilocode/session-hosting/types"
+import { CreateWorkspaceInput, deletionDispatched } from "@/kilocode/session-hosting/types"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { expect } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
@@ -348,6 +348,19 @@ const membership = (cloud: ReturnType<typeof client>) => {
 const repo = { type: "github" as const, repo: "Kilo-Org/kilocode", branch: "main" }
 const agent = { mode: "build", model: "test/fake" }
 
+it.effect("accepts an omitted workspace profile and validates any explicit profile UUID", () =>
+  Effect.sync(() => {
+    const decode = Schema.decodeUnknownSync(CreateWorkspaceInput)
+    const input = { repository: repo, prompt: "Do the thing", agent, operationKey: OPERATION, messageID: MESSAGE }
+    expect(decode(input)).not.toHaveProperty("profile")
+    expect(decode({ ...input, profile: undefined }).profile).toBeUndefined()
+    expect(decode({ ...input, profile: { id: PROFILE } }).profile).toEqual({ id: PROFILE })
+    for (const profile of [null, {}, { id: "" }, { id: "not-a-uuid" }]) {
+      expect(() => decode({ ...input, profile })).toThrow()
+    }
+  }),
+)
+
 it.effect("lists workspaces with cursor preservation and an organization scope", () => {
   const app = harness()
   return Effect.gen(function* () {
@@ -629,6 +642,53 @@ it.effect("replays an idempotent create and rejects a different message identity
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
+it.effect("omits an unselected profile from Cloud workspace creation", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const result = yield* client(app.url).createWorkspace({
+      repository: repo,
+      prompt: "Do the thing",
+      agent,
+      operationKey: OPERATION,
+      messageID: MESSAGE,
+    })
+    expect(result.workspace).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
+    expect(app.calls).toHaveLength(1)
+    const call = app.calls.at(-1)
+    expect(call).toMatchObject({ method: "POST", path: "/trpc/createHostedWorkspace" })
+    expect(JSON.parse(call?.body ?? "{}")).toEqual({
+      operationKey: OPERATION,
+      clientProvenance: "agent-manager",
+      repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
+      message: { prompt: "Do the thing", id: MESSAGE },
+      agent,
+    })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("rejects invalid explicit profile UUIDs before creating a Cloud workspace", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    for (const id of ["", "not-a-uuid"]) {
+      expect(
+        yield* cloud
+          .createWorkspace({
+            repository: repo,
+            profile: { id },
+            prompt: "Do the thing",
+            agent,
+            operationKey: OPERATION,
+            messageID: MESSAGE,
+          })
+          .pipe(Effect.flip),
+      ).toMatchObject({ code: "invalid_request", retryable: false })
+    }
+    expect(app.calls).toHaveLength(0)
+    expect(app.state.creates).toBe(0)
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
 it.effect("starts another session in a workspace and rejects a mismatched workspace identity", () => {
   const app = harness()
   return Effect.gen(function* () {
@@ -658,6 +718,7 @@ it.effect("starts another session in a workspace and rejects a mismatched worksp
     })
     expect(body).not.toHaveProperty("kilocodeOrganizationId")
     expect(body).not.toHaveProperty("options")
+    expect(body).not.toHaveProperty("profile")
 
     // The Cloud input is strict and carries the organization at the top level, unlike start and createWorkspace.
     app.calls.length = 0
@@ -788,12 +849,14 @@ it.effect("sets and clears the personal default profile with the caller identity
   return Effect.gen(function* () {
     const cloud = client(app.url)
 
-    expect(yield* cloud.setWorkspacePersonalDefaultProfile({ id: PROFILE })).toEqual({ success: true })
+    expect(yield* cloud.setWorkspacePersonalDefaultProfile({ id: PROFILE, organizationID: ORG })).toEqual({
+      success: true,
+    })
     expect(yield* cloud.clearWorkspacePersonalDefaultProfile({ id: PROFILE })).toEqual({ success: true })
 
     expect(app.calls).toMatchObject([
-      { method: "POST", path: "/trpc/setHostedWorkspacePersonalDefaultProfile" },
-      { method: "POST", path: "/trpc/clearHostedWorkspacePersonalDefaultProfile" },
+      { method: "POST", path: "/trpc/setHostedWorkspacePersonalDefaultProfile", org: ORG },
+      { method: "POST", path: "/trpc/clearHostedWorkspacePersonalDefaultProfile", org: null },
     ])
     expect(JSON.parse(app.calls[0].body)).toEqual({ profileId: PROFILE })
     expect(JSON.parse(app.calls[1].body)).toEqual({ profileId: PROFILE })

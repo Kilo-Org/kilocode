@@ -1042,7 +1042,7 @@ export function provider(options: Options): Provider {
   ): Effect.Effect<WorkspaceProfileDefaultResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(WorkspaceProfileDefaultInput, raw)
-      const auth = yield* resolve()
+      const auth = yield* resolve(input.organizationID)
       const body = yield* mutation(auth, procedure, { profileId: input.id })
       const parsed = z.object({ success: z.literal(true) }).safeParse(body)
       if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported profile default result"))
