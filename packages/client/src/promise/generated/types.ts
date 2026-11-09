@@ -339,6 +339,8 @@ export type ScheduleConditionCode = { type: "code"; code: string }
 
 export type ScheduleActionPrompt = { type: "prompt"; prompt: string }
 
+export type ScheduleActionHook = { type: "hook"; prompt: string }
+
 export type ScheduleStatus = "active" | "paused" | "done"
 
 export type ScheduleOutcome = "fired" | "late" | "checked" | "expired" | "skipped" | "disabled" | "failed"
@@ -926,7 +928,7 @@ export type ScheduleWhenEvery = { type: "every"; every: ScheduleDuration; tz?: s
 
 export type ScheduleCondition = ScheduleConditionShell | ScheduleConditionCode
 
-export type ScheduleAction = ScheduleActionPrompt
+export type ScheduleAction = ScheduleActionPrompt | ScheduleActionHook
 
 export type ArtifactProvider = { id: string; name: string; capabilities: Array<ArtifactCapability>; default: boolean }
 

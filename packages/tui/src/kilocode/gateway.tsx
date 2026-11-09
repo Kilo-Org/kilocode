@@ -15,6 +15,7 @@ import { aboutCommand } from "./dialog-about"
 import { indexingCommand } from "./components/dialog-indexing"
 import { watchIndexingWarnings } from "./indexing-notifications"
 import { privacyMode } from "./pii"
+import { privacyLayer } from "./privacy"
 import { sidebarIndexing } from "./plugins/sidebar-indexing"
 
 type Profile = typeof KiloGatewayRpc.Definition.methods.profile.output.Type
@@ -164,6 +165,7 @@ export default Plugin.define({
             indexingCommand(context),
           ],
         }))
+        privacyLayer(context)
         return null
       },
     })

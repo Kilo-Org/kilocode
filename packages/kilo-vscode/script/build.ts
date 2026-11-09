@@ -170,6 +170,18 @@ const results = await Promise.all([
     loader: { ".woff": "file", ".woff2": "file", ".ttf": "file" },
     plugins: [dedupe, pierre, markdown, sprite, css, solid],
   }),
+  // The Settings and Profile panels split their lazy tabs and the message-part stack into chunks, so their first
+  // paint does not download the Markdown, code and diff graph. The chat bundle stays one IIFE file.
+  build({
+    ...common,
+    entryPoints: { settings: path.join(root, "webview-ui/settings/index.tsx") },
+    outdir: dist,
+    format: "esm",
+    splitting: true,
+    platform: "browser",
+    loader: { ".woff": "file", ".woff2": "file", ".ttf": "file" },
+    plugins: [dedupe, pierre, markdown, sprite, css, solid],
+  }),
   build({
     ...common,
     entryPoints: ["kilo-shiki-worker"],

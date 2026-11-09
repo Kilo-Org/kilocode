@@ -20,17 +20,25 @@ export function createConnectionMetadata(input: {
   api: OpenCodeClient
   connection: Connection
   subscribe: (type: typeof catalogEvent, handler: () => void) => () => void
+  /**
+   * Reads the Kilo Gateway catalog status. The Settings and Profile panels pass false, because neither shows the
+   * catalog failure and Settings must not issue the request.
+   */
+  chat?: boolean
 }) {
   const [directory, setDirectory] = createSignal<string>()
   const [version, setVersion] = createSignal("")
   const [handshake, setHandshake] = createSignal("")
   const models: KiloModelsCache = createKiloModelsCache()
-  const kiloFailure = createKiloCatalog({
-    api: input.api,
-    directory,
-    status: input.connection.status,
-    on: input.subscribe,
-  })
+  const kiloFailure =
+    input.chat === false
+      ? () => undefined
+      : createKiloCatalog({
+          api: input.api,
+          directory,
+          status: input.connection.status,
+          on: input.subscribe,
+        })
   const state = { handshake: 0 }
 
   const readHandshake = (dir: string) => {

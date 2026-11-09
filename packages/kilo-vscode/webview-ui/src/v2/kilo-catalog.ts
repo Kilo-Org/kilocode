@@ -1,6 +1,6 @@
 // The failure reason of the Kilo Gateway catalog: the `kilocode.gateway` RPC reports it with `catalog.status` and
-// publishes each change as its `catalog` event. Settings show it under the Kilo row and in the provider catalog, and
-// the model pickers show it when no model is left.
+// publishes each change as its `catalog` event. The chat model pickers show it when no model is left. The Settings
+// panel does not read it, because its Kilo row already reports the connection state from the integration data.
 import type { OpenCodeClient } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"

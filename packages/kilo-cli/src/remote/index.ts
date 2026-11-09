@@ -10,31 +10,54 @@ import { OPENCODE_VERSION } from "@opencode/cli/version"
 import { Global } from "@opencode/util/global"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
-import { Effect, Layer, Schedule, Stream } from "effect"
+import { Effect, Exit, Layer, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { parse, type ParseError } from "jsonc-parser"
 import { randomUUID } from "node:crypto"
+import { realpath } from "node:fs/promises"
 import { hostname } from "node:os"
 import path from "node:path"
 import { RemoteCommands } from "./command-executor"
 import { SessionSync } from "../session-sync"
 import { RemoteSocket, type RemoteEnvelope } from "./socket"
 
-export type Options = { launchDirectory?: string; kind?: "cli" | "remote"; enabled?: boolean; background?: boolean }
+export type Options = {
+  launchDirectory?: string
+  kind?: "cli" | "remote"
+  enabled?: boolean
+  background?: boolean
+  idleTimeout?: number
+}
 
-// Presence advertisements accept at most 100 sessions per process.
+// Both host roots and total owned sessions are bounded per server process.
 const capacity = 100
 
-export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
+type Claim = { directory: string; watched: () => boolean; release: () => void }
+type HostRuntime = KiloRemote.Runtime & { retireIfIdle: (before: number) => boolean }
+
+const decodeSessionCarrier = Schema.decodeUnknownOption(
+  Schema.Union([
+    Schema.Struct({ sessionID: Session.ID }),
+    Schema.Struct({ form: Schema.Struct({ sessionID: Session.ID }) }),
+  ]),
+)
+
+const makeRuntime = Effect.fn("Remote.makeRuntime")(function* (
+  options: Options & { launchDirectory: string },
+  ownership: Map<string, Claim>,
+  detached: Set<string>,
+  pending: Map<string, string>,
+) {
   const sync = yield* KiloSessionSync.Service
   const bus = yield* Bus.Service
   const global = yield* Global.Service
-  const launchDirectory = path.resolve(options.launchDirectory ?? process.cwd())
+  const native = yield* Session.Service
+  const launchDirectory = options.launchDirectory
+  const kind = options.kind ?? (process.env.KILO_REMOTE_KIND === "remote" ? "remote" : "cli")
   const instanceID = randomUUID()
   const startedAt = Date.now()
   const sessions = new Map<string, RemoteSocket>()
   const owned = new Set<string>()
   const watched = new Set<string>()
-  const detached = new Set<string>()
   const states = new Map<string, string>()
   const stateQueue = new Map<string, Promise<void>>()
   let account: string | undefined
@@ -45,20 +68,138 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
   let accepting = options.enabled ?? process.env.KILO_REMOTE === "1"
   let initialized = options.enabled !== undefined || process.env.KILO_REMOTE === "1"
   let closed = false
+  let requests = 0
+  let lastActivity = Date.now()
   const run = Effect.runPromiseWith(yield* Effect.context<never>())
-  const context = () => run(sync.live(launchDirectory, [...owned]))
+  const activity = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E | RemoteCommands.Failure, R> =>
+    Effect.suspend<A, E | RemoteCommands.Failure, R>(() => {
+      if (closed)
+        return Effect.fail(new RemoteCommands.Failure({ code: "remote_unavailable", message: "Remote host is closed" }))
+      requests++
+      lastActivity = Date.now()
+      return effect.pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            requests--
+            lastActivity = Date.now()
+          }),
+        ),
+      )
+    })
+  const clearPending = () => {
+    for (const [sessionID, root] of pending) {
+      if (root === launchDirectory) pending.delete(sessionID)
+    }
+  }
+  const context = async () => {
+    const selected = [...owned]
+    for (const [sessionID, root] of pending) {
+      if (root === launchDirectory && !owned.has(sessionID)) selected.push(sessionID)
+    }
+    const result = await run(sync.live(launchDirectory, selected).pipe(Effect.result))
+    if (result._tag === "Success") return result.success
+    if (
+      [
+        "forbidden",
+        "http_403",
+        "account_blocked",
+        "organization_access_denied",
+        "account_changed",
+        "consent_conflict",
+        "session_deleted",
+        "session_not_found",
+        "creator_mismatch",
+        "source_conflict",
+      ].includes(result.failure.code)
+    )
+      clearPending()
+    throw new RemoteCommands.Failure(result.failure)
+  }
+  const release = (sessionID: string, transport = true) => {
+    if (owned.has(sessionID) || watched.has(sessionID) || pending.get(sessionID) === launchDirectory)
+      lastActivity = Date.now()
+    if (ownership.get(sessionID)?.directory === launchDirectory) ownership.delete(sessionID)
+    if (pending.get(sessionID) === launchDirectory) pending.delete(sessionID)
+    owned.delete(sessionID)
+    if (transport) {
+      watched.delete(sessionID)
+      sessions.get(sessionID)?.stop()
+      sessions.delete(sessionID)
+      states.delete(sessionID)
+    }
+    heartbeatAt = 0
+  }
   const commands = yield* RemoteCommands.make({
     launchDirectory,
     organizationID: () => current?.organizationID,
     userID: () => current?.userID,
-    canCreate: () => owned.size < capacity || [...owned].some((sessionID) => !watched.has(sessionID)),
+    canCreate: () => ownership.size < capacity || [...ownership.values()].some((claim) => !claim.watched()),
     detach: (sessionID) =>
       Effect.sync(() => {
         if (detached.size === capacity) detached.delete(detached.values().next().value!)
         detached.add(sessionID)
-        owned.delete(sessionID)
-        heartbeatAt = 0
+        release(sessionID, false)
       }),
+  })
+  const own = Effect.fn("Remote.own")(function* (sessionID: string) {
+    if (detached.has(sessionID)) return
+    if (owned.has(sessionID)) {
+      owned.delete(sessionID)
+      owned.add(sessionID)
+      const claim = ownership.get(sessionID)
+      if (claim) {
+        ownership.delete(sessionID)
+        ownership.set(sessionID, claim)
+      }
+      return
+    }
+    const session = yield* native
+      .get(Session.ID.make(sessionID))
+      .pipe(
+        Effect.mapError(
+          () => new RemoteCommands.Failure({ code: "session_not_found", message: "Session is unavailable" }),
+        ),
+      )
+    const directory = yield* Effect.tryPromise({
+      try: () => realpath(session.location.directory),
+      catch: () =>
+        new RemoteCommands.Failure({ code: "directory_unavailable", message: "Session directory is unavailable" }),
+    })
+    if (closed)
+      return yield* Effect.fail(
+        new RemoteCommands.Failure({ code: "remote_unavailable", message: "Remote host is closed" }),
+      )
+    const relative = path.relative(launchDirectory, directory)
+    if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(`..${path.sep}`))
+      return yield* Effect.fail(
+        new RemoteCommands.Failure({
+          code: "directory_escape",
+          message: "Directory must be inside the launch directory",
+        }),
+      )
+    const previous = ownership.get(sessionID)
+    if (previous && previous.directory !== launchDirectory)
+      return yield* Effect.fail(
+        new RemoteCommands.Failure({
+          code: "session_owned",
+          message: "Session is already attached to another workspace host",
+        }),
+      )
+    if (!previous && ownership.size === capacity) {
+      const oldest = [...ownership.values()].find((claim) => !claim.watched())
+      if (!oldest)
+        return yield* Effect.fail(
+          new RemoteCommands.Failure({ code: "remote_capacity", message: "Remote session capacity is full" }),
+        )
+      oldest.release()
+    }
+    owned.add(sessionID)
+    ownership.set(sessionID, {
+      directory: launchDirectory,
+      watched: () => watched.has(sessionID),
+      release: () => release(sessionID),
+    })
+    heartbeatAt = 0
   })
   const stop = () => {
     presence?.stop()
@@ -205,85 +346,130 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
       const socket = new RemoteSocket({
         url: url.href,
         ticket: () => run(sync.liveTicket(sessionID)),
-        onFrame: (frame) => sessionFrame(sessionID, frame),
+        onFrame: (frame) => run(activity(Effect.tryPromise(() => sessionFrame(sessionID, frame)))),
         terminalReplacement: true,
       })
       sessions.set(sessionID, socket)
       socket.start()
     }
   }
-  const tick = Effect.tryPromise({
-    try: async () => {
-      if (closed) return
-      if (!initialized) {
-        for (const name of KiloConfigFiles.names) {
-          const file = Bun.file(path.join(global.config, name))
-          if (!(await file.exists())) continue
-          const errors: ParseError[] = []
-          const value = parse(await file.text(), errors, { allowTrailingComma: true, allowEmptyContent: true })
-          if (errors.length || (value?.remote_control !== undefined && typeof value.remote_control !== "boolean"))
-            throw new Error("Cannot read remote_control configuration")
-          if (value?.remote_control !== undefined) accepting = value.remote_control
+  const reconcileLock = yield* Semaphore.make(1)
+  const poll = (sessionID?: string) =>
+    Effect.tryPromise({
+      try: async () => {
+        if (closed) {
+          if (sessionID)
+            throw new RemoteCommands.Failure({ code: "remote_unavailable", message: "Remote host is closed" })
+          return
         }
-        initialized = true
-      }
-      const next = await context()
-      if (closed) return
-      if (next?.identity !== current?.identity) stop()
-      // A transient sync miss keeps ownership and detach fences; only an actual account change clears them.
-      if (next && account !== undefined && next.identity !== account) {
-        owned.clear()
-        detached.clear()
-      }
-      if (next) account = next.identity
-      current = next
-      if (!current) {
-        stop()
-        return
-      }
-      if (!presence) {
-        const url = new URL("/v1/presence", current.destination)
-        url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
-        presence = new RemoteSocket({
-          url: url.href,
-          ticket: () => run(sync.liveTicket()),
-          onFrame: presenceFrame,
-          onState: (connected) => {
-            if (connected) heartbeatAt = 0
-          },
-        })
-        presence.start()
-      }
-      await reconcileSessions()
-      const liveSessions = current.sessions
-        .filter((session) => owned.has(session.sessionID) && !detached.has(session.sessionID))
-        .slice(0, capacity)
-        .map((session) => session.sessionID)
-      const membership = liveSessions.join("\0")
-      if (membership !== advertised) heartbeatAt = 0
-      if (Date.now() - heartbeatAt < 30_000) return
-      if (
-        presence.send({
-          type: "heartbeat",
-          instanceID,
-          advertisement: {
-            name: hostname(),
-            projectName: path.basename(launchDirectory),
-            version: OPENCODE_VERSION,
-            kind: options.kind ?? (process.env.KILO_REMOTE_KIND === "remote" ? "remote" : "cli"),
-            startedAt,
-            gitBranch: null,
-            capabilities: ["native-live-v1", ...(accepting ? ["remote-control-v1"] : [])],
-            sessions: liveSessions,
-          },
-        })
-      ) {
-        advertised = membership
-        heartbeatAt = Date.now()
-      }
-    },
-    catch: () => new Error("Remote connection is unavailable"),
-  }).pipe(Effect.catch(() => Effect.sync(stop)))
+        if (!initialized) {
+          for (const name of KiloConfigFiles.names) {
+            const file = Bun.file(path.join(global.config, name))
+            if (!(await file.exists())) continue
+            const errors: ParseError[] = []
+            const value = parse(await file.text(), errors, { allowTrailingComma: true, allowEmptyContent: true })
+            if (errors.length || (value?.remote_control !== undefined && typeof value.remote_control !== "boolean"))
+              throw new Error("Cannot read remote_control configuration")
+            if (value?.remote_control !== undefined) accepting = value.remote_control
+          }
+          initialized = true
+        }
+        const next = await context()
+        if (closed) {
+          if (sessionID)
+            throw new RemoteCommands.Failure({ code: "remote_unavailable", message: "Remote host is closed" })
+          return
+        }
+        if (next?.identity !== current?.identity) stop()
+        // Credentials rotate independently of the verified account/tenant that owns sessions.
+        const owner = next && JSON.stringify([next.userID, next.tenant.type, next.tenant.id, next.organizationID])
+        if (owner && account !== undefined && owner !== account) {
+          for (const id of owned) release(id)
+          detached.clear()
+          clearPending()
+          if (sessionID) pending.set(sessionID, launchDirectory)
+        }
+        if (owner) account = owner
+        current = next
+        if (!current) {
+          stop()
+          if (sessionID)
+            throw new RemoteCommands.Failure({
+              code: "remote_unavailable",
+              message: "Session synchronization is unavailable",
+            })
+          return
+        }
+        // Retry only local ownership admission, never a queued command or other mutation.
+        // Candidates stay pending until identity readiness succeeds or admission is terminal.
+        for (const [candidate, root] of pending) {
+          if (root !== launchDirectory) continue
+          if (detached.has(candidate)) {
+            pending.delete(candidate)
+            continue
+          }
+          const admitted = await run(own(candidate).pipe(Effect.result))
+          if (admitted._tag === "Success") pending.delete(candidate)
+          else {
+            if (
+              ["session_not_found", "directory_unavailable", "directory_escape", "session_owned"].includes(
+                admitted.failure.code,
+              )
+            )
+              pending.delete(candidate)
+            if (candidate === sessionID) throw admitted.failure
+          }
+        }
+        if (!presence) {
+          const url = new URL("/v1/presence", current.destination)
+          url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
+          presence = new RemoteSocket({
+            url: url.href,
+            ticket: () => run(sync.liveTicket()),
+            onFrame: (frame) =>
+              frame.channel === "commands" || frame.type === "watch"
+                ? run(activity(Effect.tryPromise(() => presenceFrame(frame))))
+                : presenceFrame(frame),
+            onState: (connected) => {
+              if (connected) heartbeatAt = 0
+            },
+          })
+          presence.start()
+        }
+        await reconcileSessions()
+        const liveSessions = current.sessions
+          .filter((session) => owned.has(session.sessionID) && !detached.has(session.sessionID))
+          .slice(0, capacity)
+          .map((session) => session.sessionID)
+        const membership = liveSessions.join("\0")
+        if (membership !== advertised) heartbeatAt = 0
+        if (Date.now() - heartbeatAt < 30_000) return
+        if (
+          presence.send({
+            type: "heartbeat",
+            instanceID,
+            advertisement: {
+              name: hostname(),
+              projectName: path.basename(launchDirectory),
+              version: OPENCODE_VERSION,
+              kind,
+              startedAt,
+              gitBranch: null,
+              capabilities: ["native-live-v1", ...(accepting ? ["remote-control-v1"] : [])],
+              sessions: liveSessions,
+            },
+          })
+        ) {
+          advertised = membership
+          heartbeatAt = Date.now()
+        }
+      },
+      catch: (cause) =>
+        cause instanceof RemoteCommands.Failure
+          ? cause
+          : new RemoteCommands.Failure({ code: "remote_unavailable", message: "Remote connection is unavailable" }),
+    })
+  const tick = reconcileLock.withPermit(poll()).pipe(Effect.catch(() => Effect.sync(stop)))
   yield* bus.subscribe().pipe(
     Stream.runForEach((event) =>
       Effect.tryPromise(async () => {
@@ -293,26 +479,10 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
         if (typeof sessionID !== "string") return
         if (event.type === "session.deleted") {
           detached.delete(sessionID)
-          owned.delete(sessionID)
-          watched.delete(sessionID)
-          sessions.get(sessionID)?.stop()
-          sessions.delete(sessionID)
-          states.delete(sessionID)
-          heartbeatAt = 0
+          release(sessionID)
           return
         }
-        if (detached.has(sessionID)) return
-        if (!owned.has(sessionID) && owned.size === capacity) {
-          const oldest = [...owned].find((id) => !watched.has(id))
-          if (!oldest) return
-          owned.delete(oldest)
-          sessions.get(oldest)?.stop()
-          sessions.delete(oldest)
-          states.delete(oldest)
-        }
-        owned.delete(sessionID)
-        owned.add(sessionID)
-        if (!watched.has(sessionID)) return
+        if (detached.has(sessionID) || !owned.has(sessionID) || !watched.has(sessionID)) return
         await publish(sessionID, event.type, event)
         if (
           event.type.startsWith("session.execution.") ||
@@ -327,13 +497,48 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
   yield* Effect.addFinalizer(() =>
     Effect.sync(() => {
       closed = true
+      for (const sessionID of owned) release(sessionID)
+      clearPending()
       stop()
     }),
   )
   if (options.background !== false) yield* tick.pipe(Effect.repeat(Schedule.spaced(1000)), Effect.forkScoped)
   const status = () => Effect.sync(() => ({ enabled: accepting, connected: presence?.connected ?? false }))
-  return KiloRemote.Service.of({
-    status,
+  return {
+    status: () => activity(status()),
+    retireIfIdle: (before: number) => {
+      if (kind === "remote" || requests || owned.size || watched.size || stateQueue.size || lastActivity > before)
+        return false
+      for (const root of pending.values()) {
+        if (root === launchDirectory) return false
+      }
+      // Fence new requests before the manager yields to close this host's scope.
+      closed = true
+      return true
+    },
+    attach: (sessionID: string) =>
+      reconcileLock
+        .withPermit(
+          Effect.gen(function* () {
+            if (detached.has(sessionID)) return yield* status()
+            const root = pending.get(sessionID)
+            if (root && root !== launchDirectory)
+              return yield* Effect.fail(
+                new RemoteCommands.Failure({
+                  code: "session_owned",
+                  message: "Session is pending in another workspace host",
+                }),
+              )
+            if (!root && pending.size === capacity)
+              return yield* Effect.fail(
+                new RemoteCommands.Failure({ code: "remote_capacity", message: "Remote attachment capacity is full" }),
+              )
+            pending.set(sessionID, launchDirectory)
+            yield* poll(sessionID)
+            return yield* status()
+          }),
+        )
+        .pipe(activity),
     enable: () =>
       Effect.gen(function* () {
         if (accepting) return yield* status()
@@ -345,7 +550,7 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
         heartbeatAt = 0
         yield* tick
         return yield* status()
-      }),
+      }).pipe(activity),
     disable: () =>
       Effect.gen(function* () {
         if (!accepting) return yield* status()
@@ -354,8 +559,108 @@ export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
         heartbeatAt = 0
         yield* tick
         return yield* status()
-      }),
-  })
+      }).pipe(activity),
+  } satisfies HostRuntime
+})
+
+// The managed server deliberately runs from $HOME and can serve several TUI workspaces.
+// Roots come from authenticated RPC locations or authoritative local session metadata, never daemon cwd.
+export const make = Effect.fn("Remote.make")(function* (options: Options = {}) {
+  const scope = yield* Effect.scope
+  const bus = yield* Bus.Service
+  const native = yield* Session.Service
+  const services = yield* Effect.context<
+    | KiloSessionSync.Service
+    | Bus.Service
+    | Database.Service
+    | Session.Service
+    | Instance.Service
+    | LocationServiceMap.Service
+    | Global.Service
+  >()
+  yield* RemoteCommands.initialize()
+  const lock = yield* Semaphore.make(1)
+  const ownership = new Map<string, Claim>()
+  const detached = new Set<string>()
+  const pending = new Map<string, string>()
+  const runtimes = new Map<string, { runtime: HostRuntime; scope: Scope.Closeable }>()
+  const collect = () =>
+    Effect.gen(function* () {
+      const before = Date.now() - (options.idleTimeout ?? 60_000)
+      for (const [root, entry] of runtimes) {
+        if (!entry.runtime.retireIfIdle(before)) continue
+        runtimes.delete(root)
+        yield* Scope.close(entry.scope, Exit.void)
+      }
+    })
+  const open = (directory: string, continuation = false) =>
+    lock.withPermit(
+      Effect.gen(function* () {
+        const root = yield* Effect.tryPromise({
+          try: () => realpath(path.resolve(options.launchDirectory ?? directory)),
+          catch: () =>
+            new RemoteCommands.Failure({ code: "directory_unavailable", message: "Launch directory is unavailable" }),
+        })
+        yield* collect()
+        const existing = runtimes.get(root)
+        if (existing) return existing.runtime
+        if (continuation) {
+          let match: { root: string; host: KiloRemote.Runtime } | undefined
+          for (const [candidate, { runtime: host }] of runtimes) {
+            const relative = path.relative(candidate, root)
+            if (
+              !path.isAbsolute(relative) &&
+              relative !== ".." &&
+              !relative.startsWith(`..${path.sep}`) &&
+              (!match || candidate.length > match.root.length)
+            )
+              match = { root: candidate, host }
+          }
+          if (match) return match.host
+        }
+        if (runtimes.size === capacity)
+          return yield* Effect.fail(
+            new RemoteCommands.Failure({ code: "remote_capacity", message: "Remote workspace host capacity is full" }),
+          )
+        const hostScope = yield* Scope.fork(scope)
+        const runtime = yield* makeRuntime({ ...options, launchDirectory: root }, ownership, detached, pending).pipe(
+          // Override the captured manager Scope inside its provided service context.
+          Effect.provideService(Scope.Scope, hostScope),
+          Effect.provide(services),
+          Effect.onExit((exit) => (Exit.isFailure(exit) ? Scope.close(hostScope, exit) : Effect.void)),
+        )
+        runtimes.set(root, { runtime, scope: hostScope })
+        return runtime
+      }).pipe(Effect.uninterruptible),
+    )
+  const service = KiloRemote.Service.of({ forDirectory: open })
+  // Non-TUI callers still become live on their first local session event. A restored
+  // TUI explicitly attaches through RPC instead, without waiting for such an event.
+  yield* bus.subscribe().pipe(
+    Stream.runForEach((event) =>
+      Effect.gen(function* () {
+        if (event.type === "session.deleted") return
+        const carrier = decodeSessionCarrier(event.data)
+        if (carrier._tag === "None") return
+        const sessionID = "sessionID" in carrier.value ? carrier.value.sessionID : carrier.value.form.sessionID
+        if (detached.has(sessionID) || pending.has(sessionID)) return
+        const claim = ownership.get(sessionID)
+        if (claim) {
+          ownership.delete(sessionID)
+          ownership.set(sessionID, claim)
+          return
+        }
+        const session = yield* native.get(sessionID)
+        const directory = yield* Effect.tryPromise(() => realpath(session.location.directory))
+        const host = yield* open(directory, true)
+        yield* host.attach(sessionID)
+      }).pipe(Effect.catch(() => Effect.void)),
+    ),
+    Effect.forkScoped,
+  )
+  if (options.background !== false)
+    yield* lock.withPermit(collect()).pipe(Effect.repeat(Schedule.spaced(30_000)), Effect.forkScoped)
+  return service
 })
 
 export const configured = (options: Options = {}) =>
