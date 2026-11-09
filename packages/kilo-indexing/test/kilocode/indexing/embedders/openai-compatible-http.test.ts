@@ -107,7 +107,7 @@ for (const endpoint of ["/v1", "/v1/embeddings"]) {
         const timer = setTimeout(() => {
           child.kill()
           gate.reject(new Error("Dimension validation subprocess timed out"))
-        }, 30_000)
+        }, 15_000)
         const [exit, , stderr] = await Promise.race([
           Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]),
           gate.promise,
@@ -128,6 +128,6 @@ for (const endpoint of ["/v1", "/v1/embeddings"]) {
         server.stop(true)
         await rm(root, { recursive: true, force: true, maxRetries: 5 })
       }
-    }, 60_000)
+    }, 20_000)
   }
 }

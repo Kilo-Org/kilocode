@@ -300,7 +300,7 @@ describe("FileWatcher", () => {
     data.handleFileEvent(file, "create")
     const result = await Promise.race([
       summary,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("watcher did not report failure")), 20_000)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("watcher did not report failure")), 2000)),
     ])
 
     expect(result.batchError?.message).toBe("cache flush failed")

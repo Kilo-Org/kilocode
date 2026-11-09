@@ -65,7 +65,7 @@ const boot =
         if (value === undefined) delete process.env[key]
         else process.env[key] = value
       })
-      await rm(root, { recursive: true, force: true, maxRetries: 5 })
+      await rm(root, { recursive: true, force: true })
     }
   }
 
@@ -82,7 +82,7 @@ test(
     expect(settled).toMatchObject({ state: "Disabled", message: "Indexing disabled." })
     expect(await rpc(client).warnings({}, { location: { directory } })).toEqual([])
   }),
-  60_000,
+  30_000,
 )
 
 test(
@@ -101,7 +101,7 @@ test(
       expect(JSON.stringify(entries)).not.toContain("searchMaxResults")
     },
   ),
-  60_000,
+  30_000,
 )
 
 test(
@@ -112,7 +112,7 @@ test(
     const status = await waitFor(() => rpc(client).status({}, { location: { directory } }), (value) => value.state !== "In Progress")
     expect(status.state).toBe("Disabled")
   }),
-  60_000,
+  30_000,
 )
 
 test(
@@ -130,7 +130,7 @@ test(
     const status = await waitFor(() => rpc(client).status({}, { location: { directory } }), (value) => value.state === "Error")
     expect(status.state).toBe("Error")
   }),
-  60_000,
+  30_000,
 )
 
 test(
@@ -151,7 +151,7 @@ test(
     await rpc(client)["config.update"]({ scope: "project", config: {} }, { location: { directory } })
     expect(await Bun.file(path.join(directory, "kilo2.json")).json()).toEqual({ privacy_mode: false })
   }),
-  60_000,
+  30_000,
 )
 
 test(
@@ -167,7 +167,7 @@ test(
       expect(status.message).toStartWith("Failed to initialize:")
     },
   ),
-  60_000,
+  30_000,
 )
 
 test(
@@ -176,11 +176,11 @@ test(
     const status = await rpc(client).consent({ enabled: true }, { location: { directory } })
     expect(status.state).not.toBe("Error")
   }),
-  60_000,
+  30_000,
 )
 
 async function waitFor<A>(read: () => Promise<A>, done: (value: A) => boolean) {
-  for (const _ of Array.from({ length: 300 })) {
+  for (const _ of Array.from({ length: 100 })) {
     const value = await read()
     if (done(value)) return value
     await Bun.sleep(100)

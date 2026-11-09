@@ -143,4 +143,4 @@ test("a new worktree session in VS Code gets semantic_search from the consent of
 
   const state = await run({ provider: "ollama" }, linked)
   expect(state.added).toEqual(["semantic_search"])
-}, 60_000)
+})
