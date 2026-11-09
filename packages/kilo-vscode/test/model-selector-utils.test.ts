@@ -230,6 +230,26 @@ describe("rankModelSearch", () => {
     })
     expect(result[0]?.name).toBe("GPT-5.6 Sol")
   })
+
+  it("keeps a dotted version together and ignores the same digit in another version", () => {
+    const models: PickerModel[] = [
+      { id: "claude-opus-4-5", name: "Claude Opus 4.5", providerID: "anthropic", providerName: "Anthropic" },
+      { id: "claude-opus-5", name: "Claude Opus 5", providerID: "anthropic", providerName: "Anthropic" },
+      { id: "claude-opus-5-5", name: "Claude Opus 5.5", providerID: "anthropic", providerName: "Anthropic" },
+      { id: "anthropic/claude-opus-5.5", name: "Anthropic: Claude Opus 5.5", providerID: "kilo", providerName: "Kilo" },
+    ]
+    expect(rankModelSearch(models, "5.5").map((model) => model.name)).toEqual([
+      "Anthropic: Claude Opus 5.5",
+      "Claude Opus 5.5",
+    ])
+  })
+
+  it("matches a version query against a hyphenated model id", () => {
+    const models: PickerModel[] = [
+      { id: "claude-opus-5-5", name: "Claude Opus", providerID: "anthropic", providerName: "Anthropic" },
+    ]
+    expect(rankModelSearch(models, "5.5").map((model) => model.id)).toEqual(["claude-opus-5-5"])
+  })
 })
 
 describe("mostUsedModels", () => {
