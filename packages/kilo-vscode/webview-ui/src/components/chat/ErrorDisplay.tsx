@@ -14,6 +14,7 @@ import {
   parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
+  isUpstreamTimeoutError,
 } from "../../utils/errorUtils"
 import ProviderConnectDialog from "../settings/ProviderConnectDialog"
 
@@ -125,6 +126,26 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
             {oauth() ? t("settings.providers.action.signInChatGPT") : t("common.connect")}
           </Button>
         </div>
+      </Match>
+      <Match when={isUpstreamTimeoutError(parsed())}>
+        <Card variant="error" class="error-card" role="alert">
+          <div class="error-card-body">
+            <Icon name="warning" size="small" />
+            <div class="error-card-message">
+              <strong>{t("error.upstreamTimeout.title")}</strong>
+              <p class="error-card-hint">{t("error.upstreamTimeout.description")}</p>
+            </div>
+          </div>
+          <Collapsible variant="ghost">
+            <Collapsible.Trigger class="error-details-trigger">
+              <span>{t("error.details.show")}</span>
+              <Collapsible.Arrow />
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <ErrorDetails error={props.error} />
+            </Collapsible.Content>
+          </Collapsible>
+        </Card>
       </Match>
     </Switch>
   )

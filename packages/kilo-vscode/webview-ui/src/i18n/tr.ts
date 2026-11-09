@@ -288,13 +288,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
-  "provider.failure.unauthorized": "Kimlik bilgileri reddedildi (HTTP {{status}}). Tekrar giriş yapın.",
-  "provider.failure.unauthorizedNoStatus": "Kimlik bilgileri reddedildi. Tekrar giriş yapın.",
-  "provider.failure.unauthenticated": "Giriş yapılmadı.",
-  "provider.failure.network": "Sağlayıcıya ulaşılamadı. Bağlantınızı kontrol edin.",
-  "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
-  "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+  "error.upstreamTimeout.title": "Yapay zeka sağlayıcısının sunucusu zaman aşımına uğradı",
+  "error.upstreamTimeout.description":
+    "Bu genellikle sunucu tarafındaki geçici bir sorundur; kurulumunuzla ilgili bir sorun değildir. Kilo bu tür hataları otomatik olarak yeniden dener, ancak sorun devam ederse mesajınızı tekrar gönderin veya sağlayıcınızın durum sayfasını kontrol edin.",
 
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",

@@ -290,13 +290,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
-  "provider.failure.unauthorized": "자격 증명이 거부되었습니다 (HTTP {{status}}). 다시 로그인하세요.",
-  "provider.failure.unauthorizedNoStatus": "자격 증명이 거부되었습니다. 다시 로그인하세요.",
-  "provider.failure.unauthenticated": "로그인되어 있지 않습니다.",
-  "provider.failure.network": "공급자에 연결할 수 없습니다. 연결 상태를 확인하세요.",
-  "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "공급자 오류.",
-  "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+  "error.upstreamTimeout.title": "AI 제공업체 서버 시간이 초과되었습니다",
+  "error.upstreamTimeout.description":
+    "대개 서버 측의 일시적인 문제이며 설정 문제가 아닙니다. Kilo가 이 오류를 자동으로 다시 시도하지만, 계속 발생한다면 메시지를 다시 보내거나 제공업체의 상태 페이지를 확인하세요.",
 
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",

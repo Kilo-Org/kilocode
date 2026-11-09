@@ -292,13 +292,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
-  "provider.failure.unauthorized": "Inloggegevens geweigerd (HTTP {{status}}). Meld je opnieuw aan.",
-  "provider.failure.unauthorizedNoStatus": "Inloggegevens geweigerd. Meld je opnieuw aan.",
-  "provider.failure.unauthenticated": "Niet aangemeld.",
-  "provider.failure.network": "Kan de provider niet bereiken. Controleer je verbinding.",
-  "provider.failure.http": "Providerfout (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Providerfout.",
-  "provider.failure.schema": "Onverwacht antwoord van de provider.",
+  "error.upstreamTimeout.title": "De server van de AI-provider had een time-out",
+  "error.upstreamTimeout.description":
+    "Dit is meestal een tijdelijk probleem aan de serverkant en geen probleem met je instellingen. Kilo probeert dit soort fouten automatisch opnieuw, maar als het blijft gebeuren, stuur je bericht opnieuw of controleer je de statuspagina van je provider.",
 
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
