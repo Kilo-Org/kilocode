@@ -97,6 +97,8 @@ export type ContentPartProps = {
   forceOpen?: boolean
   /** A recovery action for a failed tool call, such as a link to the settings that own the failure. */
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
+  /** Instruction files the read loaded beside this message. */
+  loadedFiles?: readonly string[]
 }
 
 export function ContentPart(props: ContentPartProps) {
@@ -137,6 +139,7 @@ export function ContentPart(props: ContentPartProps) {
             actions={props.actions}
             hideDetails={props.hideDetails}
             forceOpen={props.forceOpen}
+            loadedFiles={props.loadedFiles}
             errorAction={props.errorAction}
           />
         )}
@@ -427,6 +430,8 @@ export type ToolProps = {
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  /** Instruction files the read loaded, already resolved by the client. */
+  loadedFiles?: readonly string[]
 }
 
 const renderers: Record<string, Component<ToolProps>> = {}
@@ -449,6 +454,7 @@ function ToolContent(props: {
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  loadedFiles?: readonly string[]
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }) {
   const i18n = useI18n()
@@ -496,6 +502,7 @@ function ToolContent(props: {
                 actions={props.actions}
                 hideDetails={props.hideDetails}
                 forceOpen={props.forceOpen}
+                loadedFiles={props.loadedFiles}
               />
             </ToolApprovalProvider>
           }
@@ -643,6 +650,20 @@ ToolRegistry.register({
             />
           }
         />
+        <Show when={props.loadedFiles?.length}>
+          <For each={props.loadedFiles}>
+            {(file) => (
+              <div
+                data-component="tool-loaded-file"
+                classList={{ clickable: !!props.actions?.openFile }}
+                onClick={props.actions?.openFile ? () => props.actions?.openFile?.(file) : undefined}
+              >
+                <Icon name="enter" size="small" />
+                <span>{`${i18n.t("ui.tool.loaded")} ${relativizeProjectPath(file, props.directory)}`}</span>
+              </div>
+            )}
+          </For>
+        </Show>
         <Show when={images().length}>
           <div data-slot="tool-read-images">
             <For each={images()}>
