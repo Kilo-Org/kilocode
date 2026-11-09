@@ -179,6 +179,7 @@ class SessionUi(
     private val app = app
     private val sessions = sessions
     private val workspace = workspace
+    private val hostedRef = ref is SessionRef.Hosted
     private var opening = ref != null
     private var pending = false
     private var preparation: String? =
@@ -869,7 +870,7 @@ class SessionUi(
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
-            startMcpAuthTracking()
+            if (!hosted && !hostedRef) startMcpAuthTracking()
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
                 Telemetry.send(
@@ -927,7 +928,7 @@ class SessionUi(
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
                     prompt.refreshHighlights()
-                    cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
+                    if (!hosted && !hostedRef) cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
@@ -1792,6 +1793,7 @@ class SessionUi(
      * than polled.
      */
     private fun startMcpAuthTracking() {
+        if (hosted || hostedRef) return
         val auth = service<KiloMcpAuthService>()
         issuesJob?.cancel()
         issuesJob = cs.launch {
