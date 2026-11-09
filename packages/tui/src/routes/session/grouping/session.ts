@@ -1,4 +1,5 @@
 import type { SessionMessageAssistant, SessionMessageInfo } from "@opencode/client"
+import { readInstructionPaths } from "@opencode/schema/session-instruction-paths" // kilocode_change(read-loaded-files) - shared decoder for the TUI and VS Code clients
 import { groupEntries, mergeGroups, splitGroups, type GroupNode } from "./tree"
 
 export type PartRef = {
@@ -99,11 +100,7 @@ export function messagePath(message: SessionMessageInfo, verbosity: Verbosity): 
 /** Files loaded by an instruction message; one load can carry several. */
 export function instructionPaths(message: SessionMessageInfo | undefined): string[] {
   if (message?.type !== "synthetic") return []
-  const instruction = message.metadata?.instruction
-  if (typeof instruction !== "object" || instruction === null || Array.isArray(instruction)) return []
-  return Array.isArray(instruction.paths)
-    ? instruction.paths.filter((path): path is string => typeof path === "string")
-    : []
+  return [...readInstructionPaths(message.metadata)] // kilocode_change(read-loaded-files) - shared decoder for the TUI and VS Code clients
 }
 
 /** Production rules only: keep lifecycle/status decisions outside the tree engine. */

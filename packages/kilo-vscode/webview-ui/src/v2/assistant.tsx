@@ -27,6 +27,8 @@ export function AssistantMessage(props: {
   message: SessionMessageAssistant
   session: string
   actions?: ToolActions
+  /** Instruction files one read loaded, by read tool part ID. */
+  instructionFiles?: (partID: string) => readonly string[] | undefined
   /** The task-timeline bar under the pointer or keyboard focus, if any. */
   highlight?: () => TimelineHighlight | undefined
   /** The message content rendered by this row. A large message is split across several rows. */
@@ -191,6 +193,7 @@ export function AssistantMessage(props: {
                         defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
                         reasoningDisplay={displaySettings().reasoningDisplay}
                         actions={props.actions}
+                        loadedFiles={item.type === "tool" ? props.instructionFiles?.(item.id) : undefined}
                         errorAction={errorAction}
                       />
                     )}
