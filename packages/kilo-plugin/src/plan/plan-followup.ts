@@ -1,0 +1,163 @@
+export * as PlanFollowup from "./plan-followup"
+
+// Core internals with no public surface: the ask/answer service behind the native question tool, the durable
+// session store the turn is read from, and the global event bus for the client session switch.
+import { Bus } from "@opencode/core/bus"
+import { Form } from "@opencode/core/form"
+import { SessionStore } from "@opencode/core/session/store"
+import type { Context } from "@opencode/plugin/effect/plugin"
+import { Agent } from "@opencode/schema/agent"
+import type { Session } from "@opencode/schema/session"
+import type { SessionMessage } from "@opencode/schema/session-message"
+import { TuiEvent } from "@opencode/schema/tui-event"
+import { dict } from "@kilocode/kilo-i18n/en"
+import { Effect, Option } from "effect"
+import { hints } from "../question"
+import { PlanFile } from "./plan-file"
+
+export const NEW_SESSION = dict["plan.followup.answer.newSession"]
+export const CONTINUE = dict["plan.followup.answer.continue"]
+export const KEEP_REFINING = dict["plan.followup.answer.keepRefining"]
+
+const code = Agent.ID.make("code")
+
+const OPTIONS = [
+  {
+    label: NEW_SESSION,
+    description: dict["plan.followup.answer.newSession.description"],
+    labelKey: "plan.followup.answer.newSession",
+    descriptionKey: "plan.followup.answer.newSession.description",
+  },
+  {
+    label: CONTINUE,
+    description: dict["plan.followup.answer.continue.description"],
+    labelKey: "plan.followup.answer.continue",
+    descriptionKey: "plan.followup.answer.continue.description",
+    mode: "code",
+  },
+  {
+    label: KEEP_REFINING,
+    description: dict["plan.followup.answer.keepRefining.description"],
+    labelKey: "plan.followup.answer.keepRefining",
+    descriptionKey: "plan.followup.answer.keepRefining.description",
+    mode: "plan",
+  },
+]
+
+const FIELDS: Form.Fields = [
+  {
+    key: "q0",
+    title: dict["plan.followup.header"],
+    description: dict["plan.followup.question"],
+    type: "string",
+    options: OPTIONS.map((option) => ({
+      value: option.label,
+      label: option.label,
+      description: option.description,
+    })),
+    custom: true,
+  },
+]
+
+const METADATA = {
+  kind: "question",
+  kilocode: {
+    options: hints([
+      {
+        question: dict["plan.followup.question"],
+        header: dict["plan.followup.header"],
+        options: OPTIONS,
+      },
+    ]),
+  },
+}
+
+/**
+ * Asks the post-plan question when the turn that just ended called `plan_exit`, and acts on the answer:
+ * implement in a fresh session, switch this session to Code and implement, or keep refining in Plan.
+ */
+export const ask = Effect.fn(function* (input: {
+  ctx: Context
+  store: SessionStore.Interface
+  bus: Bus.Interface
+  handled: Set<string>
+  roots: readonly string[]
+  sessionID: Session.ID
+}) {
+  const forms = yield* Effect.serviceOption(Form.Service)
+  if (Option.isNone(forms)) return
+
+  const session = yield* input.store.get(input.sessionID)
+  if (!session) return
+
+  const messages = yield* input.store.messages({ sessionID: input.sessionID, order: "asc" })
+  const exit = planExit(messages)
+  if (!exit || input.handled.has(exit.turn)) return
+  input.handled.add(exit.turn)
+  // The part's agent, not the session's current agent: the user can switch agents after plan_exit.
+  if (!PlanFile.isPlanner(exit.agent)) return
+
+  const state = yield* forms.value.ask({
+    sessionID: input.sessionID,
+    title: dict["plan.followup.header"],
+    metadata: METADATA,
+    fields: FIELDS,
+  })
+  if (state.status !== "answered") return
+
+  const value = state.answer["q0"]
+  const answer = typeof value === "string" ? value.trim() : ""
+  if (!answer) return
+
+  if (answer === NEW_SESSION) return yield* newSession(input, session, messages, exit.part)
+  if (answer === CONTINUE) {
+    yield* input.ctx.session.switchAgent({ sessionID: input.sessionID, agent: code })
+    yield* input.ctx.session.prompt({ sessionID: input.sessionID, text: "Implement the plan above." })
+    return
+  }
+  const text = answer === KEEP_REFINING ? "Continue refining the plan. Do not implement yet." : answer
+  yield* input.ctx.session.prompt({ sessionID: input.sessionID, text })
+})
+
+/** The completed plan_exit call of the turn that just ended, keyed by the user message that began it. */
+function planExit(messages: ReadonlyArray<SessionMessage.Info>) {
+  const lastUser = messages.findLastIndex((message) => message.type === "user")
+  if (lastUser === -1) return undefined
+  const turn = messages[lastUser]
+  if (!turn) return undefined
+  for (const message of messages.slice(lastUser + 1).toReversed()) {
+    if (message.type !== "assistant") continue
+    for (const part of message.content.toReversed()) {
+      if (part.type !== "tool" || part.name !== "plan_exit" || part.state.status !== "completed") continue
+      return { turn: turn.id, part, agent: message.agent }
+    }
+  }
+}
+
+const newSession = Effect.fn(function* (
+  input: { ctx: Context; bus: Bus.Interface; roots: readonly string[] },
+  session: Session.Info,
+  messages: ReadonlyArray<SessionMessage.Info>,
+  exit: SessionMessage.AssistantTool,
+) {
+  const metadata = exit.state.status === "completed" ? exit.state.metadata : undefined
+  const named = metadata?.["plan"]
+  const target =
+    typeof named === "string"
+      ? PlanFile.resolve(named, input.ctx.location, input.ctx.location.directory, input.roots)
+      : PlanFile.locate(
+          PlanFile.defaultPath(session, input.ctx.location),
+          messages,
+          input.ctx.location,
+          undefined,
+          input.roots,
+        )
+  const file = target ?? PlanFile.defaultPath(session, input.ctx.location)
+
+  const next = yield* input.ctx.session.create({ agent: code })
+  yield* input.bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
+  yield* input.ctx.session.prompt({
+    sessionID: next.id,
+    text: `Plan file: ${PlanFile.display(file, input.ctx.location)}\nRead this file first and treat it as the source of truth for implementation.`,
+  })
+})

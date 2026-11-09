@@ -8,9 +8,11 @@ import { ToolOutput } from "@opencode/core/tool-output"
 import { Wildcard } from "@opencode/core/util/wildcard"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
+import type { Location } from "@opencode/schema/location"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "../gateway/modes"
+import { PlanFile } from "../plan/plan-file"
 import { Effect, Option, Stream } from "effect"
 import path from "path"
 
@@ -164,7 +166,7 @@ const probe = Agent.ID.make("kilo-config-permissions")
 export const Plugin = define({
   id: "kilo.agent",
   effect: Effect.fn(function* (ctx) {
-    const guard = guards(yield* Global.Service)
+    const guard = guards(yield* Global.Service, ctx.location)
     // Agents that exist before user config. Only their catch-all edit rule describes them reliably.
     const builtins = new Set<string>()
 
@@ -176,7 +178,8 @@ export const Plugin = define({
       editor.update(code, (item) => {
         if (source) Object.assign(item, structuredClone(source))
         item.name = Agent.Name.make("Code")
-        item.permissions.push(...rules("shell", shell))
+        // Only the Plan agent runs the Kilo plan handoff; other agents must not expose plan_exit.
+        item.permissions.push(...rules("shell", shell), rule("kilo.plan_exit", "*", "deny"))
       })
       // kilo_port(unattributed:agent:6f9571fe6129)
       // kilo_port(unattributed:agent:a91ca8efa1b6)
@@ -192,7 +195,10 @@ export const Plugin = define({
         item.hidden = true
       })
 
-      if (editor.get(general)) editor.update(general, (item) => item.permissions.push(...rules("shell", shell)))
+      if (editor.get(general))
+        editor.update(general, (item) =>
+          item.permissions.push(...rules("shell", shell), rule("kilo.plan_exit", "*", "deny")),
+        )
 
       // Native Explore allows a broad shell. Append the read-only shell table so the later rules win
       // (evaluation takes the last match) and Explore keeps the read-only bash allowlist. The ceiling
@@ -298,7 +304,7 @@ export const Plugin = define({
 export const Ceiling = define({
   id: "kilo.agent.ceiling",
   effect: Effect.fn(function* (ctx) {
-    const guard = guards(yield* Global.Service)
+    const guard = guards(yield* Global.Service, ctx.location)
     yield* ctx.agent.transform((editor) => {
       // The global config rules, then the rules that later post plugins append to every agent (the
       // browser plugin's deny).
@@ -366,7 +372,7 @@ export const Ceiling = define({
 })
 
 /** Kilo rules for the agents whose limits config must not widen. */
-function guards(global: Global.Interface) {
+function guards(global: Global.Interface, location: Location.Info) {
   // Read-only agents still need the files where long tool and shell output is stored.
   const output = [ToolOutput.DIRECTORY, Shell.DIRECTORY].map((dir) =>
     rule("external_directory", path.join(global.data, dir, "*"), "allow"),
@@ -374,6 +380,17 @@ function guards(global: Global.Interface) {
   const read = rules("read", { "*": "allow", "*.env": "ask", "*.env.*": "ask", "*.env.example": "allow" })
   // The native Plan directory, which the native Plan reminder names.
   const plans = path.join(global.home, ".opencode", "plan", "*")
+  // The Kilo plan storage from the session's file base. The project-relative form is the workspace
+  // form for root sessions, the parent form for a session started in a subdirectory.
+  const planDirectory = PlanFile.directory(location)
+  const stored = [
+    path.join(path.relative(location.directory, planDirectory) || ".", "*.md"),
+    ".kilo2/plans/*.md",
+    "plans/*.md",
+    ".plans/*.md",
+    ".opencode/plans/*.md",
+    path.join(global.data, "plans", "*.md"),
+  ]
   const allow = (...actions: string[]) => actions.map((action) => rule(action, "*", "allow"))
   return {
     ask: [
@@ -387,14 +404,16 @@ function guards(global: Global.Interface) {
     ],
     plan: [
       rule("*", "*", "deny"),
-      ...allow("question", "skill", "subagent"),
+      ...allow("question", "skill", "subagent", "kilo.plan_exit"),
       rule("subagent", general, "deny"),
       ...rules("shell", readOnlyShell),
       ...read,
       ...allow("grep", "glob", "webfetch", "websearch"),
       ...output,
       rule("external_directory", plans, "allow"),
+      rule("external_directory", path.join(global.data, "plans", "*"), "allow"),
       rule("edit", "*", "deny"),
+      ...rules("edit", Object.fromEntries(stored.map((entry) => [entry, "allow" as const]))),
       rule("edit", plans, "allow"),
     ],
     orchestrator: [

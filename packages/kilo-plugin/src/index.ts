@@ -1,4 +1,6 @@
 import { KiloAgentPlugin } from "./agent"
+// The plan file, the plan_exit tool and the post-plan follow-up question live in one plugin.
+import { KiloPlanPlugin } from "./plan"
 import { KiloBranchNamePlugin } from "./branch-name"
 import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
@@ -52,6 +54,8 @@ export const KiloPlugins = [
   KiloHandshakePlugin,
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
+  // The plan_exit tool and the post-plan handoff question.
+  KiloPlanPlugin,
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
