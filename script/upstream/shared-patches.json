@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 101,
-    "markedLines": 1676,
+    "files": 104,
+    "markedLines": 1696,
     "unmarkedLines": 299,
     "deletedFiles": 0
   },
@@ -197,6 +197,18 @@
       "rung": 3,
       "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
       "unmarked": "JSON has no comments."
+    },
+    "packages/tui/src/component/dialog-theme-list.tsx": {
+      "rung": 4,
+      "seam": "Keep the picker's preview and Escape rollback in memory, so a slow config write or config reload cannot reapply the preview after cancel. Theme selection is TUI-local: the TUI plugin API has no theme picker or persistence hook, and the host runs in the server process. A generic seam would still need these call sites, so the four marked lines pass the optional persist argument."
+    },
+    "packages/tui/src/context/theme.tsx": {
+      "rung": 4,
+      "seam": "Add an optional `persist` argument to `Themes.set`, with upstream's persist-on-set default, so the picker can preview without writing cli.json. Theme state lives in the TUI process; neither the plugin API nor host composition can reach this provider, and a seam would need the same argument plus a new plugin surface for one consumer."
+    },
+    "packages/tui/test/context/theme.test.tsx": {
+      "rung": 4,
+      "seam": "Cover the theme-preview patch: a non-persisting set changes the active theme without writing the config. The behavior exists only in the patched shared provider, so the test sits next to upstream's theme context test rather than in a Kilo-owned file."
     },
     "packages/tui/src/component/dialog-integration.tsx": {
       "rung": 4,
