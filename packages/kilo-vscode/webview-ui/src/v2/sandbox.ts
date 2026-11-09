@@ -10,7 +10,7 @@ import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { sandboxControls } from "../components/settings/sandboxing"
 import { useV2 } from "./client"
-import { mergeStatus, type SandboxStatus } from "./sandbox-status"
+import { failureHandling, mergeStatus, type SandboxStatus } from "./sandbox-status"
 
 export type SandboxSupport = KiloSandboxRpc.Support
 
@@ -95,7 +95,10 @@ export function createSandbox(input: {
       setStatuses((current) => mergeStatus(current, sessionID, value))
     } catch (error: unknown) {
       if (token !== reads) return
-      if ((error as { type?: string } | undefined)?.type === "not_found") {
+      const handling = failureHandling(error)
+      // The sandbox is optional, so a server without the plugin must not report a failure on every session view.
+      if (handling === "unsupported") return
+      if (handling === "retry") {
         // A just-created session can still be missing for a moment, so retry a few times.
         if (attempts >= 2) return
         attempts++
