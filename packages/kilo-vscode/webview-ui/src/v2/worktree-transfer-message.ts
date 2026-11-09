@@ -13,6 +13,11 @@ export type WorktreeTransferState = { branch?: string; transferring: boolean; de
 
 export type WorktreeTransferResult = { state: WorktreeTransferState; refresh?: boolean; toast?: string }
 
+/** The idle state for a panel that switched projects: no branch and no transfer left from the previous project. */
+export function clearWorktreeTransfer(): WorktreeTransferState {
+  return { branch: undefined, transferring: false, detail: "" }
+}
+
 /**
  * Reduces one host message into worktree transfer state. Returns undefined for messages the transfer does not own,
  * including a branch answer for another project, so a stale answer cannot enable actions for the wrong workspace.

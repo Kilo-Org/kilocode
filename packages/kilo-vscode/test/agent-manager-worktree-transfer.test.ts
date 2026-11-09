@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  clearWorktreeTransfer,
   reduceWorktreeTransfer,
   type WorktreeTransferState,
 } from "../webview-ui/src/v2/worktree-transfer-message"
@@ -12,6 +13,10 @@ const options = {
 }
 
 describe("worktree transfer messages", () => {
+  test("a project switch drops the branch and any running transfer", () => {
+    expect(clearWorktreeTransfer()).toEqual({ branch: undefined, transferring: false, detail: "" })
+  })
+
   test("ignores a branch answer from another project", () => {
     expect(
       reduceWorktreeTransfer(

@@ -4,7 +4,7 @@ import { createSignal, onCleanup } from "solid-js"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
-import { reduceWorktreeTransfer, type HostMessage } from "./worktree-transfer-message"
+import { clearWorktreeTransfer, reduceWorktreeTransfer, type HostMessage } from "./worktree-transfer-message"
 
 /** `project` names the workspace whose branch the row acts on, so a late answer from another project is ignored. */
 export function createWorktreeTransfer(opts?: { project?: () => string | undefined }) {
@@ -15,8 +15,13 @@ export function createWorktreeTransfer(opts?: { project?: () => string | undefin
   const [transferring, setTransferring] = createSignal(false)
   const [detail, setDetail] = createSignal("")
   const request = () => vscode.postMessage({ type: "agentManager.requestRepoInfo" } as never)
-  // The panel calls this when it switches projects, so a branch from the previous project cannot stay visible.
-  const clear = () => setBranch(undefined)
+  // The panel calls this when it switches projects, so no branch or running transfer from the previous project stays.
+  const clear = () => {
+    const state = clearWorktreeTransfer()
+    setBranch(state.branch)
+    setTransferring(state.transferring)
+    setDetail(state.detail)
+  }
   onCleanup(
     vscode.onMessage((raw) => {
       const next = reduceWorktreeTransfer(
