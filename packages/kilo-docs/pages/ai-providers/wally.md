@@ -17,6 +17,8 @@ sidebar_label: Wally
 3. Choose a model ID. Model availability and pricing change, so check the live catalog instead of copying an old model list:
 
 ```bash
+export WALLY_API_KEY="your-api-key"
+
 curl https://inference.runanywhere.ai/v1/models \
   -H "Authorization: Bearer $WALLY_API_KEY"
 ```
