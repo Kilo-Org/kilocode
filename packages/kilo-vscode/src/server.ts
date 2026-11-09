@@ -53,6 +53,12 @@ const BROWSER = ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]
 const NOTEBOOK = ["KILO_NOTEBOOK_BROKER_URL", "KILO_NOTEBOOK_BROKER_TOKEN"]
 
 /**
+ * The Agent Manager RPC is answered by this extension. The server advertises the tool only when this host starts it,
+ * and an inherited value would advertise a tool that no host answers.
+ */
+const AGENT_MANAGER = ["KILO_AGENT_MANAGER_HOST"]
+
+/**
  * The bundled `bin/kilo2` when it exists. Otherwise, in a repository checkout, the isolated dev entry
  * `script/dev-isolated.ts` with its own profile: `KILO_V2_PROFILE`, or a `profile` directory in the extension storage.
  */
@@ -90,7 +96,8 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
           !PASSWORDS.includes(key) &&
           !MANAGED.includes(key) &&
           !BROWSER.includes(key) &&
-          !NOTEBOOK.includes(key),
+          !NOTEBOOK.includes(key) &&
+          !AGENT_MANAGER.includes(key),
       ),
     ),
     // The server trusts the OS certificate store, as VS Code does by default.
@@ -98,6 +105,8 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
     KILO_CLIENT: "vscode",
     // The indexing plugin gates on machine-local project consent only when the server runs for VS Code.
     KILO_PLATFORM: "vscode",
+    // Only the Agent Manager plugin reads this; it advertises the agent_manager tool when the extension is present.
+    KILO_AGENT_MANAGER_HOST: "1",
     ...extra,
   }
 }
