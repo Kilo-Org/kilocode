@@ -164,13 +164,14 @@ export function start(input: {
   const fail = (message: string) => {
     if (state.done) return
     state.done = true
-    clearTimeout(timer)
+    clearTimeout(timer.id)
     ready.reject(new Error([message, ...state.errors.slice(-20)].join("\n").trim()))
   }
-  const timer = setTimeout(() => {
+  const expire = () => {
     fail(`The Kilo server did not start within ${TIMEOUT / 1000} seconds.`)
     stop(child)
-  }, TIMEOUT)
+  }
+  const timer = { id: setTimeout(expire, TIMEOUT) }
 
   child.stdout?.on("data", (chunk: Buffer) => {
     state.output = (state.output + chunk.toString()).slice(-OUTPUT_LIMIT)
@@ -178,7 +179,7 @@ export function start(input: {
     if (!found || state.done) return
     state.done = true
     state.started = true
-    clearTimeout(timer)
+    clearTimeout(timer.id)
     ready.resolve({
       url: found,
       authorization: `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`,
@@ -188,6 +189,12 @@ export function start(input: {
   child.stderr?.on("data", (chunk: Buffer) => {
     const text = chunk.toString()
     input.log?.(text)
+    // The first start imports the Kilo v1 sessions before the server listens and reports progress every few seconds;
+    // the start only times out when the progress stops.
+    if (!state.done && importing(text)) {
+      clearTimeout(timer.id)
+      timer.id = setTimeout(expire, TIMEOUT)
+    }
     // Only startup errors are reported; keep the tail and stop collecting once the server is ready.
     if (!state.done) state.errors = [...state.errors.slice(-19), text]
   })
@@ -197,6 +204,11 @@ export function start(input: {
     fail(`The Kilo server exited during startup (${signal ?? `code ${code}`}).`)
   })
   return ready.promise
+}
+
+/** A progress line of the Kilo v1 session import the CLI host runs before the server starts. */
+export function importing(text: string) {
+  return text.includes("kilo2: importing Kilo v1 sessions")
 }
 
 /** Closes stdin, which stops the server. Signals the process group only when it does not exit in time. */

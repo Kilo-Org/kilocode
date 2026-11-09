@@ -5,7 +5,18 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, indexingEnvironment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
+import {
+  command,
+  environment,
+  importing,
+  indexingEnvironment,
+  manager,
+  parse,
+  serverHome,
+  settingsEnvironment,
+  start,
+  stop,
+} from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -30,6 +41,12 @@ describe("parse", () => {
   test("ignores other JSON and broken lines", () => {
     expect(parse('{"level":"info"}\n{not json\n{"url":"http://127.0.0.1:1"}\n')).toBe("http://127.0.0.1:1")
   })
+})
+
+test("importing recognizes the progress lines of the Kilo v1 session import, so a long first start does not time out", () => {
+  expect(importing("kilo2: importing Kilo v1 sessions 1200/20000\n")).toBe(true)
+  expect(importing("kilo2: importing Kilo v1 sessions in process 4242, waiting for it.\n")).toBe(true)
+  expect(importing("kilo2: could not copy the sessions of a to b\n")).toBe(false)
 })
 
 describe("command", () => {
@@ -101,7 +118,6 @@ test("environment drops inherited server passwords", () => {
   expect(env.OPENCODE_SERVER_PASSWORD).toBeUndefined()
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
 })
-
 
 describe("indexingEnvironment", () => {
   test("disables indexing when no workspace folder is open", () => {
