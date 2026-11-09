@@ -21,6 +21,7 @@ import { KiloPrivacyPlugin } from "./privacy"
 import { KiloFlowPlugin } from "./flow"
 import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
+import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
 import { KiloWriteToolPlugin } from "./tool-write"
@@ -61,6 +62,8 @@ export const KiloPlugins = [
   KiloSessionSync.plugin,
   KiloRemote.plugin,
   KiloSkillPlugin,
+  // Replaces the upstream OpenCode and report built-in skills with Kilo's config guide.
+  KiloSkillConfigPlugin.Plugin,
   // Rung 1: names the extracted formats in the native read tool description. The host swaps the
   // reader behind it for the filesystem service (rung 2).
   KiloReadPlugin,
