@@ -15,7 +15,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ConfigDto
-import ai.kilocode.rpc.dto.HostedProfileDefaultDto
+import ai.kilocode.rpc.dto.HostedFailureDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -26,17 +26,24 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
+import com.intellij.platform.ide.progress.runWithModalProgressBlocking
+import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.tabs.JBTabs
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
@@ -129,7 +136,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt {
             assertEquals(0, profile().selectedIndex)
             assertSame(profile().getItemAt(0), profile().selectedItem)
-            assertFalse(setDefault().isEnabled)
             assertNull(requireNotNull(dialog).validationForTest())
             assertTrue(okButton().isEnabled)
             profile().selectedIndex = 2
@@ -140,11 +146,122 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         assertEquals("profile-prod", created().profileID)
     }
 
+    fun `test dialog loads profiles in the background without blocking the prompt`() {
+        val gate = CompletableDeferred<HostedWorkspaceProfileListDto>()
+        open(load = { gate.await() })
+        edt { prompt().setText("Type while profiles load") }
+        assertTrue(coroutines.pumpUntil { edt { prompt().model.text.contains("GPT-5") } })
+
+        edt {
+            modal {
+                assertFalse(profile().isEnabled)
+                assertEquals(
+                    KiloBundle.message("hosted.workspace.dialog.profile.loading"),
+                    cell(requireNotNull(profile().selectedItem), -1),
+                )
+                assertFalse(okButton().isEnabled)
+                assertFalse(prompt().isSendEnabled)
+                branch().text = "feature/background"
+                prompt().send()
+                rejected()
+
+                gate.complete(profiles.copy(items = profileItems.mapIndexed { index, item ->
+                    item.copy(isPersonalDefault = index == 0)
+                }))
+                assertTrue("Profiles must finish loading while the dialog is modal", coroutines.pumpUntil(pump = ::pump) {
+                    profile().isEnabled
+                })
+                assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+                assertEquals("Type while profiles load", prompt().text())
+                assertEquals("feature/background", branch().text)
+                assertTrue(okButton().isEnabled)
+                assertTrue(prompt().isSendEnabled)
+                assertEquals(
+                    KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", "Standard"),
+                    cell(requireNotNull(profile().selectedItem), -1),
+                )
+            }
+        }
+    }
+
+    fun `test failed profile loading stays visible and prevents creation`() {
+        val gate = CompletableDeferred<HostedWorkspaceProfileListDto>()
+        open(load = { gate.await() })
+        edt { prompt().setText("Create cloud workspace") }
+        assertTrue(coroutines.pumpUntil { edt { prompt().model.text.contains("GPT-5") } })
+
+        edt {
+            modal {
+                gate.complete(HostedWorkspaceProfileListDto(error = HostedFailureDto("unavailable", "Profiles failed")))
+                assertTrue("Profile load failures must be visible while modal", coroutines.pumpUntil(pump = ::pump) {
+                    requireNotNull(dialog).validationForTest()?.message == "Profiles failed"
+                })
+                assertFalse(profile().isEnabled)
+                assertEquals(
+                    KiloBundle.message("hosted.workspace.profiles.failed"),
+                    cell(requireNotNull(profile().selectedItem), -1),
+                )
+                prompt().setText("Another prompt")
+                assertEquals("Profiles failed", requireNotNull(dialog).validationForTest()?.message)
+                assertTrue(controls().filterIsInstance<JLabel>().any { it.text?.contains("Profiles failed") == true })
+                assertFalse(okButton().isEnabled)
+                prompt().send()
+                rejected()
+            }
+        }
+    }
+
+    fun `test profiles loading first does not enable creation before the model catalog arrives`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.modelsGate = gate
+        open(profiles = profiles.copy(items = profileItems.mapIndexed { index, item ->
+            item.copy(isPersonalDefault = index == 0)
+        }))
+
+        edt {
+            modal {
+                prompt().setText("Wait for cloud models")
+                assertTrue(profile().isEnabled)
+                assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+                assertFalse(okButton().isEnabled)
+                assertFalse(prompt().isSendEnabled)
+
+                gate.complete(Unit)
+                assertTrue("Model loading must complete while the dialog is modal", coroutines.pumpUntil(pump = ::pump) {
+                    prompt().isSendEnabled && okButton().isEnabled
+                })
+                assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+                assertEquals("Wait for cloud models", prompt().text())
+            }
+        }
+    }
+
+    fun `test closing the dialog cancels profile loading`() {
+        val started = CompletableDeferred<Unit>()
+        val stopped = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<HostedWorkspaceProfileListDto>()
+        open(load = {
+            started.complete(Unit)
+            try {
+                gate.await()
+            } finally {
+                stopped.complete(Unit)
+            }
+        })
+        assertTrue("Profile loading did not start", coroutines.pumpUntil { started.isCompleted })
+        val closed = requireNotNull(dialog)
+        edt { closed.doCancelAction() }
+        assertTrue("Profile loading must be cancelled with the dialog", coroutines.pumpUntil { stopped.isCompleted })
+        edt {
+            assertTrue(closed.isDisposed)
+            assertNull(closed.plan())
+        }
+    }
+
     fun `test personal default profile is preselected before organization default`() {
-        open(profiles = profiles.copy(
-            personalDefaultProfileID = "profile-dev",
-            organizationDefaultProfileID = "profile-prod",
-        ))
+        open(profiles = profiles.copy(items = profileItems.mapIndexed { index, item ->
+            item.copy(isPersonalDefault = index == 0, isOrganizationDefault = index == 1)
+        }))
 
         edt {
             assertEquals(1, profile().selectedIndex)
@@ -157,7 +274,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
                 KiloBundle.message("hosted.workspace.dialog.profile.organizationDefault", "Standard"),
                 cell(profileItems[1], 2),
             )
-            assertFalse(setDefault().isEnabled)
             assertFalse(useDefault().isVisible)
         }
     }
@@ -168,9 +284,20 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt {
             assertEquals(2, profile().selectedIndex)
             assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
-            assertTrue(setDefault().isEnabled)
             assertFalse(useDefault().isVisible)
         }
+    }
+
+    fun `test organization and personal profiles can create workspaces`() {
+        open()
+        ready()
+
+        edt {
+            profile().selectedIndex = 2
+            submit()
+        }
+
+        assertEquals("profile-prod", created().profileID)
     }
 
     fun `test profile flags preselect and label defaults without list defaults`() {
@@ -191,7 +318,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
                 KiloBundle.message("hosted.workspace.dialog.profile.organizationDefault", "Cloud Team"),
                 cell(flagged[1], 1),
             )
-            assertFalse(setDefault().isEnabled)
             assertFalse(useDefault().isVisible)
         }
     }
@@ -209,17 +335,23 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     }
 
     fun `test profile actions use the standard button gap`() {
-        open()
+        open(profiles = profiles.copy(items = profileItems.mapIndexed { index, item ->
+            item.copy(isPersonalDefault = index == 0)
+        }))
         ready()
 
         edt {
+            profile().selectedIndex = 2
             val links = controls().filterIsInstance<Stack>().single()
             assertEquals(UiStyle.Gap.pad(), links.space)
+            assertEquals(listOf(useDefault()), links.components.toList())
         }
     }
 
     fun `test use default returns to the personal default`() {
-        open(profiles = profiles.copy(personalDefaultProfileID = "profile-dev"))
+        open(profiles = profiles.copy(items = profileItems.mapIndexed { index, item ->
+            item.copy(isPersonalDefault = index == 0)
+        }))
 
         edt {
             assertFalse(useDefault().isVisible)
@@ -230,58 +362,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
             assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
             assertFalse(useDefault().isVisible)
         }
-    }
-
-    fun `test set as default link saves the selected profile`() {
-        var saved: String? = null
-        open(
-            profiles = profiles,
-            saveDefault = { id ->
-                saved = id
-                HostedProfileDefaultDto(success = true)
-            },
-        )
-        ready()
-
-        edt {
-            profile().selectedIndex = 1
-            assertTrue(setDefault().isEnabled)
-            setDefault().doClick()
-        }
-
-        assertTrue("Set-as-default link did not save the selected profile", coroutines.pumpUntil { saved == "profile-dev" })
-        assertTrue("Set-as-default link did not update its state", coroutines.pumpUntil {
-            edt { !setDefault().isEnabled }
-        })
-        assertTrue("Set-as-default link did not mark the saved profile", coroutines.pumpUntil {
-            edt { cell(profileItems[0], 1).endsWith("(personal default)") }
-        })
-    }
-
-    fun `test set as default link stays disabled while a save is in flight`() {
-        val gate = CompletableDeferred<HostedProfileDefaultDto>()
-        val items = listOf(
-            HostedWorkspaceProfileDto("profile-dev", "Standard", ownerType = "user"),
-            HostedWorkspaceProfileDto("profile-test", "Other", ownerType = "user"),
-        )
-        open(
-            profiles = HostedWorkspaceProfileListDto(items = items),
-            saveDefault = { gate.await() },
-        )
-        ready()
-
-        edt {
-            profile().selectedIndex = 1
-            setDefault().doClick()
-            assertFalse(setDefault().isEnabled)
-            profile().selectedIndex = 2
-            assertFalse("Changing the profile must not re-enable the link mid-save", setDefault().isEnabled)
-        }
-
-        gate.complete(HostedProfileDefaultDto(success = true))
-        assertTrue("The link must be usable again after the save completes", coroutines.pumpUntil {
-            edt { setDefault().isEnabled }
-        })
     }
 
     fun `test prompt send retains chosen mode model reasoning branch and profile ID`() {
@@ -592,13 +672,18 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         profiles: HostedWorkspaceProfileListDto = this.profiles,
         withWorkspace: Boolean = true,
         branch: String = "",
-        saveDefault: suspend (String) -> HostedProfileDefaultDto = { HostedProfileDefaultDto(success = true) },
+        load: (suspend () -> HostedWorkspaceProfileListDto)? = null,
     ) {
         dialog = edt {
             HostedWorkspaceDialog(
                 JBPanel<Nothing>(), project, "/test", "https://github.com/kilo-org/kilocode.git",
-                profiles, withWorkspace, branch, app, workspaces, saveDefault,
+                withWorkspace, branch, app, workspaces, load ?: { profiles },
             )
+        }
+        if (withWorkspace && load == null) {
+            assertTrue("Cloud dialog did not load the supplied profiles", coroutines.pumpUntil {
+                edt { profile().isEnabled }
+            })
         }
     }
 
@@ -638,9 +723,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private fun profile(): ComboBox<*> =
         controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) !is String }
 
-    private fun setDefault(): HyperlinkLabel = controls().filterIsInstance<HyperlinkLabel>()
-        .single { it.text == KiloBundle.message("hosted.workspace.dialog.profile.setDefault") }
-
     private fun useDefault(): HyperlinkLabel = controls().filterIsInstance<HyperlinkLabel>()
         .single { it.text == KiloBundle.message("hosted.workspace.dialog.profile.useDefault") }
 
@@ -671,6 +753,29 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
+
+    @RequiresEdt
+    private fun modal(block: () -> Unit) {
+        val outer = ModalityState.current()
+        try {
+            runWithModalProgressBlocking(project, "Cloud profile default") {
+                withContext(Dispatchers.EDT) {
+                    assertNotSame(ModalityState.nonModal(), ModalityState.current())
+                    block()
+                }
+            }
+        } finally {
+            assertSame(outer, ModalityState.current())
+        }
+    }
+
+    @RequiresEdt
+    private fun pump() {
+        val state = ModalityState.current()
+        // Unlike the shared test pump, preserve modality so non-modal callbacks remain blocked.
+        PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        assertSame(state, ModalityState.current())
+    }
 
     private fun catalog(): ModelsWorkspaceDto {
         val providers = ProvidersDto(

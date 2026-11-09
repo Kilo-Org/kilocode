@@ -6,7 +6,6 @@ import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedDeleteResultDto
 import ai.kilocode.rpc.dto.HostedFailureDto
 import ai.kilocode.rpc.dto.HostedMutationResultDto
-import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedStartSessionDto
@@ -339,19 +338,21 @@ class KiloHostedService internal constructor(
         call { workspace(ref, null, null) }
 
     suspend fun profiles(): HostedWorkspaceProfileListDto = try {
-        call { workspaceProfiles(null) }
+        call { workspaceProfiles(null) }.also {
+            log.info(
+                "hosted profiles loaded count=${it.items.size} personalDefault=${it.personalDefaultProfileID} " +
+                    "organizationDefault=${it.organizationDefaultProfileID} " +
+                    "effectiveDefault=${it.effectiveDefaultProfileID} failure=${it.error?.code}",
+            )
+            log.info(
+                "hosted profile owners " + it.items.joinToString { profile -> "${profile.id}=${profile.ownerType}" },
+            )
+        }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        log.warn("hosted profiles load failed", e)
         HostedWorkspaceProfileListDto(error = failure(e, "Cloud profiles unavailable"))
-    }
-
-    suspend fun setDefaultProfile(profileID: String): HostedProfileDefaultDto = try {
-        call { setPersonalDefaultProfile(profileID) }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        HostedProfileDefaultDto(failure = failure(e, "Cloud profile default update failed"))
     }
 
     suspend fun create(request: HostedCreateWorkspaceDto): HostedMutationResultDto {

@@ -419,35 +419,24 @@ class AgentManagerPanel(
             KiloNotifications.error(target, KiloBundle.message("hosted.workspace.create.noRepo"))
             return
         }
-        hostedCs.launch {
-            val profiles = hosted.profiles()
-            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
-                val error = profiles.error
-                if (error != null) {
-                    KiloNotifications.error(target, KiloBundle.message("hosted.workspace.profiles.failed"), error.message)
-                    return@edt
-                }
-                val dialog = HostedWorkspaceDialog(
-                    anchor,
-                    target,
-                    controller.directory,
-                    repo,
-                    profiles,
-                    withWorkspace = true,
-                )
-                if (!dialog.showAndGet()) return@edt
-                val plan = dialog.plan() ?: return@edt
-                val request = HostedCreateWorkspaceDto(
-                    repository = hostedRepository(repo, plan.branch),
-                    profileID = plan.profileID,
-                    prompt = plan.prompt,
-                    agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
-                    operationKey = java.util.UUID.randomUUID().toString(),
-                    messageID = hostedMessageID(),
-                )
-                createHosted(request)
-            }
-        }
+        val dialog = HostedWorkspaceDialog(
+            anchor,
+            target,
+            controller.directory,
+            repo,
+            withWorkspace = true,
+        )
+        if (!dialog.showAndGet()) return
+        val plan = dialog.plan() ?: return
+        val request = HostedCreateWorkspaceDto(
+            repository = hostedRepository(repo, plan.branch),
+            profileID = plan.profileID,
+            prompt = plan.prompt,
+            agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
+            operationKey = java.util.UUID.randomUUID().toString(),
+            messageID = hostedMessageID(),
+        )
+        createHosted(request)
     }
 
     @RequiresEdt
@@ -530,7 +519,6 @@ class AgentManagerPanel(
             target,
             controller.directory,
             workspace.repositoryUrl.orEmpty(),
-            ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto(),
             withWorkspace = false,
         )
         if (!dialog.showAndGet()) return

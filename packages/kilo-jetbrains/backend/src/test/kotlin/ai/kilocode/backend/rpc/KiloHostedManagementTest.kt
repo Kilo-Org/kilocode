@@ -58,9 +58,31 @@ class KiloHostedManagementTest {
         ready(app)
         val api = KiloHostedRpcApiImpl(app)
 
-        assertTrue(api.setPersonalDefaultProfile("00000000-0000-4000-8000-000000000002").success)
+        assertTrue(api.setPersonalDefaultProfile("00000000-0000-4000-8000-000000000001").success)
         val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedProfileDefaultBody)).jsonObject
         assertEquals("org_1", body["organizationID"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `missing personal defaults return the server error without reporting success`() = runBlocking(Dispatchers.Default) {
+        mock.hostedManagementStatus = 404
+        mock.hostedProfileDefault = """{"message":"Profile not found"}"""
+        val app = app(TestLog())
+        ready(app)
+
+        val result = KiloHostedRpcApiImpl(app).setPersonalDefaultProfile("00000000-0000-4000-8000-000000000001")
+
+        assertFalse(result.success)
+        val failure = assertNotNull(result.failure)
+        assertEquals("not_found", failure.code)
+        assertEquals("Profile not found", failure.message)
+        assertFalse(failure.retryable)
+        assertEquals(
+            "/kilocode/session-host/workspace/profiles/personal-default",
+            mock.lastHostedProfileDefaultPath,
+        )
+        val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedProfileDefaultBody)).jsonObject
+        assertEquals("00000000-0000-4000-8000-000000000001", body["id"]?.jsonPrimitive?.content)
     }
 
     @Test
@@ -75,11 +97,11 @@ class KiloHostedManagementTest {
         assertEquals("00000000-0000-4000-8000-000000000002", profiles.organizationDefaultProfileID)
         assertTrue(mock.lastHostedProfilesPath.orEmpty().contains("/kilocode/session-host/workspace/profiles"))
 
-        val default = api.setPersonalDefaultProfile("00000000-0000-4000-8000-000000000002")
+        val default = api.setPersonalDefaultProfile("00000000-0000-4000-8000-000000000001")
         assertTrue(default.success)
         assertEquals("/kilocode/session-host/workspace/profiles/personal-default", mock.lastHostedProfileDefaultPath)
         assertEquals(
-            "00000000-0000-4000-8000-000000000002",
+            "00000000-0000-4000-8000-000000000001",
             Json.parseToJsonElement(assertNotNull(mock.lastHostedProfileDefaultBody)).jsonObject["id"]?.jsonPrimitive?.content,
         )
 

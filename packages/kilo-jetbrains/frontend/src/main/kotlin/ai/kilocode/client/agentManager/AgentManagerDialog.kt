@@ -49,6 +49,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
 ) : DialogWrapper(parent, false) {
     protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     protected open val allowEmptyPrompt: Boolean get() = false
+    protected open val ready: Boolean get() = workspace != null
     private val completion = if (local) KiloPromptCompletionProvider(
         workspace = workspaces.workspace(directory),
         service = workspaces,
@@ -107,7 +108,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
                 agent = resolveSessionAgent(ws.agents, KiloPluginSettings.getAgent())
                 prompt.mode.setItems(modeItems(ws.agents?.agents), agent)
                 syncSelection()
-                prompt.setReady(true)
+                prompt.setReady(ready)
             }
         }
         return BorderLayoutPanel().apply {
