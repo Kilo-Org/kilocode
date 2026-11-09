@@ -43,6 +43,7 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 ### M2 Public CLI preview
 
 - [#15307](https://github.com/Kilo-Org/kilocode/issues/15307) MCP and marketplace: Kilo's MCP additions (OAuth, auth-failure surfacing, `git:` sources) and the marketplace for MCP servers, skills, modes and plugins.
+  - Plan: [plans/mcp-marketplace.md](plans/mcp-marketplace.md).
 - [#15308](https://github.com/Kilo-Org/kilocode/issues/15308) Memory and indexing: the memory engine and tools, codebase indexing and `semantic_search`.
 - [#15309](https://github.com/Kilo-Org/kilocode/issues/15309) Sandbox: shell, MCP and PTY confinement with network relay on macOS and Linux.
 - [#15310](https://github.com/Kilo-Org/kilocode/issues/15310) Agent coordination and worktrees: background subagents, wakeups and cron, goals, the shared agent board, background processes, worktrees and the Agent Manager control plane.

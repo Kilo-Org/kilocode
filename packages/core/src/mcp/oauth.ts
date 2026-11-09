@@ -24,6 +24,7 @@ import { Credential } from "../credential.js"
 import { OauthCallbackPage } from "../oauth/page.js"
 import type { Integration } from "../integration.js"
 import { ErrorSummary } from "../util/error-summary.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 /** Client ID Metadata Document: servers that support CIMD accept this URL as the client_id without registration. */
 export const CLIENT_METADATA_URL = "https://opencode.ai/oauth/opencode/client.json"
@@ -142,6 +143,9 @@ export interface Options {
     readonly open: (url: URL) => void | Promise<void>
   }
   readonly clientMetadataUrl?: string
+  // kilocode_change start - embedding OAuth client identity
+  readonly clientMetadata?: McpHost.OAuthClientMetadata
+  // kilocode_change end
   readonly discovery?: OAuthDiscoveryState
   readonly invalidate?: OAuthClientProvider["invalidateCredentials"]
 }
@@ -182,8 +186,10 @@ export const provider = (options: Options): OAuthClientProvider => {
     ...(redirect ? { state: () => redirect.state } : {}),
     clientMetadata: {
       redirect_uris: [redirectUrl],
-      client_name: "opencode",
-      client_uri: "https://opencode.ai",
+      // kilocode_change start - OAuth client identity from the embedding host
+      client_name: options.clientMetadata?.name ?? "opencode",
+      client_uri: options.clientMetadata?.uri ?? "https://opencode.ai",
+      // kilocode_change end
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: client?.client_secret ? "client_secret_post" : "none",
@@ -274,11 +280,15 @@ export const toTokens = (credential: Credential.OAuth): StoredOAuthTokens => {
 export const connectProvider = Effect.fnUntraced(function* (input: {
   readonly config: typeof ConfigMCP.Remote.Type
   readonly integrationID: Integration.ID
+  readonly clientMetadata?: McpHost.OAuthClientMetadata // kilocode_change - embedding OAuth client identity
 }) {
   const credentials = yield* Credential.Service
   const run = Effect.runPromiseWith(yield* Effect.context())
   const found = (yield* credentials.list(input.integrationID)).at(-1)
-  if (!found || found.value.type !== "oauth") return provider({ config: input.config, store: memoryStore() })
+  // kilocode_change start - embedding OAuth client identity
+  if (!found || found.value.type !== "oauth")
+    return provider({ config: input.config, store: memoryStore(), clientMetadata: input.clientMetadata })
+  // kilocode_change end
   const id = found.id
   const methodID = found.value.methodID
   const read = async () => {
@@ -289,6 +299,7 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
   let presented = found.value.refresh
   return provider({
     config: input.config,
+    clientMetadata: input.clientMetadata, // kilocode_change - embedding OAuth client identity
     invalidate: async (scope) => {
       if (scope === "verifier" || scope === "discovery") return
       const oauth = await read()
@@ -334,6 +345,7 @@ export const authorize = (input: {
   readonly config: typeof ConfigMCP.Remote.Type
   readonly integrationID: Integration.ID
   readonly methodID: Integration.MethodID
+  readonly clientMetadata?: McpHost.OAuthClientMetadata // kilocode_change - embedding OAuth client identity
 }) =>
   Effect.gen(function* () {
     const fields = { server: input.name, methodID: input.methodID, oauthAttemptID: crypto.randomUUID() }
@@ -421,7 +433,13 @@ export const authorize = (input: {
           jsonrpc: "2.0",
           id: 0,
           method: "initialize",
-          params: { protocolVersion: LATEST_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "opencode" } },
+          // kilocode_change start - embedding OAuth client identity
+          params: {
+            protocolVersion: LATEST_PROTOCOL_VERSION,
+            capabilities: {},
+            clientInfo: { name: input.clientMetadata?.name ?? "opencode" },
+          },
+          // kilocode_change end
         }),
         signal,
       }),
@@ -453,7 +471,8 @@ export const authorize = (input: {
     const oauthProvider = provider({
       config: input.config,
       store,
-      clientMetadataUrl: cimd ? CLIENT_METADATA_URL : undefined,
+      clientMetadata: input.clientMetadata, // kilocode_change - embedding OAuth client identity
+      clientMetadataUrl: cimd ? (input.clientMetadata?.documentUrl ?? CLIENT_METADATA_URL) : undefined, // kilocode_change - hosted document from the host
       discovery: { ...discovery, resourceMetadataUrl: resourceMetadataUrl?.toString() },
       redirect: {
         url: oauth?.redirect_uri ?? `http://127.0.0.1:${port}${redirectPath}`,

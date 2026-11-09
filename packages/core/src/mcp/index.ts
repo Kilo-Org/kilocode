@@ -19,6 +19,7 @@ import { Location } from "../location.js"
 import { waitForAbort } from "@opencode/util/process"
 import { State } from "../state.js"
 import type { McpClient } from "./client.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 export const ServerName = Schema.String.pipe(Schema.brand("MCP.ServerName"))
 export type ServerName = typeof ServerName.Type
@@ -167,7 +168,11 @@ export const Options = Schema.Struct({
     }),
   ),
 })
-export type Options = typeof Options.Type
+// kilocode_change start - embedding hooks; `host` is construction-only and never decoded
+export type Options = typeof Options.Type & {
+  readonly host?: McpHost.Host
+}
+// kilocode_change end
 
 export const layer = (options?: Options) =>
   Layer.effect(
@@ -235,9 +240,15 @@ export const layer = (options?: Options) =>
               authorize: () =>
                 Effect.gen(function* () {
                   const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-                  return yield* McpOAuth.authorize({ name, config: remote, integrationID, methodID }).pipe(
-                    Effect.provideService(Credential.Service, credentials),
-                  )
+                  // kilocode_change start - embedding OAuth client identity
+                  return yield* McpOAuth.authorize({
+                    name,
+                    config: remote,
+                    integrationID,
+                    methodID,
+                    clientMetadata: options?.host?.oauth,
+                  }).pipe(Effect.provideService(Credential.Service, credentials))
+                  // kilocode_change end
                 }),
             })
           })
@@ -252,9 +263,13 @@ export const layer = (options?: Options) =>
       const connectProvider = Effect.fnUntraced(function* (entry: ServerEntry) {
         if (entry.config.type !== "remote" || !entry.integrationID) return undefined
         const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-        return yield* McpOAuth.connectProvider({ config: entry.config, integrationID: entry.integrationID }).pipe(
-          Effect.provideService(Credential.Service, credentials),
-        )
+        // kilocode_change start - embedding OAuth client identity
+        return yield* McpOAuth.connectProvider({
+          config: entry.config,
+          integrationID: entry.integrationID,
+          clientMetadata: options?.host?.oauth,
+        }).pipe(Effect.provideService(Credential.Service, credentials))
+        // kilocode_change end
       })
 
       const elicitation = {
@@ -472,6 +487,7 @@ export const layer = (options?: Options) =>
             authProvider,
             elicitation,
             options?.clientInfo,
+            options?.host, // kilocode_change - embedding transport hooks
           ).pipe(
             Effect.flatMap((connection) => connection.tools().pipe(Effect.map((tools) => ({ connection, tools })))),
             // A stdio server is spawned on this location's execution plane, not the host's.
@@ -611,6 +627,7 @@ export const layer = (options?: Options) =>
           undefined,
           elicitation,
           options?.clientInfo,
+          options?.host, // kilocode_change - embedding transport hooks
         ).pipe(
           Effect.tap((connection) =>
             Effect.sync(() =>

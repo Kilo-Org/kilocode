@@ -31,6 +31,7 @@ import { Cause, Clock, Duration, Effect, Exit, Schedule, Schema } from "effect"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
 import type { Session } from "@opencode/schema/session"
 import { McpStdio } from "./stdio.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 const DEFAULT_STARTUP_TIMEOUT = 30_000
 const DEFAULT_CATALOG_TIMEOUT = 30_000
@@ -168,6 +169,7 @@ export const connect = Effect.fnUntraced(function* (
   authProvider?: OAuthClientProvider,
   elicitation?: ElicitationHandler,
   clientInfo: Implementation = { name: "opencode", version: "unknown" },
+  host?: McpHost.Host, // kilocode_change - embedding transport hooks
 ) {
   // The SDK takes list-changed handlers at construction, but consumers register after connect. On a
   // modern connection the SDK opens the subscriptions/listen stream behind these itself.
@@ -296,24 +298,28 @@ export const connect = Effect.fnUntraced(function* (
 
   const exit = yield* Effect.gen(function* () {
     if (config.type === "attached") return yield* initialize(config.transport)
+    // kilocode_change start - embedding command hook
     if (config.type === "local") {
       const [command, ...args] = config.command
+      const local = host?.localCommand?.({ command, args }) ?? { command, args }
       const transport = yield* McpStdio.make({
         server,
-        command,
-        args,
+        command: local.command,
+        args: local.args,
         cwd: config.cwd ? path.resolve(directory, config.cwd) : directory,
         environment: {
-          ...(command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
+          ...(local.command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
           ...config.environment,
         },
       })
       return yield* initialize(transport)
     }
+    // kilocode_change end
     if (!URL.canParse(config.url))
       return yield* new ConnectError({ server, message: `Invalid MCP URL for "${server}"` })
     const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-    const fetch = yield* McpOAuth.loggedFetch({ server, directory })
+    const baseFetch = yield* McpOAuth.loggedFetch({ server, directory }) // kilocode_change - embedding transport hook
+    const fetch = host?.fetch?.(baseFetch) ?? baseFetch // kilocode_change - embedding transport hook
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked
     // with ?codemode=false, which is what our Code Mode wants. The configured URL stays the OAuth identity.
     const url = new URL(config.url)
