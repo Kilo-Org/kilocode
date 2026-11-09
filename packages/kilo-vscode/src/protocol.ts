@@ -118,10 +118,13 @@ export type SpeechToTextStatus = {
  * creation and movement.
  */
 export type SidebarWorktree =
-  | { type: "continueInWorktree"; sessionId: string }
+  | { type: "agentManager.continueInWorktree"; sessionId: string }
   | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string }
   | { type: "agentManager.requestRepoInfo" }
   | { type: "openAdvancedWorktree" }
+
+/** Toggles Keep Awake from the composer slash menu. The Agent Manager provider owns the state. */
+export type AgentManagerCaffeination = { type: "agentManager.toggleCaffeination" }
 
 export type ToHost =
   | Request
@@ -134,6 +137,7 @@ export type ToHost =
   | Speech
   | Indexing
   | SidebarWorktree
+  | AgentManagerCaffeination
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }

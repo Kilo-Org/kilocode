@@ -82,6 +82,10 @@ export interface ProviderHostsSource {
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void>
+  continueInWorktree(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void>
   configureSetupScript(): Promise<void>
   sendRepoInfo(): Promise<void>
   sendDiffBranches(sessionId: string, scope?: string, projectId?: string): Promise<void>
@@ -93,6 +97,7 @@ export interface ProviderHostsSource {
   trackOpenSessions(ids: string[]): void
   trackVisibleSession(id: string | null): void
   setCaffeination(enabled: boolean): Promise<void>
+  toggleCaffeination(): Promise<void>
   postCaffeination(): void
   setReviewMarkdownRender(value: boolean): Promise<void>
   messageProject(m: AgentManagerInMessage): ProjectContext | undefined
@@ -134,6 +139,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     onCloseSession: (id) => p.onCloseSession(id),
     onCreateMultiVersion: (msg) => p.onCreateMultiVersion(msg),
     continueFromSidebar: (id, progress) => p.continueFromSidebar(id, progress),
+    continueInWorktree: (id, progress) => p.continueInWorktree(id, progress),
     configureSetupScript: () => p.configureSetupScript(),
     sendRepoInfo: () => p.sendRepoInfo(),
     sendDiffBranches: (id, scope, project) => p.sendDiffBranches(id, scope, project),
@@ -146,6 +152,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     trackOpenSessions: (ids) => p.trackOpenSessions(ids),
     trackVisibleSession: (id) => p.trackVisibleSession(id),
     setCaffeination: (enabled) => p.setCaffeination(enabled),
+    toggleCaffeination: () => p.toggleCaffeination(),
     postCaffeination: () => p.postCaffeination(),
     setReviewMarkdownRender: (value) => p.setReviewMarkdownRender(value),
   }

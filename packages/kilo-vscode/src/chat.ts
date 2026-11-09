@@ -664,7 +664,7 @@ export function routeWorktreeMessage(
       .then((branch) => post({ type: "agentManager.repoInfo", branch }))
     return true
   }
-  if (message.type === "continueInWorktree") {
+  if (message.type === "agentManager.continueInWorktree") {
     if (!worktree) {
       post({ type: "continueInWorktreeProgress", status: "error", error: "Continue in Worktree is not available" })
       return true

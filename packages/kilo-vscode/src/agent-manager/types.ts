@@ -571,8 +571,16 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
+interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | ContinueInWorktreeProgressMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserFrameMessage
@@ -1051,6 +1059,10 @@ interface SetCaffeinationIn {
   enabled: boolean
 }
 
+interface ToggleCaffeinationIn {
+  type: "agentManager.toggleCaffeination"
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -1189,7 +1201,7 @@ interface AbortIn {
 }
 
 interface ContinueInWorktreeIn {
-  type: "continueInWorktree"
+  type: "agentManager.continueInWorktree"
   sessionId: string
 }
 
@@ -1412,6 +1424,7 @@ export type AgentManagerInMessage =
   | PromptSentIn
   | RequestCaffeinationIn
   | SetCaffeinationIn
+  | ToggleCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
   | RequestDocumentIn

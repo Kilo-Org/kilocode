@@ -1105,9 +1105,15 @@
   },
   "module:packages/core/src/kilocode/caffeination.ts": {
     "state": "ported",
-    "v2": "packages/kilo-vscode/src/services/caffeination",
-    "note": "packages/kilo-vscode/src/services/caffeination (service, inhibitor, feed, confirm) ports the driver, availability probe, start and stop timeouts, ready marker and state projection. The panel and sidebar header use it; packages/kilo-vscode/test/caffeination-feed.test.ts and the caffeination driver tests cover the state flow.",
+    "v2": "packages/kilo-caffeination",
+    "note": "packages/kilo-caffeination holds the shared driver (availability probe, start and stop timeouts, ready marker) and the state controller. packages/kilo-vscode/src/services/caffeination keeps the VS Code service, feed and confirmation, and packages/tui/src/kilocode/caffeinate.ts feeds the controller the TUI session busy state for /caffeinate. packages/kilo-vscode/test/caffeination-feed.test.ts, packages/tui/test/kilocode/caffeinate.test.ts, packages/kilo-caffeination/test/controller.test.ts and packages/kilo-caffeination/test/inhibitor.test.ts cover the state flow.",
     "by": "am-progress-map"
+  },
+  "module:packages/kilo-vscode/src/services/caffeination/inhibitor.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-caffeination/src/inhibitor.ts",
+    "note": "The keep-awake driver moved from the VS Code service into the shared Kilo-owned @kilocode/caffeination package, so the TUI and VS Code clients use one copy. packages/kilo-caffeination/test/inhibitor.test.ts covers the macOS and Linux contracts.",
+    "by": "tui-caffeinate"
   },
   "module:packages/opencode/src/kilocode/primary-worktree.ts": {
     "state": "ported",
@@ -1947,5 +1953,10 @@
     "state": "ported",
     "note": "packages/kilo-plugin/test/question-option-schema.test.ts carries the mode and labelKey/descriptionKey assertions against KiloQuestion.Option (packages/schema/src/kilocode/question.ts): mode round-trips, mode is optional, labelKey and descriptionKey round-trip, plus omission of undefined hints on encode. The v1 source-marker checks guarded a kilocode_change block in a shared file; v2 has no shared-file change, and the plugin test instead fails when upstream's question tool schema or executor drifts from the Kilo mirror (KiloQuestionPlugin). The v1 'question defaults' assertion covers the `default` hint, which is out of scope here and tracked with patch:unattributed:schema/v1:85a47cb2581a under #15332.",
     "by": "v2-question-mode"
+  },
+  "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/slash.test.ts carries the sortByScore cases for the v2 matchSlash within one group: exact before prefix before substring before a description match (commit, commit-all, recommit, notes), case-insensitive queries, and hint matches (/clear finds /new, /review fast finds /review quick). v2 also keeps the Actions, Commands and Skills groups contiguous, which a separate test covers.",
+    "by": "slash-commands"
   }
 }

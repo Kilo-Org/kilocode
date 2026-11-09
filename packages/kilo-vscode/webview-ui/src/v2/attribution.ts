@@ -22,7 +22,12 @@ export function createModelAttribution() {
     read(sessionID: string, current: ModelRef | undefined): ModelRef | undefined {
       const next = requested.get(sessionID)
       if (!next) return current
-      if (current?.id === next.id && current.providerID === next.providerID) {
+      // A variant-only switch keeps the model, so the store reports it only when the variant matches too.
+      if (
+        current?.id === next.id &&
+        current.providerID === next.providerID &&
+        (current.variant ?? "default") === (next.variant ?? "default")
+      ) {
         requested.delete(sessionID)
         return current
       }

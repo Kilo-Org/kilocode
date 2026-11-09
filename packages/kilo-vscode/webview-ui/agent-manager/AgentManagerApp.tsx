@@ -47,6 +47,8 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { SessionActionsRow } from "../src/v2/session-actions-row"
+import { createWorktreeTransfer } from "../src/v2/worktree-transfer"
 import { createComposerQueue } from "../src/v2/composer"
 import type { ToWebview } from "../../src/protocol"
 import type { ReferenceHandler } from "../src/v2/append-ready"
@@ -223,6 +225,8 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  // Agent Manager owns worktree creation and movement, so its chat row reports transfer progress from the host.
+  const transfer = createWorktreeTransfer({ project: activeProjectId })
   const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
 
   const DEFAULT_SIDEBAR_WIDTH = 260
@@ -1741,6 +1745,48 @@ const AgentManagerContent: Component = () => {
       </V2Scope>
     ))
   }
+  // The worktree actions above the composer, as the sidebar shows them. The chat is the shared SessionView, so the
+  // row only differs in where it starts a worktree.
+  const showChanges = () => {
+    closeHistory()
+    setReviewActive(false)
+    panels.open(SidePanel.Diff)
+  }
+  const sessionActions = (hasMessages: boolean, todos: JSX.Element) => {
+    const id = sessions.currentSessionID()
+    const movable = selection() === LOCAL && !readOnly() && !!id && localSessionIDs().includes(id) && !isPending(id)
+    const stats = selection() === LOCAL ? localStats() : worktreeStats()[selection() ?? ""]
+    return (
+      <SessionActionsRow
+        hasMessages={hasMessages}
+        branch={isGitRepo() ? transfer.branch() : undefined}
+        onNewWorktree={handleCreateWorktree}
+        onNewWorktreeFromBranch={(branch) => {
+          if (!loaded()) return
+          expandSidebar()
+          to({ type: "agentManager.createWorktree", baseBranch: branch })
+        }}
+        onConfigureWorktree={() => showNewWorktreeDialog()}
+        onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
+        moving={transfer.transferring()}
+        moveDetail={transfer.detail()}
+        stats={stats}
+        onShowChanges={showChanges}
+        todos={todos}
+      />
+    )
+  }
+  // The workspace branch changes with a checkout or a project switch, and the row's worktree actions follow it.
+  createEffect(
+    on(
+      activeProjectId,
+      () => {
+        transfer.clear()
+        transfer.request()
+      },
+      { defer: true },
+    ),
+  )
   // The keyboard action updates the selected worktree in the session the user is reading, with its model and agent.
   const update = () => {
     const worktreeId = selection()
@@ -2219,6 +2265,10 @@ const AgentManagerContent: Component = () => {
                     onSession={handleSessionCreated}
                     actions={toolActions}
                     onShowHistory={() => openHistory()}
+                    row={sessionActions}
+                    rowWhenEmpty={!!transfer.branch()}
+                    onNewSession={handleNewTabForCurrentSelection}
+                    worktree={!!selection() && selection() !== LOCAL}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}
