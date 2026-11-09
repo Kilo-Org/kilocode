@@ -1109,6 +1109,12 @@
     "note": "packages/kilo-caffeination holds the shared driver (availability probe, start and stop timeouts, ready marker) and the state controller. packages/kilo-vscode/src/services/caffeination keeps the VS Code service, feed and confirmation, and packages/tui/src/kilocode/caffeinate.ts feeds the controller the TUI session busy state for /caffeinate. packages/kilo-vscode/test/caffeination-feed.test.ts, packages/tui/test/kilocode/caffeinate.test.ts, packages/kilo-caffeination/test/controller.test.ts and packages/kilo-caffeination/test/inhibitor.test.ts cover the state flow.",
     "by": "am-progress-map"
   },
+  "module:packages/kilo-vscode/src/services/caffeination/inhibitor.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-caffeination/src/inhibitor.ts",
+    "note": "The keep-awake driver moved from the VS Code service into the shared Kilo-owned @kilocode/caffeination package, so the TUI and VS Code clients use one copy. packages/kilo-caffeination/test/inhibitor.test.ts covers the macOS and Linux contracts.",
+    "by": "tui-caffeinate"
+  },
   "module:packages/opencode/src/kilocode/primary-worktree.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/src/agent-manager/project/paths.ts",
