@@ -5,6 +5,7 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { useLanguage } from "../context/language"
 import { useModelPreferences } from "../context/model-preferences"
 import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
@@ -30,6 +31,7 @@ import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
+import { slashActions, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 
@@ -44,6 +46,8 @@ export function SessionView(props: {
   onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
+  /** Opens a new session draft; the /new slash action is listed only when set. */
+  onNewSession?: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
   row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
   /** Shows the row before the first message too. */
@@ -74,6 +78,7 @@ export function SessionView(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
   const v2 = useV2()
+  const language = useLanguage()
   const session = () => props.session
   const work = useWorkStyleOptional()
   // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
@@ -298,9 +303,25 @@ export function SessionView(props: {
       if (status === "connected" && !props.readOnly) void catalog.load()
     }),
   )
+  // The selectors listen for these events, so a slash action opens the same picker as a click.
+  const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
+  const handlers = (): SlashHandlers => {
+    const id = session()
+    return {
+      new: props.onNewSession,
+      sessions: props.onShowHistory,
+      models: picker("openModelPicker"),
+      agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
+      variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
+      compact: id ? () => void v2.data.session.compact({ sessionID: id }).catch(v2.report) : undefined,
+      help: () => v2.open("https://kilo.ai/docs"),
+      settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
+      reload: () => void v2.api.location.reload().catch(v2.report),
+    }
+  }
   const slashEntries = createMemo(() =>
     mergeCatalog({
-      actions: [],
+      actions: slashActions(handlers(), language.t),
       // Goal mode needs its own composer state and banner, which this client does not have yet.
       commands: catalog.commands().filter((command) => command.name !== "goal"),
       skills: catalog.skills(),

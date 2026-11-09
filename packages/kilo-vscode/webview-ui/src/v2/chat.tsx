@@ -407,6 +407,7 @@ export function Chat() {
           onReferenceReady={(value) => (reference = value)}
           actions={toolActions}
           onShowHistory={() => setView("history")}
+          onNewSession={startSession}
           onViewTurnChanges={openTurnChanges}
           onForkMessage={forkSession}
           row={row}

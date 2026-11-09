@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { CommandInfo, ModelRef, SkillInfo } from "@opencode/client"
 import { matchSlash, mergeCatalog, parseSlash, slashQuery, type SlashEntry } from "../webview-ui/src/v2/slash"
+import { slashActions } from "../webview-ui/src/v2/slash-actions"
 import { createSlashCatalog } from "../webview-ui/src/v2/slash-catalog"
 import { dispatchSlash, type SlashDeps } from "../webview-ui/src/v2/slash-dispatch"
 
@@ -48,6 +49,16 @@ describe("slash catalog merge", () => {
     expect(names(mergeCatalog({ actions: children, commands, skills: [] }))).toContain("review staged")
     expect(names(mergeCatalog({ actions: children, commands, skills: [] }))).not.toContain("memory show")
     expect(names(mergeCatalog({ actions: children, commands: [], skills: [] }))).toEqual([])
+  })
+})
+
+describe("slash actions", () => {
+  test("lists only the actions this surface handles, in menu order", () => {
+    const list = slashActions({ reload: () => {}, new: () => {}, compact: undefined }, (key) => `t:${key}`)
+    expect(list.map((entry) => [entry.name, entry.description, entry.hints])).toEqual([
+      ["new", "t:prompt.slash.new", ["clear"]],
+      ["reload", "t:common.reloadDescription", ["refresh"]],
+    ])
   })
 })
 
@@ -202,13 +213,14 @@ describe("slash dispatch", () => {
     ])
   })
 
-  test("runs a client action in the webview without a session", async () => {
+  test("runs a client action from the registry in the webview without a session", async () => {
     const ran: string[] = []
     const run = deps(high)
     run.value.session = async () => {
       throw new Error("no session for an action")
     }
-    await dispatchSlash({ entry: action("models", [], () => ran.push("models")), args: "" }, run.value)
+    const actions = slashActions({ models: () => ran.push("models") }, (key) => key)
+    await dispatchSlash({ entry: actions[0], args: "" }, run.value)
     expect(ran).toEqual(["models"])
     expect(run.calls).toEqual([])
   })
