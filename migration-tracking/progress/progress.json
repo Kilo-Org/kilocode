@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1886,
+    "done": 1887,
     "total": 9765,
     "percent": 19.3,
     "dropped": 89,
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 375,
+        "done": 376,
         "total": 2771
       }
     ],
@@ -6139,7 +6139,7 @@
     },
     {
       "feature": "vscode",
-      "done": 1230,
+      "done": 1231,
       "total": 2031,
       "dropped": 26,
       "kinds": {
@@ -6156,7 +6156,7 @@
           "total": 0
         },
         "test": {
-          "done": 238,
+          "done": 239,
           "total": 607
         }
       }
@@ -7442,6 +7442,7 @@
     "module:packages/kilo-vscode/tests/unit/tool-default-open.test.ts",
     "module:packages/kilo-vscode/tests/unit/transcript-parts.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-paste-collapse.test.ts",
+    "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-speech-to-text.test.ts",
     "module:packages/kilo-vscode/tests/unit/work-style-presets.test.ts",
     "module:packages/kilo-vscode/tests/unit/work-style-state.test.ts",
