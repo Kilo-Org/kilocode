@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { createSignal } from "solid-js"
+import { createStore } from "solid-js/store"
 import type { SessionMessageAssistant, SessionMessageAssistantTool } from "@opencode/client"
 import type { ToolActionDiff } from "../src/components/message-part"
 import { resetToolOpenState } from "../src/components/tool-open-state"
@@ -332,4 +333,22 @@ test("a completed write card replaces the provisional counts with the final diff
 
   await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+2")
   expect(counts(card.host)).toEqual({ additions: "+2", deletions: "-0" })
+})
+
+type StreamingTool = Extract<SessionMessageAssistantTool, { state: { status: "streaming" } }>
+
+test("a streaming write card recounts when the tool input grows", async () => {
+  const tool = liveTool("write", {
+    status: "streaming",
+    input: '{"path":"src/notes.md","content":"one',
+  }) as StreamingTool
+  const [store, setStore] = createStore<{ item: StreamingTool }>({ item: tool })
+  const card = mountRich(() => <ContentPart item={store.item} message={liveMessage} index={0} />)
+  mounted.push(card)
+
+  await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+1")
+
+  setStore("item", "state", "input", (text) => text + "\\ntwo\\nthree")
+
+  await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+3")
 })
