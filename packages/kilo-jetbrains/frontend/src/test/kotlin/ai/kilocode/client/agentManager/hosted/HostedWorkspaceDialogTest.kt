@@ -250,6 +250,32 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         })
     }
 
+    fun `test set as default link stays disabled while a save is in flight`() {
+        val gate = CompletableDeferred<HostedProfileDefaultDto>()
+        val items = listOf(
+            HostedWorkspaceProfileDto("profile-dev", "Standard", ownerType = "user"),
+            HostedWorkspaceProfileDto("profile-test", "Other", ownerType = "user"),
+        )
+        open(
+            profiles = HostedWorkspaceProfileListDto(items = items),
+            saveDefault = { gate.await() },
+        )
+        ready()
+
+        edt {
+            profile().selectedIndex = 1
+            setDefault().doClick()
+            assertFalse(setDefault().isEnabled)
+            profile().selectedIndex = 2
+            assertFalse("Changing the profile must not re-enable the link mid-save", setDefault().isEnabled)
+        }
+
+        gate.complete(HostedProfileDefaultDto(success = true))
+        assertTrue("The link must be usable again after the save completes", coroutines.pumpUntil {
+            edt { setDefault().isEnabled }
+        })
+    }
+
     fun `test prompt send retains chosen mode model reasoning branch and profile ID`() {
         open(branch = "seed/branch")
         ready("  Implement cloud changes\nwith tests  ")

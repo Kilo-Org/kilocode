@@ -76,14 +76,16 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     private val setDefault = HyperlinkLabel(KiloBundle.message("hosted.workspace.dialog.profile.setDefault")).apply {
         addHyperlinkListener {
             val selected = profile.selectedItem as? HostedWorkspaceProfileDto ?: return@addHyperlinkListener
-            if (!isEnabled) return@addHyperlinkListener
-            isEnabled = false
+            if (!isEnabled || savingDefault) return@addHyperlinkListener
+            savingDefault = true
+            syncDefaultLinks()
             scope.launch {
                 val result = runCatching { saveDefaultValue(selected.id) }.getOrElse {
                     HostedProfileDefaultDto(failure = HostedFailureDto("unavailable", it.message.orEmpty(), retryable = true))
                 }
                 ApplicationManager.getApplication().invokeLater {
                     if (isDisposed) return@invokeLater
+                    savingDefault = false
                     if (result.success) {
                         personalDefaultProfileID = selected.id
                     } else {
@@ -97,6 +99,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             }
         }
     }
+    private var savingDefault = false
     private var result: HostedCreatePlan? = null
 
     init {
@@ -191,7 +194,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         val current = selected != null && personalDefault(selected)
         setDefault.isVisible = withWorkspace
         setDefault.isEnabled =
-            withWorkspace && selected != null && selected.ownerType != "organization" && !current
+            withWorkspace && selected != null && selected.ownerType != "organization" && !current && !savingDefault
         useDefault.isVisible = withWorkspace && default != null && selected?.id != default.id
         useDefault.isEnabled = useDefault.isVisible
         profile.repaint()
