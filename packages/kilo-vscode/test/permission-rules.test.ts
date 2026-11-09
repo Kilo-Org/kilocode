@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   addExceptionLevel,
   clearGroupedLevel,
+  clearRowLevel,
   clearSimpleLevel,
   clearWildcardLevel,
   effectiveConfigLevel,
@@ -11,6 +12,7 @@ import {
   removeExceptionLevel,
   setExceptionLevel,
   setGroupedLevel,
+  setRowLevel,
   setSimpleLevel,
   setWildcardLevel,
   toolExceptions,
@@ -151,6 +153,37 @@ describe("simple and grouped tools", () => {
       { action: "grep", resource: "*", effect: "allow" },
       { action: "glob", resource: "*", effect: "deny" },
     ])
+  })
+})
+
+describe("rows without an exception editor", () => {
+  const approved: PermissionRuleset = [
+    { action: "browser_open", resource: "*", effect: "ask" },
+    { action: "browser_open", resource: "navigate:https://example.com", effect: "allow" },
+  ]
+
+  test("a browser_open level change keeps a saved origin approval", () => {
+    expect(setRowLevel(approved, "browser_open", "deny")).toEqual([
+      { action: "browser_open", resource: "*", effect: "deny" },
+      { action: "browser_open", resource: "navigate:https://example.com", effect: "allow" },
+    ])
+  })
+
+  test("inheriting browser_open keeps a saved origin approval", () => {
+    expect(clearRowLevel(approved, "browser_open")).toEqual([
+      { action: "browser_open", resource: "navigate:https://example.com", effect: "allow" },
+    ])
+  })
+
+  test("a row without saved rules replaces every rule", () => {
+    const current: PermissionRuleset = [
+      { action: "webfetch", resource: "*", effect: "ask" },
+      { action: "webfetch", resource: "https://old.example", effect: "allow" },
+    ]
+    expect(setRowLevel(current, "webfetch", "deny")).toEqual([
+      { action: "webfetch", resource: "*", effect: "deny" },
+    ])
+    expect(clearRowLevel(current, "webfetch")).toEqual([])
   })
 })
 

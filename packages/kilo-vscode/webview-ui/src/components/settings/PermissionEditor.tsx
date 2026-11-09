@@ -10,6 +10,7 @@ import {
   DEFAULT_RULES,
   addExceptionLevel,
   clearGroupedLevel,
+  clearRowLevel,
   clearSimpleLevel,
   clearWildcardLevel,
   effectiveConfigLevel,
@@ -18,6 +19,7 @@ import {
   removeExceptionLevel,
   setExceptionLevel,
   setGroupedLevel,
+  setRowLevel,
   setSimpleLevel,
   setWildcardLevel,
   toolExceptions,
@@ -128,8 +130,8 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
   },
 ]
 
-// There is no doom_loop action. These rows have no exception editor, so changing a level replaces every rule for the
-// action, including any per-origin approvals saved for browser_open.
+// There is no doom_loop action. These rows have no exception editor, so a level change replaces every rule for the
+// action. browser_open keeps its per-origin navigate rules and lists them below its level.
 const TRAILING_TOOLS: ToolDef[] = [
   { action: "websearch", title: "Websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { action: "webfetch", title: "Webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
@@ -233,8 +235,9 @@ export const PermissionRulesEditor: Component<{
             level={levelFor(tool.action)}
             inherited={ruleInherited(tool.action)}
             showDefaultLevel={props.showDefaultLevel}
-            onChange={(level) => setSimple(tool.action, level)}
-            onInherit={() => clearSimple(tool.action)}
+            exceptions={toolExceptions(props.rules, tool.action)}
+            onChange={(level) => props.onChange(setRowLevel(props.rules, tool.action, level))}
+            onInherit={() => props.onChange(clearRowLevel(props.rules, tool.action))}
           />
         )}
       </For>
@@ -248,10 +251,12 @@ const SimpleToolRow: Component<{
   level: PermissionLevel
   inherited?: boolean
   showDefaultLevel?: boolean
+  exceptions?: PermissionRuleset
   onChange: (level: PermissionLevel) => void
   onInherit?: () => void
 }> = (props) => {
   const language = useLanguage()
+  const exceptions = () => props.exceptions ?? []
   return (
     <div
       style={{
@@ -276,6 +281,21 @@ const SimpleToolRow: Component<{
         >
           {language.t(props.descriptionKey)}
         </div>
+        <Show when={exceptions().length > 0}>
+          <div
+            style={{
+              "font-size": "var(--kilo-font-size-12)",
+              color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              "margin-top": "6px",
+              "overflow-wrap": "anywhere",
+            }}
+          >
+            {language.t("settings.autoApprove.exceptions")} ({exceptions().length}):{" "}
+            {exceptions()
+              .map((item) => `${language.t(`settings.autoApprove.level.${item.effect}`)} ${item.resource}`)
+              .join(", ")}
+          </div>
+        </Show>
       </div>
       <ActionSelect
         level={props.level}

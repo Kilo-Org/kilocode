@@ -114,6 +114,20 @@ export function clearSimpleLevel(rules: PermissionRuleset, action: string): Perm
   return replaceTool(rules, action, [])
 }
 
+// A browser_open ruleset can carry per-origin navigate approvals, and its row has no exception editor. A level
+// change must keep them, so the row uses the wildcard setters instead of the simple ones.
+const SAVED_EXCEPTIONS: ReadonlySet<string> = new Set(["browser_open"])
+
+/** Set the level of a row without an exception editor, keeping the action's per-pattern approvals. */
+export function setRowLevel(rules: PermissionRuleset, action: string, level: PermissionLevel): PermissionRuleset {
+  return SAVED_EXCEPTIONS.has(action) ? setWildcardLevel(rules, action, level) : setSimpleLevel(rules, action, level)
+}
+
+/** Inherit a row without an exception editor, keeping the action's per-pattern approvals. */
+export function clearRowLevel(rules: PermissionRuleset, action: string): PermissionRuleset {
+  return SAVED_EXCEPTIONS.has(action) ? clearWildcardLevel(rules, action) : clearSimpleLevel(rules, action)
+}
+
 export function setExceptionLevel(
   rules: PermissionRuleset,
   action: string,
