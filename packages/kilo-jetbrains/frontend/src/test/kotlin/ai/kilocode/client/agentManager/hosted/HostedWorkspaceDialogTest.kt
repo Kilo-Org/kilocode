@@ -56,6 +56,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     private lateinit var appRpc: FakeAppRpcApi
     private lateinit var rpc: FakeWorkspaceRpcApi
     private lateinit var workspaces: KiloWorkspaceService
+    private lateinit var selection: FakeHostedProfileSelectionStore
     private var dialog: HostedWorkspaceDialog? = null
     private val profileItems = listOf(
         HostedWorkspaceProfileDto("profile-dev", "Standard", ownerType = "user"),
@@ -79,6 +80,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         coroutines.drain()
         rpc = FakeWorkspaceRpcApi().apply { models = catalog() }
         workspaces = KiloWorkspaceService(coroutines.scope, rpc)
+        selection = FakeHostedProfileSelectionStore()
         KiloPluginSettings.unsetAgent()
         KiloPluginSettings.unsetFetchWorktreeBase()
     }
@@ -258,14 +260,44 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test personal default profile is preselected before organization default`() {
+    fun `test closing the dialog cancels repository preference loading`() {
+        val started = CompletableDeferred<Unit>()
+        val stopped = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<String?>()
+        val selection = object : HostedProfileSelectionStore {
+            override suspend fun selected(repositoryUrl: String): String? {
+                started.complete(Unit)
+                return try {
+                    gate.await()
+                } finally {
+                    stopped.complete(Unit)
+                }
+            }
+
+            override fun remember(
+                repositoryUrl: String,
+                selectedProfileID: String?,
+                backendDefaultProfileID: String?,
+            ) = Unit
+        }
+        open(load = { profiles }, selection = selection)
+        assertTrue("Preference loading did not start", coroutines.pumpUntil { started.isCompleted })
+        val closed = requireNotNull(dialog)
+
+        edt { closed.doCancelAction() }
+
+        assertTrue("Preference loading must be cancelled with the dialog", coroutines.pumpUntil { stopped.isCompleted })
+        edt { assertTrue(closed.isDisposed) }
+    }
+
+    fun `test organization default profile is preselected before personal default`() {
         open(profiles = profiles.copy(items = profileItems.mapIndexed { index, item ->
             item.copy(isPersonalDefault = index == 0, isOrganizationDefault = index == 1)
         }))
 
         edt {
-            assertEquals(1, profile().selectedIndex)
-            assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertEquals(2, profile().selectedIndex)
+            assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
             assertEquals(
                 KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", "Standard"),
                 cell(profileItems[0], 1),
@@ -285,6 +317,24 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
             assertEquals(2, profile().selectedIndex)
             assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
             assertFalse(useDefault().isVisible)
+        }
+    }
+
+    fun `test personal effective and legacy defaults are used as fallbacks`() {
+        val cases = listOf(
+            profiles.copy(personalDefaultProfileID = "profile-dev") to "profile-dev",
+            profiles.copy(effectiveDefaultProfileID = "profile-prod") to "profile-prod",
+            profiles.copy(items = profileItems.mapIndexed { index, item -> item.copy(isDefault = index == 0) }) to
+                "profile-dev",
+        )
+
+        cases.forEachIndexed { index, (loaded, id) ->
+            if (index > 0) {
+                edt { Disposer.dispose(requireNotNull(dialog).disposable) }
+                dialog = null
+            }
+            open(profiles = loaded)
+            edt { assertEquals(id, (profile().selectedItem as HostedWorkspaceProfileDto).id) }
         }
     }
 
@@ -308,8 +358,8 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         open(profiles = HostedWorkspaceProfileListDto(items = flagged))
 
         edt {
-            assertEquals(1, profile().selectedIndex)
-            assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertEquals(2, profile().selectedIndex)
+            assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
             assertEquals(
                 KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", "Cloud Agent"),
                 cell(flagged[0], 0),
@@ -320,6 +370,94 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
             )
             assertFalse(useDefault().isVisible)
         }
+    }
+
+    fun `test remembered repository profile overrides the backend default after loading`() {
+        selection.value = "profile-dev"
+        open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+
+        edt {
+            assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertTrue(useDefault().isVisible)
+        }
+        assertEquals(listOf("https://github.com/kilo-org/kilocode.git"), selection.reads)
+    }
+
+    fun `test stale repository profile falls back to the backend default`() {
+        selection.value = "missing-profile"
+        open(profiles = profiles.copy(
+            organizationDefaultProfileID = "profile-prod",
+            personalDefaultProfileID = "profile-dev",
+        ))
+
+        edt {
+            assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertFalse(useDefault().isVisible)
+        }
+    }
+
+    fun `test repository preference failure falls back to the backend default`() {
+        selection.error = IllegalStateException("Preference backend unavailable")
+        open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+
+        edt {
+            assertTrue(profile().isEnabled)
+            assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertFalse(useDefault().isVisible)
+            assertNull(requireNotNull(dialog).validationForTest())
+        }
+    }
+
+    fun `test accepted creation remembers the selected profile against the backend default`() {
+        open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+        ready()
+
+        edt {
+            profile().selectedIndex = 1
+            submit()
+        }
+        created()
+
+        assertEquals(
+            listOf(FakeHostedProfileSelectionStore.Save(
+                "https://github.com/kilo-org/kilocode.git",
+                "profile-dev",
+                "profile-prod",
+            )),
+            selection.saves,
+        )
+    }
+
+    fun `test accepting the backend default clears a remembered repository override`() {
+        selection.value = "profile-dev"
+        open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+        ready()
+
+        edt {
+            useDefault().doClick()
+            submit()
+        }
+        created()
+
+        assertEquals(
+            listOf(FakeHostedProfileSelectionStore.Save(
+                "https://github.com/kilo-org/kilocode.git",
+                "profile-prod",
+                "profile-prod",
+            )),
+            selection.saves,
+        )
+    }
+
+    fun `test cancelled selection does not update the repository preference`() {
+        open(profiles = profiles.copy(organizationDefaultProfileID = "profile-prod"))
+
+        edt {
+            profile().selectedIndex = 1
+            requireNotNull(dialog).doCancelAction()
+        }
+
+        assertTrue(selection.saves.isEmpty())
     }
 
     fun `test prompt uses a standard dialog border`() {
@@ -518,6 +656,8 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         assertNull(plan.branch)
         assertNull(plan.profileID)
         assertEquals("kilo/gpt-5", plan.model)
+        assertTrue(selection.reads.isEmpty())
+        assertTrue(selection.saves.isEmpty())
     }
 
     fun `test whitespace prompt creates an empty cloud workspace plan`() {
@@ -673,11 +813,12 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         withWorkspace: Boolean = true,
         branch: String = "",
         load: (suspend () -> HostedWorkspaceProfileListDto)? = null,
+        selection: HostedProfileSelectionStore = this.selection,
     ) {
         dialog = edt {
             HostedWorkspaceDialog(
                 JBPanel<Nothing>(), project, "/test", "https://github.com/kilo-org/kilocode.git",
-                withWorkspace, branch, app, workspaces, load ?: { profiles },
+                withWorkspace, branch, app, workspaces, load ?: { profiles }, selection,
             )
         }
         if (withWorkspace && load == null) {

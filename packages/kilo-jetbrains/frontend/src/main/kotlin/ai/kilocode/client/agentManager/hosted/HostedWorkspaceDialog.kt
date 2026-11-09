@@ -10,6 +10,7 @@ import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ValidationInfo
@@ -19,6 +20,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.components.BorderLayoutPanel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.GridBagConstraints
@@ -44,6 +46,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
     private val load: suspend () -> HostedWorkspaceProfileListDto = { project.service<KiloHostedService>().profiles() },
+    private val selection: HostedProfileSelectionStore = service<HostedProfileSelectionService>(),
 ) : AgentManagerDialog(parent, project, directory, false, app, workspaces) {
     private object None
     private object Loading
@@ -78,7 +81,9 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     private var result: HostedCreatePlan? = null
 
     init {
-        title = KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create.title" else "hosted.workspace.dialog.session.title")
+        title = KiloBundle.message(
+            if (withWorkspace) "hosted.workspace.dialog.create.title" else "hosted.workspace.dialog.session.title",
+        )
         init()
         initValidation()
         prompt.onChange = { syncValidation() }
@@ -88,15 +93,31 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         }
         syncUseDefault()
         syncValidation()
-        setOKButtonText(KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create" else "hosted.workspace.session.new"))
+        setOKButtonText(
+            KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create" else "hosted.workspace.session.new"),
+        )
         if (withWorkspace) scope.launch {
             val loaded = load()
+            val remembered = if (loaded.error == null) {
+                try {
+                    selection.selected(repositoryUrl)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Cloud profile preference load failed", e)
+                    null
+                }
+            } else null
             ui {
                 profiles = loaded
                 loading = false
                 val items = if (loaded.error == null) listOf(None) + loaded.items else listOf(Failed)
                 profile.model = DefaultComboBoxModel(items.toTypedArray())
-                profile.selectedItem = if (loaded.error == null) defaultProfile() ?: None else Failed
+                profile.selectedItem = when {
+                    loaded.error != null -> Failed
+                    remembered != null -> profileByID(remembered) ?: defaultProfile() ?: None
+                    else -> defaultProfile() ?: None
+                }
                 profile.isEnabled = loaded.error == null
                 syncUseDefault()
                 syncValidation()
@@ -182,6 +203,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             model = "${picked.provider}/$model",
             variant = picked.variant,
         )
+        if (withWorkspace) selection.remember(repositoryUrl, selected?.id, defaultProfile()?.id)
         close(OK_EXIT_CODE)
     }
 
@@ -199,27 +221,32 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     }
 
     private fun profileLabel(profile: HostedWorkspaceProfileDto): String = when {
-        personalDefault(profile) -> KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", profile.name)
         organizationDefault(profile) ->
             KiloBundle.message("hosted.workspace.dialog.profile.organizationDefault", profile.name)
+        personalDefault(profile) -> KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", profile.name)
         else -> profile.name
     }
 
     private fun defaultProfile(): HostedWorkspaceProfileDto? =
-        personalDefault()
-            ?: organizationDefault()
+        organizationDefault()
+            ?: personalDefault()
             ?: profiles.effectiveDefaultProfileID?.let(::profileByID)
             ?: profiles.items.find { it.isDefault }
-
-    private fun personalDefault(): HostedWorkspaceProfileDto? = profiles.items.find { it.isPersonalDefault }
 
     private fun organizationDefault(): HostedWorkspaceProfileDto? =
         profiles.organizationDefaultProfileID?.let(::profileByID) ?: profiles.items.find { it.isOrganizationDefault }
 
-    private fun personalDefault(profile: HostedWorkspaceProfileDto): Boolean = personalDefault()?.id == profile.id
+    private fun personalDefault(): HostedWorkspaceProfileDto? =
+        profiles.personalDefaultProfileID?.let(::profileByID) ?: profiles.items.find { it.isPersonalDefault }
 
     private fun organizationDefault(profile: HostedWorkspaceProfileDto): Boolean =
         organizationDefault()?.id == profile.id
 
+    private fun personalDefault(profile: HostedWorkspaceProfileDto): Boolean = personalDefault()?.id == profile.id
+
     private fun profileByID(id: String): HostedWorkspaceProfileDto? = profiles.items.find { it.id == id }
+
+    private companion object {
+        val log = logger<HostedWorkspaceDialog>()
+    }
 }
