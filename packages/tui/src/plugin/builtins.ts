@@ -23,6 +23,7 @@ import KiloSidebarUsage from "../kilocode/plugins/sidebar-usage" // kilocode_cha
 import KiloSession from "../kilocode/session" // kilocode_change - Kilo /copy-session and /sandbox commands
 import KiloTerminalActivity from "../kilocode/terminal-activity" // kilocode_change(terminal-activity) - Kilo terminal activity packets
 import KiloRemote from "../kilocode/remote" // kilocode_change(remote) - Kilo /remote command and header indicator
+import KiloCaffeinate from "../kilocode/caffeinate" // kilocode_change(caffeinate) - Kilo /caffeinate command
 
 export const builtins = [
   HomeFooter,
@@ -52,4 +53,5 @@ export const builtins = [
   KiloSession, // kilocode_change
   KiloTerminalActivity, // kilocode_change(terminal-activity)
   ...(process.env.OPENCODE_APP_DIR_NAME === "kilo2" ? [KiloRemote] : []), // kilocode_change(remote)
+  KiloCaffeinate, // kilocode_change(caffeinate)
 ]

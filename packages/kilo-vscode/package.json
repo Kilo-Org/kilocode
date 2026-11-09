@@ -1030,6 +1030,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@kilocode/caffeination": "workspace:*",
     "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",

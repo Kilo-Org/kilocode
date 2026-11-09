@@ -1087,8 +1087,8 @@
   },
   "module:packages/core/src/kilocode/caffeination.ts": {
     "state": "ported",
-    "v2": "packages/kilo-vscode/src/services/caffeination",
-    "note": "packages/kilo-vscode/src/services/caffeination (service, inhibitor, feed, confirm) ports the driver, availability probe, start and stop timeouts, ready marker and state projection. The panel and sidebar header use it; packages/kilo-vscode/test/caffeination-feed.test.ts and the caffeination driver tests cover the state flow.",
+    "v2": "packages/kilo-caffeination",
+    "note": "packages/kilo-caffeination holds the shared driver (availability probe, start and stop timeouts, ready marker) and the state controller. packages/kilo-vscode/src/services/caffeination keeps the VS Code service, feed and confirmation, and packages/tui/src/kilocode/caffeinate.ts feeds the controller the TUI session busy state for /caffeinate. packages/kilo-vscode/test/caffeination-feed.test.ts, packages/tui/test/kilocode/caffeinate.test.ts, packages/kilo-caffeination/test/controller.test.ts and packages/kilo-caffeination/test/inhibitor.test.ts cover the state flow.",
     "by": "am-progress-map"
   },
   "module:packages/opencode/src/kilocode/primary-worktree.ts": {
