@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 104,
-    "markedLines": 1696,
+    "files": 107,
+    "markedLines": 1751,
     "unmarkedLines": 299,
     "deletedFiles": 0
   },
@@ -132,6 +132,10 @@
     "packages/core/src/command.ts": {
       "rung": 3,
       "seam": "Keep optional template and model metadata on registered commands and return it from command.list. The command editor exposes only add and cannot recover a definition's captured config after registration. Definitions without metadata remain unchanged."
+    },
+    "packages/core/src/ripgrep.ts": {
+      "rung": 4,
+      "seam": "Accept ripgrep's base64 `bytes` shape alongside `text` for the matched path, line and submatch. Ripgrep emits `bytes` as soon as one byte of a record is not valid UTF-8, and the text-only schema then rejected the record and failed the whole search with `Invalid ripgrep match output`. Bytes decode as lossy UTF-8 with the replacement character, and the line and submatch limits still apply after decoding. No plugin hook or host composition reaches this parser: it runs inside the core ripgrep service before any tool result exists, and no knob can express an alternate decoder for the fixed `rg --json` shape. Records that carry `text` behave exactly as before."
     },
     "packages/core/src/config/plugin/command.ts": {
       "rung": 3,
@@ -303,6 +307,10 @@
       "rung": 4,
       "seam": "Collapsed reasoning, exploration, and activity groups do not expose a plugin label slot. A Kilo-owned badge reads each group's assistant identities so hidden reasoning/tool steps do not lose their routes."
     },
+    "packages/tui/src/routes/session/grouping/session.ts": {
+      "rung": 4,
+      "seam": "The TUI instruction metadata parser delegates to the shared @opencode/schema/session-instruction-paths decoder that the Kilo VS Code transcript also uses. The exported instructionPaths wrapper and its behavior are unchanged, so no upstream default changes. No lower rung: a Kilo-owned copy cannot be imported by the TUI without a new dependency direction, and both clients need the same parser."
+    },
     "packages/tui/src/util/session.ts": {
       "rung": 4,
       "seam": "The static context-usage resolver has no plugin hook. A Kilo-owned actual-model lookup supplies the served model's context limit when available, with the original requested model lookup as fallback."
@@ -405,6 +413,10 @@
     "packages/schema/src/tool.ts": {
       "rung": 3,
       "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
+    },
+    "packages/schema/src/session-instruction-paths.ts": {
+      "rung": 4,
+      "seam": "Shared decoder for the synthetic instruction metadata paths that both the TUI grouping and the Kilo VS Code transcript render. The shape is private to the core producer, and the two clients share no Kilo-owned package: the TUI uses @opencode/ui and the VS Code webview uses @kilocode/kilo-ui. A local parser in each client drifts silently when the producer changes, so one shared browser-safe decoder removes the duplicate. No upstream default changes; the TUI keeps its exported wrapper and behavior."
     },
     "packages/client/src/effect/api/api.ts": {
       "rung": 3,

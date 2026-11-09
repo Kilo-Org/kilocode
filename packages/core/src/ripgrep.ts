@@ -20,25 +20,45 @@ const ERROR_BYTES = 8 * 1024
 const MAX_SUBMATCHES = 100
 const MAX_LINE_CHARS = 2_000
 
+// kilocode_change start - ripgrep-bytes: ripgrep emits base64 bytes instead of text for non-UTF-8 data
+const RawText = Schema.Union([Schema.Struct({ text: Schema.String }), Schema.Struct({ bytes: Schema.String })])
+type RawText = Schema.Schema.Type<typeof RawText>
+
+const decodeText = (value: RawText) =>
+  "text" in value ? value.text : Buffer.from(value.bytes, "base64").toString("utf8")
+
+type DecodedMatch = {
+  readonly path: { readonly text: string }
+  readonly lines: { readonly text: string }
+  readonly line_number: number
+  readonly absolute_offset: number
+  readonly submatches: readonly {
+    readonly match: { readonly text: string }
+    readonly start: number
+    readonly end: number
+  }[]
+}
+
 const RawMatch = Schema.Struct({
   type: Schema.Literal("match"),
   data: Schema.Struct({
-    path: Schema.Struct({ text: Schema.String }),
-    lines: Schema.Struct({ text: Schema.String }),
+    path: RawText,
+    lines: RawText,
     line_number: PositiveInt,
     absolute_offset: NonNegativeInt,
     submatches: Schema.Array(
       Schema.Struct({
-        match: Schema.Struct({ text: Schema.String }),
+        match: RawText,
         start: NonNegativeInt,
         end: NonNegativeInt,
       }),
     ),
   }),
 })
+// kilocode_change end
 const decodeJsonRecord = Schema.decodeUnknownEffect(Schema.fromJsonString(Schema.Unknown))
 
-type RawMatchData = (typeof RawMatch.Type)["data"]
+type RawMatchData = DecodedMatch // kilocode_change(ripgrep-bytes) - parsed matches carry decoded text
 
 export class Error extends Schema.TaggedError<Error>()("Ripgrep.Error", {
   message: Schema.String,
@@ -240,17 +260,25 @@ const layer = Layer.effect(
                 if (!json || typeof json !== "object" || !("type" in json) || json.type !== "match")
                   return Effect.undefined
                 return Schema.decodeUnknownEffect(RawMatch)(json).pipe(
-                  Effect.map((match) => ({
-                    ...match.data,
-                    lines: {
-                      text:
-                        match.data.lines.text.length > MAX_LINE_CHARS
-                          ? Buffer.from(match.data.lines.text.slice(0, MAX_LINE_CHARS), "utf8").toString() + "..."
-                          : match.data.lines.text,
-                    },
-                    path: { text: normalizePath(match.data.path.text) },
-                    submatches: match.data.submatches.slice(0, MAX_SUBMATCHES),
-                  })),
+                  // kilocode_change start - ripgrep-bytes: decode text or base64 bytes, then apply limits
+                  Effect.map((match) => {
+                    const line = decodeText(match.data.lines)
+                    return {
+                      ...match.data,
+                      lines: {
+                        text:
+                          line.length > MAX_LINE_CHARS
+                            ? Buffer.from(line.slice(0, MAX_LINE_CHARS), "utf8").toString() + "..."
+                            : line,
+                      },
+                      path: { text: normalizePath(decodeText(match.data.path)) },
+                      submatches: match.data.submatches.slice(0, MAX_SUBMATCHES).map((submatch) => ({
+                        ...submatch,
+                        match: { text: decodeText(submatch.match) },
+                      })),
+                    }
+                  }),
+                  // kilocode_change end
                   Effect.mapError((cause) => failure("Invalid ripgrep match output", cause)),
                 )
               }),
