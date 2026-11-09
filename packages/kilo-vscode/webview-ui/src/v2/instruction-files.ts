@@ -28,8 +28,8 @@ export function instructionFilesByRead(messages: readonly SessionMessageInfo[], 
       })
       continue
     }
-    // An instruction message always follows the assistant step whose read published it.
-    if (message.type === "user") reads = []
+    // A steer row can arrive before the instruction message of the running step,
+    // so only the next assistant step replaces the read candidates.
     if (message.type !== "synthetic") continue
     const paths = readInstructionPaths(message.metadata)
     if (paths.length === 0) continue
@@ -43,12 +43,13 @@ export function instructionFilesByRead(messages: readonly SessionMessageInfo[], 
 
 type Read = { id: string; ran?: number; completed?: number; path?: string }
 type StartedRead = Read & { ran: number }
+type CompletedRead = StartedRead & { completed: number }
 
 /**
  * An instruction file is loaded from a directory above the file the read opened,
  * so only a read inside the instruction path's directory can have produced it.
- * Reads can run beside each other in one step, so the most recently started read
- * that is still running wins.
+ * When several reads share that directory they can all be candidates, so a match
+ * needs either one candidate or one read that completed just after the message.
  */
 function matchingRead(reads: readonly Read[], paths: readonly string[], directory: string | undefined, created: number) {
   const near = reads.filter((read) => {
@@ -58,20 +59,44 @@ function matchingRead(reads: readonly Read[], paths: readonly string[], director
   })
   if (near.length === 0) return undefined
   const started = near.filter(isStarted).filter((read) => read.ran <= created)
-  const running = started.filter((read) => (read.completed ?? Number.POSITIVE_INFINITY) >= created)
-  return pickLatest(running) ?? pickLatest(started)
+  if (started.length === 0) return undefined
+  if (started.length === 1) return started[0]
+  const completed = started.filter(isCompleted).filter((read) => read.completed >= created)
+  return completed.reduce<CompletedRead | undefined>(
+    (best, read) => (!best || read.completed < best.completed ? read : best),
+    undefined,
+  )
 }
 
 function isStarted(read: Read): read is StartedRead {
   return read.ran !== undefined
 }
 
-function pickLatest(reads: readonly StartedRead[]) {
-  return reads.reduce<StartedRead | undefined>((best, read) => (!best || read.ran >= best.ran ? read : best), undefined)
+function isCompleted(read: StartedRead): read is CompletedRead {
+  return read.completed !== undefined
 }
 
 function resolveReadPath(path: string, directory: string | undefined) {
-  if (path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("\\\\")) return path
+  if (path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith("\\\\")) return normalizeReadPath(path)
   if (!directory) return undefined
-  return `${directory.replace(/[/\\]+$/, "")}/${path.replace(/^\.\//, "")}`
+  return normalizeReadPath(`${directory.replace(/[/\\]+$/, "")}/${path}`)
+}
+
+/** Matches the server's path resolution so `src/../lib/math.ts` keeps its directory. */
+function normalizeReadPath(path: string) {
+  const unc = path.startsWith("\\\\")
+  const rooted = path.startsWith("/") || unc || /^[A-Za-z]:/.test(path)
+  const out: string[] = []
+  for (const part of path.split(/[/\\]+/)) {
+    if (!part || part === ".") continue
+    if (part === "..") {
+      if (out.length > 0 && out[out.length - 1] !== ".." && !/^[A-Za-z]:$/.test(out[out.length - 1] ?? "")) out.pop()
+      else if (!rooted) out.push("..")
+      continue
+    }
+    out.push(part)
+  }
+  if (unc) return `//${out.join("/")}`
+  if (path.startsWith("/")) return `/${out.join("/")}`
+  return out.join("/")
 }

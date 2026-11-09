@@ -21,6 +21,9 @@ const step = (id: string, created: number, content: SessionMessageAssistant["con
     time: { created },
   }) as unknown as SessionMessageInfo
 
+const user = (id: string, created: number) =>
+  ({ id, type: "user", text: "Also check lib.", time: { created } }) as unknown as SessionMessageInfo
+
 const instruction = (id: string, created: number, paths: readonly string[]) =>
   ({
     id,
@@ -57,11 +60,26 @@ describe("read instruction files", () => {
     expect(files.get("read-lib")).toEqual(["/repo/lib/AGENTS.md"])
   })
 
-  test("picks the most recently started running read when reads share a directory", () => {
+  test("does not guess between reads in one directory that are still running", () => {
     const files = instructionFilesByRead(
       [
         step("a1", 1000, [
-          read("read-1", 1001, 1100, 1300, "src/math.ts"),
+          read("read-1", 1001, 1100, undefined, "src/math.ts"),
+          read("read-2", 1002, 1150, undefined, "src/util.ts"),
+        ]),
+        instruction("s1", 1200, ["/repo/src/AGENTS.md"]),
+      ],
+      "/repo",
+    )
+
+    expect(files.size).toBe(0)
+  })
+
+  test("picks the read that completed just after the message when reads share a directory", () => {
+    const files = instructionFilesByRead(
+      [
+        step("a1", 1000, [
+          read("read-1", 1001, 1100, 1250, "src/math.ts"),
           read("read-2", 1002, 1150, 1400, "src/util.ts"),
         ]),
         instruction("s1", 1200, ["/repo/src/AGENTS.md"]),
@@ -69,7 +87,7 @@ describe("read instruction files", () => {
       "/repo",
     )
 
-    expect([...files]).toEqual([["read-2", ["/repo/src/AGENTS.md"]]])
+    expect([...files]).toEqual([["read-1", ["/repo/src/AGENTS.md"]]])
   })
 
   test("does not attach a read outside the instruction directory", () => {
@@ -79,6 +97,18 @@ describe("read instruction files", () => {
     )
 
     expect(files.size).toBe(0)
+  })
+
+  test("normalizes a relative read path with parent segments", () => {
+    const files = instructionFilesByRead(
+      [
+        step("a1", 1000, [read("read-1", 1001, 1100, 1300, "src/../lib/math.ts")]),
+        instruction("s1", 1200, ["/repo/lib/AGENTS.md"]),
+      ],
+      "/repo",
+    )
+
+    expect([...files]).toEqual([["read-1", ["/repo/lib/AGENTS.md"]]])
   })
 
   test("resolves an absolute read path without the directory", () => {
@@ -99,6 +129,19 @@ describe("read instruction files", () => {
     )
 
     expect(files.size).toBe(0)
+  })
+
+  test("keeps the read candidates when a steer row arrives before the instruction message", () => {
+    const files = instructionFilesByRead(
+      [
+        step("a1", 1000, [read("read-1", 1001, 1100, 1400)]),
+        user("u1", 1210),
+        instruction("s1", 1220, ["/repo/AGENTS.md"]),
+      ],
+      "/repo",
+    )
+
+    expect([...files]).toEqual([["read-1", ["/repo/AGENTS.md"]]])
   })
 
   test("merges the paths of later instruction messages onto the same read", () => {
