@@ -4,10 +4,11 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { formatIndexingLabel, useIndexing } from "../../context/indexing"
+import { formatIndexingLabel, IndexingProvider, useIndexing } from "../../context/indexing"
 import {
   formatKiloEmbeddingModelLabel,
   getKiloEmbeddingModel,
+  KiloEmbeddingModelsProvider,
   useKiloEmbeddingModels,
 } from "../../context/kilo-embedding-models"
 import { useLanguage } from "../../context/language"
@@ -163,7 +164,7 @@ const ScopeRows: Component<{
   )
 }
 
-const IndexingTab: Component = () => {
+const IndexingTabContent: Component = () => {
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -661,4 +662,13 @@ const IndexingTab: Component = () => {
   )
 }
 
-export default IndexingTab
+// Only this tab reads the indexing and embedding model state, so the Settings shell does not mount it.
+export default function IndexingTab() {
+  return (
+    <KiloEmbeddingModelsProvider>
+      <IndexingProvider>
+        <IndexingTabContent />
+      </IndexingProvider>
+    </KiloEmbeddingModelsProvider>
+  )
+}

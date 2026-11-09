@@ -4,7 +4,6 @@ import { Component, Show, createMemo } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
-import { failureMessage } from "../../v2/kilo-catalog"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 
@@ -59,7 +58,6 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
           allowClear={props.clearable}
           clearLabel={props.clearLabel}
           label={props.modelLabel}
-          failure={failureMessage(language.t, v2.kiloFailure())}
           onSelect={(providerID, modelID) => {
             if (!providerID || !modelID) return props.onChange(undefined)
             props.onChange(
