@@ -33,6 +33,18 @@ test("a full first page needs a short older page before the start counts as load
   }
 })
 
+test("a session created in this client starts with its transcript start loaded", () => {
+  const setup = fixture([])
+  try {
+    const created = setup.data.session.create({ id: "ses_new" })
+    created.request.catch(() => undefined)
+
+    expect(setup.data.session.message.startLoaded("ses_new")).toBe(true)
+  } finally {
+    setup.dispose()
+  }
+})
+
 function message(id: string) {
   return { id, type: "user" as const, text: id, time: { created: 0 } }
 }

@@ -359,7 +359,7 @@
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
-      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. A session this client creates starts with the start loaded, because it has no earlier history. Omitted calls behave as upstream."
     },
     "packages/client/test/solid-eviction.test.ts": {
       "rung": 4,
