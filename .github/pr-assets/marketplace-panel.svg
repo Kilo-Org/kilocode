@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="72" viewBox="0 0 240 72" fill="none" role="img" aria-label="Marketplace cards lighting up in turn, each carrying an installed check">
+  <style>
+    .c{stroke:currentColor;stroke-width:1.5;stroke-opacity:.5;animation:lit 3.6s ease-in-out infinite}
+    .b{animation-delay:.45s}
+    .d{animation-delay:.9s}
+    @keyframes lit{0%,45%,100%{stroke-opacity:.5}22%{stroke-opacity:.95}}
+    @media (prefers-reduced-motion:reduce){.c{animation:none}}
+  </style>
+  <rect x="8.5" y="6.5" width="223" height="59" rx="8" stroke="currentColor" stroke-opacity=".28"/>
+  <path d="M8.5 19.5h223" stroke="currentColor" stroke-opacity=".16"/>
+  <g fill="currentColor">
+    <circle cx="15" cy="13" r="1.7" fill-opacity=".28"/>
+    <circle cx="20.5" cy="13" r="1.7" fill-opacity=".2"/>
+    <circle cx="26" cy="13" r="1.7" fill-opacity=".2"/>
+    <rect x="15" y="26" width="27" height="9" rx="3" fill-opacity=".2"/>
+    <rect x="15" y="39" width="27" height="9" rx="3" fill-opacity=".07"/>
+    <rect x="15" y="52" width="27" height="9" rx="3" fill-opacity=".07"/>
+  </g>
+  <rect x="50.5" y="25.5" width="50" height="34" rx="5" class="c"/>
+  <rect x="118.5" y="25.5" width="50" height="34" rx="5" class="c b"/>
+  <rect x="186.5" y="25.5" width="50" height="34" rx="5" class="c d"/>
+  <g fill="currentColor">
+    <rect x="56" y="31" width="7" height="7" rx="2" fill-opacity=".32"/>
+    <rect x="67" y="32.5" width="18" height="3" rx="1.5" fill-opacity=".32"/>
+    <rect x="124" y="31" width="7" height="7" rx="2" fill-opacity=".32"/>
+    <rect x="135" y="32.5" width="18" height="3" rx="1.5" fill-opacity=".32"/>
+    <rect x="192" y="31" width="7" height="7" rx="2" fill-opacity=".32"/>
+    <rect x="203" y="32.5" width="18" height="3" rx="1.5" fill-opacity=".32"/>
+  </g>
+  <g stroke="currentColor" stroke-width="2.4" stroke-opacity=".16" stroke-linecap="round">
+    <path d="M56 46h30M56 51h18"/>
+    <path d="M124 46h30M124 51h18"/>
+    <path d="M192 46h30M192 51h18"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.4">
+    <circle cx="93" cy="32" r="4.5" stroke-opacity=".8"/>
+    <path d="M91 32.1l1.4 1.4 2.5-2.7" stroke-opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="161" cy="32" r="4.5" stroke-opacity=".8"/>
+    <path d="M159 32.1l1.4 1.4 2.5-2.7" stroke-opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="229" cy="32" r="4.5" stroke-opacity=".8"/>
+    <path d="M227 32.1l1.4 1.4 2.5-2.7" stroke-opacity="1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
