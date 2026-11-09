@@ -463,9 +463,12 @@ class KiloBackendHostedManager(
             )
         }
 
-    suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto =
+    suspend fun setPersonalDefaultProfile(profileID: String, organizationID: String?): HostedProfileDefaultDto =
         withContext(Dispatchers.IO) {
-            val body = buildJsonObject { put("id", profileID) }.toString()
+            val body = buildJsonObject {
+                put("id", profileID)
+                organizationID?.let { put("organizationID", it) }
+            }.toString()
             val response = control("POST", "/kilocode/session-host/workspace/profiles/personal-default", body)
             if (response.code !in 200..299) {
                 return@withContext HostedProfileDefaultDto(failure = failure(response, "set default profile"))

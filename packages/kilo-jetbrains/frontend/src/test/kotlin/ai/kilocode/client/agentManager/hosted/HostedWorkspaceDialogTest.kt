@@ -149,6 +149,14 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt {
             assertEquals(1, profile().selectedIndex)
             assertEquals("profile-dev", (profile().selectedItem as HostedWorkspaceProfileDto).id)
+            assertEquals(
+                KiloBundle.message("hosted.workspace.dialog.profile.personalDefault", "Standard"),
+                cell(profileItems[0], 1),
+            )
+            assertEquals(
+                KiloBundle.message("hosted.workspace.dialog.profile.organizationDefault", "Standard"),
+                cell(profileItems[1], 2),
+            )
             assertFalse(setDefault().isEnabled)
             assertFalse(useDefault().isVisible)
         }
@@ -160,7 +168,7 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt {
             assertEquals(2, profile().selectedIndex)
             assertEquals("profile-prod", (profile().selectedItem as HostedWorkspaceProfileDto).id)
-            assertFalse(setDefault().isEnabled)
+            assertTrue(setDefault().isEnabled)
             assertFalse(useDefault().isVisible)
         }
     }

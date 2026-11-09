@@ -52,6 +52,18 @@ class KiloHostedManagementTest {
     }
 
     @Test
+    fun `personal default carries the current organization`() = runBlocking(Dispatchers.Default) {
+        mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloHostedRpcApiImpl(app)
+
+        assertTrue(api.setPersonalDefaultProfile("00000000-0000-4000-8000-000000000002").success)
+        val body = Json.parseToJsonElement(assertNotNull(mock.lastHostedProfileDefaultBody)).jsonObject
+        assertEquals("org_1", body["organizationID"]?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun `profiles create start and delete use the local Session Host`() = runBlocking(Dispatchers.Default) {
         val app = app(TestLog())
         ready(app)

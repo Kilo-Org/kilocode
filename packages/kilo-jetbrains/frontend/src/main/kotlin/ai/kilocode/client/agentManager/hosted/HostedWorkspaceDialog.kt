@@ -193,8 +193,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         val default = defaultProfile()
         val current = selected != null && personalDefault(selected)
         setDefault.isVisible = withWorkspace
-        setDefault.isEnabled =
-            withWorkspace && selected != null && selected.ownerType != "organization" && !current && !savingDefault
+        setDefault.isEnabled = withWorkspace && selected != null && !current && !savingDefault
         useDefault.isVisible = withWorkspace && default != null && selected?.id != default.id
         useDefault.isEnabled = useDefault.isVisible
         profile.repaint()

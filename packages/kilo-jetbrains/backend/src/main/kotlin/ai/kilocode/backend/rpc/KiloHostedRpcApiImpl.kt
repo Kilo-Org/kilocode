@@ -68,7 +68,7 @@ class KiloHostedRpcApiImpl internal constructor(
 
     override suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto {
         app.requireReady()
-        return app.hosted.setPersonalDefaultProfile(profileID)
+        return app.hosted.setPersonalDefaultProfile(profileID, organization())
     }
 
     override suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
