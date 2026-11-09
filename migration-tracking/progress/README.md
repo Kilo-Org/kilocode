@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**1888 / 9765 cells done (19.3%)**, 89 dropped. `███░░░░░░░░░░░░░`
+**1906 / 9756 cells done (19.5%)**, 98 dropped. `███░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 1390 | 3518 | 39.5% |
+| module | 1404 | 3513 | 40% |
 | api | 12 | 36 | 33.3% |
 | patch | 110 | 3440 | 3.2% |
-| test | 376 | 2771 | 13.6% |
+| test | 380 | 2767 | 13.7% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -43,8 +43,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-30 | 646 | 9817 | 6.6% |
 | 2026-11-05 | 1609 | 9786 | 16.4% |
 | 2026-11-06 | 1874 | 9765 | 19.2% |
-| 2026-11-09 | 1887 | 9765 | 19.3% |
-| now | 1888 | 9765 | 19.3% |
+| 2026-11-09 | 1888 | 9765 | 19.3% |
+| now | 1906 | 9756 | 19.5% |
 
 ## Features
 
@@ -147,7 +147,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ui | 145/248 |  | 0/1 | 1/18 | 146/267 | 54.7% | `█████████░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 992/1424 |  |  | 239/607 | 1231/2031 | 60.6% | `██████████░░░░░░` |  |
+| vscode | 1006/1419 |  |  | 243/603 | 1249/2022 | 61.8% | `██████████░░░░░░` |  |
 | wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | worktree | 4/4 | 1/1 | 1/1 | 6/6 | 12/12 | 100% | `████████████████` | 1 plugin |
@@ -346,11 +346,19 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `module:packages/kilo-vscode/src/agent-manager/terminal-destination.ts`: The terminal destination setting, its watcher and its persistence are removed. A stored value is cleared at activation by clearLegacyTerminalDestination. (boiled-message)
 - `module:packages/kilo-vscode/src/kilo-provider/config-bindings.ts`: ConfigBindings guarded v1 config.overlayUpdate with a connection generation, project generation and target revision, and expired a binding after reconnect, trust revocation, removal or save. v2 writes the config files in the extension host (src/settings-host.ts configWrite with the serialize chain) and the webview has no revision-bound target, so the class has no v2 caller. src/settings-host.ts owns the file target and the write order instead. (open-config-picker)
 - `module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts`: One-time migration of stored kilo-code.new.autocomplete provider/model values to the unset default. The v2 extension reads new keys (kilo-code.v2.autocomplete.*), which have no stored v1 values to migrate; unset already resolves to the default model (packages/kilo-vscode/src/services/autocomplete/settings.ts readAutocompleteSettings). (autocomplete-inline)
+- `module:packages/kilo-vscode/src/services/marketplace/bundles.ts`: v1 bundled catalog snapshots and extracted them on the extension side. v2 serves the catalog from registries through kilocode.marketplace.list, with no client-side bundle or extraction step. (marketplace-panel)
+- `module:packages/kilo-vscode/src/services/marketplace/notifier.ts`: v1 notified the UI about install and MCP-auth progress over extension messages. v2 returns the installed record from the RPC and the panel polls MCP status locally (createMcp), so no extension-side notifier exists. (marketplace-panel)
+- `module:packages/kilo-vscode/src/services/marketplace/notify.ts`: v1 emitted marketplace notifications from the extension host. v2 reports install and sign-in progress inside the panel and the existing MCP status surface; there is no marketplace notification channel. (marketplace-panel)
+- `module:packages/kilo-vscode/src/services/marketplace/relevance.ts`: v1 scored catalog items against workspace context and suggest_for data to show a relevant filter and suggested installs. v2 has no relevance RPC or suggestion entry point; the panel searches and filters the catalog client-side. (marketplace-panel)
 - `module:packages/kilo-vscode/tests/unit/agent-manager-memory-commands.test.ts`: The Memory and Feedback providers are excluded (.kilo/plans/agent-manager-v2-conventions.md). v2 has no memory command, provider or resource, so the command test has no carrier. (am-progress-map)
 - `module:packages/kilo-vscode/tests/unit/agent-manager-telemetry.test.ts`: The test covered the dropped Agent Manager telemetry module. Telemetry is excluded and no v2 telemetry module or event exists. (am-progress-map)
 - `module:packages/kilo-vscode/tests/unit/agent-manager-terminal-destination.test.ts`: Tested the removed destination setting and its panel-local override rules; both are gone. The single terminal path is covered by test/agent-manager-terminal-side.test.ts and test/terminal-destination-cleanup.test.ts. (boiled-message)
 - `module:packages/kilo-vscode/tests/unit/autocomplete-migrate-default.test.ts`: Tests the dropped migrate-default.ts migration of kilo-code.new.autocomplete values; v2 reads kilo-code.v2.autocomplete.* keys with no v1 values to migrate. (autocomplete-inline)
 - `module:packages/kilo-vscode/tests/unit/config-bindings.test.ts`: Tests the removed v1 ConfigBindings class (immutable read target, expiry on reconnect, trust, removal and save, and publication after a concurrent refresh). v2 host writes through src/settings-host.ts with the serialize chain and has no bindings. (open-config-picker)
+- `module:packages/kilo-vscode/tests/unit/marketplace-bundles.test.ts`: Tested the dropped extension-side bundle extraction (module:packages/kilo-vscode/src/services/marketplace/bundles.ts). v2 has no bundled catalog. (marketplace-panel)
+- `module:packages/kilo-vscode/tests/unit/marketplace-notify.test.ts`: Tested the dropped extension-side notify modules. v2 has no marketplace notification channel. (marketplace-panel)
+- `module:packages/kilo-vscode/tests/unit/marketplace-panel-arch.test.ts`: Asserted the architecture of a separate marketplace panel and its own webview bundle, which v2 does not have. The shared-bundle panel contract is covered by packages/kilo-vscode/test/webview-surface.test.ts and test/editor-panel.test.ts. (marketplace-panel)
+- `module:packages/kilo-vscode/tests/unit/marketplace-relevance.test.ts`: Tested the dropped relevance scorer (module:packages/kilo-vscode/src/services/marketplace/relevance.ts). v2 has no relevance RPC or suggested-install surface. (marketplace-panel)
 - `module:packages/kilo-vscode/tests/unit/mcp-auth-service.test.ts`: Tests the v1 host McpAuthService, which v2 removes: the server owns MCP OAuth state (integration.oauth.*) and the webview calls it directly in webview-ui/src/v2/mcp.ts. (settings-mcp)
 - `module:packages/kilo-vscode/tests/unit/mcp-auth-status.test.ts`: Tests needsAuthNames from the removed v1 host service; v2 reads McpServer.status from the server. (settings-mcp)
 - `module:packages/kilo-vscode/tests/unit/open-config-message.test.ts`: Tests configMessage, the v1 webview helper that built the openConfigFile message and its localized labels. v2 has no such message: the webview posts openFile and the host builds the quick pick, so the label assertions are not carried. (open-config-picker)
@@ -358,6 +366,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts`: Tested the removed VS Code integrated terminal manager. The embedded terminal panel is covered by test/agent-manager-terminal-state.test.ts and test/agent-manager-terminal-side.test.ts. (boiled-message)
 - `module:packages/kilo-vscode/webview-ui/agent-manager/telemetry.ts`: Telemetry is excluded (.kilo/plans/agent-manager-v2-conventions.md): the ported Agent Manager has no telemetry module or event, and the wrapped user-visible behavior is unchanged. (am-progress-map)
 - `module:packages/kilo-vscode/webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx`: The split button and its destination dropdown are removed. TabBar renders one terminal toggle for the embedded panel, covered by test/agent-manager-terminal-side.test.ts. (boiled-message)
+- `module:packages/kilo-vscode/webview-ui/src/stories/marketplace.stories.tsx`: v2 has no webview storybook surface for the extension; the marketplace components are exercised by test/marketplace-render.test.ts and test/marketplace-install-modal.test.ts against the real components. (marketplace-panel)
 - `module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts`: The v1 helper built the localized openConfigFile message: scope, loaded status, create entry and all source labels. v2 has no such message: the webview posts openFile with the host-resolved target and the host quick pick uses fixed English labels like the other host-side confirmations, so configMessage is not carried. The picker behavior is the separate kilo-provider/open-config.ts cell ported to packages/kilo-vscode/src/open-config.ts. (fix-progress-map)
 - `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `module:packages/opencode/src/kilocode/indexing-feature.ts`: indexingEnabled and ensureIndexingPlugin read and injected @kilocode/kilo-indexing in the config plugin list. v2 always registers KiloIndexingPlugin (packages/kilo-plugin/src/index.ts); the TUI command and sidebar are always present, as with the v1 default built-in plugin. (codebase-indexing-2)
