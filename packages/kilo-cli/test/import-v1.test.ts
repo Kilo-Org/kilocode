@@ -28,6 +28,7 @@ const SECRET = {
   access: "v1-access-token-7d29ce",
   refresh: "v1-refresh-token-c3a18e",
   auth: "authjson-key-5e9b07",
+  wellknown: "authjson-wellknown-token-91c4d2",
 }
 const user = (time: number, extra: object = {}) =>
   JSON.stringify({ role: "user", time: { created: time }, agent: "code", model, ...extra })
@@ -191,8 +192,15 @@ test("the first start converts the Kilo v1 store into v2 sessions before the sto
 test("the Kilo-specific steps: no hidden or transient text, editor context kept, no credentials", async () => {
   const { dir, data } = await root()
   await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
-  // The v2 migration `import_legacy_credentials` imports an `auth.json` of the data directory into the copy.
-  await writeFile(path.join(data, "auth.json"), JSON.stringify({ openai: { type: "api", key: SECRET.auth } }))
+  // The v2 migration `import_legacy_credentials` imports an `auth.json` of the data directory into the copy, and records
+  // the origins of well-known entries in the `wellknown:sources` key.
+  await writeFile(
+    path.join(data, "auth.json"),
+    JSON.stringify({
+      openai: { type: "api", key: SECRET.auth },
+      "https://models.example.com": { type: "wellknown", key: "EXAMPLE_TOKEN", token: SECRET.wellknown },
+    }),
+  )
   const file = await KiloDatabase.select({}, { data, channel: "latest" })
   // Deleted rows must not stay readable in free pages of the file that is linked into place.
   const bytes = Buffer.from(await readFile(file)).toString("latin1")

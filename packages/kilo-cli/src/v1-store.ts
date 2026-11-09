@@ -28,8 +28,11 @@ export type Options = {
  */
 export async function convert(file: string, options: Options) {
   requireV1Store(file)
-  prepare(file)
   const total = count(file, "session")
+  // Progress between the blocking phases: the caller refreshes its import lock with every report.
+  options.progress?.(0, total)
+  prepare(file)
+  options.progress?.(0, total)
   // The conversion yields after each session, so the timer reports progress while it runs.
   const timer = setInterval(() => options.progress?.(count(file, "session_v2"), total), 2_000)
   try {

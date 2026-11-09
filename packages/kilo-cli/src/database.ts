@@ -129,6 +129,9 @@ async function importV1(store: string, file: string, data: string) {
     console.error(`kilo2: importing Kilo v1 sessions from ${store} once; ${store} stays as it is.`)
     const { KiloV1Store } = await import("./v1-store")
     const started = Date.now()
+    // The copy, the Kilo steps and the conversion run one after another, and the copy and the Kilo steps block the
+    // process, so no timer can refresh the lock during them. Progress before and after each phase keeps the lock
+    // fresh as long as no single phase takes longer than STALE.
     await copy(store, file, (copy) =>
       KiloV1Store.convert(copy, {
         data,
