@@ -8,6 +8,7 @@ import { Cause, Effect, type Scope } from "effect"
 import path from "node:path"
 import { PlanFollowup } from "./plan-followup"
 import { planExit } from "./plan"
+import { PlanReminder } from "./reminder"
 
 /** The Kilo plan workflow: the plan_exit tool and the post-plan handoff question. */
 export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore.Service | Scope.Scope>({
@@ -22,6 +23,10 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
     const handled = new Set<string>()
 
     yield* ctx.tool.transform((editor) => editor.add(planExit(ctx, store, roots))).pipe(Effect.orDie)
+
+    // The native reminder names the home directory. Name the workspace plan file too, so the write and
+    // plan_exit stay inside the project and need no external-directory approval.
+    yield* PlanReminder.install(ctx, store)
 
     yield* ctx.session.hook("experimental.idle", (event) =>
       PlanFollowup.ask({ ctx, store, bus, handled, roots, sessionID: event.sessionID }).pipe(

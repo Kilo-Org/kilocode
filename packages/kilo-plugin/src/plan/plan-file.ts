@@ -46,7 +46,7 @@ export function locate(
   agent?: string,
   roots: readonly string[] = [],
 ) {
-  return saved(target) ?? written(messages, target, workspace, agent, roots)
+  return saved(target) ?? written(messages, target, workspace, agent, roots) ?? recent(target, roots)
 }
 
 /** A path for the model and the client, relative to the session workspace when it is inside the project. */
@@ -99,9 +99,12 @@ function planWrite(message: SessionMessage.Info) {
   if (message.type !== "assistant") return undefined
   if (!isPlanner(message.agent)) return undefined
   for (const part of message.content.toReversed()) {
-    if (part.type !== "tool" || part.state.status !== "completed") continue
+    if (part.type !== "tool" || part.state.status === "error") continue
     if (part.name !== "write" && part.name !== "edit") continue
-    const file = part.state.input["path"]
+    // A write and plan_exit can arrive in the same tool batch. Use the input path even while the write
+    // is still running, and let the file check below reject a write that has not reached the disk.
+    const input = part.state.input
+    const file = typeof input === "object" && input !== null && "path" in input ? input["path"] : undefined
     if (typeof file === "string" && file.toLowerCase().endsWith(".md")) return file
   }
   return undefined
@@ -128,4 +131,22 @@ function written(
     if (isFile(full)) return full
   }
   return undefined
+}
+
+/** The newest plan file in the target directory or a native plan root, for a write that has no message yet. */
+function recent(target: string, roots: readonly string[]) {
+  const directories = [path.dirname(target), ...roots]
+  return directories
+    .flatMap((directory) => {
+      if (!fs.existsSync(directory)) return []
+      return fs
+        .readdirSync(directory)
+        .filter((name) => name.endsWith(".md"))
+        .flatMap((name) => {
+          const file = path.join(directory, name)
+          const stat = fs.statSync(file, { throwIfNoEntry: false })
+          return stat?.isFile() ? [{ file, time: stat.mtimeMs }] : []
+        })
+    })
+    .sort((left, right) => right.time - left.time || left.file.localeCompare(right.file))[0]?.file
 }

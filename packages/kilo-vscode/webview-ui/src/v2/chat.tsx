@@ -98,6 +98,14 @@ export function Chat() {
     tabs.open(id)
     setView("chat")
   }
+  // The plan handoff creates a new session on the server and asks the client to show it. The TUI and the
+  // VS Code sidebar both consume this event, so the new Code session opens in the active view.
+  onCleanup(
+    v2.data.on("tui.session.select", (event) => {
+      if (event.location && event.location.directory !== v2.directory) return
+      open(event.data.sessionID)
+    }),
+  )
   const step = (offset: -1 | 1) => {
     if (!document.hasFocus() || view() !== "chat") return
     const before = tabs.active()

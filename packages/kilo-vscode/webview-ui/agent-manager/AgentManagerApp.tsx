@@ -1331,6 +1331,19 @@ const AgentManagerContent: Component = () => {
       selectSession: (sessionID) => sessions.selectSession(sessionID),
       setReviewActive,
     })
+  // The plan handoff creates a new session on the server and asks the client to show it. Select the new
+  // session in its worktree so the Agent Manager leaves the plan tab for the Code session.
+  createEffect(() => {
+    for (const directory of directories.sessionDirectories()) {
+      const store = panel.store(directory)
+      onCleanup(
+        store.data.on("tui.session.select", (event) => {
+          if (event.location && event.location.directory !== directory) return
+          selectSessionTab(event.data.sessionID, false)
+        }),
+      )
+    }
+  })
   const handleNewTabForCurrentSelection = () =>
     newTabForSelection({
       selection: selection(),
