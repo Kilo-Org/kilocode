@@ -28,10 +28,8 @@ import { createWorktreeDelete, type WorktreeDelete } from "./worktree-delete"
 import type { ModeRouter } from "./mode-router"
 import { CaffeinationButton } from "./CaffeinationButton"
 
-const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
-  const wt = state.worktrees.find((item) => item.id === session.worktreeId)
-  return wt?.label || wt?.branch || local
-}
+const place = (worktree: AgentManagerStateMessage["worktrees"][number] | undefined, local: string) =>
+  worktree?.label || worktree?.branch || local
 
 const activeRun = (status: RunStatus | undefined) => status?.state === "running" || status?.state === "stopping"
 const operationBusy = (store: ProjectStore | undefined, id: string) =>
@@ -59,7 +57,7 @@ interface Props {
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
-  sessionActivity: (id: string) => Activity
+  sessionActivity: (id: string, info?: Pick<ProjectSessionInfo, "outcome" | "time">) => Activity
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
@@ -112,13 +110,47 @@ export const ProjectList: Component<Props> = (props) => {
     },
   })
   props.onDeleteRef?.(deletion.confirm)
+  // Group the project sessions once per catalog change; the search rows below read the groups instead of filtering
+  // every project list per worktree and per session.
+  const catalogs = createMemo(() => {
+    const result = new Map<
+      string,
+      {
+        local: ProjectSessionInfo[]
+        worktrees: Map<string, ProjectSessionInfo[]>
+        byId: Map<string, AgentManagerStateMessage["worktrees"][number]>
+      }
+    >()
+    for (const project of props.projects) {
+      const state = props.states[project.id]
+      if (!state) continue
+      const local: ProjectSessionInfo[] = []
+      const worktrees = new Map<string, ProjectSessionInfo[]>()
+      for (const session of props.sessions[project.id] ?? []) {
+        if (session.worktreeId === null) {
+          local.push(session)
+          continue
+        }
+        const list = worktrees.get(session.worktreeId)
+        if (list) list.push(session)
+        else worktrees.set(session.worktreeId, [session])
+      }
+      result.set(project.id, {
+        local,
+        worktrees,
+        byId: new Map(state.worktrees.map((worktree) => [worktree.id, worktree])),
+      })
+    }
+    return result
+  })
   const search = createMemo(() => {
     const items: SidebarSearchItem[] = []
     for (const project of props.projects) {
       const state = props.states[project.id]
-      if (!state) continue
+      const catalog = catalogs().get(project.id)
+      if (!state || !catalog) continue
       const store = props.store?.(project.id)
-      const local = props.sessions[project.id]?.filter((session) => session.worktreeId === null) ?? []
+      const local = catalog.local
       items.push({
         key: `${project.id}:local`,
         projectId: project.id,
@@ -135,7 +167,7 @@ export const ProjectList: Component<Props> = (props) => {
         count: local.length,
       })
       for (const worktree of state.worktrees) {
-        const sessions = props.sessions[project.id]?.filter((session) => session.worktreeId === worktree.id) ?? []
+        const sessions = catalog.worktrees.get(worktree.id) ?? []
         items.push({
           key: `${project.id}:worktree:${worktree.id}`,
           projectId: project.id,
@@ -153,8 +185,8 @@ export const ProjectList: Component<Props> = (props) => {
         })
       }
       for (const session of props.sessions[project.id] ?? []) {
-        const wt = state.worktrees.find((item) => item.id === session.worktreeId)
-        const where = place(state, session, props.t("agentManager.local"))
+        const wt = catalog.byId.get(session.worktreeId ?? "")
+        const where = place(wt, props.t("agentManager.local"))
         items.push({
           key: `${project.id}:session:${session.id}`,
           projectId: project.id,
@@ -164,7 +196,7 @@ export const ProjectList: Component<Props> = (props) => {
           meta: [project.label, where],
           search: [project.label, where, wt?.branch, session.title, session.id].filter(Boolean).join(" "),
           updatedAt: new Date(session.time.updated).toISOString(),
-          state: props.sessionActivity(session.id),
+          state: props.sessionActivity(session.id, session),
           visible: project.expanded,
           sessionId: session.id,
           location: session.worktreeId ? "worktree" : "local",

@@ -18,6 +18,7 @@ describe("display presets", () => {
       terminal_command_display: "expanded",
       code_edit_display: "expanded",
       mcp_tool_display: "collapsed",
+      code_mode_display: "expanded",
     })
   })
 
@@ -27,6 +28,7 @@ describe("display presets", () => {
       terminal_command_display: "collapsed",
       code_edit_display: "collapsed",
       mcp_tool_display: "collapsed",
+      code_mode_display: "collapsed",
     })
   })
 })
@@ -75,6 +77,7 @@ describe("buildWorkStylePlan", () => {
         terminal_command_display: "expanded",
         code_edit_display: "expanded",
         mcp_tool_display: "collapsed",
+        code_mode_display: "expanded",
         reasoning_display: "expanded",
         permissions: getWorkStylePreset("human-in-the-loop").permissions,
       },
@@ -89,6 +92,7 @@ describe("buildWorkStylePlan", () => {
         terminal_command_display: "expanded",
         code_edit_display: "collapsed",
         mcp_tool_display: "expanded",
+        code_mode_display: "expanded",
         auto_collapse_reasoning: true,
         permission: { edit: "ask" },
       },

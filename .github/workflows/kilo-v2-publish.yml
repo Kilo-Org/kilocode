@@ -39,7 +39,9 @@ on:
       - .github/workflows/kilo-v2-publish.yml
       - packages/kilo-cli/script/build.ts
       - packages/kilo-cli/script/publish.ts
+      - packages/kilo-cli/script/theme-smoke.ts
       - packages/cli/script/postinstall.mjs
+      - script/kilocode/smoke-host.ts
       - script/kilocode/publish-client.ts
       - script/kilocode/client-manifest.ts
       - script/kilocode/release-env.ts

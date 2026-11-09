@@ -10,7 +10,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
 import { useSettingsConfig } from "../../v2/settings-config"
-import { useSpeechStatus } from "../speech-to-text/status"
+import { useSpeechStatus, SpeechToTextStatusProvider } from "../speech-to-text/status"
 import { speechToTextModelOptions } from "../speech-to-text/model-selector"
 import { selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
@@ -21,7 +21,7 @@ import SettingsRow from "./SettingsRow"
 import { Switch } from "./Switch"
 import type { SettingsTabProps } from "./tabs"
 
-const ModelsTab: Component<SettingsTabProps> = () => {
+const ModelsTabContent: Component<SettingsTabProps> = () => {
   const language = useLanguage()
   const v2 = useV2()
   const config = useSettingsConfig()
@@ -245,6 +245,15 @@ const ModelsTab: Component<SettingsTabProps> = () => {
 }
 
 export default ModelsTab
+
+// The speech rows read the machine-wide speech status. Only this tab asks for it, not the whole Settings panel.
+function ModelsTab(props: SettingsTabProps) {
+  return (
+    <SpeechToTextStatusProvider>
+      <ModelsTabContent {...props} />
+    </SpeechToTextStatusProvider>
+  )
+}
 
 /** Commit on blur or Enter, not on every keystroke: a keystroke would otherwise write and reload the config. */
 const SpeechTextField: Component<{

@@ -60,6 +60,7 @@ export type DisplaySettings = {
   terminalCommandDisplay: ToolDisplayLayout
   codeEditDisplay: ToolDisplayLayout
   mcpToolDisplay: ToolDisplayLayout
+  codeModeDisplay: ToolDisplayLayout
   reasoningDisplay: ReasoningDisplay
 }
 
@@ -67,6 +68,7 @@ export const DISPLAY_DEFAULTS: DisplaySettings = {
   terminalCommandDisplay: "expanded",
   codeEditDisplay: "collapsed",
   mcpToolDisplay: "collapsed",
+  codeModeDisplay: "collapsed",
   reasoningDisplay: "expanded",
 }
 
@@ -431,7 +433,14 @@ export type ToWebview =
       policy?: ConfigPolicy
       error?: string
     }
-  | { type: "configWritten"; id: number; ok: boolean; error?: string }
+  | {
+      type: "configWritten"
+      id: number
+      ok: boolean
+      error?: string
+      /** The written document, so the panel updates its raw file without a second read of every config file. */
+      file?: ConfigFileContent & { scope: ConfigScope }
+    }
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
   | { type: "indexingSettingsLoaded"; settings: IndexingSettings }
   | { type: "indexingStatusLoaded"; status: KiloIndexingRpc.Status; projectId?: string }

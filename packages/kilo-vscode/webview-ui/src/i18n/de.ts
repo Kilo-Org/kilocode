@@ -1355,6 +1355,11 @@ export const dict = {
     "Wählen Sie, ob Blöcke für MCP- und generische Werkzeuge anfangs aus- oder eingeklappt sind.",
   "settings.display.mcpTool.expanded": "Ausgeklappt",
   "settings.display.mcpTool.collapsed": "Eingeklappt",
+  "settings.display.codeMode.title": "Blöcke für Code Mode",
+  "settings.display.codeMode.description":
+    "Wählen Sie, ob Blöcke für Code Mode mit aufgelisteten Tool-Aufrufen oder als eine Zeile starten. Das Skript bleibt immer ausgeblendet, bis Sie es öffnen.",
+  "settings.display.codeMode.expanded": "Ausgeklappt",
+  "settings.display.codeMode.collapsed": "Eingeklappt",
 
   "settings.display.shortcutHints.title": "Tastenkürzel-Hinweise anzeigen",
   "settings.display.shortcutHints.description":

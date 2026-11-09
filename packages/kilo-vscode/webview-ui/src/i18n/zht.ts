@@ -1214,6 +1214,11 @@ export const dict = {
   "settings.display.mcpTool.description": "選擇 MCP 與通用工具區塊的初始狀態：展開或收合。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "收合",
+  "settings.display.codeMode.title": "Code Mode 區塊",
+  "settings.display.codeMode.description":
+    "選擇 Code Mode 區塊的初始狀態：列出工具呼叫或顯示為一行。指令碼在您開啟之前始終保持隱藏。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "收合",
 
   "settings.display.shortcutHints.title": "顯示快捷鍵提示",
   "settings.display.shortcutHints.description":
