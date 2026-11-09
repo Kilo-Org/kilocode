@@ -1287,6 +1287,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",
+  "settings.display.limitContentWidth.title": "จำกัดความกว้างของเนื้อหาแชท",
+  "settings.display.limitContentWidth.description":
+    "รักษาเนื้อหาแชทและช่องพรอมต์ให้อยู่ในคอลัมน์ตรงกลางที่อ่านง่าย ปิดเพื่อใช้ความกว้างเต็มแผงในแถบด้านข้าง แท็บตัวแก้ไข และ Agent Manager",
   "settings.display.terminalCommand.title": "บล็อกคำสั่งเทอร์มินัล",
   "settings.display.terminalCommand.description": "เลือกว่าบล็อกคำสั่งเทอร์มินัลจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.terminalCommand.expanded": "ขยาย",

@@ -62,6 +62,13 @@ describe("settings search targets", () => {
     expect(result).toMatchObject({ tab: "experimental", tabOnly: false })
   })
 
+  test("finds the chat content width limit row in Display settings", () => {
+    const result = searchSettings("content width", translate).find(
+      (item) => item.titleKey === "settings.display.limitContentWidth.title",
+    )
+    expect(result).toMatchObject({ tab: "display", tabOnly: false })
+  })
+
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
     const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
     expect(keys).not.toContain("settings.agentBehaviour.removeMcp.title")

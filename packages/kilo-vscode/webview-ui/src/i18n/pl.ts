@@ -1318,6 +1318,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Przełączaj wysiłek rozumowania za pomocą Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Naciśnij Shift+Tab w polu wprowadzania promptu, aby przełączyć się na następny poziom wysiłku rozumowania. Wyłącz tę opcję, aby zachować Shift+Tab do nawigacji fokusem za pomocą klawiatury.",
+  "settings.display.limitContentWidth.title": "Ogranicz szerokość treści czatu",
+  "settings.display.limitContentWidth.description":
+    "Utrzymuje treść czatu i pole monitu w wyśrodkowanej, czytelnej kolumnie. Wyłącz, aby używać pełnej szerokości panelu na pasku bocznym, w kartach edytora i w Agent Managerze.",
   "settings.display.terminalCommand.title": "Bloki poleceń terminala",
   "settings.display.terminalCommand.description":
     "Wybierz, czy bloki poleceń terminala mają być początkowo rozwinięte czy zwinięte.",

@@ -173,6 +173,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.limitContentWidth.title")}
+          description={language.t("settings.display.limitContentWidth.description")}
+        >
+          <Switch
+            checked={config.setting("chat.limitContentWidth") !== false}
+            onChange={(checked) => config.setSetting("chat.limitContentWidth", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.limitContentWidth.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.shortcutHints.title")}
           description={language.t("settings.display.shortcutHints.description")}
         >
