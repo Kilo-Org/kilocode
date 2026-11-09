@@ -126,7 +126,7 @@ export const layer = Layer.effect(
             generation: input.generation,
             // kilocode_change end
             // Gateways require session attribution even for a stateless call; no Session is stored.
-            http: { headers: { "x-opencode-session": SessionID.create() } },
+            headers: { "x-opencode-session": SessionID.create() },
           }),
         )
         .pipe(

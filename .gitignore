@@ -64,3 +64,6 @@ telemetry-id
 # Test Artifacts # kilocode_change
 # kilocode_change: local test artifacts written by the app package
 packages/app/.artifacts/
+
+# Legal drafts pending review are kept outside the repository; never copy them in.
+legal-drafts-private/
