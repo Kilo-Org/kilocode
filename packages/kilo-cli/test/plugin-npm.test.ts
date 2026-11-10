@@ -95,6 +95,9 @@ test("reads the cache on the resolve path instead of cloning", async () => {
     expect(reported.directory).toBe(PluginGitSource.cacheDirectory(`git:${directory}`)!)
     expect(slash(reported.directory)).toContain("packages/git/")
     expect(await Bun.file(reported.directory).exists()).toBe(false)
+    // A subpath plugin is reported at its own directory inside the clone, never at the repository root.
+    const nested = await Effect.runPromise(service.resolve(`git:${directory}#plugins/x`))
+    expect(nested.directory).toBe(path.join(reported.directory, "plugins", "x"))
     expect(calls).toEqual([])
   } finally {
     await rm(directory, { recursive: true, force: true })

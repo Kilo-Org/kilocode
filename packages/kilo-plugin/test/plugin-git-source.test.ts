@@ -131,11 +131,13 @@ describe("git plugin spec parsing", () => {
   })
 
   test("normalizes a repository to one canonical identity", () => {
-    // A URL folds its scheme, host case and default port, so one repository has one identity and one deny resource.
-    expect(PluginGitSource.gitPluginIdentity("git:https://github.com:443/owner/repo")).toBe("git/github.com/owner/repo")
-    expect(PluginGitSource.gitPluginIdentity("git:http://github.com:80/owner/repo")).toBe("git/github.com/owner/repo")
-    if (process.platform !== "win32")
-      expect(PluginGitSource.gitPluginIdentity("git:https://GitHub.com/owner/repo")).toBe("git/github.com/owner/repo")
+    // A repo folds its host case and default port, so one repository has one identity and one deny resource. `new
+    // URL` already normalizes `http:`/`https:`, so these cover the shorthand host and a non-special scheme.
+    expect(PluginGitSource.gitPluginIdentity("git:GitHub.com/owner/repo")).toBe("git/github.com/owner/repo")
+    expect(PluginGitSource.gitPluginIdentity("git:ssh://Example.com:22/owner/repo")).toBe("git/example.com/owner/repo")
+    expect(PluginGitSource.gitPluginIdentity("git:ssh://example.com:2222/owner/repo")).toBe(
+      "git/example.com:2222/owner/repo",
+    )
     // A subpath normalizes, so `#./plugins/x` names the same plugin as `#plugins/x`.
     expect(PluginGitSource.gitPluginIdentity("git:github.com/owner/repo#./plugins/x")).toBe(
       "git/github.com/owner/repo/plugins/x",
@@ -148,6 +150,19 @@ describe("git plugin spec parsing", () => {
   test("rejects a subpath that leaves the clone", () => {
     expect(PluginGitSource.parseGitPluginSpec("git:github.com/owner/repo#../etc")).toBeUndefined()
     expect(PluginGitSource.parseGitPluginSpec("git:github.com/owner/repo#plugins/../../etc")).toBeUndefined()
+    // A segment that merely starts with `..` stays inside the clone.
+    expect(PluginGitSource.parseGitPluginSpec("git:github.com/owner/repo#..plugins/x")?.subpath).toBe("..plugins/x")
+  })
+
+  test("folds a local .git suffix in the identity but keeps separate clones", () => {
+    // The identity matches v1 for every repo; the clone key keeps the suffix, since these are different directories.
+    expect(PluginGitSource.gitPluginIdentity("git:/srv/plugin.git")).toBe("git/srv/plugin")
+    expect(PluginGitSource.cacheDirectory("git:/srv/plugin.git")).not.toBe(PluginGitSource.cacheDirectory("git:/srv/plugin"))
+  })
+
+  test("reports a subpath plugin's own directory inside the clone", () => {
+    const root = PluginGitSource.cacheDirectory("git:github.com/owner/repo")!
+    expect(PluginGitSource.cacheDirectory("git:github.com/owner/repo#plugins/x")).toBe(path.join(root, "plugins", "x"))
   })
 })
 
@@ -428,6 +443,10 @@ describe("git plugin loader hook", () => {
     // A relative spec is written with forward slashes on every platform; another drive stays absolute.
     const relative = path.relative(process.cwd(), fixture.path).replaceAll("\\", "/")
     const spec = relative.startsWith(".") || /^[A-Za-z]:\//.test(relative) ? relative : `./${relative}`
+    // The identity and the clone key are absolute too, so two working directories never share an entry.
+    expect(PluginGitSource.gitPluginIdentity(`git:${spec}`)).toBe(
+      `git/${fixture.path.replaceAll("\\", "/").replace(/^\/+/, "")}`,
+    )
     const resolved = await hook(`git:${spec}`, true)
     expect(resolved).toMatchObject({ target: expect.any(String) })
     if (!resolved || !("target" in resolved)) return

@@ -115,7 +115,7 @@ function parseSubpath(raw: string): { ok: true; value?: string } | { ok: false }
   const value = raw.trim()
   if (!value) return { ok: true }
   const normalized = path.posix.normalize(value.replace(/\\/g, "/")).replace(/^\/+|\/+$/g, "")
-  if (!normalized || normalized === "." || normalized.startsWith("..")) return { ok: false }
+  if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../")) return { ok: false }
   return { ok: true, value: normalized }
 }
 
@@ -156,19 +156,27 @@ function trimRepo(value: string) {
   return value.replace(/\/+$/, "").replace(/\.git$/i, "")
 }
 
-// A local path as one canonical string. `path.resolve` only knows the host's separators, so a Windows path on
-// POSIX (and the reverse) is normalized textually and keeps its separators.
+// A local path as one canonical string. A relative path is resolved on every platform; an absolute path is
+// resolved only in the host's own style, since `path.resolve` would rewrite a Windows path on POSIX (and a POSIX
+// absolute path on Windows) into a different directory. A Windows result uses forward slashes.
 function localIdentity(local: string) {
   const windows = isWindowsPath(local)
-  const absolute = windows === (process.platform === "win32") ? path.resolve(local) : local
-  return windows ? absolute.replace(/\\/g, "/") : absolute
+  const relative = !windows && !local.startsWith("/")
+  const absolute = relative || windows === (process.platform === "win32") ? path.resolve(local) : local
+  return isWindowsPath(absolute) ? absolute.replace(/\\/g, "/") : absolute
 }
 
-// The canonical repository an identity, a cache key and a `plugin.use` resource are all derived from: a URL drops
-// its scheme, host case and default port, a local path becomes absolute, and the `.git` suffix and trailing
-// slashes go. Without one canonical form, two spellings of one plugin share a clone but name different policy
-// resources, so a deny on the canonical spelling would not cover them.
+// The canonical repository an identity and a `plugin.use` resource are derived from: a URL drops its scheme, host
+// case and default port, a local path becomes absolute, and the `.git` suffix and trailing slashes go, as in v1.
+// Without one canonical form, two spellings of one plugin would name different policy resources, so a deny on the
+// canonical spelling would not cover them.
 function repoIdentity(repo: string) {
+  return trimRepo(repoKey(repo))
+}
+
+// The repository a clone is keyed by: the canonical form, except that a local path keeps a `.git` suffix, because
+// `/srv/plugin` and `/srv/plugin.git` are different directories and must not share a clone.
+function repoKey(repo: string) {
   if (isLocalRepo(repo)) {
     const local = repo.startsWith("file:")
       ? (fileUrlPath(repo) ?? repo)
@@ -232,7 +240,9 @@ function cachePaths(identity: string, ref: string | undefined) {
 export function cacheDirectory(spec: string) {
   const hit = parseGitPluginSpec(spec)
   if (!hit) return undefined
-  return cachePaths(repoIdentity(hit.repo), hit.ref).dir
+  const dir = cachePaths(repoKey(hit.repo), hit.ref).dir
+  // A subpath plugin lives inside the clone; reporting the root would read another plugin's manifest.
+  return hit.subpath ? path.join(dir, hit.subpath) : dir
 }
 
 async function git(args: string[], cwd?: string) {
@@ -245,9 +255,9 @@ async function git(args: string[], cwd?: string) {
     env: {
       ...process.env,
       GIT_TERMINAL_PROMPT: "0",
-      // Keep a configured ssh command and add the non-interactive option, so a host-key or passphrase prompt
-      // fails the clone instead of waiting on a terminal the user cannot reach.
-      GIT_SSH_COMMAND: `${process.env.GIT_SSH_COMMAND ?? "ssh"} -oBatchMode=yes`,
+      // Without a configured ssh command, a host-key or passphrase prompt fails the clone instead of waiting on a
+      // terminal the user cannot reach. A configured `GIT_SSH_COMMAND` or `GIT_SSH` is left as it is.
+      ...(process.env.GIT_SSH_COMMAND || process.env.GIT_SSH ? {} : { GIT_SSH_COMMAND: "ssh -oBatchMode=yes" }),
     },
     // No console window flashes on Windows for each git call.
     windowsHide: true,
@@ -347,7 +357,7 @@ export async function resolveGitPluginTarget(
   if (!hit || !identity)
     return { ok: false, code: "invalid_spec", error: new Error(`Invalid git plugin spec: ${spec}`) }
 
-  const repo = repoIdentity(hit.repo)
+  const repo = repoKey(hit.repo)
   const url = cloneUrl(hit.repo)
   const paths = cachePaths(repo, hit.ref)
   try {
@@ -426,41 +436,38 @@ async function collectStaging(directory: string, now: number) {
   )
 }
 
-// An entry is swept only when its clone is gone or its last use is older than the retention window. An
-// unreadable marker ages by the directory, never by a missing timestamp, and the entry's lock is taken before
-// anything is removed so a sweep cannot delete a clone another process is publishing.
+// An entry is swept only when its clone is gone or its last use is older than the retention window. The check
+// runs once to pick candidates and again under the entry's lock, and nothing is removed before the lock is held,
+// so a sweep cannot delete a clone or marker another process is publishing.
 async function collectEntry(root: string, name: string, now: number) {
   const dir = path.join(root, name)
   const marker = path.join(root, `${name}.json`)
-  const info = await stat(dir).catch(() => undefined)
-  if (!info) {
-    await rm(marker, { force: true }).catch(() => undefined)
-    return
-  }
-  const prev: Marker | undefined = await Bun.file(marker)
-    .json()
-    .catch(() => undefined)
-  if (now - (prev?.usedAt ?? prev?.updatedAt ?? info.mtimeMs) <= RETENTION) return
-
+  if (!(await expired(dir, marker, now))) return
   const lease = await Flock.acquire(`plugin-git:${dir}`, { timeoutMs: LOCK_WAIT }).catch(() => undefined)
   // A busy entry belongs to a resolve in another process; the next sweep picks it up.
   if (!lease) return
   try {
-    const seen = await stat(dir).catch(() => undefined)
-    if (!seen) {
-      await rm(marker, { force: true }).catch(() => undefined)
-      return
-    }
-    const current: Marker | undefined = await Bun.file(marker)
-      .json()
-      .catch(() => undefined)
-    // Re-check under the lock: a resolve may have refreshed the entry while we waited.
-    if (now - (current?.usedAt ?? current?.updatedAt ?? seen.mtimeMs) <= RETENTION) return
+    if (!(await expired(dir, marker, now))) return
     await rm(dir, { recursive: true, force: true }).catch(() => undefined)
     await rm(marker, { force: true }).catch(() => undefined)
   } finally {
     await lease.release()
   }
+}
+
+// Only a missing directory counts as gone: any other stat failure keeps the entry. An unreadable marker ages by
+// the directory, never by a missing timestamp.
+async function expired(dir: string, marker: string, now: number) {
+  const info = await stat(dir).then(
+    (value) => value,
+    (error) => (error instanceof Error && "code" in error && error.code === "ENOENT" ? null : undefined),
+  )
+  if (info === undefined) return false
+  if (info === null) return true
+  const prev: Marker | undefined = await Bun.file(marker)
+    .json()
+    .catch(() => undefined)
+  return now - (prev?.usedAt ?? prev?.updatedAt ?? info.mtimeMs) > RETENTION
 }
 
 // The resources a local repo resolution stands for. A `plugin.use` deny on a local path is written against a
