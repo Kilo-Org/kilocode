@@ -106,16 +106,20 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
 }
 
 /**
- * The server environment derived from the Kilo VS Code settings. The CLI reads the `KILO_` names and translates them
- * to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading off by default. A changed
- * value applies on the next start, which the extension host triggers by stopping the server.
+ * The server environment derived from the Kilo VS Code settings and the running editor. The CLI reads the `KILO_`
+ * names and translates them to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading
+ * off by default. A changed value applies on the next start, which the extension host triggers by stopping the server.
  */
 export function settingsEnvironment(values: {
   claudeCodeCompat: boolean
   extraCaCerts: string
+  editor: string
 }): Record<string, string> {
   const extraCaCerts = values.extraCaCerts.trim()
   return {
+    // v1 `services/cli-backend/server-manager.ts` reported the editor as `${vscode.env.appName} ${vscode.version}`,
+    // which the Gateway stores as `X-KILOCODE-EDITORNAME`.
+    KILOCODE_EDITOR_NAME: values.editor,
     ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
     ...(extraCaCerts.length > 0 ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
   }

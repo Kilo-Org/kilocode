@@ -103,6 +103,7 @@ describe("registerCodeActions", () => {
       "kilo-code.v2.fixCode",
       "kilo-code.v2.improveCode",
       "kilo-code.v2.focusChatInput",
+      "kilo-code.v2.toggleChatSearch",
       "kilo-code.v2.generateTerminalCommand",
       "kilo-code.v2.terminalAddToContext",
       "kilo-code.v2.terminalFixCommand",
@@ -275,6 +276,25 @@ describe("registerCodeActions", () => {
 
     expect(state.executed).toEqual([["kilo-code.v2.chat.focus"]])
     expect(state.posts).toEqual([{ type: "command", name: "focusPrompt" }])
+  })
+
+  it("toggles the sidebar transcript search", async () => {
+    const state = setup()
+
+    await state.handlers.get("kilo-code.v2.toggleChatSearch")?.()
+
+    expect(state.executed).toEqual([["kilo-code.v2.chat.focus"]])
+    expect(state.posts).toEqual([{ type: "command", name: "focusSearch" }])
+  })
+
+  it("toggles the Agent Manager transcript search", async () => {
+    const state = setup({ agentActive: true })
+
+    await state.handlers.get("kilo-code.v2.toggleChatSearch")?.()
+
+    expect(state.executed).toEqual([])
+    expect(state.waits).toEqual(["reveal", "agent"])
+    expect(state.agentPosts).toEqual([{ type: "action", action: "focusSearch" }])
   })
 
   it("sends the typed terminal command request", async () => {

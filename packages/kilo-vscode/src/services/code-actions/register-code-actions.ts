@@ -55,6 +55,13 @@ export function registerCodeActions(context: ExtensionContext, target: ChatTarge
 
     commands.registerCommand("kilo-code.v2.focusChatInput", () => target.focus()),
 
+    // Command Palette only — no keybinding. A keybinding would need to route
+    // through VS Code's keybinding-to-focused-webview forwarding, which does
+    // not reliably reach a webview whose own input already has focus;
+    // invoking straight from the palette sidesteps that path. Toggles: the
+    // webview closes the search bar itself if it is already open.
+    commands.registerCommand("kilo-code.v2.toggleChatSearch", () => target.search()),
+
     commands.registerCommand("kilo-code.v2.generateTerminalCommand", async () => {
       const input = await window.showInputBox({
         prompt: "Describe the terminal command you want to generate",

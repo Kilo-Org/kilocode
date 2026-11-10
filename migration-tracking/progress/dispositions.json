@@ -291,7 +291,7 @@
   },
   "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2.",
+    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2. Inference sends the User-Agent `Kilo-Code/v2/<version>` where v1 sent `Kilo-Code/<version>`, so the Gateway attributes the line from the User-Agent it already stores; no v2-only header is added, because the Gateway would need a new column to store it.",
     "by": "gateway-finish"
   },
   "patch:agent:063e034b577a": {
@@ -2153,5 +2153,35 @@
     "v2": "packages/kilo-vscode/test/prompt-rail-render.test.ts",
     "note": "v2 has no webview storybook, so the Playwright story specs are carried by a happy-dom component test that renders the real PromptRail: focus, click and keyboard selection, first/latest, Escape before other shortcuts, hover delay and tick switching, the rail-to-card bridge, drag and wheel suppression, focus-out close, card paging with seek/loading, and left/right edge placement with the 8px gap. The layout-level assertions about box geometry and RTL are covered by the unchanged prompt-rail.css and the live sidebar and Agent Manager self-test.",
     "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/transcript-search.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search.tsx",
+    "note": "The transcript search state (query, match case, whole word, regex, active/close, match index/count, jump request, invalid regex, searching history) is ported as the TranscriptSearchProvider and useTranscriptSearch in the v2 client, which wraps each SessionView so the task header and the transcript share it.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/TranscriptSearch.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search-bar.tsx",
+    "note": "The search bar (input, case/whole-word/regex toggles, match counter, previous/next, close, invalid-regex and searching-history states, open focus retry) is ported as TranscriptSearchBar and rendered under the task header.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-search-highlight.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search-highlight.ts",
+    "note": "The CSS Custom Highlight API scanner, its part-scoped or whole-row fallback, and the active-occurrence range resolution are ported unchanged for the v2 transcript rows.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-search-text.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search-text.ts",
+    "note": "rowSearchText now reads v2 transcript rows: the user message text, and the text parts of an assistant row chunk with the absolute part index used for the data-part-id attribution. Markdown link URLs are still stripped from assistant text only, and tool, reasoning and error content stays out of scope.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/tests/unit/transcript-search-text.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/transcript-search-text.test.ts",
+    "note": "The v1 assertions (message text only, part ranges, markdown link stripping, literal user brackets, no error matches) are ported to the v2 row shape, plus the absolute part index of a chunk. The v2 row model has no synthetic text parts, so there is no synthetic-skip case to carry.",
+    "by": "migrate-vscode-session-search-v1"
   }
 }
