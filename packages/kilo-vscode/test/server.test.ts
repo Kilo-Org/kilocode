@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, indexingEnvironment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, indexingEnvironment, manager, parse, serverPlans, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -68,14 +68,16 @@ describe("command", () => {
   })
 })
 
-describe("serverHome", () => {
-  test("is the profile home for the isolated dev server", () => {
+describe("serverPlans", () => {
+  test("is the profile data plan directory for the isolated dev server", () => {
     const cmd = { cmd: "bun", args: [], env: { KILO_V2_PROFILE: path.join(tmpdir(), "profile") } }
-    expect(serverHome(cmd, {})).toBe(path.join(tmpdir(), "profile", "home"))
+    expect(serverPlans(cmd, {})).toBe(path.join(tmpdir(), "profile", "data", "kilo2", "plans"))
   })
 
-  test("is the inherited home for the bundled server", () => {
-    expect(serverHome({ cmd: "kilo2", args: [], env: {} }, { OPENCODE_TEST_HOME: "/h" })).toBe("/h")
+  test("is the Kilo data plan directory for the bundled server", () => {
+    expect(serverPlans({ cmd: "kilo2", args: [], env: {} }, { XDG_DATA_HOME: "/d" })).toBe(
+      path.join("/d", "kilo2", "plans"),
+    )
   })
 })
 
@@ -115,24 +117,32 @@ describe("indexingEnvironment", () => {
 })
 
 describe("settingsEnvironment", () => {
-  test("disables Claude Code loading by default", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "" })).toEqual({
+  const editor = "Visual Studio Code 1.114.0"
+
+  test("reports the editor to the Gateway and disables Claude Code loading by default", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
       KILO_DISABLE_CLAUDE_CODE: "true",
     })
   })
 
   test("leaves Claude Code loading on when compatibility is enabled", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "" })).toEqual({})
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+    })
   })
 
   test("sets the extra CA certificates path, trimmed", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem " })).toEqual({
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem ", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
       NODE_EXTRA_CA_CERTS: "/certs/ca.pem",
     })
   })
 
   test("ignores a blank CA certificates value", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   " })).toEqual({})
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   ", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+    })
   })
 })
 

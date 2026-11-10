@@ -19,6 +19,22 @@ type Preference = { explicit?: boolean }
 
 const RETRY = 1000
 
+// What the last composer for a directory learned about the sandbox. The Agent Manager mounts one composer per
+// worktree and disposes it on every switch, so a remount shows the known state instead of hiding the lock until the
+// reads answer again. A different worktree has its own directory, so it starts empty like before.
+type Remembered = {
+  preference?: Preference
+  support?: SandboxSupport
+  unsupported?: boolean
+  statuses: Record<string, SandboxStatus>
+}
+
+// The webview outlives every worktree and session it visited, so the cache keeps a bounded number of directories
+// and, inside each, of session statuses. An evicted entry only costs a first-frame read, never correctness.
+const MAX_DIRECTORIES = 20
+const MAX_STATUSES = 50
+const remembered = new Map<string, Remembered>()
+
 function reason(error: unknown): string {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string")
     return error.message
@@ -34,21 +50,51 @@ export function createSandbox(input: {
   const vscode = useVSCode()
   const language = useLanguage()
   const rpc = v2.api.rpc(KiloSandboxRpc.Definition)
-  const location = { directory: v2.directory }
-  const [preference, setPreference] = createSignal<Preference>()
-  const [support, setSupport] = createSignal<SandboxSupport>()
-  const [statuses, setStatuses] = createSignal<Record<string, SandboxStatus>>({})
+  const directory = v2.directory
+  const location = { directory }
+  const saved = remembered.get(directory)
+  const [preference, setPreference] = createSignal<Preference | undefined>(saved?.preference)
+  const [support, setSupport] = createSignal<SandboxSupport | undefined>(saved?.support)
+  const [statuses, setStatuses] = createSignal<Record<string, SandboxStatus>>(saved?.statuses ?? {})
   const [pending, setPending] = createSignal(false)
   // Each read owns a token, so a late answer for another session cannot replace the current state.
   let reads = 0
   let retry: ReturnType<typeof setTimeout> | undefined
   let attempts = 0
 
+  // Every answer is kept for the next composer of this directory. Re-inserting the directory keeps the map's
+  // insertion order as recency order, so the entry cap evicts the worktree that has gone longest without a read.
+  const remember = (patch: Partial<Remembered>) => {
+    const current = remembered.get(directory) ?? { statuses: {} }
+    remembered.delete(directory)
+    remembered.set(directory, { ...current, ...patch })
+    if (remembered.size <= MAX_DIRECTORIES) return
+    const oldest = remembered.keys().next().value
+    if (oldest !== undefined) remembered.delete(oldest)
+  }
+  const storeStatus = (sessionID: string, value: SandboxStatus) => {
+    const next = mergeStatus(statuses(), sessionID, value)
+    setStatuses(next)
+    // Merge one session into the shared record instead of writing this instance's whole map back: a sibling composer
+    // for the same directory can hold an older snapshot, and its own updates must not replace newer statuses.
+    const current = remembered.get(directory) ?? { statuses: {} }
+    const shared = mergeStatus(current.statuses, sessionID, value)
+    if (shared === current.statuses) return
+    // Re-insert the updated session last, so the status cap trims the least recently read entry instead of the
+    // session this composer still shows.
+    const entries = Object.entries(shared).filter(([key]) => key !== sessionID)
+    entries.push([sessionID, value])
+    remember({ statuses: Object.fromEntries(entries.slice(-MAX_STATUSES)) })
+  }
+
   const waiters: (() => void)[] = []
   // A server without the sandbox plugin fails `support`; the first prompt must not wait for it.
-  let unsupported = false
+  let unsupported = saved?.unsupported ?? false
+  // A reply that predates the first prompt cannot seed it: the default may have changed while this composer was
+  // unmounted, so `metadata` waits for a reply of its own request.
+  let fresh = false
   const settle = () => {
-    if (preference() && (support() || unsupported)) for (const resolve of waiters.splice(0)) resolve()
+    if (preference() && (support() || unsupported) && fresh) for (const resolve of waiters.splice(0)) resolve()
   }
   const defaultsReady = () =>
     new Promise<void>((resolve) => {
@@ -59,7 +105,9 @@ export function createSandbox(input: {
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "sandboxDefaultLoaded") return
+    fresh = true
     setPreference({ explicit: message.explicit })
+    remember({ preference: { explicit: message.explicit } })
     settle()
   })
   onCleanup(unsubscribe)
@@ -72,11 +120,13 @@ export function createSandbox(input: {
       .then((value) => {
         unsupported = false
         setSupport(value)
+        remember({ support: value, unsupported: false })
         settle()
       })
       .catch(() => {
         unsupported = true
         setSupport(undefined)
+        remember({ support: undefined, unsupported: true })
         settle()
       })
   }
@@ -92,7 +142,7 @@ export function createSandbox(input: {
       const value = await rpc.status({ sessionID }, { location })
       if (token !== reads || input.session() !== sessionID) return
       attempts = 0
-      setStatuses((current) => mergeStatus(current, sessionID, value))
+      storeStatus(sessionID, value)
     } catch (error: unknown) {
       if (token !== reads) return
       const handling = failureHandling(error)
@@ -117,7 +167,7 @@ export function createSandbox(input: {
 
   const subscribe = rpc.events.on("changed", (event) => {
     const data = event.data
-    setStatuses((current) => mergeStatus(current, data.sessionID, data))
+    storeStatus(data.sessionID, data)
   })
   onCleanup(subscribe)
   onCleanup(() => {
@@ -175,13 +225,14 @@ export function createSandbox(input: {
       if (!id) {
         const next = !desired()
         setPreference({ explicit: next })
+        remember({ preference: { explicit: next } })
         post({ type: "persistSandboxDefault", enabled: next })
         return
       }
       setPending(true)
       try {
         const value = await rpc.toggle({ sessionID: id }, { location })
-        setStatuses((current) => mergeStatus(current, id, value))
+        storeStatus(id, value)
       } catch (error: unknown) {
         toast(reason(error))
       } finally {
@@ -190,9 +241,13 @@ export function createSandbox(input: {
     },
     /** The session metadata for the first prompt. */
     async metadata() {
-      if (!preference()) requestDefaults()
+      // Always ask again: the remembered default is only a rendering hint, and the user may have changed it while
+      // this composer was unmounted. The cached support still keeps the first prompt from waiting for a second read.
+      fresh = false
+      requestDefaults()
       if (!support()) readSupport()
       await defaultsReady()
+      fresh = false
       return { "kilocode.sandbox": { enabled: desired(), version: 0 } }
     },
   }

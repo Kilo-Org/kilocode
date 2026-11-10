@@ -205,6 +205,7 @@ export const dict = {
   "prompt.shortcutHint.queue": "to queue",
   "prompt.shortcutHint.changes": "to review changes",
   "prompt.shortcutHint.pr": "to open the PR",
+  "prompt.shortcutHint.newWorktree": "to start a new worktree",
   "prompt.shortcutHint.mode": "Next mode",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Continue",
@@ -1340,7 +1341,7 @@ export const dict = {
   "settings.display.codeMode.collapsed": "Collapsed",
   "settings.display.shortcutHints.title": "Show shortcut hints",
   "settings.display.shortcutHints.description":
-    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
+    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to queue a prompt, add selected code, review changes, or return to the prompt.",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
@@ -1437,6 +1438,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Open all background agents",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
+  "task.backgroundAgents.promoteFailed": "This agent could not continue in the background. It may have finished already.",
   "task.backgroundAgents.waiting": "A background agent needs your input",
   "task.backgroundAgents.needsInput": "Needs input",
   "task.backgroundAgents.clearFinished": "Clear finished",
@@ -1514,6 +1516,7 @@ export const dict = {
   "chat.search.nextMatch": "Next match",
   "chat.search.close": "Close search",
   "chat.search.invalidRegex": "Invalid regular expression",
+  "chat.search.historyFailed": "Could not search earlier messages",
   "chat.search.noResults": "No results",
   "chat.search.searchingHistory": "Searching earlier messages…",
 }

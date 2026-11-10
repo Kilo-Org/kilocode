@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
+import { Credential } from "@opencode/core/credential"
 import { McpClient } from "@opencode/core/mcp/client"
+import type { McpHost } from "@opencode/core/mcp/host"
 import { McpOAuth } from "@opencode/core/mcp/oauth"
 import { Effect, Exit } from "effect"
 import { hostEnvironmentLayer } from "../../fixture/environment"
@@ -11,17 +13,14 @@ const fixture = path.join(import.meta.dir, "fixture.ts")
 test("applies the host localCommand hook before spawning a local server", async () => {
   const tools = await Effect.runPromise(
     Effect.scoped(
-      McpClient.connect(
-        "hooks",
-        { type: "local", command: [process.execPath, fixture] },
-        import.meta.dir,
-        undefined,
-        undefined,
-        undefined,
-        {
+      McpClient.connect({
+        server: "hooks",
+        config: { type: "local", command: [process.execPath, fixture] },
+        directory: import.meta.dir,
+        host: {
           localCommand: ({ command, args }) => ({ command, args: [...args, "--host-hook"] }),
         },
-      ).pipe(
+      }).pipe(
         Effect.flatMap((connection) => connection.tools()),
         Effect.provide(hostEnvironmentLayer),
       ),
@@ -41,20 +40,17 @@ test("wraps the remote transport fetch with the host hook", async () => {
     let calls = 0
     const exit = await Effect.runPromise(
       Effect.scoped(
-        McpClient.connect(
-          "remote",
-          { type: "remote", url: new URL("/mcp", server.url).toString(), oauth: false },
-          import.meta.dir,
-          undefined,
-          undefined,
-          undefined,
-          {
+        McpClient.connect({
+          server: "remote",
+          config: { type: "remote", url: new URL("/mcp", server.url).toString(), oauth: false },
+          directory: import.meta.dir,
+          host: {
             fetch: (base) => (input, init) => {
               calls += 1
               return base(input, init)
             },
           },
-        ).pipe(Effect.provide(hostEnvironmentLayer)),
+        }).pipe(Effect.provide(hostEnvironmentLayer)),
       ).pipe(Effect.timeout("5 seconds"), Effect.exit),
     )
 
@@ -65,17 +61,32 @@ test("wraps the remote transport fetch with the host hook", async () => {
   }
 })
 
-test("uses the host OAuth client identity and keeps the upstream default", () => {
-  const config = new ConfigMCP.Remote({ type: "remote", url: "https://example.com/mcp" })
-  const branded = McpOAuth.provider({
-    config,
-    store: McpOAuth.memoryStore(),
-    clientMetadata: { name: "Kilo", uri: "https://kilo.ai" },
+test("uses the host OAuth client identity and keeps the upstream default", async () => {
+  const unused = () => Effect.die("unused credential method")
+  const credentials = Credential.Service.of({
+    lock: unused,
+    all: unused,
+    create: unused,
+    activate: unused,
+    list: unused,
+    get: unused,
+    update: unused,
+    remove: unused,
   })
-  expect(branded.clientMetadata?.client_name).toBe("Kilo")
-  expect(branded.clientMetadata?.client_uri).toBe("https://kilo.ai")
+  const config = new ConfigMCP.Remote({ type: "remote", url: "https://example.com/mcp" })
+  // An anonymous connect-time provider reads no credential, so it only needs the service to exist.
+  const identity = (clientMetadata?: McpHost.OAuthClientMetadata) =>
+    Effect.runPromise(
+      McpOAuth.connectProvider({ config, credential: undefined, clientMetadata }).pipe(
+        Effect.provideService(Credential.Service, credentials),
+      ),
+    ).then((provider) => provider.clientMetadata)
 
-  const upstream = McpOAuth.provider({ config, store: McpOAuth.memoryStore() })
-  expect(upstream.clientMetadata?.client_name).toBe("opencode")
-  expect(upstream.clientMetadata?.client_uri).toBe("https://opencode.ai")
+  const branded = await identity({ name: "Kilo", uri: "https://kilo.ai" })
+  expect(branded?.client_name).toBe("Kilo")
+  expect(branded?.client_uri).toBe("https://kilo.ai")
+
+  const upstream = await identity()
+  expect(upstream?.client_name).toBe("opencode")
+  expect(upstream?.client_uri).toBe("https://opencode.ai")
 })

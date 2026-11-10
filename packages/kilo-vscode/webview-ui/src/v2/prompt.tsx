@@ -54,6 +54,7 @@ import { kiloSettings } from "./kilo-settings"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
 import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
+import { recommend, type ManagerContext } from "./shortcut-hint"
 import { parseSlash, type SlashEntry } from "./slash"
 import { createSlashMenu, SlashMenu } from "./slash-menu"
 
@@ -66,6 +67,10 @@ const fieldSizing = typeof CSS !== "undefined" && CSS.supports("field-sizing", "
 
 // Browser references picked for each draft, kept with the same key as the draft text.
 const references = new Map<string, BrowserReference[]>()
+
+// The toolbar fold measured by the last composer. A composer remounted for another session opens with it, so the
+// actions keep the fold they had instead of showing every one for a frame and folding them away again.
+let toolbarFold = { width: Number.POSITIVE_INFINITY, pinned: 0, slot: 26, reserve: 210 }
 
 // Older review prompts carry the section in the text without review metadata.
 const REVIEW_PREFIX = /^## Review Comments\n[\s\S]*?\n\n/
@@ -145,6 +150,10 @@ export function PromptInput(props: {
     entries: () => SlashEntry[]
     run: (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => Promise<boolean>
   }
+  /** Another session tab is open, so switching tabs is one of the suggested shortcuts. */
+  tabs?: boolean
+  /** Agent Manager state for the suggested shortcut. Missing in the sidebar, which has no worktrees or panels. */
+  manager?: () => ManagerContext | undefined
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -255,23 +264,65 @@ export function PromptInput(props: {
     window.removeEventListener("keyup", hold)
     window.removeEventListener("blur", release)
   })
-  // An empty composer during a run suggests one shortcut in its placeholder: queueing, the one Enter cannot do. The
-  // Send tooltip and the modifier preview cover the others.
-  const runningHint = () =>
-    !!props.running &&
-    !props.questioning &&
-    !text() &&
-    !browsers().length &&
-    speech.state() !== "recording" &&
-    v2.connection.status() === "connected"
-  const hintText = (key: string) =>
-    language.t("prompt.placeholder.plainHint", { key, action: language.t("prompt.shortcutHint.queue") })
+  // The empty composer suggests one shortcut in its placeholder: the one that fits what the user does now. The Send
+  // tooltip and the modifier preview cover the other send actions, and the Agent Manager list covers the rest.
+  const [focused, setFocused] = createSignal(false)
+  // Focus away in an editor or terminal is what makes "add the selection" and "type here" the useful hints.
+  const [away, setAway] = createSignal(!document.hasFocus())
+  const onWindowFocus = () => setAway(false)
+  const onWindowBlur = () => setAway(true)
+  window.addEventListener("focus", onWindowFocus)
+  window.addEventListener("blur", onWindowBlur)
+  onCleanup(() => {
+    window.removeEventListener("focus", onWindowFocus)
+    window.removeEventListener("blur", onWindowBlur)
+  })
+  // One memo for every reader, so the placeholder and the keycap copy share one recommendation instead of rebuilding
+  // the Agent Manager context once per reader.
+  const suggestion = createMemo(
+    () => {
+      if (kiloSettings()["showShortcutHints"] === false) return undefined
+      if (props.disabled || v2.connection.status() !== "connected") return undefined
+      // A recording prompt sends on the next Enter, so it suggests nothing else.
+      if (speech.state() === "recording") return undefined
+      return recommend({
+        bindings: v2.bindings(),
+        queue: sendShortcuts().queue,
+        focused: focused(),
+        away: away(),
+        draft: !!text(),
+        // A pending question is not running work, so it does not offer queueing.
+        busy: props.running && !props.questioning,
+        selection: v2.selection(),
+        tabs: props.tabs,
+        // A thunk: a hidden hint must not build the Agent Manager context.
+        manager: props.manager,
+      })
+    },
+    undefined,
+    { equals: (a, b) => a?.label === b?.label && a?.binding === b?.binding },
+  )
   // The placeholder template split around the key, so the key renders as keycaps.
-  const keycaps = () => {
-    const mark = "\u0001"
-    const parts = hintText(mark).split(mark)
-    return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: sendShortcuts().queue }
-  }
+  const keycaps = createMemo(
+    () => {
+      const next = suggestion()
+      if (!next) return undefined
+      const mark = "\u0001"
+      const parts = language
+        .t("prompt.placeholder.plainHint", { key: mark, action: language.t(`prompt.shortcutHint.${next.label}`) })
+        .split(mark)
+      return { before: parts.at(0) ?? "", after: parts.at(1) ?? "", binding: next.binding }
+    },
+    undefined,
+    // Recreate the overlay only when the visible tip changes, so its fade-in runs once per tip.
+    { equals: (a, b) => a?.before === b?.before && a?.after === b?.after && a?.binding === b?.binding },
+  )
+  // The keycap copy above draws the suggested shortcut, so the native placeholder stays the plain help text. An empty
+  // textarea is sized from its placeholder, so a shorter hint here would resize the composer every time it appears.
+  const placeholder = () =>
+    v2.connection.status() === "connected"
+      ? language.t("prompt.placeholder.plain")
+      : language.t("prompt.placeholder.connecting")
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
   const sendAction = (): SendMode => (busySend() ? held() : "steer")
   const sendIcon = () => ({ steer: "send", queue: "clock", now: "arrow-right" } as const)[sendAction()]
@@ -748,27 +799,35 @@ export function PromptInput(props: {
   // from the DOM, so a larger font scales the fold steps.
   let hintRef: HTMLDivElement | undefined
   let pinnedRef: HTMLDivElement | undefined
-  const [metrics, setMetrics] = createSignal({ width: Number.POSITIVE_INFINITY, pinned: 0, slot: 26, reserve: 210 })
+  const [metrics, setMetrics] = createSignal(toolbarFold, {
+    equals: (a, b) => a.width === b.width && a.pinned === b.pinned && a.slot === b.slot && a.reserve === b.reserve,
+  })
+  const [measured, setMeasured] = createSignal(false)
   onMount(() => {
     const measure = () => {
       const hint = hintRef
       const pinned = pinnedRef
       if (!hint || !pinned) return
       const box = getComputedStyle(hint)
+      const width =
+        hint.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight) - (parseFloat(box.columnGap) || 0)
+      // A composer mounted in a hidden panel measures nothing, so it keeps the fold it opens with until it has room.
+      if (width <= 0) return
       const actions = pinned.parentElement
       const button = actions?.querySelector<HTMLElement>(".prompt-action [data-component='icon-button']")
       const gap = actions ? parseFloat(getComputedStyle(actions).columnGap) || 0 : 0
-      setMetrics({
-        width:
-          hint.clientWidth -
-          parseFloat(box.paddingLeft) -
-          parseFloat(box.paddingRight) -
-          (parseFloat(box.columnGap) || 0),
+      toolbarFold = {
+        width,
         pinned: pinned.getBoundingClientRect().width,
         slot: (button?.getBoundingClientRect().width ?? 22) + gap,
         reserve: reserve(hint),
-      })
+      }
+      setMetrics(toolbarFold)
+      setMeasured(true)
     }
+    // Measure once before the first paint. The observer only reports after it, which would expand the actions the
+    // cached fold held back and animate them into the overflow menu on every switch.
+    measure()
     const observer = new ResizeObserver(measure)
     if (hintRef) observer.observe(hintRef)
     if (pinnedRef) observer.observe(pinnedRef)
@@ -932,20 +991,14 @@ export function PromptInput(props: {
               <br />
             </Show>
           </div>
-          <Show when={runningHint()}>
-            <PromptHint {...keycaps()} />
+          <Show when={keycaps()} keyed>
+            {(caps) => <PromptHint before={caps.before} binding={caps.binding} after={caps.after} />}
           </Show>
           <textarea
             ref={(el) => (refs.input = el)}
             class="prompt-input"
-            classList={{ "prompt-input--disabled": props.disabled, "prompt-input--keycaps": runningHint() }}
-            placeholder={
-              v2.connection.status() !== "connected"
-                ? language.t("prompt.placeholder.connecting")
-                : runningHint()
-                  ? hintText(sendShortcuts().queue)
-                  : language.t("prompt.placeholder.plain")
-            }
+            classList={{ "prompt-input--disabled": props.disabled, "prompt-input--keycaps": !!keycaps() }}
+            placeholder={placeholder()}
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
             onBeforeInput={(e) => paste.beforeInput(e, refs.input)}
@@ -983,6 +1036,8 @@ export function PromptInput(props: {
               speechUp(e)
             }}
             onScroll={scroll}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             aria-disabled={props.disabled}
             readOnly={props.disabled}
             rows={1}
@@ -992,7 +1047,7 @@ export function PromptInput(props: {
       </div>
       <div class="prompt-input-hint" ref={(el) => (hintRef = el)}>
         {props.selectors}
-        <div class="prompt-input-hint-actions">
+        <div class="prompt-input-hint-actions" data-measured={measured() ? "" : undefined}>
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
           </div>

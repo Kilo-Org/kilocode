@@ -23,7 +23,8 @@
     "onWebviewPanel:kilo-code.v2.profilePanel",
     "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
-    "onWebviewPanel:kilo-code.v2.documentsPanel"
+    "onWebviewPanel:kilo-code.v2.documentsPanel",
+    "onWebviewPanel:kilo-code.v2.subagentPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -154,7 +155,7 @@
         "kilo-code.v2.showShortcutHints": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Show keyboard shortcuts in the empty Agent Manager session view."
+          "markdownDescription": "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to queue a prompt, add selected code, review changes, or open another worktree."
         },
         "kilo-code.v2.showAutoApprovalReason": {
           "type": "boolean",
@@ -387,6 +388,11 @@
         "title": "Session History",
         "category": "Kilo Code (v2)",
         "icon": "$(history)"
+      },
+      {
+        "command": "kilo-code.v2.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code (v2)"
       },
       {
         "command": "kilo-code.v2.profile",
@@ -771,6 +777,12 @@
         "command": "kilo-code.v2.agentManager.search",
         "key": "ctrl+f",
         "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.search",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
         "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
       },
       {

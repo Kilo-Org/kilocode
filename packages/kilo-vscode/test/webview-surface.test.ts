@@ -54,3 +54,12 @@ describe("webview body surface", () => {
     expect(surface("marketplace")).toBe("var(--vscode-editor-background)")
   })
 })
+
+describe("webview sidebar edge", () => {
+  test("only the sidebar view carries the physical workbench edge", () => {
+    expect(html({ ...base, view: "chat", sidebar: "left" })).toContain('data-sidebar="left"')
+    expect(html({ ...base, view: "chat", sidebar: "right" })).toContain('data-sidebar="right"')
+    expect(page("chat")).toContain('data-sidebar=""')
+    expect(page("agentManager")).toContain('data-sidebar=""')
+  })
+})

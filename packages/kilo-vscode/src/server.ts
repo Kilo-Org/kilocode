@@ -6,6 +6,7 @@ import { existsSync, mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
 import { launch } from "./process"
+import { dataPlans } from "./documents/document-reader"
 
 export type Command = { cmd: string; args: string[]; env: Record<string, string> }
 export type Server = { url: string; authorization: string; process: ChildProcess }
@@ -74,11 +75,11 @@ export function command(input: {
   }
 }
 
-/** The home directory the server reads (`Global.home`). The isolated dev profile moves it into the profile. */
-export function serverHome(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
+/** The global plan directory the server writes. The isolated dev profile moves the data directory into the profile. */
+export function serverPlans(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
   const profile = cmd?.env.KILO_V2_PROFILE
-  if (profile) return path.join(path.resolve(profile), "home")
-  return env.OPENCODE_TEST_HOME ?? homedir()
+  if (profile) return path.join(path.resolve(profile), "data", "kilo2", "plans")
+  return dataPlans(env)
 }
 
 export function environment(base: NodeJS.ProcessEnv, extra: Record<string, string>): NodeJS.ProcessEnv {
@@ -105,16 +106,20 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
 }
 
 /**
- * The server environment derived from the Kilo VS Code settings. The CLI reads the `KILO_` names and translates them
- * to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading off by default. A changed
- * value applies on the next start, which the extension host triggers by stopping the server.
+ * The server environment derived from the Kilo VS Code settings and the running editor. The CLI reads the `KILO_`
+ * names and translates them to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading
+ * off by default. A changed value applies on the next start, which the extension host triggers by stopping the server.
  */
 export function settingsEnvironment(values: {
   claudeCodeCompat: boolean
   extraCaCerts: string
+  editor: string
 }): Record<string, string> {
   const extraCaCerts = values.extraCaCerts.trim()
   return {
+    // v1 `services/cli-backend/server-manager.ts` reported the editor as `${vscode.env.appName} ${vscode.version}`,
+    // which the Gateway stores as `X-KILOCODE-EDITORNAME`.
+    KILOCODE_EDITOR_NAME: values.editor,
     ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
     ...(extraCaCerts.length > 0 ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
   }

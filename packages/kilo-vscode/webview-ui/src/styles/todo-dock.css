@@ -179,13 +179,19 @@
 }
 
 /* The count and the title collapse to zero width when the dock runs out of
-   room. Their padding lives inside, so the collapse also closes the gap. */
+   room. Their padding lives inside, so the collapse also closes the gap. A
+   re-fit between two visible widths is instant: the working status label sets
+   that room, so wording changes must not animate the todo text. */
 [data-slot="todo-chip-count"],
 [data-slot="todo-chip-title"] {
   display: inline-grid;
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   overflow: hidden;
+}
+
+/* Only the finished chip's collapse animates, once the celebration settles. */
+[data-component="todo-chip"][data-settled] [data-slot="todo-chip-title"][data-hidden] {
   transition:
     max-width 260ms var(--todo-ease),
     opacity 200ms ease;

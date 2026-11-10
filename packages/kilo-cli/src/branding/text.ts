@@ -91,7 +91,7 @@ export const replacements = {
     product,
     title,
     ["Update OpenCode", "Kilo update instructions"],
-    ["https://opencode.ai/v2/docs", "https://kilo.ai/docs"],
+    ["https://opencode.ai/docs", "https://kilo.ai/docs"],
   ],
   "tui/src/mini/runtime.lifecycle.ts": [product, title],
   "tui/src/routes/session/permission.tsx": [

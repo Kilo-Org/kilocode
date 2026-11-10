@@ -111,6 +111,14 @@ body.vscode-light
   min-height: 0;
 }
 
+/* A subagent editor tab: the back row to the parent, then the read-only session. */
+.subagent-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 .history-view-header {
   flex-shrink: 0;
   display: flex;

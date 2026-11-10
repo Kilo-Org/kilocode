@@ -120,7 +120,8 @@
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */
-[data-slot="task-tool-open"] {
+[data-slot="task-tool-open"],
+[data-slot="task-tool-action"] {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -135,20 +136,10 @@
   cursor: pointer;
 }
 
-[data-slot="task-tool-open"]:hover {
+[data-slot="task-tool-open"]:hover,
+[data-slot="task-tool-action"]:hover {
   color: var(--text-base);
   background: var(--surface-hover);
-}
-
-[data-slot="task-tool-background"] {
-  flex-shrink: 0;
-  padding: 0 6px;
-  border: 1px solid var(--border-weak-base);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-sans);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-large);
-  color: var(--text-weak);
 }
 
 [data-component="task-tools"] {
