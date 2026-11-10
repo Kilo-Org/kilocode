@@ -86,15 +86,17 @@
   scrollbar-gutter: stable;
 }
 
-/* The prompt rail sits in the panel's edge column, from 8px to 24px. While it
-   is visible, give the transcript a matching gutter on that side so a tick
-   never paints over a prompt, an answer, or tool output. */
+/* The prompt rail's column runs from 8px to 24px off the panel edge, and the
+   active and hovered ticks grow across it. The default 16px gutter puts content
+   at 21px, under those ticks. While the rail is visible, 23px plus the half
+   scrollbar offset of .message-list-content starts content at 28px, keeping the
+   same 4px clearance that a resting tick has in v1. */
 .message-list-container[data-prompt-rail="left"] .message-list {
-  padding-left: max(var(--chat-gutter, 16px), 32px);
+  padding-left: max(var(--chat-gutter, 16px), 23px);
 }
 
 .message-list-container[data-prompt-rail="right"] .message-list {
-  padding-right: max(var(--chat-gutter, 16px), 32px);
+  padding-right: max(var(--chat-gutter, 16px), 23px);
 }
 
 /* Rows that overflow Virtua's container must not change the scroll height
