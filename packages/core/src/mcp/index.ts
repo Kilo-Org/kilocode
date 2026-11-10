@@ -35,6 +35,7 @@ import { Location } from "../location.js"
 import { waitForAbort } from "@opencode/util/process"
 import { State } from "../state.js"
 import type { McpClient } from "./client.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 import { McpConnection } from "./connection.js"
 import { McpPool } from "./pool.js"
 
@@ -194,7 +195,11 @@ export const Options = Schema.Struct({
     }),
   ),
 })
-export type Options = typeof Options.Type
+// kilocode_change start - embedding hooks; `host` is construction-only and never decoded
+export type Options = typeof Options.Type & {
+  readonly host?: McpHost.Host
+}
+// kilocode_change end
 
 export const layer = (options?: Options) =>
   Layer.effect(
@@ -268,10 +273,18 @@ export const layer = (options?: Options) =>
               authorize: () =>
                 Effect.gen(function* () {
                   const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-                  return yield* McpOAuth.authorize({ name, config: remote, integrationID, methodID }).pipe(
+                  // kilocode_change start - embedding OAuth client identity
+                  return yield* McpOAuth.authorize({
+                    name,
+                    config: remote,
+                    integrationID,
+                    methodID,
+                    clientMetadata: options?.host?.oauth,
+                  }).pipe(
                     Effect.provideService(Credential.Service, credentials),
                     Effect.provideService(FetchHttpClient.Fetch, fetch),
                   )
+                  // kilocode_change end
                 }),
             })
           })
@@ -301,10 +314,16 @@ export const layer = (options?: Options) =>
       ) {
         if (entry.config.type !== "remote" || !entry.integrationID) return undefined
         const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-        return yield* McpOAuth.connectProvider({ config: entry.config, credential }).pipe(
+        // kilocode_change start - embedding OAuth client identity
+        return yield* McpOAuth.connectProvider({
+          config: entry.config,
+          credential,
+          clientMetadata: options?.host?.oauth,
+        }).pipe(
           Effect.provideService(Credential.Service, credentials),
           Effect.provideService(FetchHttpClient.Fetch, fetch),
         )
+        // kilocode_change end
       })
 
       const elicitation: McpClient.ElicitationHandler = {
@@ -425,6 +444,7 @@ export const layer = (options?: Options) =>
             elicitation,
             environment,
             fetch,
+            host: options?.host, // kilocode_change - embedding transport, command and OAuth hooks
             scope: servers,
             lock: locks.withLock(name),
             callbacks,
@@ -595,6 +615,7 @@ export const layer = (options?: Options) =>
           directory: location.directory,
           elicitation,
           clientInfo: options?.clientInfo,
+          host: options?.host, // kilocode_change - embedding transport hooks
         }).pipe(
           Effect.tap((connection) =>
             Effect.sync(() =>
