@@ -5,6 +5,7 @@ import { samePath } from "../src/agent-manager/project/paths"
 const WT = "/repo/worktrees/feature"
 
 type Snapshot = {
+  sessions?: string[]
   statuses: Record<string, { type: string }>
   permissions: Array<{ id: string; sessionID: string }>
   questions: Array<{ id: string; sessionID: string }>
@@ -69,6 +70,60 @@ describe("WorktreeActivity", () => {
     expect(posts.at(-1)).toEqual([WT])
 
     activity.event({ type: "permission.asked", data: { id: "p2", sessionID: "s1" } }, WT)
+    expect(posts.at(-1)).toEqual([])
+  })
+
+  it("clears a loaded busy session on a lifecycle event without a location", async () => {
+    const { activity, posts } = make(async () => ({
+      sessions: ["s1"],
+      statuses: { s1: { type: "busy" } },
+      permissions: [],
+      questions: [],
+    }))
+    await activity.sync(true)
+    expect(posts.at(-1)).toEqual([WT])
+
+    activity.event({ type: "session.execution.succeeded", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([])
+
+    activity.event({ type: "session.execution.started", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([WT])
+  })
+
+  it("keeps following a session after a failed run, and forgets it once deleted", async () => {
+    const { activity, posts } = make(async () => ({
+      sessions: ["s1"],
+      statuses: { s1: { type: "busy" } },
+      permissions: [],
+      questions: [],
+    }))
+    await activity.sync(true)
+
+    activity.event({ type: "session.execution.failed", data: { sessionID: "s1", error: {} } })
+    expect(posts.at(-1)).toEqual([])
+
+    activity.event({ type: "session.execution.started", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([WT])
+
+    activity.event({ type: "session.deleted", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([])
+
+    activity.event({ type: "session.execution.started", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([])
+  })
+
+  it("follows a session created after the load through events without a location", async () => {
+    const { activity, posts } = make()
+    await activity.sync()
+
+    activity.event({ type: "session.execution.started", data: { sessionID: "s2" } })
+    expect(posts.at(-1)).toEqual([])
+
+    activity.event({ type: "session.created", data: { sessionID: "s2", location: { directory: WT } } })
+    activity.event({ type: "session.execution.started", data: { sessionID: "s2" } })
+    expect(posts.at(-1)).toEqual([WT])
+
+    activity.event({ type: "session.execution.interrupted", data: { sessionID: "s2", reason: "user" } })
     expect(posts.at(-1)).toEqual([])
   })
 
