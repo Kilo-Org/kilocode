@@ -159,7 +159,19 @@ describe("worktreeFamily", () => {
     const linked = path.join(root, "linked")
     try {
       await exec("git", ["init", "-q", repo])
-      await exec("git", ["-C", repo, "commit", "-q", "--allow-empty", "-m", "init"])
+      await exec("git", [
+        "-C",
+        repo,
+        "-c",
+        "user.name=Kilo",
+        "-c",
+        "user.email=kilo@example.com",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "init",
+      ])
       await exec("git", ["-C", repo, "worktree", "add", "-q", "-b", "feature", linked])
 
       expect((await worktreeFamily(repo)).toSorted()).toEqual([linked, repo].toSorted())

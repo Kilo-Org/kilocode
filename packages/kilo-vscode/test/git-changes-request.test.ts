@@ -9,13 +9,16 @@ import { exec } from "../src/util/process"
 
 afterAll(() => disposeGitChangesTarget())
 
+// A CI runner has no global git identity, so every commit names one explicitly.
+const identity = ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com"]
+
 async function repo(run: (dir: string) => Promise<void>) {
   const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-git-changes-")))
   try {
     await exec("git", ["init", "-q", "-b", "main", dir])
     await writeFile(path.join(dir, "a.txt"), "before\n")
     await exec("git", ["-C", dir, "add", "-A"])
-    await exec("git", ["-C", dir, "commit", "-q", "-m", "init"])
+    await exec("git", ["-C", dir, ...identity, "commit", "-q", "-m", "init"])
     await run(dir)
   } finally {
     await rm(dir, { recursive: true, force: true })
@@ -32,7 +35,7 @@ describe("handleGitChangesRequest", () => {
     await repo(async (dir) => {
       await exec("git", ["-C", dir, "checkout", "-q", "-b", "feature"])
       await writeFile(path.join(dir, "a.txt"), "after\n")
-      await exec("git", ["-C", dir, "commit", "-q", "-am", "change"])
+      await exec("git", ["-C", dir, ...identity, "commit", "-q", "-am", "change"])
       const ctx = capture()
       await handleGitChangesRequest(
         { type: "requestGitChangesContext", requestId: "git-1", directory: dir, base: "main" },
