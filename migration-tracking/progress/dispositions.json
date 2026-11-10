@@ -2159,5 +2159,33 @@
     "v2": "packages/kilo-vscode/test/transcript-search-text.test.ts",
     "note": "The v1 assertions (message text only, part ranges, markdown link stripping, literal user brackets, no error matches) are ported to the v2 row shape, plus the absolute part index of a chunk. The v2 row model has no synthetic text parts, so there is no synthetic-skip case to carry.",
     "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/opencode/src/kilocode/session/transcript.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/recall/mention.ts",
+    "note": "The `session:` mention resolves on the KiloRecallPlugin prompt hook: packages/kilo-plugin/src/recall/mention.ts swaps each `session:` prompt file for a data-URI text attachment, keeps the reference as the file source and adds the same note and failure texts (invalid reference, not found, different workspace). The scope check stays the project-or-worktree family. SessionTranscript.format (headings, synthetic handling, 100k default with the head/tail middle omission) is in packages/kilo-plugin/src/recall/transcript.ts. The v1 form synthesised text and file parts in the prompt loop; v2 rewrites the prompt file because the server reads no `session:` URI.",
+    "by": "port-at-mentions"
+  },
+  "module:packages/opencode/test/kilocode/session/transcript.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/recall-mention.test.ts",
+    "note": "The resolve suite (transcript attached with the past-chat note, synthetic messages left out, different-workspace rejection, unknown and invalid references) and the format truncation case (head and tail kept, middle omitted) are ported to the prompt-hook shape, plus the sibling-worktree and global-project family cases and an untouched-file case. packages/kilo-cli/test/session-mention.test.ts covers the host round trip.",
+    "by": "port-at-mentions"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt.tsx",
+    "note": "The last v1 prompt input part missing from the v2 composer was the `@` menu: files, folders, opened files, Browse files, terminal output, git changes, past chats, models and worktrees, with mention drafts per draft key, atomic mention editing, the highlight overlay and mention drops. It lives in v2/prompt.tsx (useFileMention, mentionDrafts, mentionFiles) with the menu in v2/mention-menu.tsx.",
+    "by": "port-at-mentions"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/message-files.ts": {
+    "state": "dropped",
+    "note": "v1 parsed the webview's message envelope with zod to lift `files` (mime, file/data/session URL, filename, source span) out of a prompt message before sending it to the backend. v2 sends prompt files directly from the webview to the server through session.prompt (uri, name, mention), so the server reads the attachment itself and the host has no message file parser or `session:` URL allowlist; `session:` URIs are resolved by the recall plugin prompt hook.",
+    "by": "port-at-mentions"
+  },
+  "module:packages/kilo-vscode/tests/unit/message-files.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped v1 host parser (module:packages/kilo-vscode/src/kilo-provider/message-files.ts): accepted file/data/session URLs and dropped malformed or unknown-scheme entries. v2 has no host message file parser because the webview passes prompt files straight to session.prompt, so there is no equivalent to assert; the `session:` form it allowed is covered by packages/kilo-plugin/test/recall-mention.test.ts.",
+    "by": "port-at-mentions"
   }
 }

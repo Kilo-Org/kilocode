@@ -196,6 +196,9 @@ export const dict = {
 
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Search worktrees",
+  "prompt.mention.empty": "No files or folders found",
+  "prompt.mention.terminalUnavailable": "Terminal context unavailable",
+  "prompt.mention.gitChangesUnavailable": "Git changes unavailable",
   "prompt.thinking.tooltip": "Reasoning effort",
   "prompt.shortcutHint.addSelection": "to add the selection",
   "prompt.shortcutHint.waiting": "to answer a waiting session",

@@ -761,6 +761,8 @@ export function MessageList(props: {
                     <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
                       <UserMessage
                         message={{ ...row.item.payload, id: row.item.id, type: "user", time: row.item.time }}
+                        sessionID={props.session}
+                        actions={props.actions}
                         pending={props.pending?.(row.item.id)}
                       />
                     </div>

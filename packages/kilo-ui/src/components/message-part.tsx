@@ -40,6 +40,7 @@ import { Icon, type IconProps } from "./icon"
 import { IconButton } from "./icon-button"
 import { ImagePreview } from "./image-preview"
 import { Markdown } from "./markdown"
+import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 import { ReasoningContent } from "./reasoning-content"
 import type { ReasoningDisplay } from "./reasoning-open"
 import { normalize } from "./session-diff"
@@ -1865,6 +1866,55 @@ export type UserMessagePending = {
   actions: readonly UserMessagePendingAction[]
 }
 
+type UserFile = NonNullable<SessionMessageUser["files"]>[number]
+
+/**
+ * The text of a user message with its `@` mentions highlighted. A workspace file mention opens the file and a past
+ * chat mention opens that session; terminal, git changes and worktree mentions are highlighted only. A path mention
+ * without a span (an older message) is found by its shape and opens as a file.
+ */
+function HighlightedText(props: {
+  text: string
+  files: UserFile[]
+  agents: ReadonlyArray<{ mention?: { text: string; start: number; end: number } }>
+  onOpenFile?: (path: string) => void
+  onOpenSession?: (sessionID: string) => void
+}) {
+  const segments = createMemo(() => buildHighlightedTextSegments(props.text, props.files, props.agents))
+  const action = (segment: HighlightSegment) => {
+    if (segment.type !== "file") return undefined
+    const path = segment.text.replace(/^@/, "")
+    const file = props.files.find((item) => item.mention?.text === segment.text)
+    const uri = file?.source.type === "uri" ? file.source.uri : undefined
+    const session = props.onOpenSession
+    if (uri?.startsWith("session:") && session) return () => session(uri.slice("session:".length))
+    const open = props.onOpenFile
+    if ((!file || uri?.startsWith("file:")) && open && path) return () => open(path)
+    return undefined
+  }
+  return (
+    <For each={segments()}>
+      {(segment) => {
+        const run = action(segment)
+        return (
+          <span
+            data-highlight={segment.type}
+            data-clickable={run ? "" : undefined}
+            onClick={(event) => {
+              if (!run) return
+              event.preventDefault()
+              event.stopPropagation()
+              run()
+            }}
+          >
+            {segment.text}
+          </span>
+        )
+      }}
+    </For>
+  )
+}
+
 export function UserMessageDisplay(props: {
   message: SessionMessageUser
   copyLabel?: string
@@ -1878,12 +1928,20 @@ export function UserMessageDisplay(props: {
   pending?: UserMessagePending
   /** Opens an image attachment outside the webview. Return false to keep the in-page preview for that image. */
   onOpenImage?: (uri: string, name: string | undefined) => boolean
+  /** Opens the file an `@` mention in the text names. */
+  onOpenFile?: (path: string) => void
+  /** Opens the past chat an `@` mention in the text references. */
+  onOpenSession?: (sessionID: string) => void
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
   const dialog = useDialog()
   const [copied, setCopied] = createSignal(false)
-  const files = () => props.message.files ?? []
+  // A text file an `@` mention attached shows as the highlighted mention in the text, not as a separate chip.
+  const inline = (file: UserFile) =>
+    !!file.mention?.text && !file.mime.startsWith("image/") && file.mime !== "application/pdf"
+  const files = () => (props.message.files ?? []).filter((file) => !inline(file))
+  const mentions = () => (props.message.files ?? []).filter(inline)
   const stamp = () =>
     new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }).format(new Date(props.message.time.created))
   const copy = async () => {
@@ -1952,9 +2010,26 @@ export function UserMessageDisplay(props: {
           <Show when={props.message.text}>
             <div data-slot="user-message-text" dir="auto" data-queued={props.pending ? "" : undefined}>
               {/* The clamp sits on an inner box: on the padded bubble, the hidden lines would show in its padding. */}
-              <Show when={props.pending && !expanded()} fallback={props.message.text}>
+              <Show
+                when={props.pending && !expanded()}
+                fallback={
+                  <HighlightedText
+                    text={props.message.text}
+                    files={mentions()}
+                    agents={props.message.agents ?? []}
+                    onOpenFile={props.onOpenFile}
+                    onOpenSession={props.onOpenSession}
+                  />
+                }
+              >
                 <span ref={textRef} data-slot="user-message-clamp">
-                  {props.message.text}
+                  <HighlightedText
+                    text={props.message.text}
+                    files={mentions()}
+                    agents={props.message.agents ?? []}
+                    onOpenFile={props.onOpenFile}
+                    onOpenSession={props.onOpenSession}
+                  />
                 </span>
               </Show>
             </div>

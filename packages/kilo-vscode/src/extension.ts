@@ -54,6 +54,7 @@ import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
+import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
@@ -223,6 +224,7 @@ export function activate(context: ExtensionContext) {
   const connection = createAgentManagerConnection({ server })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
+  context.subscriptions.push({ dispose: disposeGitChangesTarget })
   registerAutocompleteProvider(context, autocomplete)
   // The Changes editor tab diffs the workspace, the staged and unstaged tree, a session, or one turn. Its catalog
   // reads server session diffs through the same connection as the Agent Manager.
