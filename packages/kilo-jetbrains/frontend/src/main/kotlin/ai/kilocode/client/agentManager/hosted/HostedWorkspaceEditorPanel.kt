@@ -4,10 +4,12 @@ import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
 import ai.kilocode.client.agentManager.WorkspaceSessionHeader
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
+import ai.kilocode.client.agentManager.worktree.isDefaultSessionTitle
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
@@ -20,8 +22,6 @@ import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
-import ai.kilocode.rpc.dto.SessionActivityDto
-import ai.kilocode.rpc.dto.SessionActivityKindDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -49,15 +49,8 @@ import kotlinx.coroutines.withContext
  * local worktree. New sessions start blank and Cloud creates them from the first prompt; only
  * backend capabilities that Cloud does not have (rename, fork, close from the editor toolbar) differ.
  */
-internal fun hostedIdle(
-    previous: Map<String, SessionActivityDto>,
-    next: Map<String, SessionActivityDto>,
-    workspace: String,
-    sessions: List<HostedWorkspaceSessionDto>,
-): Boolean = previous.keys.any { key ->
-    previous[key]?.kind == SessionActivityKindDto.RUNNING && !next.containsKey(key) &&
-        (key.contains(workspace) || sessions.any { it.nativeSessionID == key })
-}
+internal fun hostedSessionOf(key: String, workspace: String, sessions: List<HostedWorkspaceSessionDto>): Boolean =
+    key.contains(workspace) || sessions.any { it.id == key || it.nativeSessionID == key }
 
 internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     parent: Disposable,
@@ -92,6 +85,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private var identity: String? = null
     private var signedOut = false
     private var lastStatus: HostedWorkspaceStatus? = null
+    private var running: Set<String> = emptySet()
 
     init {
         project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
@@ -148,15 +142,9 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         }
         cs.launch {
             val service = project.service<KiloSessionService>()
-            var last = service.activity.value
-            combine(service.activity, service.statuses) { activity, _ -> activity }.collect { activity ->
-                val previous = last
-                last = activity
+            combine(service.activity, service.statuses) { activity, _ -> activity }.collect {
                 withContext(Dispatchers.Main) {
-                    if (active && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) {
-                        sync(select = false)
-                        if (hostedIdle(previous, activity, ref.workspaceID, sessions)) scheduleTitleRefresh()
-                    }
+                    if (active && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) syncActivity()
                 }
             }
         }
@@ -198,7 +186,23 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     }
 
     override fun onHostChanged() {
-        if (active) sync(select = false)
+        if (active) syncActivity()
+    }
+
+    /**
+     * Re-syncs rows and watches this workspace's sessions leave Running. Cloud names a session after
+     * its first turn and never streams that title, so a finished turn is the cue to re-read the
+     * workspace until the name shows up — whether the turn ran in this editor or anywhere else.
+     */
+    @RequiresEdt
+    private fun syncActivity() {
+        val now = manager.activity().filter { (key, kind) ->
+            kind == SessionActivityKind.RUNNING && hostedSessionOf(key, ref.workspaceID, sessions)
+        }.keys
+        val finished = running.any { it !in now }
+        running = now
+        sync(select = false)
+        if (finished) scheduleTitleRefresh()
     }
 
     override fun rows(): List<ActiveItem> {
@@ -242,33 +246,35 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private fun reload() {
         applyStatus()
         val generation = ++loadGeneration
-        cs.launch {
-            try {
-                val item = hosted.workspace(ref)
-                val loaded = hosted.sessions(ref, item)
-                hosted.status(ref)
-                withContext(Dispatchers.Main) {
-                    if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel) || generation != loadGeneration) {
-                        return@withContext
-                    }
-                    sessions = loaded
-                    dto = item
-                    attempts = 0
-                    syncTitle()
-                    applyStatus()
-                    sync()
+        cs.launch { load(generation) }
+    }
+
+    private suspend fun load(generation: Long) {
+        try {
+            val item = hosted.workspace(ref)
+            val loaded = hosted.sessions(ref, item)
+            hosted.status(ref)
+            withContext(Dispatchers.Main) {
+                if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel) || generation != loadGeneration) {
+                    return@withContext
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel) || generation != loadGeneration) {
-                        return@withContext
-                    }
-                    if (retryWhileStarting()) return@withContext
-                    compute.update(HostedWorkspaceStatus.UNAVAILABLE.badge())
-                    compute.toolTipText = KiloBundle.message("hosted.workspace.status.error", e.message ?: "")
+                sessions = loaded
+                dto = item
+                attempts = 0
+                syncTitle()
+                applyStatus()
+                sync()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel) || generation != loadGeneration) {
+                    return@withContext
                 }
+                if (retryWhileStarting()) return@withContext
+                compute.update(HostedWorkspaceStatus.UNAVAILABLE.badge())
+                compute.toolTipText = KiloBundle.message("hosted.workspace.status.error", e.message ?: "")
             }
         }
     }
@@ -300,14 +306,28 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         return true
     }
 
+    /**
+     * Re-reads the workspace with backoff until every session carries a real title. Cloud generates
+     * the name asynchronously after the first turn, so one fixed delay misses it as often as not.
+     */
     private fun scheduleTitleRefresh() {
         titleRefresh?.cancel()
         titleRefresh = cs.launch {
-            delay(2_000)
-            withContext(Dispatchers.Main) {
-                if (active && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) reload()
+            for (wait in TITLE_RETRY) {
+                delay(wait)
+                val generation = withContext(Dispatchers.Main) {
+                    if (!active || Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) null else ++loadGeneration
+                } ?: return@launch
+                load(generation)
+                if (withContext(Dispatchers.Main) { titled() }) return@launch
             }
         }
+    }
+
+    @RequiresEdt
+    private fun titled(): Boolean = sessions.isNotEmpty() && sessions.none {
+        val title = it.title
+        title.isNullOrBlank() || isDefaultSessionTitle(title)
     }
 
     @RequiresEdt
@@ -422,5 +442,6 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private companion object {
         const val RETRY_MS = 2_000L
         const val RETRY_LIMIT = 10
+        val TITLE_RETRY = listOf(2_000L, 4_000L, 8_000L, 16_000L)
     }
 }

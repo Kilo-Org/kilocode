@@ -2232,6 +2232,55 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(edt { provider!!.canDeleteElement(context) })
     }
 
+    fun `test booting cloud workspace shows the shared running spinner`() {
+        val ref = HostedWorkspaceRefDto("cloud", "booting")
+        val item = HostedWorkspaceDto(ref, name = "Cloud booting")
+        val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun providers(): List<HostedProviderDto> = emptyList()
+            override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
+                HostedWorkspaceListDto(listOf(item))
+            override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = item
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedWorkspaceStatusDto(ref, "active", "starting", "sandbox_starting", 100.0)
+            override suspend fun systemEvents(
+                ref: HostedWorkspaceRefDto,
+                sessionID: String,
+                organizationID: String?,
+            ): Flow<HostedSystemEventDto> = emptyFlow()
+            override suspend fun workspaceProfiles(organizationID: String?) =
+                ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
+            override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) =
+                ai.kilocode.rpc.dto.HostedMutationResultDto()
+            override suspend fun startWorkspaceSession(
+                ref: HostedWorkspaceRefDto,
+                request: ai.kilocode.rpc.dto.HostedStartSessionDto,
+            ) = ai.kilocode.rpc.dto.HostedMutationResultDto()
+            override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedDeleteResultDto(ref)
+        }, gate = { true }, log = TestLog(), repo = { "repo" })
+        project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        project.replaceService(
+            KiloSessionService::class.java,
+            KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()),
+            testRootDisposable,
+        )
+        rpc.listed += main()
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        waitUntil {
+            leaves(tree(panel)).any { (it.item as? HostedWorkspaceRow)?.data?.dto?.ref == ref }
+        }
+
+        val row = leaves(tree(panel)).map { it.item }.filterIsInstance<HostedWorkspaceRow>()
+            .single { it.data.dto.ref == ref }
+        // Starting is work in progress; the row wears the same spinner local running sessions use.
+        assertSame(SpinnerIcon.icon, row.icon)
+        assertEquals("Starting", row.badges.single().text)
+    }
+
     fun `test cloud create is retired after repeated successful omissions`() {
         val createdRef = HostedWorkspaceRefDto("cloud", "created")
         val session = HostedWorkspaceSessionDto(

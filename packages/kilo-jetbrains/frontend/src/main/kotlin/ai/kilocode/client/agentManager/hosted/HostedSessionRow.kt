@@ -1,6 +1,6 @@
 package ai.kilocode.client.agentManager.hosted
 
-import ai.kilocode.client.agentManager.worktree.isDefaultSessionTitle
+import ai.kilocode.client.agentManager.sessionRowTitle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.history.HostedHistoryItem
@@ -19,14 +19,7 @@ internal class HostedSessionRow(
 ) : ActiveSection {
     override val key: String get() = item.id
     override val title: String
-        get() {
-            val name = item.title.takeIf { it.isNotBlank() }
-                ?: live?.takeIf { it.isNotBlank() }
-                ?: ""
-            if (name.isBlank()) return KiloBundle.message("hosted.workspace.session.untitled")
-            if (isDefaultSessionTitle(name)) return KiloBundle.message("worktree.session.new")
-            return name
-        }
+        get() = sessionRowTitle(live, item.title, KiloBundle.message("hosted.workspace.session.untitled"))
     override val note: String? get() = if (closed) KiloBundle.message("hosted.workspace.session.closed") else null
     override val tooltip: String get() = title
     override val section: String get() = HistoryTime.title(HistoryTime.section(item))

@@ -40,6 +40,7 @@ import ai.kilocode.client.agentManager.hosted.hostedRepository
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRemoval
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceStatus
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.hosted.openHostedWorkspace
@@ -898,7 +899,7 @@ val local = (0 until controller.model.size).map {
                 val known = dto.sessionCursor == null && dto.sessions.isNotEmpty() &&
                     dto.sessions.all { it.id in observed }
                 val kind = aggregateSessionActivity(kinds) ?: SessionActivityKind.RUNNING.takeIf {
-                    !known && status?.hasActiveTurn == true
+                    HostedWorkspaceStatus.of(status).busy() || (!known && status?.hasActiveTurn == true)
                 }
                 val progress = if (dto.ref.key in deletingHosted) KiloBundle.message("common.deleting") else null
                 HostedWorkspaceRowData(dto, status, kind, progress)

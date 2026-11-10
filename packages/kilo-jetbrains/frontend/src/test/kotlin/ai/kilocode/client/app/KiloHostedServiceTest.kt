@@ -79,6 +79,28 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `active workspace without a preparation record is ready`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val state = KiloHostedService.HostedState(
+            statuses = mapOf(ref.key to HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0)),
+        )
+
+        // A session created after the sandbox came up has no preparation events of its own; it must
+        // not look like it is preparing forever.
+        assertEquals(HostedReadiness.Ready, state.readiness(ref, "${ref.key}:new"))
+    }
+
+    @Test
+    fun `booting workspace without a preparation record still prepares`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val state = KiloHostedService.HostedState(
+            statuses = mapOf(ref.key to HostedWorkspaceStatusDto(ref, "active", "starting", "sandbox_starting", 100.0)),
+        )
+
+        assertEquals(HostedReadiness.Preparing, state.readiness(ref, "${ref.key}:new"))
+    }
+
+    @Test
     fun `workspace and session creation retain the submitted prompt for one editor seed`() = runBlocking {
         val rpc = FakeRpc()
         val session = session("one")

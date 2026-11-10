@@ -27,6 +27,12 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
         id = "cloud-compute",
     )
 
+    /**
+     * Sandbox boot or teardown. Rows show the same running spinner local sessions use so Cloud work
+     * in progress reads the same at a glance; the compute badge still names the phase.
+     */
+    fun busy(): Boolean = this == STARTING || this == SETTING_UP || this == LOADING || this == STOPPING
+
     companion object {
         fun of(status: HostedWorkspaceStatusDto?): HostedWorkspaceStatus {
             if (status?.deletionState == "deleting" ||

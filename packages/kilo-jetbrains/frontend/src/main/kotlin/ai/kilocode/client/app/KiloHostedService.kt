@@ -121,7 +121,10 @@ class KiloHostedService internal constructor(
             if (own == HostedReadiness.Failed) return own
             return when (presentation(ref)?.computeStatus) {
                 null, "starting", "setting_up", "loading" -> HostedReadiness.Preparing
-                else -> own
+                // An active sandbox with no preparation record for this session is not preparing:
+                // treating it as Unknown would leave the "Preparing Cloud workspace" footer stuck on
+                // sessions that were created after the workspace came up.
+                else -> if (own == HostedReadiness.Unknown) HostedReadiness.Ready else own
             }
         }
 
@@ -348,8 +351,19 @@ class KiloHostedService internal constructor(
         Disposer.register(parent) { job.cancel() }
     }
 
-    suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto =
-        call { workspace(ref, null, null) }
+    /**
+     * Fetches one workspace and folds it back into the discovery list, so the tree row, the editor,
+     * and the tab title all read the same Cloud-generated session titles and branch without waiting
+     * for the next full discovery pass.
+     */
+    suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto {
+        val dto = call { workspace(ref, null, null) }
+        _state.update { current ->
+            if (current.items.none { it.ref == ref }) current
+            else current.copy(items = current.items.map { if (it.ref == ref) dto else it })
+        }
+        return dto
+    }
 
     suspend fun profiles(): HostedWorkspaceProfileListDto = try {
         call { workspaceProfiles(null) }.also {

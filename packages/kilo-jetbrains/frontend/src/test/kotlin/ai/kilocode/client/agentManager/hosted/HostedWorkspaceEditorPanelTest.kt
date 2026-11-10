@@ -489,18 +489,55 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         } })
     }
 
-    fun testHostedIdleDetectsCompletedTurn() {
-        val running = SessionActivityDto(directory = "/cloud-agent/sessions/selected", kind = SessionActivityKindDto.RUNNING)
+    fun testFinishedTurnOnTheOpenSessionRereadsTheWorkspaceUntilCloudNamesIt() {
+        // Cloud creates the session with a placeholder name and only names it after the first turn.
+        val placeholder = "New session - 2026-11-10T19:59:50.555Z"
+        rpc.rootSessions = rpc.rootSessions.map { if (it.id == key) it.copy(title = placeholder) else it }
+        // Discovery is what the Agent Manager tree reads; seed it with the stale placeholder.
+        rpc.list = HostedWorkspaceListDto(listOf(HostedWorkspaceDto(ref, branch = "feature/cloud", sessions = rpc.rootSessions)))
+        hosted.refresh("repo")
+        assertTrue(coroutines.pumpUntil { hosted.state.value.items.any { it.ref == ref } })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionUi>().single().title() == placeholder
+        } })
+        val reads = rpc.workspaceCalls
+
+        // The turn runs and finishes in this editor's own session: no tree, no global activity map.
+        sessions.statuses.value = mapOf(key to SessionStatusDto("busy"))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            val list = descendants(panel).filterIsInstance<JBList<*>>().single()
+            (0 until list.model.size).map { list.model.getElementAt(it) as ActiveItem }
+                .single { it.key == key }.badges.isNotEmpty()
+        } })
+        rpc.rootSessions = rpc.rootSessions.map {
+            if (it.id == key) it.copy(title = "Microsoft company overview", updated = 5.0) else it
+        }
+        sessions.statuses.value = mapOf(key to SessionStatusDto("idle"))
+
+        assertTrue(coroutines.pumpUntil(deadlineMs = 10_000) { rpc.workspaceCalls > reads })
+        assertTrue(coroutines.pumpUntil(deadlineMs = 10_000) { edtWait {
+            val list = descendants(panel).filterIsInstance<JBList<*>>().single()
+            val row = (0 until list.model.size).map { list.model.getElementAt(it) as ActiveItem }.firstOrNull { it.key == key }
+            val header = descendants(panel).filterIsInstance<SimpleColoredComponent>().first().getCharSequence(true).toString()
+            row?.title == "Microsoft company overview" && header == "Microsoft company overview"
+        } })
+        // The tree reads discovery items, so the fetched workspace must land there as well.
+        assertEquals(
+            "Microsoft company overview",
+            hosted.state.value.items.single { it.ref == ref }.sessions.single { it.id == key }.title,
+        )
+    }
+
+    fun testHostedSessionOfMatchesCompositeAndNativeIds() {
         val current = listOf(HostedWorkspaceSessionDto(
             id = key,
             nativeSessionID = "selected",
             title = "Selected session",
             updated = 1.0,
         ))
-        assertTrue(hostedIdle(mapOf(key to running), emptyMap(), ref.workspaceID, current))
-        assertTrue(hostedIdle(mapOf("selected" to running), emptyMap(), ref.workspaceID, current))
-        assertFalse(hostedIdle(mapOf(key to running), mapOf(key to running), ref.workspaceID, current))
-        assertFalse(hostedIdle(mapOf(key to running), emptyMap(), "other", emptyList()))
+        assertTrue(hostedSessionOf(key, ref.workspaceID, current))
+        assertTrue(hostedSessionOf("selected", ref.workspaceID, current))
+        assertFalse(hostedSessionOf("selected", "other", emptyList()))
     }
 
     fun testHeaderUsesTheRowBadgeAndSeparateHourlyPriceWithoutRefreshControl() {
