@@ -60,6 +60,7 @@ const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
   documents: new Set(),
   diffViewer: new Set(),
+  subagent: new Set(["showTaskTimeline"]),
 }
 
 /** The Agent Manager worktree actions of the sidebar chat. */
@@ -471,6 +472,16 @@ export function wire(input: {
       void commands.executeCommand("kilo-code.v2.marketplace")
       return true
     }
+    // A subagent opens in its own editor tab, in the directory store of the view that showed it.
+    if (message.type === "openSubagent") {
+      void commands.executeCommand("kilo-code.v2.openSubagent", {
+        sessionID: message.sessionID,
+        title: message.title,
+        parentSessionID: message.parentSessionID,
+        directory: input.directory,
+      })
+      return true
+    }
     if (message.type === "requestIndexingSettings") {
       void indexing.requestSettings(message.projectId)
       return true
@@ -574,6 +585,7 @@ const ENTRY = {
   agentManager: "agent-manager",
   documents: "documents",
   diffViewer: "diff-viewer",
+  subagent: "webview",
 } as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
@@ -642,7 +654,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "marketplace" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "marketplace" || input.view === "documents" || input.view === "subagent" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -700,7 +712,7 @@ export function routeWorktreeMessage(
   return false
 }
 
-type View = "chat" | "settings" | "profile" | "marketplace" | "agentManager" | "documents" | "diffViewer"
+type View = "chat" | "settings" | "profile" | "marketplace" | "agentManager" | "documents" | "diffViewer" | "subagent"
 
 /** The Changes editor tab: the session, working tree and turn diffs with review comments. */
 export type ChangesTab = {

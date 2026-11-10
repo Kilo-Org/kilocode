@@ -75,6 +75,14 @@ export type ToolActions = {
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
+  /** Opens a subagent session where the client shows subagents, such as an editor tab or an inspector. */
+  openSubagent?: (sessionID: string, title?: string) => void
+  /** Where `openSubagent` shows the subagent, for the open control's label. Defaults to a panel. */
+  subagentTarget?: "tab" | "panel"
+  /** Stops a running subagent session and every session it started. */
+  stopSession?: (sessionID: string) => void
+  /** Continues a running foreground subagent in the background, so the parent's tool call returns at once. */
+  backgroundSession?: (sessionID: string) => void
 }
 
 export type ContentPartProps = {
@@ -990,12 +998,22 @@ ToolRegistry.register({
       if (id && child?.running(id)) return "running" as const
       return taskStatus(props.status)
     }
-    const canOpen = () => !!childID() && !!props.actions?.openSession
+    const canOpen = () => !!childID() && !!(props.actions?.openSubagent ?? props.actions?.openSession)
+    const canStop = () => !!childID() && avatar() === "running" && !!props.actions?.stopSession
+    const canBackground = () =>
+      !!childID() && props.status === "running" && !background() && !!props.actions?.backgroundSession
+    const act = (action: ((sessionID: string) => void) | undefined) => (event: MouseEvent) => {
+      const id = childID()
+      if (!id || !action) return
+      event.preventDefault()
+      event.stopPropagation()
+      action(id)
+    }
     const navigate = () => {
       const id = childID()
-      const action = props.actions?.openSession
-      if (!id || !action) return
-      action(id)
+      if (!id) return
+      if (props.actions?.openSubagent) return props.actions.openSubagent(id, description() || undefined)
+      props.actions?.openSession?.(id)
     }
     const openChild = (event: MouseEvent) => {
       if (!canOpen()) return
@@ -1032,8 +1050,30 @@ ToolRegistry.register({
           </Show>
           {approvalLine()}
         </div>
+        <Show when={canStop()}>
+          <span
+            data-slot="task-tool-action"
+            data-action="stop"
+            title={i18n.t("task.stop")}
+            aria-label={i18n.t("task.stop")}
+            onClick={act(props.actions?.stopSession)}
+          >
+            <Icon name="stop" size="small" />
+          </span>
+        </Show>
+        <Show when={canBackground()}>
+          <span
+            data-slot="task-tool-action"
+            data-action="background"
+            title={i18n.t("task.backgroundAgents.continueInBackground")}
+            aria-label={i18n.t("task.backgroundAgents.continueInBackground")}
+            onClick={act(props.actions?.backgroundSession)}
+          >
+            <Icon name="arrow-down-to-line" size="small" />
+          </span>
+        </Show>
         <Show when={canOpen()}>
-          <span data-slot="task-tool-open" title={`${i18n.t("task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
+          <span data-slot="task-tool-open" title={`${i18n.t(props.actions?.subagentTarget === "tab" ? "task.open.tab" : "task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
             <Icon name="square-arrow-top-right" size="small" />
           </span>
         </Show>

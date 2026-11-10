@@ -47,6 +47,7 @@ import {
 import { NotebookBroker, notebookToolsEnabled } from "./services/notebook"
 import { marketplace } from "./marketplace-panel"
 import { profile } from "./profile-panel"
+import { subagentPanels, type SubagentPanelTarget } from "./subagent-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
@@ -313,6 +314,16 @@ export function activate(context: ExtensionContext) {
     agentManager: () => agentManager.settings,
   })
   const profilePanel = profile({ context, server, directory })
+  const subagents = subagentPanels({
+    context,
+    server,
+    diff: diffs,
+    documents: () => documentsRef.current,
+    showParent: async (sessionID) => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "openSession", sessionID })
+    },
+  })
   const marketplacePanel = marketplace({ context, server, directory })
   const chatTarget = createChatTarget({ view, agentManager })
   registerCodeActions(context, chatTarget)
@@ -384,6 +395,9 @@ export function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
     commands.registerCommand("kilo-code.v2.marketplace", () => marketplacePanel.open()),
+    commands.registerCommand("kilo-code.v2.openSubagent", (target?: SubagentPanelTarget) => {
+      if (target?.sessionID) subagents.open(target)
+    }),
     // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
     // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
     commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
@@ -406,6 +420,7 @@ export function activate(context: ExtensionContext) {
     panel,
     profilePanel,
     marketplacePanel,
+    subagents,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),

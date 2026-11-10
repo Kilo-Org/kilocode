@@ -120,7 +120,8 @@
 }
 
 /* Task tool child-session tool list (v1.0.25 style) */
-[data-slot="task-tool-open"] {
+[data-slot="task-tool-open"],
+[data-slot="task-tool-action"] {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -135,7 +136,8 @@
   cursor: pointer;
 }
 
-[data-slot="task-tool-open"]:hover {
+[data-slot="task-tool-open"]:hover,
+[data-slot="task-tool-action"]:hover {
   color: var(--text-base);
   background: var(--surface-hover);
 }

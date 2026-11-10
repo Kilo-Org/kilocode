@@ -29,6 +29,7 @@ import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
+import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
@@ -52,8 +53,11 @@ export function SessionView(props: {
   worktree?: boolean
   /** Opens a new session draft; the /new slash action is listed only when set. */
   onNewSession?: () => void
-  /** The row above the dock; receives whether the session has messages and the todo element it trails. */
-  row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
+  /**
+   * The row above the dock; receives whether the session has messages, the todo element it trails and the background
+   * agent stack it leads.
+   */
+  row?: (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => JSX.Element
   /** Shows the row before the first message too. */
   rowWhenEmpty?: boolean
   /** Replaces the welcome screen of an empty session. */
@@ -216,6 +220,14 @@ export function SessionView(props: {
       if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
     })
   const working = createWorking(session)
+  // Subagent jobs feed the dock's agent stack and the stop and "continue in background" actions of subagent cards. A
+  // read-only view has no dock and offers neither action.
+  const jobs = createBackgroundJobs({ session })
+  const actions = createMemo<ToolActions>(() =>
+    props.readOnly
+      ? props.actions
+      : { ...props.actions, stopSession: jobs.cancel, backgroundSession: jobs.promote },
+  )
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
@@ -406,7 +418,7 @@ export function SessionView(props: {
           <div class="chat-messages">
             <MessageList
               session={session()}
-              actions={props.actions}
+              actions={actions()}
               selection={selection}
               onSelectSession={(id) => props.actions.openSession?.(id)}
               onShowHistory={props.onShowHistory}
@@ -437,8 +449,12 @@ export function SessionView(props: {
           </Show>
           <SessionDock
             session={session()}
+            jobs={jobs}
+            onOpenSession={(id, title) =>
+              props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
+            }
             blocked={dockBlocked()}
-            actions={(todos) => props.row?.(hasMessages(), todos)}
+            actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
             hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
             status={working.status()}
             submitting={working.submitting()}
