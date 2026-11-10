@@ -6,6 +6,22 @@ Use Kilo Code directly from your terminal for maximum flexibility.
 npm install -g @kilocode/cli
 ```
 
+### Install via conda
+
+If you use conda, pixi, or another conda-compatible package manager, install the `kilo-cli` package from the `anaconda-cloud` channel.
+
+With pixi:
+
+```bash
+pixi add kilo-cli
+```
+
+With conda:
+
+```bash
+conda install -c anaconda-cloud kilo-cli
+```
+
 ### Older CPUs (No AVX Support)
 
 If you're running on an older CPU without AVX support (e.g., Intel Xeon Nehalem, AMD Bulldozer, or older), the CLI may crash with "Illegal instruction". In that case, download the **baseline** variant from GitHub releases:
