@@ -123,7 +123,12 @@ export const layer = Layer.effect(
     const unfixed = new Set<string>()
 
     // Takes only data from the Location that opens it: the connection outlives that Location's claim.
-    const open = (key: string, input: Pick<Input, "name" | "config" | "directory" | "clientInfo">) => {
+    // kilocode_change start - embedding hooks: the host is process-wide, so a shared connection carries it
+    const open = (
+      key: string,
+      input: Pick<Input, "name" | "config" | "directory" | "clientInfo" | "host">,
+    ) => {
+      // kilocode_change end
       const slot: Slot = {
         holders: new Set(),
         lock: Semaphore.makeUnsafe(1),
@@ -135,6 +140,7 @@ export const layer = Layer.effect(
           directory: input.directory,
           shared: true,
           clientInfo: input.clientInfo,
+          host: input.host, // kilocode_change - embedding hooks
           // Every holder of a key presents the same credential, so any of them can build the provider.
           authProvider: Effect.suspend(() => slot.holders.values().next().value?.authProvider ?? Effect.undefined),
           elicitation: {
@@ -241,7 +247,15 @@ export const layer = Layer.effect(
       if (unpoolable.has(key)) return "private" as const
       const slot =
         slots.get(key) ??
-        open(key, { name: input.name, config: input.config, directory: input.directory, clientInfo: input.clientInfo })
+        // kilocode_change start - embedding hooks
+        open(key, {
+          name: input.name,
+          config: input.config,
+          directory: input.directory,
+          clientInfo: input.clientInfo,
+          host: input.host,
+        })
+        // kilocode_change end
       yield* Effect.acquireRelease(
         Effect.sync(() => slot.holders.add(holder)),
         () => release(key, slot, holder),
