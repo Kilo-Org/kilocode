@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 107,
-    "markedLines": 1762,
+    "files": 109,
+    "markedLines": 1771,
     "unmarkedLines": 300,
     "deletedFiles": 0
   },
@@ -138,8 +138,12 @@
       "seam": "Accept ripgrep's base64 `bytes` shape alongside `text` for the matched path, line and submatch. Ripgrep emits `bytes` as soon as one byte of a record is not valid UTF-8, and the text-only schema then rejected the record and failed the whole search with `Invalid ripgrep match output`. Bytes decode as lossy UTF-8 with the replacement character, and the line and submatch limits still apply after decoding. No plugin hook or host composition reaches this parser: it runs inside the core ripgrep service before any tool result exists, and no knob can express an alternate decoder for the fixed `rg --json` shape. Records that carry `text` behave exactly as before."
     },
     "packages/core/src/config/plugin/command.ts": {
-      "rung": 3,
-      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+      "rung": 4,
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata; the seam itself is rung 3. Rung 4: each prompt an expanded config command admits carries the Kilo prompt-injected label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. The command editor offers only `add`, a definition's `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches these two prompt calls. The label is UI metadata only: text, delivery, the subagent prefix and every upstream default are unchanged. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+    },
+    "packages/core/src/plugin/command.ts": {
+      "rung": 4,
+      "seam": "Each prompt an expanded built-in command admits (`init`, `review`, an MCP prompt) carries the Kilo prompt-injected label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. Rungs 1 to 3 do not work: the built-in command definitions register through a command editor that offers only `add`, each definition builds its own prompt, and the invocation carries no metadata channel, so no plugin hook or pass-through parameter reaches the prompt call. The label is UI metadata only: prompt text, delivery and every upstream default are unchanged, and the plugin's upstream test observes the same prompt fields."
     },
     "packages/plugin/src/effect/command.ts": {
       "rung": 3,
@@ -168,6 +172,10 @@
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
       "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+    },
+    "packages/core/src/tool/plugin/schedule.ts": {
+      "rung": 4,
+      "seam": "The `/schedule` command's prompt carries the Kilo prompt-injected label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/schedule <request>` instead of the expanded template the model receives. The command registers through an editor that offers only `add`, its `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches the prompt call. The label is UI metadata only: prompt text, delivery and every upstream default are unchanged."
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,

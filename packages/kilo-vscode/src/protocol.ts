@@ -422,8 +422,8 @@ export type ToWebview =
     }
   /** Adds context chips to the composer and focuses it. */
   | { type: "appendContext"; items: PromptAttachment[] }
-  /** Sends a prompt in the open session at once, without touching the draft. */
-  | { type: "startPrompt"; text: string; items?: PromptAttachment[] }
+  /** Sends a prompt in the open session at once, without touching the draft. `injectedTitle` labels a prompt Kilo composed. */
+  | { type: "startPrompt"; text: string; items?: PromptAttachment[]; injectedTitle?: string }
   | ({ type: "navigate" } & SettingsNavigation)
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }

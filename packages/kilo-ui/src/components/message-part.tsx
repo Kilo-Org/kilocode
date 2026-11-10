@@ -1872,6 +1872,8 @@ export function UserMessageDisplay(props: {
   copyText?: string
   /** Content shown in the bubble above the text, for example Integrated Browser element references. */
   header?: JSX.Element
+  /** Content shown inside the bubble above the text, for example the label of a prompt Kilo composed. */
+  bubbleHeader?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
   /** Dims the message and shows its delivery status and controls in place of the time, fork and copy actions. */
@@ -1946,11 +1948,12 @@ export function UserMessageDisplay(props: {
           </For>
         </div>
       </Show>
-      <Show when={props.message.text || props.header}>
+      <Show when={props.message.text || props.header || props.bubbleHeader}>
         <div data-slot="user-message-body">
           {props.header}
-          <Show when={props.message.text}>
+          <Show when={props.message.text || props.bubbleHeader}>
             <div data-slot="user-message-text" dir="auto" data-queued={props.pending ? "" : undefined}>
+              {props.bubbleHeader}
               {/* The clamp sits on an inner box: on the padded bubble, the hidden lines would show in its padding. */}
               <Show when={props.pending && !expanded()} fallback={props.message.text}>
                 <span ref={textRef} data-slot="user-message-clamp">

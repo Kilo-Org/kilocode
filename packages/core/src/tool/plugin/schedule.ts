@@ -9,6 +9,7 @@ import { Config } from "../../config.js"
 import { ConfigEntryObserver } from "../../config/plugin/entry-observer.js"
 import { Flag } from "../../flag.js"
 import PROMPT_SCHEDULE from "../../plugin/command/schedule.txt"
+import { KiloPromptInjected } from "../../kilocode/session/injected.js" // kilocode_change(prompt-injected) - label an expanded command template in the transcript
 import { Schedule } from "../../schedule.js"
 
 /** A schedule as the model reads it, with times in the schedule's own zone. */
@@ -164,6 +165,7 @@ export const Plugin = {
               ...input.prompt,
               sessionID: input.sessionID,
               text: PROMPT_SCHEDULE.replaceAll("$ARGUMENTS", () => input.prompt.text.trim()),
+              metadata: KiloPromptInjected.command("schedule", input.prompt.text), // kilocode_change(prompt-injected)
               delivery: input.delivery,
             })
             .pipe(Effect.asVoid),

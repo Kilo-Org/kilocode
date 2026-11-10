@@ -165,6 +165,7 @@ import { ReviewCommentActionsContext, type ReviewCommentActions } from "../src/c
 import { openPRComment } from "../src/utils/pr-review"
 import type { ReviewAppendHandler } from "../src/v2/append-ready"
 import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
+import { injectedMetadata } from "../../src/shared/injected-prompt"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -2112,7 +2113,12 @@ const AgentManagerContent: Component = () => {
         return
       }
       if (message.type !== "startPrompt") return
-      composerQueue.push({ type: "submit", text: message.text, items: message.items ?? [] })
+      composerQueue.push({
+        type: "submit",
+        text: message.text,
+        items: message.items ?? [],
+        metadata: message.injectedTitle ? injectedMetadata(message.injectedTitle) : undefined,
+      })
     })
 
     onCleanup(() => {
