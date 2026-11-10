@@ -28,22 +28,23 @@ const release = ["latest", "beta", "prod"]
 /**
  * Sets OPENCODE_DB to the Kilo database file and returns it. `KILO2_DB` (copied to OPENCODE_DB by ./env) wins, and a
  * child process keeps the file of its parent. `KILO_DISABLE_CHANNEL_DB` puts every channel in `kilo2.db`.
- * `KILO_DISABLE_V1_IMPORT` starts a new database without the Kilo v1 sessions.
+ * `KILO_DISABLE_V1_IMPORT` starts a new database without the Kilo v1 sessions. `v1: false` skips only the automatic v1
+ * import, which the `import v1` command does itself with its own source.
  */
 export async function select(
   env: Record<string, string | undefined>,
-  input = { data: Global.Path.data, channel },
+  input: { data?: string; channel?: string; v1?: boolean } = {},
 ): Promise<string> {
   if (env.OPENCODE_DB) return env.OPENCODE_DB
+  const data = input.data ?? Global.Path.data
+  const selected = input.channel ?? channel
   const flag = (value: string | undefined) => value === "1" || value === "true"
   const shared = flag(env.KILO_DISABLE_CHANNEL_DB)
   // kilo_port(unattributed:core/database:a155cf41e765)
   const file =
-    shared || release.includes(input.channel)
-      ? path.join(input.data, "kilo2.db")
-      : path.join(input.data, `kilo2-${safe(input.channel)}.db`)
+    shared || release.includes(selected) ? path.join(data, "kilo2.db") : path.join(data, `kilo2-${safe(selected)}.db`)
   await refuseV1Store(file)
-  await adopt(file, input.data, input.channel, shared, !flag(env.KILO_DISABLE_V1_IMPORT))
+  await adopt(file, data, selected, shared, input.v1 !== false && !flag(env.KILO_DISABLE_V1_IMPORT))
   env.OPENCODE_DB = file
   return file
 }

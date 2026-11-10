@@ -238,7 +238,7 @@ export function importEvent(line: string): ImportEvent | undefined {
   if (line.includes("waiting for it")) return { kind: "waiting" }
   const done = /done, (\d+) sessions/.exec(line)
   if (done) return { kind: "done", imported: Number(done[1]) }
-  const progress = /(\d+)\/(\d+)/.exec(line)
+  const progress = /^kilo2: importing Kilo v1 sessions (\d+)\/(\d+)$/.exec(line)
   if (progress) return { kind: "progress", imported: Number(progress[1]), total: Number(progress[2]) }
   return { kind: "start" }
 }

@@ -44,9 +44,10 @@ describe("parse", () => {
 })
 
 test("importEvent reads every line of the Kilo v1 session import, so a long first start shows progress and never times out", () => {
-  expect(importEvent("kilo2: importing Kilo v1 sessions from /data/kilo/kilo.db once; it stays as it is.")).toEqual({
-    kind: "start",
-  })
+  // A store path with digits and slashes must not read as progress.
+  expect(
+    importEvent("kilo2: importing Kilo v1 sessions from /backups/2024/11/kilo.db once; it stays as it is."),
+  ).toEqual({ kind: "start" })
   expect(importEvent("kilo2: importing Kilo v1 sessions in process 4242, waiting for it.")).toEqual({ kind: "waiting" })
   expect(importEvent("kilo2: importing Kilo v1 sessions 1200/20000")).toEqual({
     kind: "progress",

@@ -204,6 +204,8 @@ export function activate(context: ExtensionContext) {
     },
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
+      // Also hides a status that only waited for another process's import, which reports no completion.
+      importing.hide()
       shutdown.started(started)
       connection.started(started)
       alerts.start(started)

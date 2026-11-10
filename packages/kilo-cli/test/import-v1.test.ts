@@ -173,6 +173,14 @@ test("refuses a Kilo v1 store as the target, so a naming mistake cannot migrate 
   ).toBe(before)
 })
 
+test("the manual import command can skip the automatic adoption", async () => {
+  const { dir, data } = await root()
+  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  const file = await KiloDatabase.select({}, { data, channel: "latest", v1: false })
+  expect(await Bun.file(file).exists()).toBe(false)
+  expect(await strays(data)).toEqual([])
+})
+
 test("the import API returns the session count and reports an existing store as skipped", async () => {
   const { dir, data } = await root()
   const store = KiloDatabase.v1Store(data)
