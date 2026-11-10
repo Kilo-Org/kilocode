@@ -5,7 +5,7 @@ import { createSignal } from "solid-js"
 import { useLanguage } from "../context/language"
 import { partFeedback } from "../../../src/shared/browser-feedback"
 import { useV2 } from "./client"
-import { pendingActions, pendingEditable, type PendingAction } from "./pending-actions"
+import { pendingActions, pendingEditable, pendingRequest, promptInterrupt, type PendingAction } from "./pending-actions"
 
 const ICONS: Record<PendingAction, UserMessagePendingAction["icon"]> = {
   now: "send",
@@ -45,11 +45,11 @@ export function createPending(input: {
   }
 
   const request = (sessionID: string, inboxID: string, text: string, action: PendingAction) => {
+    const next = pendingRequest(action)
     // Sending this prompt now stops the current model call and its tools, but never a running compaction: the
     // checkpoint finishes first and the prompt follows it. Only the composer's Stop ends a compaction.
-    if (action === "now") return v2.api.session.interrupt({ sessionID, resume: true, steer: true })
-    if (action === "steer" || action === "queue")
-      return v2.api.session.inbox.update({ sessionID, inboxID, delivery: action })
+    if (next.type === "interrupt") return v2.api.session.interrupt(promptInterrupt(sessionID))
+    if (next.type === "delivery") return v2.api.session.inbox.update({ sessionID, inboxID, delivery: next.delivery })
     const cancel = v2.api.session.inbox.cancel({ sessionID, inboxID })
     if (action === "delete") return cancel
     // Cancel also succeeds for an item that was delivered first. Take the text back only if the item is still

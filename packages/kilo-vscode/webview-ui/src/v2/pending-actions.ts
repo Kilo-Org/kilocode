@@ -18,6 +18,21 @@ export function pendingEditable(payload: {
   return !payload.files?.length && !payload.agents?.length && !payload.skills?.length
 }
 
+/**
+ * The interrupt a prompt-sending action issues before it sends. It may stop the current model call and its running
+ * tools, but never a running compaction: the checkpoint finishes first and the prompt follows it.
+ */
+export function promptInterrupt(sessionID: string) {
+  return { sessionID, resume: true, steer: true }
+}
+
+/** What one control of a pending prompt asks of the server. `now` stops the turn first; the others only move it. */
+export function pendingRequest(action: PendingAction) {
+  if (action === "now") return { type: "interrupt" } as const
+  if (action === "steer" || action === "queue") return { type: "delivery", delivery: action } as const
+  return { type: "cancel" } as const
+}
+
 type Key = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">
 type Message = {
   id: string

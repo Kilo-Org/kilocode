@@ -34,7 +34,7 @@ import { createSandbox } from "./sandbox"
 import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
-import { steerInterrupts, type SendMode } from "./pending-actions"
+import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
 import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
@@ -296,9 +296,7 @@ export function SessionView(props: {
     const interrupt =
       running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
     if (interrupt)
-      await v2.api.session
-        .interrupt({ sessionID: id, resume: true, steer: true })
-        .catch((err: unknown) => v2.report(err))
+      await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
     return { id, gate, model }
   }
 

@@ -1247,6 +1247,31 @@ describe("SessionExecution interrupt continuation", () => {
     }),
   )
 
+  // kilocode_change start - steer: a steered interruption still stops a model call when no checkpoint is running.
+  it.effect("still interrupts a steered model call when no compaction is running", () =>
+    Effect.gen(function* () {
+      const database = yield* Database.Service
+      const sessionID = Session.ID.make("ses_continue_steering")
+      yield* seedSessions(database, [sessionID])
+
+      const draining = yield* Deferred.make<void>()
+      const scope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
+      const context = yield* buildExecution(scope, () =>
+        Deferred.succeed(draining, undefined).pipe(Effect.andThen(Effect.never)),
+      )
+      const execution = Context.get(context, SessionExecution.Service)
+      yield* execution.resume(sessionID).pipe(Effect.forkScoped)
+      yield* Deferred.await(draining)
+
+      // A guard that suppressed every steered interruption would leave the model call running and pass the other case.
+      expect(yield* execution.interrupt(sessionID, { resume: true, steer: true })).toBeTrue()
+      yield* execution.awaitIdle(sessionID)
+      expect(yield* execution.active).toEqual(new Set())
+    }),
+  )
+  // kilocode_change end
+
   // kilocode_change start - steer: a steered interruption leaves a running compaction alone.
   it.effect("leaves a running compaction alone when a steer interrupts", () =>
     Effect.gen(function* () {
