@@ -32,6 +32,8 @@ const explore = Agent.ID.make("explore")
 const general = Agent.ID.make("general")
 const plan = Agent.ID.make("plan")
 const planTools = [rule("kilo.plan_exit", "*", "deny"), rule("kilo.open_plan", "*", "deny")]
+// Kilo Swarm coordination stays open to the read-only agents; the board plugin registers the tools only when enabled.
+const board = ["board_read", "board_post"]
 
 type Table = Record<string, Permission.Rule["effect"]>
 
@@ -204,7 +206,10 @@ export const Plugin = define({
       // Native Explore allows a broad shell. Append the read-only shell table so the later rules win
       // (evaluation takes the last match) and Explore keeps the read-only bash allowlist. The ceiling
       // reapplies it after config; this copy keeps Explore read-only even when the ceiling does not run.
-      if (editor.get(explore)) editor.update(explore, (item) => item.permissions.push(...rules("shell", exploreShell)))
+      if (editor.get(explore))
+        editor.update(explore, (item) =>
+          item.permissions.push(...rules("shell", exploreShell), ...board.map((action) => rule(action, "*", "allow"))),
+        )
 
       editor.update(Agent.ID.make("ask"), (item) => {
         item.name = Agent.Name.make("Ask")
@@ -401,7 +406,7 @@ function guards(global: Global.Interface, location: Location.Info) {
       rule("*", "*", "deny"),
       ...rules("shell", readOnlyShell),
       ...read,
-      ...allow("grep", "glob", "skill", "question", "webfetch", "websearch"),
+      ...allow("grep", "glob", "skill", "question", "webfetch", "websearch", ...board),
       ...output,
       rule("edit", "*", "deny"),
       rule("subagent", "*", "deny"),
@@ -412,7 +417,7 @@ function guards(global: Global.Interface, location: Location.Info) {
       rule("subagent", general, "deny"),
       ...rules("shell", readOnlyShell),
       ...read,
-      ...allow("grep", "glob", "webfetch", "websearch"),
+      ...allow("grep", "glob", "webfetch", "websearch", ...board),
       ...output,
       rule("external_directory", data, "allow"),
       rule("edit", "*", "deny"),
@@ -420,7 +425,7 @@ function guards(global: Global.Interface, location: Location.Info) {
     ],
     orchestrator: [
       rule("*", "*", "deny"),
-      ...allow("read", "grep", "glob", "question", "skill", "subagent", "webfetch", "websearch"),
+      ...allow("read", "grep", "glob", "question", "skill", "subagent", "webfetch", "websearch", ...board),
       ...output,
       rule("shell", "*", "deny"),
     ],

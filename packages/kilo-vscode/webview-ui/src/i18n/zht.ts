@@ -1345,6 +1345,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "開啟所有背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
+  "task.backgroundAgents.promoteFailed": "此代理無法在背景繼續。它可能已經完成。",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
   "task.backgroundAgents.clearFinished": "清除已完成",
