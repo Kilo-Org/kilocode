@@ -61,6 +61,8 @@ export function SessionView(props: {
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
   readOnly?: boolean
+  /** Whether the Command Palette search toggle targets this view; the Agent Manager's sub-agent inspector turns it off. */
+  searchCommand?: boolean
   /** Rendered above the task header, for the sidebar's session tab strip. */
   tabStrip?: JSX.Element
   /** Opens the proposed changes of an edit permission request. */
@@ -401,7 +403,7 @@ export function SessionView(props: {
       <div class="chat-view">
         {props.tabStrip}
         <Show when={session()} keyed>
-          {(id) => <TaskHeader sessionID={id} />}
+          {(id) => <TaskHeader sessionID={id} readonly={props.readOnly} searchCommand={props.searchCommand} />}
         </Show>
         <div class="chat-messages-wrapper">
           <ToolChildSessionProvider value={childSessions}>

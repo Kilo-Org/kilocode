@@ -1,15 +1,5 @@
 import { createContext, useContext, createSignal, type Accessor, type ParentComponent } from "solid-js"
 
-export interface SearchMatch {
-  key: string
-  /** Index (0-based) of this occurrence among all matches within the same row. */
-  occurrence: number
-  /** id of the message part this occurrence falls within, if it could be
-   * attributed to one — lets highlighting scan just that part's DOM subtree
-   * instead of every element in the row. */
-  partId?: string
-}
-
 interface TranscriptSearchContextValue {
   query: Accessor<string>
   setQuery: (value: string) => void

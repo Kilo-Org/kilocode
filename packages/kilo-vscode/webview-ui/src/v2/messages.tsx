@@ -11,7 +11,6 @@ import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { KiloNotifications } from "../components/chat/KiloNotifications"
 import { useLanguage } from "../context/language"
 import { useNotificationsOptional } from "../context/notifications"
-import { escapeRegExp } from "../utils/escape-regexp"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
@@ -39,9 +38,9 @@ import {
 } from "./transcript-cache"
 import { createRowHandoff } from "./transcript-row-handoff"
 import { TranscriptRowView } from "./transcript-row"
-import { useTranscriptSearch, type SearchMatch } from "./transcript-search"
+import { useTranscriptSearch } from "./transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
-import { rowSearchText, type SearchTextRange } from "./transcript-search-text"
+import { buildSearchPattern, searchMatches } from "./transcript-search-match"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
 
@@ -337,28 +336,23 @@ export function MessageList(props: {
   })
 
   const search = useTranscriptSearch()
-
-  function rangeAt(ranges: SearchTextRange[], index: number): SearchTextRange | undefined {
-    return ranges.find((range) => index >= range.start && index < range.end)
-  }
-
-  function buildPattern(query: string, matchCase: boolean, wholeWord: boolean, regex: boolean): RegExp | undefined {
-    if (!query) return undefined
-    try {
-      const pattern = regex ? query : escapeRegExp(query)
-      // Unicode-aware boundary: plain `\b` only treats ASCII letters, digits
-      // and underscore as "word" characters, so it silently breaks whole-word
-      // matching for Cyrillic, Arabic, CJK and other non-ASCII text.
-      if (!wholeWord) return new RegExp(pattern, matchCase ? "gu" : "giu")
-      return new RegExp(`(?<![\\p{L}\\p{M}\\p{N}_])(?:${pattern})(?![\\p{L}\\p{M}\\p{N}_])`, matchCase ? "gu" : "giu")
-    } catch {
-      return undefined
-    }
-  }
+  // A failed history load leaves the cursor untouched, so the loading effect
+  // would retry the whole remaining history on every run. Stop retrying until
+  // a different session opens or the search is reopened.
+  const [historyFailed, setHistoryFailed] = createSignal(false)
+  createEffect(
+    on(
+      () => [props.session, search.active()] as const,
+      ([session, active], previous) => {
+        if (!previous || previous[0] !== session || (active && !previous[1])) setHistoryFailed(false)
+      },
+      { defer: true },
+    ),
+  )
 
   const pattern = createMemo(() => {
     if (!search.active()) return undefined
-    return buildPattern(search.query(), search.matchCase(), search.wholeWord(), search.regex())
+    return buildSearchPattern(search.query(), search.matchCase(), search.wholeWord(), search.regex())
   })
 
   // An invalid regex (e.g. an unbalanced group) compiles to `undefined`, which
@@ -380,36 +374,18 @@ export function MessageList(props: {
       search.active() &&
       !!search.query() &&
       !!id &&
+      !historyFailed() &&
       v2.data.session.message.more(id) &&
       !v2.data.session.message.startLoaded(id)
     search.setSearchingHistory(searching)
     if (!searching || !id || v2.data.session.message.loading(id)) return
-    void v2.data.session.message.loadMore(id, { all: true }).catch(v2.report)
+    void v2.data.session.message.loadMore(id, { all: true }).catch((error: unknown) => {
+      setHistoryFailed(true)
+      v2.report(error)
+    })
   })
 
-  const matches = createMemo(() => {
-    const compiled = pattern()
-    if (!compiled) return []
-    const result: SearchMatch[] = []
-    for (const row of rows()) {
-      const { text, ranges } = rowSearchText(row)
-      compiled.lastIndex = 0
-      let occurrence = 0
-      let hit = compiled.exec(text)
-      while (hit) {
-        if (hit[0].length === 0) {
-          compiled.lastIndex += 1
-          hit = compiled.exec(text)
-          continue
-        }
-        const range = rangeAt(ranges, hit.index)
-        result.push({ key: row.key, occurrence, partId: range?.partId })
-        occurrence += 1
-        hit = compiled.exec(text)
-      }
-    }
-    return result
-  })
+  const matches = createMemo(() => searchMatches(rows(), pattern()))
 
   createEffect(
     on(matches, (list) => {

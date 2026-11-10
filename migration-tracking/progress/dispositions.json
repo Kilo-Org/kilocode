@@ -2091,7 +2091,7 @@
   "module:packages/kilo-vscode/tests/unit/transcript-search-text.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/transcript-search-text.test.ts",
-    "note": "The v1 assertions (message text only, part ranges, synthetic skip, markdown link stripping, literal user brackets, no error matches) are ported to the v2 row shape, plus the absolute part index of a chunk.",
+    "note": "The v1 assertions (message text only, part ranges, markdown link stripping, literal user brackets, no error matches) are ported to the v2 row shape, plus the absolute part index of a chunk. The v2 row model has no synthetic text parts, so there is no synthetic-skip case to carry.",
     "by": "migrate-vscode-session-search-v1"
   }
 }

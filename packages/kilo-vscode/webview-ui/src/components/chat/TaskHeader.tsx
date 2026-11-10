@@ -43,6 +43,8 @@ import { renderable } from "../../utils/timeline/timeline-parts"
 interface TaskHeaderProps {
   sessionID: string
   readonly?: boolean
+  /** Whether the Command Palette search toggle reaches this header. A nested view turns it off. */
+  searchCommand?: boolean
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -137,11 +139,19 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   // The Command Palette toggle and the header search icon both reach the
   // search state from here: the bar itself only mounts once search is active,
   // so it can never be what turns search on in the first place, and it would
-  // not exist anymore to react to a request to close it.
+  // not exist anymore to react to a request to close it. A nested session
+  // view, such as the Agent Manager's sub-agent inspector, opts out so one
+  // toggle cannot open search in two views at once.
   const search = useTranscriptSearch()
-  const toggleSearch = () => (search.active() ? search.closeSearch() : search.setActive(true))
-  window.addEventListener("focusTranscriptSearch", toggleSearch)
-  onCleanup(() => window.removeEventListener("focusTranscriptSearch", toggleSearch))
+  const toggleSearch = () => {
+    if (!hasMessages()) return
+    if (search.active()) search.closeSearch()
+    else search.setActive(true)
+  }
+  if (props.searchCommand !== false) {
+    window.addEventListener("focusTranscriptSearch", toggleSearch)
+    onCleanup(() => window.removeEventListener("focusTranscriptSearch", toggleSearch))
+  }
 
   // Whenever search closes via an explicit user action — the header toggle
   // button, the Command Palette toggle, the bar's own "X", or Escape — send
@@ -149,8 +159,17 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   // control was just clicked or removed. `closeSignal` only moves on an
   // explicit close, so a silent reset when the session changes keeps the
   // transcript's own focus handling. `defer: true` skips the initial run so
-  // mounting does not immediately steal focus.
-  createEffect(on(() => search.closeSignal(), focusPrompt, { defer: true }))
+  // mounting does not immediately steal focus. A read-only view has no
+  // composer of its own, so it must not move focus to another surface.
+  createEffect(
+    on(
+      () => search.closeSignal(),
+      () => {
+        if (!props.readonly) focusPrompt()
+      },
+      { defer: true },
+    ),
+  )
 
   const toggle = () => {
     const next = !expanded()

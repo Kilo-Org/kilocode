@@ -2,6 +2,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { type Component, onMount, Show } from "solid-js"
 import { useLanguage } from "../context/language"
+import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useTranscriptSearch } from "./transcript-search"
 
 export const TranscriptSearchBar: Component = () => {
@@ -32,6 +33,9 @@ export const TranscriptSearchBar: Component = () => {
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
+      // Enter only navigates from the input, never from the option or nav
+      // buttons, and never while an IME composition is being committed.
+      if (event.target !== inputRef || !isEnterKeyCommitNotIme(event)) return
       event.preventDefault()
       if (event.shiftKey) prev()
       else next()
@@ -40,7 +44,6 @@ export const TranscriptSearchBar: Component = () => {
     if (event.key === "Escape") {
       event.preventDefault()
       close()
-      return
     }
   }
 
@@ -113,18 +116,24 @@ export const TranscriptSearchBar: Component = () => {
         </div>
       </div>
       <Show when={search.invalid()}>
-        <span data-slot="transcript-search-error">{language.t("chat.search.invalidRegex")}</span>
+        <span data-slot="transcript-search-error" role="status" aria-live="polite">
+          {language.t("chat.search.invalidRegex")}
+        </span>
       </Show>
       <Show when={!search.invalid() && search.searchingHistory() && search.count() === 0}>
-        <span data-slot="transcript-search-empty">{language.t("chat.search.searchingHistory")}</span>
+        <span data-slot="transcript-search-empty" role="status" aria-live="polite">
+          {language.t("chat.search.searchingHistory")}
+        </span>
       </Show>
       <Show
         when={!search.invalid() && !search.searchingHistory() && search.query().length > 0 && search.count() === 0}
       >
-        <span data-slot="transcript-search-empty">{language.t("chat.search.noResults")}</span>
+        <span data-slot="transcript-search-empty" role="status" aria-live="polite">
+          {language.t("chat.search.noResults")}
+        </span>
       </Show>
       <Show when={!search.invalid() && search.count() > 0}>
-        <span data-slot="transcript-search-counter">
+        <span data-slot="transcript-search-counter" role="status" aria-live="polite">
           {search.index() + 1} / {search.count()}
         </span>
       </Show>
