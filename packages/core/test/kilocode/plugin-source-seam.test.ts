@@ -94,6 +94,26 @@ it.live("blocks a host-resolved target when a policy resource it names is denied
   }),
 )
 
+it.live("blocks a denied plugin before the installing pass reaches the resolver", () =>
+  Effect.gen(function* () {
+    const directory = yield* tmpdirScoped()
+    yield* setOrganizationPolicy([{ action: "plugin.use", resource: "git/host/plugin", effect: "deny" }])
+    const passes: boolean[] = []
+    // The read pass names the resources from the spec alone, so the denial never needs a clone.
+    const loader = yield* modules((_target, options) => {
+      passes.push(options.install)
+      return Effect.succeed(
+        options.install
+          ? { target: directory.path, resources: ["git/host/plugin"] }
+          : { pending: true as const, resources: ["git/host/plugin"] },
+      )
+    })
+
+    expect(yield* loader.load(operation("git:/host/plugin"), { install: true })).toEqual({ blocked: true })
+    expect(passes).toEqual([false])
+  }),
+)
+
 it.live("keeps the upstream behavior when no host resolver is configured", () =>
   Effect.gen(function* () {
     const directory = yield* tmpdirScoped()

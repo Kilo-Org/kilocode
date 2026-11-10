@@ -151,11 +151,15 @@ Later phases extend the same host interface; they do not rework the hook mechani
   `Effect.serviceOption`, so upstream's graph, with no host, keeps its behavior byte for byte.
 - The resolver runs before the local/npm split in `PluginModule.load`. It returns the directory to
   load plus the `plugin.use` resources the resolution stands for (the `git/...` identity, and the
-  source path of a local repo), and the loader blocks the plugin when any of them is denied, so a
-  deny-list cannot be bypassed by a second spelling of the same plugin. A target the host cannot
-  read yet reports `pending`, so the clone happens in the installing pass and not in the fast pass
-  that activates everything else first, like the npm branch's `resolve`. `source()` still reports the
-  configured `git:` spec, so a git plugin lists as a package target.
+  canonical path, real path and configured spelling of a local repo), and the loader blocks the
+  plugin when any of them is denied, so a deny-list cannot be bypassed by a second spelling of the
+  same plugin. The identity is canonical: a URL folds its scheme, host case and default port, a local
+  path becomes absolute, and the subpath is POSIX-normalized, with `..` rejected, so one repository
+  has one identity and one deny resource. A target the host cannot read yet reports `pending` with
+  those resources, so the clone happens in the installing pass and not in the fast pass that
+  activates everything else first, like the npm branch's `resolve`; the loader reads the resources
+  from that pass before it resolves, so a denied plugin never reaches the network. `source()` still
+  reports the configured `git:` spec, so a git plugin lists as a package target.
 - `git://host/repo` stays an npm Git dependency: `isGitPluginSpec` excludes the npm protocol form, so
   it reaches npm exactly as before.
 - `packages/kilo-cli/src/plugin-npm.ts` wraps the npm service (rung 2, service replacement, in the CLI
@@ -163,19 +167,26 @@ Later phases extend the same host interface; they do not rework the hook mechani
   ask npm directly: the TUI's own plugin loader resolves configured package targets through
   `packages.prepare`, and the plugin update check would otherwise report the target as not installed.
   Every non-`git:` spec and every other method reaches the native service unchanged; a git plugin
-  update is a clone refresh and its update check reports no registry change.
+  update forces a clone refresh and its update check reports no registry change. `resolve` is the
+  non-installing read path: it reads the cache and reports the expected directory when nothing is
+  cached, like `Npm.resolve` for an uninstalled package, instead of cloning or failing as a defect.
 - The cache keeps the npm cache's hygiene: a resolve sweeps at most once an hour, removing
-  interrupted `<dir>.tmp-*` staging directories after an hour and clones nothing resolved for a week.
-  `reuse` touches the marker, so a pinned ref in use is never swept.
+  interrupted staging clones from the cache's own `.staging` directory after an hour and clones
+  nothing resolved for a week. One clone is kept per repository and ref, and a subpath is resolved
+  inside it, so several plugins from one repository share a clone. The marker keeps the clone time
+  and the last-use stamp apart: only the last-use stamp moves on a hit, so a frequently resolved
+  mutable ref is still re-checked after the TTL, and a sweep holds the entry's lock and ages an
+  unreadable marker by the directory instead of deleting it outright.
 - `PluginSupervisor` needed no change: the options travel through the registry node the supervisor
   already depends on. Only `packages/core/src/plugin.ts` and `plugin/module.ts` carry the rung-3 seam
   (`script/upstream/shared-patches.json`, both rung 3).
 - `packages/kilo-cli/src/host.ts` replaces `Plugin.node` with
   `Plugin.configured({ pluginSource: PluginGitSource.pluginSource })` and the npm node with the
   wrapper.
-- Tests: 19 cases in `packages/kilo-plugin/test/plugin-git-source.test.ts` (the v1 parsing, identity,
+- Tests: 25 cases in `packages/kilo-plugin/test/plugin-git-source.test.ts` (the v1 parsing, identity,
   ref, cache-key, symlink-escape, staging-cleanup and `~` cases, plus the npm-protocol exclusion, the
-  cached-only read, the sweep and the loader hook's pending/resources contract), the seam test
+  canonical identity and subpath, the shared clone per repository, the refresh stamps, the forced
+  refresh, the sweep and the loader hook's pending/resources contract), the seam test
   `packages/core/test/kilocode/plugin-source-seam.test.ts` (resolved target, deferred pass, policy
   resources and the unchanged upstream path), the npm wrapper test
   `packages/kilo-cli/test/plugin-npm.test.ts`, and the host test

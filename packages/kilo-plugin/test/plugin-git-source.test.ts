@@ -129,6 +129,26 @@ describe("git plugin spec parsing", () => {
     expect(PluginGitSource.gitPluginIdentity("git:/tmp/repo")).not.toBe("/tmp/repo")
     expect(PluginGitSource.gitPluginIdentity("git:github.com/owner/repo")).not.toBe("repo")
   })
+
+  test("normalizes a repository to one canonical identity", () => {
+    // A URL folds its scheme, host case and default port, so one repository has one identity and one deny resource.
+    expect(PluginGitSource.gitPluginIdentity("git:https://github.com:443/owner/repo")).toBe("git/github.com/owner/repo")
+    expect(PluginGitSource.gitPluginIdentity("git:http://github.com:80/owner/repo")).toBe("git/github.com/owner/repo")
+    if (process.platform !== "win32")
+      expect(PluginGitSource.gitPluginIdentity("git:https://GitHub.com/owner/repo")).toBe("git/github.com/owner/repo")
+    // A subpath normalizes, so `#./plugins/x` names the same plugin as `#plugins/x`.
+    expect(PluginGitSource.gitPluginIdentity("git:github.com/owner/repo#./plugins/x")).toBe(
+      "git/github.com/owner/repo/plugins/x",
+    )
+    expect(PluginGitSource.gitPluginIdentity("git:github.com/owner/repo#plugins//x")).toBe(
+      "git/github.com/owner/repo/plugins/x",
+    )
+  })
+
+  test("rejects a subpath that leaves the clone", () => {
+    expect(PluginGitSource.parseGitPluginSpec("git:github.com/owner/repo#../etc")).toBeUndefined()
+    expect(PluginGitSource.parseGitPluginSpec("git:github.com/owner/repo#plugins/../../etc")).toBeUndefined()
+  })
 })
 
 describe("git plugin resolution", () => {
@@ -252,18 +272,103 @@ describe("git plugin resolution", () => {
     expect(warm.ok).toBe(true)
   })
 
+  test("shares one clone between subpaths of one repository", async () => {
+    await using fixture = await repo({
+      "package.json": plugin,
+      "a/package.json": JSON.stringify({ name: "a", exports: { "./server": "./server.js" } }),
+      "a/server.js": source,
+      "b/package.json": JSON.stringify({ name: "b", exports: { "./server": "./server.js" } }),
+      "b/server.js": source,
+    })
+
+    const a = await PluginGitSource.resolveGitPluginTarget(`git:${fixture.path}#a`)
+    const b = await PluginGitSource.resolveGitPluginTarget(`git:${fixture.path}#b`)
+    expect(a.ok && b.ok).toBe(true)
+    if (!a.ok || !b.ok) return
+    // A subpath is resolved inside one clone, so a repository with several plugins is cloned once.
+    expect(path.dirname(a.target)).toBe(path.dirname(b.target))
+    expect(path.basename(a.target)).toBe("a")
+    expect(path.basename(b.target)).toBe("b")
+  })
+
+  test("a cache hit does not postpone the mutable-ref refresh", async () => {
+    await using fixture = await repo({ "package.json": plugin, "server.js": source })
+    const spec = `git:${fixture.path}`
+    const first = await PluginGitSource.resolveGitPluginTarget(spec)
+    expect(first.ok).toBe(true)
+    if (!first.ok) return
+    const marker = `${first.target}.json`
+    const cloned = (await Bun.file(marker).json()) as { updatedAt: number }
+
+    expect((await PluginGitSource.resolveGitPluginTarget(spec)).ok).toBe(true)
+    const reused = (await Bun.file(marker).json()) as { updatedAt: number; usedAt?: number }
+    // Only the retention stamp moves, so resolving a branch plugin often still re-checks it after the TTL.
+    expect(reused.updatedAt).toBe(cloned.updatedAt)
+    expect(reused.usedAt).toBeGreaterThanOrEqual(cloned.updatedAt)
+  })
+
+  test("fetches on demand even inside the refresh window", async () => {
+    await using fixture = await repo({ "package.json": plugin, "server.js": source })
+    const spec = `git:${fixture.path}`
+    const first = await PluginGitSource.resolveGitPluginTarget(spec)
+    expect(first.ok).toBe(true)
+    if (!first.ok) return
+    await Bun.write(path.join(fixture.path, "later.txt"), "later\n")
+    await $`git add -A`.cwd(fixture.path).quiet()
+    await $`git commit -q -m later`.cwd(fixture.path).quiet()
+
+    const cached = await PluginGitSource.resolveGitPluginTarget(spec)
+    expect(cached.ok).toBe(true)
+    if (!cached.ok) return
+    expect(await Bun.file(path.join(cached.target, "later.txt")).exists()).toBe(false)
+
+    const forced = await PluginGitSource.resolveGitPluginTarget(spec, { force: true })
+    expect(forced.ok).toBe(true)
+    if (!forced.ok) return
+    expect(await Bun.file(path.join(forced.target, "later.txt")).exists()).toBe(true)
+  })
+
+  test("keeps a clone whose identity contains .tmp- and one whose marker has no timestamp", async () => {
+    const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-git.tmp-plugin-")))
+    await $`git init -q -b main`.cwd(directory).quiet()
+    await $`git config user.email test@example.com`.cwd(directory).quiet()
+    await $`git config user.name Test`.cwd(directory).quiet()
+    await $`git config commit.gpgsign false`.cwd(directory).quiet()
+    try {
+      await commit(directory, { "package.json": plugin, "server.js": source })
+      const resolved = await PluginGitSource.resolveGitPluginTarget(`git:${directory}`)
+      expect(resolved.ok).toBe(true)
+      if (!resolved.ok) return
+
+      // An entry is aged by its marker, never by a name that happens to contain a staging-like segment.
+      const old = new Date(0)
+      await utimes(resolved.target, old, old)
+      await PluginGitSource.collect()
+      expect(await Bun.file(path.join(resolved.target, "package.json")).exists()).toBe(true)
+
+      // A marker without a timestamp falls back to the directory age, so a fresh clone survives.
+      const now = new Date()
+      await utimes(resolved.target, now, now)
+      await Bun.write(`${resolved.target}.json`, JSON.stringify({ identity: directory }))
+      await PluginGitSource.collect()
+      expect(await Bun.file(path.join(resolved.target, "package.json")).exists()).toBe(true)
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
   test("sweeps an unused clone and an interrupted staging directory", async () => {
     await using fixture = await repo({ "package.json": plugin, "server.js": source })
     const resolved = await PluginGitSource.resolveGitPluginTarget(`git:${fixture.path}`)
     expect(resolved.ok).toBe(true)
     if (!resolved.ok) return
     const marker = `${resolved.target}.json`
-    const staging = `${resolved.target}.tmp-dead`
-    await mkdir(staging)
+    const staging = path.join(PluginGitSource.cacheRoot(), ".staging", path.basename(resolved.target))
+    await mkdir(staging, { recursive: true })
     const old = new Date(0)
     await utimes(resolved.target, old, old)
     await utimes(staging, old, old)
-    await Bun.write(marker, JSON.stringify({ repo: fixture.path, updatedAt: 0 }))
+    await Bun.write(marker, JSON.stringify({ identity: fixture.path, updatedAt: 0 }))
 
     await PluginGitSource.collect()
 
@@ -298,16 +403,34 @@ describe("git plugin loader hook", () => {
     await using fixture = await repo({ "package.json": plugin, "server.js": source })
     const spec = `git:${fixture.path}`
 
-    expect(await hook(spec, false)).toEqual({ pending: true })
+    // The read pass names the resources from the spec alone, so a loader can deny the plugin before the clone.
+    expect(await hook(spec, false)).toMatchObject({
+      pending: true,
+      resources: expect.arrayContaining([PluginGitSource.gitPluginIdentity(spec)!]),
+    })
 
     const resolved = await hook(spec, true)
     expect(resolved).toMatchObject({ target: expect.any(String) })
     if (!resolved || !("target" in resolved)) return
     const identity = PluginGitSource.gitPluginIdentity(spec)
-    expect(resolved.resources).toEqual([identity!, fixture.path])
+    // The canonical local path and its real path are named alongside the identity, so a deny on any spelling of
+    // the same directory matches. Paths differ by separator per platform, so compare one spelling.
+    const resources = (resolved.resources ?? []).map((resource) => resource.replaceAll("\\", "/"))
+    expect(resources).toContain(identity!)
+    expect(resources).toContain(fixture.path.replaceAll("\\", "/"))
 
     // With the clone cached, the non-installing pass reads it instead of asking for another pass.
     expect(await hook(spec, false)).toEqual(resolved)
+  })
+
+  test("names a relative local repo by its canonical path", async () => {
+    await using fixture = await repo({ "package.json": plugin, "server.js": source })
+    const resolved = await hook(`git:${path.relative(process.cwd(), fixture.path)}`, true)
+    expect(resolved).toMatchObject({ target: expect.any(String) })
+    if (!resolved || !("target" in resolved)) return
+    // A relative repo must still name the absolute directory a policy denies, not a cwd-dependent spelling.
+    const resources = (resolved.resources ?? []).map((resource) => resource.replaceAll("\\", "/"))
+    expect(resources).toContain(fixture.path.replaceAll("\\", "/"))
   })
 
   test("rejects an invalid git spec before touching the network", async () => {

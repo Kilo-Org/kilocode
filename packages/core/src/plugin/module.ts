@@ -28,7 +28,7 @@ import { Watcher } from "../filesystem/watcher.js"
  */
 export type PluginSourceResolution =
   | { readonly target: string; readonly resources?: readonly string[] }
-  | { readonly pending: true }
+  | { readonly pending: true; readonly resources?: readonly string[] }
 
 /** Plugin loader options a host may provide. */
 export interface Options {
@@ -82,17 +82,23 @@ export const make = Effect.fn("PluginModule.make")(function* () {
         // kilocode_change start - the host source resolver runs before the local/npm split
         const policies = ManagedPolicy.statements(yield* config.entries())
         if (ManagedPolicy.decision(policies, "plugin.use", target) === "deny") return { blocked: true as const }
-        const resolved = pluginSource
-          ? yield* pluginSource(operation.target, { install: options?.install !== false })
-          : undefined
-        if (resolved && "pending" in resolved) return { pending: true as const }
-        const denied =
-          resolved !== undefined &&
-          (resolved.resources ?? []).some(
-            (resource) => ManagedPolicy.decision(policies, "plugin.use", resource) === "deny",
-          )
-        if (denied) return { blocked: true as const }
-        return yield* load(operation, sources, watch, options, resolved?.target)
+        const denied = (resources: readonly string[] | undefined) =>
+          (resources ?? []).some((resource) => ManagedPolicy.decision(policies, "plugin.use", resource) === "deny")
+        if (pluginSource) {
+          // The read pass runs first even when the caller asked to install: it names the resources from the spec
+          // alone, so a denied plugin is blocked before the resolver reaches the network.
+          const cached = yield* pluginSource(operation.target, { install: false })
+          if (denied(cached?.resources)) return { blocked: true as const }
+          if (cached && "pending" in cached) {
+            if (options?.install === false) return { pending: true as const }
+            const resolved = yield* pluginSource(operation.target, { install: true })
+            if (denied(resolved?.resources)) return { blocked: true as const }
+            if (resolved && "pending" in resolved) return { pending: true as const }
+            return yield* load(operation, sources, watch, options, resolved?.target)
+          }
+          if (cached) return yield* load(operation, sources, watch, options, cached.target)
+        }
+        return yield* load(operation, sources, watch, options)
         // kilocode_change end
       }),
     changes: () => Stream.fromPubSub(changes),
