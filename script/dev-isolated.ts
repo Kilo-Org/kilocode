@@ -13,11 +13,13 @@ await Promise.all(dirs.map((dir) => mkdir(dir, { recursive: true })))
 console.error(`kilo v2 dev profile: ${profile}`)
 
 const args = process.argv.slice(2)
-// A shell or terminal of a Kilo or OpenCode server inherits that server's database, config directory, home, session
-// and password, and the CLI would use them instead of the profile.
+// A shell or terminal of a Kilo or OpenCode server inherits that server's database, config, home, session and
+// password, and the CLI would use them instead of the profile. Pass config with OPENCODE_CONFIG_CONTENT instead.
 const inherited = [
   "OPENCODE_DB",
   "KILO2_DB",
+  "OPENCODE_CONFIG",
+  "KILO2_CONFIG",
   "OPENCODE_CONFIG_DIR",
   "KILO2_CONFIG_DIR",
   "OPENCODE_HOME_DIR",

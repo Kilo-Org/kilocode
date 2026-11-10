@@ -59,6 +59,8 @@ test("isolated dev ignores the database, home, session and client of a parent Ki
   const names = [
     "OPENCODE_DB",
     "KILO2_DB",
+    "OPENCODE_CONFIG",
+    "KILO2_CONFIG",
     "OPENCODE_CONFIG_DIR",
     "KILO2_CONFIG_DIR",
     "OPENCODE_HOME_DIR",
@@ -96,6 +98,8 @@ test("isolated dev ignores the database, home, session and client of a parent Ki
         KILO_V2_PROFILE: profile,
         OPENCODE_DB: path.join(real, "opencode.db"),
         KILO2_DB: path.join(real, "kilo2.db"),
+        OPENCODE_CONFIG: path.join(real, "kilo2.json"),
+        KILO2_CONFIG: path.join(real, "kilo2.json"),
         OPENCODE_CONFIG_DIR: path.join(real, "config"),
         KILO2_CONFIG_DIR: path.join(real, "config"),
         OPENCODE_HOME_DIR: real,
