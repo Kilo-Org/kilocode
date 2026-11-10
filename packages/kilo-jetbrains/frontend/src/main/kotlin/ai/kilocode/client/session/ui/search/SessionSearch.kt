@@ -201,6 +201,10 @@ internal class SessionSearch(
         cache.clear()
         results = emptyList()
         current = -1
+        pending = 0
+        pendingIndex = null
+        revealPending = false
+        refreshPending = false
         error = null
         host.isVisible = false
         host.revalidate()
@@ -503,12 +507,14 @@ internal class SessionSearch(
         reveal(results[current])
     }
 
-    private fun target(direction: Int): Int =
-        if (current < 0) {
+    private fun target(direction: Int): Int {
+        val base = pendingIndex ?: current
+        return if (base < 0) {
             if (direction > 0) 0 else results.lastIndex
         } else {
-            Math.floorMod(current + direction, results.size)
+            Math.floorMod(base + direction, results.size)
         }
+    }
 
     @RequiresEdt
     private fun reveal(hit: Hit) {

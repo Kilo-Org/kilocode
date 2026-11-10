@@ -118,11 +118,12 @@ class SessionSearchTest : SessionUiTestBase() {
         showMessages()
         textMessage("user_1", "hello")
         assistant("asst_1", "hello")
+        assistant("asst_2", "hello")
 
         ui.search.open()
         val bar = ui.search.getComponent()
         bar.getSearchTextComponent().text = "hello"
-        assertTrue("first match is selected", pumpUntil { bar.statusText == "1 of 2" })
+        assertTrue("first match is selected", pumpUntil { bar.statusText == "1 of 3" })
 
         emit(
             ChatEventDto.PartUpdated("ses_test", part("asst_1_text", "asst_1", "text", "hello extra")),
@@ -132,10 +133,40 @@ class SessionSearchTest : SessionUiTestBase() {
         settleShort(10)
 
         ui.search.searchForward()
+        ui.search.searchForward()
 
         assertTrue(
-            "stale navigation advances instead of jumping to the first match",
-            pumpUntil { bar.statusText == "2 of 2" },
+            "repeated stale navigation advances to the last match",
+            pumpUntil { bar.statusText == "3 of 3" },
+        )
+        ui.search.close()
+    }
+
+    fun `test closing during stale navigation resets the pending target`() {
+        showMessages()
+        textMessage("user_1", "hello")
+        assistant("asst_1", "hello")
+        assistant("asst_2", "hello")
+
+        ui.search.open()
+        val bar = ui.search.getComponent()
+        bar.getSearchTextComponent().text = "hello"
+        assertTrue("first match is selected", pumpUntil { bar.statusText == "1 of 3" })
+
+        emit(
+            ChatEventDto.PartUpdated("ses_test", part("asst_1_text", "asst_1", "text", "hello extra")),
+            flush = false,
+        )
+        forceFlushWithoutDispatch()
+        settleShort(10)
+
+        ui.search.searchForward()
+        ui.search.close()
+        ui.search.searchForward()
+
+        assertTrue(
+            "reopening after close starts at the first match",
+            pumpUntil { bar.statusText == "1 of 3" },
         )
         ui.search.close()
     }
