@@ -6,6 +6,7 @@ import type { Config } from "../config/config"
 import type { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 import { KilocodePaths } from "./paths"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import type { OrganizationMode } from "@kilocode/kilo-gateway"
 
 export namespace ModesMigrator {
@@ -184,8 +185,10 @@ export namespace ModesMigrator {
     }
 
     // 5. Project .kilocodemodes
-    const projectModesPath = path.join(options.projectDir, ".kilocodemodes")
-    allModes.push(...(await readModesFile(projectModesPath)))
+    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+      const projectModesPath = path.join(options.projectDir, ".kilocodemodes")
+      allModes.push(...(await readModesFile(projectModesPath)))
+    }
 
     // Deduplicate by slug (later entries win)
     const modesBySlug = new Map<string, KilocodeMode>()
