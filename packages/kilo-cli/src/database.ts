@@ -42,6 +42,7 @@ export async function select(
     shared || release.includes(input.channel)
       ? path.join(input.data, "kilo2.db")
       : path.join(input.data, `kilo2-${safe(input.channel)}.db`)
+  await refuseV1Store(file)
   await adopt(file, input.data, input.channel, shared, !flag(env.KILO_DISABLE_V1_IMPORT))
   env.OPENCODE_DB = file
   return file
@@ -103,7 +104,30 @@ async function adopt(file: string, data: string, channel: string, shared: boolea
     (store && existsSync(store) ? store : undefined) ??
     (files.includes(primary) ? primary : undefined)
   if (!source) return
-  if (source === store) return importV1(store, file, data)
+  if (source === store) {
+    const started = Date.now()
+    try {
+      const result = await importV1({
+        store,
+        file,
+        data,
+        log: (line) => console.error(line),
+        onStart: () => console.error(`kilo2: importing Kilo v1 sessions from ${store} once; ${store} stays as it is.`),
+        progress: (done, total) => console.error(`kilo2: importing Kilo v1 sessions ${done}/${total}`),
+      })
+      if (!result.skipped)
+        console.error(
+          `kilo2: importing Kilo v1 sessions done, ${result.imported} sessions in ${Date.now() - started} ms.`,
+        )
+    } catch (error) {
+      if (existsSync(file)) return
+      console.error(
+        `kilo2: importing Kilo v1 sessions failed, starting with a new database. ${store} stays as it is; delete ${file} and start again to retry:`,
+        error,
+      )
+    }
+    return
+  }
   try {
     await copy(source, file)
   } catch (error) {
@@ -116,39 +140,44 @@ async function adopt(file: string, data: string, channel: string, shared: boolea
   }
 }
 
+export type ImportResult = { readonly imported: number; readonly skipped: boolean }
+
 /**
- * Imports the Kilo v1 store into a new store at `file`. One process converts while the others wait for it, so parallel
- * starts (VS Code windows, the CLI) do not repeat the work. Every line starts with `kilo2: importing`, which the VS Code
- * client reads as progress while it waits for the server. A failed import leaves no store, so the server starts empty.
+ * Imports the Kilo v1 store at `store` into a new store at `file`, and returns the session count. One process converts
+ * while the others wait for it, so parallel starts (VS Code windows, the CLI) do not repeat the work. A failed import
+ * leaves no store behind and throws; the caller starts with a new database. The v1 store is only read.
+ *
+ * Progress and log lines are the caller's: the automatic first start writes the `kilo2:` lines the VS Code client reads,
+ * and the `import v1` command writes its own.
  */
-async function importV1(store: string, file: string, data: string) {
-  const lock = `${file}.import.lock`
+export async function importV1(input: {
+  readonly store: string
+  readonly file: string
+  readonly data: string
+  readonly log?: (line: string) => void
+  readonly onStart?: () => void
+  readonly progress?: (done: number, total: number) => void
+}): Promise<ImportResult> {
+  const lock = `${input.file}.import.lock`
   try {
-    if (!(await acquire(lock, file))) return
-    if (existsSync(file)) return
-    console.error(`kilo2: importing Kilo v1 sessions from ${store} once; ${store} stays as it is.`)
+    if (!(await acquire(lock, input.file, input.log))) return { imported: 0, skipped: true }
+    if (existsSync(input.file)) return { imported: 0, skipped: true }
+    input.onStart?.()
     const { KiloV1Store } = await import("./v1-store")
-    const started = Date.now()
     // The copy, the Kilo steps and the conversion run one after another, and the copy and the Kilo steps block the
     // process, so no timer can refresh the lock during them. Progress before and after each phase keeps the lock
     // fresh as long as no single phase takes longer than STALE.
-    await copy(store, file, (copy) =>
-      KiloV1Store.convert(copy, {
-        data,
-        progress: (done, total) => {
-          touch(lock)
-          console.error(`kilo2: importing Kilo v1 sessions ${done}/${total}`)
-        },
-      }).then((total) =>
-        console.error(`kilo2: importing Kilo v1 sessions done, ${total} sessions in ${Date.now() - started} ms.`),
-      ),
-    )
-  } catch (error) {
-    if (existsSync(file)) return
-    console.error(
-      `kilo2: importing Kilo v1 sessions failed, starting with a new database. ${store} stays as it is; delete ${file} and start again to retry:`,
-      error,
-    )
+    const imported =
+      (await copy(input.store, input.file, (copy) =>
+        KiloV1Store.convert(copy, {
+          data: input.data,
+          progress: (done, total) => {
+            touch(lock)
+            input.progress?.(done, total)
+          },
+        }),
+      )) ?? 0
+    return { imported, skipped: false }
   } finally {
     if (readOwner(lock) === process.pid) rmSync(lock, { force: true })
   }
@@ -165,7 +194,7 @@ const STALE = 120_000
  * then. A lock of a process that no longer runs, or a stale one, is taken over. Any other failure to take the lock
  * throws, so the caller starts with a new database instead of waiting.
  */
-async function acquire(lock: string, file: string) {
+async function acquire(lock: string, file: string, log?: (line: string) => void) {
   const notice = { last: 0 }
   while (true) {
     if (existsSync(file)) return false
@@ -184,7 +213,7 @@ async function acquire(lock: string, file: string) {
     }
     if (Date.now() - notice.last >= 5_000) {
       notice.last = Date.now()
-      console.error(`kilo2: importing Kilo v1 sessions in process ${held.owner ?? "?"}, waiting for it.`)
+      log?.(`kilo2: importing Kilo v1 sessions in process ${held.owner ?? "?"}, waiting for it.`)
     }
     await Bun.sleep(250)
   }
@@ -239,13 +268,28 @@ export function v1Store(data = Global.Path.data) {
 }
 
 /**
+ * Refuses to open a Kilo v1 store as the v2 store. The server would migrate that file in place, which rewrites the
+ * user's only copy, and v1 could no longer read it. The v2 file name must stay distinct from v1's (`kilo2.db` and
+ * `kilo2-<channel>.db` against `kilo.db` and `kilo-<channel>.db`), also after the release renames the data directory
+ * from `kilo2` to `kilo`: at that point the v1 store lies in the same directory as the v2 store.
+ */
+export async function refuseV1Store(file: string) {
+  if (!existsSync(file)) return
+  const { KiloV1Store } = await import("./v1-store")
+  if (!KiloV1Store.isV1Store(file)) return
+  throw new Error(
+    `${file} is a Kilo v1 session store, and kilo2 never migrates it in place: v1 could no longer read it. Keep the kilo2 store name distinct from v1's (kilo2.db or kilo2-<channel>.db), or move the v1 store before starting kilo2.`,
+  )
+}
+
+/**
  * Copies the database at `source` to `file` through SQLite. A read-only `VACUUM INTO` takes a consistent snapshot that
  * includes the pages still in the WAL, also while another process writes, and never writes the source database or its
  * WAL. The copy is written next to `file` and linked into place, so a process that starts at the same time never opens
  * a half-written file, and it is owner-only like the file the server opens. `check` can change or reject the copy
  * before it is reachable. No temporary copy stays behind.
  */
-async function copy(source: string, file: string, check?: (copy: string) => Promise<void>) {
+async function copy<A>(source: string, file: string, check?: (copy: string) => Promise<A>): Promise<A | undefined> {
   const { Database } = await import("bun:sqlite")
   const temp = `${file}.${process.pid}.adopt`
   try {
@@ -257,9 +301,10 @@ async function copy(source: string, file: string, check?: (copy: string) => Prom
     }
     // SQLite creates the copy with the process umask, so make it owner-only before it is reachable under `file`.
     ownerOnly(temp)
-    await check?.(temp)
+    const result = await check?.(temp)
     linkSync(temp, file)
     ownerOnly(file)
+    return result
   } finally {
     for (const suffix of ["", "-wal", "-shm", "-journal"]) rmSync(`${temp}${suffix}`, { force: true })
   }

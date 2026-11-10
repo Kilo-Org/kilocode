@@ -60,21 +60,29 @@ export async function convert(file: string, options: Options) {
   return total
 }
 
-/** The tables the V1 migration reads; a kilo2 or earlier V2 store has `session_v2` already. */
-export function requireV1Store(file: string) {
-  const db = new SQLite(file, { readonly: true })
+/** Whether `file` is a Kilo v1 store: the tables the V1 migration reads, and no `session_v2` of a kilo2 or V2 store. */
+export function isV1Store(file: string) {
   try {
-    const tables = new Set(
-      db
-        .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .all()
-        .map((table) => table.name),
-    )
-    if (tables.has("session_v2") || !["session", "message", "part", "project"].every((name) => tables.has(name)))
-      throw new Error("not a Kilo v1 session store")
-  } finally {
-    db.close()
+    const db = new SQLite(file, { readonly: true })
+    try {
+      const tables = new Set(
+        db
+          .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .all()
+          .map((table) => table.name),
+      )
+      return !tables.has("session_v2") && ["session", "message", "part", "project"].every((name) => tables.has(name))
+    } finally {
+      db.close()
+    }
+  } catch {
+    // Not a readable SQLite file, so not a v1 store.
+    return false
   }
+}
+
+export function requireV1Store(file: string) {
+  if (!isV1Store(file)) throw new Error("not a Kilo v1 session store")
 }
 
 /**

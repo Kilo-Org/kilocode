@@ -158,6 +158,30 @@ function read<A>(file: string, fn: (db: SQLite) => A) {
 const strays = async (data: string) =>
   (await readdir(data)).filter((name) => name.includes(".adopt") || name.endsWith(".lock"))
 
+test("refuses a Kilo v1 store as the target, so a naming mistake cannot migrate the user's only copy", async () => {
+  const { dir, data } = await root()
+  const target = path.join(data, "kilo2.db")
+  await v1Store(target, path.join(dir, "work"))
+  const before = createHash("sha256")
+    .update(await readFile(target))
+    .digest("hex")
+  await expect(KiloDatabase.refuseV1Store(target)).rejects.toThrow("Kilo v1 session store")
+  expect(
+    createHash("sha256")
+      .update(await readFile(target))
+      .digest("hex"),
+  ).toBe(before)
+})
+
+test("the import API returns the session count and reports an existing store as skipped", async () => {
+  const { dir, data } = await root()
+  const store = KiloDatabase.v1Store(data)
+  await v1Store(store, path.join(dir, "work"))
+  const file = path.join(data, "kilo2.db")
+  expect(await KiloDatabase.importV1({ store, file, data })).toEqual({ imported: 2, skipped: false })
+  expect(await KiloDatabase.importV1({ store, file, data })).toEqual({ imported: 0, skipped: true })
+})
+
 test("the first start converts the Kilo v1 store into v2 sessions before the store is reachable", async () => {
   const { dir, data } = await root()
   const source = await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))

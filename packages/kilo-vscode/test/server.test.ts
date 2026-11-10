@@ -8,7 +8,7 @@ import path from "node:path"
 import {
   command,
   environment,
-  importing,
+  importEvent,
   indexingEnvironment,
   manager,
   parse,
@@ -43,10 +43,26 @@ describe("parse", () => {
   })
 })
 
-test("importing recognizes the progress lines of the Kilo v1 session import, so a long first start does not time out", () => {
-  expect(importing("kilo2: importing Kilo v1 sessions 1200/20000\n")).toBe(true)
-  expect(importing("kilo2: importing Kilo v1 sessions in process 4242, waiting for it.\n")).toBe(true)
-  expect(importing("kilo2: could not copy the sessions of a to b\n")).toBe(false)
+test("importEvent reads every line of the Kilo v1 session import, so a long first start shows progress and never times out", () => {
+  expect(importEvent("kilo2: importing Kilo v1 sessions from /data/kilo/kilo.db once; it stays as it is.")).toEqual({
+    kind: "start",
+  })
+  expect(importEvent("kilo2: importing Kilo v1 sessions in process 4242, waiting for it.")).toEqual({ kind: "waiting" })
+  expect(importEvent("kilo2: importing Kilo v1 sessions 1200/20000")).toEqual({
+    kind: "progress",
+    imported: 1200,
+    total: 20000,
+  })
+  expect(importEvent("kilo2: importing Kilo v1 sessions done, 20000 sessions in 30000 ms.")).toEqual({
+    kind: "done",
+    imported: 20000,
+  })
+  expect(importEvent("kilo2: importing Kilo v1 sessions failed, starting with a new database.")).toEqual({
+    kind: "failed",
+  })
+  expect(importEvent("kilo2: could not copy the sessions of a to b")).toBeUndefined()
+  // The manual command writes its own lines, which are not the server's import.
+  expect(importEvent("Importing Kilo v1 sessions 10/20")).toBeUndefined()
 })
 
 describe("command", () => {

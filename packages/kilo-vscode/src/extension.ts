@@ -8,6 +8,7 @@ import {
   l10n,
   languages,
   ProgressLocation,
+  StatusBarAlignment,
   window,
   workspace,
   type ExtensionContext,
@@ -111,7 +112,10 @@ export function activate(context: ExtensionContext) {
       ...(agentManagerRef
         ? [...agentManagerRef.contexts.values()].flatMap((project) => [
             project.root,
-            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+            ...(project
+              .peekState()
+              ?.getWorktrees()
+              .map((worktree) => worktree.path) ?? []),
           ])
         : []),
     ],
@@ -169,12 +173,35 @@ export function activate(context: ExtensionContext) {
   // Plan mode writes plans under the server's home, so plan links resolve there too.
   usePlanHome(serverHome(serverCommand(), process.env))
   let indexing: IndexingHost | undefined
+  // The first start imports the Kilo v1 sessions before the server listens, so the status bar is the only surface that
+  // exists while it runs.
+  const importing = window.createStatusBarItem(StatusBarAlignment.Left)
+  context.subscriptions.push(importing)
   const server = manager({
     command: serverCommand,
     cwd: directory,
     env: process.env,
     settings: serverSettings,
     log: (text) => output.append(text),
+    onImport: (event) => {
+      if (event.kind === "progress") {
+        importing.text = `$(sync~spin) Kilo: importing sessions ${event.imported}/${event.total}`
+        importing.show()
+        return
+      }
+      if (event.kind === "start" || event.kind === "waiting") {
+        importing.text = "$(sync~spin) Kilo: preparing your sessions"
+        importing.show()
+        return
+      }
+      importing.hide()
+      if (event.kind === "done")
+        void window.showInformationMessage(`Imported ${event.imported} Kilo v1 sessions from your earlier install.`)
+      if (event.kind === "failed")
+        void window.showWarningMessage(
+          "Kilo could not import the Kilo v1 sessions and starts with a new store. See the Kilo output for details.",
+        )
+    },
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
       shutdown.started(started)
@@ -272,7 +299,8 @@ export function activate(context: ExtensionContext) {
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  agentManager.onBrowserDebug = (...args) =>
+    output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
   browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -281,8 +309,7 @@ export function activate(context: ExtensionContext) {
       trusted: () => workspace.isTrusted,
       // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        editorTabOwns(route.sessionId) &&
-        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        editorTabOwns(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -364,9 +391,8 @@ export function activate(context: ExtensionContext) {
     { dispose: () => diffs.dispose() },
     diffCatalog,
     changes,
-    commands.registerCommand(
-      "kilo-code.v2.showChanges",
-      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    commands.registerCommand("kilo-code.v2.showChanges", (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) =>
+      changes.openFromCommand(arg),
     ),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
       deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
