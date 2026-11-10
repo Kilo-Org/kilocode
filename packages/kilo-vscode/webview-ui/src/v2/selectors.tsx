@@ -29,6 +29,9 @@ export function createSelection(
   const prefs = useModelPreferences()
   const [draftAgent, setDraftAgent] = createSignal<string>()
   const [draftModel, setDraftModel] = createSignal<ModelRef>()
+  // v1 `Pick(composer, agent)`: the model a pick gave the draft of that agent, so the next new session of this
+  // webview starts there too, as the next sidebar draft did. It lives in memory, as v1's session picks.
+  const picks = new Map<string, ModelRef>()
   const fallback = createDefaultModel(v2)
   // The latest switch request per session, so a prompt waits for it. Prompts gate on session creation themselves.
   const commits = new Map<string, Promise<unknown>>()
@@ -89,12 +92,15 @@ export function createSelection(
   const configured = createMemo(() => configuredModel(v2.data.location.config.list()))
   const initial = () =>
     initialModel({
+      pick: picks.get(agent()?.id ?? ""),
       agent: agent()?.model ?? undefined,
       configured: configured(),
       team: kiloTeam(v2.kiloModels()),
+      loaded: prefs?.loaded() ?? true,
       recents: prefs?.recents() ?? [],
+      models: models() ?? [],
+      serverDefault: fallback(),
       valid: (ref) => !!find(ref),
-      fallback: fallback(),
     })
   // The remembered effort of the agent on a model: v1 keeps the last effort a new session chose ("" is Default), on
   // the nearest effort the model still has.
@@ -182,7 +188,11 @@ export function createSelection(
       // keeps the effort the agent last chose for it.
       const variant = (current?.variant && preserveVariant(current.variant, variantsOf(next))) || remembered(next)
       prefs?.pushRecent(providerID, modelID)
-      if (!session() && variant) remember(next, variant)
+      // A draft remembers the pick for the next new session of this agent, as v1 Pick(composer, agent).
+      const draft = !session()
+      const agentID = agent()?.id
+      if (draft && agentID) picks.set(agentID, next)
+      if (draft && variant) remember(next, variant)
       setModel({ ...next, ...(variant ? { variant } : {}) })
     },
     selectVariant(variant: string | undefined) {
@@ -232,8 +242,8 @@ export function createSelection(
 export type Selection = ReturnType<typeof createSelection>
 
 /**
- * The server default model of the directory, the last fallback of every composer after its own choice and the agent
- * model. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog.
+ * The server default model of the directory, the fallback of every composer after its own choice, the agent model and
+ * Kilo Auto Free. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog.
  */
 export function createDefaultModel(v2: V2) {
   const [model, setModel] = createSignal<ModelRef>()

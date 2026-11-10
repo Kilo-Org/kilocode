@@ -134,6 +134,7 @@ import { useEntryAnchor } from "./anchor-view"
 import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
+import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -2647,6 +2648,11 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       <Match when={display() === "skill"}>
         <Skill {...toolprops} />
       </Match>
+      {/* kilocode_change start - board: Kilo Swarm board tools */}
+      <Match when={boardTools.has(props.part.name)}>
+        <BoardTool {...toolprops} block={BlockTool} />
+      </Match>
+      {/* kilocode_change end */}
       <Match when={true}>
         <GenericTool {...toolprops} />
       </Match>
