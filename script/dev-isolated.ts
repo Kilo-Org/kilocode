@@ -12,11 +12,29 @@ const dirs = ["data", "config", "state", "cache", "home", "tmp"].map((name) => p
 await Promise.all(dirs.map((dir) => mkdir(dir, { recursive: true })))
 console.error(`kilo v2 dev profile: ${profile}`)
 
-const child = Bun.spawn([process.execPath, path.join(host, "src/index.ts"), ...process.argv.slice(2)], {
+const args = process.argv.slice(2)
+// A shell or terminal of a Kilo or OpenCode server inherits that server's database, config directory, home, session
+// and password, and the CLI would use them instead of the profile.
+const inherited = [
+  "OPENCODE_DB",
+  "KILO2_DB",
+  "OPENCODE_CONFIG_DIR",
+  "KILO2_CONFIG_DIR",
+  "OPENCODE_HOME_DIR",
+  "OPENCODE_APP_DIR_NAME",
+  "OPENCODE_SESSION_ID",
+  "OPENCODE_SERVER_PASSWORD",
+  "KILO_SERVER_PASSWORD",
+  // The client of that server. A client that starts its own server here (`serve --stdio`, as the VS Code extension
+  // does from a checkout) passes its own.
+  ...(args.includes("--stdio") ? [] : ["OPENCODE_CLIENT", "KILO_CLIENT", "KILO_PLATFORM", "KILO_AGENT_MANAGER_HOST"]),
+]
+
+const child = Bun.spawn([process.execPath, path.join(host, "src/index.ts"), ...args], {
   // The CLI uses the working directory as the project directory.
   cwd: process.env.INIT_CWD ?? process.cwd(),
   env: {
-    ...process.env,
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !inherited.includes(key))),
     // Default to the free Kilo model unless the caller passes its own config.
     ...(process.env.OPENCODE_CONFIG_CONTENT
       ? {}
