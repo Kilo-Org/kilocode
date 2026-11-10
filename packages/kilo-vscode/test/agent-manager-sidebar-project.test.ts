@@ -12,10 +12,20 @@ import type { ProjectContext } from "../src/agent-manager/project/context"
 
 const temp: string[] = []
 
-afterEach(() => {
-  // Git and the Windows indexer can hold a temp directory for a moment after the test; the other suites retry for the
-  // same reason.
-  for (const dir of temp.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+afterEach(async () => {
+  // Bun ignores the Node `maxRetries` option, and a git command the test started can still hold the temp repository on
+  // Windows, so retry the removal here.
+  for (const dir of temp.splice(0)) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        fs.rmSync(dir, { recursive: true, force: true })
+        break
+      } catch (error) {
+        if (attempt === 15) throw error
+        await Bun.sleep(150)
+      }
+    }
+  }
 })
 
 function repo(name: string, branch: string) {
