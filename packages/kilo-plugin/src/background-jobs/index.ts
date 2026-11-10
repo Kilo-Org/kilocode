@@ -83,9 +83,7 @@ export const Plugin = define({
               }),
               Effect.tapError((error) => {
                 if (started.id === undefined) return Effect.void
-                const message = error instanceof Error ? error.message : String(error)
-                if (message.startsWith("Subagent cancelled")) return tracker.finish(started.id, "cancelled")
-                return tracker.finish(started.id, "error", message)
+                return tracker.fail(started.id, error instanceof Error ? error.message : String(error))
               }),
               // An interrupted call stops its foreground child.
               Effect.onInterrupt(() => (started.id === undefined ? Effect.void : tracker.finish(started.id, "cancelled"))),

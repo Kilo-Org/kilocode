@@ -102,6 +102,13 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
       return yield* finish(id, result.info.status, result.info.error, result.info.completed_at)
     }).pipe(Effect.forkDetach({ startImmediately: true }), Effect.asVoid)
 
+  /** A failed tool call ends its foreground job; the Job registry says whether it was cancelled or failed. */
+  const fail = Effect.fn("KiloBackgroundJobs.fail")(function* (id: string, message: string) {
+    const info = yield* input.jobs.get(id)
+    if (info?.status === "cancelled") return yield* finish(id, "cancelled", undefined, info.completed_at)
+    return yield* finish(id, "error", info?.error ?? message, info?.completed_at)
+  })
+
   const start = Effect.fn("KiloBackgroundJobs.start")(function* (job: Start) {
     const now = yield* Clock.currentTimeMillis
     const previous = records.get(job.sessionID)?.job
@@ -233,7 +240,7 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
     )
   }
 
-  return { start, finish, background, list, promote, cancel, remove }
+  return { start, finish, fail, background, list, promote, cancel, remove }
 })
 
 /** Reads the child session a `subagent` tool call reports through its progress metadata. */

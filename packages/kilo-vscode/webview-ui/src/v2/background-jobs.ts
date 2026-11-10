@@ -5,6 +5,7 @@ import type { SessionMessageInfo } from "@opencode/client"
 import { KiloBackgroundJobsRpc } from "@opencode/schema/kilocode/background-jobs"
 import { createComputed, createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import {
   jobAgents,
   mergeListed,
@@ -16,6 +17,7 @@ import {
   type BackgroundAgent,
   type BackgroundJob,
 } from "../components/chat/background-agents"
+import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 
 const EMPTY: readonly SessionMessageInfo[] = []
@@ -27,6 +29,7 @@ function errorType(error: unknown) {
 
 export function createBackgroundJobs(input: { session: Accessor<string | undefined> }) {
   const v2 = useV2()
+  const language = useLanguage()
   const rpc = v2.api.rpc(KiloBackgroundJobsRpc.Definition)
   const location = { directory: v2.directory }
   // Undefined until the first list answer for the open session, and on a server without the plugin.
@@ -70,6 +73,8 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
       () => [input.session(), v2.connection.status()] as const,
       ([id, status], previous) => {
         if (id !== previous?.[0]) setJobs(undefined)
+        // A server that answered without the plugin may have it after a reconnect, for example once it registered.
+        if (id !== previous?.[0] || (status === "connected" && previous?.[1] !== "connected")) unsupported = false
         if (!id || status !== "connected") return
         list(id)
       },
@@ -135,7 +140,18 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
     },
     /** Continue a running foreground subagent in the background. */
     promote: (sessionID: string) => {
-      void rpc.promote({ jobID: sessionID }, { location }).catch(report)
+      void rpc
+        .promote({ jobID: sessionID }, { location })
+        .then((moved) => {
+          // The job finished, or core could not background it: the card keeps waiting, so say why.
+          if (moved) return
+          showToast({
+            variant: "error",
+            title: language.t("common.requestFailed"),
+            description: language.t("task.backgroundAgents.promoteFailed"),
+          })
+        })
+        .catch(report)
     },
     /** Hide finished agents of the open session. */
     dismiss: (ids: string[]) => {

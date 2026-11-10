@@ -1403,6 +1403,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
+  "task.backgroundAgents.promoteFailed": "Deze agent kon niet op de achtergrond doorgaan. Mogelijk is hij al klaar.",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
   "task.backgroundAgents.clearFinished": "Voltooide wissen",

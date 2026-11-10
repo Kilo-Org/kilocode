@@ -145,6 +145,25 @@ describe("kilocode.background-jobs", () => {
     }),
   )
 
+  it.live("records a foreground subagent cancelled outside the RPC as cancelled", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const llm = yield* TestLLM.Test
+      const jobs = yield* Job.Service
+      const gate = yield* llm.gate()
+      const call = yield* env
+        .run({ agent: "reviewer", description: "Cancelled review", prompt: "Review it" })
+        .pipe(Effect.forkChild)
+      yield* gate.started
+      const running = yield* env.until((list) => list[0]?.status === "running")
+      yield* jobs.cancel(running[0]!.id)
+      const result = yield* Fiber.join(call)
+      expect(result.status).toBe("error")
+      expect(yield* env.list).toMatchObject([{ status: "cancelled", background: false }])
+      yield* gate.release
+    }),
+  )
+
   it.live("stops a background subagent", () =>
     Effect.gen(function* () {
       const env = yield* setup
