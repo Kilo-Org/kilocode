@@ -1311,6 +1311,7 @@ const AgentManagerContent: Component = () => {
         ),
       )
       onCleanup(store.data.on("session.tool.failed", (event) => planOpener.failed(event.data.sessionID, event.data.id)))
+      onCleanup(store.data.on("session.deleted", (event) => planOpener.forget(event.data.sessionID)))
     }
   })
 

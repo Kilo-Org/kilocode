@@ -1,7 +1,6 @@
 export * as PlanFile from "./plan-file"
 
 import type { Location } from "@opencode/schema/location"
-import { ProjectID } from "@opencode/schema/project-id"
 import type { Session } from "@opencode/schema/session"
 import type { SessionMessage } from "@opencode/schema/session-message"
 import { FSUtil } from "@opencode/util/fs-util"
@@ -11,12 +10,16 @@ import path from "node:path"
 
 export type Target = Pick<Location.Info, "directory" | "project">
 
+/** Version control markers at a project root. A project without one is a plain directory, keyed by its path. */
+const VCS = [".git", ".hg"]
+
 /**
  * The Kilo plan directory: `.kilo2/plans` in a version-controlled project, else `plans` in the Kilo data
- * directory. A directory without version control has no project root to keep plans in.
+ * directory. A directory without version control has no project root to keep plans in. The project ID does not
+ * tell the two apart: a plain directory gets a hashed ID, and an unidentified repository shares the global ID.
  */
 export function directory(target: Target, data: string) {
-  if (target.project.id === ProjectID.global) return path.join(data, "plans")
+  if (!VCS.some((name) => fs.existsSync(path.join(target.project.directory, name)))) return path.join(data, "plans")
   return path.join(target.project.directory, ".kilo2", "plans")
 }
 

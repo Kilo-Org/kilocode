@@ -48,6 +48,12 @@ export function createPlanOpener(active: () => string | undefined, open: (plan: 
     failed(sessionID: string, toolID: string) {
       plans.delete(id(sessionID, toolID))
     },
+    /** Drops the state of a deleted session, so a long-lived webview does not keep it. */
+    forget(sessionID: string) {
+      const prefix = `${sessionID}:`
+      for (const set of [plans, opened]) for (const key of [...set]) if (key.startsWith(prefix)) set.delete(key)
+      for (const key of [...pending.keys()]) if (key.startsWith(prefix)) pending.delete(key)
+    },
     /** Defer plans from inactive sessions until their session becomes active. */
     flush(sessionID: string | undefined) {
       if (!sessionID) return

@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test"
 import { Generate } from "@opencode/core/generate"
 import { SessionMessage } from "@opencode/schema/session-message"
-import { DateTime } from "effect"
+import { Agent } from "@opencode/schema/agent"
+import { Model } from "@opencode/schema/model"
+import { Provider } from "@opencode/schema/provider"
+import { Tool } from "@opencode/schema/tool"
+import { DateTime, Effect, Exit } from "effect"
 import { PlanHandover } from "../src/plan/handover"
 import { PlanFollowup } from "../src/plan/plan-followup"
 import { code, handoff, nextSessionID, planPath, sessionID } from "./plan-harness"
@@ -29,7 +33,12 @@ test("Continue here switches the session to Code and starts the implementation",
 test("Keep refining stays in Plan", async () => {
   const result = await handoff({ answer: PlanFollowup.KEEP_REFINING })
   expect(result.switched).toEqual([])
-  expect(result.prompted).toEqual([{ sessionID, text: "Continue refining the plan. Do not implement yet." }])
+  expect(result.prompted).toEqual([
+    {
+      sessionID,
+      text: "Continue refining the plan. Do not implement yet. When the refined plan is ready, update the plan file and call plan_exit again.",
+    },
+  ])
 })
 
 test("a typed answer goes to the planning session as a prompt", async () => {
@@ -52,6 +61,8 @@ test("Start new session opens a Code session with the plan file, the handover an
     ],
   })
   expect(result.createdAgents).toEqual([code])
+  // The Code agent has no model of its own, so the new session keeps the model that wrote the plan.
+  expect(result.createdModels).toEqual([{ id: "test-model", providerID: "test" }])
   expect(result.published).toEqual([nextSessionID])
   expect(result.generated[0]?.system).toBe(PlanHandover.PROMPT)
   expect(result.generated[0]?.prompt).toContain("User: Plan dark mode")
@@ -86,4 +97,46 @@ test("the handover transcript keeps the newest text when the session is long", (
   const transcript = PlanHandover.render(messages)
   expect(transcript.length).toBe(60_000)
   expect(transcript.endsWith("User: newest question")).toBe(true)
+})
+
+test("the handover transcript carries tool input and output, so the summary sees real file contents", () => {
+  const created = DateTime.makeUnsafe(0)
+  const transcript = PlanHandover.render([
+    {
+      id: SessionMessage.ID.create(),
+      time: { created },
+      type: "assistant",
+      agent: Agent.ID.make("plan"),
+      model: { id: Model.ID.make("m"), providerID: Provider.ID.make("p") },
+      content: [
+        {
+          type: "tool",
+          id: Tool.CallID.make("call-read"),
+          name: "read",
+          time: { created },
+          state: {
+            status: "completed",
+            input: { path: "math.ts" },
+            content: [{ type: "text", text: 'export const VERSION = "1.2.3"\n' + "x".repeat(10_000) }],
+          },
+        },
+      ],
+    },
+  ])
+  expect(transcript).toContain('[tool read] {"path":"math.ts"}')
+  expect(transcript).toContain('export const VERSION = "1.2.3"')
+  expect(transcript).toContain("[truncated]")
+  expect(transcript.length).toBeLessThan(4_200)
+})
+
+test("a user interruption during the handover summary stops the handoff, a failure does not", async () => {
+  const messages: SessionMessage.Info[] = [
+    { id: SessionMessage.ID.create(), time: { created: DateTime.makeUnsafe(0) }, type: "user", text: "Plan it" },
+  ]
+  const interrupted = await Effect.runPromiseExit(PlanHandover.generate({ messages, generate: () => Effect.interrupt }))
+  expect(Exit.hasInterrupts(interrupted)).toBe(true)
+  const failed = await Effect.runPromise(
+    PlanHandover.generate({ messages, generate: () => Effect.fail(new Error("unavailable")) }),
+  )
+  expect(failed).toBe("")
 })

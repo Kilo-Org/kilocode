@@ -249,6 +249,11 @@ export function Chat() {
       planOpener.failed(event.data.sessionID, event.data.id)
     }),
   )
+  onCleanup(
+    v2.data.on("session.deleted", (event) => {
+      if (inScope(event)) planOpener.forget(event.data.sessionID)
+    }),
+  )
   createEffect(() => planOpener.flush(session()))
 
   const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" } satisfies ToHost as never)

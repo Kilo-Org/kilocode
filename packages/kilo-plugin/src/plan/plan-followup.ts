@@ -9,6 +9,7 @@ import { Generate } from "@opencode/core/generate"
 import { SessionStore } from "@opencode/core/session/store"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
+import type { Model } from "@opencode/schema/model"
 import type { Session } from "@opencode/schema/session"
 import type { SessionMessage } from "@opencode/schema/session-message"
 import { TuiEvent } from "@opencode/schema/tui-event"
@@ -121,13 +122,17 @@ export const ask = Effect.fn(function* (input: {
   const answer = typeof value === "string" ? value.trim() : ""
   if (!answer) return
 
-  if (answer === NEW_SESSION) return yield* newSession(input, session, exit.part)
+  if (answer === NEW_SESSION) return yield* newSession(input, session, exit.part, exit.model)
   if (answer === CONTINUE) {
     yield* input.ctx.session.switchAgent({ sessionID: input.sessionID, agent: code })
     yield* input.ctx.session.prompt({ sessionID: input.sessionID, text: "Implement the plan above." })
     return
   }
-  const text = answer === KEEP_REFINING ? "Continue refining the plan. Do not implement yet." : answer
+  // The question comes back only after another plan_exit, so a refined plan must end with one.
+  const text =
+    answer === KEEP_REFINING
+      ? "Continue refining the plan. Do not implement yet. When the refined plan is ready, update the plan file and call plan_exit again."
+      : answer
   yield* input.ctx.session.prompt({ sessionID: input.sessionID, text })
 })
 
@@ -137,7 +142,7 @@ function planExit(messages: ReadonlyArray<SessionMessage.Info>) {
     if (message.type !== "assistant") continue
     for (const part of message.content.toReversed()) {
       if (part.type !== "tool" || part.name !== "plan_exit" || part.state.status !== "completed") continue
-      return { part, agent: message.agent }
+      return { part, agent: message.agent, model: message.model }
     }
   }
 }
@@ -152,6 +157,7 @@ const newSession = Effect.fn(function* (
   input: { ctx: Context; store: SessionStore.Interface; bus: Bus.Interface; data: string; sessionID: Session.ID },
   session: Session.Info,
   exit: SessionMessage.AssistantTool,
+  planning: Model.Ref,
 ) {
   const metadata = exit.state.status === "completed" ? exit.state.metadata : undefined
   const named = metadata?.["plan"]
@@ -160,8 +166,13 @@ const newSession = Effect.fn(function* (
     PlanFile.defaultPath(session, input.ctx.location, input.data)
   const history = (yield* input.store.messages({ sessionID: input.sessionID, order: "desc", limit: HISTORY })).toReversed()
 
+  // The Code agent's own model, else the model that wrote the plan: the server default can be a weaker free model.
+  const model = yield* input.ctx.agent.get({ agentID: code }).pipe(
+    Effect.map((result) => result.data.model ?? planning),
+    Effect.orElseSucceed(() => planning),
+  )
   // Create and show the session first: the summary can take seconds and the client switches on the select event.
-  const next = yield* input.ctx.session.create({ agent: code })
+  const next = yield* input.ctx.session.create({ agent: code, model })
   yield* input.bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
 
   const handover = yield* summary(input.ctx, history)

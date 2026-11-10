@@ -35,6 +35,7 @@ export async function workspace() {
   const project = path.join(root, "project")
   const data = path.join(root, "data")
   await mkdir(path.join(project, ".kilo2", "plans"), { recursive: true })
+  await mkdir(path.join(project, ".git"))
   await Bun.write(path.join(project, planPath), "# Dark mode\n1. Add a toggle.")
   const location = new Location.Info({
     directory: AbsolutePath.make(project),
@@ -89,6 +90,7 @@ export async function handoff(input: {
   const asked: Form.CreateInput[] = []
   const switched: Agent.ID[] = []
   const createdAgents: (Agent.ID | undefined)[] = []
+  const createdModels: unknown[] = []
   const published: Session.ID[] = []
   const prompted: { sessionID: Session.ID; text: string }[] = []
   const generated: Generate.TextInput[] = []
@@ -114,9 +116,10 @@ export async function handoff(input: {
                   return Effect.succeed({ dispose: Effect.void })
                 }) as never,
                 switchAgent: (request) => Effect.sync(() => void switched.push(request.agent)),
-                create: ((request: { agent?: Agent.ID }) =>
+                create: ((request: { agent?: Agent.ID; model?: unknown }) =>
                   Effect.sync(() => {
                     createdAgents.push(request.agent)
+                    createdModels.push(request.model)
                     return next
                   })) as never,
                 prompt: (request) =>
@@ -178,5 +181,5 @@ export async function handoff(input: {
   } finally {
     await space.dispose()
   }
-  return { asked, switched, createdAgents, published, prompted, generated }
+  return { asked, switched, createdAgents, createdModels, published, prompted, generated }
 }

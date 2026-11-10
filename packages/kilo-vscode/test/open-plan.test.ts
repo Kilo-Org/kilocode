@@ -68,4 +68,16 @@ describe("createPlanOpener", () => {
     await Promise.resolve()
     expect(opened).toEqual(["session-1:tool-1:.kilo2/plans/dark-mode.md"])
   })
+
+  test("forgets a deleted session, so its deferred plan never opens", async () => {
+    let active = "session-2"
+    const { opened, value } = opener(() => active)
+    value.started("session-1", "tool-1", "open_plan")
+    value.completed("session-1", "tool-1", { plan: ".kilo2/plans/dark-mode.md", open: true })
+    value.forget("session-1")
+    active = "session-1"
+    value.flush(active)
+    await Promise.resolve()
+    expect(opened).toEqual([])
+  })
 })

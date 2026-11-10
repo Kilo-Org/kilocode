@@ -2,7 +2,7 @@ export * as PlanHandover from "./handover"
 
 import type { Model } from "@opencode/schema/model"
 import type { SessionMessage } from "@opencode/schema/session-message"
-import { Duration, Effect, Option } from "effect"
+import { Cause, Duration, Effect, Option } from "effect"
 
 export const PROMPT = `You are summarizing a planning session to hand off to an implementation session.
 
@@ -28,13 +28,16 @@ Keep the summary concise. Focus on high-entropy information that would save the 
 
 /** The planning transcript is bounded so a long session cannot exceed the summary model's context. */
 const CHARS = 60_000
+/** Each tool call keeps its input and the start of its output, so file reads ground the summary in real code. */
+const TOOL_CHARS = 4_000
 const TIMEOUT = Duration.seconds(60)
 
 type Generate = (input: { prompt: string; system: string; model?: Model.Ref }) => Effect.Effect<string, unknown>
 
 /**
  * A short summary of what planning discovered, for the implementation session. Empty when there is nothing to
- * add, when generation fails, or after the timeout: the handoff must not depend on it.
+ * add, when generation fails, or after the timeout: the handoff must not depend on it. A user interruption is not a
+ * generation failure and stops the handoff.
  */
 export const generate = Effect.fn("PlanHandover.generate")(function* (input: {
   messages: ReadonlyArray<SessionMessage.Info>
@@ -47,14 +50,16 @@ export const generate = Effect.fn("PlanHandover.generate")(function* (input: {
     .generate({ prompt: transcript, system: PROMPT, ...(input.model ? { model: input.model } : {}) })
     .pipe(
       Effect.timeoutOption(TIMEOUT),
-      Effect.catchCause((cause) =>
-        Effect.logWarning("plan handover generation failed", { cause }).pipe(Effect.as(Option.none<string>())),
+      Effect.catchCauseIf(
+        (cause) => !Cause.hasInterrupts(cause),
+        (cause) =>
+          Effect.logWarning("plan handover generation failed", { cause }).pipe(Effect.as(Option.none<string>())),
       ),
     )
   return Option.getOrElse(result, () => "").trim()
 })
 
-/** The user and assistant text of the session, newest kept when it exceeds the bound. */
+/** The user and assistant text and the tool calls of the session, newest kept when it exceeds the bound. */
 export function render(messages: ReadonlyArray<SessionMessage.Info>) {
   const text = messages
     .flatMap((message) => {
@@ -62,7 +67,7 @@ export function render(messages: ReadonlyArray<SessionMessage.Info>) {
       if (message.type !== "assistant") return []
       const parts = message.content.flatMap((part) => {
         if (part.type === "text") return [part.text]
-        if (part.type === "tool") return [`[tool ${part.name}]`]
+        if (part.type === "tool") return [tool(part)]
         return []
       })
       return parts.length ? [`Assistant: ${parts.join("\n")}`] : []
@@ -70,6 +75,17 @@ export function render(messages: ReadonlyArray<SessionMessage.Info>) {
     .join("\n\n")
     .trim()
   return text.length > CHARS ? text.slice(-CHARS) : text
+}
+
+function tool(part: SessionMessage.AssistantTool) {
+  const state = part.state
+  const input = typeof state.input === "string" ? state.input : JSON.stringify(state.input)
+  const output =
+    state.status === "completed" || state.status === "error"
+      ? (state.content ?? []).flatMap((content) => (content.type === "text" ? [content.text] : [])).join("\n")
+      : ""
+  const text = [`[tool ${part.name}] ${input}`, ...(output ? [output] : [])].join("\n")
+  return text.length > TOOL_CHARS ? `${text.slice(0, TOOL_CHARS)}\n[truncated]` : text
 }
 
 /** The newest todo list of the planning session, as a Markdown checklist. */

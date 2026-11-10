@@ -38,8 +38,16 @@ test("a version-controlled project keeps plans in .kilo2/plans, other directorie
   const space = await workspace()
   try {
     expect(PlanFile.directory(space.location, space.data)).toBe(path.join(space.project, ".kilo2", "plans"))
-    const scratch = new Location.Info({ ...space.location, project: { ...space.location.project, id: Project.ID.global } })
+    // A plain directory has a hashed project ID, an unidentified repository the global one: only the marker counts.
+    const plain = path.join(space.root, "plain")
+    await mkdir(plain)
+    const scratch = new Location.Info({
+      directory: AbsolutePath.make(plain),
+      project: { id: Project.ID.make("prj_hashed"), directory: AbsolutePath.make(plain), canonical: AbsolutePath.make(plain) },
+    })
     expect(PlanFile.directory(scratch, space.data)).toBe(path.join(space.data, "plans"))
+    const unidentified = new Location.Info({ ...space.location, project: { ...space.location.project, id: Project.ID.global } })
+    expect(PlanFile.directory(unidentified, space.data)).toBe(path.join(space.project, ".kilo2", "plans"))
     expect(PlanFile.defaultPath(session, space.location, space.data)).toBe(
       path.join(space.project, ".kilo2", "plans", `${DateTime.toEpochMillis(created)}-plan.md`),
     )
