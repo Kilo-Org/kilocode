@@ -86,6 +86,17 @@
   scrollbar-gutter: stable;
 }
 
+/* The prompt rail sits in the panel's edge column, from 8px to 24px. While it
+   is visible, give the transcript a matching gutter on that side so a tick
+   never paints over a prompt, an answer, or tool output. */
+.message-list-container[data-prompt-rail="left"] .message-list {
+  padding-left: max(var(--chat-gutter, 16px), 32px);
+}
+
+.message-list-container[data-prompt-rail="right"] .message-list {
+  padding-right: max(var(--chat-gutter, 16px), 32px);
+}
+
 /* Rows that overflow Virtua's container must not change the scroll height
    before Virtua measures them. See VirtualBox in v2/messages.tsx. `clip` does
    not create a scroll container, so sticky content keeps working. */

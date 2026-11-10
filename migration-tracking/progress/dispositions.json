@@ -2129,5 +2129,29 @@
     "state": "dropped",
     "note": "v2 has no webview storybook surface for the extension; the marketplace components are exercised by test/marketplace-render.test.ts and test/marketplace-install-modal.test.ts against the real components.",
     "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptRail.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-rail.tsx",
+    "note": "The rail component is ported to the v2 transcript: ticks spread over the measured height, the hover/focus/click card with prompt and answer previews, keyboard navigation, first/latest, history and overflow entries, wheel forwarding, the Escape capture that dismisses the card before other shortcuts, and the VList path for long sessions. It renders inside MessageList, so the sidebar chat and the Agent Manager SessionView share it; the host now passes the physical sidebar edge through data-sidebar. Covered by test/prompt-rail-render.test.ts.",
+    "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-rail.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-rail-data.ts",
+    "note": "previewText, promptItems, capacity, historyAction and railEntries are ported to read v2 SessionMessageInfo transcript rows plus queued inbox rows. Answer previews join the chunks of the first assistant step that has text, and queued prompts come from the inbox partition rather than transcript rows.",
+    "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/tests/unit/prompt-rail.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-rail.test.ts",
+    "note": "The previewText, promptItems, capacity, historyAction and railEntries suites are ported to v2 fixtures (SessionMessageInfo, transcriptRows, SessionInboxUser queued rows), including chunk joining, truncation, image-only prompt promotion, tool-only turns and queued marking.",
+    "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/tests/prompt-rail.spec.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-rail-render.test.ts",
+    "note": "v2 has no webview storybook, so the Playwright story specs are carried by a happy-dom component test that renders the real PromptRail: focus, click and keyboard selection, first/latest, Escape before other shortcuts, hover delay and tick switching, the rail-to-card bridge, drag and wheel suppression, focus-out close, card paging with seek/loading, and left/right edge placement with the 8px gap. The layout-level assertions about box geometry and RTL are covered by the unchanged prompt-rail.css and the live sidebar and Agent Manager self-test.",
+    "by": "prompt-navigator"
   }
 }
