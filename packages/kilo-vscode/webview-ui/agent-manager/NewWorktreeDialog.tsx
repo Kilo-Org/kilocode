@@ -25,6 +25,7 @@ import { useLanguage } from "../src/context/language"
 import { useModelPreferences } from "../src/context/model-preferences"
 import { configuredModel, initialModel } from "../src/v2/model-default"
 import { kiloTeam } from "../src/v2/kilo-models"
+import { failureMessage } from "../src/v2/kilo-catalog"
 import { useBridge } from "./v2/vscode"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
@@ -186,17 +187,23 @@ export const NewWorktreeDialog: Component<{
   const modelPreferences = useModelPreferences()
   void props.store.data.location.config.sync().catch(() => undefined)
   // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
-  // default, the most recent pick, then the server default.
+  // default, the most recent pick, Kilo Auto Free, then the server default. Undefined until the account and the
+  // recents are known.
   const defaultFor = (agent: string) =>
     initialModel({
       agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
       configured: configuredModel(props.store.data.location.config.list()),
       team: kiloTeam(props.store.kiloModels()),
+      loaded: modelPreferences?.loaded() ?? true,
       recents: modelPreferences?.recents() ?? [],
+      models: props.models,
+      serverDefault: serverDefault(),
       valid: (ref) =>
         props.models.some((item) => item.enabled && item.providerID === ref.providerID && item.id === ref.id),
-      fallback: serverDefault(),
     })
+  // v1 waited for the provider catalog before it chose: until the account and the recents are known, no Kilo choice
+  // is trusted and no fallback is shown.
+  const ready = () => kiloTeam(props.store.kiloModels()) !== undefined
   const preferences = createDialogPreferences({
     saved,
     agent: initialAgent,
@@ -213,6 +220,7 @@ export const NewWorktreeDialog: Component<{
         return chosen.variant
       return modelPreferences?.variant(agent, model.providerID, model.modelID) || undefined
     },
+    ready,
     valid: (value) =>
       props.models.some(
         (model) => model.enabled && model.providerID === value.providerID && model.id === value.modelID,
@@ -221,6 +229,11 @@ export const NewWorktreeDialog: Component<{
       props.models
         .find((model) => model.providerID === value.providerID && model.id === value.modelID)
         ?.variants.map((variant) => variant.id) ?? [],
+    // A pick in this dialog is the last pick of a new session: the next dialog and composer start there, as v1.
+    remember: (agent, model, variant) => {
+      modelPreferences?.pushRecent(model.providerID, model.modelID)
+      modelPreferences?.rememberVariant(agent, model.providerID, model.modelID, variant)
+    },
   })
   const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
@@ -959,6 +972,8 @@ export const NewWorktreeDialog: Component<{
                         gateway={props.store.kiloModels().entries}
                         value={model()}
                         descriptionRenderer={ModelDescription}
+                        // The same reason the sidebar composer shows when the Kilo catalog leaves no usable model.
+                        failure={failureMessage(t, props.store.kiloFailure())}
                         onSelect={selectModel}
                         onPick={restorePrompt}
                         onCancel={restorePrompt}

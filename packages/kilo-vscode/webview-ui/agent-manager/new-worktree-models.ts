@@ -10,15 +10,18 @@ export type ModelSelection = { providerID: string; modelID: string }
 export function createDialogModels(opts: {
   saved?: ModelSelection
   fallback: () => ModelSelection | null
+  /** Whether the account is known; a Kilo choice can belong to another account until it is. */
+  ready: () => boolean
   valid: (model: ModelSelection) => boolean
   variants: (model: ModelSelection) => string[]
 }) {
   const [choice, select] = createSignal(opts.saved)
+  const valid = (value: ModelSelection) => (value.providerID !== "kilo" || opts.ready()) && opts.valid(value)
   const model = createMemo(() => {
     const saved = choice()
-    if (saved && opts.valid(saved)) return saved
+    if (saved && valid(saved)) return saved
     const fallback = opts.fallback()
-    return fallback && opts.valid(fallback) ? fallback : null
+    return fallback && valid(fallback) ? fallback : null
   })
   const canSubmit = (allocations?: ModelAllocations) => {
     if (!allocations) return model() !== null
@@ -28,7 +31,7 @@ export function createDialogModels(opts: {
       (entry) =>
         Number.isInteger(entry.count) &&
         entry.count > 0 &&
-        opts.valid(entry) &&
+        valid(entry) &&
         (entry.variant === undefined || opts.variants(entry).includes(entry.variant)),
     )
   }
@@ -40,8 +43,11 @@ export function createDialogPreferences(opts: {
   agent: string
   fallback: (agent: string) => ModelSelection | null
   effort: (agent: string, model: ModelSelection | null) => string | undefined
+  ready: () => boolean
   valid: (model: ModelSelection) => boolean
   variants: (model: ModelSelection) => string[]
+  /** Records a pick for the next new session: v1 `apply` pushed every explicit pick to the recents. */
+  remember: (agent: string, model: ModelSelection, variant: string | undefined) => void
 }) {
   // Picks stay per agent so switching modes and back restores each agent's choice.
   const picks: Record<string, { model: ModelSelection; variant?: string }> = {}
@@ -51,6 +57,7 @@ export function createDialogPreferences(opts: {
   const selection = createDialogModels({
     saved: opts.saved.model,
     fallback: () => opts.fallback(agent()),
+    ready: opts.ready,
     valid: opts.valid,
     variants: opts.variants,
   })
@@ -80,16 +87,18 @@ export function createDialogPreferences(opts: {
       setVariant(effort)
       picks[agent()] = { model: next, variant: effort }
     })
+    opts.remember(agent(), next, effort === DEFAULT_VARIANT ? undefined : effort)
   }
   const selectVariant = (value: string | undefined) => {
     const next = value ?? DEFAULT_VARIANT
+    const sel = model()
     batch(() => {
       setVariant(next)
-      const sel = model()
       if (!sel) return
       selection.select(sel)
       picks[agent()] = { model: sel, variant: next }
     })
+    if (sel) opts.remember(agent(), sel, value === DEFAULT_VARIANT ? undefined : value)
   }
   // Drop the model and effort after a successful submit so the persist effect stops writing them back.
   const clear = () => {
