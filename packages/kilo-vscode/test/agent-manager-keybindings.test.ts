@@ -30,7 +30,7 @@ describe("Agent Manager keybindings", () => {
       agentManagerOpen: "⌘⇧M",
       cycleAgentMode: "⌘.",
       cyclePreviousAgentMode: "⌘⇧.",
-      search: "⌘F",
+      search: "⌘⇧F",
       previousSession: "⌘⌥↑",
       nextSession: "⌘⌥↓",
       previousTab: "⌘⌥←",
@@ -53,6 +53,24 @@ describe("Agent Manager keybindings", () => {
       jumpTo1: "⌘1",
       jumpTo9: "⌘9",
     })
+  })
+
+  it("binds worktree search to Cmd+Shift+F and keeps Cmd+F for v1 parity", () => {
+    const search = manifestKeybindings()
+      .filter((binding) => binding.command === "kilo-code.v2.agentManager.search")
+      .map((binding) => ({ key: binding.key, mac: binding.mac, when: binding.when }))
+    expect(search).toEqual([
+      {
+        key: "ctrl+f",
+        mac: "cmd+f",
+        when: "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus",
+      },
+      {
+        key: "ctrl+shift+f",
+        mac: "cmd+shift+f",
+        when: "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus",
+      },
+    ])
   })
 
   it("shows user keybindings.json overrides", () => {
