@@ -1960,6 +1960,72 @@
     "note": "packages/kilo-plugin/test/question-option-schema.test.ts carries the mode and labelKey/descriptionKey assertions against KiloQuestion.Option (packages/schema/src/kilocode/question.ts): mode round-trips, mode is optional, labelKey and descriptionKey round-trip, plus omission of undefined hints on encode. The v1 source-marker checks guarded a kilocode_change block in a shared file; v2 has no shared-file change, and the plugin test instead fails when upstream's question tool schema or executor drifts from the Kilo mirror (KiloQuestionPlugin). The v1 'question defaults' assertion covers the `default` hint, which is out of scope here and tracked with patch:unattributed:schema/v1:85a47cb2581a under #15332.",
     "by": "v2-question-mode"
   },
+  "module:packages/opencode/src/kilocode/plan-file.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/plan/plan-file.ts",
+    "note": "PlanFile: plan directory (.kilo2/plans in a version-controlled project, <Kilo data>/plans otherwise, the v2 form of .kilo/plans and Global.Path.data/plans), the default <created>-plan.md path, resolve, locate (exact target vs newer sibling by mtime, then the last plan a planning message wrote), display, ensure.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/src/kilocode/plan-followup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/plan/plan-followup.ts",
+    "note": "PlanFollowup.ask at the experimental.idle boundary: the three answers plus free text, Continue switches to Code, Start new session creates a Code session, selects it with tui.session.select and prompts with the plan file, the handover summary (PlanHandover in src/plan/handover.ts) and the todo list; the custom row is hidden on VS Code.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/test/kilocode/plan-exit-detection.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/plan-exit-detection.test.ts",
+    "note": "Asks only for a completed plan_exit of a planner agent in the current turn, once per turn.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/test/kilocode/plan-file.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/plan-file.test.ts",
+    "note": "Plan directory rule, resolve scope, newer sibling over stale target, written plan lookup, no unrelated plan, subdirectory display.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/test/kilocode/plan-followup.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/plan-followup.test.ts",
+    "note": "Question shape and i18n keys, Continue, Keep refining, custom and blank answers, Start new session with handover and todos, handover failure fallback, bounded transcript.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/test/kilocode/plan-mode-ruleset-stacking.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent.test.ts",
+    "note": "The Plan assertions (plan edits allowed, source edits denied, Code untouched) are in \"limits Plan to read-only tools and the Kilo plan directories\" and \"keeps read-only limits when global config rules allow more\". v2 has no per-prompt rule stacking to dedupe: the Plan rules are the agent ruleset that the Kilo ceiling seals.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/src/kilocode/session/native-plan-prompt.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/plan/prompt.txt",
+    "note": "The Kilo Plan prompt, sent in the Plan mode reminder by PlanMode.enter (src/plan/mode.ts) with the Plan File section.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/test/kilocode/ensure-plan-dir.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/ensure-plan-dir.test.ts",
+    "note": "PlanFile.ensure creates a missing nested plan directory and is idempotent.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/src/kilocode/tool/plan.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/plan/plan.ts",
+    "note": "planExit: the plan_exit tool with the kilo.plan_exit permission action.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/src/kilocode/tool/open-plan.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/plan/plan.ts",
+    "note": "openPlan: the open_plan tool, registered for the VS Code client, metadata { plan, open: true }.",
+    "by": "plan-handoff"
+  },
+  "module:packages/opencode/test/kilocode/tool/open-plan.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/open-plan.test.ts",
+    "note": "open_plan metadata, plan_exit result and the not-found guidance.",
+    "by": "plan-handoff"
+  },
   "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts": {
     "state": "ported",
     "note": "packages/kilo-vscode/test/slash.test.ts carries the sortByScore cases for the v2 matchSlash within one group: exact before prefix before substring before a description match (commit, commit-all, recommit, notes), case-insensitive queries, and hint matches (/clear finds /new, /review fast finds /review quick). v2 also keeps the Actions, Commands and Skills groups contiguous, which a separate test covers.",
@@ -2063,5 +2129,35 @@
     "state": "dropped",
     "note": "v2 has no webview storybook surface for the extension; the marketplace components are exercised by test/marketplace-render.test.ts and test/marketplace-install-modal.test.ts against the real components.",
     "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/transcript-search.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search.tsx",
+    "note": "The transcript search state (query, match case, whole word, regex, active/close, match index/count, jump request, invalid regex, searching history) is ported as the TranscriptSearchProvider and useTranscriptSearch in the v2 client, which wraps each SessionView so the task header and the transcript share it.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/TranscriptSearch.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search-bar.tsx",
+    "note": "The search bar (input, case/whole-word/regex toggles, match counter, previous/next, close, invalid-regex and searching-history states, open focus retry) is ported as TranscriptSearchBar and rendered under the task header.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-search-highlight.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search-highlight.ts",
+    "note": "The CSS Custom Highlight API scanner, its part-scoped or whole-row fallback, and the active-occurrence range resolution are ported unchanged for the v2 transcript rows.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-search-text.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search-text.ts",
+    "note": "rowSearchText now reads v2 transcript rows: the user message text, and the text parts of an assistant row chunk with the absolute part index used for the data-part-id attribution. Markdown link URLs are still stripped from assistant text only, and tool, reasoning and error content stays out of scope.",
+    "by": "migrate-vscode-session-search-v1"
+  },
+  "module:packages/kilo-vscode/tests/unit/transcript-search-text.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/transcript-search-text.test.ts",
+    "note": "The v1 assertions (message text only, part ranges, markdown link stripping, literal user brackets, no error matches) are ported to the v2 row shape, plus the absolute part index of a chunk. The v2 row model has no synthetic text parts, so there is no synthetic-skip case to carry.",
+    "by": "migrate-vscode-session-search-v1"
   }
 }

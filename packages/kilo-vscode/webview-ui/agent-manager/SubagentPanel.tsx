@@ -125,6 +125,7 @@ const SubagentContent: Component<ContentProps> = (props) => {
                 actions={props.actions}
                 onShowHistory={props.onShowHistory}
                 readOnly
+                searchCommand={false}
               />
             </V2Scope>
           )}
