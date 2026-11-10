@@ -774,6 +774,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
       },
       {
+        "command": "kilo-code.v2.agentManager.search",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
+      },
+      {
         "command": "kilo-code.v2.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
