@@ -11,7 +11,7 @@ const bindings = {
   nextTab: "⌘⌥→",
   toggleDiff: "⌘D",
   openPR: "⌘⇧R",
-  newWorktree: "⌘N",
+  quickWorktree: "⌘⇧N",
   jumpTo3: "⌘3",
 }
 
@@ -92,15 +92,15 @@ describe("shortcut hint recommendation", () => {
 
     it("pull request exists and its panel is closed: open it", () => {
       expect(am({ pr: true })).toEqual({ binding: "⌘⇧R", label: "pr" })
-      expect(am({ pr: true, panel: "pr" })).toEqual({ binding: "⌘N", label: "newWorktree" })
+      expect(am({ pr: true, panel: "pr" })).toEqual({ binding: "⌘⇧N", label: "newWorktree" })
     })
 
     it("nothing to review: switch session when there is more than one", () => {
       expect(am({ worktrees: 1 })?.label).toBe("sessions")
     })
 
-    it("nothing to review and no other worktree: opening another worktree starts a second task", () => {
-      expect(am({})).toEqual({ binding: "⌘N", label: "newWorktree" })
+    it("nothing to review and no other worktree: starting a worktree is the next task", () => {
+      expect(am({})).toEqual({ binding: "⌘⇧N", label: "newWorktree" })
     })
 
     it("a shortcut the user removed is never suggested", () => {
@@ -109,7 +109,7 @@ describe("shortcut hint recommendation", () => {
       expect(
         recommend({ ...idle, bindings: rest, manager: () => ({ ...manager, changes: true, worktrees: 2 }) })?.label,
       ).toBe("sessions")
-      const none = { ...bindings, toggleDiff: "", previousSession: "", nextSession: "", newWorktree: "" }
+      const none = { ...bindings, toggleDiff: "", previousSession: "", nextSession: "", quickWorktree: "" }
       expect(
         recommend({ ...idle, bindings: none, manager: () => ({ ...manager, changes: true, worktrees: 2 }) }),
       ).toBeUndefined()

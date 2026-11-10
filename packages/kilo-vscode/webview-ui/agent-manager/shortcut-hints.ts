@@ -1,5 +1,10 @@
 /** Rows for the empty Agent Manager session. A row only shows when its action has something to show. */
 
+import type { ManagerContext } from "../src/v2/shortcut-hint"
+import { LOCAL, type NavEntry } from "./navigate"
+import { SidePanel } from "./side-panel-layout"
+import type { Activity } from "./v2/activity"
+
 type Stats = { files: number; additions: number; deletions: number }
 
 export function hintRows(
@@ -19,4 +24,41 @@ export function hintRows(
   ]
     .filter((row) => row.show && row.bindings.length > 0 && row.bindings.every(Boolean))
     .map((row) => ({ label: row.label, bindings: row.bindings }))
+}
+
+/**
+ * The prompt hint context of the Agent Manager sidebar. The jump number is the position of a waiting session in the
+ * sidebar order, which is the same order the numeric shortcut badges use, so `index + 1` names the key that jumps to
+ * that session.
+ */
+export function hintManager(input: {
+  nav: NavEntry[]
+  selection: string | null
+  activeProjectId: string | undefined
+  activity: (projectId: string, worktree: string | null) => Activity
+  changes: boolean
+  pr: boolean
+  panel?: SidePanel | null
+}) {
+  const selected = (entry: NavEntry) => {
+    const target = entry.target
+    if (target.projectId !== input.activeProjectId) return false
+    if (target.kind === "local") return input.selection === LOCAL
+    if (target.kind === "worktree") return input.selection === target.worktreeId
+    return false
+  }
+  const waiting = input.nav.findIndex(
+    (entry) =>
+      !selected(entry) &&
+      input.activity(entry.target.projectId, entry.target.kind === "worktree" ? entry.target.worktreeId : null) ===
+        "waiting",
+  )
+  const panel = input.panel
+  return {
+    changes: input.changes,
+    pr: input.pr,
+    panel: panel === SidePanel.Diff ? "diff" : panel === SidePanel.PR ? "pr" : panel ? "other" : undefined,
+    worktrees: input.nav.filter((entry) => entry.target.kind === "worktree").length,
+    waiting: waiting >= 0 && waiting < 9 ? waiting + 1 : undefined,
+  } satisfies ManagerContext
 }
