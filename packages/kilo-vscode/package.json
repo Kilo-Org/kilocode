@@ -389,6 +389,11 @@
         "icon": "$(history)"
       },
       {
+        "command": "kilo-code.v2.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code (v2)"
+      },
+      {
         "command": "kilo-code.v2.profile",
         "title": "Profile",
         "category": "Kilo Code (v2)",
