@@ -27,6 +27,7 @@ import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
+import { settledLoader, startingLoader } from "./session-loading"
 import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
 import { createWorking } from "./working"
@@ -160,8 +161,8 @@ export function SessionView(props: {
       const run = ++attempt
       const loaded = v2.data.session.message.startLoaded(id)
       const messages = v2.data.session.message.sync(id)
-      setStarting((value) => (loaded ? (value === id ? undefined : value) : id))
-      const settle = () => setStarting((value) => (run === attempt && value === id ? undefined : value))
+      setStarting((value) => startingLoader(value, { session: id, loaded }))
+      const settle = () => setStarting((value) => settledLoader(value, { session: id, run, attempt }))
       void messages.then(settle, settle)
       void Promise.all([
         v2.data.session.sync(id, { children: true }),
