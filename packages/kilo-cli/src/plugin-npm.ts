@@ -33,7 +33,7 @@ export const wrap = (npm: Npm.Interface): Npm.Interface => {
   // expected directory when nothing is cached yet, like `Npm.resolve` does for a package that is not installed,
   // instead of cloning over the network or dying.
   const cached = (pkg: string) =>
-    git(pkg, { refresh: false }).pipe(Effect.catch(() => Effect.succeed(packageOf(directory(pkg)))))
+    git(pkg, { refresh: false }).pipe(Effect.orElseSucceed(() => packageOf(directory(pkg))))
   const owned = (pkg: string) => PluginGitSource.isGitPluginSpec(pkg)
   return {
     ...npm,
