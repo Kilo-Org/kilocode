@@ -220,3 +220,27 @@ function twoTurns() {
   }
   return [...turn, next]
 }
+
+test("a failing summary model falls back once to the default model", async () => {
+  const messages: SessionMessage.Info[] = [
+    { id: SessionMessage.ID.create(), time: { created: DateTime.makeUnsafe(0) }, type: "user", text: "Plan it" },
+  ]
+  const calls: unknown[] = []
+  const text = await Effect.runPromise(
+    PlanHandover.generate({
+      messages,
+      model: { id: Model.ID.make("plan-model"), providerID: Provider.ID.make("plan-provider") },
+      generate: (request) =>
+        Effect.suspend(() => {
+          calls.push(request.model)
+          return calls.length === 1
+            ? Effect.fail({ _tag: "ProviderRequestError", message: "Provider returned error" })
+            : Effect.succeed("## Discoveries\n- Cart has items.")
+        }),
+    }),
+  )
+  expect(text).toBe("## Discoveries\n- Cart has items.")
+  expect(calls).toHaveLength(2)
+  expect(calls[0]).toEqual({ id: "plan-model", providerID: "plan-provider" })
+  expect(calls[1]).toBeUndefined()
+})

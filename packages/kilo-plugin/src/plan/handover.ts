@@ -50,16 +50,19 @@ export const generate = Effect.fn("PlanHandover.generate")(function* (input: {
 }) {
   const transcript = render(input.messages)
   if (!transcript) return ""
-  const result = yield* input
-    .generate({ prompt: transcript, system: PROMPT, ...(input.model ? { model: input.model } : {}) })
-    .pipe(
-      Effect.timeoutOption(TIMEOUT),
-      Effect.catchCauseIf(
-        (cause) => !Cause.hasInterrupts(cause),
-        (cause) =>
-          Effect.logWarning("plan handover generation failed", { cause }).pipe(Effect.as(Option.none<string>())),
-      ),
-    )
+  const attempt = (model?: Model.Ref) =>
+    input
+      .generate({ prompt: transcript, system: PROMPT, ...(model ? { model } : {}) })
+      .pipe(
+        Effect.timeoutOption(TIMEOUT),
+        Effect.catchCauseIf(
+          (cause) => !Cause.hasInterrupts(cause),
+          (cause) => Effect.logWarning("plan handover generation failed", { cause }).pipe(Effect.as(Option.none<string>())),
+        ),
+      )
+  // A model-specific provider error falls back once to the default model. An empty summary is a result, not a failure.
+  const first = yield* attempt(input.model)
+  const result = Option.isSome(first) || input.model === undefined ? first : yield* attempt()
   return clean(Option.getOrElse(result, () => "").trim())
 })
 
