@@ -583,12 +583,13 @@ export type Snapshot = {
   dropped?: string[]
 }
 
-export type Placement = { marked: Rungs; ports: number }
+export type Placement = { marked: Rungs; ports: number; owned: number }
 
 /**
  * Placement of a PR, from its diff (`git diff -U0`) and the head text of the shared files it touches: new marked lines in
- * shared upstream files by rung (shared-patches.json), with the same marker rules as script/check-shared-patches.ts, and
- * new `kilo_port(<feature>:<id>)` annotations in Kilo-owned files under `packages/`.
+ * shared upstream files by rung (shared-patches.json), with the same marker rules as script/check-shared-patches.ts, new
+ * `kilo_port(<feature>:<id>)` annotations in Kilo-owned files under `packages/`, and the added lines in Kilo-owned
+ * package files. The last one lets a PR comment say that code moved but no cell changed.
  */
 export function placement(diff: string, contents: Map<string, string>, rungs: SharedRungs): Placement {
   const hunks = parseHunks(diff)
@@ -604,7 +605,10 @@ export function placement(diff: string, contents: Map<string, string>, rungs: Sh
   const ports = hunks
     .filter((h) => h.file.startsWith("packages/") && isKiloOwned(h.file))
     .reduce((s, h) => s + (h.added.join("\n").match(new RegExp(`kilo_port\\((${PROOF_FEATURE}):[0-9a-f]{12}\\)`, "g"))?.length ?? 0), 0)
-  return { marked, ports }
+  const owned = hunks
+    .filter((h) => h.file.startsWith("packages/") && isKiloOwned(h.file) && !isGenerated(h.file))
+    .reduce((s, h) => s + h.added.filter((l) => l.trim() !== "").length, 0)
+  return { marked, ports, owned }
 }
 
 /** Markdown delta between two progress.json files, for the PR comment. Deterministic and self-contained. */
@@ -662,7 +666,13 @@ export function compare(base: Snapshot, head: Snapshot, place?: Placement) {
     "",
     `**Ratchets:** ${head.summary?.coreImports ?? "n/a"} core-internal imports (base ${base.summary?.coreImports ?? "n/a"}); shared patches by rung ${shared(head.summary?.sharedPatches)} (base ${shared(base.summary?.sharedPatches)}).`,
   )
-  if (!rows.length && !closed.length && !reopened.length && !dropped.length) return [...lines, "", "No change to the progress map.", ""].join("\n")
+  if (!rows.length && !closed.length && !reopened.length && !dropped.length) {
+    const quiet =
+      place && place.owned > 0 && place.ports === 0
+        ? `No cell closed, although the PR adds ${place.owned} ${plural("line", place.owned)} in Kilo-owned files. If it ports v1 behavior, add a done-proof or a disposition for each cell; v2-only work needs none.`
+        : "No change to the progress map."
+    return [...lines, "", quiet, ""].join("\n")
+  }
   if (rows.length) lines.push("", "| Feature | Before | After | Change |", "|---|---:|---:|---|", ...rows)
   lines.push(...list("cells closed", closed), ...list("cells reopened (were done on the base)", reopened), ...list("cells dropped", dropped), "")
   return lines.join("\n")
