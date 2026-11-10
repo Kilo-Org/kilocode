@@ -1,7 +1,7 @@
 import { Cause, Effect, Layer } from "effect"
 import { LocationServiceMap } from "../../location-service-map"
 import { makeGlobalNode } from "../../effect/app-node"
-import { SessionRunCoordinator } from "../run-coordinator"
+import { ExecutionDrain } from "../../kilocode/session/execution-drain" // kilocode_change
 import { SessionRunner } from "../runner"
 import { SessionSchema } from "../schema"
 import { SessionStore } from "../store"
@@ -15,8 +15,10 @@ const layer = Layer.effect(
     const store = yield* SessionStore.Service
     const locations = yield* LocationServiceMap.Service
     const drain = yield* SessionDrain.Service // kilocode_change
-    const coordinator = yield* SessionRunCoordinator.make<SessionSchema.ID, SessionRunner.RunError>({
-      lease: drain.hold, // kilocode_change
+    // kilocode_change start - reserve drain work around run and wake
+    const coordinator = yield* ExecutionDrain.make<SessionSchema.ID, SessionRunner.RunError>({
+      hold: drain.hold,
+      // kilocode_change end
       drain: Effect.fnUntraced(function* (sessionID: SessionSchema.ID, force) {
         const session = yield* store.get(sessionID)
         if (!session) return yield* Effect.die(`Session not found: ${sessionID}`)

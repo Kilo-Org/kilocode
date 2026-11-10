@@ -6,12 +6,12 @@ import { BackgroundJob } from "../../src/background-job"
 import { Database } from "../../src/database/database"
 import { reserve } from "../../src/kilocode/session/background-drain"
 import { SessionDrain } from "../../src/kilocode/session/drain"
+import { ExecutionDrain } from "../../src/kilocode/session/execution-drain"
 import { ProjectTable } from "../../src/project/sql"
 import { Project } from "../../src/project"
 import { AbsolutePath } from "../../src/schema"
 import { SessionSchema } from "../../src/session/schema"
 import { SessionTable } from "../../src/session/sql"
-import { SessionRunCoordinator } from "../../src/session/run-coordinator"
 import { testEffect } from "../lib/effect"
 import { link } from "./drain-family"
 
@@ -168,8 +168,8 @@ it.effect("failed foreground work hands its reservation to a pending successor",
     const second = yield* Deferred.make<void>()
     const started = yield* Deferred.make<void>()
     let runs = 0
-    const coordinator = yield* SessionRunCoordinator.make({
-      lease: drain.hold,
+    const coordinator = yield* ExecutionDrain.make({
+      hold: drain.hold,
       drain: () =>
         Effect.gen(function* () {
           runs++
@@ -196,21 +196,21 @@ it.effect("racing asynchronous reservations do not start duplicate owners or lea
     const ready = yield* Deferred.make<void>()
     const started = yield* Deferred.make<void>()
     const finish = yield* Deferred.make<void>()
-    const joined = yield* Deferred.make<void>()
-    let leases = 0
+    let holds = 0
+    let released = 0
     let runs = 0
-    const coordinator = yield* SessionRunCoordinator.make({
-      lease: (id: SessionSchema.ID) =>
+    const coordinator = yield* ExecutionDrain.make({
+      hold: (id: SessionSchema.ID) =>
         drain.hold(id).pipe(
           Effect.tap(() =>
             Effect.gen(function* () {
-              if (++leases === 2) yield* Deferred.succeed(acquired, undefined)
+              if (++holds === 2) yield* Deferred.succeed(acquired, undefined)
               yield* Deferred.await(ready)
             }),
           ),
           Effect.map((release) => () => {
+            released++
             release()
-            Deferred.doneUnsafe(joined, Effect.void)
           }),
         ),
       drain: () =>
@@ -225,11 +225,14 @@ it.effect("racing asynchronous reservations do not start duplicate owners or lea
     yield* Deferred.await(acquired)
     yield* Deferred.succeed(ready, undefined)
     yield* Deferred.await(started)
-    yield* Deferred.await(joined)
+    // The redundant hold is released in the same synchronous step in which the second caller joins.
+    yield* Effect.yieldNow.pipe(Effect.repeat({ while: () => released === 0 }))
     const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
     yield* Deferred.succeed(finish, undefined)
     yield* Effect.all([Fiber.join(first), Fiber.join(second), Fiber.join(waiting)])
     expect(runs).toBe(1)
+    expect(released).toBe(2)
   }),
 )
 
@@ -240,8 +243,8 @@ it.effect("coalesced foreground wakeups keep a continuous reservation", () =>
     const second = yield* Deferred.make<void>()
     const started = yield* Deferred.make<void>()
     let runs = 0
-    const coordinator = yield* SessionRunCoordinator.make({
-      lease: drain.hold,
+    const coordinator = yield* ExecutionDrain.make({
+      hold: drain.hold,
       drain: () =>
         Effect.gen(function* () {
           runs++
@@ -259,6 +262,171 @@ it.effect("coalesced foreground wakeups keep a continuous reservation", () =>
     yield* Deferred.succeed(second, undefined)
     yield* Fiber.join(waiting)
     expect(runs).toBe(2)
+  }),
+)
+
+it.effect("a wake acknowledgment is reserved before execution starts", () =>
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const finish = yield* Deferred.make<void>()
+    const coordinator = yield* ExecutionDrain.make({ hold: drain.hold, drain: () => Deferred.await(finish) })
+    yield* coordinator.wake(parent)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
+    yield* Deferred.succeed(finish, undefined)
+    yield* Fiber.join(waiting)
+  }),
+)
+
+it.effect("cancelling the initiating caller keeps detached execution reserved", () =>
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const started = yield* Deferred.make<void>()
+    const finish = yield* Deferred.make<void>()
+    const coordinator = yield* ExecutionDrain.make({
+      hold: drain.hold,
+      drain: () => Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(finish))),
+    })
+    const caller = yield* coordinator.run(parent).pipe(Effect.forkChild)
+    yield* Deferred.await(started)
+    yield* Fiber.interrupt(caller)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
+    expect((yield* coordinator.active).has(parent)).toBe(true)
+    yield* Deferred.succeed(finish, undefined)
+    yield* Fiber.join(waiting)
+  }),
+)
+
+it.effect("a wake during interruption cleanup keeps the reservation through its successor", () =>
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const running = yield* Deferred.make<void>()
+    const cleaning = yield* Deferred.make<void>()
+    const cleaned = yield* Deferred.make<void>()
+    const started = yield* Deferred.make<void>()
+    const finish = yield* Deferred.make<void>()
+    let runs = 0
+    const coordinator = yield* ExecutionDrain.make({
+      hold: drain.hold,
+      drain: () =>
+        Effect.gen(function* () {
+          runs++
+          if (runs === 1)
+            return yield* Deferred.succeed(running, undefined).pipe(
+              Effect.andThen(Effect.never),
+              Effect.ensuring(Deferred.succeed(cleaning, undefined).pipe(Effect.andThen(Deferred.await(cleaned)))),
+            )
+          yield* Deferred.succeed(started, undefined)
+          return yield* Deferred.await(finish)
+        }),
+    })
+    yield* coordinator.wake(parent)
+    yield* Deferred.await(running)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    const stopping = yield* coordinator.interrupt(parent).pipe(Effect.forkChild)
+    yield* Deferred.await(cleaning)
+    yield* coordinator.wake(parent)
+    yield* Deferred.succeed(cleaned, undefined)
+    yield* Fiber.join(stopping)
+    yield* Deferred.await(started)
+    expect(waiting.pollUnsafe()).toBeUndefined()
+    yield* Deferred.succeed(finish, undefined)
+    yield* Fiber.join(waiting)
+    expect(runs).toBe(2)
+  }),
+)
+
+it.effect("racing asynchronous wake reservations coalesce and release every hold", () =>
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const acquired = yield* Deferred.make<void>()
+    const ready = yield* Deferred.make<void>()
+    const started = yield* Deferred.make<void>()
+    const finish = yield* Deferred.make<void>()
+    let holds = 0
+    let released = 0
+    let runs = 0
+    const coordinator = yield* ExecutionDrain.make({
+      hold: (id: SessionSchema.ID) =>
+        drain.hold(id).pipe(
+          Effect.tap(() =>
+            Effect.gen(function* () {
+              if (++holds === 2) yield* Deferred.succeed(acquired, undefined)
+              yield* Deferred.await(ready)
+            }),
+          ),
+          Effect.map((release) => () => {
+            released++
+            release()
+          }),
+        ),
+      drain: () =>
+        Effect.gen(function* () {
+          runs++
+          yield* Deferred.succeed(started, undefined)
+          yield* Deferred.await(finish)
+        }),
+    })
+    const first = yield* coordinator.wake(parent).pipe(Effect.forkChild)
+    const second = yield* coordinator.wake(parent).pipe(Effect.forkChild)
+    yield* Deferred.await(acquired)
+    yield* Deferred.succeed(ready, undefined)
+    yield* Fiber.join(first)
+    yield* Fiber.join(second)
+    yield* Deferred.await(started)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeUndefined()
+    expect(released).toBe(1)
+    yield* Deferred.succeed(finish, undefined)
+    yield* Fiber.join(waiting)
+    expect(released).toBe(2)
+    expect(runs).toBe(2)
+  }),
+)
+
+it.effect("closing the coordinator releases its reservation only after execution cleanup", () =>
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const started = yield* Deferred.make<void>()
+    const cleaning = yield* Deferred.make<void>()
+    const cleaned = yield* Deferred.make<void>()
+    const scope = yield* Scope.make()
+    const coordinator = yield* ExecutionDrain.make({
+      hold: drain.hold,
+      drain: () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Effect.never),
+          Effect.ensuring(Deferred.succeed(cleaning, undefined).pipe(Effect.andThen(Deferred.await(cleaned)))),
+        ),
+    }).pipe(Scope.provide(scope))
+    yield* coordinator.wake(parent)
+    yield* Deferred.await(started)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    const closing = yield* Scope.close(scope, Exit.void).pipe(Effect.forkChild)
+    yield* Deferred.await(cleaning)
+    expect(waiting.pollUnsafe()).toBeUndefined()
+    yield* Deferred.succeed(cleaned, undefined)
+    yield* Fiber.join(closing)
+    yield* Fiber.join(waiting)
+  }),
+)
+
+it.effect("closing the coordinator with a pending wake still releases its reservation", () =>
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const started = yield* Deferred.make<void>()
+    const scope = yield* Scope.make()
+    const coordinator = yield* ExecutionDrain.make({
+      hold: drain.hold,
+      drain: () => Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
+    }).pipe(Scope.provide(scope))
+    yield* coordinator.wake(parent)
+    yield* Deferred.await(started)
+    yield* coordinator.wake(parent)
+    yield* Scope.close(scope, Exit.void)
+    const waiting = yield* drain.wait(parent).pipe(Effect.forkChild({ startImmediately: true }))
+    expect(waiting.pollUnsafe()).toBeDefined()
   }),
 )
 
