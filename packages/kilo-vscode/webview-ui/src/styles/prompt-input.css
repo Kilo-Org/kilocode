@@ -374,13 +374,20 @@
   scrollbar-gutter: stable;
 }
 
-/* Size from the content without a scrollHeight measurement. max-height above
-   keeps the long-draft cap and the textarea scrolls past it as before. */
+/* Size from the content without a scrollHeight measurement, for a draft that has text. An empty draft stays at
+   rows=1 and the CSS minimum, as v1 did, so the placeholder never sets the composer height. max-height above keeps
+   the long-draft cap and the textarea scrolls past it as before. */
 @supports (field-sizing: content) {
-  .prompt-input {
+  .prompt-input:not(:placeholder-shown) {
     field-sizing: content;
     height: auto;
   }
+}
+
+/* The minimum height, plus the space the bottom padding reserves, holds a placeholder that wraps to a second line in
+   a narrow composer. Without it the fixed minimum would cut the wrapped line off. */
+.prompt-input:placeholder-shown {
+  padding-bottom: 8px;
 }
 
 .prompt-input:focus {

@@ -7,13 +7,26 @@ const kb = {
   openPR: "⌘⇧R",
   previousSession: "⌘⌥↑",
   nextSession: "⌘⌥↓",
+  quickWorktree: "⌘⇧N",
+  openWorktree: "⌘⇧O",
 }
 
 const labels = (rows: ReturnType<typeof hintRows>) => rows.map((row) => row.label)
 
 describe("agent manager empty session shortcut list", () => {
-  it("new project with one session: only the terminal", () => {
-    expect(labels(hintRows(kb, { pr: false, worktrees: 0 }))).toEqual(["agentManager.shortcuts.toggleTerminal"])
+  it("new project on local: the worktree action and the terminal", () => {
+    expect(labels(hintRows(kb, { pr: false, worktrees: 0 }))).toEqual([
+      "agentManager.shortcuts.newWorktree",
+      "agentManager.shortcuts.toggleTerminal",
+    ])
+  })
+
+  it("a selected worktree also offers opening it as a folder", () => {
+    expect(labels(hintRows(kb, { pr: false, worktrees: 0, worktree: true }))).toEqual([
+      "agentManager.shortcuts.newWorktree",
+      "agentManager.shortcuts.openWorktree",
+      "agentManager.shortcuts.toggleTerminal",
+    ])
   })
 
   it("busy project: session switching first, then this worktree's changes and PR", () => {
@@ -22,6 +35,7 @@ describe("agent manager empty session shortcut list", () => {
       "agentManager.hints.switchSession",
       "agentManager.shortcuts.toggleDiff",
       "agentManager.shortcuts.openPR",
+      "agentManager.shortcuts.newWorktree",
       "agentManager.shortcuts.toggleTerminal",
     ])
     expect(rows.at(0)?.bindings).toEqual(["⌘⌥↑", "⌘⌥↓"])
@@ -32,6 +46,6 @@ describe("agent manager empty session shortcut list", () => {
       { ...kb, openPR: "" },
       { stats: { files: 0, additions: 0, deletions: 0 }, pr: true, worktrees: 0 },
     )
-    expect(labels(rows)).toEqual(["agentManager.shortcuts.toggleTerminal"])
+    expect(labels(rows)).toEqual(["agentManager.shortcuts.newWorktree", "agentManager.shortcuts.toggleTerminal"])
   })
 })

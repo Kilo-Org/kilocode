@@ -52,6 +52,7 @@ function makeScope(input: { chat: boolean }) {
       event: events(),
       directory: "/workspace",
       bindings: () => ({}),
+      selection: () => false,
       chat: input.chat,
       onCommand: () => {},
       open: () => {},

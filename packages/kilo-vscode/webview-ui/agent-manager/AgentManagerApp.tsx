@@ -1596,7 +1596,10 @@ const AgentManagerContent: Component = () => {
     selection,
     registry,
     activePR,
+    sidePanel,
     nav: () => buildProjectNavEntries(projectList(), projectStates()),
+    activeProjectId,
+    activity,
   })
   const intro = createIntro({
     hints: hints.list,
@@ -2309,6 +2312,7 @@ const AgentManagerContent: Component = () => {
                     rowWhenEmpty={!!transfer.branch()}
                     onNewSession={handleNewTabForCurrentSelection}
                     worktree={!!selection() && selection() !== LOCAL}
+                    manager={hints.manager}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}

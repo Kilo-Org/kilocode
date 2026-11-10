@@ -27,6 +27,7 @@ import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
+import type { ManagerContext } from "./shortcut-hint"
 import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
 import { createWorking } from "./working"
@@ -80,6 +81,10 @@ export function SessionView(props: {
   onMissing?: (sessionID: string) => void
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** Another session tab is open, so the prompt suggests switching tabs. */
+  tabs?: boolean
+  /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
+  manager?: () => ManagerContext | undefined
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -467,6 +472,8 @@ export function SessionView(props: {
                 onReferenceReady={props.onReferenceReady}
                 onComposerReady={props.onComposerReady}
                 slash={{ entries: slashEntries, run: runSlash }}
+                tabs={props.tabs}
+                manager={props.manager}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                 sandbox={sandboxControl}

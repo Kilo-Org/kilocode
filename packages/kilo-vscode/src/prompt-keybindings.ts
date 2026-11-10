@@ -37,3 +37,27 @@ export function watchKeybindings(context: vscode.ExtensionContext, cb: () => voi
   }
   return vscode.Disposable.from(...watchers)
 }
+
+/** Whether the active editor has selected text. "Add to context" only works while it does. */
+export function promptSelection(): boolean {
+  return vscode.window.activeTextEditor?.selections.some((selection) => !selection.isEmpty) ?? false
+}
+
+/**
+ * Call `cb` when the context of the prompt hint changes: the user's keybindings, or whether an editor selection
+ * exists. The selection is the only editor state the hint reads, so moving the caret alone does not repaint it.
+ */
+export function watchPromptContext(context: vscode.ExtensionContext, cb: () => void): vscode.Disposable {
+  let last = promptSelection()
+  const sync = () => {
+    const next = promptSelection()
+    if (next === last) return
+    last = next
+    cb()
+  }
+  return vscode.Disposable.from(
+    watchKeybindings(context, cb),
+    vscode.window.onDidChangeTextEditorSelection(sync),
+    vscode.window.onDidChangeActiveTextEditor(sync),
+  )
+}

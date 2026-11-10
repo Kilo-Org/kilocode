@@ -37,7 +37,7 @@ import {
   writeKiloSettings,
 } from "./settings-host"
 import { resolveKiloProfile } from "./settings-paths"
-import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { promptKeybindings, promptSelection, watchPromptContext } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { workStyleHost } from "./work-style-host"
 import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
@@ -147,13 +147,12 @@ export function chat(input: {
         // A hidden webview may not receive the reset notification.
         if (view.visible) syncState()
       })
-      // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
-      // user's keybindings.json changes.
-      const keybindings = watchKeybindings(
-        input.context,
-        () => void send({ type: "keybindings", bindings: promptKeybindings(input.context) }),
-      )
-      void send({ type: "keybindings", bindings: promptKeybindings(input.context) })
+      // The prompt hint names one shortcut at a time, so send the labels and whether an editor selection exists on
+      // load and whenever either changes.
+      const context = () =>
+        void send({ type: "keybindings", bindings: promptKeybindings(input.context), selection: promptSelection() })
+      const keybindings = watchPromptContext(input.context, context)
+      context()
       view.onDidDispose(() => {
         surface.dispose()
         stats?.dispose()

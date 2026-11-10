@@ -424,7 +424,7 @@ export type ToWebview =
   /** Sends a prompt in the open session at once, without touching the draft. */
   | { type: "startPrompt"; text: string; items?: PromptAttachment[] }
   | ({ type: "navigate" } & SettingsNavigation)
-  | { type: "keybindings"; bindings: Record<string, string> }
+  | { type: "keybindings"; bindings: Record<string, string>; selection: boolean }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "modelPreferencesLoaded"; value: ModelPreferences }

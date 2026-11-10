@@ -205,6 +205,7 @@ export const dict = {
   "prompt.shortcutHint.queue": "to queue",
   "prompt.shortcutHint.changes": "to review changes",
   "prompt.shortcutHint.pr": "to open the PR",
+  "prompt.shortcutHint.newWorktree": "to open another worktree",
   "prompt.shortcutHint.mode": "Next mode",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Continue",
@@ -1340,7 +1341,7 @@ export const dict = {
   "settings.display.codeMode.collapsed": "Collapsed",
   "settings.display.shortcutHints.title": "Show shortcut hints",
   "settings.display.shortcutHints.description":
-    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
+    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to queue a prompt, add selected code, review changes, or return to the prompt.",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
