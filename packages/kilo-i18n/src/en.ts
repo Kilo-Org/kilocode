@@ -131,7 +131,7 @@ export const dict = {
 
   // Plan follow-up question shown after plan_exit. The English strings here must match
   // the canonical `label`/`header`/`question` sent by the backend — those canonical labels
-  // are still what the backend matches on (see packages/opencode/src/kilocode/plan-followup.ts).
+  // are still what the backend matches on (see packages/kilo-plugin/src/plan/plan-followup.ts).
   "plan.followup.header": "Implement",
   "plan.followup.question": "Ready to implement?",
   "plan.followup.answer.newSession": "Start new session",

@@ -3,10 +3,10 @@ import { buildShortcutCategories } from "../webview-ui/agent-manager/shortcuts"
 
 describe("Agent Manager shortcut map", () => {
   it("includes sidebar search in the quick-switch section", () => {
-    const categories = buildShortcutCategories({ search: "⌘F", jumpTo1: "⌘1" }, (key) => key)
+    const categories = buildShortcutCategories({ search: "⌘⇧F", jumpTo1: "⌘1" }, (key) => key)
     expect(categories[0]?.shortcuts[0]).toEqual({
       label: "agentManager.sidebarSearch.label",
-      binding: "⌘F",
+      binding: "⌘⇧F",
     })
   })
 
