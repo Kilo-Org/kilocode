@@ -50,6 +50,8 @@ export const Plugin = define({
     const wrapped = new Set<string>()
     /** MCP tools: delegated authority that needs unrestricted network. */
     const delegated = new Set<string>()
+    /** Tools a network-restricted session does not offer, filled from this Location's registry below. */
+    let hidden = hiddenTools([])
     const emit = yield* Ref.make<(event: KiloSandboxRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
 
     const runtime: RuntimeInterface = {
@@ -256,9 +258,6 @@ export const Plugin = define({
     )
   }),
 })
-
-// Effective ids a network-restricted session does not offer, filled from the registry so a renamed tool namespace follows.
-let hidden = hiddenTools([])
 
 function describe(error: unknown) {
   if (typeof error === "object" && error !== null && "description" in error && typeof error.description === "string")
