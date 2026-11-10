@@ -8,6 +8,7 @@ import { KiloRead } from "@kilocode/kilo-plugin/read"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
@@ -114,6 +115,24 @@ export const overrides: LayerNode.Replacements = [
   // replacement): upstream keeps ownership of the tool, its description, pages and instructions.
   ReadToolFileSystem.node.replace(KiloRead.node),
   SdkPlugins.node.replace(plugins),
+  // Kilo Plan mode (kilocode.plan) replaces the native one: a remove operation runs before the config operations.
+  ConfigPluginSource.node.replace(
+    ConfigPluginSource.node.mapLayer((layer) =>
+      Layer.effect(
+        ConfigPluginSource.Service,
+        Effect.gen(function* () {
+          const source = yield* ConfigPluginSource.Service
+          return {
+            ...source,
+            operations: () =>
+              source
+                .operations()
+                .pipe(Effect.map((operations) => [{ type: "remove" as const, target: "opencode.plan" }, ...operations])),
+          }
+        }),
+      ).pipe(Layer.provide(layer)),
+    ),
+  ),
   App.node.replace(App.configured(KiloApp)),
   Model.node.replace(
     Model.node.mapLayer((layer) =>

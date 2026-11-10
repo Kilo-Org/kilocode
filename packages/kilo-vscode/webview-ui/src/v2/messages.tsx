@@ -38,6 +38,9 @@ import {
 } from "./transcript-cache"
 import { createRowHandoff } from "./transcript-row-handoff"
 import { TranscriptRowView } from "./transcript-row"
+import { useTranscriptSearch } from "./transcript-search"
+import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
+import { buildSearchPattern, searchMatches } from "./transcript-search-match"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
 
@@ -332,6 +335,210 @@ export function MessageList(props: {
     el.scrollBy({ top: row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientTop })
   })
 
+  const search = useTranscriptSearch()
+  // A failed history load leaves the cursor untouched, so the loading effect
+  // would retry the whole remaining history on every run. Stop retrying until
+  // the query, the session or the open state changes.
+  createEffect(
+    on(
+      () => [props.session, search.active(), search.query()] as const,
+      ([session, active, query], previous) => {
+        if (!previous || previous[0] !== session || (active && !previous[1]) || previous[2] !== query)
+          search.setHistoryFailed(false)
+      },
+      { defer: true },
+    ),
+  )
+
+  const pattern = createMemo(() => {
+    if (!search.active()) return undefined
+    return buildSearchPattern(search.query(), search.matchCase(), search.wholeWord(), search.regex())
+  })
+
+  // An invalid regex (e.g. an unbalanced group) compiles to `undefined`, which
+  // otherwise looks identical to "no matches" — surface it explicitly so the
+  // search bar can show a real error instead.
+  createEffect(() => {
+    search.setInvalid(search.active() && !!search.query() && search.regex() && !pattern())
+  })
+
+  // The session only loads its most recent page up front, so the matches only
+  // ever see the loaded rows. While a query is active, load the rest of the
+  // history: a search that silently skipped older messages would undermine
+  // the main "find something in a long session" use case, and a partial count
+  // could mislead. `searchingHistory` keeps the bar on "Searching earlier
+  // messages…" until the whole history has actually been searched.
+  createEffect(() => {
+    const id = props.session
+    const searching =
+      search.active() &&
+      !!search.query() &&
+      !!id &&
+      !search.historyFailed() &&
+      v2.data.session.message.more(id) &&
+      !v2.data.session.message.startLoaded(id)
+    search.setSearchingHistory(searching)
+    if (!searching || !id || v2.data.session.message.loading(id)) return
+    void v2.data.session.message.loadMore(id, { all: true }).catch((error: unknown) => {
+      search.setHistoryFailed(true)
+      v2.report(error)
+    })
+  })
+
+  const matches = createMemo(() => searchMatches(rows(), pattern()))
+
+  createEffect(
+    on(matches, (list) => {
+      search.setCount(list.length)
+      if (list.length === 0) {
+        search.setIndex(0)
+        return
+      }
+      if (search.index() >= list.length) search.setIndex(list.length - 1)
+    }),
+  )
+
+  // Jump straight to the first match as the user types or toggles an option,
+  // instead of leaving them to press Enter or an arrow just to see where the
+  // current query landed.
+  createEffect(
+    on(
+      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex()],
+      () => {
+        search.setIndex(0)
+        search.requestJump()
+      },
+    ),
+  )
+
+  // Closing or switching to another session leaves a query bound to a
+  // transcript that is no longer displayed if left untouched, so reset the
+  // whole widget. `defer: true` skips the initial run so mounting does not
+  // reset a session that was never searched.
+  createEffect(
+    on(
+      () => props.session,
+      () => {
+        search.setActive(false)
+        search.setQuery("")
+        search.setMatchCase(false)
+        search.setWholeWord(false)
+        search.setRegex(false)
+        search.setIndex(0)
+        search.setCount(0)
+      },
+      { defer: true },
+    ),
+  )
+
+  const activeKey = createMemo(() => matches()[search.index()]?.key)
+  const activeMatch = createMemo(() => matches()[search.index()])
+
+  // Maps a row key to the part ids the data model could attribute matches to
+  // there. A row with no entry has zero data-level matches, so the highlighter
+  // scans nothing in it; a row with an entry always has a real match and falls
+  // back to the whole row when its part ids resolve to no mounted element.
+  const matchedPartsByRow = createMemo(() => {
+    const map = new Map<string, Set<string>>()
+    for (const match of matches()) {
+      const set = map.get(match.key) ?? new Set<string>()
+      if (match.partId) set.add(match.partId)
+      map.set(match.key, set)
+    }
+    return map
+  })
+
+  // Highlights every rendered occurrence of the query via the CSS Custom
+  // Highlight API, and returns the precise Range of the current occurrence so
+  // navigation can judge whether it needs to scroll at all (several
+  // occurrences can share one message).
+  let highlightFrame: number | undefined
+  let highlightFrameInner: number | undefined
+  let pendingCenter = false
+  const paintHighlights = () => {
+    const el = scrollEl()
+    if (!el || !search.active()) {
+      clearTranscriptHighlights()
+      return
+    }
+    const active = activeMatch()
+    const range = applyTranscriptHighlights(
+      el,
+      pattern(),
+      active && { key: active.key, occurrence: active.occurrence },
+      matchedPartsByRow(),
+    )
+    if (!pendingCenter) return
+    pendingCenter = false
+    if (!range) return
+    // Only nudge the scroll position when the match is not already comfortably
+    // placed. Re-centering on every step (even when the match is already
+    // visible) reads as constant, distracting jumping when several occurrences
+    // share one message.
+    const rect = range.getClientRects()[0]
+    if (!rect) return
+    const box = el.getBoundingClientRect()
+    const fullyVisible = rect.top >= box.top && rect.bottom <= box.bottom
+    // The comfort band covers the middle 70% of the viewport, wide enough that
+    // most steps between nearby matches do not scroll at all, while still
+    // recentering before a match gets uncomfortably close to the edge.
+    const comfortMargin = box.height * 0.35
+    const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
+    if (fullyVisible && centered) return
+    el.scrollBy({ top: rect.top + rect.height / 2 - box.top - el.clientTop - el.clientHeight / 2 })
+  }
+
+  // Two frames of margin so the virtualizer has settled the DOM for the new
+  // scroll position before it is scanned for the precise occurrence to
+  // center. Both frame ids are tracked so cleanup can cancel whichever leg of
+  // the chain has not fired yet.
+  const scheduleHighlight = () => {
+    if (highlightFrame !== undefined) return
+    highlightFrame = requestAnimationFrame(() => {
+      highlightFrameInner = requestAnimationFrame(() => {
+        highlightFrame = undefined
+        highlightFrameInner = undefined
+        paintHighlights()
+      })
+    })
+  }
+
+  createEffect(
+    on(
+      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex(), search.active(), activeMatch()],
+      scheduleHighlight,
+    ),
+  )
+
+  createEffect(
+    on(
+      () => search.jump(),
+      () => {
+        const match = matches()[search.index()]
+        if (!match) return
+        autoScroll.pause()
+        pendingCenter = true
+        const el = scrollEl()
+        const mounted = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(match.key)}"]`)
+        // Only force the coarse row-level scroll when the row is virtualized
+        // out. A mounted row defers entirely to the precise per-occurrence
+        // check in paintHighlights, which only scrolls when the exact match
+        // actually needs it.
+        if (!mounted) {
+          const index = indexes().get(match.key)
+          if (index !== undefined) virtualizer()?.scrollToIndex(index, { align: "center" })
+        }
+        scheduleHighlight()
+      },
+    ),
+  )
+
+  onCleanup(() => {
+    if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
+    if (highlightFrameInner !== undefined) cancelAnimationFrame(highlightFrameInner)
+    clearTranscriptHighlights()
+  })
+
   const onScrollToMessage = (event: Event) => {
     const detail = (event as CustomEvent<{ id: string; partId?: string }>).detail
     if (!detail?.id) return
@@ -387,6 +594,7 @@ export function MessageList(props: {
   const handleScroll = () => {
     autoScroll.handleScroll()
     if (!syncing) maybeLoadOlder()
+    if (search.active()) scheduleHighlight()
   }
 
   let resize: ResizeObserver | undefined
@@ -435,6 +643,7 @@ export function MessageList(props: {
           actions={props.actions}
           instructionFiles={(partID) => instructionFiles().get(partID)}
           highlight={() => highlight()}
+          searchActive={activeKey() === key}
           onViewTurnChanges={props.onViewTurnChanges}
           onForkMessage={row().message.id === firstUser() ? undefined : props.onForkMessage}
           pending={props.pending}

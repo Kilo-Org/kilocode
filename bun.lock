@@ -371,6 +371,7 @@
       "dependencies": {
         "@effect/platform-node": "catalog:",
         "@kilocode/gateway-core": "workspace:*",
+        "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/sandbox": "workspace:*",
         "@opencode/ai": "workspace:*",

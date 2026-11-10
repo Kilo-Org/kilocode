@@ -5,13 +5,19 @@
 import { createSignal, onCleanup } from "solid-js"
 import { useVSCode } from "../context/vscode"
 
+// The last state the host sent. A composer remounted for another worktree shows the toggle as the user left it
+// instead of dropping its on state until the next reply.
+let lastEnabled: boolean | undefined
+
 export function createAutoApprove() {
   const vscode = useVSCode()
-  const [enabled, setEnabled] = createSignal(false)
+  const [enabled, setEnabled] = createSignal(lastEnabled ?? false)
 
   onCleanup(
     vscode.onMessage((message) => {
-      if (message.type === "autoApproveStateLoaded") setEnabled(message.value)
+      if (message.type !== "autoApproveStateLoaded") return
+      lastEnabled = message.value
+      setEnabled(message.value)
     }),
   )
   vscode.postMessage({ type: "requestAutoApproveState" })
@@ -20,6 +26,7 @@ export function createAutoApprove() {
     enabled,
     toggle() {
       const value = !enabled()
+      lastEnabled = value
       setEnabled(value)
       vscode.postMessage({ type: "persistAutoApproveState", value })
     },

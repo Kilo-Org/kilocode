@@ -870,6 +870,12 @@ body.vscode-reduce-motion .prompt-action {
   margin-inline-end: -4px;
 }
 
+/* The first fold arrives with the composer's first measurement. Animating it would replay on every session switch,
+   so the actions take their fold at once and only later width changes animate. */
+.prompt-input-hint-actions:not([data-measured]) .prompt-action {
+  transition: none;
+}
+
 .prompt-more-button {
   position: relative;
 }

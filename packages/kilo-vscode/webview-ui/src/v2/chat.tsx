@@ -29,6 +29,7 @@ import { createWorktreeTransfer } from "./worktree-transfer"
 import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
 import { createComposerQueue } from "./composer"
+import { createPlanOpener } from "./open-plan"
 import { showTabStrip } from "../utils/local-tabs"
 import { focusPrompt } from "../utils/tab-navigation"
 
@@ -75,6 +76,14 @@ export function Chat() {
     // The history row that had focus is gone, so the opened session's composer takes it.
     requestAnimationFrame(focusPrompt)
   }
+  // The plan handoff creates a new session on the server and asks the client to show it. The TUI and the
+  // VS Code sidebar both consume this event, so the new Code session opens in the active view.
+  onCleanup(
+    v2.data.on("tui.session.select", (event) => {
+      if (event.location && event.location.directory !== v2.directory) return
+      open(event.data.sessionID)
+    }),
+  )
   const step = (offset: -1 | 1) => {
     if (!document.hasFocus() || view() !== "chat") return
     const before = tabs.active()
@@ -84,6 +93,12 @@ export function Chat() {
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
+    if (name === "focusSearch") {
+      setView("chat")
+      // A search request only reaches the session header while the chat is the
+      // visible view; it mounts after the switch, so dispatch on the next frame.
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusTranscriptSearch")))
+    }
     if (name === "showOpenTabs") {
       setView("chat")
       window.dispatchEvent(new Event("showOpenTabs"))
@@ -198,20 +213,54 @@ export function Chat() {
     vscode.postMessage({ type: "openChanges", sessionID, turnID } satisfies ToHost as never)
 
   // What a tool renderer may ask the host to open. The host owns the editor and the diff surfaces.
+  const openToolFile = (filePath: string, line?: number, column?: number, sessionID?: string) =>
+    getVSCodeAPI().postMessage({
+      type: "openToolFile",
+      filePath,
+      line,
+      column,
+      sessionID: sessionID ?? session(),
+    } satisfies ToHost as never)
   const toolActions: ToolActions = {
-    openFile: (filePath, line, column, sessionID) =>
-      getVSCodeAPI().postMessage({
-        type: "openToolFile",
-        filePath,
-        line,
-        column,
-        sessionID: sessionID ?? session(),
-      } satisfies ToHost as never),
+    openFile: openToolFile,
     validateFiles,
     openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
     openDiffs: (diffs) => getVSCodeAPI().postMessage({ type: "openDiffsVirtual", diffs } satisfies ToHost as never),
     openSession: open,
   }
+
+  // A completed open_plan call opens its plan file once its session is active. The connection carries events for
+  // every directory, so another directory's sessions are ignored.
+  const planOpener = createPlanOpener(
+    () => session(),
+    (plan) => openToolFile(plan.path, undefined, undefined, plan.sessionID),
+  )
+  const inScope = (event: { location?: { directory: string } }) =>
+    !event.location || event.location.directory === v2.directory
+  onCleanup(
+    v2.data.on("session.tool.input.started", (event) => {
+      if (!inScope(event)) return
+      planOpener.started(event.data.sessionID, event.data.id, event.data.name)
+    }),
+  )
+  onCleanup(
+    v2.data.on("session.tool.success", (event) => {
+      if (!inScope(event)) return
+      planOpener.completed(event.data.sessionID, event.data.id, event.data.metadata)
+    }),
+  )
+  onCleanup(
+    v2.data.on("session.tool.failed", (event) => {
+      if (!inScope(event)) return
+      planOpener.failed(event.data.sessionID, event.data.id)
+    }),
+  )
+  onCleanup(
+    v2.data.on("session.deleted", (event) => {
+      if (inScope(event)) planOpener.forget(event.data.sessionID)
+    }),
+  )
+  createEffect(() => planOpener.flush(session()))
 
   const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" } satisfies ToHost as never)
   const startWorktreeFromBranch = (branch: string) =>

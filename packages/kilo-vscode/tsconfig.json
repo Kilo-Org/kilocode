@@ -24,6 +24,7 @@
     "src/shared",
     "test/fixtures/browser-panel-render.tsx",
     "test/fixtures/marketplace-render.tsx",
-    "test/fixtures/marketplace-install-modal.tsx"
+    "test/fixtures/marketplace-install-modal.tsx",
+    "test/fixtures/prompt-toolbar-flicker.tsx"
   ]
 }

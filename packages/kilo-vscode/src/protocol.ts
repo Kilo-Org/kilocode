@@ -412,6 +412,7 @@ export type ToWebview =
       name:
         | "newSession"
         | "history"
+        | "focusSearch"
         | "cycleAgentMode"
         | "cyclePreviousAgentMode"
         | "showOpenTabs"
