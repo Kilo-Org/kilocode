@@ -15,7 +15,7 @@ import * as SandboxActivation from "./activation"
 import { SandboxConfig } from "./config"
 import { marker, register, release } from "./environment"
 import { mutates } from "./git"
-import { isMcp } from "./network"
+import { hiddenTools, isMcp } from "./network"
 import * as SandboxPolicy from "./policy"
 import { Runtime, type Interface as RuntimeInterface, type Target } from "./runtime"
 
@@ -50,6 +50,8 @@ export const Plugin = define({
     const wrapped = new Set<string>()
     /** MCP tools: delegated authority that needs unrestricted network. */
     const delegated = new Set<string>()
+    /** Tools a network-restricted session does not offer, filled from this Location's registry below. */
+    let hidden = hiddenTools([])
     const emit = yield* Ref.make<(event: KiloSandboxRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
 
     const runtime: RuntimeInterface = {
@@ -143,6 +145,7 @@ export const Plugin = define({
     yield* ctx.tool
       .transform((editor) => {
         delegated.clear()
+        hidden = hiddenTools(editor.list())
         for (const item of editor.list()) {
           if (delegating.has(item.id)) continue
           editor.update(item.id, (tool) => {
@@ -255,9 +258,6 @@ export const Plugin = define({
     )
   }),
 })
-
-// Effective ids: the registry prefixes a namespaced tool with its namespace.
-const hidden = new Set(["opencode_list_mcp_resources", "opencode_read_mcp_resource", "execute"])
 
 function describe(error: unknown) {
   if (typeof error === "object" && error !== null && "description" in error && typeof error.description === "string")
