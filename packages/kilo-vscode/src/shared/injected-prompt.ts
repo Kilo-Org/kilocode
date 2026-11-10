@@ -52,6 +52,11 @@ export function injectedPreview(text: string): string | undefined {
   return first && first !== body ? first : undefined
 }
 
+/** The prompt text without the trailing source marker, which is internal addressing rather than prompt content. */
+export function withoutSource(text: string): string {
+  return text.replace(ATTRIBUTION, "")
+}
+
 /**
  * Resolve the header and collapsed body for a user message. `text` is the
  * message body after review and browser feedback sections were removed.
@@ -61,7 +66,7 @@ export function injectedView(metadata: unknown, text: string): InjectedView | un
   const source = text.match(ATTRIBUTION)?.[1]
   // Templates and composed prompts carry the blank lines they were built from; the bubble and Copy show the same
   // trimmed body so neither keeps an empty first or last line.
-  const body = text.replace(ATTRIBUTION, "").trim()
+  const body = withoutSource(text).trim()
   // A prompt another session delivered reads as coming from Kilo, whatever else it carries.
   if (source) return { label: "Sent by Kilo from another session", source, text: body }
   const marked = partInjected(metadata)

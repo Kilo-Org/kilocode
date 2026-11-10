@@ -4,7 +4,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createMemo, createSignal, Show } from "solid-js"
 import { partFeedback } from "../../../src/shared/browser-feedback"
-import { injectedView } from "../../../src/shared/injected-prompt"
+import { injectedView, withoutSource } from "../../../src/shared/injected-prompt"
 import type { ToHost } from "../../../src/protocol"
 import { imageMime } from "../../../src/shared/image-data-url"
 import { ReviewComments } from "../components/chat/ReviewComments"
@@ -51,8 +51,9 @@ export function UserMessage(props: {
     const body = parsed()
     return body ? { ...props.message, text: body.body } : props.message
   })
-  // Build the header nodes once. UserMessageDisplay reads these props in several Show conditions, and a getter would
-  // rebuild a detached subtree (with mounted Tooltip effects) on every read.
+  // Build the header nodes once: UserMessageDisplay reads this prop in several Show conditions, and a getter would
+  // rebuild a detached subtree (with mounted Tooltip effects) on every read. The attribute and label reads inside are
+  // their own effects, so toggling updates them in place and the activated toggle keeps its node and keyboard focus.
   const bubble = createMemo(() => {
     const value = view()
     if (!value) return undefined
@@ -102,7 +103,8 @@ export function UserMessage(props: {
         <UserMessageDisplay
           message={message()}
           copyLabel={language.t("ui.message.copyMessage")}
-          copyText={view()?.text ?? props.message.text}
+          // Copy keeps the whole text the model received, review section included, without the source marker.
+          copyText={withoutSource(props.message.text)}
           header={
             <Show when={feedback()}>
               {(browser) => <BrowserReferences references={browser().references} variant="message" />}

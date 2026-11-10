@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { injectedMetadata, injectedPreview, injectedView, partInjected } from "../src/shared/injected-prompt"
+import {
+  injectedMetadata,
+  injectedPreview,
+  injectedView,
+  partInjected,
+  withoutSource,
+} from "../src/shared/injected-prompt"
 import { PUSH_INSTRUCTION } from "../src/shared/review-comments"
 
 describe("injected prompt metadata", () => {
@@ -21,6 +27,20 @@ describe("injected prompt metadata", () => {
 
   it("has no preview when a long body has no paragraph break", () => {
     expect(injectedPreview("one\ntwo\nthree\nfour\nfive")).toBeUndefined()
+  })
+})
+
+describe("withoutSource", () => {
+  it("drops the trailing source marker and leaves the prompt text alone", () => {
+    expect(withoutSource("Continue this work.\n\n<!-- kilo-agent-manager source=ses_caller -->")).toBe(
+      "Continue this work.",
+    )
+    expect(withoutSource("Continue this work.")).toBe("Continue this work.")
+  })
+
+  it("keeps a marker that is not at the end of the text", () => {
+    const text = "Keep <!-- kilo-agent-manager source=ses_caller --> inline"
+    expect(withoutSource(text)).toBe(text)
   })
 })
 
