@@ -2270,5 +2270,17 @@
     "state": "dropped",
     "note": "Tested the board SQL migrations, which v2 does not have (see packages/core/src/kilocode/board/sql.ts).",
     "by": "mire-production"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptHint.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-hint.tsx",
+    "note": "The keycap copy of the prompt placeholder is ported as v2/prompt-hint.tsx: same bracket handling so a parenthesis stays on the keycap line, the same aria-hidden overlay over the plain textarea placeholder, and the same before/binding/after split. This PR is the one that uses it for the whole hint set, so it records the cell.",
+    "by": "port-keyboard-suggestions-to-v1"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/shortcut-hints-settings.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/settings-host.ts",
+    "note": "Reading showShortcutHints and pushing it to every webview on change is carried by the generic v2 settings host: showShortcutHints is in KILO_SETTING_KEYS, readKiloSettings returns it, and the onDidChangeConfiguration listener posts the full settings set when a kilo-code.v2 setting changes. webview-ui/src/v2/kilo-settings.ts is the receiving accessor, so the hint reads the same setting as on v1.",
+    "by": "port-keyboard-suggestions-to-v1"
   }
 }

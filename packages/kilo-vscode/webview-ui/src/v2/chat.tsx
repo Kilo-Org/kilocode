@@ -336,6 +336,7 @@ export function Chat() {
           onComposerReady={composerQueue.ready}
           draftKey={tabs.active()}
           onMissing={(id) => tabs.close(id)}
+          tabs={showTabStrip(tabs.ids())}
           tabStrip={
             <Show when={showTabStrip(tabs.ids())}>
               <SessionTabStrip tabs={tabs} onFork={forkSession} />

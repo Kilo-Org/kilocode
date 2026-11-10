@@ -36,6 +36,7 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
   const api = input.api ?? OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const stores = new Map<string, Entry>()
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
+  const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
   const catalogHandlers = new Set<() => void>()
   let metadata: ConnectionMetadata | undefined
@@ -77,6 +78,7 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
         shared: metadata,
         visible,
         bindings,
+        selection,
         onCommand,
         open,
       })
@@ -125,6 +127,7 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
       }
       if (message.type === "keybindings") {
         setBindings(message.bindings)
+        setSelection(message.selection)
         return true
       }
       if (message.type === "response" || message.type === "chunk" || message.type === "end" || message.type === "error") {
