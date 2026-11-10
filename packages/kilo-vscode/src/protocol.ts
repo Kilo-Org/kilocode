@@ -280,6 +280,13 @@ export type Ui =
   | { type: "openChanges"; sessionID?: string; turnID?: string }
   /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
   | { type: "requestGitChangesStats" }
+  /** Opens a subagent session in its own read-only editor tab. */
+  | ({ type: "openSubagent" } & SubagentTarget)
+  /** Closes a subagent editor tab and shows its parent session in the sidebar. */
+  | { type: "subagentBack" }
+
+/** A subagent session an editor tab shows: the child session, its title and the session that started it. */
+export type SubagentTarget = { sessionID: string; title?: string; parentSessionID?: string }
 
 export type ModelPreferenceRef = { providerID: string; modelID: string }
 export type ModelUsageMap = Record<string, { count: number; lastUsed: number }>
@@ -424,6 +431,8 @@ export type ToWebview =
   | { type: "appendContext"; items: PromptAttachment[] }
   /** Sends a prompt in the open session at once, without touching the draft. `injectedTitle` labels a prompt Kilo composed. */
   | { type: "startPrompt"; text: string; items?: PromptAttachment[]; injectedTitle?: string }
+  /** Shows a session in the sidebar, for example the parent of a closed subagent tab. */
+  | { type: "openSession"; sessionID: string }
   | ({ type: "navigate" } & SettingsNavigation)
   | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }

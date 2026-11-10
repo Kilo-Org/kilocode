@@ -167,6 +167,8 @@ describe("Watcher lifecycle", () => {
           })
           yield* Effect.sync(() => events.length).pipe(
             Effect.filterOrFail((count) => count > 0),
+            Effect.tapError(() => Effect.promise(() => fs.writeFile(path.join(tmp.path, "opencode.jsonc"), "skip"))), // kilocode_change(ci): an ignored name repeats too, so the filter stays tested when the first writes were missed
+            Effect.tapError(() => Effect.promise(() => fs.writeFile(path.join(tmp.path, "opencode.json"), "first"))), // kilocode_change(ci): macOS FSEvents can start after the first write and then never report it, so the write repeats
             Effect.retry(Schedule.spaced("10 millis")),
             Effect.timeout("10 seconds"), // kilocode_change(ci): a 1s budget is too short for fs.watch on a loaded macOS runner
           )

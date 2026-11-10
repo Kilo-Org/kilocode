@@ -25,6 +25,7 @@ import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { ShutdownDeadline } from "@opencode/cli/shutdown-deadline"
 import { KiloApp } from "./app"
 import { AutoCommand } from "./auto/auto"
+import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
 
@@ -61,6 +62,7 @@ const KiloCommands = {
       spec: Commands.commands.service.spec.pipe(Command.withAlias("daemon")),
     },
     auto: AutoCommand,
+    import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
   },
@@ -132,6 +134,10 @@ const Handlers = Runtime.handlers(KiloCommands, {
     disable: () => import("./sync/disable"),
     status: () => import("./sync/status"),
     flush: () => import("./sync/flush"),
+  },
+  // Kilo: manual import of an earlier Kilo installation.
+  import: {
+    v1: () => import("./import/v1"),
   },
   // Kilo: custom auto routers.
   auto: {

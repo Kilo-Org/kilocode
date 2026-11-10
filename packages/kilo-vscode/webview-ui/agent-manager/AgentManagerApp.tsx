@@ -47,6 +47,7 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { openSubagent } from "../src/v2/open-subagent"
 import { SessionActionsRow } from "../src/v2/session-actions-row"
 import { createWorktreeTransfer } from "../src/v2/worktree-transfer"
 import { createComposerQueue } from "../src/v2/composer"
@@ -1289,6 +1290,15 @@ const AgentManagerContent: Component = () => {
     openSession: (id) => {
       if (!focusExistingSession(id)) to({ type: "agentManager.openSessionLocally", sessionId: id })
     },
+    // A subagent opens in the inspector beside its parent chat.
+    openSubagent: (sessionID, title) =>
+      openSubagent({
+        sessionID,
+        title,
+        parentSessionID: sessions.currentSessionID(),
+        surface: "inspector",
+        post: to,
+      }),
   }
 
   // A completed open_plan call opens its plan file once its session is the visible one. Plan calls from inactive
@@ -1793,7 +1803,7 @@ const AgentManagerContent: Component = () => {
     setReviewActive(false)
     panels.open(SidePanel.Diff)
   }
-  const sessionActions = (hasMessages: boolean, todos: JSX.Element) => {
+  const sessionActions = (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => {
     const id = sessions.currentSessionID()
     const movable = selection() === LOCAL && !readOnly() && !!id && localSessionIDs().includes(id) && !isPending(id)
     const stats = selection() === LOCAL ? localStats() : worktreeStats()[selection() ?? ""]
@@ -1814,6 +1824,7 @@ const AgentManagerContent: Component = () => {
         stats={stats}
         onShowChanges={showChanges}
         todos={todos}
+        agents={agents}
       />
     )
   }

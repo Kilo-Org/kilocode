@@ -75,6 +75,14 @@ export type ToolActions = {
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
+  /** Opens a subagent session where the client shows subagents, such as an editor tab or an inspector. */
+  openSubagent?: (sessionID: string, title?: string) => void
+  /** Where `openSubagent` shows the subagent, for the open control's label. Defaults to a panel. */
+  subagentTarget?: "tab" | "panel"
+  /** Stops a running subagent session and every session it started. */
+  stopSession?: (sessionID: string) => void
+  /** Continues a running foreground subagent in the background, so the parent's tool call returns at once. */
+  backgroundSession?: (sessionID: string) => void
 }
 
 export type ContentPartProps = {
@@ -340,13 +348,20 @@ function TextContent(props: {
     openPathLink(link)
   }
 
+  // VS Code listens for link clicks on the webview window and opens every anchor in the system browser. Claim the
+  // events we handle so a link opens either in the Integrated Browser or externally, never in both.
+  const claim = (event: MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
   const click = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return
     const fileLink = event.target.closest(".file-link[data-file-path]")
     if (fileLink) {
       const path = fileLink.getAttribute("data-file-path")
       if (!path) return
-      event.preventDefault()
+      claim(event)
       props.actions?.openFile?.(
         path,
         position(fileLink, "data-file-line"),
@@ -358,7 +373,7 @@ function TextContent(props: {
     // The renderer keeps the parsed path of a file link in data attributes, because the sanitizer drops `file:` hrefs.
     const pathLink = event.target.closest("a.file-path-link[data-file-path]")
     if (pathLink) {
-      event.preventDefault()
+      claim(event)
       openPathLink(pathLink)
       return
     }
@@ -367,12 +382,12 @@ function TextContent(props: {
     if (!href) return
     const file = extractFilePathFromHref(href)
     if (file) {
-      event.preventDefault()
+      claim(event)
       openValidated(file.path, file.line, file.column)
       return
     }
     if (!props.open || !/^https?:\/\//i.test(href)) return
-    event.preventDefault()
+    claim(event)
     // Shift-click asks for the system browser even when the host routes links into the Integrated Browser.
     props.open(href, event.shiftKey)
   }
@@ -428,7 +443,7 @@ export type ToolProps = {
   time?: SessionMessageAssistantTool["time"]
   attachments: ToolFileContent[]
   directory?: string
-  openUrl?: (uri: string) => void
+  openUrl?: (uri: string, external?: boolean) => void
   defaultOpen?: boolean
   actions?: ToolActions
   hideDetails?: boolean
@@ -845,7 +860,8 @@ ToolRegistry.register({
                     onClick={(event) => {
                       if (!props.openUrl) return
                       event.preventDefault()
-                      props.openUrl(url)
+                      event.stopPropagation()
+                      props.openUrl(url, event.shiftKey)
                     }}
                   >
                     {url}
@@ -990,12 +1006,22 @@ ToolRegistry.register({
       if (id && child?.running(id)) return "running" as const
       return taskStatus(props.status)
     }
-    const canOpen = () => !!childID() && !!props.actions?.openSession
+    const canOpen = () => !!childID() && !!(props.actions?.openSubagent ?? props.actions?.openSession)
+    const canStop = () => !!childID() && avatar() === "running" && !!props.actions?.stopSession
+    const canBackground = () =>
+      !!childID() && props.status === "running" && !background() && !!props.actions?.backgroundSession
+    const act = (action: ((sessionID: string) => void) | undefined) => (event: MouseEvent) => {
+      const id = childID()
+      if (!id || !action) return
+      event.preventDefault()
+      event.stopPropagation()
+      action(id)
+    }
     const navigate = () => {
       const id = childID()
-      const action = props.actions?.openSession
-      if (!id || !action) return
-      action(id)
+      if (!id) return
+      if (props.actions?.openSubagent) return props.actions.openSubagent(id, description() || undefined)
+      props.actions?.openSession?.(id)
     }
     const openChild = (event: MouseEvent) => {
       if (!canOpen()) return
@@ -1027,13 +1053,32 @@ ToolRegistry.register({
             <TextShimmer text={label()} active={busy(props.status)} />
           </span>
           <Show when={detail()}>{(text) => <span data-slot="basic-tool-tool-subtitle">{text()}</span>}</Show>
-          <Show when={background()}>
-            <span data-slot="task-tool-background">{i18n.t("task.backgroundAgents.untitled")}</span>
-          </Show>
           {approvalLine()}
         </div>
+        <Show when={canStop()}>
+          <span
+            data-slot="task-tool-action"
+            data-action="stop"
+            title={i18n.t("task.stop")}
+            aria-label={i18n.t("task.stop")}
+            onClick={act(props.actions?.stopSession)}
+          >
+            <Icon name="stop" size="small" />
+          </span>
+        </Show>
+        <Show when={canBackground()}>
+          <span
+            data-slot="task-tool-action"
+            data-action="background"
+            title={i18n.t("task.backgroundAgents.continueInBackground")}
+            aria-label={i18n.t("task.backgroundAgents.continueInBackground")}
+            onClick={act(props.actions?.backgroundSession)}
+          >
+            <Icon name="arrow-down-to-line" size="small" />
+          </span>
+        </Show>
         <Show when={canOpen()}>
-          <span data-slot="task-tool-open" title={`${i18n.t("task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
+          <span data-slot="task-tool-open" title={`${i18n.t(props.actions?.subagentTarget === "tab" ? "task.open.tab" : "task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
             <Icon name="square-arrow-top-right" size="small" />
           </span>
         </Show>

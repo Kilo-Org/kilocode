@@ -17,6 +17,7 @@ import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { instructionFilesByRead } from "./instruction-files"
 import type { Selection } from "./selectors"
+import { sessionStarting } from "./session-loading"
 import {
   anchorOffset,
   handedRows,
@@ -76,6 +77,8 @@ function sameKeys(left: readonly string[], right: readonly string[]) {
 
 export function MessageList(props: {
   session?: string
+  /** The session whose first transcript page is in flight, from the view that starts the request. */
+  starting?: string
   actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
@@ -130,6 +133,14 @@ export function MessageList(props: {
     v2.data.session.message.more(props.session) &&
     !v2.data.session.message.startLoaded(props.session)
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
+  // The open session shows its loader instead of the welcome screen until the first transcript page lands.
+  const starting = () =>
+    sessionStarting({
+      session: props.session,
+      loading: props.starting,
+      messages: messages().length,
+      queued: queued().length,
+    })
   const autoScroll = createAutoScroll({ working })
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
@@ -806,9 +817,15 @@ export function MessageList(props: {
         <div
           ref={autoScroll.contentRef}
           data-slot="message-list-content"
-          class={empty() ? "message-list-content-empty" : "message-list-content"}
+          class={empty() && !starting() ? "message-list-content-empty" : "message-list-content"}
         >
-          <Show when={empty()}>
+          <Show when={starting()}>
+            <div class="message-list-loading" role="status">
+              <Spinner />
+              <span>{language.t("session.messages.loading")}</span>
+            </div>
+          </Show>
+          <Show when={empty() && !starting()}>
             {props.empty ? (
               props.empty()
             ) : (
