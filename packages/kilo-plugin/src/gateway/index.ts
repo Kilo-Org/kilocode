@@ -55,6 +55,15 @@ const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
 const IS_TEST_RUNNER = /\.test\.[cm]?[jt]sx?$/.test(process.argv[1] ?? "")
+// Upstream OpenCode request identity from `packages/core/src/session/model-request.ts`. The Gateway attributes through
+// the X-KILOCODE-* headers, which v1 sent without these, so they are removed at the last boundary.
+const UPSTREAM_REQUEST_HEADERS = [
+  "x-opencode-session-id",
+  "x-opencode-parent-session-id",
+  "x-opencode-project",
+  "x-opencode-session",
+  "x-opencode-client",
+]
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
@@ -830,6 +839,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           if (catalog.failed) throw new Error("Unable to retrieve Kilo model catalog")
           const headers = new Headers(event.request.headers)
           headers.delete("x-api-key")
+          UPSTREAM_REQUEST_HEADERS.forEach((name) => headers.delete(name))
           const token = catalog.anonymous
             ? KiloAccount.ANONYMOUS_KEY
             : catalog.account?.token ?? KiloAccount.ANONYMOUS_KEY

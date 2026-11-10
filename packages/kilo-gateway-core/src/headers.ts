@@ -10,6 +10,10 @@ export const HEADER_MACHINE = "X-KILOCODE-MACHINEID"
 export const HEADER_TESTER = "X-KILOCODE-TESTER"
 export const HEADER_MODE = "x-kilocode-mode"
 export const USER_AGENT_PREFIX = "opencode-kilo-provider"
+// v1 sent `Kilo-Code/<version>` for inference and the Gateway distinguishes clients by the User-Agent, which it
+// already stores. v2 keeps that product prefix and adds the line as a segment, so existing dashboards still match
+// `Kilo-Code/` while `Kilo-Code/v2/` isolates this line. No new header to store.
+export const USER_AGENT_INFERENCE_PREFIX = "Kilo-Code/v2"
 export const TESTER_SUPPRESS_VALUE = "SUPPRESS"
 
 export interface Options {
@@ -48,7 +52,8 @@ export function provider(options: Options, env: Record<string, string | undefine
 }
 
 // Per-request attribution headers from v1 (`packages/opencode/src/session/llm/request.ts` and
-// `packages/kilo-gateway/src/headers.ts`).
+// `packages/kilo-gateway/src/headers.ts`). The inference User-Agent carries the Kilo line, see
+// USER_AGENT_INFERENCE_PREFIX above.
 export function request(
   options: RequestOptions,
   env: Record<string, string | undefined> = process.env,
@@ -56,7 +61,7 @@ export function request(
   const version = env.KILOCODE_VERSION || options.version
   return {
     ...provider(options, env),
-    "User-Agent": version ? `${USER_AGENT_PREFIX}/${version}` : USER_AGENT_PREFIX,
+    "User-Agent": version ? `${USER_AGENT_INFERENCE_PREFIX}/${version}` : USER_AGENT_INFERENCE_PREFIX,
     ...(options.sessionID ? { [HEADER_TASK]: options.sessionID } : {}),
     ...(options.parentSessionID ? { [HEADER_PARENT_TASK]: options.parentSessionID } : {}),
     ...(options.projectID ? { [HEADER_PROJECT]: options.projectID } : {}),

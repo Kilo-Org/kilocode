@@ -38,7 +38,7 @@ export interface AppActionHandlers {
 }
 
 const PREVENT_WITH_COMMAND = new Set(["t", "w", "n", "d", "e", "f"])
-const PREVENT_WITH_COMMAND_SHIFT = new Set(["t", "m", "w", "n", "o", "r", "[", "]"])
+const PREVENT_WITH_COMMAND_SHIFT = new Set(["t", "m", "w", "n", "o", "r", "f", "[", "]"])
 const ARROWS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"])
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)

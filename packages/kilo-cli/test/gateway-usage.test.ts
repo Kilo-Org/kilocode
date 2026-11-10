@@ -257,6 +257,29 @@ test("sets X-KILOCODE-FEATURE from the root session platform, else the process f
   })
 }, 30_000)
 
+// The Gateway tells the v2 line from v1 by the inference User-Agent, and the v1 attribution set arrives without the
+// upstream OpenCode request identity, on every dialect.
+test.each(["openrouter", "anthropic", "openai"] as const)(
+  "identifies the Kilo line in the %s User-Agent and keeps the v1 request identity",
+  async (dialect) => {
+    using backend = gateway(dialect)
+    await isolated(backend.url, async (directory) => {
+      await server(directory, ":memory:", async (client) => {
+        const session = await client.session.create({ location: { directory }, model: auto })
+        await client.session.prompt({ sessionID: session.id, text: "Say hello." })
+        await client.session.wait({ sessionID: session.id })
+        expect(backend.requests.length).toBeGreaterThan(0)
+        for (const request of backend.requests) {
+          expect(request.userAgent?.startsWith("Kilo-Code/v2/")).toBeTrue()
+          expect(request.opencodeHeaders).toEqual([])
+          expect(request.sessionID).toBe(session.id)
+        }
+      })
+    })
+  },
+  30_000,
+)
+
 async function isolated(url: string, body: (directory: string) => Promise<void>) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-gateway-usage-"))
   const variables = {
@@ -345,6 +368,8 @@ function gateway(
     messages: { role: string; content: unknown }[]
     sessionID: string | null
     feature: string | null
+    userAgent: string | null
+    opencodeHeaders: string[]
     pathname: string
   }[] = []
   const server = Bun.serve({
@@ -379,6 +404,8 @@ function gateway(
         pathname,
         sessionID: request.headers.get("x-kilocode-taskid"),
         feature: request.headers.get("x-kilocode-feature"),
+        userAgent: request.headers.get("user-agent"),
+        opencodeHeaders: [...request.headers.keys()].filter((name) => name.startsWith("x-opencode-")),
       })
       const response = responses[index]
       if (!response) return new Response("Unexpected model request", { status: 500 })
