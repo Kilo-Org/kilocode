@@ -824,6 +824,7 @@ export const dict = {
   "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
+
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",
   "context.stats.thisSession": "This session",
@@ -1046,7 +1047,9 @@ export const dict = {
   "settings.agentBehaviour.noAgentsFound": "No agents found.",
   "settings.agentBehaviour.removeAgent.title": "Remove agent",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Remove agent "{{name}}"? This will disable the agent by updating your config.',
+    'Remove agent "{{name}}"? This deletes the markdown file that defines it, or removes its config entry.',
+  "settings.agentBehaviour.removeAgent.confirmAll":
+    'Remove agent "{{name}}"? It is defined in both the project and global config, so this removes it from both.',
   "settings.agentBehaviour.removeAgent.button": "Remove",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",

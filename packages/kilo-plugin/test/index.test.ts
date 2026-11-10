@@ -14,6 +14,8 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.session-sync",
     "kilocode.remote",
     "kilocode.skill",
+    "kilocode.skill-config",
+    "kilocode.agent",
     "kilocode.read",
     "kilocode.tool-todo",
     "kilocode.tool-write",

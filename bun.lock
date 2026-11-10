@@ -253,6 +253,16 @@
         "@typescript/native": "catalog:",
       },
     },
+    "packages/kilo-caffeination": {
+      "name": "@kilocode/caffeination",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native": "catalog:",
+      },
+    },
     "packages/kilo-cli": {
       "name": "@kilocode/kilo-cli",
       "version": "0.0.0",
@@ -357,6 +367,7 @@
       "dependencies": {
         "@effect/platform-node": "catalog:",
         "@kilocode/gateway-core": "workspace:*",
+        "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/sandbox": "workspace:*",
         "@opencode/ai": "workspace:*",
@@ -474,6 +485,7 @@
       "name": "kilo-code-v2",
       "version": "0.0.1",
       "dependencies": {
+        "@kilocode/caffeination": "workspace:*",
         "@kilocode/gateway-core": "workspace:*",
         "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-ui": "workspace:*",
@@ -767,6 +779,7 @@
       "name": "@opencode/tui",
       "version": "2.2.4",
       "dependencies": {
+        "@kilocode/caffeination": "workspace:*",
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
         "@opencode/latex": "workspace:*",
@@ -1528,6 +1541,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@js-temporal/polyfill": ["@js-temporal/polyfill@0.5.1", "", { "dependencies": { "jsbi": "^4.3.0" } }, "sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ=="],
+
+    "@kilocode/caffeination": ["@kilocode/caffeination@workspace:packages/kilo-caffeination"],
 
     "@kilocode/flows-plugin": ["@kilocode/flows-plugin@workspace:packages/kilo-flows-plugin"],
 

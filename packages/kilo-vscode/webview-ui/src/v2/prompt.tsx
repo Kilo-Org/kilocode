@@ -54,6 +54,8 @@ import { kiloSettings } from "./kilo-settings"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
 import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
+import { parseSlash, type SlashEntry } from "./slash"
+import { createSlashMenu, SlashMenu } from "./slash-menu"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -138,6 +140,11 @@ export function PromptInput(props: {
   onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
   /** Receives the context actions handle of this composer; undefined on unmount. */
   onComposerReady?: (composer: ComposerHandle | undefined) => void
+  /** The slash command menu: its entries, and the runner of a sent server command or skill. */
+  slash?: {
+    entries: () => SlashEntry[]
+    run: (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => Promise<boolean>
+  }
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -160,6 +167,7 @@ export function PromptInput(props: {
   }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
+  const slash = createSlashMenu(() => props.slash?.entries() ?? [])
   // Editor selections, files, terminal output and images sent with the next prompt, per draft like the text.
   const [attachments, setAttachments] = createSignal<PromptAttachment[]>(attachmentDrafts.get(props.draftKey))
   const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
@@ -309,6 +317,7 @@ export function PromptInput(props: {
         saveReviewDraft(draft, untrack(comments))
         draft = key
         history.reset()
+        slash.close()
         setBrowsers(key ? (references.get(key) ?? []) : [])
         setComments((key ? reviewDrafts.get(key) : undefined) ?? [])
         const value = promptDrafts.get(key)
@@ -379,6 +388,18 @@ export function PromptInput(props: {
   // kilocode_change end
 
   const focusInput = () => refs.input?.focus({ preventScroll: true })
+  // A menu selection rewrites the draft like an edit, so a late Enhance result cannot overwrite it.
+  const replaceDraft = (value: string, cursor: number) => {
+    enhanceToken++
+    preEnhance = null
+    history.reset()
+    setText(value)
+    const input = refs.input
+    if (!input) return
+    input.value = value
+    input.setSelectionRange(cursor, cursor)
+    focusInput()
+  }
   // The restore chain outlives the event that started it, so every handle is tracked and dropped on unmount.
   const frames = new Set<number>()
   const timers = new Set<ReturnType<typeof setTimeout>>()
@@ -499,6 +520,10 @@ export function PromptInput(props: {
     const pending = external ? [] : comments()
     const prompt = browserPrompt(draft, picked)
     const sent = external ? external.text : expandPastes(draft, pastes).trim()
+    // A draft that names a server command or skill runs it. Review comments and browser references need the plain
+    // prompt, which carries them in its text and metadata.
+    const runner = external || pending.length > 0 || picked.length > 0 ? undefined : props.slash
+    const target = runner ? parseSlash(runner.entries(), sent) : undefined
     // The draft key identifies the conversation this send belongs to, even when the session is created first.
     const key = props.draftKey
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
@@ -518,18 +543,22 @@ export function PromptInput(props: {
       setAttachments([])
       setBrowsers([])
       replaceComments([])
+      slash.close()
     }
     // The review Markdown leads the text, so the transcript can strip it again with the comments in metadata.
     const review = external
       ? { text: external.text, metadata: undefined }
       : composeReviewPrompt(pending, expandPastes(draft, pastes), pushFixes())
     setSending(true)
-    void props
-      // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
-      .onSend(review.text, mode, {
-        items,
-        metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
-      })
+    const request =
+      runner && target
+        ? runner.run(target.entry, target.args, mode, items)
+        : // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
+          props.onSend(review.text, mode, {
+            items,
+            metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
+          })
+    void request
       .then((ok) => {
         if (ok) preEnhance = null
         else restore()
@@ -544,7 +573,19 @@ export function PromptInput(props: {
       .finally(() => setSending(false))
   }
 
+  // A typed client action runs in the webview without a send, and leaves the attachments in the draft.
+  const runAction = () => {
+    if (!props.slash || speech.active() || comments().length > 0 || browsers().length > 0) return false
+    const target = parseSlash(props.slash.entries(), paste.plainText(text()).trim())
+    if (target?.entry.kind !== "action") return false
+    slash.close()
+    replaceDraft("", 0)
+    target.entry.run()
+    return true
+  }
+
   const send = (mode: SendMode = "steer") => {
+    if (runAction()) return
     if (!canSend()) return
     if (speech.state() === "recording") {
       transcribeAndSend()
@@ -805,6 +846,9 @@ export function PromptInput(props: {
       onDragLeave={images.handleDragLeave}
       onDrop={images.handleDrop}
     >
+      <Show when={slash.show()}>
+        <SlashMenu menu={slash} onSelect={(entry) => slash.select(entry, text(), replaceDraft)} />
+      </Show>
       <Show when={comments().length > 0 && !props.disabled}>
         <ReviewComments
           comments={comments()}
@@ -912,6 +956,7 @@ export function PromptInput(props: {
               history.reset()
               setText(e.currentTarget.value)
               paste.afterInput()
+              slash.input(e.currentTarget.value, e.currentTarget.selectionStart ?? e.currentTarget.value.length)
             }}
             onPaste={(e) => {
               if (props.disabled || !refs.input) return
@@ -926,6 +971,7 @@ export function PromptInput(props: {
             onKeyDown={(e) => {
               if (speechDown(e)) return
               if (undoEnhance(e)) return
+              if (slash.keyDown(e, text(), replaceDraft)) return
               if (paste.backspace(e, refs.input, setText)) return
               paste.arrow(e, refs.input)
               if (historyKey(e)) return

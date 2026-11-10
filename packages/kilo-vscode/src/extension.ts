@@ -45,6 +45,7 @@ import {
   registerTerminalActions,
 } from "./services/code-actions"
 import { NotebookBroker, notebookToolsEnabled } from "./services/notebook"
+import { marketplace } from "./marketplace-panel"
 import { profile } from "./profile-panel"
 import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
@@ -312,6 +313,7 @@ export function activate(context: ExtensionContext) {
     agentManager: () => agentManager.settings,
   })
   const profilePanel = profile({ context, server, directory })
+  const marketplacePanel = marketplace({ context, server, directory })
   const chatTarget = createChatTarget({ view, agentManager })
   registerCodeActions(context, chatTarget)
   registerTerminalActions(context, chatTarget)
@@ -381,6 +383,7 @@ export function activate(context: ExtensionContext) {
       await view.post({ type: "command", name: "history" })
     }),
     commands.registerCommand("kilo-code.v2.profile", () => profilePanel.open()),
+    commands.registerCommand("kilo-code.v2.marketplace", () => marketplacePanel.open()),
     // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
     // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
     commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
@@ -402,6 +405,7 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand("kilo-code.v2.settingsSearch", () => panel.open([{ search: true }])),
     panel,
     profilePanel,
+    marketplacePanel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", () => cycle("cycleAgentMode")),

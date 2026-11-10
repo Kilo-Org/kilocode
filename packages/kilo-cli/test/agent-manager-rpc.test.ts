@@ -36,7 +36,13 @@ const boot =
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-manager-rpc-")))
     await Bun.write(path.join(root, "repo", "placeholder.txt"), "hello")
     const directory = path.join(root, "repo")
-    const previous = { KILO_API_URL: process.env.KILO_API_URL, KILO_API_KEY: process.env.KILO_API_KEY }
+    const previous = {
+      KILO_API_URL: process.env.KILO_API_URL,
+      KILO_API_KEY: process.env.KILO_API_KEY,
+      KILO_AGENT_MANAGER_HOST: process.env.KILO_AGENT_MANAGER_HOST,
+    }
+    // The extension is the Agent Manager host, and only a host gets the tool that calls its RPC.
+    process.env.KILO_AGENT_MANAGER_HOST = "1"
     process.env.KILO_API_URL = backend.url
     delete process.env.KILO_API_KEY
     try {

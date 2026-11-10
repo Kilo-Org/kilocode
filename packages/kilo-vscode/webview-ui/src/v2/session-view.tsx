@@ -5,6 +5,9 @@ import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
+import { useLanguage } from "../context/language"
+import { focusPrompt } from "../utils/tab-navigation"
 import { useModelPreferences } from "../context/model-preferences"
 import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
@@ -29,6 +32,10 @@ import { createSandbox } from "./sandbox"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
+import { mergeCatalog, type SlashEntry } from "./slash"
+import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { createSlashCatalog } from "./slash-catalog"
+import { dispatchSlash } from "./slash-dispatch"
 
 export function SessionView(props: {
   session: string | undefined
@@ -41,6 +48,10 @@ export function SessionView(props: {
   onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
+  /** True for a session in an Agent Manager worktree, which can run /review worktree. */
+  worktree?: boolean
+  /** Opens a new session draft; the /new slash action is listed only when set. */
+  onNewSession?: () => void
   /** The row above the dock; receives whether the session has messages and the todo element it trails. */
   row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
   /** Shows the row before the first message too. */
@@ -71,6 +82,7 @@ export function SessionView(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
 }) {
   const v2 = useV2()
+  const language = useLanguage()
   const session = () => props.session
   const work = useWorkStyleOptional()
   // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
@@ -220,11 +232,9 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = async (
-    text: string,
-    mode: SendMode = "steer",
-    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
-  ) => {
+  // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
+  // question is dismissed, and a send that should stop the running model call stops it.
+  const begin = async (mode: SendMode) => {
     const key = draftKey()
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
@@ -251,7 +261,24 @@ export function SessionView(props: {
     const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
     const interrupt =
       running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
-    if (interrupt) await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
+    if (interrupt)
+      await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
+    return { id, gate, model }
+  }
+
+  // The prompt is admitted on the server; the Most used group counts sent prompts per model, as v1.
+  const prompted = (id: string, text: string, used: ModelRef | undefined) => {
+    if (used) preferences?.recordUsage(used.providerID, used.id)
+    props.onPrompted?.(id, text, used)
+    return true
+  }
+
+  const send = async (
+    text: string,
+    mode: SendMode = "steer",
+    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+  ) => {
+    const { id, gate, model } = await begin(mode)
     return v2.data.session
       .prompt({
         sessionID: id,
@@ -261,13 +288,87 @@ export function SessionView(props: {
         files: input?.items?.length ? toPromptFiles(input.items) : undefined,
         delivery: mode === "queue" ? "queue" : "steer",
       })
-      .then(() => {
-        const used = gate ? selection.attributed(id) : model
-        // The Most used group counts sent prompts per model, as v1.
-        if (used) preferences?.recordUsage(used.providerID, used.id)
-        props.onPrompted?.(id, text, used)
-        return true
+      .then(() => prompted(id, text, gate ? selection.attributed(id) : model))
+      .catch((err: unknown) => {
+        v2.report(err)
+        return false
       })
+  }
+
+  // Server commands and skills of the slash menu, from the cache of this location.
+  const catalog = createSlashCatalog({
+    command: v2.data.location.command,
+    skill: v2.data.location.skill,
+    on: v2.data.on,
+    report: v2.report,
+  })
+  onCleanup(catalog.dispose)
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status === "connected" && !props.readOnly) void catalog.load()
+    }),
+  )
+  // The selectors listen for these events, so a slash action opens the same picker as a click.
+  const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
+  const handlers = (): SlashHandlers => {
+    const id = session()
+    const start = props.onNewSession
+    return {
+      // The new tab remounts the composer that had focus, so the focus moves to the new composer after it mounts.
+      new: start
+        ? () => {
+            start()
+            requestAnimationFrame(focusPrompt)
+          }
+        : undefined,
+      sessions: props.onShowHistory,
+      models: picker("openModelPicker"),
+      agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
+      variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
+      compact: id ? () => void v2.data.session.compact({ sessionID: id }).catch(v2.report) : undefined,
+      caffeinate: () =>
+        getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
+      help: () => v2.open("https://kilo.ai/docs"),
+      marketplace: () => getVSCodeAPI().postMessage({ type: "openMarketplace" } satisfies ToHost as never),
+      settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
+      reload: () => void v2.api.location.reload().catch(v2.report),
+    }
+  }
+  const slashEntries = createMemo(() =>
+    mergeCatalog({
+      actions: slashActions(handlers(), language.t),
+      // Goal mode needs its own composer state and banner, which this client does not have yet.
+      commands: catalog.commands().filter((command) => command.name !== "goal"),
+      nested: reviewScopes(catalog.commands(), props.worktree === true),
+      skills: catalog.skills(),
+    }),
+  )
+
+  const runSlash = async (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => {
+    const { id, gate } = await begin(mode)
+    const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
+    // A command with its own model runs on that model, which the server switches the session to.
+    const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
+    return dispatchSlash(
+      {
+        entry,
+        args,
+        files: items.length ? toPromptFiles(items) : undefined,
+        delivery: mode === "queue" ? "queue" : "steer",
+      },
+      {
+        session: async () => {
+          await selection.created(id)
+          await gate
+          return id
+        },
+        selected: (sessionID) => selection.attributed(sessionID),
+        switchModel: (input) => v2.api.session.switchModel(input),
+        command: (input) => v2.api.session.command(input),
+        prompt: (input) => v2.data.session.prompt(input),
+      },
+    )
+      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : selection.attributed(id)))
       .catch((err: unknown) => {
         v2.report(err)
         return false
@@ -365,6 +466,7 @@ export function SessionView(props: {
                 onReviewAppendReady={props.onReviewAppendReady}
                 onReferenceReady={props.onReferenceReady}
                 onComposerReady={props.onComposerReady}
+                slash={{ entries: slashEntries, run: runSlash }}
                 selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                 autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                 sandbox={sandboxControl}

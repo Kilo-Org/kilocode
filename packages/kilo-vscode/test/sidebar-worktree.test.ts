@@ -44,7 +44,7 @@ describe("sidebar worktree host messages", () => {
   it("forwards move progress to the sidebar", async () => {
     const { worktree, post, posts, continueAction } = setup()
 
-    expect(routeWorktreeMessage({ type: "continueInWorktree", sessionId: "ses_1" }, worktree, post)).toBe(true)
+    expect(routeWorktreeMessage({ type: "agentManager.continueInWorktree", sessionId: "ses_1" }, worktree, post)).toBe(true)
     await flush()
 
     expect(continueAction).toHaveBeenCalledWith("ses_1", expect.any(Function))
@@ -55,7 +55,7 @@ describe("sidebar worktree host messages", () => {
   it("reports a missing worktree bridge", () => {
     const { post, posts } = setup()
 
-    expect(routeWorktreeMessage({ type: "continueInWorktree", sessionId: "ses_1" }, undefined, post)).toBe(true)
+    expect(routeWorktreeMessage({ type: "agentManager.continueInWorktree", sessionId: "ses_1" }, undefined, post)).toBe(true)
 
     expect(posts).toEqual([
       { type: "continueInWorktreeProgress", status: "error", error: "Continue in Worktree is not available" },

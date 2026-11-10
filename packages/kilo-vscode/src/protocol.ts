@@ -118,10 +118,13 @@ export type SpeechToTextStatus = {
  * creation and movement.
  */
 export type SidebarWorktree =
-  | { type: "continueInWorktree"; sessionId: string }
+  | { type: "agentManager.continueInWorktree"; sessionId: string }
   | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string }
   | { type: "agentManager.requestRepoInfo" }
   | { type: "openAdvancedWorktree" }
+
+/** Toggles Keep Awake from the composer slash menu. The Agent Manager provider owns the state. */
+export type AgentManagerCaffeination = { type: "agentManager.toggleCaffeination" }
 
 export type ToHost =
   | Request
@@ -134,6 +137,7 @@ export type ToHost =
   | Speech
   | Indexing
   | SidebarWorktree
+  | AgentManagerCaffeination
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
@@ -266,6 +270,7 @@ export type Ui =
   | { type: "saveImage"; dataUrl: string; filename: string }
   | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
+  | { type: "openMarketplace" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }

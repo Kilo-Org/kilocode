@@ -90,6 +90,7 @@ import {
 import {
   createFromSidebar,
   continueFromSidebar,
+  continueInActiveProject,
   diagnose,
   focusPanel,
   getSessionDirectories,
@@ -624,6 +625,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.postCaffeination()
   }
 
+  public async toggleCaffeination(): Promise<void> {
+    const state = this.caffeination.getState()
+    await this.setCaffeination(!(state.enabled || state.active))
+  }
+
   public postCaffeination(): void {
     this.postToWebview({ type: "agentManager.caffeination", ...this.caffeination.getState() })
   }
@@ -1137,6 +1143,14 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void> {
     return this.inWorkspaceProject(() => continueFromSidebar(this.api(), sessionId, progress))
+  }
+
+  /** Continues a session of the project the Agent Manager panel shows in a new worktree of that project. */
+  public continueInWorktree(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void> {
+    return continueInActiveProject(this.api(), sessionId, progress)
   }
 
   public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {

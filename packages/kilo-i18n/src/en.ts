@@ -85,6 +85,8 @@ export const dict = {
   "marketplace.badge.skills": "Includes skills",
   "marketplace.card.by": "by {{author}}",
   "marketplace.install.method": "Installation Method",
+  "marketplace.install.agent.mode": "mode: {{mode}}",
+  "marketplace.install.agent.steps": "steps: {{steps}}",
   "marketplace.install.parameters": "Parameters",
   "marketplace.install.optional": "(optional)",
   "marketplace.scope.project": "project",
@@ -105,6 +107,27 @@ export const dict = {
   "marketplace.contribute.cta": "Contribute on GitHub",
   "marketplace.migration.notice":
     "Modes have been replaced by agents. If you previously installed marketplace modes, please remove and reinstall them as agents to migrate to the new format.",
+  "marketplace.intro.v2": "Install reusable agents, skills, and MCP tools for one project or every project.",
+  "marketplace.contribute.prompt.v2": "Missing a skill, agent, or MCP server?",
+  "marketplace.status.missing": "Missing files",
+  "marketplace.status.modified": "Modified locally",
+  "marketplace.status.incomplete": "Incomplete",
+  "marketplace.status.recovering": "Recovering",
+  "marketplace.card.repair": "Repair",
+  "marketplace.card.reinstall": "Reinstall",
+  "marketplace.card.modified": "Local changes are protected; remove it manually if you no longer want it.",
+  "marketplace.installed.empty": "No marketplace items are installed.",
+  "marketplace.install.config": "Configuration file",
+  "marketplace.install.server": "Server configuration",
+  "marketplace.install.secrets": "Secrets",
+  "marketplace.install.secret.warning": "These values are stored as plaintext in the MCP configuration: {{secrets}}.",
+  "marketplace.install.secret.project":
+    "Do not commit this configuration if it contains secrets; use an environment variable instead.",
+  "marketplace.install.agent.warning":
+    "This agent adds instructions and permissions that apply whenever it runs. Review them before installing.",
+  "marketplace.install.skill.warning": "Skills add instructions and resources Kilo loads when a task needs them.",
+  "marketplace.install.warnings": "Installation warnings",
+  "marketplace.remove.keepsSignIn": "Any existing sign-in for this server is kept.",
 
   // Plan follow-up question shown after plan_exit. The English strings here must match
   // the canonical `label`/`header`/`question` sent by the backend — those canonical labels

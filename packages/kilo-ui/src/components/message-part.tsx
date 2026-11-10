@@ -49,6 +49,7 @@ import { TextShimmer } from "./text-shimmer"
 import { ToolApprovalProvider, resolveToolApproval } from "./tool-approval"
 import { useToolChildSession } from "./tool-child-session"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
+import { inputChanges, streamedTool, streamInterval, type ChangeCount } from "./tool-stream"
 import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
 import { Tooltip } from "./tooltip"
 
@@ -97,6 +98,8 @@ export type ContentPartProps = {
   forceOpen?: boolean
   /** A recovery action for a failed tool call, such as a link to the settings that own the failure. */
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
+  /** Instruction files the read loaded beside this message. */
+  loadedFiles?: readonly string[]
 }
 
 export function ContentPart(props: ContentPartProps) {
@@ -137,6 +140,7 @@ export function ContentPart(props: ContentPartProps) {
             actions={props.actions}
             hideDetails={props.hideDetails}
             forceOpen={props.forceOpen}
+            loadedFiles={props.loadedFiles}
             errorAction={props.errorAction}
           />
         )}
@@ -418,6 +422,8 @@ export type ToolProps = {
   partID: string
   output: string
   status: string
+  /** Provisional additions and deletions from a streamed edit, write, or patch input; the final diff replaces them. */
+  liveChanges?: ChangeCount
   /** When the call was created, started running and finished. */
   time?: SessionMessageAssistantTool["time"]
   attachments: ToolFileContent[]
@@ -427,6 +433,8 @@ export type ToolProps = {
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  /** Instruction files the read loaded, already resolved by the client. */
+  loadedFiles?: readonly string[]
 }
 
 const renderers: Record<string, Component<ToolProps>> = {}
@@ -449,6 +457,7 @@ function ToolContent(props: {
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  loadedFiles?: readonly string[]
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }) {
   const i18n = useI18n()
@@ -457,9 +466,28 @@ function ToolContent(props: {
     const value = state()
     return "metadata" in value ? (value.metadata ?? {}) : {}
   }
+  // Parsing the accumulated input is linear in its size, so the stream throttles
+  // and widens its interval as the input grows.
+  const raw = () => {
+    const value = state()
+    return value.status === "streaming" ? value.input : ""
+  }
+  const streamText = createThrottledValue(raw, () => streamInterval(raw().length))
+  const streamed = createMemo(() => {
+    const value = state()
+    if (value.status !== "streaming") return undefined
+    return streamedTool(props.item.name, streamText())
+  })
   const input = (): Record<string, unknown> => {
     const value = state()
-    return value.status === "streaming" ? {} : value.input
+    if (value.status !== "streaming") return value.input
+    return streamed()?.input ?? {}
+  }
+  const liveChanges = (): ChangeCount | undefined => {
+    const value = state()
+    if (value.status === "streaming") return streamed()?.changes
+    if (value.status === "running") return inputChanges(props.item.name, value.input)
+    return undefined
   }
   const attachments = () => {
     const value = state()
@@ -488,6 +516,7 @@ function ToolContent(props: {
                 partID={props.item.id}
                 output={toolOutput(props.item)}
                 status={state().status === "streaming" ? "pending" : state().status}
+                liveChanges={liveChanges()}
                 time={props.item.time}
                 attachments={attachments()}
                 directory={props.directory}
@@ -496,6 +525,7 @@ function ToolContent(props: {
                 actions={props.actions}
                 hideDetails={props.hideDetails}
                 forceOpen={props.forceOpen}
+                loadedFiles={props.loadedFiles}
               />
             </ToolApprovalProvider>
           }
@@ -643,6 +673,20 @@ ToolRegistry.register({
             />
           }
         />
+        <Show when={props.loadedFiles?.length}>
+          <For each={props.loadedFiles}>
+            {(file) => (
+              <div
+                data-component="tool-loaded-file"
+                classList={{ clickable: !!props.actions?.openFile }}
+                onClick={props.actions?.openFile ? () => props.actions?.openFile?.(file) : undefined}
+              >
+                <Icon name="enter" size="small" />
+                <span>{`${i18n.t("ui.tool.loaded")} ${relativizeProjectPath(file, props.directory)}`}</span>
+              </div>
+            )}
+          </For>
+        </Show>
         <Show when={images().length}>
           <div data-slot="tool-read-images">
             <For each={images()}>
@@ -1167,6 +1211,8 @@ function FileTitle(props: {
   directory?: string
   changes?: FileDiffInfo
   onOpen?: (event: MouseEvent) => void
+  /** Shown when the path is not known yet, such as a file written before its path streams. */
+  fallback?: JSX.Element
 }) {
   return (
     <div data-slot="message-part-title-area">
@@ -1175,6 +1221,7 @@ function FileTitle(props: {
           <TextShimmer text={props.title} active={props.pending} />
         </span>
         <ToolFileMeta path={props.path} directory={props.directory} changes={props.changes} onOpen={props.onOpen} />
+        <Show when={!props.path}>{props.fallback}</Show>
       </div>
     </div>
   )
@@ -1227,6 +1274,8 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => diff()?.file || string(props.input.path)
+    const live = () => (busy(props.status) ? props.liveChanges : undefined)
+    const changes = () => diff() ?? live()
     // A plain function, not `createMemo`: a memo parses the patch with Pierre
     // on render, even while the card stays collapsed. Only the deferred body
     // and the diff action read it.
@@ -1276,8 +1325,9 @@ ToolRegistry.register({
                 pending={busy(props.status)}
                 path={path()}
                 directory={props.directory}
-                changes={diff()}
+                changes={changes()}
                 onOpen={props.actions?.openFile ? openFile : undefined}
+                fallback={<Show when={live()}>{(counts) => <DiffChanges changes={counts()} />}</Show>}
               />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
@@ -1313,6 +1363,8 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => string(props.input.path)
+    const live = () => (busy(props.status) ? props.liveChanges : undefined)
+    const changes = () => diff() ?? live()
     // A write that leaves the file as it was has an empty diff: show only the header.
     const unchanged = () => {
       const file = diff()
@@ -1361,8 +1413,9 @@ ToolRegistry.register({
                 pending={busy(props.status)}
                 path={path()}
                 directory={props.directory}
-                changes={diff()}
+                changes={changes()}
                 onOpen={props.actions?.openFile ? openFile : undefined}
+                fallback={<Show when={live()}>{(counts) => <DiffChanges changes={counts()} />}</Show>}
               />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
@@ -1416,6 +1469,8 @@ ToolRegistry.register({
     const component = useFileComponent()
     const list = createMemo(() => fileDiffs(props.metadata.files))
     const single = () => (list().length === 1 ? list()[0] : undefined)
+    // Before the final per-file diffs arrive, one provisional count covers the whole patch text.
+    const live = () => (list().length || !busy(props.status) ? undefined : props.liveChanges)
     const [expanded, setExpanded] = createSignal<string[]>([])
     const [seeded, setSeeded] = createSignal(false)
     createEffect(() => {
@@ -1524,6 +1579,13 @@ ToolRegistry.register({
                     <div data-slot="message-part-tool-changes">
                       <DiffChanges changes={list()} />
                     </div>
+                  </Show>
+                  <Show when={live()}>
+                    {(changes) => (
+                      <div data-slot="message-part-tool-changes">
+                        <DiffChanges changes={changes()} />
+                      </div>
+                    )}
                   </Show>
                 </div>
               </div>

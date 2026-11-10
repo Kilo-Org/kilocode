@@ -99,6 +99,8 @@ export function environment(base: NodeJS.ProcessEnv, extra: Record<string, strin
     KILO_CLIENT: "vscode",
     // The indexing plugin gates on machine-local project consent only when the server runs for VS Code.
     KILO_PLATFORM: "vscode",
+    // This extension answers the Agent Manager RPC, so it advertises the agent_manager tool.
+    KILO_AGENT_MANAGER_HOST: "1",
     ...extra,
   }
 }
