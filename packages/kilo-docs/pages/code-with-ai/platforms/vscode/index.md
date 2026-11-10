@@ -31,6 +31,7 @@ Key features include:
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
 - **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
+- **[Documents tab](/docs/code-with-ai/agents/chat-interface)** — Markdown references open in a rendered, interactive document tab with image previews, copy actions, and line comments
 - **[Notifications](/docs/getting-started/settings/notifications)** - Choose sounds, VS Code alerts, or OS notifications when a session needs attention
 - **[Keep Awake](/docs/getting-started/settings/keep-awake)** - Optionally prevent system sleep while agents work in a local VS Code window
 - **Transcript export:** Save complete local session transcripts as Markdown files
@@ -67,6 +68,18 @@ Stopping the main session with **Stop** or `Esc` ends its current response but l
 Send a message while Kilo is working to queue it for processing in order. To revise a queued message, clear the prompt input and click the message's edit icon. This removes it from the queue and restores its text, images, and file references to the input. Sending it again adds it to the end of the queue.
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
+
+## Reviewing changes
+
+The **Changes** button above the prompt shows the working tree totals (`+N -M`) when files have changed and opens the **Changes** editor tab. The tab opens on the **Branch** diff, which compares your branch with its base branch and includes staged, unstaged, untracked, and local commit changes. Use the source picker to switch to **Staged**, **Unstaged**, or **Session**; the **Session** scope collects the files Kilo changed during the current session.
+
+Each completed turn that changed files shows a **Modified N files** row with addition and deletion bars. Select the row to open the diff for that turn only.
+
+In the diff viewer:
+
+- Use the layout toggle to switch between unified and split view. Kilo remembers your choice in the `kilo-code.new.diff.style` setting.
+- For Markdown files, use the eye/code toggle to switch between rendered Markdown and the raw diff. See [Markdown Diff Rendering](/docs/getting-started/settings#markdown-diff-rendering).
+- Add an inline comment on a changed line and choose **Send to Kilo**. The comment appears as a card above the prompt and is included when you send your next message.
 
 ## Multi-root workspaces
 
