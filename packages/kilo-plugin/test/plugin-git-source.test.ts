@@ -425,7 +425,10 @@ describe("git plugin loader hook", () => {
 
   test("names a relative local repo by its canonical path", async () => {
     await using fixture = await repo({ "package.json": plugin, "server.js": source })
-    const resolved = await hook(`git:${path.relative(process.cwd(), fixture.path)}`, true)
+    // A relative spec is written with forward slashes on every platform; another drive stays absolute.
+    const relative = path.relative(process.cwd(), fixture.path).replaceAll("\\", "/")
+    const spec = relative.startsWith(".") || /^[A-Za-z]:\//.test(relative) ? relative : `./${relative}`
+    const resolved = await hook(`git:${spec}`, true)
     expect(resolved).toMatchObject({ target: expect.any(String) })
     if (!resolved || !("target" in resolved)) return
     // A relative repo must still name the absolute directory a policy denies, not a cwd-dependent spelling.
