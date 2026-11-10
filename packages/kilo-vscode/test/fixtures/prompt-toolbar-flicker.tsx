@@ -172,8 +172,8 @@ function Draft(props: { expose: (sandbox: ReturnType<typeof createSandbox>) => v
   props.expose(sandbox)
   return null
 }
-const draft = (expose: (sandbox: ReturnType<typeof createSandbox>) => void) =>
-  isolate({ child: () => <Draft expose={expose} /> })
+const draft = (expose: (sandbox: ReturnType<typeof createSandbox>) => void, directory = "/workspace") =>
+  isolate({ child: () => <Draft expose={expose} />, directory })
 
 // Every icon the toolbar shows, in order, with the state that makes it look different between frames.
 const icons = (root: Element) =>
@@ -197,6 +197,22 @@ const settleHost = async () => {
   await wait(120)
   await window.happyDOM.waitUntilComplete()
 }
+
+// The directory cache is capped. Mounting a 21st worktree evicts the one that has gone longest without a read, so a
+// later return to it reads the sandbox state again.
+const capped: Array<ReturnType<typeof createSandbox>> = []
+const mountCached = async (directory: string) => {
+  const mount = draft((sandbox) => capped.push(sandbox), directory)
+  await wait(0)
+  mount.dispose()
+}
+for (let index = 0; index < 20; index++) await mountCached(`/workspace/cap-${index}`)
+await mountCached("/workspace/cap-20")
+const evicted = draft((sandbox) => capped.push(sandbox), "/workspace/cap-0")
+assert.equal(capped.at(-1)!.enabled(), false, "the 21st directory evicts the oldest cache entry")
+await wait(0)
+assert.equal(capped.at(-1)!.enabled(), true, "the evicted directory reads its state again")
+evicted.dispose()
 
 // The first worktree needs the real round trips: the speech provider debounces its request.
 const first = isolate({ child: () => <Composer session="ses_a" /> })

@@ -80,12 +80,11 @@ export function createSandbox(input: {
     const current = remembered.get(directory) ?? { statuses: {} }
     const shared = mergeStatus(current.statuses, sessionID, value)
     if (shared === current.statuses) return
-    const entries = Object.entries(shared)
-    remember({
-      statuses: Object.fromEntries(
-        entries.length > MAX_STATUSES ? entries.slice(entries.length - MAX_STATUSES) : entries,
-      ),
-    })
+    // Re-insert the updated session last, so the status cap trims the least recently read entry instead of the
+    // session this composer still shows.
+    const entries = Object.entries(shared).filter(([key]) => key !== sessionID)
+    entries.push([sessionID, value])
+    remember({ statuses: Object.fromEntries(entries.slice(-MAX_STATUSES)) })
   }
 
   const waiters: (() => void)[] = []
