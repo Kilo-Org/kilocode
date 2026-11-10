@@ -8,6 +8,7 @@ import {
   l10n,
   languages,
   ProgressLocation,
+  version,
   window,
   workspace,
   type ExtensionContext,
@@ -159,6 +160,7 @@ export function activate(context: ExtensionContext) {
       ...settingsEnvironment({
         claudeCodeCompat: values.claudeCodeCompat === true,
         extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
+        editor: `${env.appName} ${version}`,
       }),
       ...browser,
       ...notebook,

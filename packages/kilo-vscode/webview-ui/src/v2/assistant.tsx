@@ -31,6 +31,8 @@ export function AssistantMessage(props: {
   instructionFiles?: (partID: string) => readonly string[] | undefined
   /** The task-timeline bar under the pointer or keyboard focus, if any. */
   highlight?: () => TimelineHighlight | undefined
+  /** Whether the current transcript search match is in this row. */
+  searchActive?: boolean
   /** The message content rendered by this row. A large message is split across several rows. */
   parts?: SessionMessageAssistant["content"]
   /** Index of the first rendered content item in the message. */
@@ -131,6 +133,7 @@ export function AssistantMessage(props: {
       data-session={props.session}
       data-row-key={props.rowKey}
       data-live={!done() ? "" : undefined}
+      data-search-active={props.searchActive ? "" : undefined}
     >
       <div class="vscode-session-turn-assistant">
         <For each={parts()}>

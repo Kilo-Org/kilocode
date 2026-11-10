@@ -390,6 +390,11 @@
         "icon": "$(history)"
       },
       {
+        "command": "kilo-code.v2.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code (v2)"
+      },
+      {
         "command": "kilo-code.v2.profile",
         "title": "Profile",
         "category": "Kilo Code (v2)",
@@ -772,6 +777,12 @@
         "command": "kilo-code.v2.agentManager.search",
         "key": "ctrl+f",
         "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
+      },
+      {
+        "command": "kilo-code.v2.agentManager.search",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
         "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
       },
       {
