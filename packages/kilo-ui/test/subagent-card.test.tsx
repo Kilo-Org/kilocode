@@ -56,6 +56,7 @@ test("a background subagent never offers continue in background", () => {
   mounted.push(card)
 
   expect(action(card, "background")).toBeNull()
+  expect(card.host.textContent).not.toContain("Background agent")
   // Stop follows the child session status, which this card has no source for, so the completed tool part hides it.
   expect(action(card, "stop")).toBeNull()
 })

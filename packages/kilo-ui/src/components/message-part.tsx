@@ -1045,9 +1045,6 @@ ToolRegistry.register({
             <TextShimmer text={label()} active={busy(props.status)} />
           </span>
           <Show when={detail()}>{(text) => <span data-slot="basic-tool-tool-subtitle">{text()}</span>}</Show>
-          <Show when={background()}>
-            <span data-slot="task-tool-background">{i18n.t("task.backgroundAgents.untitled")}</span>
-          </Show>
           {approvalLine()}
         </div>
         <Show when={canStop()}>
