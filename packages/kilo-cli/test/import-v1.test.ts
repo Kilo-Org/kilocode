@@ -173,6 +173,17 @@ test("refuses a Kilo v1 store as the target, so a naming mistake cannot migrate 
   ).toBe(before)
 })
 
+test("the manual import command still adopts an earlier kilo2 store and ignores the v1 store", async () => {
+  const { dir, data } = await root()
+  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  const earlier = new SQLite(path.join(data, "opencode.db"))
+  earlier.run("CREATE TABLE session_v2 (id TEXT)")
+  earlier.run("INSERT INTO session_v2 VALUES ('ses_kilo2')")
+  earlier.close()
+  const file = await KiloDatabase.select({}, { data, channel: "latest", v1: false })
+  read(file, (db) => expect(db.query("SELECT id FROM session_v2").all()).toEqual([{ id: "ses_kilo2" }]))
+})
+
 test("the manual import command can skip the automatic adoption", async () => {
   const { dir, data } = await root()
   await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))

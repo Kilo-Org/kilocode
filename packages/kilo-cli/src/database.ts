@@ -28,8 +28,8 @@ const release = ["latest", "beta", "prod"]
 /**
  * Sets OPENCODE_DB to the Kilo database file and returns it. `KILO2_DB` (copied to OPENCODE_DB by ./env) wins, and a
  * child process keeps the file of its parent. `KILO_DISABLE_CHANNEL_DB` puts every channel in `kilo2.db`.
- * `KILO_DISABLE_V1_IMPORT` starts a new database without the Kilo v1 sessions. `v1: false` skips only the automatic v1
- * import, which the `import v1` command does itself with its own source.
+ * `KILO_DISABLE_V1_IMPORT` starts a new database without the Kilo v1 sessions. `v1: false` skips only the Kilo v1
+ * source, which the `import v1` command reads itself; an earlier kilo2 build file is still adopted.
  */
 export async function select(
   env: Record<string, string | undefined>,
