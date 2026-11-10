@@ -93,6 +93,7 @@ export function recommend(ctx: HintContext): Hint | undefined {
   if (ctx.busy) return { binding: ctx.queue, label: "queue" }
 
   if (!am) return sessions(kb, am, ctx.tabs)
-  // Nothing to review and nowhere else to go: opening another worktree is the way to run a second task.
-  return review(kb, am) ?? sessions(kb, am) ?? hint(kb.newWorktree, "newWorktree")
+  // Nothing to review and nowhere else to go: creating a worktree is the way to run a second task. Same key as the
+  // "New worktree" row of the empty Agent Manager session, so the two places that are visible together agree.
+  return review(kb, am) ?? sessions(kb, am) ?? hint(kb.quickWorktree, "newWorktree")
 }

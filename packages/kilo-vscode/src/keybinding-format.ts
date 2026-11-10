@@ -141,7 +141,7 @@ export const PROMPT_COMMANDS: Record<string, string> = {
   "kilo-code.v2.agentManager.nextSession": "nextSession",
   "kilo-code.v2.agentManager.toggleDiff": "toggleDiff",
   "kilo-code.v2.agentManager.openPR": "openPR",
-  "kilo-code.v2.agentManager.newWorktree": "newWorktree",
+  "kilo-code.v2.agentManager.quickWorktree": "quickWorktree",
   ...Object.fromEntries(
     Array.from({ length: 9 }, (_, index) => [`kilo-code.v2.agentManager.jumpTo${index + 1}`, `jumpTo${index + 1}`]),
   ),

@@ -205,7 +205,7 @@ export const dict = {
   "prompt.shortcutHint.queue": "to queue",
   "prompt.shortcutHint.changes": "to review changes",
   "prompt.shortcutHint.pr": "to open the PR",
-  "prompt.shortcutHint.newWorktree": "to open another worktree",
+  "prompt.shortcutHint.newWorktree": "to start a new worktree",
   "prompt.shortcutHint.mode": "Next mode",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Continue",
