@@ -66,6 +66,22 @@ describe("createDialogPreferences", () => {
     unknownAccount.preferences.dispose()
   })
 
+  test("a Kilo allocation submits while the account is unknown", () => {
+    // An allocation is a fresh pick from this connection's catalog, so the account read does not gate it. Otherwise
+    // Compare models would stay unsubmittable forever when the account read fails.
+    const { preferences } = dialog({ ready: false })
+    const allocations = new Map([["kilo/a", { providerID: "kilo", modelID: "a", name: "Kilo A", count: 1 }]])
+    expect(preferences.selection.canSubmit(allocations)).toBe(true)
+    preferences.dispose()
+  })
+
+  test("an allocation outside the catalog is rejected", () => {
+    const { preferences } = dialog()
+    const allocations = new Map([["gone/m", { providerID: "gone", modelID: "m", name: "Gone", count: 1 }]])
+    expect(preferences.selection.canSubmit(allocations)).toBe(false)
+    preferences.dispose()
+  })
+
   test("records the pick for the next new session", () => {
     const { preferences, picks, efforts } = dialog()
     preferences.selectModel("x", "b")

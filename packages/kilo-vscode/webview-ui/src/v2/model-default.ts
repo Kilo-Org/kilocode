@@ -13,10 +13,12 @@ const KILO_AUTO: Ref = { providerID: KILO, id: "kilo-auto/free" }
  * team account, the most recent pick that is still in the catalog, then Kilo Auto Free (the server default when the
  * catalog no longer has it). Each candidate must still be in the catalog (`valid`).
  *
- * A Kilo candidate is not trusted before the account is known, and the recents are not used before the preferences
- * arrive, so a dialog cannot open on the server default and then jump to the recent pick. Neither wait can block the
- * resolver: the server default is resolved for this scope and stands in while the account is unknown, and a team
- * account never reads the recents.
+ * Two waits, neither of which can block for good: a Kilo candidate is not trusted before the account is known, and a
+ * personal account does not use the recents before the preferences arrive. While the account is unknown the server
+ * default stands in, and it is replaced by the recent pick once the account resolves to Personal, because the account
+ * read can fail and the resolver must still answer. A team account never reads the recents, so it does not wait for
+ * them. A known personal account with incomplete preferences waits, so a pick can never appear after the dialog has
+ * opened on another model.
  */
 export function initialModel(input: {
   /** v1 `Pick(scope, agent)`: a pick in this composer or dialog sticks for the next new session of that agent. */

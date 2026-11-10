@@ -188,7 +188,7 @@ export const NewWorktreeDialog: Component<{
   void props.store.data.location.config.sync().catch(() => undefined)
   // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
   // default, the most recent pick, Kilo Auto Free, then the server default. The server default stands in while the
-  // account or the recents are unknown, so the dialog can always submit.
+  // account is unknown, so the dialog can still submit then; a known personal account waits for the recents.
   const defaultFor = (agent: string) =>
     initialModel({
       agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,

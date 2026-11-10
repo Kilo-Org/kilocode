@@ -33,7 +33,10 @@ export function createDialogModels(opts: {
       (entry) =>
         Number.isInteger(entry.count) &&
         entry.count > 0 &&
-        valid(entry) &&
+        // An allocation is an explicit pick from the catalog of this connection, not a saved choice from another
+        // account, so the account read does not gate it. Otherwise a failed authStatus would keep Compare models
+        // permanently unsubmittable.
+        opts.valid(entry) &&
         (entry.variant === undefined || opts.variants(entry).includes(entry.variant)),
     )
   }
