@@ -36,6 +36,7 @@ import { mergeCatalog, type SlashEntry } from "./slash"
 import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
+import { TranscriptSearchProvider } from "./transcript-search"
 
 export function SessionView(props: {
   session: string | undefined
@@ -396,85 +397,87 @@ export function SessionView(props: {
   })
 
   return (
-    <div class="chat-view">
-      {props.tabStrip}
-      <Show when={session()} keyed>
-        {(id) => <TaskHeader sessionID={id} />}
-      </Show>
-      <div class="chat-messages-wrapper">
-        <ToolChildSessionProvider value={childSessions}>
-          <div class="chat-messages">
-            <MessageList
-              session={session()}
-              actions={props.actions}
-              selection={selection}
-              onSelectSession={(id) => props.actions.openSession?.(id)}
-              onShowHistory={props.onShowHistory}
-              onForkMessage={running() ? undefined : props.onForkMessage}
-              empty={props.empty}
-              onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-              onViewTurnChanges={props.onViewTurnChanges}
-              pending={pending}
-            />
-          </div>
-        </ToolChildSessionProvider>
-      </div>
-      <Show when={!props.readOnly}>
-        <div class="chat-input">
-          <Show when={v2.handshake() || v2.error()}>
-            <div class="error-card" role="alert" data-component="v2-error">
-              <span>{v2.handshake() || v2.error()}</span>
-              <button class="error-card-dismiss" onClick={() => v2.setError("")}>
-                x
-              </button>
-            </div>
-          </Show>
-          <Show when={permissions()[0]} keyed>
-            {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
-          </Show>
-          <Show when={forms()[0]} keyed>
-            {(form) => <QuestionDock form={form} />}
-          </Show>
-          <SessionDock
-            session={session()}
-            blocked={dockBlocked()}
-            actions={(todos) => props.row?.(hasMessages(), todos)}
-            hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
-            status={working.status()}
-            submitting={working.submitting()}
-            timing={working.timing()}
-            text={working.text()}
-            retry={working.retry()}
-            onCancel={stop}
-            onScrollToBottom={() => scrollToBottom?.()}
-          />
-          <Show when={draftKey()} keyed>
-            {(key) => (
-              <PromptInput
-                draftKey={key}
+    <TranscriptSearchProvider>
+      <div class="chat-view">
+        {props.tabStrip}
+        <Show when={session()} keyed>
+          {(id) => <TaskHeader sessionID={id} />}
+        </Show>
+        <div class="chat-messages-wrapper">
+          <ToolChildSessionProvider value={childSessions}>
+            <div class="chat-messages">
+              <MessageList
                 session={session()}
-                running={running()}
-                disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
-                blocked={blocked()}
-                questioning={questioning()}
-                onSend={send}
-                onStop={stop}
-                onAppendReady={(append) => {
-                  composer = append
-                  props.onAppendReady?.(append)
-                }}
-                onReviewAppendReady={props.onReviewAppendReady}
-                onReferenceReady={props.onReferenceReady}
-                onComposerReady={props.onComposerReady}
-                slash={{ entries: slashEntries, run: runSlash }}
-                selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-                autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
-                sandbox={sandboxControl}
+                actions={props.actions}
+                selection={selection}
+                onSelectSession={(id) => props.actions.openSession?.(id)}
+                onShowHistory={props.onShowHistory}
+                onForkMessage={running() ? undefined : props.onForkMessage}
+                empty={props.empty}
+                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                onViewTurnChanges={props.onViewTurnChanges}
+                pending={pending}
               />
-            )}
-          </Show>
+            </div>
+          </ToolChildSessionProvider>
         </div>
-      </Show>
-    </div>
+        <Show when={!props.readOnly}>
+          <div class="chat-input">
+            <Show when={v2.handshake() || v2.error()}>
+              <div class="error-card" role="alert" data-component="v2-error">
+                <span>{v2.handshake() || v2.error()}</span>
+                <button class="error-card-dismiss" onClick={() => v2.setError("")}>
+                  x
+                </button>
+              </div>
+            </Show>
+            <Show when={permissions()[0]} keyed>
+              {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
+            </Show>
+            <Show when={forms()[0]} keyed>
+              {(form) => <QuestionDock form={form} />}
+            </Show>
+            <SessionDock
+              session={session()}
+              blocked={dockBlocked()}
+              actions={(todos) => props.row?.(hasMessages(), todos)}
+              hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
+              status={working.status()}
+              submitting={working.submitting()}
+              timing={working.timing()}
+              text={working.text()}
+              retry={working.retry()}
+              onCancel={stop}
+              onScrollToBottom={() => scrollToBottom?.()}
+            />
+            <Show when={draftKey()} keyed>
+              {(key) => (
+                <PromptInput
+                  draftKey={key}
+                  session={session()}
+                  running={running()}
+                  disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                  blocked={blocked()}
+                  questioning={questioning()}
+                  onSend={send}
+                  onStop={stop}
+                  onAppendReady={(append) => {
+                    composer = append
+                    props.onAppendReady?.(append)
+                  }}
+                  onReviewAppendReady={props.onReviewAppendReady}
+                  onReferenceReady={props.onReferenceReady}
+                  onComposerReady={props.onComposerReady}
+                  slash={{ entries: slashEntries, run: runSlash }}
+                  selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+                  autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
+                  sandbox={sandboxControl}
+                />
+              )}
+            </Show>
+          </div>
+        </Show>
+      </div>
+    </TranscriptSearchProvider>
   )
 }

@@ -84,6 +84,12 @@ export function Chat() {
   v2.onCommand((name) => {
     if (name === "newSession") startSession()
     if (name === "history") setView("history")
+    if (name === "focusSearch") {
+      setView("chat")
+      // A search request only reaches the session header while the chat is the
+      // visible view; it mounts after the switch, so dispatch on the next frame.
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusTranscriptSearch")))
+    }
     if (name === "showOpenTabs") {
       setView("chat")
       window.dispatchEvent(new Event("showOpenTabs"))
