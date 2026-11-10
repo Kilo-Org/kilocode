@@ -1,9 +1,11 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.active.ActiveDeleteOptions
 import ai.kilocode.client.ui.active.activeDeleteContent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBLabel
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JButton
@@ -25,6 +27,25 @@ class ActiveListDeletePopupTest : BasePlatformTestCase() {
         button.doClick()
         assertEquals(1, hides.size)
         assertEquals(listOf(false), confirms)
+    }
+
+    fun `test Cloud workspace deletion separates the question from the consequences`() {
+        val content = activeDeleteContent(
+            ActiveDeleteOptions(
+                message = KiloBundle.message("hosted.workspace.delete.message"),
+                detail = KiloBundle.message("hosted.workspace.delete.detail"),
+            ),
+            hide = {},
+            confirm = {},
+        )
+
+        assertEquals(
+            listOf(
+                "Delete this Cloud workspace?",
+                "All sessions and Cloud files will be removed. Active work will be terminated. This cannot be undone.",
+            ),
+            components(content).filterIsInstance<JBLabel>().map { it.text },
+        )
     }
 
     fun `test delete content requires gate confirmation`() {

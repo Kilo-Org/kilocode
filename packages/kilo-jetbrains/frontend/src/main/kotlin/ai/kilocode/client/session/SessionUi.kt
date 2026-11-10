@@ -3,6 +3,7 @@ package ai.kilocode.client.session
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.reloadCoreSettings
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.client.app.KiloMcpAuthService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -178,10 +179,14 @@ class SessionUi(
     private val app = app
     private val sessions = sessions
     private val workspace = workspace
+    private val hostedRef = ref is SessionRef.Hosted
     private var opening = ref != null
     private var pending = false
-    private var preparation: String? = null
+    private var preparation: String? =
+        if (ref is SessionRef.Hosted) KiloBundle.message("hosted.workspace.preparing") else null
+    // Retain the last applied event after dismissal so an unrelated hosted refresh cannot reopen it.
     private var preparationFailure: HostedSystemEventDto? = null
+    private var dismissed: HostedSystemEventDto? = null
     private var loaded: Boolean? = null
     private var revertDraft: Pair<String, List<PromptAttachment>>? = null
     private var pendingRollback: String? = null
@@ -214,6 +219,9 @@ class SessionUi(
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
         openProfileAction = ::openProfileSettings,
+        hosted = manager?.hosted == true,
+        create = manager?.let { host -> { prompt -> host.createSession(prompt) } },
+        created = { ref -> manager?.sessionCreated(this, ref) },
         timers = timers,
     )
 
@@ -287,6 +295,7 @@ class SessionUi(
     init {
         Disposer.register(this, popup)
         buildUi()
+        preparation?.let { messageBody.progress.setPreparation(it, null) }
         Disposer.register(this, selection)
         applyStyle(style)
         scroll.show(body(controller.model.state))
@@ -459,7 +468,7 @@ class SessionUi(
     }
 
     @RequiresEdt
-    internal fun title(): String? = controller.model.session?.title?.takeIf { it.isNotBlank() }
+    internal fun title(): String? = controller.model.title()
 
     @RequiresEdt
     internal fun syncActivity() {
@@ -496,6 +505,11 @@ class SessionUi(
     }
 
     @RequiresEdt
+    internal fun seedHostedPrompt(prompt: ai.kilocode.rpc.dto.PromptDto) {
+        controller.seedHostedPrompt(prompt)
+    }
+
+    @RequiresEdt
     internal fun focusPrompt() {
         val target = promptFocusedComponent
         ApplicationManager.getApplication().invokeLater({
@@ -506,15 +520,55 @@ class SessionUi(
     }
 
     @RequiresEdt
-    internal fun setHostedPreparation(event: HostedSystemEventDto?) {
+    internal fun setHostedTitle(title: String?) {
         if (!hosted) return
-        val failure = event?.takeIf { it.cloudStatus == "error" || it.action == "attempt_failed" || it.failure != null }
+        controller.model.setHostedTitle(title)
+    }
+
+    @RequiresEdt
+    internal fun setHostedPreparation(readiness: HostedReadiness, event: HostedSystemEventDto?) {
+        if (!hosted) return
+        controller.hostedPreparation(readiness)
+        if (readiness == HostedReadiness.Ready) {
+            if (preparation == null && preparationFailure == null) return
+            preparation = null
+            preparationFailure = null
+            messageBody.setPreparationFailure(null)
+            messageBody.progress.setPreparation(null)
+            scroll.show(body(controller.model.state))
+            messageBody.revalidate()
+            return
+        }
+        val failure = event?.takeIf { readiness == HostedReadiness.Failed }
+        if (failure == null && readiness == HostedReadiness.Preparing && event?.action == "attempt_started") dismissed = null
+        if (failure != null && dismissed?.let {
+                if (failure.attemptID != null) return@let failure.attemptID == it.attemptID
+                if (failure.triggerMessageID != null) return@let failure.triggerMessageID == it.triggerMessageID
+                failure == it
+            } == true) return
         val text = if (failure != null) null else event?.message?.takeIf { it.isNotBlank() }
-            ?: event?.let { KiloBundle.message("hosted.workspace.preparing") }
+            ?: KiloBundle.message("hosted.workspace.preparing")
         if (preparation == text && preparationFailure == failure) return
         preparation = text
         preparationFailure = failure
-        messageBody.progress.setPreparation(text, failure)
+        if (failure != null) {
+            val setup = failure.failure == "workspace_setup_failed" ||
+                failure.step?.startsWith("setup") == true ||
+                failure.detail?.startsWith("Setup command") == true
+            val title = KiloBundle.message(
+                if (setup) "hosted.workspace.preparation.setupFailed" else "hosted.workspace.preparation.failed",
+            )
+            val message = buildList {
+                add(title)
+                failure.detail?.takeIf { it.isNotBlank() }?.let(::add)
+                if (failure.outputTruncated) add(KiloBundle.message("hosted.workspace.preparation.outputTruncated"))
+            }.joinToString("\n")
+            messageBody.progress.setPreparation(null)
+            messageBody.setPreparationFailure(failure, message)
+        } else {
+            messageBody.setPreparationFailure(null)
+            messageBody.progress.setPreparation(text, null)
+        }
         scroll.show(body(controller.model.state))
         messageBody.revalidate()
     }
@@ -583,9 +637,36 @@ class SessionUi(
         outcome = SessionOutcomeView(
             selection = selection,
             focus = focus,
-            retry = if (readonly) null else controller::retry,
-            retryable = controller::canRetry,
-            dismiss = if (readonly) null else controller::dismissError,
+            retry = if (readonly) null else {
+                {
+                    val failure = messageBody.preparationFailure()
+                    if (failure != null) {
+                        dismissed = failure
+                        messageBody.setPreparationFailure(null)
+                        controller.retryPreparation(failure)
+                    } else if (controller.canRetryLoad()) {
+                        controller.retryLoad()
+                    } else {
+                        controller.retry()
+                    }
+                }
+            },
+            retryable = {
+                val failure = messageBody.preparationFailure()
+                if (failure != null) controller.canRetryPreparation(failure)
+                else controller.canRetry() || controller.canRetryLoad()
+            },
+            dismiss = if (readonly) null else {
+                {
+                    val failure = messageBody.preparationFailure()
+                    if (failure != null) {
+                        dismissed = failure
+                        messageBody.setPreparationFailure(null)
+                    } else {
+                        controller.dismissError()
+                    }
+                }
+            },
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -618,10 +699,10 @@ class SessionUi(
             ),
             visible = { isShowing },
         ).also {
-            it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
+        messageBody.outcome = outcome
         header = SessionHeaderPanel(
             controller,
             this,
@@ -792,7 +873,7 @@ class SessionUi(
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
-            startMcpAuthTracking()
+            if (!hosted && !hostedRef) startMcpAuthTracking()
             prompt.model.favorites = { app.favorites.value }
             prompt.model.onFavoriteToggle = { item ->
                 Telemetry.send(
@@ -850,7 +931,7 @@ class SessionUi(
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
                     prompt.refreshHighlights()
-                    cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
+                    if (!hosted && !hostedRef) cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
@@ -909,6 +990,8 @@ class SessionUi(
                     refreshBoardIfEmpty()
                 }
 
+                is SessionModelEvent.MessageUpdated -> confirmPendingSend()
+
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared -> {
@@ -932,7 +1015,6 @@ class SessionUi(
                 is SessionModelEvent.ContentAdded,
                 is SessionModelEvent.ContentDelta,
                 is SessionModelEvent.TurnRemoved,
-                is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.ContentUpdated,
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
@@ -1141,6 +1223,10 @@ class SessionUi(
             // the transcript already). A queued send baselines the in-flight turn's message, so that
             // turn cannot be mistaken for confirmation of this one.
             pendingSend = userMessageIds()
+            if (preparationFailure != null) {
+                preparationFailure = null
+                messageBody.setPreparationFailure(null)
+            }
             controller.prompt(text, allFiles, editor?.context, select, injectedTitle)
             scroll.followBottom(follow)
         }
@@ -1710,6 +1796,7 @@ class SessionUi(
      * than polled.
      */
     private fun startMcpAuthTracking() {
+        if (hosted || hostedRef) return
         val auth = service<KiloMcpAuthService>()
         issuesJob?.cancel()
         issuesJob = cs.launch {
