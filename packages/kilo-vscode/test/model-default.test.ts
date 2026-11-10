@@ -86,12 +86,19 @@ describe("initialModel", () => {
     ).toEqual(base.serverDefault)
   })
 
-  test("waits for the account before it uses the recents", () => {
+  test("uses the server default while the account is unknown instead of waiting for the recents", () => {
     const recents = [{ providerID: "x", modelID: "b" }]
-    expect(initialModel({ ...base, team: undefined, recents })).toBeUndefined()
+    expect(initialModel({ ...base, team: undefined, recents })).toEqual(base.serverDefault)
+    // The account read can fail for good, so even a Kilo server default is trusted here: it is resolved for this
+    // scope, and a dialog must still submit.
+    expect(initialModel({ ...base, team: undefined, serverDefault: free })).toEqual(free)
   })
 
-  test("waits for the recents before it falls back", () => {
+  test("a team account does not wait for the recents", () => {
+    expect(initialModel({ ...base, team: true, loaded: false, serverDefault: free })).toEqual(free)
+  })
+
+  test("waits for the recents before it falls back for a personal account", () => {
     expect(initialModel({ ...base, loaded: false })).toBeUndefined()
     expect(initialModel({ ...base, loaded: false, recents: [{ providerID: "x", modelID: "b" }] })).toBeUndefined()
   })
@@ -99,8 +106,15 @@ describe("initialModel", () => {
   test("an agent or configured model still applies while the account is unknown, unless it is Kilo", () => {
     const agent = { providerID: "x", id: "b" }
     expect(initialModel({ ...base, team: undefined, loaded: false, agent })).toEqual(agent)
-    expect(initialModel({ ...base, team: undefined, agent: { providerID: "kilo", id: "a" } })).toBeUndefined()
-    expect(initialModel({ ...base, loaded: false, configured: { providerID: "kilo", id: "a" } })).toBeUndefined()
+    expect(initialModel({ ...base, team: undefined, agent: { providerID: "kilo", id: "a" } })).toEqual(
+      base.serverDefault,
+    )
+    // A known personal account may trust a Kilo configured model before the recents arrive: only the account read
+    // gates a Kilo candidate.
+    expect(initialModel({ ...base, loaded: false, configured: { providerID: "kilo", id: "a" } })).toEqual({
+      providerID: "kilo",
+      id: "a",
+    })
   })
 })
 

@@ -20,8 +20,10 @@ export function createDialogModels(opts: {
   const model = createMemo(() => {
     const saved = choice()
     if (saved && valid(saved)) return saved
+    // The fallback is the resolver's answer, which already applied the account rule to Kilo candidates. Trusting a
+    // Kilo server default here keeps the dialog submittable when the account read failed, and `ready` would reject it.
     const fallback = opts.fallback()
-    return fallback && valid(fallback) ? fallback : null
+    return fallback && opts.valid(fallback) ? fallback : null
   })
   const canSubmit = (allocations?: ModelAllocations) => {
     if (!allocations) return model() !== null
@@ -46,8 +48,10 @@ export function createDialogPreferences(opts: {
   ready: () => boolean
   valid: (model: ModelSelection) => boolean
   variants: (model: ModelSelection) => string[]
-  /** Records a pick for the next new session: v1 `apply` pushed every explicit pick to the recents. */
-  remember: (agent: string, model: ModelSelection, variant: string | undefined) => void
+  /** Records a model pick for the next new session: v1 `apply` pushed every explicit pick to the recents. */
+  rememberPick: (agent: string, model: ModelSelection, variant: string | undefined) => void
+  /** Records only the effort of the current model, as the sidebar's `selectVariant`, without touching the recents. */
+  rememberEffort: (agent: string, model: ModelSelection, variant: string | undefined) => void
 }) {
   // Picks stay per agent so switching modes and back restores each agent's choice.
   const picks: Record<string, { model: ModelSelection; variant?: string }> = {}
@@ -87,7 +91,7 @@ export function createDialogPreferences(opts: {
       setVariant(effort)
       picks[agent()] = { model: next, variant: effort }
     })
-    opts.remember(agent(), next, effort === DEFAULT_VARIANT ? undefined : effort)
+    opts.rememberPick(agent(), next, effort === DEFAULT_VARIANT ? undefined : effort)
   }
   const selectVariant = (value: string | undefined) => {
     const next = value ?? DEFAULT_VARIANT
@@ -98,7 +102,7 @@ export function createDialogPreferences(opts: {
       selection.select(sel)
       picks[agent()] = { model: sel, variant: next }
     })
-    if (sel) opts.remember(agent(), sel, value === DEFAULT_VARIANT ? undefined : value)
+    if (sel) opts.rememberEffort(agent(), sel, value === DEFAULT_VARIANT ? undefined : value)
   }
   // Drop the model and effort after a successful submit so the persist effect stops writing them back.
   const clear = () => {

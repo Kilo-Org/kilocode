@@ -187,8 +187,8 @@ export const NewWorktreeDialog: Component<{
   const modelPreferences = useModelPreferences()
   void props.store.data.location.config.sync().catch(() => undefined)
   // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
-  // default, the most recent pick, Kilo Auto Free, then the server default. Undefined until the account and the
-  // recents are known.
+  // default, the most recent pick, Kilo Auto Free, then the server default. The server default stands in while the
+  // account or the recents are unknown, so the dialog can always submit.
   const defaultFor = (agent: string) =>
     initialModel({
       agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
@@ -229,9 +229,14 @@ export const NewWorktreeDialog: Component<{
       props.models
         .find((model) => model.providerID === value.providerID && model.id === value.modelID)
         ?.variants.map((variant) => variant.id) ?? [],
-    // A pick in this dialog is the last pick of a new session: the next dialog and composer start there, as v1.
-    remember: (agent, model, variant) => {
+    // A pick in this dialog is the last pick of a new session: the next dialog and composer start there, as v1. An
+    // effort change only remembers the effort, as the sidebar's selectVariant, so it cannot rewrite the recents with
+    // a model the user never picked.
+    rememberPick: (agent, model, variant) => {
       modelPreferences?.pushRecent(model.providerID, model.modelID)
+      modelPreferences?.rememberVariant(agent, model.providerID, model.modelID, variant)
+    },
+    rememberEffort: (agent, model, variant) => {
       modelPreferences?.rememberVariant(agent, model.providerID, model.modelID, variant)
     },
   })

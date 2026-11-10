@@ -1,5 +1,6 @@
 // The New Worktree dialog's model memory: a pick there is the last pick of a new session, so the next dialog and the
-// composer start on it (v1 `apply` pushed every explicit pick to the recents).
+// composer start on it (v1 `apply` pushed every explicit pick to the recents). An effort change only remembers the
+// effort, so it cannot rewrite the recents with a model the user never picked.
 //
 // `bun test` resolves solid-js to its server build, so memos evaluate once: a case that changes model() cannot assert
 // the new value, but the callback payloads it passes (what the dialog remembers) are plain signals and reads.
@@ -14,8 +15,11 @@ import {
 const catalog = ["kilo/auto", "kilo/a", "x/b"]
 const valid = (model: ModelSelection) => catalog.includes(`${model.providerID}/${model.modelID}`)
 
+type Remembered = { agent: string; model: ModelSelection; variant: string | undefined }
+
 function dialog(input: { saved?: ModelSelection; agent?: string; ready?: boolean; fallback?: ModelSelection } = {}) {
-  const remembered: Array<{ agent: string; model: ModelSelection; variant: string | undefined }> = []
+  const picks: Remembered[] = []
+  const efforts: Remembered[] = []
   const preferences = createRoot((dispose) => ({
     ...createDialogPreferences({
       saved: { model: input.saved },
@@ -25,11 +29,12 @@ function dialog(input: { saved?: ModelSelection; agent?: string; ready?: boolean
       ready: () => input.ready ?? true,
       valid,
       variants: (model) => (model.modelID === "b" ? ["low", "high"] : ["low"]),
-      remember: (agent, model, variant) => remembered.push({ agent, model, variant }),
+      rememberPick: (agent, model, variant) => picks.push({ agent, model, variant }),
+      rememberEffort: (agent, model, variant) => efforts.push({ agent, model, variant }),
     }),
     dispose,
   }))
-  return { preferences, remembered }
+  return { preferences, picks, efforts }
 }
 
 describe("createDialogPreferences", () => {
@@ -43,7 +48,7 @@ describe("createDialogPreferences", () => {
     saved.preferences.dispose()
   })
 
-  test("a Kilo choice waits for the account", () => {
+  test("a saved Kilo choice waits for the account", () => {
     const pending = dialog({
       saved: { providerID: "kilo", modelID: "a" },
       fallback: { providerID: "x", modelID: "b" },
@@ -53,26 +58,45 @@ describe("createDialogPreferences", () => {
     pending.preferences.dispose()
   })
 
+  test("a Kilo fallback stays usable while the account is unknown, so the dialog can still submit", () => {
+    // The account read can fail for good. The resolver already applied the account rule, so a Kilo server default
+    // must not be rejected again by this gate.
+    const unknownAccount = dialog({ ready: false })
+    expect(unknownAccount.preferences.model()).toEqual({ providerID: "kilo", modelID: "auto" })
+    unknownAccount.preferences.dispose()
+  })
+
   test("records the pick for the next new session", () => {
-    const { preferences, remembered } = dialog()
+    const { preferences, picks, efforts } = dialog()
     preferences.selectModel("x", "b")
-    expect(remembered).toEqual([{ agent: "code", model: { providerID: "x", modelID: "b" }, variant: undefined }])
+    expect(picks).toEqual([{ agent: "code", model: { providerID: "x", modelID: "b" }, variant: undefined }])
+    expect(efforts).toEqual([])
     expect(preferences.selection.choice()).toEqual({ providerID: "x", modelID: "b" })
     preferences.dispose()
   })
 
+  test("an effort change remembers the effort and leaves the pick alone", () => {
+    const { preferences, picks, efforts } = dialog({ saved: { providerID: "x", modelID: "b" } })
+    preferences.selectVariant("high")
+    expect(efforts).toEqual([{ agent: "code", model: { providerID: "x", modelID: "b" }, variant: "high" }])
+    expect(picks).toEqual([])
+    preferences.dispose()
+  })
+
   test("carries the chosen effort onto the next pick", () => {
-    const { preferences, remembered } = dialog({ saved: { providerID: "x", modelID: "b" } })
+    const { preferences, picks, efforts } = dialog({ saved: { providerID: "x", modelID: "b" } })
     preferences.selectVariant("high")
     preferences.selectModel("kilo", "a")
-    expect(remembered.at(-1)).toEqual({ agent: "code", model: { providerID: "kilo", modelID: "a" }, variant: "low" })
+    expect(picks.at(-1)).toEqual({ agent: "code", model: { providerID: "kilo", modelID: "a" }, variant: "low" })
+    expect(efforts).toHaveLength(1)
     preferences.dispose()
   })
 
   test("records an explicit Default as no effort", () => {
-    const { preferences, remembered } = dialog({ saved: { providerID: "x", modelID: "b" } })
+    const { preferences, picks, efforts } = dialog({ saved: { providerID: "x", modelID: "b" } })
     preferences.selectVariant(DEFAULT_VARIANT)
-    expect(remembered).toEqual([{ agent: "code", model: { providerID: "x", modelID: "b" }, variant: undefined }])
+    expect(efforts).toEqual([{ agent: "code", model: { providerID: "x", modelID: "b" }, variant: undefined }])
+    expect(picks).toEqual([])
     expect(preferences.variant()).toBe(DEFAULT_VARIANT)
     preferences.dispose()
   })

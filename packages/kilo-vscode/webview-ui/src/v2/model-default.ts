@@ -13,9 +13,10 @@ const KILO_AUTO: Ref = { providerID: KILO, id: "kilo-auto/free" }
  * team account, the most recent pick that is still in the catalog, then Kilo Auto Free (the server default when the
  * catalog no longer has it). Each candidate must still be in the catalog (`valid`).
  *
- * Nothing is chosen before the account and the recents are known (`loaded`): v1 returned no model while the provider
- * catalog was pending. Without that wait a dialog opens on the server default and then jumps to the recent pick, so
- * each open can settle on a different model.
+ * A Kilo candidate is not trusted before the account is known, and the recents are not used before the preferences
+ * arrive, so a dialog cannot open on the server default and then jump to the recent pick. Neither wait can block the
+ * resolver: the server default is resolved for this scope and stands in while the account is unknown, and a team
+ * account never reads the recents.
  */
 export function initialModel(input: {
   /** v1 `Pick(scope, agent)`: a pick in this composer or dialog sticks for the next new session of that agent. */
@@ -33,24 +34,28 @@ export function initialModel(input: {
   serverDefault: Ref | undefined
   valid: (ref: Ref) => boolean
 }): Ref | undefined {
-  const pending = input.team === undefined || !input.loaded
+  const accountKnown = input.team !== undefined
+  const inCatalog = (ref: Ref | undefined) => (ref && input.valid(ref) ? ref : undefined)
   // v1 `validate`: a Kilo model belongs to an account only once that account is known.
-  const validate = (ref: Ref | undefined) => {
-    if (!ref || (pending && ref.providerID === KILO)) return undefined
-    return input.valid(ref) ? ref : undefined
-  }
-  const preference = validate(input.pick) ?? validate(input.agent) ?? validate(input.configured)
+  const candidate = (ref: Ref | undefined) =>
+    ref && (accountKnown || ref.providerID !== KILO) ? inCatalog(ref) : undefined
+  const preference = candidate(input.pick) ?? candidate(input.agent) ?? candidate(input.configured)
   if (preference) return preference
-  if (pending) return undefined
-  // v1 never used the recents or the fallback for a team: its recommendation, else the first Kilo model.
+  // v1 never used the recents for a team: its recommendation, else the first Kilo model.
   if (input.team)
-    return validate(input.serverDefault) ?? validate(input.models.find((model) => model.providerID === KILO))
+    return inCatalog(input.serverDefault) ?? inCatalog(input.models.find((model) => model.providerID === KILO))
+  // The account read can fail for good: `kilo-models.ts` keeps `ready` false after a rejected `authStatus`, and it
+  // reads again only on a catalog change. The server default is resolved for this scope, so it fills the picker here
+  // instead of leaving a dialog that can never submit.
+  if (!accountKnown) return inCatalog(input.serverDefault)
+  // A personal account's last tier is the recents, which are incomplete until the preferences arrive.
+  if (!input.loaded) return undefined
   const recent = input.recents
     .map((item) => ({ providerID: item.providerID, id: item.modelID }))
-    .find((item) => validate(item))
+    .find((item) => candidate(item))
   // v1 used its `KILO_AUTO` constant here; the free router is a catalog model now, and the server default is the v2
   // answer when that model is gone (a team-only catalog, a custom server).
-  return recent ?? validate(KILO_AUTO) ?? validate(input.serverDefault)
+  return recent ?? candidate(KILO_AUTO) ?? inCatalog(input.serverDefault)
 }
 
 /** The `model` of the last config document that sets one, as the TUI reads it. */
