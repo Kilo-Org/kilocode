@@ -16,6 +16,8 @@ export type ChatTarget = {
   attach(items: PromptAttachment[]): Promise<void>
   prompt(text: string, items?: PromptAttachment[]): Promise<void>
   focus(): Promise<void>
+  /** Toggles the transcript search of the chat the user focused last. */
+  search(): Promise<void>
 }
 
 type Surface = "sidebar" | "agentManager"
@@ -74,5 +76,16 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
     await input.view.post({ type: "command", name: "focusPrompt" })
   }
 
-  return { attach, prompt, focus }
+  const search = async () => {
+    if (preferAgentManager()) {
+      input.agentManager.focusPanel()
+      if (!(await input.agentManager.waitForReady())) return
+      input.agentManager.postMessage({ type: "action", action: "focusSearch" })
+      return
+    }
+    await showChat()
+    await input.view.post({ type: "command", name: "focusSearch" })
+  }
+
+  return { attach, prompt, focus, search }
 }

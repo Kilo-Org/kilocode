@@ -12,6 +12,8 @@ export function TranscriptRowView(props: {
   /** Instruction files one read loaded, by read tool part ID. */
   instructionFiles?: (partID: string) => readonly string[] | undefined
   highlight?: () => TimelineHighlight | undefined
+  /** Whether the current transcript search match is in this row. */
+  searchActive?: boolean
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** Forks the session before the user message, when the surface can fork. */
@@ -32,6 +34,7 @@ export function TranscriptRowView(props: {
             <UserMessage
               message={row().message}
               rowKey={row().key}
+              searchActive={props.searchActive}
               pending={props.pending?.(row().message.id)}
               onFork={
                 props.onForkMessage
@@ -49,6 +52,7 @@ export function TranscriptRowView(props: {
               actions={props.actions}
               instructionFiles={props.instructionFiles}
               highlight={props.highlight}
+              searchActive={props.searchActive}
               parts={row().parts}
               start={row().start}
               metadata={row().metadata}
@@ -60,7 +64,13 @@ export function TranscriptRowView(props: {
         </Match>
         <Match when={props.row.type === "error" && props.row}>
           {(row) => (
-            <div class="vscode-session-turn" data-row="error" data-message={row().message.id} data-row-key={row().key}>
+            <div
+              class="vscode-session-turn"
+              data-row="error"
+              data-message={row().message.id}
+              data-row-key={row().key}
+              data-search-active={props.searchActive ? "" : undefined}
+            >
               <ErrorCard error={row().error} />
             </div>
           )}
