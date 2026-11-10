@@ -352,7 +352,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     createOptions.length = 0
     scheduleCounter = 0
     const plugins = yield* Plugin.Service
-    const context = yield* PluginHost.make(plugins)
+    const context = yield* PluginHost.make(plugins, "test")
     const schedules = yield* Schedule.Service
     const abandoned = record("flw_abandoned")
     const abandonedRun = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
@@ -656,9 +656,29 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     expect(request.system.at(-1)?.text).toContain("Available tools for this run:\n- read\n- shell\n- write")
     expect(request.system.at(-1)?.text).toContain("- shell: taskctl *")
     expect(request.system.at(-1)?.text).toContain("- edit: reports/*")
+    // The run Session above fails as soon as it is admitted, because the test has no model. A denied tool call is
+    // therefore checked on a second run that the test marks as running on an idle Session.
+    yield* context.session.wait({ sessionID: execution.output.sessionID })
+    const deniedSession = yield* context.session.create({
+      title: "Flow: denied tool",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+      metadata: { "kilocode.flow": { flowID: created.output.reference.flowID, runID: "flr_denied" } },
+    })
+    const deniedRun = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
+      version: 1,
+      id: "flr_denied",
+      flowID: created.output.reference.flowID,
+      status: "running",
+      worktree: "reuse",
+      sessionID: deniedSession.id,
+      time: { created: 1, updated: 1, started: 1 },
+    })
+    const deniedKey = `flow-run:v1:${deniedRun.flowID}:${deniedRun.id}`
+    yield* context.storage.set(deniedKey, JSON.stringify(deniedRun))
     yield* hooks.trigger("tool", "execute.after", {
       tool: "shell",
-      sessionID: execution.output.sessionID,
+      sessionID: deniedSession.id,
       agent: Agent.ID.make("build"),
       messageID: SessionMessage.ID.create(),
       id: Tool.CallID.make("call_flow_denied_shell"),
@@ -673,13 +693,10 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
         }),
       }),
     })
-    expect(yield* context.storage.get(`flow-run:v1:${execution.output.flowID}:${execution.output.id}`)).toContain(
+    expect(yield* context.storage.get(deniedKey)).toContain(
       'Flow permission policy blocked shell for \\"otherctl mutate\\" while running shell',
     )
-    yield* context.session.wait({ sessionID: execution.output.sessionID })
-    expect(yield* context.session.get({ sessionID: execution.output.sessionID })).toMatchObject({
-      outcome: "interrupted",
-    })
+    yield* context.storage.remove(deniedKey)
     yield* Effect.yieldNow
     expect(yield* list(context, schedules, source.projectID)).toMatchObject({
       flows: [

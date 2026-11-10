@@ -108,6 +108,21 @@ describe("model picker order", () => {
     ])
   })
 
+  test("signed out lists favorites first, marked, without section headers", () => {
+    const options = build({ connected: false, showExtra: false, favorites: [opus, sonnet], recents: [bedrock] })
+    expect(options.every((item) => item.category === undefined)).toBe(true)
+    expect(options.map((item) => [item.modelID, item.description])).toEqual([
+      ["anthropic/claude-sonnet-4.5", "(Favorite)"],
+      ["claude-opus-4", "(Favorite)"],
+      ["anthropic/claude-opus-4.5", undefined],
+      ["kilo-auto/free", undefined],
+      ["x-ai/grok-code-fast", undefined],
+      ["openai/gpt-5", undefined],
+      ["anthropic.claude-sonnet-4", undefined],
+      ["claude-sonnet-4", undefined],
+    ])
+  })
+
   test("without Gateway metadata, Kilo models still come first in the server order", () => {
     expect(rows(build({ gateway: new Map() })).slice(0, 5)).toEqual([
       "Kilo Gateway | openai/gpt-5",

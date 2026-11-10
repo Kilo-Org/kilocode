@@ -100,7 +100,7 @@ const setup = Effect.fn(function* (info: KiloConfigPolicy.Info, managedPrivacy =
     ])
   })
   const plugins = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugins)
+  const host = yield* PluginHost.make(plugins, "test")
   yield* AgentPlugin.Plugin.effect(host)
   yield* PlanPlugin.Plugin.effect(host)
   yield* KiloAgentPlugin.Plugin.effect(host)

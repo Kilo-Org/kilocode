@@ -80,7 +80,7 @@ const addPlugin = Effect.fn(function* () {
     editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
   })
   const plugin = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugin)
+  const host = yield* PluginHost.make(plugin, "test")
   yield* KiloPlugin.effect(host)
   // The host gives a registered Kilo plugin the global services it requires (packages/kilo-cli/src/host.ts).
   yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
@@ -104,7 +104,7 @@ describe("KiloGatewayPlugin", () => {
   it.live("fails explicitly if an embedder does not provide Location config", () =>
     Effect.gen(function* () {
       const plugin = yield* Plugin.Service
-      const host = yield* PluginHost.make(plugin)
+      const host = yield* PluginHost.make(plugin, "test")
       const bus = yield* Bus.Service
       const result = yield* Effect.promise(() =>
         Effect.runPromiseExit(
@@ -451,7 +451,7 @@ describe("KiloGatewayPlugin", () => {
               })
             })
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             const paused = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>()
             const release = yield* Deferred.make<void>()
             let pauseNextReload = false
@@ -536,7 +536,7 @@ describe("KiloGatewayPlugin", () => {
               })
             })
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             const paused = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>()
             const release = yield* Deferred.make<void>()
             const invalidated = yield* Deferred.make<void>()
@@ -779,7 +779,7 @@ describe("KiloGatewayPlugin", () => {
               })
             })
             const plugins = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugins)
+            const host = yield* PluginHost.make(plugins, "test")
             yield* KiloPlugin.effect(host)
             yield* KiloGatewayPlugin.effect(host).pipe(
               Effect.provideService(Config.Service, {
@@ -1394,7 +1394,7 @@ describe("KiloGatewayPlugin", () => {
                 ],
               }
               const plugins = yield* Plugin.Service
-              yield* VerbosityPlugin.Plugin.effect(yield* PluginHost.make(plugins))
+              yield* VerbosityPlugin.Plugin.effect(yield* PluginHost.make(plugins, "test"))
               const host = yield* addPlugin()
               yield* ConfigProviderPlugin.Plugin.effect(host).pipe(
                 Effect.provide(
@@ -2002,7 +2002,7 @@ describe("KiloGatewayPlugin", () => {
           withEnv({ ...env, KILO_API_URL: backend.url }, () =>
             Effect.gen(function* () {
               const plugin = yield* Plugin.Service
-              const host = yield* PluginHost.make(plugin)
+              const host = yield* PluginHost.make(plugin, "test")
               const input = legacy.name === "team"
                 ? { KILO_API_KEY: `${backend.url}/api:legacy-token` }
                 : legacy.input
@@ -2191,7 +2191,7 @@ describe("KiloGatewayPlugin", () => {
           () =>
             Effect.gen(function* () {
               const plugin = yield* Plugin.Service
-              const host = yield* PluginHost.make(plugin)
+              const host = yield* PluginHost.make(plugin, "test")
               yield* host.storage.set("organization:env", { organizationID: "selected" })
               yield* addPlugin()
               expect((yield* (yield* Model.Service).available()).filter((model) => model.providerID === kilo)).toEqual(

@@ -1,4 +1,4 @@
-import { Effect, PlatformError, Scope } from "effect"
+import { Effect, PlatformError, Redacted, Scope } from "effect"
 import { ChildProcess } from "effect/process"
 import { bubblewrap } from "./bubblewrap"
 import { current } from "./context"
@@ -104,7 +104,7 @@ export function prepareCommand(
     if (!profile) return command
     const launch = yield* confine(profile, {
       command: command.command,
-      args: command.args,
+      args: command.args.map(plain),
       cwd,
       environment: env,
       shell: command.options.shell,
@@ -121,4 +121,9 @@ export function prepareCommand(
 
 export function backendSupport(network?: Profile["network"]) {
   return backend.support(network)
+}
+
+// A command can carry redacted words; the confined launcher needs their plain text.
+function plain(word: string | Redacted.Redacted<string>) {
+  return typeof word === "string" ? word : Redacted.value(word)
 }

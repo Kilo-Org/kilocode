@@ -23,10 +23,11 @@ const emptyCredentialsLayer = Layer.effect(
         if (resolved.ref.providerID !== "kilo") return resolved
         const provider = yield* providers.get(resolved.ref.providerID)
         const route = resolved.model.route
-        const options = route.defaults.providerOptions
-        // The marker selects the empty-credential auth below; it must never reach the Gateway body.
-        if (options !== undefined && "kiloEmptyToken" in options)
-          delete (options as Record<string, unknown>).kiloEmptyToken
+        // The marker selects the empty-credential auth below; it must never reach the Gateway body. The model copies
+        // the route options when it is built, so remove the marker from both.
+        for (const options of [route.options?.providerOptions, resolved.model.options?.providerOptions])
+          if (options !== undefined && "kiloEmptyToken" in options)
+            delete (options as Record<string, unknown>).kiloEmptyToken
         if (provider?.settings?.kiloEmptyToken !== true) return resolved
         return {
           ...resolved,
