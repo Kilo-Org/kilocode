@@ -2353,5 +2353,11 @@
     "v2": "packages/kilo-vscode/test/keybinding-format.test.ts",
     "note": "The mac and windows/linux formatting cases (cmd, ctrl, shift, alt, arrows, backspace, enter, escape, brackets, chords and a plain key) are ported to packages/kilo-vscode/test/keybinding-format.test.ts as the formatKeybinding suite.",
     "by": "progress-map-repair"
+  },
+  "module:packages/opencode/test/kilocode/plugin-git-source.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/plugin-git-source.test.ts",
+    "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
+    "by": "plugin-git-sources"
   }
 }

@@ -10,6 +10,7 @@ import type { PersistentPty } from "./persistent-pty.js"
 import { Cause, Context, Effect, Exit, Latch, Layer, Logger, Queue, References, Scope, Semaphore } from "effect"
 import { Bus } from "./bus.js"
 import { PluginHost } from "./plugin/host.js"
+import { PluginModule } from "./plugin/module.js" // kilocode_change - plugin source resolver seam
 import { type Failure, type Generation, Service } from "./plugin/service.js"
 import { State } from "./state.js"
 
@@ -305,6 +306,17 @@ function slotInfo(slot: Slot): Plugin.Info {
     features: slot.plugin.features ?? { server: true },
   }
 }
+
+// kilocode_change start - plugin source resolver seam
+/**
+ * The same registry node with the loader options a host sets, for example how to resolve its own plugin source
+ * syntax. Decorating `node` keeps one declaration of its service, layer and dependencies.
+ */
+export const configured = (options: PluginModule.Options) =>
+  node.mapLayer((layer) =>
+    Layer.merge(layer, Layer.succeed(PluginModule.OptionsService, PluginModule.OptionsService.of(options))),
+  )
+// kilocode_change end
 
 export const node: LayerNode.Provider<Service, PersistentPty.UnavailableError, typeof Node.tags.values.location> =
   Node.makeLocationNode({

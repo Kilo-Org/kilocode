@@ -6,7 +6,9 @@ import { GuiBundle, type Source } from "@opencode/schema/plugin"
 import { createPluginSources } from "@opencode/plugin/source"
 import { Hash } from "@opencode/util/hash"
 import { Npm } from "@opencode/util/npm"
-import { Deferred, Effect, FiberSet, PubSub, Schema, Stream } from "effect"
+// kilocode_change start - Option reads the optional host source resolver
+import { Context, Deferred, Effect, FiberSet, Option, PubSub, Schema, Stream } from "effect"
+// kilocode_change end
 import path from "path"
 import { readFile, stat } from "node:fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
@@ -17,9 +19,36 @@ import { Config } from "../config.js"
 import { ManagedPolicy } from "../managed-policy.js"
 import { Watcher } from "../filesystem/watcher.js"
 
+// kilocode_change start - plugin source resolver seam
+/**
+ * What a host resolves a target it owns to: the directory the loader reads instead, plus the `plugin.use` resources
+ * the resolution stands for (for example a canonical identity), or `pending` when the source needs the installing
+ * pass. A host that supports more source syntax than a local path or an npm package returns this before the loader
+ * decides between the two; returning `undefined` leaves the target alone.
+ */
+export type PluginSourceResolution =
+  | { readonly target: string; readonly resources?: readonly string[] }
+  | { readonly pending: true }
+
+/** Plugin loader options a host may provide. */
+export interface Options {
+  readonly pluginSource?: (
+    target: string,
+    options: { readonly install: boolean },
+  ) => Effect.Effect<PluginSourceResolution | undefined, LoadError>
+}
+
+/** `Plugin.configured(options)` provides this service; the loader leaves itself untouched when it is absent. */
+export class OptionsService extends Context.Service<OptionsService, Options>()("@opencode/PluginModuleOptions") {}
+// kilocode_change end
+
 export const make = Effect.fn("PluginModule.make")(function* () {
   const config = yield* Config.Service
   const watcher = yield* Watcher.Service
+  // kilocode_change start - the host's source resolver, absent upstream
+  const settings = yield* Effect.serviceOption(OptionsService)
+  const pluginSource = Option.isSome(settings) ? settings.value.pluginSource : undefined
+  // kilocode_change end
   const scope = yield* Effect.scope
   const runPromise = yield* FiberSet.makeRuntimePromise()
   const changes = yield* PubSub.unbounded<void>()
@@ -50,9 +79,21 @@ export const make = Effect.fn("PluginModule.make")(function* () {
         const version = operation.target.lastIndexOf("@")
         const target =
           path.isAbsolute(operation.target) || version <= 0 ? operation.target : operation.target.slice(0, version)
-        if (ManagedPolicy.decision(ManagedPolicy.statements(yield* config.entries()), "plugin.use", target) === "deny")
-          return { blocked: true as const }
-        return yield* load(operation, sources, watch, options)
+        // kilocode_change start - the host source resolver runs before the local/npm split
+        const policies = ManagedPolicy.statements(yield* config.entries())
+        if (ManagedPolicy.decision(policies, "plugin.use", target) === "deny") return { blocked: true as const }
+        const resolved = pluginSource
+          ? yield* pluginSource(operation.target, { install: options?.install !== false })
+          : undefined
+        if (resolved && "pending" in resolved) return { pending: true as const }
+        const denied =
+          resolved !== undefined &&
+          (resolved.resources ?? []).some(
+            (resource) => ManagedPolicy.decision(policies, "plugin.use", resource) === "deny",
+          )
+        if (denied) return { blocked: true as const }
+        return yield* load(operation, sources, watch, options, resolved?.target)
+        // kilocode_change end
       }),
     changes: () => Stream.fromPubSub(changes),
   }
@@ -103,20 +144,28 @@ const load = Effect.fn("PluginModule.load")(function* (
   sources: ReturnType<typeof createPluginSources>,
   watch: (file: string) => Effect.Effect<void>,
   options?: { readonly install?: boolean },
+  // kilocode_change start - the directory a host resolved the target to
+  resolved?: string,
+  // kilocode_change end
 ) {
-  const local = path.isAbsolute(operation.target)
+  // kilocode_change start - a host resolves its own plugin source syntax to a local directory before the
+  // local/npm split; every other target keeps the upstream behavior.
+  // kilocode_change(plugin:25cfde80052f)
+  const target = resolved ?? operation.target
+  const local = path.isAbsolute(target)
   const npm = yield* Npm.Service
   const installed = local
     ? undefined
     : options?.install === false
-      ? yield* npm.resolve(operation.target)
-      : yield* npm.add(operation.target)
+      ? yield* npm.resolve(target)
+      : yield* npm.add(target)
   // Legacy auto-discovery still admits standalone server sources. Configured
   // local plugins always arrive here as directories.
   const entrypoints: Host.Entrypoints =
-    local && (yield* Effect.promise(() => stat(operation.target))).isFile()
-      ? { server: pathToFileURL(operation.target).href }
-      : yield* Effect.sync(() => Host.resolve(installed ?? { directory: operation.target }))
+    local && (yield* Effect.promise(() => stat(target))).isFile()
+      ? { server: pathToFileURL(target).href }
+      : yield* Effect.sync(() => Host.resolve(installed ?? { directory: target }))
+  // kilocode_change end
   const entrypoint = entrypoints.server
   // A TUI-only package is not the server's to list; the TUI loads it from its own config.
   const found = entrypoint || entrypoints.gui
@@ -129,7 +178,9 @@ const load = Effect.fn("PluginModule.load")(function* (
     ? yield* loadServer(entrypoint, local ? sources : undefined, installed?.revision)
     : undefined
   const plugin = server?.plugin ?? {
-    id: Host.packageID(installed ?? { directory: operation.target }),
+    // kilocode_change start - the resolved directory identifies the package
+    id: Host.packageID(installed ?? { directory: target }),
+    // kilocode_change end
     effect: () => Effect.void,
   }
   const revision = JSON.stringify([operation, server ? server.version : installed?.revision])

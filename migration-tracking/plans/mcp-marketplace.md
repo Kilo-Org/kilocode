@@ -138,6 +138,50 @@ Later phases extend the same host interface; they do not rework the hook mechani
 - Add the v1 test disposition `ported` with the v2 path; mark the `plugin:25cfde80052f` patch cell on
   the resolver seam.
 
+**Status:** implemented in this worktree.
+
+- `packages/kilo-plugin/src/plugin/git-source.ts` exports the spec parser, the `git/...` identity,
+  the cache/clone resolver, and `pluginSource`, the loader hook. `resolveGitPluginTarget` returns an
+  absolute cache path instead of v1's `file://` URL, because the v2 loader decides local versus npm
+  from `path.isAbsolute`; the cache root stays `Global.Path.cache/packages/git`, as in v1.
+- The seam is `PluginModule.Options.pluginSource`, provided through the `PluginModule.OptionsService`
+  context tag. `Plugin.configured(options)` decorates the existing registry node with that service
+  through `mapLayer`, so one declaration owns the node's service, layer and dependencies and the
+  plugin supervisor (a dependent of `Plugin.node`) sees the options; the loader reads them with
+  `Effect.serviceOption`, so upstream's graph, with no host, keeps its behavior byte for byte.
+- The resolver runs before the local/npm split in `PluginModule.load`. It returns the directory to
+  load plus the `plugin.use` resources the resolution stands for (the `git/...` identity, and the
+  source path of a local repo), and the loader blocks the plugin when any of them is denied, so a
+  deny-list cannot be bypassed by a second spelling of the same plugin. A target the host cannot
+  read yet reports `pending`, so the clone happens in the installing pass and not in the fast pass
+  that activates everything else first, like the npm branch's `resolve`. `source()` still reports the
+  configured `git:` spec, so a git plugin lists as a package target.
+- `git://host/repo` stays an npm Git dependency: `isGitPluginSpec` excludes the npm protocol form, so
+  it reaches npm exactly as before.
+- `packages/kilo-cli/src/plugin-npm.ts` wraps the npm service (rung 2, service replacement, in the CLI
+  runtime and the server graph) so a `git:` spec is resolved from the same cache in the places that
+  ask npm directly: the TUI's own plugin loader resolves configured package targets through
+  `packages.prepare`, and the plugin update check would otherwise report the target as not installed.
+  Every non-`git:` spec and every other method reaches the native service unchanged; a git plugin
+  update is a clone refresh and its update check reports no registry change.
+- The cache keeps the npm cache's hygiene: a resolve sweeps at most once an hour, removing
+  interrupted `<dir>.tmp-*` staging directories after an hour and clones nothing resolved for a week.
+  `reuse` touches the marker, so a pinned ref in use is never swept.
+- `PluginSupervisor` needed no change: the options travel through the registry node the supervisor
+  already depends on. Only `packages/core/src/plugin.ts` and `plugin/module.ts` carry the rung-3 seam
+  (`script/upstream/shared-patches.json`, both rung 3).
+- `packages/kilo-cli/src/host.ts` replaces `Plugin.node` with
+  `Plugin.configured({ pluginSource: PluginGitSource.pluginSource })` and the npm node with the
+  wrapper.
+- Tests: 19 cases in `packages/kilo-plugin/test/plugin-git-source.test.ts` (the v1 parsing, identity,
+  ref, cache-key, symlink-escape, staging-cleanup and `~` cases, plus the npm-protocol exclusion, the
+  cached-only read, the sweep and the loader hook's pending/resources contract), the seam test
+  `packages/core/test/kilocode/plugin-source-seam.test.ts` (resolved target, deferred pass, policy
+  resources and the unchanged upstream path), the npm wrapper test
+  `packages/kilo-cli/test/plugin-npm.test.ts`, and the host test
+  `packages/kilo-cli/test/plugin-git-source.test.ts` (a `git:` entry in `kilo2.json` clones and
+  activates). The v1 install/detect/remove case stays with the marketplace plugin kind in Phase 3.
+
 ### Phase 3: Marketplace plugin kind
 
 1. **Schema and registry**

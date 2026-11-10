@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 121,
-    "markedLines": 2028,
+    "files": 123,
+    "markedLines": 2098,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -505,6 +505,14 @@
     "packages/server/src/handlers/session.ts": {
       "rung": 3,
       "seam": "Forward the `steer` query parameter to `Session.interrupt`. The handler owns the endpoint input and no plugin hook sees it; omitted, the call is unchanged."
+    },
+    "packages/core/src/plugin.ts": {
+      "rung": 3,
+      "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `Plugin.configured(options)` decorates the registry node with a loader-options service through `mapLayer`, so an embedding host can resolve its own plugin source syntax (Kilo's `git:` specs) without the shared loader knowing about it. The node still provides `Plugin.Service`, its service, layer and dependencies keep their single upstream declaration, and the extra service changes nothing when a host does not configure it. No plugin hook reaches the loader's local/npm split before a plugin is active. Rung 3 because rung 1 has no hook before activation and rung 2 cannot replace the registry without losing the server's configured options."
+    },
+    "packages/core/src/plugin/module.ts": {
+      "rung": 3,
+      "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `PluginModule.Options.pluginSource` lets an embedding host map a configured target to the directory the loader should read, before the existing local-path/npm split, name the `plugin.use` resources the resolution stands for (so a deny-list cannot be bypassed by another spelling), and report `pending` when the source needs the installing pass instead of the fast pass. The hook returns `undefined` for every upstream target, so npm packages and local directories behave exactly as before. Rungs 1 and 2 cannot reach the loader: the split runs inside `PluginModule.load`, after the plugin registry, and a host cannot supply the Npm or source loading steps from outside it. Kilo supplies `git:` clone resolution here."
     }
   }
 }
