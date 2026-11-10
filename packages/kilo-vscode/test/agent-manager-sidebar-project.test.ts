@@ -13,7 +13,9 @@ import type { ProjectContext } from "../src/agent-manager/project/context"
 const temp: string[] = []
 
 afterEach(() => {
-  for (const dir of temp.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+  // Git and the Windows indexer can hold a temp directory for a moment after the test; the other suites retry for the
+  // same reason.
+  for (const dir of temp.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
 })
 
 function repo(name: string, branch: string) {
