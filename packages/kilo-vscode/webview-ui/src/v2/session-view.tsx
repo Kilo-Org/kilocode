@@ -3,7 +3,7 @@
 import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
@@ -147,14 +147,25 @@ export function SessionView(props: {
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
   const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
 
+  // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
+  // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
+  // newer request owns the loader, so the settle of a superseded one cannot clear it.
+  const [starting, setStarting] = createSignal<string>()
+  let attempt = 0
   // Load again after a reconnect too: createData drops its loaded state while disconnected. Same as the TUI session
   // route (packages/tui/src/routes/session/index.tsx).
   createEffect(
     on([session, v2.connection.status] as const, ([id, status]) => {
       if (!id || status !== "connected") return
+      const run = ++attempt
+      const loaded = v2.data.session.message.startLoaded(id)
+      const messages = v2.data.session.message.sync(id)
+      setStarting((value) => (loaded ? (value === id ? undefined : value) : id))
+      const settle = () => setStarting((value) => (run === attempt && value === id ? undefined : value))
+      void messages.then(settle, settle)
       void Promise.all([
         v2.data.session.sync(id, { children: true }),
-        v2.data.session.message.sync(id),
+        messages,
         v2.data.session.pending.sync(id),
       ]).catch((err: unknown) => {
         // A session created here is known before the server has it; only a session nobody created is missing.
@@ -410,6 +421,7 @@ export function SessionView(props: {
             <div class="chat-messages">
               <MessageList
                 session={session()}
+                starting={starting()}
                 actions={props.actions}
                 selection={selection}
                 onSelectSession={(id) => props.actions.openSession?.(id)}
