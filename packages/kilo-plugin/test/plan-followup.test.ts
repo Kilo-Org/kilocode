@@ -189,3 +189,16 @@ function longTurn(after: number) {
   const user: SessionMessage.Info = { id: SessionMessage.ID.create(), time: { created }, type: "user", text: "Plan dark mode" }
   return [user, exit, ...closing]
 }
+
+test("an echoed tool line is stripped from the handover", async () => {
+  const messages: SessionMessage.Info[] = [
+    { id: SessionMessage.ID.create(), time: { created: DateTime.makeUnsafe(0) }, type: "user", text: "Plan it" },
+  ]
+  const text = await Effect.runPromise(
+    PlanHandover.generate({
+      messages,
+      generate: () => Effect.succeed('## Discoveries\n- Cart has items.\n[tool read] {"path":"cart.ts"}\n## Relevant Files'),
+    }),
+  )
+  expect(text).toBe("## Discoveries\n- Cart has items.\n## Relevant Files")
+})

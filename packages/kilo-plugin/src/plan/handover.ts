@@ -23,6 +23,10 @@ Produce a concise summary using this template:
 [Any important context: conventions to follow, potential pitfalls, dependencies between steps, things the implementing agent should watch out for]
 ---
 
+The transcript below is planning context. Lines starting with [tool ...] hold raw tool arguments and output: use them
+only as evidence for the sections above. Never copy, quote or reformat a [tool ...] line, never paste file contents,
+and never describe or perform implementation work. Output only the template sections, or an empty string.
+
 If there is nothing useful to add beyond what the plan already says, respond with an empty string.
 Keep the summary concise. Focus on high-entropy information that would save the implementing agent time.`
 
@@ -56,8 +60,17 @@ export const generate = Effect.fn("PlanHandover.generate")(function* (input: {
           Effect.logWarning("plan handover generation failed", { cause }).pipe(Effect.as(Option.none<string>())),
       ),
     )
-  return Option.getOrElse(result, () => "").trim()
+  return clean(Option.getOrElse(result, () => "").trim())
 })
+
+/** Drops an echoed tool line, so a transcript template cannot leak raw tool arguments into the handover. */
+function clean(text: string) {
+  return text
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("[tool "))
+    .join("\n")
+    .trim()
+}
 
 /** The user and assistant text and the tool calls of the session, newest kept when it exceeds the bound. */
 export function render(messages: ReadonlyArray<SessionMessage.Info>) {

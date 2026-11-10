@@ -175,7 +175,7 @@ const newSession = Effect.fn(function* (
   const next = yield* input.ctx.session.create({ agent: code, model })
   yield* input.bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
 
-  const handover = yield* summary(input.ctx, history)
+  const handover = yield* summary(input.ctx, history, model)
   const todos = PlanHandover.todos(history)
   const text = [
     `Plan file: ${PlanFile.display(file, input.ctx.location)}\nRead this file first and treat it as the source of truth for implementation.`,
@@ -185,14 +185,15 @@ const newSession = Effect.fn(function* (
   yield* input.ctx.session.prompt({ sessionID: next.id, text })
 })
 
-/** The handover summary from the compaction agent model when one is set, else the default model. */
-const summary = Effect.fn(function* (ctx: Context, history: ReadonlyArray<SessionMessage.Info>) {
+/** The handover summary from the compaction agent model when one is set, else the model that wrote the plan. */
+const summary = Effect.fn(function* (ctx: Context, history: ReadonlyArray<SessionMessage.Info>, planning: Model.Ref) {
   const generate = yield* Effect.serviceOption(Generate.Service)
   if (Option.isNone(generate)) return ""
-  const model = yield* ctx.agent.get({ agentID: Agent.ID.make("compaction") }).pipe(
-    Effect.map((result) => result.data.model),
-    Effect.orElseSucceed(() => undefined),
-  )
+  const model =
+    (yield* ctx.agent.get({ agentID: Agent.ID.make("compaction") }).pipe(
+      Effect.map((result) => result.data.model),
+      Effect.orElseSucceed(() => undefined),
+    )) ?? planning
   return yield* PlanHandover.generate({
     messages: history,
     model,
