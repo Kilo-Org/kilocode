@@ -28,6 +28,9 @@ const OpenParameters = Schema.Struct({
 type Input = { readonly path?: string }
 
 // kilo_port(tool:fabed9da976a)
+// plan/exit.txt carries the two v1 hunks of tool/plan-exit.txt verbatim (EXIT_DESCRIPTION above):
+// kilo_port(unattributed:tool:f6ac0ab8d0f5)
+// kilo_port(unattributed:tool:b2cf7d8186a3)
 /** The `plan_exit` tool: it locates the plan the planning turn wrote and records it for the follow-up question. */
 export function planExit(ctx: Context, store: SessionStore.Interface, data: string) {
   return {

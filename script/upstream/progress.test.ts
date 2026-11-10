@@ -292,14 +292,26 @@ test("placement counts new marked lines in shared files by rung and new kilo_por
     ["packages/core/src/added.ts", "// kilocode_change - new file\nexport const added = 1\n"],
   ])
   const place = placement(diff, contents, rungs)
-  expect(place).toEqual({ marked: { plugin: 0, host: 0, seam: 4, patch: 3 }, ports: 2 })
+  expect(place).toEqual({ marked: { plugin: 0, host: 0, seam: 4, patch: 3 }, ports: 2, owned: 3 })
 
   const summary = (coreImports: number) => ({ done: 0, total: 1, percent: 0, dropped: 0, coreImports, sharedPatches: { seam: 13, patch: 1 } })
   const head = { summary: summary(2), coreImports: ["@opencode/core/bus", "@opencode/core/variant"] }
   const out = compare({ summary: summary(1), coreImports: ["@opencode/core/variant"] }, head, place)
   expect(out).toContain("**Placement:** 7 new marked lines in shared files (4 seam, 3 patch), 2 new `kilo_port` annotations, 1 new core-internal import (`@opencode/core/bus`).")
   expect(out).toContain("**Ratchets:** 2 core-internal imports (base 1); shared patches by rung 13 seam, 1 patch (base 13 seam, 1 patch).")
-  expect(compare({}, head, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0 })).toContain(
+  expect(compare({}, head, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0, owned: 0 })).toContain(
     "**Placement:** 0 new marked lines in shared files, 0 new `kilo_port` annotations, core-internal imports not compared (the base map has no import list).",
   )
+})
+
+test("compare says when Kilo-owned code moved but no cell changed", () => {
+  const quiet = compare({}, { summary: { done: 0, total: 1, percent: 0, dropped: 0 } }, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0, owned: 42 })
+  expect(quiet).toContain("No cell closed, although the PR adds 42 lines in Kilo-owned files.")
+  expect(quiet).toContain("If it ports v1 behavior, add a done-proof or a disposition for each cell; v2-only work needs none.")
+  expect(compare({}, { summary: { done: 0, total: 1, percent: 0, dropped: 0 } }, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0, owned: 0 })).toContain(
+    "No change to the progress map.",
+  )
+  const proved = compare({ summary: { done: 0, total: 1, percent: 0, dropped: 0 }, done: [] }, { summary: { done: 1, total: 1, percent: 100, dropped: 0 }, done: ["module:a"] }, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 1, owned: 42 })
+  expect(proved).toContain("1 cells closed")
+  expect(proved).not.toContain("No cell closed")
 })
