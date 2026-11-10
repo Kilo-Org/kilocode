@@ -3,9 +3,9 @@ import { $ } from "bun"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { Rpc } from "@opencode/core/rpc"
-import type { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
+import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { Global } from "@opencode/util/global"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -179,8 +179,39 @@ describe("marketplace plugin kind", () => {
       expect(yield* json(moved)).toEqual({ plugins: [] })
     }),
   )
-  test("a plugin locale catalog is required for the kind", () => {
-    // The kind is part of the wire contract, so clients and the server agree on the catalog verb.
-    expect(["skill", "mcp", "agent", "plugin"]).toContain("plugin")
+  // The kind is a wire contract shared by the server, the TUI and VS Code, so decode it instead of comparing a
+  // copy of the literal list.
+  test("the plugin kind, item content and owned resource decode", () => {
+    const item = Schema.decodeUnknownSync(KiloMarketplaceRpc.Item)({
+      registry: "kilo",
+      kind: "plugin",
+      id: "kilo-plugin",
+      name: "Kilo Plugin",
+      description: "Demo",
+      tags: [],
+      prerequisites: [],
+      parameters: [],
+      options: [],
+      plugin: { spec: "kilo-plugin@1.2.3" },
+    })
+    expect(item.kind).toBe("plugin")
+    expect(item.plugin).toEqual({ spec: "kilo-plugin@1.2.3" })
+    expect(item.agent).toBeUndefined()
+    const resource = Schema.decodeUnknownSync(KiloMarketplaceRpc.Resource)({
+      plugin: "kilo-plugin",
+      fingerprints: ["hash"],
+    })
+    expect(resource).toEqual({ plugin: "kilo-plugin", fingerprints: ["hash"] })
+    const record = Schema.decodeUnknownSync(KiloMarketplaceRpc.Installed)({
+      registry: "kilo",
+      kind: "plugin",
+      id: "kilo-plugin",
+      scope: "project",
+      installedAt: 0,
+      config: ".kilo2/kilo2.json",
+      resources: [resource],
+    })
+    expect(record).toMatchObject({ kind: "plugin", config: ".kilo2/kilo2.json", resources: [resource] })
+    expect(record.server).toBeUndefined()
   })
 })

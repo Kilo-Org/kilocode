@@ -220,6 +220,10 @@ Status: implemented (schema/registry/installer/RPC in one PR, clients in the nex
      (2026-11-10): fail fast, accepting that the RPC blocks on the network and installs server-side.
    - Deliberate difference from v1: the catalog `id` no longer has to equal `pluginIdentity(spec)`,
      because v2 keys the durable record by catalog id and stores the identity in the resource.
+   - Deliberate difference from v1: a TUI-only package is refused. v1 kept a separate TUI plugin list, so
+     the server never saw such a package; v2 has one native config shared by the server and the TUI, and
+     the server loader requires a server or GUI entrypoint, so writing a TUI-only spec there would make
+     every location report a failed plugin.
    - Tests: installer unit tests for append/replace/remove, identity replacement, JSONC preservation,
      modified-entry refusal and git specs.
 

@@ -20,6 +20,10 @@ export class PluginPackageError extends Error {
  * Resolve and install a catalog plugin spec through the same package machinery the plugin loader uses, so an
  * install fails before it writes config instead of leaving an entry the loader cannot activate. `npm` is passed in
  * so the resolver stays testable without a package manager.
+ *
+ * A package must expose a server or GUI entrypoint, which is what `PluginModule.load` requires. v1 could install a
+ * TUI-only package because it kept a separate TUI plugin list, but v2 has one native config shared by the server
+ * and the TUI, so a TUI-only package in it would make the server report a failed plugin for every location.
  */
 export function resolve(input: {
   spec: string
