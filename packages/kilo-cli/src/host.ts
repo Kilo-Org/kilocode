@@ -13,6 +13,7 @@ import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { Model } from "@opencode/core/model"
+import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
@@ -134,6 +135,13 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
+  // MCP servers see the Kilo client identity, and OAuth registration uses Kilo's product name and URI.
+  Mcp.node.replace(
+    Mcp.configured({
+      clientInfo: { name: "kilo", version: KiloApp.version },
+      host: { oauth: { name: "Kilo", uri: "https://kilo.ai" } },
+    }),
+  ),
   Model.node.replace(
     Model.node.mapLayer((layer) =>
       Layer.effect(

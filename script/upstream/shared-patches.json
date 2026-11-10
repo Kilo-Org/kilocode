@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 107,
-    "markedLines": 1770,
+    "files": 113,
+    "markedLines": 1880,
     "unmarkedLines": 300,
     "deletedFiles": 0
   },
@@ -156,6 +156,30 @@
     "packages/schema/src/file-diff.ts": {
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/mcp/host.ts": {
+      "rung": 3,
+      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity) for an embedding host. No plugin hook reaches the MCP transport or OAuth registration, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+    },
+    "packages/core/src/mcp/client.ts": {
+      "rung": 3,
+      "seam": "Apply the optional host `fetch` wrapper to the remote transport and the host `localCommand` rewrite to a local server command. No plugin hook reaches the MCP transport or the spawn command; the host sets both through `Mcp.configured`. Omitting the hooks preserves upstream behavior."
+    },
+    "packages/core/src/mcp/connection.ts": {
+      "rung": 3,
+      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` and `localCommand` hooks also reach connections the connection service and the pool open rather than only a direct client connect. No plugin hook reaches the MCP transport or spawn command; with `host` unset nothing changes."
+    },
+    "packages/core/src/mcp/pool.ts": {
+      "rung": 3,
+      "seam": "Pass the process-wide `McpHost.Host` into a shared connection's `McpConnection.make`, since the pool opens shared connections from data it takes from the first holder. The host is identical for every Location in a process, so it stays out of the pool key. With `host` unset nothing changes."
+    },
+    "packages/core/src/mcp/index.ts": {
+      "rung": 3,
+      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, command or OAuth identity; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
+    },
+    "packages/core/src/mcp/oauth.ts": {
+      "rung": 3,
+      "seam": "Use the optional host OAuth client identity for `client_name`, `client_uri` and the initialize challenge, and let the host name the CIMD document URL. No plugin hook reaches OAuth registration; the host supplies the values through `Mcp.configured`. Defaults stay `opencode` and the upstream document."
     },
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
