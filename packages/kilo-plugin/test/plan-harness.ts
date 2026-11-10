@@ -162,7 +162,10 @@ export async function handoff(input: {
               Layer.mock(SessionStore.Service, {
                 get: () => Effect.succeed(session),
                 messages: (request) => {
-                  if (request.type === "user") return Effect.succeed([user])
+                  if (request.type === "user") {
+                    const newest = messages.toReversed().find((message) => message.type === "user")
+                    return Effect.succeed(newest ? [newest] : [])
+                  }
                   if (request.order !== "desc") return Effect.succeed(messages)
                   const newest = messages.toReversed()
                   return Effect.succeed(request.limit === undefined ? newest : newest.slice(0, request.limit))

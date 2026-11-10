@@ -202,3 +202,21 @@ test("an echoed tool line is stripped from the handover", async () => {
   )
   expect(text).toBe("## Discoveries\n- Cart has items.\n## Relevant Files")
 })
+
+test("a plan_exit of the previous turn is not asked again in a new turn", async () => {
+  const result = await handoff({ tail: twoTurns(), answer: PlanFollowup.KEEP_REFINING })
+  expect(result.asked).toHaveLength(0)
+})
+
+/** An asked turn followed by a new user message, so the window still holds the earlier plan_exit. */
+function twoTurns() {
+  const previous = longTurn(1)
+  const turn = previous.slice(0, 2)
+  const next: SessionMessage.Info = {
+    id: SessionMessage.ID.create(),
+    time: { created: DateTime.makeUnsafe(0) },
+    type: "user",
+    text: "Now change the wording",
+  }
+  return [...turn, next]
+}
