@@ -3,7 +3,7 @@
 import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import type { MentionFile } from "../hooks/context-mention-utils"
 import type { GitChangesTarget } from "../hooks/useGitChangesContext"
@@ -30,8 +30,11 @@ import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
+import type { ManagerContext } from "./shortcut-hint"
+import { settledLoader, startingLoader } from "./session-loading"
 import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
+import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
@@ -56,8 +59,11 @@ export function SessionView(props: {
   worktree?: boolean
   /** Opens a new session draft; the /new slash action is listed only when set. */
   onNewSession?: () => void
-  /** The row above the dock; receives whether the session has messages and the todo element it trails. */
-  row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
+  /**
+   * The row above the dock; receives whether the session has messages, the todo element it trails and the background
+   * agent stack it leads.
+   */
+  row?: (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => JSX.Element
   /** Shows the row before the first message too. */
   rowWhenEmpty?: boolean
   /** Replaces the welcome screen of an empty session. */
@@ -96,6 +102,10 @@ export function SessionView(props: {
   terminalContext?: () => string | undefined
   /** Reads the focused Agent Manager terminal for `@terminal`. */
   resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Another session tab is open, so the prompt suggests switching tabs. */
+  tabs?: boolean
+  /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
+  manager?: () => ManagerContext | undefined
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -160,14 +170,25 @@ export function SessionView(props: {
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
   const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
 
+  // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
+  // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
+  // newer request owns the loader, so the settle of a superseded one cannot clear it.
+  const [starting, setStarting] = createSignal<string>()
+  let attempt = 0
   // Load again after a reconnect too: createData drops its loaded state while disconnected. Same as the TUI session
   // route (packages/tui/src/routes/session/index.tsx).
   createEffect(
     on([session, v2.connection.status] as const, ([id, status]) => {
       if (!id || status !== "connected") return
+      const run = ++attempt
+      const loaded = v2.data.session.message.startLoaded(id)
+      const messages = v2.data.session.message.sync(id)
+      setStarting((value) => startingLoader(value, { session: id, loaded }))
+      const settle = () => setStarting((value) => settledLoader(value, { session: id, run, attempt }))
+      void messages.then(settle, settle)
       void Promise.all([
         v2.data.session.sync(id, { children: true }),
-        v2.data.session.message.sync(id),
+        messages,
         v2.data.session.pending.sync(id),
       ]).catch((err: unknown) => {
         // A session created here is known before the server has it; only a session nobody created is missing.
@@ -232,6 +253,14 @@ export function SessionView(props: {
       if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
     })
   const working = createWorking(session)
+  // Subagent jobs feed the dock's agent stack and the stop and "continue in background" actions of subagent cards. A
+  // read-only view has no dock and offers neither action.
+  const jobs = createBackgroundJobs({ session })
+  const actions = createMemo<ToolActions>(() =>
+    props.readOnly
+      ? props.actions
+      : { ...props.actions, stopSession: jobs.cancel, backgroundSession: jobs.promote },
+  )
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
@@ -430,7 +459,8 @@ export function SessionView(props: {
             <div class="chat-messages">
               <MessageList
                 session={session()}
-                actions={props.actions}
+                starting={starting()}
+                actions={actions()}
                 selection={selection}
                 onSelectSession={(id) => props.actions.openSession?.(id)}
                 onShowHistory={props.onShowHistory}
@@ -461,8 +491,12 @@ export function SessionView(props: {
             </Show>
             <SessionDock
               session={session()}
+              jobs={jobs}
+              onOpenSession={(id, title) =>
+                props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
+              }
               blocked={dockBlocked()}
-              actions={(todos) => props.row?.(hasMessages(), todos)}
+              actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
               hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
               status={working.status()}
               submitting={working.submitting()}
@@ -491,6 +525,8 @@ export function SessionView(props: {
                   onReferenceReady={props.onReferenceReady}
                   onComposerReady={props.onComposerReady}
                   slash={{ entries: slashEntries, run: runSlash }}
+                  tabs={props.tabs}
+                  manager={props.manager}
                   selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                   autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                   sandbox={sandboxControl}

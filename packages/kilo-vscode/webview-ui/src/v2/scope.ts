@@ -24,6 +24,8 @@ export function createV2Scope(input: {
   /** Whether the session list of this directory is shown. A hidden directory loads it when it becomes visible. */
   visible?: Accessor<boolean>
   bindings: Accessor<Record<string, string>>
+  /** Whether the active editor has selected text, which the prompt hint reads. */
+  selection: Accessor<boolean>
   /**
    * Loads the sidebar data: the session list and the Kilo Gateway catalog status. The Settings and Profile panels
    * pass false, because neither renders a transcript and neither shows the catalog failure.
@@ -99,6 +101,7 @@ export function createV2Scope(input: {
     connection,
     loading,
     bindings: input.bindings,
+    selection: input.selection,
     version: metadata.version,
     extensionVersion,
     handshake: metadata.handshake,

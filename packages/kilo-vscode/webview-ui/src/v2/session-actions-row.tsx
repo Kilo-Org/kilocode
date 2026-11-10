@@ -1,6 +1,6 @@
-// The session actions row above the composer: New Session, the worktree actions, Changes and the todo chip. The
-// sidebar shows every action; the Agent Manager panel omits New Session and Changes because its tab bar and diff
-// panel own them.
+// The session actions row above the composer: the background agent stack, New Session, the worktree actions, Changes
+// and the todo chip. The sidebar shows every action; the Agent Manager panel omits New Session and Changes because its
+// tab bar and diff panel own them.
 import { Button } from "@kilocode/kilo-ui/button"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -29,6 +29,8 @@ export function SessionActionsRow(props: {
   /** Opens the changes of the open session; absent when the surface has its own changes control. */
   onShowChanges?: () => void
   todos?: JSX.Element
+  /** The background agent stack and the board button; the dock places them on a line with room. */
+  agents?: JSX.Element
 }) {
   const language = useLanguage()
   const worktreeTooltip = language.t("sidebar.session.newWorktree.tooltip")
@@ -58,6 +60,7 @@ export function SessionActionsRow(props: {
   return (
     <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !props.hasMessages }}>
       <div class="session-actions-row">
+        {props.agents}
         <Show when={props.hasMessages && props.onNewSession}>
           <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
             <Button

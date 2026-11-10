@@ -2130,6 +2130,30 @@
     "note": "v2 has no webview storybook surface for the extension; the marketplace components are exercised by test/marketplace-render.test.ts and test/marketplace-install-modal.test.ts against the real components.",
     "by": "marketplace-panel"
   },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptRail.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-rail.tsx",
+    "note": "The rail component is ported to the v2 transcript: ticks spread over the measured height, the hover/focus/click card with prompt and answer previews, keyboard navigation, first/latest, history and overflow entries, wheel forwarding, the Escape capture that dismisses the card before other shortcuts, and the VList path for long sessions. It renders inside MessageList, so the sidebar chat and the Agent Manager SessionView share it; the host now passes the physical sidebar edge through data-sidebar. Covered by test/prompt-rail-render.test.ts.",
+    "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-rail.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-rail-data.ts",
+    "note": "previewText, promptItems, capacity, historyAction and railEntries are ported to read v2 SessionMessageInfo transcript rows plus queued inbox rows. Answer previews join the chunks of the first assistant step that has text, and queued prompts come from the inbox partition rather than transcript rows.",
+    "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/tests/unit/prompt-rail.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-rail.test.ts",
+    "note": "The previewText, promptItems, capacity, historyAction and railEntries suites are ported to v2 fixtures (SessionMessageInfo, transcriptRows, SessionInboxUser queued rows), including chunk joining, truncation, image-only prompt promotion, tool-only turns and queued marking.",
+    "by": "prompt-navigator"
+  },
+  "module:packages/kilo-vscode/tests/prompt-rail.spec.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-rail-render.test.ts",
+    "note": "v2 has no webview storybook, so the Playwright story specs are carried by a happy-dom component test that renders the real PromptRail: focus, click and keyboard selection, first/latest, Escape before other shortcuts, hover delay and tick switching, the rail-to-card bridge, drag and wheel suppression, focus-out close, card paging with seek/loading, and left/right edge placement with the 8px gap. The layout-level assertions about box geometry and RTL are covered by the unchanged prompt-rail.css and the live sidebar and Agent Manager self-test.",
+    "by": "prompt-navigator"
+  },
   "module:packages/kilo-vscode/webview-ui/src/context/transcript-search.tsx": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/transcript-search.tsx",
@@ -2187,5 +2211,104 @@
     "state": "dropped",
     "note": "Tested the dropped v1 host parser (module:packages/kilo-vscode/src/kilo-provider/message-files.ts): accepted file/data/session URLs and dropped malformed or unknown-scheme entries. v2 has no host message file parser because the webview passes prompt files straight to session.prompt, so there is no equivalent to assert; the `session:` form it allowed is covered by packages/kilo-plugin/test/recall-mention.test.ts.",
     "by": "port-at-mentions"
+  },
+  "api:GET /kilocode/background-jobs": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/background-jobs/tracker.ts",
+    "note": "Served by the kilocode.background-jobs RPC (packages/schema/src/kilocode/background-jobs.ts Definition, handlers in packages/kilo-plugin/src/background-jobs/). `list({sessionID})` returns the subagent jobs of one parent session, foreground ones included (core lists only backgrounded jobs), with status, background flag and times; `changed` events replace the client's 1 s poll. Test: packages/kilo-plugin/test/background-jobs.test.ts (real subagent tool, TestLLM).",
+    "by": "mire-production"
+  },
+  "api:POST /kilocode/background-jobs/{jobID}/cancel": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/background-jobs/tracker.ts",
+    "note": "Served by the kilocode.background-jobs RPC (packages/schema/src/kilocode/background-jobs.ts Definition, handlers in packages/kilo-plugin/src/background-jobs/). `cancel({jobID})` interrupts the child session and every descendant and cancels their jobs, deepest first; unknown jobs fail with not_found. Test: packages/kilo-plugin/test/background-jobs.test.ts.",
+    "by": "mire-production"
+  },
+  "api:POST /kilocode/background-jobs/{jobID}/promote": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/background-jobs/tracker.ts",
+    "note": "Served by the kilocode.background-jobs RPC (packages/schema/src/kilocode/background-jobs.ts Definition, handlers in packages/kilo-plugin/src/background-jobs/). `promote({jobID})` backgrounds one running foreground subagent through Job.background: the parent's blocked subagent call returns its background result and core delivers the completion later. Finished jobs return false. Test: packages/kilo-plugin/test/background-jobs.test.ts.",
+    "by": "mire-production"
+  },
+  "patch:unattributed:core/background-job:b74e71daf68f": {
+    "state": "native",
+    "note": "v1 let an empty output of a later extension run clobber the job output (#13469). v2 has no Job.extend: a follow-up to a running subagent steers its single run, and the job output is the text of the newest completed assistant message (packages/core/src/session/subagent-job.ts, SubagentCompletion.text with NO_TEXT for an empty answer), so the clobbering cannot happen.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/store.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/store.ts",
+    "note": "Board store on the plugin key/value storage (ctx.storage) instead of SQL tables: per-root lock, v1 limits, idempotent retries, self-post refusal, recipient and reply checks, stale-cursor recovery, read-only observe with before paging, root-only reset with revision conflicts; revision is next_seq - 1. The unread objective column is dropped.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/context.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/context.ts",
+    "note": "The 11 instruction lines (session context hook, only when board_read is offered) and the activity notifier (tool execute.after hook) of the kilocode.board plugin.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/enabled.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/enabled.ts",
+    "note": "Enabled unless shared_agent_board is false or KILO_EXPERIMENTAL_SHARED_AGENT_BOARD is false; tools are re-registered on config.updated.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/notice.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/notice.ts",
+    "note": "The activity and unavailable notice texts, verbatim.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board/store.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board/store.test.ts",
+    "note": "Store semantics on the plugin storage.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board-tools.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board-tools.test.ts",
+    "note": "Tool registration by config, runtime identity, permissions, retries, availability and warnings, stale cursor, instructions, notices and the RPC.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board-context.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board-context.test.ts",
+    "note": "Instructions and notifier.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board-enabled.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board-enabled.test.ts",
+    "note": "Config and environment resolution matrix.",
+    "by": "mire-production"
+  },
+  "module:packages/core/test/kilocode/config-shared-agent-board.test.ts": {
+    "state": "ported",
+    "v2": "packages/core/test/kilocode/config/mapping.test.ts",
+    "note": "The shared_agent_board key decodes as a top-level Kilo config boolean (folded) and the retired experimental key is refused with the v1 warning: packages/core/test/kilocode/config/mapping.test.ts rows shared_agent_board and experimental.shared_agent_board.",
+    "by": "mire-production"
+  },
+  "module:packages/core/src/kilocode/board/sql.ts": {
+    "state": "dropped",
+    "note": "The v2 board persists through the kilocode.board plugin key/value storage (packages/kilo-plugin/src/board/store.ts); there is no Kilo board SQL table or migration.",
+    "by": "mire-production"
+  },
+  "module:packages/core/test/kilocode/board/migration.test.ts": {
+    "state": "dropped",
+    "note": "Tested the board SQL migrations, which v2 does not have (see packages/core/src/kilocode/board/sql.ts).",
+    "by": "mire-production"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptHint.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-hint.tsx",
+    "note": "The keycap copy of the prompt placeholder is ported as v2/prompt-hint.tsx: same bracket handling so a parenthesis stays on the keycap line, the same aria-hidden overlay over the plain textarea placeholder, and the same before/binding/after split. This PR is the one that uses it for the whole hint set, so it records the cell.",
+    "by": "port-keyboard-suggestions-to-v1"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/shortcut-hints-settings.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/settings-host.ts",
+    "note": "Reading showShortcutHints and pushing it to every webview on change is carried by the generic v2 settings host: showShortcutHints is in KILO_SETTING_KEYS, readKiloSettings returns it, and the onDidChangeConfiguration listener posts the full settings set when a kilo-code.v2 setting changes. webview-ui/src/v2/kilo-settings.ts is the receiving accessor, so the hint reads the same setting as on v1.",
+    "by": "port-keyboard-suggestions-to-v1"
   }
 }

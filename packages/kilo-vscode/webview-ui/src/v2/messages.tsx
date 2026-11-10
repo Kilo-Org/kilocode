@@ -11,11 +11,13 @@ import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { KiloNotifications } from "../components/chat/KiloNotifications"
 import { useLanguage } from "../context/language"
 import { useNotificationsOptional } from "../context/notifications"
+import { useVSCode } from "../context/vscode"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { instructionFilesByRead } from "./instruction-files"
 import type { Selection } from "./selectors"
+import { sessionStarting } from "./session-loading"
 import {
   anchorOffset,
   handedRows,
@@ -43,6 +45,8 @@ import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcri
 import { buildSearchPattern, searchMatches } from "./transcript-search-match"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
+import { PromptRail } from "./prompt-rail"
+import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
 
 /**
  * Container for Virtua rows. Virtua sizes it from cached row heights and places
@@ -73,6 +77,8 @@ function sameKeys(left: readonly string[], right: readonly string[]) {
 
 export function MessageList(props: {
   session?: string
+  /** The session whose first transcript page is in flight, from the view that starts the request. */
+  starting?: string
   actions?: ToolActions
   onSelectSession: (id: string) => void
   onShowHistory: () => void
@@ -90,6 +96,7 @@ export function MessageList(props: {
   pending?: (messageID: string) => UserMessagePending | undefined
 }) {
   const v2 = useV2()
+  const vscode = useVSCode()
   const language = useLanguage()
   const notifications = useNotificationsOptional()
   const [highlight, setHighlight] = createSignal<TimelineHighlight>()
@@ -98,6 +105,8 @@ export function MessageList(props: {
   const [scrollEl, setScrollEl] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   const [layout, setLayout] = createSignal("")
+  // Transcript height, kept reactive so the prompt rail re-caps on resize.
+  const [height, setHeight] = createSignal(0)
   const [pendingJump, setPendingJump] = createSignal<{ session: string; key: string }>()
   const [pendingRestore, setPendingRestore] = createSignal<string>()
 
@@ -124,6 +133,14 @@ export function MessageList(props: {
     v2.data.session.message.more(props.session) &&
     !v2.data.session.message.startLoaded(props.session)
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
+  // The open session shows its loader instead of the welcome screen until the first transcript page lands.
+  const starting = () =>
+    sessionStarting({
+      session: props.session,
+      loading: props.starting,
+      messages: messages().length,
+      queued: queued().length,
+    })
   const autoScroll = createAutoScroll({ working })
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
@@ -588,12 +605,129 @@ export function MessageList(props: {
     loadOlder()
   }
 
+  // Prompt navigator: one tick per user prompt, positioned against the
+  // transcript edge, opening a card of prompt and answer previews.
+  const railItems = createMemo(() => promptItems(rows(), partition().queued))
+  // Until the transcript is measured there is no height to cap against, and
+  // rendering every prompt would spill ticks past the rail on long sessions.
+  const entries = createMemo(() => railEntries(railItems(), capacity(height()), more()))
+  const [railTurn, setRailTurn] = createSignal<string>()
+  const railActiveKey = createMemo(() => railItems().find((item) => item.turn === railTurn())?.key)
+  // Older prompts are prepended inside the open card. Virtua keeps the visible
+  // row still only when it knows rows were added before it.
+  const prepending = createMemo<{ keys: readonly string[]; value: boolean }>((previous) => {
+    const keys = railItems().map((item) => item.key)
+    const first = previous?.keys[0]
+    return {
+      keys,
+      value: !!first && keys.length > (previous?.keys.length ?? 0) && keys.indexOf(first) > 0,
+    }
+  })
+
+  // Jumping to the first prompt pages the whole history in, deliberately and
+  // progressively: each completed prepend advances the cursor, while hover and
+  // opening the card remain free of network work. Stop if a request makes no
+  // progress so a backend failure cannot become a retry loop.
+  const [seek, setSeek] = createSignal<{ session: string; count: number }>()
+  let paging = false
+  const firstPrompt = () => {
+    const item = railItems()[0]
+    if (!more()) {
+      if (item) jump(item.key)
+      return
+    }
+    const id = props.session
+    if (!id || loadingOlder()) return
+    const count = messages().length
+    // Start the request before recording the seek: a signal write can flush
+    // this effect before the call returns, and it must observe the load.
+    loadOlder()
+    setSeek({ session: id, count })
+  }
+  createEffect(() => {
+    const loading = loadingOlder()
+    const target = seek()
+    if (!target) {
+      paging = loading
+      return
+    }
+    if (target.session !== props.session) {
+      paging = false
+      setSeek(undefined)
+      return
+    }
+    if (loading) {
+      paging = true
+      return
+    }
+    // The load never started (no cursor left, or a failure cleared it), so
+    // treat this as the end instead of leaving the card seeking forever.
+    if (!paging) {
+      setSeek(undefined)
+      const item = railItems()[0]
+      if (item) jump(item.key)
+      return
+    }
+    paging = false
+    const count = messages().length
+    const action = historyAction(target.count, count, more())
+    const item = railItems()[0]
+    if (action === "load") {
+      loadOlder()
+      setSeek({ session: target.session, count })
+      return
+    }
+    setSeek(undefined)
+    if (item) jump(item.key)
+  })
+
+  // The active tick follows the turn at the top of the transcript, derived from
+  // the virtualizer offset. When the rows do not fill the transcript, the newest
+  // prompt is the one in view.
+  const trackActive = () => {
+    const list = railItems()
+    if (list.length === 0) return setRailTurn(undefined)
+    const handle = virtualizer()
+    const offset = handle?.scrollOffset
+    if (handle && offset !== undefined && offset > 1) {
+      const row = lookup().get(virtualKeys()[handle.findItemIndex(offset)] ?? "")
+      if (row) return setRailTurn(row.turn)
+    }
+    const el = scrollEl()
+    if (handle && el && el.scrollHeight > el.clientHeight + 1) {
+      const row = lookup().get(virtualKeys()[0] ?? "")
+      if (row) return setRailTurn(row.turn)
+    }
+    setRailTurn(list.at(-1)?.turn)
+  }
+  let activeFrame: number | undefined
+  const scheduleActive = () => {
+    if (activeFrame !== undefined) return
+    activeFrame = requestAnimationFrame(() => {
+      activeFrame = undefined
+      trackActive()
+    })
+  }
+  onCleanup(() => {
+    if (activeFrame !== undefined) cancelAnimationFrame(activeFrame)
+  })
+  // Re-derive the active turn whenever the transcript changes so the rail
+  // reflects a newly started turn even before any scrolling happens.
+  createEffect(() => {
+    railItems()
+    partition()
+    // The virtualizer mounts after the first pass; measure again once it exists.
+    virtualizer()
+    scheduleActive()
+  })
+
   // A synthetic scroll only lets Virtua read the offset after a remount. It
   // must not page history.
   let syncing = false
   const handleScroll = () => {
     autoScroll.handleScroll()
     if (!syncing) maybeLoadOlder()
+    scheduleActive()
     if (search.active()) scheduleHighlight()
   }
 
@@ -602,6 +736,7 @@ export function MessageList(props: {
     const el = scrollEl()
     if (!el) return
     const style = getComputedStyle(el)
+    setHeight(el.clientHeight)
     setLayout(
       layoutFingerprint({
         width: Math.round(el.clientWidth),
@@ -652,8 +787,12 @@ export function MessageList(props: {
     })
   }
 
+  // The Agent Manager and other editor surfaces have no sidebar edge signal.
+  // Keep their rail on the physical right, even in RTL.
+  const railSide = () => vscode.sidebarSide() ?? "right"
+
   return (
-    <div class="message-list-container">
+    <div class="message-list-container" data-prompt-rail={entries().length >= 2 ? railSide() : undefined}>
       <Show when={!props.empty && empty() ? notifications : undefined}>
         {(value) => (
           <Show when={props.selection}>
@@ -677,9 +816,15 @@ export function MessageList(props: {
         <div
           ref={autoScroll.contentRef}
           data-slot="message-list-content"
-          class={empty() ? "message-list-content-empty" : "message-list-content"}
+          class={empty() && !starting() ? "message-list-content-empty" : "message-list-content"}
         >
-          <Show when={empty()}>
+          <Show when={starting()}>
+            <div class="message-list-loading" role="status">
+              <Spinner />
+              <span>{language.t("session.messages.loading")}</span>
+            </div>
+          </Show>
+          <Show when={empty() && !starting()}>
             {props.empty ? (
               props.empty()
             ) : (
@@ -773,6 +918,30 @@ export function MessageList(props: {
           </Show>
         </div>
       </div>
+      <PromptRail
+        side={railSide()}
+        entries={entries}
+        items={railItems}
+        active={railActiveKey}
+        onSelect={(item: PromptRailItem) => jump(item.key)}
+        onFirst={firstPrompt}
+        onLatest={() => {
+          const item = railItems().at(-1)
+          if (item) jump(item.key)
+        }}
+        onLoadOlder={loadOlder}
+        onWheel={(deltaY) => {
+          const el = scrollEl()
+          if (!el) return
+          if (deltaY < 0 && el.scrollHeight - el.clientHeight > 1) autoScroll.pause()
+          el.scrollTop += deltaY
+        }}
+        height={height}
+        hasOlder={more}
+        loadingOlder={loadingOlder}
+        prepending={() => prepending().value}
+        seeking={() => Boolean(seek())}
+      />
       <Show when={!empty() && autoScroll.userScrolled()}>
         <IconButton
           icon="arrow-down-to-line"
