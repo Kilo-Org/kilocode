@@ -327,16 +327,17 @@ async function copy<A>(
   const umask = process.umask(0o077)
   try {
     if (input.since === undefined) {
-      const { openReadonly } = await import("./sqlite-readonly")
-      const db = openReadonly(source)
+      const { changed, openReadonly } = await import("./sqlite-readonly")
+      const reader = openReadonly(source)
       try {
         // `VACUUM INTO` blocks for minutes on a large store, so the lock is refreshed on both sides of it.
         input.onProgress?.()
-        db.run("VACUUM INTO ?", [temp])
+        reader.db.run("VACUUM INTO ?", [temp])
         input.onProgress?.()
       } finally {
-        db.close()
+        reader.db.close()
       }
+      if (!reader.unchanged()) throw changed(source)
     } else {
       const { extract } = await import("./import/extract")
       extract(source, temp, input.since, input.onProgress)

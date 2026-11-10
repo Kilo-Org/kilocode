@@ -94,7 +94,7 @@ export function isKiloV1Store(file: string) {
 /** The v1 traits of the tables in `file`; undefined when it cannot be read, unless `strict` asks for the error. */
 function tablesOf(file: string, options: { strict?: boolean } = {}) {
   try {
-    const db = openReadonly(file)
+    const db = openReadonly(file).db
     try {
       const tables = new Set(
         db
@@ -219,7 +219,7 @@ function clearCredentials(db: SQLite) {
 
 function count(file: string, table: string) {
   try {
-    const db = openReadonly(file)
+    const db = openReadonly(file).db
     try {
       return db.query<{ n: number }, []>(`SELECT count(*) AS n FROM "${table}"`).get()?.n ?? 0
     } finally {
