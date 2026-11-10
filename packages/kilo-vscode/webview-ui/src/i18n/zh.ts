@@ -1343,6 +1343,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
+  "task.backgroundAgents.promoteFailed": "此代理无法在后台继续。它可能已经完成。",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
   "task.backgroundAgents.needsInput": "需要输入",
   "task.backgroundAgents.clearFinished": "清除已完成",

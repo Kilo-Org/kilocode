@@ -11,6 +11,7 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../../context/language"
+import { getVSCodeAPI } from "../../../context/vscode"
 import { useSettingsConfig } from "../../../v2/settings-config"
 import { createMcp } from "../../../v2/mcp"
 import McpEditView from "./McpEditView"
@@ -75,6 +76,7 @@ const McpSubtab: Component<{ focus?: string; navigation?: number }> = (props) =>
   }
 
   const toggle = (name: string) => setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
+  const browseMarketplace = () => getVSCodeAPI().postMessage({ type: "openMarketplace" } as never)
 
   // A deep link from chat expands the named server and scrolls it into view. The config may still be loading when
   // the target arrives, so the effect also tracks the server list and retries the scroll until the row is mounted.
@@ -197,6 +199,11 @@ const McpSubtab: Component<{ focus?: string; navigation?: number }> = (props) =>
       }
     >
       <div>
+        <div style={{ display: "flex", "justify-content": "flex-end", "margin-bottom": "8px" }}>
+          <Button variant="ghost" size="small" onClick={browseMarketplace}>
+            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+          </Button>
+        </div>
         <Show
           when={entries().length > 0}
           fallback={

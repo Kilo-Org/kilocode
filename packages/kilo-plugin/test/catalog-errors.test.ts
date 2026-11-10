@@ -45,7 +45,7 @@ for (const scenario of ["http", "network", "schema", "missing-team"] as const) {
               editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
             })
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
             const rpc = yield* Rpc.Service
             const failure = yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)
@@ -115,7 +115,7 @@ for (const reason of reasons) {
         () =>
           Effect.gen(function* () {
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
             const rpc = yield* Rpc.Service
             const client = rpc.client(KiloGatewayRpc.Definition)
@@ -145,7 +145,7 @@ it.live("reports no reason for a usable catalog", () =>
       () =>
         Effect.gen(function* () {
           const plugin = yield* Plugin.Service
-          const host = yield* PluginHost.make(plugin)
+          const host = yield* PluginHost.make(plugin, "test")
           yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
           const rpc = yield* Rpc.Service
           expect(yield* rpc.client(KiloGatewayRpc.Definition)["catalog.status"]({})).toEqual({ failure: null })

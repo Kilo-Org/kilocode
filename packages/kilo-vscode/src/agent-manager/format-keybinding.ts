@@ -15,7 +15,7 @@ const GLOBAL_KEYBINDINGS: Record<string, string> = {
 
 /** [binding name, command suffix, key after the cmd/ctrl modifier] */
 const FALLBACKS: Array<[string, string, string]> = [
-  ["search", "search", "f"],
+  ["search", "search", "shift+f"],
   ["runScript", "runScript", "e"],
   ["toggleDiff", "toggleDiff", "d"],
   ["showShortcuts", "showShortcuts", "shift+/"],

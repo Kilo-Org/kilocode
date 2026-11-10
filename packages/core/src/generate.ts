@@ -1,7 +1,7 @@
 export * as Generate from "./generate.js"
 
 import { ai, AIError, DecisionClient, ImageClient, LLMClient, Media } from "@opencode/ai/effect"
-import type { GenerationOptionsInput, SystemPart } from "@opencode/ai/effect" // kilocode_change(branch-name) seam - stateless request options
+import type { GenerationOptionsFields, SystemPart } from "@opencode/ai/effect" // kilocode_change(branch-name) seam - stateless request options
 import type { DecisionRequest, DecisionResult, ImageRequest, ImageResult } from "@opencode/schema/generate"
 import { Money } from "@opencode/schema/money"
 import { SessionID } from "@opencode/schema/session-id"
@@ -19,7 +19,7 @@ export interface TextInput {
   readonly model?: Model.Ref
   // kilocode_change start - branch-name seam: optional system prompt and generation settings for a stateless call
   readonly system?: string | ReadonlyArray<SystemPart>
-  readonly generation?: GenerationOptionsInput
+  readonly generation?: GenerationOptionsFields
   // kilocode_change end
 }
 
@@ -123,10 +123,10 @@ export const layer = Layer.effect(
             prompt: input.prompt,
             // kilocode_change start - branch-name seam: pass through the optional system prompt and generation settings
             system: input.system,
-            generation: input.generation,
+            ...input.generation,
             // kilocode_change end
             // Gateways require session attribution even for a stateless call; no Session is stored.
-            http: { headers: { "x-opencode-session": SessionID.create() } },
+            headers: { "x-opencode-session": SessionID.create() },
           }),
         )
         .pipe(

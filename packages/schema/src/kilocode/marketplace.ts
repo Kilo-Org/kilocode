@@ -100,6 +100,8 @@ export const Installed = Schema.Struct({
   id: Schema.String,
   scope: Scope,
   project: optional(Schema.String),
+  /** The install option the record was written with, so a repair can preselect it. */
+  option: optional(Schema.String),
   /** MCP config file relative to the scope root, so records survive moving the project. */
   config: optional(Schema.String),
   /** Native mcp.servers key, used for status and sign-in handoff. */

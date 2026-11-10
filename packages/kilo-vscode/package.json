@@ -21,8 +21,10 @@
     "onStartupFinished",
     "onWebviewPanel:kilo-code.v2.settingsPanel",
     "onWebviewPanel:kilo-code.v2.profilePanel",
+    "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
-    "onWebviewPanel:kilo-code.v2.documentsPanel"
+    "onWebviewPanel:kilo-code.v2.documentsPanel",
+    "onWebviewPanel:kilo-code.v2.subagentPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -158,7 +160,7 @@
         "kilo-code.v2.showShortcutHints": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Show keyboard shortcuts in the empty Agent Manager session view."
+          "markdownDescription": "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to queue a prompt, add selected code, review changes, or open another worktree."
         },
         "kilo-code.v2.showAutoApprovalReason": {
           "type": "boolean",
@@ -393,10 +395,21 @@
         "icon": "$(history)"
       },
       {
+        "command": "kilo-code.v2.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code (v2)"
+      },
+      {
         "command": "kilo-code.v2.profile",
         "title": "Profile",
         "category": "Kilo Code (v2)",
         "icon": "$(account)"
+      },
+      {
+        "command": "kilo-code.v2.marketplace",
+        "title": "Marketplace",
+        "category": "Kilo Code (v2)",
+        "icon": "$(extensions)"
       },
       {
         "command": "kilo-code.v2.showOpenTabs",
@@ -772,6 +785,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
       },
       {
+        "command": "kilo-code.v2.agentManager.search",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
+      },
+      {
         "command": "kilo-code.v2.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
@@ -943,9 +962,14 @@
           "group": "navigation@3"
         },
         {
-          "command": "kilo-code.v2.settings",
+          "command": "kilo-code.v2.marketplace",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@4"
+        },
+        {
+          "command": "kilo-code.v2.settings",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation@5"
         }
       ],
       "scm/title": [

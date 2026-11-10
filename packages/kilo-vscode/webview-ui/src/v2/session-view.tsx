@@ -3,7 +3,7 @@
 import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
 import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
@@ -27,8 +27,11 @@ import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
+import type { ManagerContext } from "./shortcut-hint"
+import { settledLoader, startingLoader } from "./session-loading"
 import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
+import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
 import { steerInterrupts, type SendMode } from "./pending-actions"
@@ -36,6 +39,7 @@ import { mergeCatalog, type SlashEntry } from "./slash"
 import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
+import { TranscriptSearchProvider } from "./transcript-search"
 
 export function SessionView(props: {
   session: string | undefined
@@ -52,14 +56,19 @@ export function SessionView(props: {
   worktree?: boolean
   /** Opens a new session draft; the /new slash action is listed only when set. */
   onNewSession?: () => void
-  /** The row above the dock; receives whether the session has messages and the todo element it trails. */
-  row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
+  /**
+   * The row above the dock; receives whether the session has messages, the todo element it trails and the background
+   * agent stack it leads.
+   */
+  row?: (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => JSX.Element
   /** Shows the row before the first message too. */
   rowWhenEmpty?: boolean
   /** Replaces the welcome screen of an empty session. */
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
   readOnly?: boolean
+  /** Whether the Command Palette search toggle targets this view; the Agent Manager's sub-agent inspector turns it off. */
+  searchCommand?: boolean
   /** Rendered above the task header, for the sidebar's session tab strip. */
   tabStrip?: JSX.Element
   /** Opens the proposed changes of an edit permission request. */
@@ -80,6 +89,10 @@ export function SessionView(props: {
   onMissing?: (sessionID: string) => void
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** Another session tab is open, so the prompt suggests switching tabs. */
+  tabs?: boolean
+  /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
+  manager?: () => ManagerContext | undefined
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -144,14 +157,25 @@ export function SessionView(props: {
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
   const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
 
+  // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
+  // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
+  // newer request owns the loader, so the settle of a superseded one cannot clear it.
+  const [starting, setStarting] = createSignal<string>()
+  let attempt = 0
   // Load again after a reconnect too: createData drops its loaded state while disconnected. Same as the TUI session
   // route (packages/tui/src/routes/session/index.tsx).
   createEffect(
     on([session, v2.connection.status] as const, ([id, status]) => {
       if (!id || status !== "connected") return
+      const run = ++attempt
+      const loaded = v2.data.session.message.startLoaded(id)
+      const messages = v2.data.session.message.sync(id)
+      setStarting((value) => startingLoader(value, { session: id, loaded }))
+      const settle = () => setStarting((value) => settledLoader(value, { session: id, run, attempt }))
+      void messages.then(settle, settle)
       void Promise.all([
         v2.data.session.sync(id, { children: true }),
-        v2.data.session.message.sync(id),
+        messages,
         v2.data.session.pending.sync(id),
       ]).catch((err: unknown) => {
         // A session created here is known before the server has it; only a session nobody created is missing.
@@ -216,6 +240,14 @@ export function SessionView(props: {
       if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
     })
   const working = createWorking(session)
+  // Subagent jobs feed the dock's agent stack and the stop and "continue in background" actions of subagent cards. A
+  // read-only view has no dock and offers neither action.
+  const jobs = createBackgroundJobs({ session })
+  const actions = createMemo<ToolActions>(() =>
+    props.readOnly
+      ? props.actions
+      : { ...props.actions, stopSession: jobs.cancel, backgroundSession: jobs.promote },
+  )
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
@@ -329,6 +361,7 @@ export function SessionView(props: {
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
+      marketplace: () => getVSCodeAPI().postMessage({ type: "openMarketplace" } satisfies ToHost as never),
       settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
       reload: () => void v2.api.location.reload().catch(v2.report),
     }
@@ -395,85 +428,94 @@ export function SessionView(props: {
   })
 
   return (
-    <div class="chat-view" data-limit-content-width={limitChatContentWidth() ? "true" : "false"}>
-      {props.tabStrip}
-      <Show when={session()} keyed>
-        {(id) => <TaskHeader sessionID={id} />}
-      </Show>
-      <div class="chat-messages-wrapper">
-        <ToolChildSessionProvider value={childSessions}>
-          <div class="chat-messages">
-            <MessageList
-              session={session()}
-              actions={props.actions}
-              selection={selection}
-              onSelectSession={(id) => props.actions.openSession?.(id)}
-              onShowHistory={props.onShowHistory}
-              onForkMessage={running() ? undefined : props.onForkMessage}
-              empty={props.empty}
-              onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-              onViewTurnChanges={props.onViewTurnChanges}
-              pending={pending}
-            />
-          </div>
-        </ToolChildSessionProvider>
-      </div>
-      <Show when={!props.readOnly}>
-        <div class="chat-input">
-          <Show when={v2.handshake() || v2.error()}>
-            <div class="error-card" role="alert" data-component="v2-error">
-              <span>{v2.handshake() || v2.error()}</span>
-              <button class="error-card-dismiss" onClick={() => v2.setError("")}>
-                x
-              </button>
-            </div>
-          </Show>
-          <Show when={permissions()[0]} keyed>
-            {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
-          </Show>
-          <Show when={forms()[0]} keyed>
-            {(form) => <QuestionDock form={form} />}
-          </Show>
-          <SessionDock
-            session={session()}
-            blocked={dockBlocked()}
-            actions={(todos) => props.row?.(hasMessages(), todos)}
-            hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
-            status={working.status()}
-            submitting={working.submitting()}
-            timing={working.timing()}
-            text={working.text()}
-            retry={working.retry()}
-            onCancel={stop}
-            onScrollToBottom={() => scrollToBottom?.()}
-          />
-          <Show when={draftKey()} keyed>
-            {(key) => (
-              <PromptInput
-                draftKey={key}
+    <TranscriptSearchProvider>
+      <div class="chat-view" data-limit-content-width={limitChatContentWidth() ? "true" : "false"}>
+        {props.tabStrip}
+        <Show when={session()} keyed>
+          {(id) => <TaskHeader sessionID={id} readonly={props.readOnly} searchCommand={props.searchCommand} />}
+        </Show>
+        <div class="chat-messages-wrapper">
+          <ToolChildSessionProvider value={childSessions}>
+            <div class="chat-messages">
+              <MessageList
                 session={session()}
-                running={running()}
-                disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
-                blocked={blocked()}
-                questioning={questioning()}
-                onSend={send}
-                onStop={stop}
-                onAppendReady={(append) => {
-                  composer = append
-                  props.onAppendReady?.(append)
-                }}
-                onReviewAppendReady={props.onReviewAppendReady}
-                onReferenceReady={props.onReferenceReady}
-                onComposerReady={props.onComposerReady}
-                slash={{ entries: slashEntries, run: runSlash }}
-                selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-                autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
-                sandbox={sandboxControl}
+                starting={starting()}
+                actions={actions()}
+                selection={selection}
+                onSelectSession={(id) => props.actions.openSession?.(id)}
+                onShowHistory={props.onShowHistory}
+                onForkMessage={running() ? undefined : props.onForkMessage}
+                empty={props.empty}
+                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                onViewTurnChanges={props.onViewTurnChanges}
+                pending={pending}
               />
-            )}
-          </Show>
+            </div>
+          </ToolChildSessionProvider>
         </div>
-      </Show>
-    </div>
+        <Show when={!props.readOnly}>
+          <div class="chat-input">
+            <Show when={v2.handshake() || v2.error()}>
+              <div class="error-card" role="alert" data-component="v2-error">
+                <span>{v2.handshake() || v2.error()}</span>
+                <button class="error-card-dismiss" onClick={() => v2.setError("")}>
+                  x
+                </button>
+              </div>
+            </Show>
+            <Show when={permissions()[0]} keyed>
+              {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
+            </Show>
+            <Show when={forms()[0]} keyed>
+              {(form) => <QuestionDock form={form} />}
+            </Show>
+            <SessionDock
+              session={session()}
+              jobs={jobs}
+              onOpenSession={(id, title) =>
+                props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
+              }
+              blocked={dockBlocked()}
+              actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
+              hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
+              status={working.status()}
+              submitting={working.submitting()}
+              timing={working.timing()}
+              text={working.text()}
+              retry={working.retry()}
+              onCancel={stop}
+              onScrollToBottom={() => scrollToBottom?.()}
+            />
+            <Show when={draftKey()} keyed>
+              {(key) => (
+                <PromptInput
+                  draftKey={key}
+                  session={session()}
+                  running={running()}
+                  disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                  blocked={blocked()}
+                  questioning={questioning()}
+                  onSend={send}
+                  onStop={stop}
+                  onAppendReady={(append) => {
+                    composer = append
+                    props.onAppendReady?.(append)
+                  }}
+                  onReviewAppendReady={props.onReviewAppendReady}
+                  onReferenceReady={props.onReferenceReady}
+                  onComposerReady={props.onComposerReady}
+                  slash={{ entries: slashEntries, run: runSlash }}
+                  tabs={props.tabs}
+                  manager={props.manager}
+                  selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+                  autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
+                  sandbox={sandboxControl}
+                />
+              )}
+            </Show>
+          </div>
+        </Show>
+      </div>
+    </TranscriptSearchProvider>
   )
 }

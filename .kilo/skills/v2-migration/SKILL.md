@@ -54,9 +54,10 @@ The legacy sync branding passes exist but are disabled by default and process co
 
 - Run the CLI only through `bun dev` (`script/dev-isolated.ts`, which starts the Kilo host entry `packages/kilo-cli/src/index.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
 - Use a fresh profile per test: `KILO_V2_PROFILE=/tmp/kilo-v2-<id>`. Add `--standalone` so parallel agents do not share the service port.
-- `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
+- `bun dev` ignores the database, config file and directory, home, session, server password and client identity that a shell inherits from a Kilo or OpenCode process (`OPENCODE_DB`, `KILO2_DB`, `KILO2_CONFIG`, `KILO2_CONFIG_DIR`, their `OPENCODE_` names, `OPENCODE_HOME_DIR`, `OPENCODE_SESSION_ID`, `KILO_CLIENT`, `KILO_PLATFORM`, ...), so it is safe from an agent shell inside VS Code. Only `serve --stdio`, the server a client starts for itself, keeps the client identity. To pass config, use `OPENCODE_CONFIG_CONTENT`; to use another home, set `KILO_TEST_HOME`.
+- `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models, but their free tier can rate-limit with "You need to sign up to keep going"; do not wait on it. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories.
-- Models: `kilo/kilo-auto/free` by default. Use `kilo/deepseek/deepseek-v4.1-flash` only when a paid model is needed.
+- Models: use a cheap model such as `kilo/deepseek/deepseek-v4.1-flash` for self-tests; a paid request of this size is fine and does not need approval. `kilo/kilo-auto/free` is fine when it answers.
 - Isolate tests too. Upstream tests can write into the real home and leave servers running. Run them with `T=$(mktemp -d)` and `env OPENCODE_TEST_HOME=$T XDG_DATA_HOME=$T/data XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache bun test ...`. After the run, stop any of your processes that `pgrep -fl 'opencode-test-|opencode-service-lifecycle'` lists.
 - `OPENCODE_TEST_HOME` overrides the home directory `Global.Path.home` reports, so tests can point it at a scratch directory. When you run the Kilo host entry (`bun dev`, `packages/kilo-cli`), set `KILO_TEST_HOME` instead: the host translates `KILO_<NAME>` to `OPENCODE_<NAME>` at boot (`packages/kilo-cli/src/env.ts`, `names`), so `KILO_TEST_HOME` becomes `OPENCODE_TEST_HOME` before `@opencode/util/global` loads. Use the `OPENCODE_` name only when driving an upstream package directly (not the host).
 
@@ -153,7 +154,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 
 - Read `screen` after every step. Dialogs chain: choosing a model opens a variant dialog, and the next typed text lands in its search field.
 - Do not wait for text you typed. It is already on the screen. Use `idle`.
-- A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
+- A model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
 - `st click --text` does not reach the terminal. Use `tclick`.
 - Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review and for the PR screenshots (section `## Proof` under Evidence), because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.

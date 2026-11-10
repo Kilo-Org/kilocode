@@ -67,7 +67,7 @@ const fixture = Effect.fn(function* (companion = false, skills = true) {
   })
   yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
   const plugin = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugin)
+  const host = yield* PluginHost.make(plugin, "test")
   const rpc = yield* Rpc.Service
   return {
     directory,

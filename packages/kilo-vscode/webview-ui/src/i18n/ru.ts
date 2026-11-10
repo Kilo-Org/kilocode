@@ -1421,6 +1421,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
+  "task.backgroundAgents.promoteFailed": "Этот агент не смог продолжить работу в фоне. Возможно, он уже завершился.",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
   "task.backgroundAgents.clearFinished": "Очистить завершённые",

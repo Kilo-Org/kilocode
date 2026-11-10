@@ -1389,6 +1389,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
+  "task.backgroundAgents.promoteFailed": "تعذّر على هذا الوكيل المتابعة في الخلفية. ربما انتهى بالفعل.",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
   "task.backgroundAgents.clearFinished": "مسح المكتمل",

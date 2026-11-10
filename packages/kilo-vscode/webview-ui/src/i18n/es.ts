@@ -1443,6 +1443,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Abrir todos los agentes en segundo plano",
   "task.backgroundAgents.cancel": "Detener",
   "task.backgroundAgents.continueInBackground": "Continuar en segundo plano",
+  "task.backgroundAgents.promoteFailed": "Este agente no pudo continuar en segundo plano. Puede que ya haya terminado.",
   "task.backgroundAgents.waiting": "Un agente en segundo plano necesita tu entrada",
   "task.backgroundAgents.needsInput": "Necesita entrada",
   "task.backgroundAgents.clearFinished": "Borrar completados",

@@ -75,7 +75,7 @@ it.live("applies real agents, respects local overrides, and replaces organizatio
               }),
             )
             const plugins = yield* Plugin.Service
-            yield* KiloGatewayPlugin.effect(yield* PluginHost.make(plugins)).pipe(Effect.provide(Global.layerWith({})))
+            yield* KiloGatewayPlugin.effect(yield* PluginHost.make(plugins, "test")).pipe(Effect.provide(Global.layerWith({})))
             expect((yield* agents.get(Agent.ID.make("first-only")))?.system).toBe("First team")
             expect((yield* agents.get(Agent.ID.make("code")))?.system).toBe("Team code")
             // Config agent transforms run after the Gateway, so explicit user instructions still win.
@@ -172,7 +172,7 @@ it.live("managed privacy wins request and environment options, preserves routing
               }),
             )
             const plugins = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugins)
+            const host = yield* PluginHost.make(plugins, "test")
             yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
             const models = yield* Model.Service
             expect(

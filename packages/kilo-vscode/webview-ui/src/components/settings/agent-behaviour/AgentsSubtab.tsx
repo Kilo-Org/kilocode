@@ -91,6 +91,18 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
   const currentDefault = () => (config.value(["default_agent"]) as string | undefined) ?? ""
   const defaultScope = () => config.source(["default_agent"]) ?? "global"
 
+  // Kilo Swarm is on unless a config file turns it off. The config API can drop this Kilo key, so the raw target files
+  // are the fallback for the merged value.
+  const sharedBoard = () => {
+    const value = config.value(["shared_agent_board"])
+    if (typeof value === "boolean") return value
+    const project = config.raw("project")?.shared_agent_board
+    if (typeof project === "boolean") return project
+    return config.raw("global")?.shared_agent_board !== false
+  }
+  const setSharedBoard = (checked: boolean) =>
+    config.set(["shared_agent_board"], checked, config.source(["shared_agent_board"]) ?? "global")
+
   const chooseDefault = (value: string) => {
     if (!value) {
       void clearDefaultAgent(config, currentDefault() ? defaultScope() : undefined)
@@ -269,7 +281,6 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
           <SettingsRow
             title={language.t("settings.agentBehaviour.pushFixes.title")}
             description={language.t("settings.agentBehaviour.pushFixes.description")}
-            last
           >
             <Switch
               checked={config.setting("agentManager.pushFixes") !== false}
@@ -277,6 +288,15 @@ const AgentsSubtab: Component<{ navigation?: number }> = (props) => {
               hideLabel
             >
               {language.t("settings.agentBehaviour.pushFixes.title")}
+            </Switch>
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.sharedAgentBoard.title")}
+            description={language.t("settings.agentBehaviour.sharedAgentBoard.description")}
+            last
+          >
+            <Switch checked={sharedBoard()} onChange={(checked) => void setSharedBoard(checked)} hideLabel>
+              {language.t("settings.agentBehaviour.sharedAgentBoard.title")}
             </Switch>
           </SettingsRow>
         </Card>

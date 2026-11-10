@@ -1415,6 +1415,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
+  "task.backgroundAgents.promoteFailed": "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.clearFinished": "完了済みを消去",

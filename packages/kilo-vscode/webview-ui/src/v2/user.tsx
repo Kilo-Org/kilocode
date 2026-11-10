@@ -14,6 +14,8 @@ export function UserMessage(props: {
   rowKey?: string
   sessionID?: string
   onFork?: () => void
+  /** Whether the current transcript search match is in this row. */
+  searchActive?: boolean
   pending?: UserMessagePending
 }) {
   const language = useLanguage()
@@ -41,6 +43,7 @@ export function UserMessage(props: {
       data-message={props.message.id}
       data-row-key={props.rowKey}
       data-pending={props.pending ? "" : undefined}
+      data-search-active={props.searchActive ? "" : undefined}
     >
       <div class="vscode-session-turn-user">
         <Show when={review()}>

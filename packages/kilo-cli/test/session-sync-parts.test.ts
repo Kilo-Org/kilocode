@@ -740,8 +740,9 @@ it.live(
         ),
       ).toMatchObject({ op: "remove", cause: "part-removed" })
       yield* f.db.update(SessionMessageTable).set({ data: row.data }).where(eq(SessionMessageTable.id, messageID)).run()
+      // The native reader appends inline content that is still on a split row after its part rows.
       expect((yield* captured(f)).reconstructed).toMatchObject({
-        message: { content: [{ type: "text", text: "mutable tail" }] },
+        message: { content: [{ type: "text", text: "mutable tail" }, ...legacy] },
       })
       yield* f.db.delete(SessionPartTable).where(eq(SessionPartTable.message_id, messageID)).run()
       expect((yield* captured(f)).reconstructed).toMatchObject({ message: { content: legacy } })

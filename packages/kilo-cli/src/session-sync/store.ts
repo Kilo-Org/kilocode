@@ -186,11 +186,13 @@ const sessionValue = (r: string) => `json_object(
   'origin',json_object('directory',${r}.directory,'subpath',${r}.path,'projectID',${r}.project_id))`
 // The envelope never reads native part bodies. Values and frontiers are materialized in the
 // same native transaction, so a later excluded write cannot change an already-consented snapshot.
+// A split row normally has empty inline content. Content still on it stays in the envelope, because the native
+// reader appends it after the part rows.
 export const messageValue = (r: string) =>
   `CASE WHEN ${r}.type='assistant' AND json_type(${r}.data,'$.content') IS NOT NULL
     AND EXISTS(SELECT 1 FROM session_part WHERE message_id=${r}.id)
-    THEN json_object('seq',${r}.seq,'message',json_patch(json_remove(${r}.data,'$.content'),
-      json_object('id',${r}.id,'type',${r}.type)),
+    THEN json_object('seq',${r}.seq,'message',json_patch(CASE WHEN json_array_length(${r}.data,'$.content')=0
+      THEN json_remove(${r}.data,'$.content') ELSE ${r}.data END,json_object('id',${r}.id,'type',${r}.type)),
       'parts',json_object('count',(SELECT count(*) FROM session_part WHERE message_id=${r}.id),'through',s.position))
     ELSE json_object('seq',${r}.seq,'message',json_patch(${r}.data,json_object('id',${r}.id,'type',${r}.type))) END`
 

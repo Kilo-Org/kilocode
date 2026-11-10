@@ -7,6 +7,7 @@ import {
   CompactionCheckpointResponse,
   CompactionResponse,
   HttpContext,
+  type LLMRequest,
 } from "@opencode/ai/effect"
 import { LLMClient } from "@opencode/ai/route"
 import type {
@@ -18,6 +19,9 @@ import type {
 } from "@opencode/ai/route"
 import { Effect, Layer, Stream } from "effect"
 
+type TriggerRequest = LLMRequest & Pick<CheckpointRequest, "model">
+type EndpointRequest = LLMRequest & Pick<CompactionRequest, "model">
+
 // The native provider classifier keeps the complete normalized frame, including Kilo's retry decision.
 // Known Kilo terminal errors and top-up use the existing override across stream, generate, and compact.
 export const layer = <E, R>(base: Layer.Layer<LLMClientService, E, R>) =>
@@ -26,22 +30,22 @@ export const layer = <E, R>(base: Layer.Layer<LLMClientService, E, R>) =>
     Effect.gen(function* () {
       const client = yield* LLMClient.Service
       function compact(
-        request: CheckpointRequest,
+        request: TriggerRequest,
         options: TriggerCompactOptions,
       ): Effect.Effect<CompactionCheckpointResponse, AIError>
       function compact(
-        request: CompactionRequest,
+        request: EndpointRequest,
         options?: EndpointCompactOptions,
       ): Effect.Effect<CompactionResponse, AIError>
       function compact(
-        request: CheckpointRequest | CompactionRequest,
+        request: TriggerRequest | EndpointRequest,
         options?: EndpointCompactOptions | TriggerCompactOptions,
       ) {
         // The overloads tie the request capability to the selected mechanism. Only the error is changed here.
         const result: Effect.Effect<CompactionCheckpointResponse | CompactionResponse, AIError> =
           options?.mechanism === "trigger"
-            ? client.compact(request as CheckpointRequest, options)
-            : client.compact(request as CompactionRequest, options)
+            ? client.compact(request as TriggerRequest, options)
+            : client.compact(request as EndpointRequest, options)
         return request.model.provider === "kilo" ? result.pipe(Effect.mapError(normalize)) : result
       }
       return LLMClient.Service.of({
