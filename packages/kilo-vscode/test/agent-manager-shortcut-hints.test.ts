@@ -76,7 +76,7 @@ describe("agent manager prompt hint context", () => {
     })
 
   it("numbers a waiting session by its sidebar position, which is the badge the jump shortcut uses", () => {
-    // Local is index 0, so the first worktree is ⌘1 even though it is not selected.
+    // Local is index 0 (⌘1), so the first worktree is ⌘2 even though it is not selected.
     expect(build({ activity: { "p1:a": "waiting" } }).waiting).toBe(2)
     expect(build({ activity: { "p1:b": "waiting" } }).waiting).toBe(3)
   })
