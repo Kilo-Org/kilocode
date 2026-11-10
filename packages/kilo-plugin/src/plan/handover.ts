@@ -2,7 +2,7 @@ export * as PlanHandover from "./handover"
 
 import type { Model } from "@opencode/schema/model"
 import type { SessionMessage } from "@opencode/schema/session-message"
-import { Cause, Data, Duration, Effect, Option } from "effect"
+import { Cause, Duration, Effect, Option } from "effect"
 
 export const PROMPT = `You are summarizing a planning session to hand off to an implementation session.
 
@@ -36,7 +36,6 @@ const CHARS = 60_000
 const TOOL_CHARS = 4_000
 const TIMEOUT = Duration.seconds(60)
 
-class Timeout extends Data.TaggedError("PlanHandover.Timeout")<{}> {}
 
 /** A timed-out attempt is final; a provider failure may be retried once on the default model. */
 type Attempt = { readonly text: Option.Option<string>; readonly retry: boolean }
