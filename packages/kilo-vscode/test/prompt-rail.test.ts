@@ -9,6 +9,7 @@ import type {
 import { capacity, historyAction, previewText, promptItems, railEntries } from "../webview-ui/src/v2/prompt-rail-data"
 import type { TranscriptQueuedRow } from "../webview-ui/src/v2/transcript"
 import { transcriptRows } from "../webview-ui/src/v2/transcript"
+import { PUSH_INSTRUCTION } from "../src/shared/review-comments"
 
 const base = { time: { created: 1 } }
 
@@ -201,6 +202,51 @@ describe("promptItems", () => {
     const items = promptItems(rows([]), [queued("q1", "You are Kilo Code, an expert code reviewer.", metadata)])
 
     expect(items[0]?.prompt).toBe("Sent by Kilo · /review staged")
+  })
+
+  test("resolves a review prompt from the body the transcript shows", () => {
+    const comments = {
+      version: 1,
+      comments: [
+        { id: "c1", file: "src/auth.ts", side: "additions", line: 3, comment: "Check the token", selectedText: "" },
+      ],
+    }
+    const metadata = { kilo: { review: comments } }
+    const stored = [
+      "## Review Comments",
+      "",
+      "**src/auth.ts** (line 3):",
+      "Check the token",
+      "",
+      PUSH_INSTRUCTION,
+      "",
+      "Also rename the helper.",
+    ].join("\n")
+
+    const [item] = promptItems(rows([user("u1", stored, { metadata })]))
+
+    expect(item!.prompt).toBe("Kilo added: push fixes to the pull request")
+  })
+
+  test("previews the user's own text for a review prompt without a push instruction", () => {
+    const comments = {
+      version: 1,
+      comments: [
+        { id: "c1", file: "src/auth.ts", side: "additions", line: 3, comment: "Check the token", selectedText: "" },
+      ],
+    }
+    const stored = [
+      "## Review Comments",
+      "",
+      "**src/auth.ts** (line 3):",
+      "Check the token",
+      "",
+      "Also rename the helper.",
+    ].join("\n")
+
+    const [item] = promptItems(rows([user("u1", stored, { metadata: { kilo: { review: comments } } })]))
+
+    expect(item!.prompt).toBe("Also rename the helper.")
   })
 })
 

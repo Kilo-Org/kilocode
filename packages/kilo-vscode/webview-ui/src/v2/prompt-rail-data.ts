@@ -1,6 +1,7 @@
 // Prompt navigator data: one item per user prompt, the tick entries the rail
 // shows for them, and the preview text of the card rows.
 import type { SessionMessageAssistant } from "@opencode/client"
+import { partFeedback } from "../../../src/shared/browser-feedback"
 import { injectedView } from "../../../src/shared/injected-prompt"
 import type { TranscriptQueuedRow, TranscriptRow } from "./transcript"
 
@@ -75,12 +76,15 @@ function text(parts: SessionMessageAssistant["content"], limit: number): string 
 }
 
 /**
- * The row label for one user prompt. A prompt Kilo composed or extended names the invocation instead of showing the
- * template the model received; a prompt another session delivered keeps its text with that origin in front.
+ * The row label for one user prompt. The structured review and browser sections lead the stored text and are shown as
+ * cards in the transcript, so resolve the body they leave behind first, the same way the bubble does. A prompt Kilo
+ * composed or extended then names the invocation instead of showing the template the model received, and a prompt
+ * another session delivered keeps its text with that origin in front.
  */
 function promptText(value: string, metadata: unknown): string {
-  const view = injectedView(metadata, value)
-  if (!view) return previewText(value)
+  const body = partFeedback(metadata, value)?.body ?? value
+  const view = injectedView(metadata, body)
+  if (!view) return previewText(body)
   if (view.source) return previewText(`${view.label}: ${view.text}`)
   return view.label
 }
