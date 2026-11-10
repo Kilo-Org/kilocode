@@ -69,6 +69,31 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 
 The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
+**Slash commands:**
+
+Type `/` at the start of the chat input to open the command menu. The menu groups **Actions** (run immediately, such as starting a session or switching the model), **Commands** (sent to Kilo as a prompt, including built-in commands, custom commands, skills, and MCP prompts), and **Skills**. Use the arrow keys to move, `Enter` or `Tab` to select, and `Escape` to close; the mouse works too. Commands match on their name, description, or search terms, and any text you type after the command is kept.
+
+Some commands open a nested menu. For example, `/review ` lists review scopes such as `uncommitted`, `staged`, `unpushed`, `branch`, and `worktree`, and `/memory ` lists memory actions. When a skill shares a name with a command, the skill appears as `/name:skill` so both stay reachable.
+
+Common commands:
+
+| Command | Action |
+|---|---|
+| `/new` | Start a new session (searchable as `clear`) |
+| `/sessions` | Switch to another session (searchable as `resume`, `continue`, or `history`) |
+| `/models` | Switch the AI model |
+| `/agents` | Switch the agent |
+| `/variant` | Switch the reasoning effort |
+| `/compact` | Summarize and compact the session |
+| `/review` | Review code changes |
+| `/memory` | Manage project memory |
+| `/export` | Export the session transcript |
+| `/caffeinate` | Toggle [Keep Awake](/docs/getting-started/settings/keep-awake) |
+| `/settings` | Open Settings |
+| `/reload` | Reload config, skills, agents, and commands from disk |
+
+Custom commands, [skills](/docs/customize/skills), and MCP prompts appear in the same menu under **Commands** and **Skills**. The CLI exposes the same commands; see the [CLI slash commands](/docs/code-with-ai/platforms/cli#interactive-slash-commands).
+
 **Exporting local transcripts:**
 
 Run `/export` in chat, or open a local session's **History** context menu and choose **Export session transcript**. The save dialog lets you choose the Markdown (`.md`) destination.
@@ -91,6 +116,23 @@ When more than one session is open, the sidebar and Kilo editor tabs show a sess
 | `Cmd+Shift+Left` / `Right` | `Ctrl+Shift+Left` / `Right` | Move the focused session tab left / right |
 
 Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
+
+**Forking a session:**
+
+Fork a conversation to branch off it without losing the original. Use the fork action on a user message, or choose **Fork session** from a session tab's menu. The fork opens as a new session that copies the earlier context and waits for your next instruction; it does not start a reply on its own and does not create a new worktree.
+
+**Session actions:**
+
+While a session is open, a row of actions appears above the chat input. It requires a Git repository.
+
+| Action | What it does |
+|---|---|
+| **New Session** | Start a fresh conversation while keeping the current session intact. |
+| **New Worktree** | Create an isolated Git worktree for the session. Use the split menu to create it from the current branch or to **Configure** options in the Agent Manager dialog. |
+| **Move to Worktree** | Move this conversation and its uncommitted changes into a new worktree for isolated follow-up work. |
+| **Changes** | Open the changes view for the working tree. |
+
+See [Agent Manager](/docs/automate/agent-manager) for worktree setup and management.
 
 {% /tab %}
 {% tab label="CLI" %}
