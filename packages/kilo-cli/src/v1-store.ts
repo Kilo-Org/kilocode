@@ -6,6 +6,7 @@
 export * as KiloV1Store from "./v1-store"
 
 import { Database as SQLite } from "bun:sqlite"
+import { openReadonly } from "./sqlite-readonly"
 import { Effect, Layer, References } from "effect"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Database } from "@opencode/core/database/database"
@@ -93,7 +94,7 @@ export function isKiloV1Store(file: string) {
 /** The v1 traits of the tables in `file`; undefined when it cannot be read, unless `strict` asks for the error. */
 function tablesOf(file: string, options: { strict?: boolean } = {}) {
   try {
-    const db = new SQLite(file, { readonly: true })
+    const db = openReadonly(file)
     try {
       const tables = new Set(
         db
@@ -218,7 +219,7 @@ function clearCredentials(db: SQLite) {
 
 function count(file: string, table: string) {
   try {
-    const db = new SQLite(file, { readonly: true })
+    const db = openReadonly(file)
     try {
       return db.query<{ n: number }, []>(`SELECT count(*) AS n FROM "${table}"`).get()?.n ?? 0
     } finally {

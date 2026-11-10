@@ -327,8 +327,8 @@ async function copy<A>(
   const umask = process.umask(0o077)
   try {
     if (input.since === undefined) {
-      const { Database } = await import("bun:sqlite")
-      const db = new Database(source, { readonly: true })
+      const { openReadonly } = await import("./sqlite-readonly")
+      const db = openReadonly(source)
       try {
         // `VACUUM INTO` blocks for minutes on a large store, so the lock is refreshed on both sides of it.
         input.onProgress?.()

@@ -2,7 +2,7 @@ import { Database as SQLite } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
-import { mkdir, mkdtemp, readdir, readFile, realpath, rm, utimes, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, utimes, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../src/database"
@@ -274,6 +274,34 @@ test("a Kilo v1 store is not adopted, so the start cannot create the store the g
   expect(await KiloDatabase.select({}, { data, channel: "local" })).toBe(path.join(data, "kilo2-local.db"))
   expect(existsSync(path.join(data, "kilo2-local.db"))).toBe(false)
   expect(existsSync(path.join(data, "opencode-local.db"))).toBe(true)
+})
+
+test("the next start opens a store that was just imported, although it has no -wal or -shm file yet", async () => {
+  const { dir, data } = await root()
+  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"))
+  const file = await importStore(data)
+  expect(existsSync(`${file}-wal`) || existsSync(`${file}-shm`)).toBe(false)
+  expect(await KiloDatabase.select({}, { data, channel: "latest" })).toBe(file)
+  expect(await KiloDatabase.select({ OPENCODE_DB: file }, { data, channel: "latest" })).toBe(file)
+})
+
+test("a v1 store at rest, after v1 closed it, is imported without creating files beside it", async () => {
+  for (const since of [undefined, Date.now() - 7 * 86_400_000]) {
+    const { dir, data } = await root()
+    const v1 = await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"), Date.now())
+    v1.db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+    // A copy of the checkpointed file is a store at rest: in WAL mode, with no -wal or -shm file beside it.
+    const store = path.join(dir, "rest", "kilo.db")
+    await mkdir(path.dirname(store), { recursive: true })
+    await copyFile(KiloDatabase.v1Store(data), store)
+    const before = await hashes(path.dirname(store))
+    expect(await KiloDatabase.importV1({ store, file: path.join(data, "kilo2.db"), data, since })).toEqual({
+      imported: 2,
+      skipped: false,
+    })
+    expect(await hashes(path.dirname(store))).toEqual(before)
+    expect(existsSync(`${store}-wal`) || existsSync(`${store}-shm`)).toBe(false)
+  }
 })
 
 test("a v1 store from before the Kilo tables is still imported, and is not taken for a store to protect", async () => {

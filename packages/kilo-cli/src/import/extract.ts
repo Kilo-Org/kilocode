@@ -3,6 +3,7 @@
 // through one read-only connection inside one read transaction, so the selection and every copied row come from the
 // same snapshot even while Kilo v1 writes, and it never writes the source database or its WAL.
 import { Database as SQLite, type SQLQueryBindings } from "bun:sqlite"
+import { openReadonly } from "../sqlite-readonly"
 
 const BATCH = 1_000
 
@@ -20,7 +21,7 @@ type Table = {
 
 /** Writes the v1 tables and the rows of the `since` window from `source` into the new file `target`. */
 export function extract(source: string, target: string, since: number, onProgress: () => void = () => {}) {
-  const from = new SQLite(source, { readonly: true })
+  const from = openReadonly(source)
   try {
     from.run("BEGIN")
     const ids = selectSessions(from, since)
