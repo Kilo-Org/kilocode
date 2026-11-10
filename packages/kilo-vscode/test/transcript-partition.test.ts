@@ -8,6 +8,7 @@ import type {
 import { messageTurnRanges, turnMetadata } from "../webview-ui/src/v2/message-status"
 import {
   anchorOffset,
+  DIRECT_TAIL_ROWS,
   handedRows,
   partitionTranscript,
   retainTurn,
@@ -243,6 +244,55 @@ describe("partitionTranscript", () => {
 
     expect(partition.directKeys).toEqual([])
     expect(partition.virtualKeys).toContain("u2:user")
+  })
+
+  test("keeps only the last rows of a long live turn direct", () => {
+    const messages = [user("u1", 0)]
+    for (let index = 0; index < 30; index++) {
+      messages.push(assistant({ id: `a${index}`, created: index + 1, text: `step ${index}` }))
+    }
+    const rows = transcriptRows(messages)
+    const partition = partitionTranscript(rows, [], new Set(["u1"]))
+
+    expect(partition.directKeys).toEqual(rows.slice(-DIRECT_TAIL_ROWS).map((row) => row.key))
+    expect(partition.virtualKeys).toEqual(rows.slice(0, -DIRECT_TAIL_ROWS).map((row) => row.key))
+    expect(partition.directKeys).toHaveLength(DIRECT_TAIL_ROWS)
+  })
+
+  test("cuts between the chunk rows of one message without moving either", () => {
+    const message = assistant({ id: "a1", created: 1, parts: textParts(TRANSCRIPT_CHUNK_SIZE * (DIRECT_TAIL_ROWS + 2)) })
+    const messages = [user("u1", 0), message]
+    const rows = transcriptRows(messages)
+    const partition = partitionTranscript(rows, [], new Set(["u1"]))
+
+    expect(partition.directKeys).toEqual(rows.slice(-DIRECT_TAIL_ROWS).map((row) => row.key))
+    expect(partition.virtualKeys[0]).toBe("u1:user")
+    expect(partition.directKeys[0]).toBe(`a1:assistant:${TRANSCRIPT_CHUNK_SIZE * 2}`)
+  })
+
+  test("hands the oldest tail row to the virtual window on each new step", () => {
+    const messages = [user("u1", 0)]
+    let previous: ReturnType<typeof partitionTranscript> | undefined
+    for (let step = 0; step < 20; step++) {
+      messages.push(assistant({ id: `a${step}`, created: step + 1, text: `step ${step}` }))
+      const rows = transcriptRows(messages)
+      const partition = partitionTranscript(rows, [], new Set(["u1"]), previous)
+      const keys = rows.map((row) => row.key)
+      const shown = [...partition.virtualKeys, ...partition.directKeys]
+
+      expect(shown.toSorted()).toEqual(keys.toSorted())
+      expect(new Set(shown).size).toBe(keys.length)
+      expect(partition.directKeys.length).toBeLessThanOrEqual(DIRECT_TAIL_ROWS)
+      if (previous) {
+        const moved = handedRows(
+          previous.directKeys,
+          new Map(partition.virtualKeys.map((key, index) => [key, index])),
+        )
+        expect(moved.length).toBeLessThanOrEqual(1)
+        if (previous.directKeys.length === DIRECT_TAIL_ROWS) expect(moved).toEqual([previous.directKeys[0]])
+      }
+      previous = partition
+    }
   })
 
   test("keeps queued prompts outside the transcript rows", () => {
