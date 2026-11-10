@@ -81,36 +81,31 @@ export function promptItems(
   rows: readonly TranscriptRow[],
   queued: readonly TranscriptQueuedRow[] = [],
 ): PromptRailItem[] {
-  const items = rows.flatMap((row): PromptRailItem[] =>
-    row.type === "user"
-      ? [
-          {
-            key: row.key,
-            turn: row.turn,
-            queued: false,
-            prompt: truncate(previewText(row.message.text), PROMPT_LIMIT),
-            answer: "",
-          },
-        ]
-      : [],
-  )
-  const byTurn = new Map(items.map((item) => [item.turn, item]))
-
-  // One pass fills every answer: assistant rows follow their user row and carry
-  // the same turn id. The first step that has text is the preview; the chunks of
-  // that step keep appending until the answer limit is reached, so a reply split
-  // into rows reads as one paragraph.
-  const carrier = new Map<string, string>()
+  const items: PromptRailItem[] = []
+  let current: PromptRailItem | undefined
+  // A steer keeps the turn open, so two prompts can share a turn id. Attach
+  // each assistant segment to the prompt that precedes it, and join the chunks
+  // of its first text-bearing step by message id.
+  let carrier: string | undefined
   for (const row of rows) {
-    if (row.type !== "assistant") continue
-    const item = byTurn.get(row.turn)
-    if (!item) continue
-    const id = carrier.get(item.turn)
-    if (item.answer && id && row.message.id !== id) continue
+    if (row.type === "user") {
+      current = {
+        key: row.key,
+        turn: row.turn,
+        queued: false,
+        prompt: truncate(previewText(row.message.text), PROMPT_LIMIT),
+        answer: "",
+      }
+      items.push(current)
+      carrier = undefined
+      continue
+    }
+    if (row.type !== "assistant" || !current) continue
+    if (current.answer && carrier && row.message.id !== carrier) continue
     const value = text(row.parts, ANSWER_LIMIT)
     if (!value) continue
-    if (!id) carrier.set(item.turn, row.message.id)
-    item.answer = truncate(item.answer ? `${item.answer} ${value}` : value, ANSWER_LIMIT)
+    if (!carrier) carrier = row.message.id
+    current.answer = truncate(current.answer ? `${current.answer} ${value}` : value, ANSWER_LIMIT)
   }
 
   // A prompt can carry no text at all (image-only or file-only message). Rather

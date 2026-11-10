@@ -107,6 +107,24 @@ describe("promptItems", () => {
     expect(items[0]?.answer).toBe(content.map((part) => part.text).join(" "))
   })
 
+  test("keeps each steered prompt with the answer that followed it", () => {
+    const items = promptItems(
+      rows([
+        user("u1", "first"),
+        assistant("a1", [text("First answer.")]),
+        user("u2", "steer"),
+        assistant("a2", [text("Second answer.")]),
+        { id: "idle", type: "idle", time: { created: 3 }, outcome: "succeeded" },
+      ]),
+    )
+
+    expect(items.map((item) => ({ prompt: item.prompt, answer: item.answer }))).toEqual([
+      { prompt: "first", answer: "First answer." },
+      { prompt: "steer", answer: "Second answer." },
+    ])
+    expect(items.map((item) => item.turn)).toEqual(["u1", "u1"])
+  })
+
   test("uses the first step with text and keeps all of its chunks", () => {
     const content = Array.from({ length: 10 }, (_, index) => text(`Part ${index + 1}.`))
     const items = promptItems(

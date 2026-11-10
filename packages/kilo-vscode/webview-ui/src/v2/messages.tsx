@@ -420,8 +420,11 @@ export function MessageList(props: {
     }
     const id = props.session
     if (!id || loadingOlder()) return
-    setSeek({ session: id, count: messages().length })
+    const count = messages().length
+    // Start the request before recording the seek: a signal write can flush
+    // this effect before the call returns, and it must observe the load.
     loadOlder()
+    setSeek({ session: id, count })
   }
   createEffect(() => {
     const loading = loadingOlder()
@@ -452,8 +455,8 @@ export function MessageList(props: {
     const action = historyAction(target.count, count, more())
     const item = railItems()[0]
     if (action === "load") {
-      setSeek({ session: target.session, count })
       loadOlder()
+      setSeek({ session: target.session, count })
       return
     }
     setSeek(undefined)
