@@ -64,10 +64,17 @@ test("a writer that starts during an at-rest read is reported before it checkpoi
   expect(reader.unchanged()).toBe(false)
 })
 
-test("a store in use is read with locks and sees what its writer committed", async () => {
+test("a store in use is read with locks and sees what its writer committed, also only in the WAL", async () => {
   const { live } = await stores()
+  // The writer of `stores` stays open: this row exists only in its -wal file, which an immutable read would ignore.
+  const writer = new Database(live)
+  open.push(writer)
+  writer.run("INSERT INTO note VALUES ('in the wal')")
   const reader = openReadonly(live)
   open.push(reader.db)
-  expect(reader.db.query("SELECT body FROM note").all()).toEqual([{ body: "kept" }])
+  expect(reader.db.query("SELECT body FROM note ORDER BY rowid").all()).toEqual([
+    { body: "kept" },
+    { body: "in the wal" },
+  ])
   expect(reader.unchanged()).toBe(true)
 })

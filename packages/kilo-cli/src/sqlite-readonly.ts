@@ -13,15 +13,20 @@ import { pathToFileURL } from "node:url"
  * whether the store stayed at rest, and a caller that copies the store checks it before it trusts the copy.
  */
 export function openReadonly(file: string) {
-  if (existsSync(`${file}-wal`)) return { db: new Database(file, { readonly: true }), unchanged: () => true }
+  // One look at the store both picks the read and is the baseline of `unchanged`, so a writer that starts between a
+  // probe and a baseline cannot end up in the baseline of a read that ignores its WAL.
   const before = state(file)
+  if (before.wal) return { db: new Database(file, { readonly: true }), unchanged: () => true }
   return {
     // The URI flag makes every SQLite build parse the `immutable` parameter, whatever its compile-time default.
     db: new Database(
       `${pathToFileURL(file).href}?immutable=1`,
       constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI,
     ),
-    unchanged: () => state(file) === before,
+    unchanged: () => {
+      const now = state(file)
+      return now.size === before.size && now.mtime === before.mtime && now.wal === before.wal && now.shm === before.shm
+    },
   }
 }
 
@@ -38,5 +43,5 @@ export function changed(file: string) {
  */
 function state(file: string) {
   const stat = statSync(file)
-  return [stat.size, stat.mtimeMs, existsSync(`${file}-wal`), existsSync(`${file}-shm`)].join(":")
+  return { size: stat.size, mtime: stat.mtimeMs, wal: existsSync(`${file}-wal`), shm: existsSync(`${file}-shm`) }
 }
