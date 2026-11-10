@@ -17,13 +17,13 @@ function workspace() {
 
 function withHome<T>(run: () => T): T {
   const home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "kilo-home-")))
-  const previous = process.env.OPENCODE_TEST_HOME
-  process.env.OPENCODE_TEST_HOME = home
+  const previous = process.env.XDG_DATA_HOME
+  process.env.XDG_DATA_HOME = home
   try {
     return run()
   } finally {
-    if (previous === undefined) delete process.env.OPENCODE_TEST_HOME
-    else process.env.OPENCODE_TEST_HOME = previous
+    if (previous === undefined) delete process.env.XDG_DATA_HOME
+    else process.env.XDG_DATA_HOME = previous
   }
 }
 
@@ -217,8 +217,11 @@ describe("resolveDocumentPath", () => {
 
 describe("dataPlans", () => {
   it("uses the Kilo data plan directory", () => {
-    expect(dataPlans({ XDG_DATA_HOME: "/tmp/data" }, undefined)).toEqual(path.join("/tmp/data", "kilo2", "plans"))
-    expect(dataPlans({}, "/tmp/home")).toEqual(path.join("/tmp/home", ".local", "share", "kilo2", "plans"))
+    expect(dataPlans({ XDG_DATA_HOME: "/tmp/data" }, "/tmp/home")).toEqual(path.join("/tmp/data", "kilo2", "plans"))
+    // The server ignores an empty XDG_DATA_HOME and a test home override.
+    expect(dataPlans({ XDG_DATA_HOME: "", OPENCODE_TEST_HOME: "/tmp/test" }, "/tmp/home")).toEqual(
+      path.join("/tmp/home", ".local", "share", "kilo2", "plans"),
+    )
   })
 })
 

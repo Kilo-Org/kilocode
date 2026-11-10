@@ -40,14 +40,13 @@ export function usePlanDir(dir: string): void {
 }
 
 /** The server's global plan directory, the one place outside the worktree whose files the preview shows. */
-export function plansDir(dir = serverPlans ?? dataPlans(process.env)): string {
-  return dir
+export function plansDir(): string {
+  return serverPlans ?? dataPlans(process.env)
 }
 
-/** The plan directory in the Kilo data directory: `<XDG data>/kilo2/plans`. */
-export function dataPlans(env: NodeJS.ProcessEnv, home = env.OPENCODE_TEST_HOME): string {
-  const base = home ? path.join(home, ".local", "share") : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"))
-  return path.join(base, "kilo2", "plans")
+/** The plan directory in the Kilo data directory, derived as the server does: `<XDG data>/kilo2/plans`. */
+export function dataPlans(env: NodeJS.ProcessEnv, home = os.homedir()): string {
+  return path.join(env.XDG_DATA_HOME || path.join(home, ".local", "share"), "kilo2", "plans")
 }
 
 /** Whether `resolved` lives in the plan directory (realpath-folded for tmpfs/symlink cases). */

@@ -146,3 +146,15 @@ test("a blocked plan edit explains the plan directory", async () => {
     }),
   )
 })
+
+test("a plan directory that cannot be created does not fail the Plan request", async () => {
+  const persisted = await install(({ context, dir }) =>
+    Effect.gen(function* () {
+      fs.mkdirSync(path.dirname(path.dirname(dir)), { recursive: true })
+      fs.rmSync(path.dirname(dir), { recursive: true, force: true })
+      fs.writeFileSync(path.dirname(dir), "not a directory")
+      yield* context({ agent: plan, sessionID, messages: [Message.user("Plan dark mode")] })
+    }),
+  )
+  expect(persisted).toHaveLength(1)
+})

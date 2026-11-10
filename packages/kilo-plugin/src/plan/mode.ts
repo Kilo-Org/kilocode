@@ -49,6 +49,10 @@ export const install = Effect.fn(function* (input: {
 }) {
   const ctx = input.ctx
   const dir = PlanFile.directory(ctx.location, input.data)
+  // Session hooks have no failure channel: a read-only checkout must not fail Plan requests or stop the reminders.
+  const ensure = Effect.sync(() => PlanFile.ensure(dir)).pipe(
+    Effect.catchCause((cause) => Effect.logWarning("failed to create the plan directory", { dir, cause })),
+  )
   const reminder = Effect.fn(function* (sessionID: Session.ID) {
     const session = yield* input.store.get(sessionID)
     if (!session) return undefined
@@ -70,7 +74,7 @@ export const install = Effect.fn(function* (input: {
   yield* ctx.session.hook("context", (event) =>
     Effect.gen(function* () {
       const entry = event.agent === plan ? yield* reminder(event.sessionID) : undefined
-      if (entry) yield* Effect.sync(() => PlanFile.ensure(dir))
+      if (entry) yield* ensure
       const last = lastReminder(event.messages)
       const missing = entry !== undefined && last !== entry
       const stale = event.agent !== plan && last !== undefined && last !== leave
@@ -96,7 +100,7 @@ export const install = Effect.fn(function* (input: {
         if (!change) return
         const text = change === "enter" ? yield* reminder(event.data.sessionID) : leave
         if (!text) return
-        if (change === "enter") yield* Effect.sync(() => PlanFile.ensure(dir))
+        if (change === "enter") yield* ensure
         yield* ctx.session.synthetic({ sessionID: event.data.sessionID, text, resume: false }).pipe(
           Effect.catchCause((cause) =>
             Effect.logWarning("failed to inject the Plan mode reminder", { sessionID: event.data.sessionID, cause }),

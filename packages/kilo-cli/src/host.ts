@@ -115,8 +115,7 @@ export const overrides: LayerNode.Replacements = [
   // replacement): upstream keeps ownership of the tool, its description, pages and instructions.
   ReadToolFileSystem.node.replace(KiloRead.node),
   SdkPlugins.node.replace(plugins),
-  // Kilo Plan mode (kilocode.plan) replaces the native one: a config-level remove runs first, so a user config entry
-  // `opencode.plan` can still turn the native plugin back on.
+  // Kilo Plan mode (kilocode.plan) replaces the native one: a remove operation runs before the config operations.
   ConfigPluginSource.node.replace(
     ConfigPluginSource.node.mapLayer((layer) =>
       Layer.effect(

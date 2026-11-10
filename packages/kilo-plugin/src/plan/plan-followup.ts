@@ -95,16 +95,14 @@ export const ask = Effect.fn(function* (input: {
   const session = yield* input.store.get(input.sessionID)
   if (!session) return
 
-  // Read one row for the current turn, then only that turn. A long Code history is not loaded.
+  // Read the last user row, then only the tail of its turn: plan_exit ends a planning turn, so a long Code turn is
+  // not loaded on every idle.
   const [lastUser] = yield* input.store.messages({ sessionID: input.sessionID, order: "desc", limit: 1, type: "user" })
   if (!lastUser) return
   if (input.handled.get(input.sessionID) === lastUser.id) return
-  const messages = yield* input.store.messages({
-    sessionID: input.sessionID,
-    order: "asc",
-    cursor: { id: lastUser.id, direction: "next" },
-  })
-  const exit = planExit(messages)
+  const tail = yield* input.store.messages({ sessionID: input.sessionID, order: "desc", limit: TAIL })
+  const end = tail.findIndex((message) => message.id === lastUser.id)
+  const exit = planExit((end === -1 ? tail : tail.slice(0, end)).toReversed())
   if (!exit) return
   // The part's agent, not the session's current agent: the user can switch agents after plan_exit.
   if (!PlanFile.isPlanner(exit.agent)) return
@@ -143,6 +141,9 @@ function planExit(messages: ReadonlyArray<SessionMessage.Info>) {
     }
   }
 }
+
+/** The newest messages of a turn that can hold its plan_exit call: the call and at most a closing step. */
+const TAIL = 10
 
 /** The planning messages the handover summary reads. Bounded: the summary needs the recent planning context. */
 const HISTORY = 200

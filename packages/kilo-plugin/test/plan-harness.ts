@@ -145,7 +145,6 @@ export async function handoff(input: {
                 get: () => Effect.succeed(session),
                 messages: (request) => {
                   if (request.type === "user") return Effect.succeed([user])
-                  if (request.cursor) return Effect.succeed([assistant])
                   return Effect.succeed(request.order === "desc" ? messages.toReversed() : messages)
                 },
               }),
