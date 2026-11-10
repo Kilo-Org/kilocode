@@ -245,56 +245,17 @@ internal open class MdViewHybrid(
     override fun searchRevision(): Long = searchRev
 
     @Suppress("LoopWithTooManyJumpStatements")
-    override fun searchSurfaces(): List<MdSearchView.SearchSurface> {
+    override fun searchBlocks(): List<MdSearchView.SearchBlock> {
         if (disposed) return emptyList()
-        val out = ArrayList<MdSearchView.SearchSurface>()
+        val out = ArrayList<MdSearchView.SearchBlock>()
         for (view in blocks) {
             val pane = view.searchPane() ?: continue
             val doc = pane.document
             val text = doc.getText(0, doc.length)
             if (text.isEmpty()) continue
-            out.add(MdSearchView.SearchSurface(view.searchId, pane, text, excluded(doc), searchRev))
+            out.add(Block(view.searchId, pane, text, excluded(doc), searchRev))
         }
         return out
-    }
-
-    @Suppress("ReturnCount", "MaxLineLength")
-    override fun searchRect(surface: MdSearchView.SearchSurface, range: TextRange): Rectangle? {
-        if (disposed) return null
-        val pane = surface.component as? JTextComponent ?: return null
-        if (!pane.isShowing) return null
-        val bounds = paneRect(pane, range) ?: return null
-        val point = runCatching { SwingUtilities.convertPoint(pane, bounds.x, bounds.y, root) }.getOrNull() ?: return null
-        return Rectangle(point.x, point.y, bounds.width, bounds.height)
-    }
-
-    override fun scrollIntoView(surface: MdSearchView.SearchSurface, range: TextRange) {
-        if (disposed) return
-        val pane = surface.component as? JTextComponent ?: return
-        paneRect(pane, range)?.let { pane.scrollRectToVisible(it) }
-    }
-
-    private fun paneRect(pane: JTextComponent, range: TextRange): Rectangle? {
-        val start = runCatching { pane.modelToView2D(range.startOffset)?.bounds }.getOrNull() ?: return null
-        val end = runCatching {
-            pane.modelToView2D((range.endOffset - 1).coerceAtLeast(range.startOffset))?.bounds
-        }.getOrNull() ?: start
-        return start.union(end)
-    }
-
-    @Suppress("LoopWithTooManyJumpStatements")
-    override fun applySearchHighlights(highlights: Map<Int, MdSearchView.SearchHighlights>) {
-        if (disposed) return
-        clearSearchHighlights()
-        for (view in blocks) {
-            val pane = view.searchPane() ?: continue
-            val spec = highlights[view.searchId] ?: continue
-            val normal = painter(false)
-            val current = painter(true)
-            for (range in spec.ranges.take(MAX_SEARCH_HIGHLIGHTS)) addTag(view.searchId, pane, range, normal)
-            spec.current?.let { addTag(view.searchId, pane, it, current) }
-            pane.repaint()
-        }
     }
 
     override fun clearSearchHighlights() {
@@ -304,6 +265,56 @@ internal open class MdViewHybrid(
             clearTags(view.searchId, pane)
         }
         searchTags.clear()
+    }
+
+    private inner class Block(
+        override val id: Int,
+        override val component: JComponent,
+        override val text: String,
+        override val excluded: List<TextRange>,
+        override val revision: Long,
+    ) : MdSearchView.SearchBlock {
+        private val pane = component as? JTextComponent
+
+        override fun applyHighlights(ranges: List<TextRange>, current: TextRange?) {
+            if (disposed) return
+            val pane = pane ?: return
+            clearTags(id, pane)
+            val normal = painter(false)
+            val active = painter(true)
+            for (range in ranges.take(MAX_SEARCH_HIGHLIGHTS)) addTag(id, pane, range, normal)
+            current?.let { addTag(id, pane, it, active) }
+            pane.repaint()
+        }
+
+        override fun clearHighlights() {
+            pane?.let { clearTags(id, it) }
+        }
+
+        @Suppress("ReturnCount", "MaxLineLength")
+        override fun rect(range: TextRange): Rectangle? {
+            if (disposed) return null
+            val pane = pane ?: return null
+            if (!pane.isShowing) return null
+            val bounds = paneRect(pane, range) ?: return null
+            val point = runCatching { SwingUtilities.convertPoint(pane, bounds.x, bounds.y, root) }.getOrNull()
+                ?: return null
+            return Rectangle(point.x, point.y, bounds.width, bounds.height)
+        }
+
+        override fun scrollIntoView(range: TextRange) {
+            if (disposed) return
+            val pane = pane ?: return
+            paneRect(pane, range)?.let { pane.scrollRectToVisible(it) }
+        }
+    }
+
+    private fun paneRect(pane: JTextComponent, range: TextRange): Rectangle? {
+        val start = runCatching { pane.modelToView2D(range.startOffset)?.bounds }.getOrNull() ?: return null
+        val end = runCatching {
+            pane.modelToView2D((range.endOffset - 1).coerceAtLeast(range.startOffset))?.bounds
+        }.getOrNull() ?: start
+        return start.union(end)
     }
 
     override fun addSearchListener(listener: MdSearchView.SearchListener) {
@@ -366,13 +377,16 @@ internal open class MdViewHybrid(
         private val outline: Color,
     ) : Highlighter.HighlightPainter {
         override fun paint(g: Graphics, p0: Int, p1: Int, bounds: Shape, c: JTextComponent) {
-            val rect = (bounds as? Rectangle) ?: bounds.bounds
+            // HTML text views can report line-wide highlight bounds. Draw the actual glyph range so
+            // the rounded background wraps only the matched words.
+            val rect = rangeRect(c, p0, p1) ?: (bounds as? Rectangle) ?: bounds.bounds
             if (rect.width <= 0 || rect.height <= 0) return
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val arc = JBUI.scale(3)
                 g2.color = fill
-                g2.fillRect(rect.x, rect.y, rect.width, rect.height)
+                g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height, arc, arc)
                 if (current) {
                     g2.color = outline
                     g2.stroke = BasicStroke(JBUI.scale(1).toFloat().coerceAtLeast(1f))
@@ -382,14 +396,20 @@ internal open class MdViewHybrid(
                         rect.y + pad,
                         (rect.width - pad * 2).coerceAtLeast(1),
                         (rect.height - pad * 2).coerceAtLeast(1),
-                        JBUI.scale(3),
-                        JBUI.scale(3),
+                        arc,
+                        arc,
                     )
                 }
             } finally {
                 g2.dispose()
             }
         }
+    }
+
+    private fun rangeRect(c: JTextComponent, p0: Int, p1: Int): Rectangle? {
+        val start = runCatching { c.modelToView2D(p0)?.bounds }.getOrNull() ?: return null
+        val end = runCatching { c.modelToView2D((p1 - 1).coerceAtLeast(p0))?.bounds }.getOrNull() ?: start
+        return start.union(end)
     }
 
     override fun markdown(): String = source.toString()

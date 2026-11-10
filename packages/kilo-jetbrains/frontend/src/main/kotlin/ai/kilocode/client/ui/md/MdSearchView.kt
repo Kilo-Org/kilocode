@@ -16,33 +16,33 @@ interface MdSearchView {
     /** Monotonically increasing when rendered searchable text or its documents change. */
     fun searchRevision(): Long = 0
 
-    /** Rendered prose surfaces that transcript search may inspect. Each surface keeps document offsets. */
-    fun searchSurfaces(): List<SearchSurface> = emptyList()
+    /** Rendered prose blocks in display order. Each block owns its own highlighting. */
+    fun searchBlocks(): List<SearchBlock> = emptyList()
 
-    /** Bounds of [range] in [SearchSurface.component] coordinates, or null while the surface is not laid out. */
-    fun searchRect(surface: SearchSurface, range: TextRange): Rectangle? = null
-
-    /** Scrolls a nested surface (for example a wide table) so [range] is visible inside it. */
-    fun scrollIntoView(surface: SearchSurface, range: TextRange) = Unit
-
-    /** Replace every search-owned highlight. Surfaces absent from [highlights] are cleared. */
-    fun applySearchHighlights(highlights: Map<Int, SearchHighlights>) = Unit
-
-    fun clearSearchHighlights() = Unit
+    fun clearSearchHighlights() {
+        searchBlocks().forEach { it.clearHighlights() }
+    }
 
     fun addSearchListener(listener: SearchListener) = Unit
 
     fun removeSearchListener(listener: SearchListener) = Unit
 
-    data class SearchSurface(
-        val id: Int,
-        val component: JComponent,
-        val text: String,
-        val excluded: List<TextRange>,
-        val revision: Long,
-    )
+    /** One rendered prose block that can highlight ranges inside its own text. */
+    interface SearchBlock {
+        val id: Int
+        val component: JComponent
+        val text: String
+        val excluded: List<TextRange>
+        val revision: Long
 
-    data class SearchHighlights(val ranges: List<TextRange>, val current: TextRange?)
+        fun applyHighlights(ranges: List<TextRange>, current: TextRange?)
+
+        fun clearHighlights()
+
+        fun rect(range: TextRange): Rectangle?
+
+        fun scrollIntoView(range: TextRange)
+    }
 
     fun interface SearchListener {
         fun onSearchChanged()

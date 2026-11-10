@@ -3,6 +3,7 @@ package ai.kilocode.client.ui.md
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBScrollPane
 import javax.swing.text.JTextComponent
 
 class MdViewSearchTest : BasePlatformTestCase() {
@@ -44,7 +45,7 @@ class MdViewSearchTest : BasePlatformTestCase() {
             """.trimIndent(),
         )
 
-        val all = view.searchSurfaces().joinToString("\n") { it.text }
+        val all = view.searchBlocks().joinToString("\n") { it.text }
 
         assertTrue(all.contains("Heading"))
         assertTrue(all.contains("inline code here"))
@@ -65,25 +66,47 @@ class MdViewSearchTest : BasePlatformTestCase() {
             """.trimIndent(),
         )
 
-        val surface = view.searchSurfaces().single { it.text.contains("item") }
-        val hidden = surface.text.indexOf("hidden")
+        val block = view.searchBlocks().single { it.text.contains("item") }
+        val hidden = block.text.indexOf("hidden")
         if (hidden >= 0) {
             assertTrue(
                 "fenced code inside a list must be excluded",
-                surface.excluded.any { hidden >= it.startOffset && hidden < it.endOffset },
+                block.excluded.any { hidden >= it.startOffset && hidden < it.endOffset },
             )
         }
     }
 
+    fun `test matched word geometry is narrower than the line`() {
+        view.set("hello target world")
+        val block = view.searchBlocks().single()
+        val pane = block.component as JTextComponent
+        val host = JBScrollPane(view.component)
+        host.setSize(420, 200)
+        view.component.setSize(420, view.component.preferredSize.height)
+        host.doLayout()
+        view.component.doLayout()
+        pane.doLayout()
+
+        val start = block.text.indexOf("target")
+        val first = pane.modelToView2D(start)!!.bounds
+        val last = pane.modelToView2D(start + "target".length - 1)!!.bounds
+        val word = first.union(last)
+
+        assertTrue(
+            "word highlight should wrap the matched word, not the whole line: word=${word.width} pane=${pane.width}",
+            word.width < pane.width / 2,
+        )
+    }
+
     fun `test highlights are search owned and can be cleared`() {
         view.set("hello target world")
-        val surface = view.searchSurfaces().single()
-        val start = surface.text.indexOf("target")
+        val block = view.searchBlocks().single()
+        val start = block.text.indexOf("target")
         val range = TextRange(start, start + "target".length)
 
-        val pane = surface.component as JTextComponent
+        val pane = block.component as JTextComponent
         pane.select(0, 5)
-        view.applySearchHighlights(mapOf(surface.id to MdSearchView.SearchHighlights(listOf(range), range)))
+        block.applyHighlights(listOf(range), range)
         assertEquals(2, pane.highlighter.highlights.size)
         assertEquals(0, pane.selectionStart)
         assertEquals(5, pane.selectionEnd)
@@ -96,37 +119,33 @@ class MdViewSearchTest : BasePlatformTestCase() {
         view.set("target")
         repeat(50) {
             view.append(" target")
-            val surface = view.searchSurfaces().single()
-            view.applySearchHighlights(
-                mapOf(surface.id to MdSearchView.SearchHighlights(listOf(TextRange(0, 1)), null)),
-            )
+            val block = view.searchBlocks().single()
+            block.applyHighlights(listOf(TextRange(0, 1)), null)
         }
 
-        val pane = view.searchSurfaces().single().component as JTextComponent
+        val pane = view.searchBlocks().single().component as JTextComponent
         assertEquals(1, pane.highlighter.highlights.size)
     }
 
-    fun `test highlight tags are capped per surface while current match stays visible`() {
+    fun `test highlight tags are capped per block while current match stays visible`() {
         view.set("x".repeat(MAX_SEARCH_HIGHLIGHTS + 100))
-        val surface = view.searchSurfaces().single()
+        val block = view.searchBlocks().single()
         val ranges = (0 until MAX_SEARCH_HIGHLIGHTS + 100).map { TextRange(it, it + 1) }
 
-        view.applySearchHighlights(mapOf(surface.id to MdSearchView.SearchHighlights(ranges, ranges.last())))
+        block.applyHighlights(ranges, ranges.last())
 
-        val pane = surface.component as JTextComponent
+        val pane = block.component as JTextComponent
         assertEquals(MAX_SEARCH_HIGHLIGHTS + 1, pane.highlighter.highlights.size)
     }
 
     fun `test streaming updates do not clear existing highlights`() {
         view.set("target")
-        val surface = view.searchSurfaces().single()
-        view.applySearchHighlights(
-            mapOf(surface.id to MdSearchView.SearchHighlights(listOf(TextRange(0, 1)), null)),
-        )
+        val block = view.searchBlocks().single()
+        block.applyHighlights(listOf(TextRange(0, 1)), null)
 
         view.append(" target")
 
-        val pane = view.searchSurfaces().single().component as JTextComponent
+        val pane = view.searchBlocks().single().component as JTextComponent
         assertEquals(1, pane.highlighter.highlights.size)
     }
 

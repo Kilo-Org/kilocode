@@ -1,9 +1,12 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MAX_SEARCH_HIGHLIGHTS
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
+import com.intellij.util.ui.JBUI
 
 class SessionSearchTest : SessionUiTestBase() {
     fun `test find searches conversation prose and navigates matches`() {
@@ -168,6 +171,26 @@ class SessionSearchTest : SessionUiTestBase() {
             "reopening after close starts at the first match",
             pumpUntil { bar.statusText == "1 of 3" },
         )
+        ui.search.close()
+    }
+
+    fun `test find bar uses the transcript content lane width`() {
+        showMessages()
+        ui.search.open()
+
+        val bar = ui.search.getComponent()
+        val host = ui.search.host
+        host.setSize(800, bar.preferredSize.height + 20)
+        host.doLayout()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        val left = JBUI.scale(SessionUiStyle.SessionLayout.INNER_HORIZONTAL)
+        val right = JBUI.scale(SessionUiStyle.SessionLayout.INNER_RIGHT)
+        val available = 800 - left - right
+        val expected = minOf(available, panel.searchLaneWidth())
+
+        assertEquals("Find bar should match the transcript lane", expected, bar.width)
+        assertEquals("Find bar should be centered in the transcript lane", left + (available - expected) / 2, bar.x)
         ui.search.close()
     }
 

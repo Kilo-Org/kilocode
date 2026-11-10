@@ -292,6 +292,9 @@ class SessionMessageListPanel(
     /** Find the rendered component for one part of a message, or null if neither has a view. */
     fun findPart(message: String, part: String): JComponent? = msgToView[message]?.part(part)
 
+    /** Width of the transcript's centered content lane, used by the Find bar. */
+    internal fun searchLaneWidth(): Int = SessionUiStyle.SessionLayout.readableWidth(this, style.transcriptFont)
+
     /** Ordered conversation prose bodies suitable for transcript search. */
     @RequiresEdt
     internal fun searchBodies(): List<TranscriptSearchBody> {

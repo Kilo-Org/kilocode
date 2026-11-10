@@ -4,7 +4,10 @@ package ai.kilocode.client.session.ui.search
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.scroll.SessionScroll
+import ai.kilocode.client.session.ui.SessionLayout
+import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.find.FindModel
 import com.intellij.find.SearchReplaceComponent
 import com.intellij.find.SearchSession
@@ -28,7 +31,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.wm.IdeFocusManager
-import com.intellij.ui.components.panels.NonOpaquePanel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.ui.md.MdSearchView
@@ -39,7 +41,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.awt.BorderLayout
+import java.awt.Insets
 import java.util.WeakHashMap
 import java.awt.Rectangle
 import javax.swing.JComponent
@@ -68,7 +70,17 @@ internal class SessionSearch(
     private val scope: CoroutineScope,
     private val focusFallback: () -> JComponent?,
 ) : Disposable, SearchSession {
-    val host: JComponent = NonOpaquePanel(BorderLayout())
+    val host: JComponent = SessionLayoutPanel(
+        gap = 0,
+        pad = Insets(
+            0,
+            SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
+            0,
+            SessionUiStyle.SessionLayout.INNER_RIGHT,
+        ),
+    ).apply {
+        (layout as SessionLayout).maxWidth = { panel.searchLaneWidth() }
+    }
 
     private val find = FindModel().apply {
         isCaseSensitive = false
@@ -98,17 +110,17 @@ internal class SessionSearch(
     private var revealPending = false
     private var refreshPending = false
     private val watched = LinkedHashMap<MdView, MdSearchView.SearchListener>()
-    private val cache = WeakHashMap<MdView, SurfaceCache>()
+    private val cache = WeakHashMap<MdView, BlockCache>()
     private val listener = MdSearchView.SearchListener { if (active) schedule(false) }
     private val observer = FindModel.FindModelObserver { onModelChanged() }
 
     private class Hit(
         val body: TranscriptSearchBody,
-        val surface: MdSearchView.SearchSurface,
+        val block: MdSearchView.SearchBlock,
         val range: TextRange,
     )
 
-    private class SurfaceCache(val revision: Long, val list: List<MdSearchView.SearchSurface>)
+    private class BlockCache(val revision: Long, val list: List<MdSearchView.SearchBlock>)
 
     init {
         host.isVisible = false
@@ -161,7 +173,7 @@ internal class SessionSearch(
     @RequiresEdt
     fun applyStyle() {
         if (!active) return
-        if (results.any { it.surface.revision != it.body.md.searchRevision() }) {
+        if (results.any { it.block.revision != it.body.md.searchRevision() }) {
             schedule(false)
             return
         }
@@ -239,7 +251,7 @@ internal class SessionSearch(
             }
         })
         bar = built
-        host.add(built, BorderLayout.CENTER)
+        host.add(built)
         return built
     }
 
@@ -316,7 +328,7 @@ internal class SessionSearch(
         }
         val bodies = panel.searchBodies()
         watch(bodies)
-        val snapshots = bodies.map { body -> body to surfaces(body.md) }
+        val snapshots = bodies.map { body -> body to blocks(body.md) }
         val id = ++generation
         search?.cancel()
         searching = true
@@ -339,11 +351,11 @@ internal class SessionSearch(
         }
     }
 
-    private fun surfaces(md: MdView): List<MdSearchView.SearchSurface> {
+    private fun blocks(md: MdView): List<MdSearchView.SearchBlock> {
         val revision = md.searchRevision()
         val cached = cache[md]
         if (cached != null && cached.revision == revision) return cached.list
-        return md.searchSurfaces().also { cache[md] = SurfaceCache(revision, it) }
+        return md.searchBlocks().also { cache[md] = BlockCache(revision, it) }
     }
 
     private fun watch(bodies: List<TranscriptSearchBody>) {
@@ -363,16 +375,16 @@ internal class SessionSearch(
 
     private fun collect(
         id: Long,
-        snapshots: List<Pair<TranscriptSearchBody, List<MdSearchView.SearchSurface>>>,
+        snapshots: List<Pair<TranscriptSearchBody, List<MdSearchView.SearchBlock>>>,
         options: TranscriptMatchOptions,
     ): Outcome {
         val deadline = System.nanoTime() + TranscriptMatcher.BUDGET_MS * NANOS_PER_MS
         val hits = ArrayList<Hit>()
-        for ((body, surfaces) in snapshots) {
-            for (surface in surfaces) {
+        for ((body, blocks) in snapshots) {
+            for (block in blocks) {
                 if (id != generation) return Outcome.Cancelled
                 val result = TranscriptMatcher.matches(
-                    surface.text,
+                    block.text,
                     options,
                     deadline,
                     cancelled = { id != generation },
@@ -380,8 +392,8 @@ internal class SessionSearch(
                 when (result) {
                     is TranscriptMatchResult.Matches -> {
                         for (range in result.ranges) {
-                            if (excluded(surface, range)) continue
-                            hits.add(Hit(body, surface, range))
+                            if (excluded(block, range)) continue
+                            hits.add(Hit(body, block, range))
                         }
                     }
                     TranscriptMatchResult.Cancelled -> return Outcome.Cancelled
@@ -394,8 +406,8 @@ internal class SessionSearch(
         return Outcome.Results(hits)
     }
 
-    private fun excluded(surface: MdSearchView.SearchSurface, range: TextRange): Boolean =
-        surface.excluded.any { range.startOffset < it.endOffset && it.startOffset < range.endOffset }
+    private fun excluded(block: MdSearchView.SearchBlock, range: TextRange): Boolean =
+        block.excluded.any { range.startOffset < it.endOffset && it.startOffset < range.endOffset }
 
     @RequiresEdt
     private fun apply(outcome: Outcome, reveal: Boolean) {
@@ -422,7 +434,7 @@ internal class SessionSearch(
 
     @RequiresEdt
     private fun applyResults(hits: List<Hit>, reveal: Boolean) {
-        val stale = hits.any { it.surface.revision != it.body.md.searchRevision() }
+        val stale = hits.any { it.block.revision != it.body.md.searchRevision() }
         val show = reveal || revealPending
         val anchor = results.getOrNull(current)
         val anchorKey = anchor?.body?.key
@@ -494,7 +506,7 @@ internal class SessionSearch(
             schedule(false)
             return
         }
-        if (results.any { it.surface.revision != it.body.md.searchRevision() }) {
+        if (results.any { it.block.revision != it.body.md.searchRevision() }) {
             pendingIndex = target(direction)
             pending = 0
             revealPending = true
@@ -518,22 +530,22 @@ internal class SessionSearch(
 
     @RequiresEdt
     private fun reveal(hit: Hit) {
-        if (hit.surface.revision != hit.body.md.searchRevision()) {
+        if (hit.block.revision != hit.body.md.searchRevision()) {
             schedule(false)
             return
         }
         if (hit.body.collapsed()) hit.body.reveal()
-        hit.body.md.scrollIntoView(hit.surface, hit.range)
+        hit.block.scrollIntoView(hit.range)
         val component = hit.body.md.component
-        val rect = hit.body.md.searchRect(hit.surface, hit.range)
+        val rect = hit.block.rect(hit.range)
         if (rect != null) {
             scroll.scrollToRect(component, rect)
             return
         }
         ApplicationManager.getApplication().invokeLater {
             if (!active || results.getOrNull(current) !== hit) return@invokeLater
-            hit.body.md.scrollIntoView(hit.surface, hit.range)
-            val retry = hit.body.md.searchRect(hit.surface, hit.range) ?: return@invokeLater
+            hit.block.scrollIntoView(hit.range)
+            val retry = hit.block.rect(hit.range) ?: return@invokeLater
             scroll.scrollToRect(hit.body.md.component, retry)
         }
     }
@@ -541,32 +553,26 @@ internal class SessionSearch(
     @RequiresEdt
     private fun applyHighlights() {
         val currentHit = results.getOrNull(current)
-        val groups = LinkedHashMap<MdView, MutableMap<Int, MutableList<TextRange>>>()
-        val known = HashMap<MdView, HashMap<Int, MdSearchView.SearchSurface>>()
+        val groups = LinkedHashMap<MdView, MutableMap<Int, Pair<MdSearchView.SearchBlock, MutableList<TextRange>>>>()
         for (hit in results) {
             groups.getOrPut(hit.body.md) { LinkedHashMap() }
-                .getOrPut(hit.surface.id) { mutableListOf() }
+                .getOrPut(hit.block.id) { hit.block to mutableListOf() }
+                .second
                 .add(hit.range)
-            known.getOrPut(hit.body.md) { HashMap() }[hit.surface.id] = hit.surface
         }
-        for (md in watched.keys) {
-            if (!groups.containsKey(md)) md.clearSearchHighlights()
-        }
-        for ((md, surfaces) in groups) {
-            val map = LinkedHashMap<Int, MdSearchView.SearchHighlights>()
-            for ((id, ranges) in surfaces) {
-                val surface = known[md]?.get(id)
-                val activeRange = currentHit?.takeIf { it.body.md === md && it.surface.id == id }?.range
-                val shown = ranges.map { display(surface, it) }
-                map[id] = MdSearchView.SearchHighlights(shown, activeRange?.let { display(surface, it) })
+        for (md in watched.keys) md.clearSearchHighlights()
+        for ((md, blocks) in groups) {
+            for ((id, entry) in blocks) {
+                val block = entry.first
+                val activeRange = currentHit?.takeIf { it.body.md === md && it.block.id == id }?.range
+                block.applyHighlights(entry.second.map { display(block, it) }, activeRange?.let { display(block, it) })
             }
-            md.applySearchHighlights(map)
         }
     }
 
-    private fun display(surface: MdSearchView.SearchSurface?, range: TextRange): TextRange {
-        if (surface == null || range.length > 0 || surface.text.isEmpty()) return range
-        val start = range.startOffset.coerceIn(0, surface.text.length - 1)
+    private fun display(block: MdSearchView.SearchBlock, range: TextRange): TextRange {
+        if (range.length > 0 || block.text.isEmpty()) return range
+        val start = range.startOffset.coerceIn(0, block.text.length - 1)
         return TextRange(start, start + 1)
     }
 
