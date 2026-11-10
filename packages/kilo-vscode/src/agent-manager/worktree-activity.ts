@@ -16,7 +16,7 @@ type Change =
   | { kind: "permission.remove"; id: string; sessionID: string }
   | { kind: "question.add"; id: string; sessionID: string }
   | { kind: "question.remove"; id: string; sessionID: string }
-  | { kind: "clear"; sessionID: string }
+  | { kind: "clear"; sessionID: string; deleted: boolean }
 
 type State = {
   dir: string
@@ -293,8 +293,8 @@ export class WorktreeActivity {
       type === "session.execution.interrupted" ||
       type === "session.idle"
     )
-      return type === "session.execution.failed" ? this.cleared(value) : this.idle(value)
-    if (type === "session.deleted") return this.cleared(value)
+      return type === "session.execution.failed" ? this.cleared(value, false) : this.idle(value)
+    if (type === "session.deleted") return this.cleared(value, true)
     if (type === "permission.asked" || type === "form.created") return this.add(type, value)
     if (type === "permission.replied" || type === "form.replied" || type === "form.cancelled")
       return this.remove(type, value)
@@ -319,9 +319,9 @@ export class WorktreeActivity {
     return sessionID ? { kind: "status", sessionID, type: "idle" } : undefined
   }
 
-  private cleared(value: Record<string, unknown>): Change | undefined {
+  private cleared(value: Record<string, unknown>, deleted: boolean): Change | undefined {
     const sessionID = string(value.sessionID) ?? string(record(value.info)?.id)
-    return sessionID ? { kind: "clear", sessionID } : undefined
+    return sessionID ? { kind: "clear", sessionID, deleted } : undefined
   }
 
   private add(type: unknown, value: Record<string, unknown>): Change | undefined {
@@ -349,7 +349,8 @@ export class WorktreeActivity {
   }
 
   private apply(state: State, change: Change): void {
-    if (change.kind !== "clear") state.sessions.add(change.sessionID)
+    // A failed run keeps its session, so the next run of that session still finds this directory.
+    if (change.kind !== "clear" || !change.deleted) state.sessions.add(change.sessionID)
     if (change.kind === "session") return
     if (change.kind === "status") {
       state.statuses.set(change.sessionID, change.type)
@@ -371,7 +372,7 @@ export class WorktreeActivity {
       if (state.questions.get(change.id) === change.sessionID) state.questions.delete(change.id)
       return
     }
-    state.sessions.delete(change.sessionID)
+    if (change.deleted) state.sessions.delete(change.sessionID)
     state.statuses.delete(change.sessionID)
     for (const [id, sessionID] of state.permissions) {
       if (sessionID === change.sessionID) state.permissions.delete(id)

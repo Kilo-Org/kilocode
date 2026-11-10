@@ -5,6 +5,7 @@ import { samePath } from "../src/agent-manager/project/paths"
 const WT = "/repo/worktrees/feature"
 
 type Snapshot = {
+  sessions?: string[]
   statuses: Record<string, { type: string }>
   permissions: Array<{ id: string; sessionID: string }>
   questions: Array<{ id: string; sessionID: string }>
@@ -87,6 +88,28 @@ describe("WorktreeActivity", () => {
 
     activity.event({ type: "session.execution.started", data: { sessionID: "s1" } })
     expect(posts.at(-1)).toEqual([WT])
+  })
+
+  it("keeps following a session after a failed run, and forgets it once deleted", async () => {
+    const { activity, posts } = make(async () => ({
+      sessions: ["s1"],
+      statuses: { s1: { type: "busy" } },
+      permissions: [],
+      questions: [],
+    }))
+    await activity.sync(true)
+
+    activity.event({ type: "session.execution.failed", data: { sessionID: "s1", error: {} } })
+    expect(posts.at(-1)).toEqual([])
+
+    activity.event({ type: "session.execution.started", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([WT])
+
+    activity.event({ type: "session.deleted", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([])
+
+    activity.event({ type: "session.execution.started", data: { sessionID: "s1" } })
+    expect(posts.at(-1)).toEqual([])
   })
 
   it("follows a session created after the load through events without a location", async () => {
