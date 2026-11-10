@@ -41,6 +41,10 @@ interface TranscriptSearchContextValue {
    * older history hadn't been searched yet. */
   searchingHistory: Accessor<boolean>
   setSearchingHistory: (value: boolean) => void
+  /** True when loading older pages failed, so "No results" would be
+   * misleading. Cleared when the query, the session or the open state changes. */
+  historyFailed: Accessor<boolean>
+  setHistoryFailed: (value: boolean) => void
 }
 
 const TranscriptSearchContext = createContext<TranscriptSearchContextValue>()
@@ -61,6 +65,7 @@ export const TranscriptSearchProvider: ParentComponent = (props) => {
   const [jump, setJump] = createSignal(0)
   const [invalid, setInvalid] = createSignal(false)
   const [searchingHistory, setSearchingHistory] = createSignal(false)
+  const [historyFailed, setHistoryFailed] = createSignal(false)
 
   return (
     <TranscriptSearchContext.Provider
@@ -87,6 +92,8 @@ export const TranscriptSearchProvider: ParentComponent = (props) => {
         setInvalid,
         searchingHistory,
         setSearchingHistory,
+        historyFailed,
+        setHistoryFailed,
       }}
     >
       {props.children}

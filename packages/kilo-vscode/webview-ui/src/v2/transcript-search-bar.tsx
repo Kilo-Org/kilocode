@@ -120,13 +120,24 @@ export const TranscriptSearchBar: Component = () => {
           {language.t("chat.search.invalidRegex")}
         </span>
       </Show>
+      <Show when={!search.invalid() && search.historyFailed()}>
+        <span data-slot="transcript-search-empty" role="status" aria-live="polite">
+          {language.t("chat.search.historyFailed")}
+        </span>
+      </Show>
       <Show when={!search.invalid() && search.searchingHistory() && search.count() === 0}>
         <span data-slot="transcript-search-empty" role="status" aria-live="polite">
           {language.t("chat.search.searchingHistory")}
         </span>
       </Show>
       <Show
-        when={!search.invalid() && !search.searchingHistory() && search.query().length > 0 && search.count() === 0}
+        when={
+          !search.invalid() &&
+          !search.historyFailed() &&
+          !search.searchingHistory() &&
+          search.query().length > 0 &&
+          search.count() === 0
+        }
       >
         <span data-slot="transcript-search-empty" role="status" aria-live="polite">
           {language.t("chat.search.noResults")}

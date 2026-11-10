@@ -338,13 +338,13 @@ export function MessageList(props: {
   const search = useTranscriptSearch()
   // A failed history load leaves the cursor untouched, so the loading effect
   // would retry the whole remaining history on every run. Stop retrying until
-  // a different session opens or the search is reopened.
-  const [historyFailed, setHistoryFailed] = createSignal(false)
+  // the query, the session or the open state changes.
   createEffect(
     on(
-      () => [props.session, search.active()] as const,
-      ([session, active], previous) => {
-        if (!previous || previous[0] !== session || (active && !previous[1])) setHistoryFailed(false)
+      () => [props.session, search.active(), search.query()] as const,
+      ([session, active, query], previous) => {
+        if (!previous || previous[0] !== session || (active && !previous[1]) || previous[2] !== query)
+          search.setHistoryFailed(false)
       },
       { defer: true },
     ),
@@ -374,13 +374,13 @@ export function MessageList(props: {
       search.active() &&
       !!search.query() &&
       !!id &&
-      !historyFailed() &&
+      !search.historyFailed() &&
       v2.data.session.message.more(id) &&
       !v2.data.session.message.startLoaded(id)
     search.setSearchingHistory(searching)
     if (!searching || !id || v2.data.session.message.loading(id)) return
     void v2.data.session.message.loadMore(id, { all: true }).catch((error: unknown) => {
-      setHistoryFailed(true)
+      search.setHistoryFailed(true)
       v2.report(error)
     })
   })
