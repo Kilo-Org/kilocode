@@ -89,8 +89,8 @@ runs:
           pid=$!
           (sleep 600 && kill "$pid" 2>/dev/null) &
           watchdog=$!
-          if wait "$pid"; then kill "$watchdog" 2>/dev/null; exit 0; fi
-          kill "$watchdog" 2>/dev/null
+          if wait "$pid"; then kill "$watchdog" 2>/dev/null || true; exit 0; fi
+          kill "$watchdog" 2>/dev/null || true
           echo "::warning::bun install attempt $attempt failed or timed out"
         done
         exit 1
