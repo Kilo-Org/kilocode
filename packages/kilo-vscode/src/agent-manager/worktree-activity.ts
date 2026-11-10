@@ -2,12 +2,15 @@ import { samePath } from "./project/paths"
 import type { AgentManagerConnection } from "./connection"
 
 type Snapshot = {
+  /** The sessions of the directory, so events without a location can find it. */
+  sessions?: string[]
   statuses: Record<string, { type: string }>
   permissions: Array<{ id: string; sessionID: string }>
   questions: Array<{ id: string; sessionID: string }>
 }
 
 type Change =
+  | { kind: "session"; sessionID: string }
   | { kind: "status"; sessionID: string; type: string }
   | { kind: "permission.add"; id: string; sessionID: string }
   | { kind: "permission.remove"; id: string; sessionID: string }
@@ -18,6 +21,7 @@ type Change =
 type State = {
   dir: string
   loaded: boolean
+  sessions: Set<string>
   statuses: Map<string, string>
   permissions: Map<string, string>
   questions: Map<string, string>
@@ -46,6 +50,7 @@ type FactoryOptions = {
 }
 
 const TYPES = new Set([
+  "session.created",
   "session.status",
   "session.execution.started",
   "session.execution.succeeded",
@@ -139,12 +144,15 @@ export class WorktreeActivity {
       this.publish()
       return
     }
-    if (!directory) return
-    const state = this.states.find((item) => matches(item.dir, directory))
-    if (!state) return
-
     const change = this.change(type, value.data)
     if (!change) return
+    // The server sends session events without a location: find the directory from the session it names.
+    const dir =
+      directory ?? (type === "session.created" ? string(record(record(value.data)?.location)?.directory) : undefined)
+    const state = dir
+      ? this.states.find((item) => matches(item.dir, dir))
+      : this.states.find((item) => item.sessions.has(change.sessionID) || item.statuses.has(change.sessionID))
+    if (!state) return
     if (state.request) state.request.events.push(change)
     this.apply(state, change)
     this.publish()
@@ -178,6 +186,7 @@ export class WorktreeActivity {
     return {
       dir,
       loaded: false,
+      sessions: new Set(),
       statuses: new Map(),
       permissions: new Map(),
       questions: new Map(),
@@ -233,6 +242,7 @@ export class WorktreeActivity {
   private finish(req: Request, snapshot: Snapshot): void {
     if (!this.valid(req)) return
     const next = this.state(req.state.dir)
+    for (const sessionID of snapshot.sessions ?? []) next.sessions.add(sessionID)
     for (const [sessionID, status] of Object.entries(snapshot.statuses ?? {})) {
       if (typeof status?.type === "string") next.statuses.set(sessionID, status.type)
     }
@@ -246,6 +256,7 @@ export class WorktreeActivity {
     }
     for (const change of req.events) this.apply(next, change)
     Object.assign(req.state, {
+      sessions: next.sessions,
       statuses: next.statuses,
       permissions: next.permissions,
       questions: next.questions,
@@ -261,6 +272,7 @@ export class WorktreeActivity {
   private invalidate(state: State): void {
     state.request = undefined
     state.loaded = false
+    state.sessions.clear()
     state.statuses.clear()
     state.permissions.clear()
     state.questions.clear()
@@ -269,6 +281,10 @@ export class WorktreeActivity {
   private change(type: unknown, props: unknown): Change | undefined {
     const value = record(props)
     if (!value) return undefined
+    if (type === "session.created") {
+      const sessionID = string(value.sessionID)
+      return sessionID ? { kind: "session", sessionID } : undefined
+    }
     if (type === "session.status") return this.status(value)
     if (type === "session.execution.started" || type === "session.retry.scheduled") return this.running(value, type)
     if (
@@ -333,6 +349,8 @@ export class WorktreeActivity {
   }
 
   private apply(state: State, change: Change): void {
+    if (change.kind !== "clear") state.sessions.add(change.sessionID)
+    if (change.kind === "session") return
     if (change.kind === "status") {
       state.statuses.set(change.sessionID, change.type)
       return
@@ -353,6 +371,7 @@ export class WorktreeActivity {
       if (state.questions.get(change.id) === change.sessionID) state.questions.delete(change.id)
       return
     }
+    state.sessions.delete(change.sessionID)
     state.statuses.delete(change.sessionID)
     for (const [id, sessionID] of state.permissions) {
       if (sessionID === change.sessionID) state.permissions.delete(id)
@@ -396,6 +415,7 @@ export function createWorktreeActivity(opts: FactoryOptions) {
           .map((id) => [id, { type: "busy" }]),
       )
       return {
+        sessions: [...ids],
         statuses,
         permissions: permission.data.map((item) => ({ id: item.id, sessionID: item.sessionID })),
         questions: form.data.map((item) => ({ id: item.id, sessionID: item.sessionID })),
