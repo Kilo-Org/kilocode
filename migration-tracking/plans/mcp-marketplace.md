@@ -92,9 +92,16 @@ Later phases extend the same host interface; they do not rework the hook mechani
    - CIMD eligibility: no `client_id`, no `client_secret`, no `callback_port`, and a redirect equal
      to the documented default (`http://127.0.0.1:19876/mcp/oauth/callback`). Otherwise DCR.
    - Use the default `19876`/`/mcp/oauth/callback` when CIMD is selected; keep ephemeral ports for DCR.
-   - Provide the Kilo CIMD document at the configured URL (for example
-     `https://kilo.ai/docs/oauth/kilo/client.json`). If that host is unavailable, disable CIMD and
-     document the DCR fallback.
+     v2 today always listens on an ephemeral port and uses `/callback`, so the eligibility rule and the
+     listener have to change together or the authorization server rejects the document mismatch.
+   - The Kilo CIMD document is hosted and verified (2026-11-10) at
+     `https://kilo.ai/docs/oauth/kilo/client.json`: `client_id` is that URL, `client_name` "Kilo",
+     `client_uri` `https://kilo.ai`, `redirect_uris`
+     `["http://127.0.0.1:19876/mcp/oauth/callback"]`, `grant_types` authorization code + refresh,
+     `response_types` code, and `token_endpoint_auth_method` `none`. Default the host document URL to it
+     instead of the OpenCode URL `https://opencode.ai/oauth/opencode/client.json`; the authorization server
+     reads the hosted document, so the local `clientMetadata` only has to agree for DCR. The URL is the
+     client identity and must stay stable.
    - Tests: port `mcp-cimd.test.ts` and `mcp/oauth-issuer.test.ts`. Required cases: a configured
      secret is never sent to a second issuer; refresh against the new issuer; custom callback
      port/redirect/secret use DCR; explicit default redirect uses CIMD.
@@ -322,8 +329,9 @@ flowchart LR
 
 ## Decisions needed before implementation
 
-1. **CIMD hosting:** does `https://kilo.ai/docs/oauth/kilo/client.json` exist and who publishes it?
-   If not, CIMD must fall back to DCR.
+1. **CIMD hosting:** resolved 2026-11-10. `https://kilo.ai/docs/oauth/kilo/client.json` exists and
+   serves the Kilo client document (see Phase 1). CIMD stays enabled; DCR remains the fallback for custom
+   redirects, callback ports and secrets, and for servers without the capability.
 2. **MCP Apps:** confirm it stays in U-E11-05 rather than #15307.
 3. **Env sanitization:** confirm v1's credential stripping is still required on v2; if yes, it is a
    security fix, not a nice-to-have.
