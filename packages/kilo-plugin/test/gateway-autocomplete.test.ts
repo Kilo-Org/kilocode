@@ -52,7 +52,7 @@ const addPlugin = Effect.fn(function* () {
     })
     editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
   })
-  const host = yield* PluginHost.make(yield* Plugin.Service)
+  const host = yield* PluginHost.make(yield* Plugin.Service, "test")
   yield* KiloPlugin.effect(host)
   yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
 })
@@ -219,7 +219,7 @@ describe("Kilo Gateway autocomplete RPC", () => {
       (backend) =>
         withEnv({ ...env, KILO_API_KEY: `${backend.url}/api/organizations/first:secret`, KILO_ORG_ID: "selected" }, () =>
           Effect.gen(function* () {
-            const host = yield* PluginHost.make(yield* Plugin.Service)
+            const host = yield* PluginHost.make(yield* Plugin.Service, "test")
             yield* host.storage.set("organization:env", { organizationID: "selected" })
             yield* addPlugin()
             const rpc = yield* Rpc.Service

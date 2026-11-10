@@ -4,15 +4,15 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1888,
-    "total": 9765,
-    "percent": 19.3,
-    "dropped": 89,
+    "done": 1906,
+    "total": 9756,
+    "percent": 19.5,
+    "dropped": 98,
     "kinds": [
       {
         "kind": "module",
-        "done": 1390,
-        "total": 3518
+        "done": 1404,
+        "total": 3513
       },
       {
         "kind": "api",
@@ -26,8 +26,8 @@
       },
       {
         "kind": "test",
-        "done": 376,
-        "total": 2771
+        "done": 380,
+        "total": 2767
       }
     ],
     "landed": {
@@ -6139,13 +6139,13 @@
     },
     {
       "feature": "vscode",
-      "done": 1231,
-      "total": 2031,
-      "dropped": 26,
+      "done": 1249,
+      "total": 2022,
+      "dropped": 35,
       "kinds": {
         "module": {
-          "done": 992,
-          "total": 1424
+          "done": 1006,
+          "total": 1419
         },
         "api": {
           "done": 0,
@@ -6156,8 +6156,8 @@
           "total": 0
         },
         "test": {
-          "done": 239,
-          "total": 607
+          "done": 243,
+          "total": 603
         }
       }
     },
@@ -6727,6 +6727,7 @@
     "module:packages/kilo-vscode/script/launch.ts",
     "module:packages/kilo-vscode/src/DiffVirtualProvider.ts",
     "module:packages/kilo-vscode/src/DocumentViewerProvider.ts",
+    "module:packages/kilo-vscode/src/MarketplacePanelProvider.ts",
     "module:packages/kilo-vscode/src/agent-manager/AgentManagerProvider.ts",
     "module:packages/kilo-vscode/src/agent-manager/GitOps.ts",
     "module:packages/kilo-vscode/src/agent-manager/GitStatsPoller.ts",
@@ -7206,6 +7207,7 @@
     "module:packages/kilo-vscode/src/services/i18n/uk.ts",
     "module:packages/kilo-vscode/src/services/i18n/zh.ts",
     "module:packages/kilo-vscode/src/services/i18n/zht.ts",
+    "module:packages/kilo-vscode/src/services/marketplace/actions.ts",
     "module:packages/kilo-vscode/src/services/marketplace/index.ts",
     "module:packages/kilo-vscode/src/services/marketplace/types.ts",
     "module:packages/kilo-vscode/src/services/mcp-auth/index.ts",
@@ -7250,10 +7252,12 @@
     "module:packages/kilo-vscode/src/util/process.ts",
     "module:packages/kilo-vscode/src/util/serialize.ts",
     "module:packages/kilo-vscode/src/util/spotlight.ts",
+    "module:packages/kilo-vscode/src/utils.ts",
     "module:packages/kilo-vscode/tests/fixtures/browser-network-tls.ts",
     "module:packages/kilo-vscode/tests/fixtures/browser-network.ts",
     "module:packages/kilo-vscode/tests/fixtures/browser-panel-render.tsx",
     "module:packages/kilo-vscode/tests/fixtures/browser-proxy.ts",
+    "module:packages/kilo-vscode/tests/fixtures/marketplace-install-modal.tsx",
     "module:packages/kilo-vscode/tests/fixtures/node.ts",
     "module:packages/kilo-vscode/tests/fixtures/worktree-references.ts",
     "module:packages/kilo-vscode/tests/setup/vscode-mock.ts",
@@ -7382,6 +7386,9 @@
     "module:packages/kilo-vscode/tests/unit/kilo-provider-notifications.test.ts",
     "module:packages/kilo-vscode/tests/unit/local-diff.test.ts",
     "module:packages/kilo-vscode/tests/unit/local-tabs.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-actions.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-install-modal.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-panel-mcp-auth-refresh.test.ts",
     "module:packages/kilo-vscode/tests/unit/mcp-oauth-config.test.ts",
     "module:packages/kilo-vscode/tests/unit/message-time.test.ts",
     "module:packages/kilo-vscode/tests/unit/mode-io.test.ts",
@@ -7712,6 +7719,7 @@
     "module:packages/kilo-vscode/webview-ui/documents/DocumentPanel.tsx",
     "module:packages/kilo-vscode/webview-ui/documents/index.tsx",
     "module:packages/kilo-vscode/webview-ui/documents/state.ts",
+    "module:packages/kilo-vscode/webview-ui/marketplace/MarketplaceApp.tsx",
     "module:packages/kilo-vscode/webview-ui/marketplace/index.tsx",
     "module:packages/kilo-vscode/webview-ui/pierre-worker.ts",
     "module:packages/kilo-vscode/webview-ui/settings/index.tsx",
@@ -7743,7 +7751,15 @@
     "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-cache.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-row-handoff.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/history/HistoryView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/ItemCard.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceContribute.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/RemoveDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/marketplace/index.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/marketplace.css",
+    "module:packages/kilo-vscode/webview-ui/src/components/marketplace/utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/migration/index.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/profile/DeviceAuthCard.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx",
@@ -7843,6 +7859,7 @@
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/zht.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/context/marketplace-session.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/mcp-auth.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/model-selection.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/notifications.tsx",
@@ -7907,6 +7924,7 @@
     "module:packages/kilo-vscode/webview-ui/src/styles/todo-dock.css",
     "module:packages/kilo-vscode/webview-ui/src/styles/tool-overrides.css",
     "module:packages/kilo-vscode/webview-ui/src/styles/welcome.css",
+    "module:packages/kilo-vscode/webview-ui/src/types/marketplace.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/agent-manager.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/config.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/connection.ts",
@@ -8258,11 +8276,19 @@
     "module:packages/kilo-vscode/src/agent-manager/terminal-destination.ts",
     "module:packages/kilo-vscode/src/kilo-provider/config-bindings.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts",
+    "module:packages/kilo-vscode/src/services/marketplace/bundles.ts",
+    "module:packages/kilo-vscode/src/services/marketplace/notifier.ts",
+    "module:packages/kilo-vscode/src/services/marketplace/notify.ts",
+    "module:packages/kilo-vscode/src/services/marketplace/relevance.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-memory-commands.test.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-telemetry.test.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-terminal-destination.test.ts",
     "module:packages/kilo-vscode/tests/unit/autocomplete-migrate-default.test.ts",
     "module:packages/kilo-vscode/tests/unit/config-bindings.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-bundles.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-notify.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-panel-arch.test.ts",
+    "module:packages/kilo-vscode/tests/unit/marketplace-relevance.test.ts",
     "module:packages/kilo-vscode/tests/unit/mcp-auth-service.test.ts",
     "module:packages/kilo-vscode/tests/unit/mcp-auth-status.test.ts",
     "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts",
@@ -8270,6 +8296,7 @@
     "module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/telemetry.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/stories/marketplace.stories.tsx",
     "module:packages/kilo-vscode/webview-ui/src/utils/open-config.ts",
     "module:packages/opencode/src/kilocode/agent/scout.txt",
     "module:packages/opencode/src/kilocode/indexing-feature.ts",

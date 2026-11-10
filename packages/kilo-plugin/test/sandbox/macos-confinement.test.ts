@@ -2,7 +2,7 @@ import { afterAll, expect, test } from "bun:test"
 import { existsSync } from "node:fs"
 import fs from "node:fs/promises"
 import path from "node:path"
-import { Effect } from "effect"
+import { Effect, Redacted } from "effect"
 import { ChildProcess } from "effect/process"
 import {
   backendSupport,
@@ -28,11 +28,17 @@ function quote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`
 }
 
+function plain(word: string | Redacted.Redacted<string>) {
+  return Redacted.isRedacted(word) ? Redacted.value(word) : word
+}
+
 function spawn(command: ChildProcess.StandardCommand) {
   return Effect.promise(async () => {
-    const child = Bun.spawn([command.command, ...command.args], {
+    const child = Bun.spawn([command.command, ...command.args.map(plain)], {
       cwd: command.options.cwd,
-      env: command.options.env ?? process.env,
+      env: command.options.env
+        ? Object.fromEntries(Object.entries(command.options.env).map(([key, value]) => [key, value && plain(value)]))
+        : process.env,
       stdout: "pipe",
       stderr: "pipe",
     })
