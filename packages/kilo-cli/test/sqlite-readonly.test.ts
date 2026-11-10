@@ -52,6 +52,18 @@ test("a store at rest that changes during the read is reported, so a copy of it 
   expect(reader.unchanged()).toBe(false)
 })
 
+test("a writer that starts during an at-rest read is reported before it checkpoints", async () => {
+  const { rest } = await stores()
+  const reader = openReadonly(rest)
+  open.push(reader.db)
+  reader.db.query("SELECT body FROM note").all()
+  // A WAL writer adds its frames to a new -wal file and leaves the main file as it is until a checkpoint.
+  const writer = new Database(rest)
+  open.push(writer)
+  writer.run("INSERT INTO note VALUES ('new')")
+  expect(reader.unchanged()).toBe(false)
+})
+
 test("a store in use is read with locks and sees what its writer committed", async () => {
   const { live } = await stores()
   const reader = openReadonly(live)
