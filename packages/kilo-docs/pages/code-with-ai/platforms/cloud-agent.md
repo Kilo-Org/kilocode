@@ -60,7 +60,7 @@ On the **General** tab:
 
 - **Default sandbox** — the sandbox for new sessions when a repository has no override. The dialog names the sandbox that **Platform default** resolves to, so you can see what a session uses when nothing else applies.
 - **Repository overrides** — set or clear a sandbox and an [agent environment profile](#agent-environment-profiles) for an individual repository.
-- **Your agent preferences** — personal agent settings that apply only to sessions you start; see [Your agent preferences](#your-agent-preferences).
+- **Your personal preferences** — transcript display and agent settings that apply only to sessions you start; see [Personal preferences](#personal-preferences).
 
 The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, **Agents**, **Instructions**, and **Import**.
 
@@ -70,10 +70,11 @@ When you start a session, the sandbox is resolved in this order: the sandbox you
 
 Vercel sandboxes are offered for GitHub repositories only. If your account cannot select a sandbox, the settings show where sessions run as plain text and the new-session page hides the picker.
 
-### Your agent preferences
+### Personal preferences
 
-At the bottom of the **General** tab, **Your agent preferences** controls personal Cloud Agent settings. They apply to every session you start, including organization sessions, and they do not change settings for other members.
+At the bottom of the **General** tab, **Personal preferences** controls settings that apply only to you, so they do not change settings for other members. In an organization they are marked **Only you**; they apply to every session you start, including organization sessions.
 
+- **Transcript display** — turn on **Collapse tools** to group consecutive tool calls, reasoning, and other agent activity between visible messages into one expandable row. The group keeps questions, suggestion actions, child-session controls, files, snapshot progress, tool errors, and assistant failures visible without expanding, and shows a working indicator while the agent is streaming. It is off by default, and the choice is saved in your browser and applies to both personal and organization chats.
 - **Agent modes** — toggle **Plan**, **Debug**, **Orchestrator**, and **Ask** in your agent picker. **Code** stays enabled because new sessions start in Code mode. Pick a mode's model in each session.
 - **Background models** — choose a model and thinking variant for **Explore** and **Compaction**, or keep the session model. An override applies only when the chosen model is available to the session.
 
@@ -235,7 +236,9 @@ The popover shows cached status from GitHub webhooks rather than querying GitHub
 
 ## Previewing a running app
 
-You can preview a web app running inside a Cloud Agent session's sandbox. When a session serves an app on a port, the web interface shows a preview button and preview links, and selecting one opens the running app in a new browser tab. Each preview is served from its own hostname that targets the session's workspace and port, so different sessions and ports do not collide.
+You can preview a web app running inside a Cloud Agent session's sandbox. Open the preview picker to see the services actually listening in the sandbox: Kilo lists each one with a recognizable framework or runtime name, a safe working-directory hint, and its port, and selecting one opens the running app in a new browser tab through the secure preview flow. Each preview is served from its own hostname that targets the session's workspace and port, so different sessions and ports do not collide.
+
+Discovery runs only when you open the picker or select **Refresh**, not on a polling interval, and it never returns raw command lines, environment values, or full filesystem paths. Kilo dedupes the list, caps it at 50 services, and skips its own server, ports reserved by the sandbox provider, and listeners it cannot attribute to a sandbox process. The picker shows loading, empty, stopped, unsupported, and error states as needed, and if the service you want is not listed, expand the secondary disclosure to enter a port manually.
 
 Preview is available to every Cloud Agent account.
 
@@ -470,7 +473,7 @@ Care should be taken when deciding to use webhooks as they are susceptible to pr
 
 ## General Cloud Agent Limitations and Guidance
 
-- Each message can run for **up to 15 minutes**.
+- Each message can run for **up to 12 hours**.
   Break large tasks into smaller steps; use a `plan.md` or `todo.md` file to keep scope clear.
 - **Context is persistent across messages.**
   Kilo Code remembers previous turns within the same session.
