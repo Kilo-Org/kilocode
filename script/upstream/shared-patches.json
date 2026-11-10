@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 107,
-    "markedLines": 1762,
+    "markedLines": 1763,
     "unmarkedLines": 300,
     "deletedFiles": 0
   },
@@ -191,7 +191,7 @@
     },
     "packages/core/test/filesystem/watcher.test.ts": {
       "rung": 4,
-      "seam": "Test timing only, the same kind of patch as packages/core/test/plugin/supervisor-reload.test.ts: the two event-arrival waits in the entries watcher test go from 1 s to 10 s. The macOS platform job timed out at 1018 ms with 218 other core tests passing, because fs.watch can deliver an entries event after 1 s on a loaded shared runner. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the event arrives. No product code changes. Rung 4: the deadline is a literal inside the upstream test and no seam can parameterize it from Kilo code."
+      "seam": "Test timing only, the same kind of patch as packages/core/test/plugin/supervisor-reload.test.ts: the two event-arrival waits in the entries watcher test go from 1 s to 10 s, and the first wait rewrites `opencode.json` after each failed check. fs.watch starts its macOS FSEvents stream asynchronously, so on a loaded shared runner the test's writes can land before the stream is live; then no event ever arrives and the wait times out however long it is (the macOS platform job failed at 10 s). The rewrite repeats only the watched file, so the test still asserts that only `opencode.json` is reported. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the event arrives. No product code changes. Rung 4: the deadline and the writes are literals inside the upstream test and no seam can parameterize them from Kilo code."
     },
     "packages/server/src/process.ts": {
       "rung": 3,
