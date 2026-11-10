@@ -41,7 +41,6 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     project: Project,
     directory: String,
     private val repositoryUrl: String,
-    private val withWorkspace: Boolean,
     branch: String = "",
     app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
@@ -52,16 +51,17 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     private object Loading
     private object Failed
 
-    override val allowEmptyPrompt: Boolean get() = withWorkspace
+    // An empty prompt creates an empty workspace; sessions are created from the editor instead.
+    override val allowEmptyPrompt: Boolean get() = true
 
     private val branch = JBTextField(branch).apply {
         emptyText.text = KiloBundle.message("hosted.workspace.dialog.branch.placeholder")
     }
     private val repository = ComboBox(arrayOf(hostedRepositoryName(repositoryUrl)))
     private var profiles = HostedWorkspaceProfileListDto()
-    private var loading = withWorkspace
-    override val ready: Boolean get() = super.ready && (!withWorkspace || !loading && profiles.error == null)
-    private val profile = ComboBox<Any>(arrayOf(if (withWorkspace) Loading else None)).apply {
+    private var loading = true
+    override val ready: Boolean get() = super.ready && !loading && profiles.error == null
+    private val profile = ComboBox<Any>(arrayOf(Loading)).apply {
         renderer = SimpleListCellRenderer.create("") {
             when (it) {
                 None -> KiloBundle.message("hosted.workspace.dialog.profile.none")
@@ -71,7 +71,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
                 else -> ""
             }
         }
-        isEnabled = !withWorkspace
+        isEnabled = false
     }
     private val useDefault = HyperlinkLabel(KiloBundle.message("hosted.workspace.dialog.profile.useDefault")).apply {
         addHyperlinkListener {
@@ -81,9 +81,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     private var result: HostedCreatePlan? = null
 
     init {
-        title = KiloBundle.message(
-            if (withWorkspace) "hosted.workspace.dialog.create.title" else "hosted.workspace.dialog.session.title",
-        )
+        title = KiloBundle.message("hosted.workspace.dialog.create.title")
         init()
         initValidation()
         prompt.onChange = { syncValidation() }
@@ -93,10 +91,8 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         }
         syncUseDefault()
         syncValidation()
-        setOKButtonText(
-            KiloBundle.message(if (withWorkspace) "hosted.workspace.dialog.create" else "hosted.workspace.session.new"),
-        )
-        if (withWorkspace) scope.launch {
+        setOKButtonText(KiloBundle.message("hosted.workspace.dialog.create"))
+        scope.launch {
             val loaded = load()
             val remembered = if (loaded.error == null) {
                 try {
@@ -135,15 +131,12 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
 
     @RequiresEdt
     override fun doValidate(): ValidationInfo? = when {
-        withWorkspace && loading -> ValidationInfo("")
-        withWorkspace && profiles.error != null -> ValidationInfo(
+        loading -> ValidationInfo("")
+        profiles.error != null -> ValidationInfo(
             profiles.error?.message ?: KiloBundle.message("hosted.workspace.profiles.failed"),
         )
-        !allowEmptyPrompt && prompt.text().isEmpty() ->
-            ValidationInfo(KiloBundle.message("hosted.workspace.dialog.prompt.required"), prompt)
         pending()?.let { it.agent == null || it.model == null || it.provider != "kilo" } ?: true ->
             ValidationInfo(KiloBundle.message("hosted.workspace.create.noModel"), prompt)
-        !withWorkspace -> null
         profile.selectedItem !== None && profile.selectedItem as? HostedWorkspaceProfileDto !in profiles.items ->
             ValidationInfo(KiloBundle.message("hosted.workspace.dialog.profile.invalid"), profile)
         else -> null
@@ -154,15 +147,13 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             override fun getFill(component: JComponent) = GridBagConstraints.HORIZONTAL
         }.apply {
             addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.repository"), repository)
-            if (withWorkspace) {
-                addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.branch"), branch)
-                addLabeledComponent(
-                    KiloBundle.message("hosted.workspace.dialog.profile"),
-                    BorderLayoutPanel().addToCenter(profile).addToRight(
-                        Stack.horizontal(gap = UiStyle.Gap.pad()).next(useDefault),
-                    ),
-                )
-            }
+            addLabeledComponent(KiloBundle.message("hosted.workspace.dialog.branch"), branch)
+            addLabeledComponent(
+                KiloBundle.message("hosted.workspace.dialog.profile"),
+                BorderLayoutPanel().addToCenter(profile).addToRight(
+                    Stack.horizontal(gap = UiStyle.Gap.pad()).next(useDefault),
+                ),
+            )
         }.panel
         return content(null, fields)
     }
@@ -174,7 +165,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     override fun doOKAction() = submitCreate(prompt.text())
 
     override fun submitCreate(text: String) {
-        if (withWorkspace && (loading || profiles.error != null)) {
+        if (loading || profiles.error != null) {
             syncValidation()
             return
         }
@@ -191,19 +182,19 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             return
         }
         val selected = profile.selectedItem as? HostedWorkspaceProfileDto
-        if (withWorkspace && profile.selectedItem !== None && selected !in profiles.items) {
+        if (profile.selectedItem !== None && selected !in profiles.items) {
             setErrorText(KiloBundle.message("hosted.workspace.dialog.profile.invalid"), profile)
             return
         }
         result = HostedCreatePlan(
             prompt = picked.text,
-            branch = branch.text.trim().takeIf { withWorkspace && it.isNotBlank() },
-            profileID = selected?.id.takeIf { withWorkspace },
+            branch = branch.text.trim().takeIf { it.isNotBlank() },
+            profileID = selected?.id,
             agent = mode,
             model = "${picked.provider}/$model",
             variant = picked.variant,
         )
-        if (withWorkspace) selection.remember(repositoryUrl, selected?.id, defaultProfile()?.id)
+        selection.remember(repositoryUrl, selected?.id, defaultProfile()?.id)
         close(OK_EXIT_CODE)
     }
 
@@ -215,7 +206,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     private fun syncUseDefault() {
         val selected = profile.selectedItem as? HostedWorkspaceProfileDto
         val default = defaultProfile()
-        useDefault.isVisible = withWorkspace && default != null && selected?.id != default.id
+        useDefault.isVisible = default != null && selected?.id != default.id
         useDefault.isEnabled = useDefault.isVisible
         profile.repaint()
     }

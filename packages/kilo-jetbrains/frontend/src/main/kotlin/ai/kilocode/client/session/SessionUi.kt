@@ -219,6 +219,9 @@ class SessionUi(
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
         openProfileAction = ::openProfileSettings,
+        hosted = manager?.hosted == true,
+        create = manager?.let { host -> { prompt -> host.createSession(prompt) } },
+        created = { ref -> manager?.sessionCreated(this, ref) },
         timers = timers,
     )
 

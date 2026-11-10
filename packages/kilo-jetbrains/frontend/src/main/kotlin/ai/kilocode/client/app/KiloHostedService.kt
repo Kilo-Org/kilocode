@@ -111,6 +111,20 @@ class KiloHostedService internal constructor(
             else -> HostedReadiness.Ready
         }
 
+        /**
+         * Readiness for a session whose workspace compute is still booting. Starting or setting up
+         * counts as Preparing so the editor keeps showing progress instead of surfacing a
+         * "not available" history error before the sandbox can answer.
+         */
+        fun readiness(ref: HostedWorkspaceRefDto, session: String): HostedReadiness {
+            val own = readiness(session)
+            if (own == HostedReadiness.Failed) return own
+            return when (presentation(ref)?.computeStatus) {
+                null, "starting", "setting_up", "loading" -> HostedReadiness.Preparing
+                else -> own
+            }
+        }
+
         /** Preparation is presentation only; native idle never changes canonical compute state. */
         fun presentation(ref: HostedWorkspaceRefDto): HostedWorkspaceStatusDto? {
             val status = statuses[ref.key]

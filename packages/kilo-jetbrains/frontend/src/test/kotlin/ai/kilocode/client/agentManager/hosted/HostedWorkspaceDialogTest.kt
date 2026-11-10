@@ -100,14 +100,8 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test prompt fills the dialog center in both creation modes`() {
+    fun `test prompt fills the dialog center`() {
         open()
-        ready()
-        edt { assertPromptCentered() }
-
-        edt { Disposer.dispose(requireNotNull(dialog).disposable) }
-        dialog = null
-        open(profiles = HostedWorkspaceProfileListDto(), withWorkspace = false)
         ready()
         edt { assertPromptCentered() }
     }
@@ -642,25 +636,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a cloud session needs no workspace profile or branch`() {
-        open(profiles = HostedWorkspaceProfileListDto(), withWorkspace = false, branch = "ignored/branch")
-        ready()
-
-        edt {
-            val controls = controls()
-            assertEquals(listOf("kilocode"), (0 until repository().itemCount).map { repository().getItemAt(it) })
-            assertEmpty(controls.filterIsInstance<JBTextField>().filter { it.isEditable })
-            submit()
-        }
-
-        val plan = created()
-        assertNull(plan.branch)
-        assertNull(plan.profileID)
-        assertEquals("kilo/gpt-5", plan.model)
-        assertTrue(selection.reads.isEmpty())
-        assertTrue(selection.saves.isEmpty())
-    }
-
     fun `test whitespace prompt creates an empty cloud workspace plan`() {
         open()
         ready()
@@ -811,7 +786,6 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
     private fun open(
         profiles: HostedWorkspaceProfileListDto = this.profiles,
-        withWorkspace: Boolean = true,
         branch: String = "",
         load: (suspend () -> HostedWorkspaceProfileListDto)? = null,
         selection: HostedProfileSelectionStore = this.selection,
@@ -819,10 +793,10 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         dialog = edt {
             HostedWorkspaceDialog(
                 JBPanel<Nothing>(), project, "/test", "https://github.com/kilo-org/kilocode.git",
-                withWorkspace, branch, app, workspaces, load ?: { profiles }, selection,
+                branch, app, workspaces, load ?: { profiles }, selection,
             )
         }
-        if (withWorkspace && load == null) {
+        if (load == null) {
             assertTrue("Cloud dialog did not load the supplied profiles", coroutines.pumpUntil {
                 edt { profile().isEnabled }
             })

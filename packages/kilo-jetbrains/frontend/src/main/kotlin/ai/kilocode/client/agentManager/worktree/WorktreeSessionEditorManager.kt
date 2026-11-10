@@ -206,10 +206,10 @@ open class WorktreeSessionEditorManager(
     }
 
     @RequiresEdt
-    open fun hasPendingNew(): Boolean = pending
+    override fun hasPendingNew(): Boolean = pending
 
     @RequiresEdt
-    open fun deleting(): Set<String> = deleting
+    override fun deleting(): Set<String> = deleting
 
     @RequiresEdt
     override fun emptyPanel(parent: Disposable, controller: SessionController): EmptySessionPanel = EmptySessionPanel(

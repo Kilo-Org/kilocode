@@ -165,7 +165,7 @@ class AgentManagerPanel(
         )
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
-    private val provider = WorktreeDeleteProvider()
+    private val provider = RowDeleteProvider()
     private val edit = RenameAction()
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
@@ -424,7 +424,6 @@ class AgentManagerPanel(
             target,
             controller.directory,
             repo,
-            withWorkspace = true,
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return
@@ -509,29 +508,6 @@ class AgentManagerPanel(
     private fun closeHostedPending(target: Project, pending: HostedWorkspaceDto) {
         service<HostedWorkspaceCache>().remove(pending.ref)
         target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(pending))
-    }
-
-    @RequiresEdt
-    internal fun newHostedSession(anchor: Component, workspace: HostedWorkspaceDto) {
-        val target = project ?: return
-        val dialog = HostedWorkspaceDialog(
-            anchor,
-            target,
-            controller.directory,
-            workspace.repositoryUrl.orEmpty(),
-            withWorkspace = false,
-        )
-        if (!dialog.showAndGet()) return
-        val plan = dialog.plan() ?: return
-        startHosted(
-            workspace.ref,
-            HostedStartSessionDto(
-                prompt = plan.prompt,
-                agent = HostedAgentDto(plan.agent, plan.model, plan.variant),
-                operationKey = java.util.UUID.randomUUID().toString(),
-                messageID = hostedMessageID(),
-            ),
-        )
     }
 
     @RequiresEdt
@@ -1134,19 +1110,34 @@ val local = (0 until controller.model.size).map {
 
     private fun selectedRow(): WorktreeRow? = tree.selected() as? WorktreeRow
 
-    private inner class WorktreeDeleteProvider : DeleteProvider {
+    private fun selectedHosted(): HostedWorkspaceRow? = tree.selected() as? HostedWorkspaceRow
+
+    /** Local and hosted rows share the platform Delete shortcut and confirmation popup. */
+    private inner class RowDeleteProvider : DeleteProvider {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
         override fun canDeleteElement(dataContext: DataContext): Boolean {
-            val row = selectedRow()
-            return deletable(row?.dto)
+            selectedRow()?.let { return deletable(it.dto) }
+            return selectedHosted()?.let(::deletableHosted) ?: false
         }
 
         override fun deleteElement(dataContext: DataContext) {
-            val row = selectedRow() ?: return
-            if (!deletable(row.dto)) return
-            showDeletePopup(row.dto)
+            selectedRow()?.let { row ->
+                if (!deletable(row.dto)) return
+                showDeletePopup(row.dto)
+                return
+            }
+            selectedHosted()?.let { row ->
+                if (!deletableHosted(row)) return
+                deleteHosted(row.data.dto)
+            }
         }
+    }
+
+    private fun deletableHosted(row: HostedWorkspaceRow): Boolean {
+        if (hostedState.signedOut) return false
+        val key = row.data.dto.ref.key
+        return key !in pendingHosted && key !in deletingHosted
     }
 
     private inner class RenameAction : DumbAwareAction(

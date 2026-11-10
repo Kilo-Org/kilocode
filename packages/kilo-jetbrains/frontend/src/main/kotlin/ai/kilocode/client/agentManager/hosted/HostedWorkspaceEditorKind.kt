@@ -41,8 +41,10 @@ object HostedWorkspaceEditorKind : KiloEditorKind {
 
     override fun title(params: Map<String, String>): String {
         val ref = HostedWorkspaceRefDto(params[PROVIDER].orEmpty(), params[WORKSPACE].orEmpty())
-        val dto = service<HostedWorkspaceCache>().get(ref)
-        return HostedWorkspaceTitle.text(dto?.name, dto?.branch, params[WORKSPACE].orEmpty())
+        val cache = service<HostedWorkspaceCache>()
+        val dto = cache.get(ref)
+        return cache.title(ref)
+            ?: HostedWorkspaceTitle.text(dto?.name, dto?.branch, params[WORKSPACE].orEmpty())
     }
 
     override fun icon(params: Map<String, String>): Icon = HostedWorkspaceIcons.cloud
@@ -113,7 +115,7 @@ internal fun hostedWorkspaceParams(dto: HostedWorkspaceDto): Map<String, String>
 
 internal fun openHostedWorkspace(project: Project, dto: HostedWorkspaceDto, focus: Boolean = true) {
     ensureHostedWorkspaceEditorKind()
-    service<HostedWorkspaceCache>().put(dto)
+    service<HostedWorkspaceCache>().put(dto, HostedWorkspaceTitle.text(dto))
     project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
     project.service<KiloVfsManager>().open(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto), focus)
 }

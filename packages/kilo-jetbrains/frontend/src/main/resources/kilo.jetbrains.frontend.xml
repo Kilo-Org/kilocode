@@ -458,7 +458,6 @@
             <reference ref="Kilo.HostedWorkspace.Refresh"/>
             <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
             <separator/>
-            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.HostedWorkspace.Dismiss"/>
             <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
@@ -476,6 +475,7 @@
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
             <separator/>
+            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>
 

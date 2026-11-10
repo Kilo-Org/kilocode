@@ -117,6 +117,11 @@ class SessionController(
   private val afterUpdate: (Boolean) -> Unit = {},
   private val loaded: (Boolean) -> Unit = {},
   private val openProfileAction: () -> Unit = {},
+  // Hosted surfaces start blank and create their Cloud session from the first prompt. The flag
+  // applies before any ref exists; [create] owns the Cloud start call and null means local create.
+  private val hosted: Boolean = false,
+  private val create: (suspend (PromptDto) -> SessionRef?)? = null,
+  private val created: (SessionRef) -> Unit = {},
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val notify: (String, String) -> Unit = { title, body -> KiloNotifications.error(title, body) },
   private val notifyInfo: (String, String) -> Unit = { title, body -> KiloNotifications.info(title, body) },
@@ -126,6 +131,7 @@ class SessionController(
 
     private data class OrganizationTarget(val org: String?)
     private data class Followup(val dir: String, val time: Long)
+    private data class Created(val id: String, val submitted: Boolean)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
     private data class RevertOp(val key: Long)
     private data class Dispatch(
@@ -156,6 +162,8 @@ class SessionController(
     private val listeners = mutableListOf<SessionControllerListener>()
     private var ref: SessionRef? = ref
     private val sid: String? get() = (ref as? SessionRef.Local)?.id ?: (ref as? SessionRef.Hosted)?.id
+    // Hosted behavior must apply to a blank hosted panel before its Cloud session exists.
+    private val isHosted: Boolean get() = hosted || ref is SessionRef.Hosted
     private val directory: String get() = (ref as? SessionRef.Hosted)?.workspaceKey ?: workspace.directory
     private val updates = SessionUpdateQueue(
       parent,
@@ -184,7 +192,7 @@ class SessionController(
     // While a revert is in flight, turn/status transitions are deferred here instead of dropped,
     // then reconciled when the operation releases so an underlying server turn is not lost.
     private var revertDeferred: SessionState? = null
-    private var creating: CompletableDeferred<String?>? = null
+    private var creating: CompletableDeferred<Created?>? = null
     private var initial: PromptDto? = null
     private val pending = LinkedHashMap<String, Permission>()
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
@@ -193,6 +201,8 @@ class SessionController(
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
     private var hostedToken: SessionLoadState.Loading? = null
     private var hostedStarted = false
+    private var hostedRetryToken: SessionLoadState.Loading? = null
+    private var lastReadiness = HostedReadiness.Unknown
     private var hostedFallback: UiTimer? = null
     // The app-readiness observed on the previous AppChanged tick. Recovery requires both a later
     // non-READY -> READY edge and a READY observed before that edge: restored tabs commonly see
@@ -352,7 +362,7 @@ class SessionController(
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val hosted = ref is SessionRef.Hosted
+        val hosted = isHosted
         val messageID = if (hosted) hostedMessageID() else null
         val dto = promptDto(text, files, editorContext, select, injectedTitle).let {
             if (messageID != null) it.copy(messageID = messageID) else it
@@ -366,6 +376,13 @@ class SessionController(
 
     fun command(command: String, args: String, files: List<PromptPartDto> = emptyList()) {
         assertEdt()
+        if (hosted && ref == null) {
+            notifyInfo(
+                KiloBundle.message("hosted.workspace.session.untitled"),
+                KiloBundle.message("hosted.workspace.dialog.prompt.required"),
+            )
+            return
+        }
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
         val dto = promptDto("", files)
@@ -379,7 +396,7 @@ class SessionController(
     private fun dispatch(data: Dispatch, optimistic: PromptDto? = null, send: suspend (String) -> Unit) {
         assertEdt()
         if (revertOp != null) return
-        if (ref is SessionRef.Hosted) promptRevision++
+        if (isHosted) promptRevision++
         // New work, so the previous cancellation is settled. Turn open clears this too, but a send that
         // never reaches a turn would otherwise leave a stale Stop suppressing the next explanation.
         stopRequested = false
@@ -392,13 +409,13 @@ class SessionController(
         ) + props)
         showSession()
         optimistic?.let(::addOptimistic)
-        val pending = sid?.let { CompletableDeferred(it) } ?: session()
+        val pending = sid?.let { CompletableDeferred(Created(it, false)) } ?: session(optimistic)
         cs.launch {
             try {
-                val id = pending.await() ?: return@launch
-                send(id)
-                capture("Conversation Message", sessionProps(id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + props)
-                LOG.debug { "${ChatLogSummary.sid(id)} kind=${data.kind} dispatched=true" }
+                val created = pending.await() ?: return@launch
+                if (!created.submitted) send(created.id)
+                capture("Conversation Message", sessionProps(created.id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + props)
+                LOG.debug { "${ChatLogSummary.sid(created.id)} kind=${data.kind} dispatched=true" }
             } catch (e: Exception) {
                 capture("Session Error", sessionProps(sid ?: ref?.key ?: data.start) + mapOf("context" to data.kind, "errorClass" to e::class.java.name))
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: data.start)} kind=${data.kind} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
@@ -439,15 +456,15 @@ class SessionController(
         model.addOptimisticUser(dto, parts)
     }
 
-    private fun session(): CompletableDeferred<String?> {
+    private fun session(prompt: PromptDto?): CompletableDeferred<Created?> {
         assertEdt()
         val pending = creating
         if (pending != null) return pending
-        val next = CompletableDeferred<String?>()
+        val next = CompletableDeferred<Created?>()
         creating = next
         cs.launch {
             try {
-                next.complete(createSession())
+                next.complete(createSession(prompt))
             } catch (e: Exception) {
                 next.completeExceptionally(e)
             } finally {
@@ -459,7 +476,30 @@ class SessionController(
         return next
     }
 
-    private suspend fun createSession(): String? {
+    private suspend fun createSession(prompt: PromptDto?): Created? {
+        if (isHosted) {
+            val starter = create ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed"))
+            val hosted = starter(prompt ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed")))
+                ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed"))
+            runEdt {
+                if (disposed) return@runEdt
+                ref = hosted
+                // The Cloud start call already submitted this prompt; keep it visible across the
+                // subscription's replay without sending it twice.
+                initial = prompt
+                hostedStarted = true
+                updateModel { model.setHostedTitle((hosted as? SessionRef.Hosted)?.title) }
+                showSession()
+            }
+            if (disposed) return null
+            runEdt {
+                if (disposed) return@runEdt
+                subscribeEvents()
+                created(hosted)
+            }
+            LOG.info("${ChatLogSummary.sid(hosted.id)} kind=session hosted=true created=true")
+            return Created(hosted.id, submitted = true)
+        }
         val session = sessions.create(directory)
         runEdt {
             if (disposed) return@runEdt
@@ -476,8 +516,9 @@ class SessionController(
         runEdt {
             if (disposed) return@runEdt
             subscribeEvents()
+            created(SessionRef.Local(session))
         }
-        return session.id
+        return Created(session.id, submitted = false)
     }
 
     fun abort() {
@@ -764,6 +805,12 @@ class SessionController(
         loadSession(token)
     }
 
+    private fun retryableHosted(e: Exception): Boolean {
+        val raw = e.message.orEmpty()
+        val status = Regex("""HTTP (\d{3})""").find(raw)?.groupValues?.get(1)?.toIntOrNull()
+        return status == null || status >= 500 || raw.contains("KILO_LIVE_RUNTIME_UNAVAILABLE")
+    }
+
     private fun historyError(target: SessionRef, e: Exception): SessionState.Error {
         val raw = e.message.orEmpty().ifBlank { KiloBundle.message("history.error.local") }
         if (target !is SessionRef.Hosted) return SessionState.Error(raw)
@@ -1000,7 +1047,7 @@ class SessionController(
 
     fun selectModel(provider: String, id: String) {
         assertEdt()
-        if (ref is SessionRef.Hosted && provider != KILO_PROVIDER) return
+        if (isHosted && provider != KILO_PROVIDER) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model=$provider/$id" }
         val agent = model.agent ?: return
         val key = "$provider/$id"
@@ -1046,7 +1093,7 @@ class SessionController(
 
     fun selectVariant(value: String) {
         assertEdt()
-        if (ref is SessionRef.Hosted) return
+        if (isHosted) return
         val key = model.model ?: return
         if (value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
@@ -1389,7 +1436,7 @@ class SessionController(
                     model.models = state.providers?.let { providers ->
                         providers.providers
                             .filter { it.id == KILO_PROVIDER || it.id in providers.connected }
-                            .filter { ref !is SessionRef.Hosted || it.id == KILO_PROVIDER }
+                            .filter { !isHosted || it.id == KILO_PROVIDER }
                             .flatMap { provider ->
                                 provider.models.map { (id, info) ->
                                     ModelItem(
@@ -1501,6 +1548,13 @@ class SessionController(
                     if (target is SessionRef.Hosted) {
                         if (epoch != generation) return@edt
                         if (promptRevision != revision) return@edt
+                        // The sandbox may still be booting: keep the preparation progress and load
+                        // again when Cloud reports ready instead of showing "not available".
+                        if (retryableHosted(e) && lastReadiness != HostedReadiness.Ready) {
+                            hostedToken = token
+                            hostedStarted = false
+                            return@edt
+                        }
                     }
                     updateModel {
                         model.setState(historyError(target, e))
@@ -1524,13 +1578,31 @@ class SessionController(
     @RequiresEdt
     internal fun hostedPreparation(readiness: HostedReadiness) {
         assertEdt()
-        if (disposed || ref !is SessionRef.Hosted || hostedStarted) return
+        if (disposed || ref !is SessionRef.Hosted) return
+        val previous = lastReadiness
+        lastReadiness = readiness
+        if (hostedStarted) {
+            // A load that raced the sandbox can fail with a retryable 5xx; load again once Cloud is
+            // ready instead of leaving the error on top of a workspace that just came up.
+            if (readiness == HostedReadiness.Ready && previous != HostedReadiness.Ready && canRetryLoad()) {
+                retryHosted()
+            }
+            return
+        }
         when (readiness) {
             HostedReadiness.Ready -> loadHosted()
             HostedReadiness.Preparing,
             HostedReadiness.Failed -> cancelHostedFallback()
             HostedReadiness.Unknown -> scheduleHostedFallback()
         }
+    }
+
+    @RequiresEdt
+    private fun retryHosted() {
+        val token = hostedRetryToken ?: return
+        hostedStarted = true
+        startSessionLoading(token)
+        loadSession(token)
     }
 
     @RequiresEdt
@@ -1554,6 +1626,7 @@ class SessionController(
         val token = hostedToken ?: return
         cancelHostedFallback()
         hostedToken = null
+        hostedRetryToken = token
         hostedStarted = true
         startSessionLoading(token)
         loadSession(token)
@@ -2841,8 +2914,8 @@ class SessionController(
             providerID = provider,
             modelID = modelId,
             agent = agent,
-            variant = if (ref is SessionRef.Hosted) null else variant,
-            editorContext = if (ref is SessionRef.Hosted) null else editorContext,
+            variant = if (isHosted) null else variant,
+            editorContext = if (isHosted) null else editorContext,
         )
     }
 
@@ -2878,7 +2951,7 @@ class SessionController(
     }
 
     private fun selectResolvedModel(key: String?) {
-        if (ref is SessionRef.Hosted) {
+        if (isHosted) {
             val selected = key?.takeIf { it.startsWith("$KILO_PROVIDER/") && item(it) != null }
                 ?: model.models.firstOrNull { it.id == "kilo-auto/free" }?.key
                 ?: model.models.firstOrNull()?.key

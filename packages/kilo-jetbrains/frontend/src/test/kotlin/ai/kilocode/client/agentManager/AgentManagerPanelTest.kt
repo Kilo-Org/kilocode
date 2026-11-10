@@ -104,8 +104,16 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
+import com.intellij.ide.DataManager
 import com.intellij.ide.IdeEventQueue
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.ide.DeleteProvider
+import com.intellij.openapi.actionSystem.DataProvider
+import com.intellij.openapi.actionSystem.DataSnapshotProvider
+import com.intellij.openapi.actionSystem.DataMap
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.Disposer
@@ -2171,6 +2179,59 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(row.search.contains("OpenRouter API access"))
     }
 
+    fun `test hosted rows participate in the platform delete action`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = HostedIDs.session(ref.providerID, ref.workspaceID, "same")
+        val item = HostedWorkspaceDto(
+            ref,
+            name = "Cloud one",
+            sessions = listOf(HostedWorkspaceSessionDto(key, "same")),
+        )
+        val hosted = KiloHostedService(coroutines.scope, object : KiloHostedRpcApi {
+            override suspend fun providers(): List<HostedProviderDto> = emptyList()
+            override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
+                HostedWorkspaceListDto(listOf(item))
+            override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?) = item
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0)
+            override suspend fun systemEvents(
+                ref: HostedWorkspaceRefDto,
+                sessionID: String,
+                organizationID: String?,
+            ): Flow<HostedSystemEventDto> = emptyFlow()
+            override suspend fun workspaceProfiles(organizationID: String?) =
+                ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+            override suspend fun setPersonalDefaultProfile(profileID: String) =
+                ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
+            override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) =
+                ai.kilocode.rpc.dto.HostedMutationResultDto()
+            override suspend fun startWorkspaceSession(
+                ref: HostedWorkspaceRefDto,
+                request: ai.kilocode.rpc.dto.HostedStartSessionDto,
+            ) = ai.kilocode.rpc.dto.HostedMutationResultDto()
+            override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+                HostedDeleteResultDto(ref)
+        }, gate = { true }, log = TestLog(), repo = { "repo" })
+        project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        project.replaceService(
+            KiloSessionService::class.java,
+            KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()),
+            testRootDisposable,
+        )
+        rpc.listed += main()
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        val view = tree(panel)
+        waitUntil { edt { view.select(ref.key) } }
+
+        val context = edt { DataManager.getInstance().getDataContext(panel) }
+        val sink = edt { DeleteProviderSink().also { panel.uiDataSnapshot(it) } }
+        val provider = sink.provider
+        assertNotNull(provider)
+        assertTrue(edt { provider!!.canDeleteElement(context) })
+    }
+
     fun `test cloud create is retired after repeated successful omissions`() {
         val createdRef = HostedWorkspaceRefDto("cloud", "created")
         val session = HostedWorkspaceSessionDto(
@@ -2453,6 +2514,21 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // instead of racing a fixed flush under CI load.
         waitUntil { rows(panel) > 0 && (0 until rows(panel)).all { row(panel, it).progress == null } }
         return panel
+    }
+
+    private class DeleteProviderSink : DataSink {
+        var provider: DeleteProvider? = null
+
+        override fun <T : Any> set(key: DataKey<T>, data: T?) {
+            if (key == PlatformDataKeys.DELETE_ELEMENT_PROVIDER) provider = data as? DeleteProvider
+        }
+
+        override fun <T : Any> setNull(key: DataKey<T>) {}
+        override fun <T : Any> lazyNull(key: DataKey<T>) {}
+        override fun <T : Any> lazyValue(key: DataKey<T>, data: (DataMap) -> T?) {}
+        override fun uiDataSnapshot(provider: UiDataProvider) = provider.uiDataSnapshot(this)
+        override fun dataSnapshot(provider: DataSnapshotProvider) = provider.dataSnapshot(this)
+        override fun uiDataSnapshot(provider: DataProvider) {}
     }
 
     private fun main(): WorktreeDto {

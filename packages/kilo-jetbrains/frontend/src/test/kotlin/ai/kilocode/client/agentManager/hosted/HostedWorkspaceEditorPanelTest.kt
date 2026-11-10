@@ -24,6 +24,7 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.active.activeLayout
 import javax.swing.SwingUtilities
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.ui.ProgressPanel
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.controller.SessionController
@@ -70,6 +71,8 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBLabel
@@ -116,6 +119,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         app.replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         }), testRootDisposable)
+        useInactiveDisposeTimeout()
         panel = edtWait { HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace") }
         emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 1.0))
         assertTrue(coroutines.pumpUntil { edtWait {
@@ -533,19 +537,18 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         edtWait { assertEquals("Sleeping", badge().segments.single().text); assertEquals(count, descendants(header).size) }
     }
 
-    fun testInitialPlaceholderIsCenteredInTheEditor() {
+    fun testInitialPanelShowsABlankSessionInsteadOfAPlaceholder() {
         edtWait {
             val second = HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace")
             try {
-                val label = descendants(second).filterIsInstance<JBLabel>()
-                    .single { it.text == KiloBundle.message("hosted.workspace.empty") }
-                val area = label.parent
-                area.setSize(400, 300)
-                area.doLayout()
-                assertTrue("Horizontal centre: label=${label.bounds} area=${area.size}",
-                    kotlin.math.abs((area.width - label.width) / 2 - label.x) <= 1)
-                assertTrue("Vertical centre: label=${label.bounds} area=${area.size}",
-                    kotlin.math.abs((area.height - label.height) / 2 - label.y) <= 1)
+                assertTrue(
+                    "Cloud editor must open a blank prompt panel, not an empty hint",
+                    descendants(second).any { it is SessionUi },
+                )
+                assertTrue(
+                    descendants(second).filterIsInstance<JBLabel>()
+                        .none { it.text == KiloBundle.message("hosted.workspace.empty") },
+                )
             } finally {
                 Disposer.dispose(second)
             }
@@ -588,10 +591,10 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
 
         hosted.refresh("/renamed-repository")
 
-        assertTrue(coroutines.pumpUntil { edtWait {
-            descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue
-                ?.let { (it as ActiveItem).key == rpc.rootSessions.single().id } == true
-        } })
+        assertTrue(coroutines.pumpUntil {
+            val value = edtWait { descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue }
+            (value as? ActiveItem)?.key == rpc.rootSessions.single().id
+        })
         edtWait {
             assertEquals(rpc.rootSessions.single().id,
                 (descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue as ActiveItem).key)
@@ -634,9 +637,31 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         edtWait { assertEquals(0, descendants(panel).filterIsInstance<JBList<*>>().single().model.size) }
     }
 
-    fun testWorkspaceHeaderPullsBranchAndCustomNameFromWorkspaceMetadata() {
+    fun testNewSessionStartsABlankPromptWithoutCallingCloud() {
+        val manager = HostedWorkspaceEditorPanel::class.java
+            .getDeclaredField("manager")
+            .apply { isAccessible = true }
+            .get(panel) as ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
+
+        edtWait { manager.newSession() }
+
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionUi>().any { it.blank }
+        } })
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<JBList<*>>().single()
+                .let { list -> (0 until list.model.size).any { (list.model.getElementAt(it) as ActiveItem).key == SessionHost.NEW } }
+        } })
+        assertEquals(0, rpc.starts)
+    }
+
+    fun testWorkspaceHeaderUsesTheSessionTitleThenFallsBackToWorkspaceMetadata() {
         val title = edtWait { descendants(panel).filterIsInstance<SimpleColoredComponent>().first() }
-        edtWait { assertEquals("feature/cloud", title.getCharSequence(true).toString()) }
+        // A titled session wins everywhere: tree row, header, tab, and status bar agree.
+        edtWait { assertEquals("Selected session", title.getCharSequence(true).toString()) }
+        rpc.rootSessions = emptyList()
+        hosted.refresh(project.basePath.orEmpty())
+        assertTrue(coroutines.pumpUntil { edtWait { title.getCharSequence(true).toString() == "feature/cloud" } })
         rpc.name = "Cloud custom name"
         hosted.refresh(project.basePath.orEmpty())
         assertTrue(coroutines.pumpUntil { edtWait { title.getCharSequence(true).toString() == "Cloud custom name" } })
@@ -644,6 +669,7 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     fun testRefreshingWorkspaceMetadataRetitlesAndReusesTheOpenEditor() {
+        rpc.rootSessions = emptyList()
         val dto = HostedWorkspaceDto(ref, branch = "feature/cloud")
         val editors = FileEditorManager.getInstance(project)
         try {
@@ -670,6 +696,22 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
                 KiloVirtualFileSystem.getInstance().clear()
             }
         }
+    }
+
+    private fun useInactiveDisposeTimeout() {
+        Registry.mutateContributedKeys {
+            it + (TIMEOUT to RegistryKeyDescriptor(
+                TIMEOUT,
+                "Milliseconds before hidden session UI is disposed after switching away.",
+                "180000",
+                false,
+                false,
+                null,
+                null,
+            ))
+        }
+        Disposer.register(testRootDisposable) { Registry.mutateContributedKeys { it - TIMEOUT } }
+        Registry.get(TIMEOUT).setValue(60_000, testRootDisposable)
     }
 
     private fun emit(event: HostedSystemEventDto) { assertTrue(rpc.events.tryEmit(event)) }
@@ -702,12 +744,17 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     private fun descendants(root: Component): List<Component> = listOf(root) +
         if (root is Container) root.components.flatMap { descendants(it) } else emptyList()
 
+    private companion object {
+        const val TIMEOUT = "kilo.session.inactive.disposeTimeoutMs"
+    }
+
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
         val events = MutableSharedFlow<HostedSystemEventDto>(replay = 16)
         var collectors = 0
         var active = 0
         var workspaceCalls = 0
         var statusCalls = 0
+        var starts = 0
         var gate: CompletableDeferred<Unit>? = null
         var name: String? = null
         var list = HostedWorkspaceListDto()
@@ -730,8 +777,10 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         override suspend fun workspaceProfiles(organizationID: String?) = HostedWorkspaceProfileListDto()
         override suspend fun setPersonalDefaultProfile(profileID: String) = ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
         override suspend fun createWorkspace(request: HostedCreateWorkspaceDto) = mutation
-        override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: HostedStartSessionDto) =
-            HostedMutationResultDto()
+        override suspend fun startWorkspaceSession(ref: HostedWorkspaceRefDto, request: HostedStartSessionDto): HostedMutationResultDto {
+            starts++
+            return HostedMutationResultDto()
+        }
         override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
             HostedDeleteResultDto(ref)
         override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = flow {

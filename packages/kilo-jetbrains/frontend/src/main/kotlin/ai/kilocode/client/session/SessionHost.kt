@@ -65,6 +65,14 @@ abstract class SessionHost(
     }
 
     @RequiresEdt
+    override fun sessionCreated(ui: SessionUi, ref: SessionRef) {
+        opened[ref.key] = ui
+        val local = (ref as? SessionRef.Local)?.session?.id
+        if (local != null) opened.putIfAbsent(local, ui)
+        onSessionsChanged()
+    }
+
+    @RequiresEdt
     override fun activity(): Map<String, SessionActivityKind> {
         val base = status()
         val live = all.mapNotNull { ui ->

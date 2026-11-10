@@ -27,12 +27,7 @@ internal class HostedWorkspaceRow(
     override val key: String get() = dto.ref.key
     override val identity: Any get() = "hosted:${dto.ref.key}"
     override val title: String
-        get() = HostedWorkspaceTitle.text(
-            dto.name,
-            dto.branch,
-            dto.ref.workspaceID,
-            dto.sessions.maxByOrNull { it.updated }?.title,
-        )
+        get() = HostedWorkspaceTitle.text(dto)
     override val description: String?
         get() = dto.branch?.takeIf { it.isNotBlank() }
     override val tooltip: String?
