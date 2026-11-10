@@ -63,7 +63,7 @@ There is no `workflows/` directory in v2. A v1 workflow becomes a command: move 
 
 An agent file's body is its system prompt. Frontmatter: `description`, `mode` (`primary`, `subagent` or `all`), `model`, `steps` (maximum iterations), `hidden`, `color` (`#RRGGBB` only), `disabled` (also removes a built-in agent), `permissions` and `request: { headers, body }`.
 
-Kilo's primary agents are `code` (the default), `ask`, `debug`, `orchestrator` and `plan`; `general` and `explore` are subagents, and `build` is a hidden alias of `code`. `ask`, `plan`, `orchestrator` and `explore` keep read-only limits that broad global `permissions` cannot widen; a rule in that agent's own `permissions` can. The Plan agent may only edit plan files under `.kilo2/plans/` (`<data>/plans/` outside git) and hands off with `plan_exit`.
+Kilo's primary agents are `code` (the default), `ask`, `debug`, `orchestrator` and `plan`; `general` and `explore` are subagents, and `build` is a hidden alias of `code`. `ask`, `plan` and `orchestrator` keep read-only limits that broad global `permissions` cannot widen; a rule in that agent's own `permissions` can. `explore` cannot be widened at all, only restricted further with deny rules. The Plan agent may only edit plan Markdown files (`.kilo2/plans/*.md`, `plans/*.md`, `.plans/*.md`, or `<data>/plans/` outside git) and hands off with `plan_exit`.
 
 ## Skills
 
