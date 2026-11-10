@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, indexingEnvironment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, indexingEnvironment, manager, parse, serverPlans, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -68,14 +68,16 @@ describe("command", () => {
   })
 })
 
-describe("serverHome", () => {
-  test("is the profile home for the isolated dev server", () => {
+describe("serverPlans", () => {
+  test("is the profile data plan directory for the isolated dev server", () => {
     const cmd = { cmd: "bun", args: [], env: { KILO_V2_PROFILE: path.join(tmpdir(), "profile") } }
-    expect(serverHome(cmd, {})).toBe(path.join(tmpdir(), "profile", "home"))
+    expect(serverPlans(cmd, {})).toBe(path.join(tmpdir(), "profile", "data", "kilo2", "plans"))
   })
 
-  test("is the inherited home for the bundled server", () => {
-    expect(serverHome({ cmd: "kilo2", args: [], env: {} }, { OPENCODE_TEST_HOME: "/h" })).toBe("/h")
+  test("is the Kilo data plan directory for the bundled server", () => {
+    expect(serverPlans({ cmd: "kilo2", args: [], env: {} }, { XDG_DATA_HOME: "/d" })).toBe(
+      path.join("/d", "kilo2", "plans"),
+    )
   })
 })
 
