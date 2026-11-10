@@ -1390,6 +1390,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
+  "task.backgroundAgents.promoteFailed": "Bu ajan arka planda devam edemedi. Zaten bitmiş olabilir.",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",

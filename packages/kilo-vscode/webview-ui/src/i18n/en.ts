@@ -1438,6 +1438,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Open all background agents",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
+  "task.backgroundAgents.promoteFailed": "This agent could not continue in the background. It may have finished already.",
   "task.backgroundAgents.waiting": "A background agent needs your input",
   "task.backgroundAgents.needsInput": "Needs input",
   "task.backgroundAgents.clearFinished": "Clear finished",

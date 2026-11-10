@@ -30,6 +30,7 @@ import { chunkPaths } from "./validate-paths"
 import { createReviewAppendQueue } from "./review-queue"
 import { createComposerQueue } from "./composer"
 import { createPlanOpener } from "./open-plan"
+import { openSubagent } from "./open-subagent"
 import { showTabStrip } from "../utils/local-tabs"
 import { focusPrompt } from "../utils/tab-navigation"
 
@@ -168,6 +169,10 @@ export function Chat() {
         composerQueue.push({ type: "attach", items: item.items })
         return
       }
+      if (item.type === "openSession") {
+        open(item.sessionID)
+        return
+      }
       if (item.type === "startPrompt") {
         setView("chat")
         composerQueue.push({ type: "submit", text: item.text, items: item.items ?? [] })
@@ -227,6 +232,16 @@ export function Chat() {
     openDiff: (diff) => getVSCodeAPI().postMessage({ type: "openDiffVirtual", diff } satisfies ToHost as never),
     openDiffs: (diffs) => getVSCodeAPI().postMessage({ type: "openDiffsVirtual", diffs } satisfies ToHost as never),
     openSession: open,
+    // A subagent opens in its own read-only editor tab, so the sidebar keeps the parent session.
+    subagentTarget: "tab",
+    openSubagent: (sessionID, title) =>
+      openSubagent({
+        sessionID,
+        title,
+        parentSessionID: session(),
+        surface: "tab",
+        post: (message) => getVSCodeAPI().postMessage(message as never),
+      }),
   }
 
   // A completed open_plan call opens its plan file once its session is active. The connection carries events for
@@ -271,9 +286,9 @@ export function Chat() {
     if (id) transfer.move(id)
   }
 
-  // The session actions row: New Session, the worktree actions, Changes and the todo chip. The worktree actions
-  // need a git repository, so they show only when the Agent Manager reports a branch.
-  const row = (hasMessages: boolean, todos: JSX.Element) => (
+  // The session actions row: the agent stack, New Session, the worktree actions, Changes and the todo chip. The
+  // worktree actions need a git repository, so they show only when the Agent Manager reports a branch.
+  const row = (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => (
     <SessionActionsRow
       hasMessages={hasMessages}
       branch={transfer.branch()}
@@ -287,6 +302,7 @@ export function Chat() {
       stats={stats()}
       onShowChanges={openChanges}
       todos={todos}
+      agents={agents}
     />
   )
 

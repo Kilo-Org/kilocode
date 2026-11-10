@@ -2184,6 +2184,93 @@
     "note": "The v1 assertions (message text only, part ranges, markdown link stripping, literal user brackets, no error matches) are ported to the v2 row shape, plus the absolute part index of a chunk. The v2 row model has no synthetic text parts, so there is no synthetic-skip case to carry.",
     "by": "migrate-vscode-session-search-v1"
   },
+  "api:GET /kilocode/background-jobs": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/background-jobs/tracker.ts",
+    "note": "Served by the kilocode.background-jobs RPC (packages/schema/src/kilocode/background-jobs.ts Definition, handlers in packages/kilo-plugin/src/background-jobs/). `list({sessionID})` returns the subagent jobs of one parent session, foreground ones included (core lists only backgrounded jobs), with status, background flag and times; `changed` events replace the client's 1 s poll. Test: packages/kilo-plugin/test/background-jobs.test.ts (real subagent tool, TestLLM).",
+    "by": "mire-production"
+  },
+  "api:POST /kilocode/background-jobs/{jobID}/cancel": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/background-jobs/tracker.ts",
+    "note": "Served by the kilocode.background-jobs RPC (packages/schema/src/kilocode/background-jobs.ts Definition, handlers in packages/kilo-plugin/src/background-jobs/). `cancel({jobID})` interrupts the child session and every descendant and cancels their jobs, deepest first; unknown jobs fail with not_found. Test: packages/kilo-plugin/test/background-jobs.test.ts.",
+    "by": "mire-production"
+  },
+  "api:POST /kilocode/background-jobs/{jobID}/promote": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/background-jobs/tracker.ts",
+    "note": "Served by the kilocode.background-jobs RPC (packages/schema/src/kilocode/background-jobs.ts Definition, handlers in packages/kilo-plugin/src/background-jobs/). `promote({jobID})` backgrounds one running foreground subagent through Job.background: the parent's blocked subagent call returns its background result and core delivers the completion later. Finished jobs return false. Test: packages/kilo-plugin/test/background-jobs.test.ts.",
+    "by": "mire-production"
+  },
+  "patch:unattributed:core/background-job:b74e71daf68f": {
+    "state": "native",
+    "note": "v1 let an empty output of a later extension run clobber the job output (#13469). v2 has no Job.extend: a follow-up to a running subagent steers its single run, and the job output is the text of the newest completed assistant message (packages/core/src/session/subagent-job.ts, SubagentCompletion.text with NO_TEXT for an empty answer), so the clobbering cannot happen.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/store.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/store.ts",
+    "note": "Board store on the plugin key/value storage (ctx.storage) instead of SQL tables: per-root lock, v1 limits, idempotent retries, self-post refusal, recipient and reply checks, stale-cursor recovery, read-only observe with before paging, root-only reset with revision conflicts; revision is next_seq - 1. The unread objective column is dropped.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/context.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/context.ts",
+    "note": "The 11 instruction lines (session context hook, only when board_read is offered) and the activity notifier (tool execute.after hook) of the kilocode.board plugin.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/enabled.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/enabled.ts",
+    "note": "Enabled unless shared_agent_board is false or KILO_EXPERIMENTAL_SHARED_AGENT_BOARD is false; tools are re-registered on config.updated.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/src/kilocode/board/notice.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/notice.ts",
+    "note": "The activity and unavailable notice texts, verbatim.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board/store.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board/store.test.ts",
+    "note": "Store semantics on the plugin storage.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board-tools.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board-tools.test.ts",
+    "note": "Tool registration by config, runtime identity, permissions, retries, availability and warnings, stale cursor, instructions, notices and the RPC.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board-context.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board-context.test.ts",
+    "note": "Instructions and notifier.",
+    "by": "mire-production"
+  },
+  "module:packages/opencode/test/kilocode/board-enabled.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/board-enabled.test.ts",
+    "note": "Config and environment resolution matrix.",
+    "by": "mire-production"
+  },
+  "module:packages/core/test/kilocode/config-shared-agent-board.test.ts": {
+    "state": "ported",
+    "v2": "packages/core/test/kilocode/config/mapping.test.ts",
+    "note": "The shared_agent_board key decodes as a top-level Kilo config boolean (folded) and the retired experimental key is refused with the v1 warning: packages/core/test/kilocode/config/mapping.test.ts rows shared_agent_board and experimental.shared_agent_board.",
+    "by": "mire-production"
+  },
+  "module:packages/core/src/kilocode/board/sql.ts": {
+    "state": "dropped",
+    "note": "The v2 board persists through the kilocode.board plugin key/value storage (packages/kilo-plugin/src/board/store.ts); there is no Kilo board SQL table or migration.",
+    "by": "mire-production"
+  },
+  "module:packages/core/test/kilocode/board/migration.test.ts": {
+    "state": "dropped",
+    "note": "Tested the board SQL migrations, which v2 does not have (see packages/core/src/kilocode/board/sql.ts).",
+    "by": "mire-production"
+  },
   "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptHint.tsx": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/prompt-hint.tsx",
