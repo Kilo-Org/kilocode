@@ -340,13 +340,20 @@ function TextContent(props: {
     openPathLink(link)
   }
 
+  // VS Code listens for link clicks on the webview window and opens every anchor in the system browser. Claim the
+  // events we handle so a link opens either in the Integrated Browser or externally, never in both.
+  const claim = (event: MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
   const click = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return
     const fileLink = event.target.closest(".file-link[data-file-path]")
     if (fileLink) {
       const path = fileLink.getAttribute("data-file-path")
       if (!path) return
-      event.preventDefault()
+      claim(event)
       props.actions?.openFile?.(
         path,
         position(fileLink, "data-file-line"),
@@ -358,7 +365,7 @@ function TextContent(props: {
     // The renderer keeps the parsed path of a file link in data attributes, because the sanitizer drops `file:` hrefs.
     const pathLink = event.target.closest("a.file-path-link[data-file-path]")
     if (pathLink) {
-      event.preventDefault()
+      claim(event)
       openPathLink(pathLink)
       return
     }
@@ -367,12 +374,12 @@ function TextContent(props: {
     if (!href) return
     const file = extractFilePathFromHref(href)
     if (file) {
-      event.preventDefault()
+      claim(event)
       openValidated(file.path, file.line, file.column)
       return
     }
     if (!props.open || !/^https?:\/\//i.test(href)) return
-    event.preventDefault()
+    claim(event)
     // Shift-click asks for the system browser even when the host routes links into the Integrated Browser.
     props.open(href, event.shiftKey)
   }
@@ -428,7 +435,7 @@ export type ToolProps = {
   time?: SessionMessageAssistantTool["time"]
   attachments: ToolFileContent[]
   directory?: string
-  openUrl?: (uri: string) => void
+  openUrl?: (uri: string, external?: boolean) => void
   defaultOpen?: boolean
   actions?: ToolActions
   hideDetails?: boolean
@@ -845,7 +852,8 @@ ToolRegistry.register({
                     onClick={(event) => {
                       if (!props.openUrl) return
                       event.preventDefault()
-                      props.openUrl(url)
+                      event.stopPropagation()
+                      props.openUrl(url, event.shiftKey)
                     }}
                   >
                     {url}

@@ -516,6 +516,14 @@ export function wire(input: {
     if (handleLeafMessage(message)) return
   })
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
+  // The rail follows the physical workbench edge. Text direction must not move it
+  // between chat and code, and only the sidebar view has an edge to follow.
+  const sidebar =
+    input.view === "chat"
+      ? workspace.getConfiguration("workbench").get<string>("sideBar.location") === "right"
+        ? "right"
+        : "left"
+      : undefined
   webview.html = html({
     csp: webview.cspSource,
     script: uri("dist", `${ENTRY[input.view]}.js`),
@@ -528,6 +536,7 @@ export function wire(input: {
     language: env.language,
     version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
+    sidebar,
     settings: readKiloSettings(),
     globals: input.globals,
   })
@@ -588,6 +597,8 @@ export function html(input: {
   language: string
   version: string
   view?: View
+  /** Physical workbench edge of the sidebar view; editor panels have none. */
+  sidebar?: "left" | "right"
   settings: Record<string, unknown>
   globals?: Record<string, unknown>
 }) {
@@ -623,7 +634,7 @@ export function html(input: {
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
     .join(" ")
   return `<!DOCTYPE html>
-<html lang="${escape(input.language)}" data-theme="kilo-vscode">
+<html lang="${escape(input.language)}" data-theme="kilo-vscode" data-sidebar="${input.sidebar ?? ""}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
