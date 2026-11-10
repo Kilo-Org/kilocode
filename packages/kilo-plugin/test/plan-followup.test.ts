@@ -5,7 +5,7 @@ import { Agent } from "@opencode/schema/agent"
 import { Model } from "@opencode/schema/model"
 import { Provider } from "@opencode/schema/provider"
 import { Tool } from "@opencode/schema/tool"
-import { DateTime, Effect, Exit } from "effect"
+import { DateTime, Duration, Effect, Exit } from "effect"
 import { PlanHandover } from "../src/plan/handover"
 import { PlanFollowup } from "../src/plan/plan-followup"
 import { code, handoff, nextSessionID, planPath, sessionID } from "./plan-harness"
@@ -157,6 +157,9 @@ test("the new session takes the Code agent's own model when it has one", async (
     codeModel: { id: "code-model", providerID: "code-provider" },
   })
   expect(result.createdModels).toEqual([{ id: "code-model", providerID: "code-provider" }])
+  // The summary keeps the planning model, not the cheaper Code model the new session uses.
+  expect(String(result.generated[0]?.model?.id)).toBe("test-model")
+  expect(String(result.generated[0]?.model?.providerID)).toBe("test")
 })
 
 /** A turn with the plan_exit call followed by `after` closing assistant messages. */
@@ -243,4 +246,24 @@ test("a failing summary model falls back once to the default model", async () =>
   expect(calls).toHaveLength(2)
   expect(calls[0]).toEqual({ id: "plan-model", providerID: "plan-provider" })
   expect(calls[1]).toBeUndefined()
+})
+
+test("a timed-out summary does not retry, so the handoff waits one budget", async () => {
+  const messages: SessionMessage.Info[] = [
+    { id: SessionMessage.ID.create(), time: { created: DateTime.makeUnsafe(0) }, type: "user", text: "Plan it" },
+  ]
+  const calls: unknown[] = []
+  const text = await Effect.runPromise(
+    PlanHandover.generate({
+      messages,
+      timeout: Duration.millis(1),
+      model: { id: Model.ID.make("plan-model"), providerID: Provider.ID.make("plan-provider") },
+      generate: (request) => {
+        calls.push(request.model)
+        return Effect.never
+      },
+    }),
+  )
+  expect(text).toBe("")
+  expect(calls).toHaveLength(1)
 })

@@ -2,7 +2,7 @@ export * as PlanHandover from "./handover"
 
 import type { Model } from "@opencode/schema/model"
 import type { SessionMessage } from "@opencode/schema/session-message"
-import { Cause, Duration, Effect, Option } from "effect"
+import { Cause, Data, Duration, Effect, Option } from "effect"
 
 export const PROMPT = `You are summarizing a planning session to hand off to an implementation session.
 
@@ -36,6 +36,11 @@ const CHARS = 60_000
 const TOOL_CHARS = 4_000
 const TIMEOUT = Duration.seconds(60)
 
+class Timeout extends Data.TaggedError("PlanHandover.Timeout")<{}> {}
+
+/** A timed-out attempt is final; a provider failure may be retried once on the default model. */
+type Attempt = { readonly text: Option.Option<string>; readonly retry: boolean }
+
 type Generate = (input: { prompt: string; system: string; model?: Model.Ref }) => Effect.Effect<string, unknown>
 
 /**
@@ -47,23 +52,33 @@ export const generate = Effect.fn("PlanHandover.generate")(function* (input: {
   messages: ReadonlyArray<SessionMessage.Info>
   generate: Generate
   model?: Model.Ref
+  /** Overrides the per-attempt budget. Tests use a short value. */
+  timeout?: Duration.Duration
 }) {
   const transcript = render(input.messages)
   if (!transcript) return ""
-  const attempt = (model?: Model.Ref) =>
+  const attempt = (model?: Model.Ref): Effect.Effect<Attempt> =>
     input
       .generate({ prompt: transcript, system: PROMPT, ...(model ? { model } : {}) })
       .pipe(
-        Effect.timeoutOption(TIMEOUT),
-        Effect.catchCauseIf(
-          (cause) => !Cause.hasInterrupts(cause),
-          (cause) => Effect.logWarning("plan handover generation failed", { cause }).pipe(Effect.as(Option.none<string>())),
+        Effect.map((text): Attempt => ({ text: Option.some(text), retry: false })),
+        Effect.timeoutOrElse({
+          duration: input.timeout ?? TIMEOUT,
+          orElse: (): Effect.Effect<Attempt> =>
+            Effect.succeed({ text: Option.none<string>(), retry: false } satisfies Attempt),
+        }),
+        Effect.catchCause((cause) =>
+          Cause.hasInterrupts(cause)
+            ? Effect.interrupt
+            : Effect.logWarning("plan handover generation failed", { cause }).pipe(
+                Effect.as({ text: Option.none<string>(), retry: true } satisfies Attempt),
+              ),
         ),
       )
   // A model-specific provider error falls back once to the default model. An empty summary is a result, not a failure.
   const first = yield* attempt(input.model)
-  const result = Option.isSome(first) || input.model === undefined ? first : yield* attempt()
-  return clean(Option.getOrElse(result, () => "").trim())
+  const result = first.retry && input.model !== undefined ? yield* attempt() : first
+  return clean(Option.getOrElse(result.text, () => "").trim())
 })
 
 /** Drops an echoed tool line, so a transcript template cannot leak raw tool arguments into the handover. */

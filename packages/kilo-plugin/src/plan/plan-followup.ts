@@ -175,7 +175,7 @@ const newSession = Effect.fn(function* (
   const next = yield* input.ctx.session.create({ agent: code, model })
   yield* input.bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
 
-  const handover = yield* summary(input.ctx, history, model)
+  const handover = yield* summary(input.ctx, history, planning)
   const todos = PlanHandover.todos(history)
   const text = [
     `Plan file: ${PlanFile.display(file, input.ctx.location)}\nRead this file first and treat it as the source of truth for implementation.`,
