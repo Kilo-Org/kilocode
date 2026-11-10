@@ -30,12 +30,14 @@
     "effect": "catalog:",
     "jsonc-parser": "3.3.1",
     "mammoth": "1.12.0",
+    "npm-package-arg": "13.0.2",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@types/npm-package-arg": "6.1.4",
     "@typescript/native": "catalog:",
     "@zip.js/zip.js": "2.7.62"
   }
