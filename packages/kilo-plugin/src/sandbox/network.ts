@@ -6,12 +6,22 @@ import { builtin, host, opaque } from "./network-tools"
 const known = new Set<string>(builtin)
 const indirect = new Set<string>(opaque.map((item) => item.id))
 const external = new Set<string>(host.map((item) => item.id))
+// Built-ins a network-restricted session does not offer. Code Mode itself is hidden too, because it can call MCP tools.
+const offline = new Set(["list_mcp_resources", "read_mcp_resource"])
 // Kilo branding renames the upstream built-in tool namespace to `kilo` when the host loads it; code that runs
 // without that transform (upstream checks, this package's tests) still sees `opencode`.
 const builtinNamespaces = new Set(["kilo", "opencode"])
 
 export function isBuiltin(id: string) {
   return known.has(id)
+}
+
+/** Effective ids a network-restricted session does not offer, taken from the registered tools rather than their namespace. */
+export function hiddenTools(tools: ReadonlyArray<{ readonly id: string; readonly name: string }>) {
+  return new Set([
+    "execute",
+    ...tools.filter((tool) => offline.has(tool.name)).map((tool) => tool.id),
+  ])
 }
 
 /**

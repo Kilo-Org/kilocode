@@ -49,6 +49,27 @@ describe("sandbox tool network classification", () => {
     expect(Network.isBuiltin("mcp__weather__current")).toBe(false)
   })
 
+  test("hides Code Mode and the MCP resource tools of a network-restricted session whatever their namespace", () => {
+    const tools = (prefix: string) => [
+      { id: "execute", name: "execute" },
+      { id: `${prefix}_list_mcp_resources`, name: "list_mcp_resources" },
+      { id: `${prefix}_read_mcp_resource`, name: "read_mcp_resource" },
+      { id: `${prefix}_artifact_create`, name: "artifact_create" },
+      { id: "read", name: "read" },
+    ]
+    expect([...Network.hiddenTools(tools("kilo"))]).toEqual([
+      "execute",
+      "kilo_list_mcp_resources",
+      "kilo_read_mcp_resource",
+    ])
+    expect([...Network.hiddenTools(tools("opencode"))]).toEqual([
+      "execute",
+      "opencode_list_mcp_resources",
+      "opencode_read_mcp_resource",
+    ])
+    expect([...Network.hiddenTools([])]).toEqual(["execute"])
+  })
+
   test("keeps classified non-network built-in tools available in deny mode", async () => {
     let called = false
     await Effect.runPromise(

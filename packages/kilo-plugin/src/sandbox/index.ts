@@ -15,7 +15,7 @@ import * as SandboxActivation from "./activation"
 import { SandboxConfig } from "./config"
 import { marker, register, release } from "./environment"
 import { mutates } from "./git"
-import { isMcp } from "./network"
+import { hiddenTools, isMcp } from "./network"
 import * as SandboxPolicy from "./policy"
 import { Runtime, type Interface as RuntimeInterface, type Target } from "./runtime"
 
@@ -143,6 +143,7 @@ export const Plugin = define({
     yield* ctx.tool
       .transform((editor) => {
         delegated.clear()
+        hidden = hiddenTools(editor.list())
         for (const item of editor.list()) {
           if (delegating.has(item.id)) continue
           editor.update(item.id, (tool) => {
@@ -256,15 +257,8 @@ export const Plugin = define({
   }),
 })
 
-// Effective ids: the registry prefixes a namespaced tool with its namespace, which branding renames to `kilo` when the
-// host loads it. Both spellings are listed so a run without that transform hides the same tools.
-const hidden = new Set([
-  "kilo_list_mcp_resources",
-  "kilo_read_mcp_resource",
-  "opencode_list_mcp_resources",
-  "opencode_read_mcp_resource",
-  "execute",
-])
+// Effective ids a network-restricted session does not offer, filled from the registry so a renamed tool namespace follows.
+let hidden = hiddenTools([])
 
 function describe(error: unknown) {
   if (typeof error === "object" && error !== null && "description" in error && typeof error.description === "string")
