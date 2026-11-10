@@ -150,7 +150,7 @@ export async function importV1(input: {
       })) ?? 0
     return { imported, skipped: false }
   } finally {
-    if (readOwner(lock) === process.pid) rmSync(lock, { force: true })
+    if (readOwner(lock) === process.pid) remove(lock)
   }
 }
 
@@ -179,7 +179,7 @@ async function acquire(lock: string, file: string, log?: (line: string) => void)
     // The owner released the lock between the two calls.
     if (!held) continue
     if ((held.owner !== undefined && !alive(held.owner)) || Date.now() - held.touched > STALE) {
-      rmSync(lock, { force: true })
+      remove(lock)
       continue
     }
     if (Date.now() - notice.last >= 5_000) {
@@ -286,10 +286,27 @@ async function copy<A>(
     ownerOnly(file)
     return result
   } finally {
-    for (const suffix of ["", "-wal", "-shm", "-journal"]) rmSync(`${temp}${suffix}`, { force: true })
+    for (const suffix of ["", "-wal", "-shm", "-journal"]) remove(`${temp}${suffix}`)
   }
 }
 
 function ownerOnly(file: string) {
   if (process.platform !== "win32") chmodSync(file, 0o600)
+}
+
+/**
+ * Removes a lock or a temporary copy. Windows can still hold the file for a moment after SQLite closes it, and a
+ * leftover temporary file is harmless, so a removal retries and then gives up instead of failing the import.
+ */
+function remove(file: string) {
+  for (let attempt = 0; attempt <= 4; attempt++) {
+    try {
+      rmSync(file, { force: true })
+      return
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (attempt === 4 || (code !== "EBUSY" && code !== "EPERM" && code !== "ENOTEMPTY")) return
+      Bun.sleepSync(50)
+    }
+  }
 }

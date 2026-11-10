@@ -22,6 +22,9 @@ export function extract(source: string, target: string, since: number, onProgres
   try {
     from.run("BEGIN")
     const ids = selectSessions(from, since)
+    // An empty window would publish an empty store and leave the caller without its earlier sessions, so it fails first.
+    if (ids.length === 0)
+      throw new Error(`No Kilo v1 sessions were updated since ${new Date(since).toISOString().slice(0, 10)}.`)
     const schema = readSchema(from)
     const tables = readTables(from)
     const to = new SQLite(target)

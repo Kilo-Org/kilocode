@@ -1,6 +1,7 @@
 import { Database as SQLite } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
+import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, utimes, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -12,8 +13,22 @@ const open: SQLite[] = []
 afterEach(async () => {
   // Windows keeps an open file locked, so every connection closes before the directory is removed.
   for (const db of open.splice(0)) db.close()
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+  await Promise.all(dirs.splice(0).map(removeDir))
 })
+
+/** Windows also locks a path briefly after the last handle closes, so removal retries instead of failing the test. */
+async function removeDir(dir: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rm(dir, { recursive: true, force: true })
+      return
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (attempt >= 9 || (code !== "EBUSY" && code !== "EPERM" && code !== "ENOTEMPTY")) throw error
+      await Bun.sleep(100)
+    }
+  }
+}
 
 /** A test directory with an empty kilo2 data directory; the Kilo v1 store goes in `kilo` beside it. */
 async function root() {
@@ -372,6 +387,17 @@ test("--since leaves the v1 files byte-identical and still applies the Kilo step
     expect(reply.data).not.toContain("hidden note")
     expect(reply.data).not.toContain("Initializing snapshot")
   })
+})
+
+test("--since with an empty window fails instead of publishing an empty store", async () => {
+  const { dir, data } = await root()
+  await v1Store(KiloDatabase.v1Store(data), path.join(dir, "work"), Date.now())
+  const file = path.join(data, "kilo2.db")
+  const since = Date.now() + 86_400_000
+  await expect(KiloDatabase.importV1({ store: KiloDatabase.v1Store(data), file, data, since })).rejects.toThrow(
+    "No Kilo v1 sessions were updated since",
+  )
+  expect(existsSync(file)).toBe(false)
 })
 
 /** Imports the v1 store beside `data` into `<data>/kilo2.db`, the way the command does without `--from`. */
