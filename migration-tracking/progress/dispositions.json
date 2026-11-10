@@ -2310,5 +2310,21 @@
     "v2": "packages/kilo-vscode/src/settings-host.ts",
     "note": "Reading showShortcutHints and pushing it to every webview on change is carried by the generic v2 settings host: showShortcutHints is in KILO_SETTING_KEYS, readKiloSettings returns it, and the onDidChangeConfiguration listener posts the full settings set when a kilo-code.v2 setting changes. webview-ui/src/v2/kilo-settings.ts is the receiving accessor, so the hint reads the same setting as on v1.",
     "by": "port-keyboard-suggestions-to-v1"
+  },
+  "module:packages/kilo-vscode/tests/unit/prompt-input-bidirectional.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/prompt-input-bidirectional.test.ts",
+    "note": "Same two cases, asserting the v2 sources: the overlay and textarea of v2/prompt.tsx and the New Worktree dialog textarea carry dir=\"auto\", and the overlay CSS keeps unicode-bidi: plaintext. The textarea assertion matches the v2 class name.",
+    "by": "port-at-mentions"
+  },
+  "module:packages/kilo-vscode/tests/unit/prompt-input-connection-guard.test.ts": {
+    "state": "dropped",
+    "note": "The v1 test asserted statement order inside PromptInput.tsx source text: resolve the async terminal and git attachments, then recheck isDisabled, then clear the draft. The v2 composer starts the same reads and clears the draft in one synchronous step, then restores the draft when the send fails or a mention cannot be read, so there is no pre-clear window for the assertion. The restore path is covered by the composer fixture test (test/prompt-toolbar-flicker.test.ts) and the mention tests.",
+    "by": "port-at-mentions"
+  },
+  "module:packages/kilo-vscode/tests/helpers/prompt-input.ts": {
+    "state": "dropped",
+    "note": "A Playwright helper that opens the v1 webview storybook story `prompt-input--default-420` and posts a connectionState message, used by the v1 paste-collapse and prompt-undo specs. The v2 webview has no storybook (no packages/kilo-vscode/webview-ui/src/stories and no packages/stories), so there is no story iframe to open; the v2 composer is covered by the happy-dom fixture test and the component tests.",
+    "by": "port-at-mentions"
   }
 }
