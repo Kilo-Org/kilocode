@@ -1079,7 +1079,11 @@ ToolRegistry.register({
           </span>
         </Show>
         <Show when={canOpen()}>
-          <span data-slot="task-tool-open" title={`${i18n.t(props.actions?.subagentTarget === "tab" ? "task.open.tab" : "task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
+          <span
+            data-slot="task-tool-open"
+            title={`${i18n.t(props.actions?.subagentTarget === "tab" ? "task.open.tab" : "task.open.panel")} (Cmd/Ctrl+Enter)`}
+            onClick={openChild}
+          >
             <Icon name="square-arrow-top-right" size="small" />
           </span>
         </Show>
@@ -1945,6 +1949,14 @@ function HighlightedText(props: {
           <span
             data-highlight={segment.type}
             data-clickable={run ? "" : undefined}
+            role={run ? "link" : undefined}
+            tabIndex={run ? 0 : undefined}
+            onKeyDown={(event) => {
+              if (!run || (event.key !== "Enter" && event.key !== " ")) return
+              event.preventDefault()
+              event.stopPropagation()
+              run()
+            }}
             onClick={(event) => {
               if (!run) return
               event.preventDefault()

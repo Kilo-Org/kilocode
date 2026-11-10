@@ -20,3 +20,16 @@ test("context requests settle by ID, time out, and preserve cleanup semantics", 
     expect(ctx.pending()).toBe(!reset)
   }
 })
+
+test("a synchronous send failure settles the request immediately", async () => {
+  const ctx = createContextRequests("sync", 10_000, "Timed out")
+  const failure = new Error("send failed")
+  const result = ctx
+    .request(() => {
+      throw failure
+    })
+    .catch((err: Error) => err)
+  await expect(result).resolves.toBe(failure)
+  // Not pending until the timeout: the composer gates Send on this flag.
+  expect(ctx.pending()).toBe(false)
+})

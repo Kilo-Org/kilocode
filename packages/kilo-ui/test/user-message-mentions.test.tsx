@@ -81,3 +81,21 @@ test("mentions are not clickable without a handler", () => {
   mounted.push(view)
   expect(view.host.querySelectorAll("[data-clickable]")).toHaveLength(0)
 })
+
+test("a mention opens from the keyboard", () => {
+  const opened: string[] = []
+  const view = mountRich(() => (
+    <UserMessageDisplay
+      message={message}
+      onOpenFile={(path) => opened.push(`file:${path}`)}
+      onOpenSession={(id) => opened.push(`session:${id}`)}
+    />
+  ))
+  mounted.push(view)
+
+  const [file] = [...view.host.querySelectorAll<HTMLElement>('[data-highlight="file"]')]
+  expect(file?.getAttribute("role")).toBe("link")
+  expect(file?.tabIndex).toBe(0)
+  file?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+  expect(opened).toEqual(["file:src/a.ts"])
+})

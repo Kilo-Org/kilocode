@@ -2525,3 +2525,41 @@ describe("useFileMention in a session directory", () => {
     scope.dispose()
   })
 })
+
+describe("past chats across a session switch", () => {
+  it("ignores a reply requested by the previous session", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+    const session = createSignal<string | undefined>("ses_a")
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, session[0], () => false)
+    })
+
+    // Past chats are requested from the first character of a query.
+    mention.onInput("@a", 2)
+    const first = posted.find((message) => message.type === "requestSessionSearch")
+    if (first?.type !== "requestSessionSearch") throw new Error("Expected a session search")
+
+    // Switching session resets the mention state, so the reply to the first request is stale.
+    session[1]("ses_b")
+    await wait(0)
+    for (const handler of handlers) {
+      handler({
+        type: "sessionSearchResult",
+        requestId: first.requestId,
+        sessions: [{ id: "ses_old", title: "Old scope chat", updated: 1 }],
+      })
+    }
+    expect(mention.sessionCandidates()).toEqual([])
+    dispose.fn?.()
+  })
+})

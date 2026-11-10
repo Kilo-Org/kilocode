@@ -237,6 +237,8 @@ export function useFileMention(
   // once per session instead of on every keystroke, plus the fetch state a
   // spaced query consults before deciding it is prose rather than a title.
   let sessionScope: string | undefined
+  // The past-chat request in flight, with the scope that asked for it, so a reply cannot land in another session.
+  let sessionRequest: { id: string; scope: string } | undefined
   let sessionsInFlight = false
   let sessionTimer: ReturnType<typeof setTimeout> | undefined
   let pending: { query: string } | undefined
@@ -285,6 +287,7 @@ export function useFileMention(
     prewarmRequest = undefined
     workspaceDir = dirs.get(value) ?? directory?.() ?? ""
     sessionScope = undefined
+    sessionRequest = undefined
     sessionsInFlight = false
     pending = undefined
     if (sessionTimer) clearTimeout(sessionTimer)
@@ -507,7 +510,10 @@ export function useFileMention(
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "sessionSearchResult") {
-      if (message.requestId === `session-search-${sessionSearchCounter}`) applySessions(message.sessions)
+      if (message.requestId === sessionRequest?.id && sessionRequest.scope === scope()) {
+        sessionRequest = undefined
+        applySessions(message.sessions)
+      }
       return
     }
     if (message.type !== "fileSearchResult") return
@@ -624,9 +630,11 @@ export function useFileMention(
       resolvePending()
     }, SESSION_FETCH_GRACE_MS)
     const id = sessionID?.()
+    const requestId = `session-search-${sessionSearchCounter}`
+    sessionRequest = { id: requestId, scope: scope() }
     vscode.postMessage({
       type: "requestSessionSearch",
-      requestId: `session-search-${sessionSearchCounter}`,
+      requestId,
       ...(id ? { sessionID: id } : {}),
       ...target(),
     })

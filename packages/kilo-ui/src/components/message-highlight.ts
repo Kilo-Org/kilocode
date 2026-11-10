@@ -32,7 +32,11 @@ function detect(text: string): Ref[] {
   return Array.from(text.matchAll(MENTION_RE), (match) => ({
     source: { value: match[0] ?? "", start: match.index, end: match.index + match[0].length },
     type: "file" as const,
-  }))
+  })).filter(
+    // Only a mention that starts a token counts: in `foo@example.com` the `@` continues a word, and the fallback must
+    // not turn the address into a file mention. `resolve()` applies the same guard to a recorded span.
+    (ref) => ref.source.start === 0 || !PATH_CONTINUATION.test(text[ref.source.start - 1] ?? ""),
+  )
 }
 
 function locate(text: string, ref: Ref, claimed: { start: number; end: number }[]): Ref | undefined {

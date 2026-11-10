@@ -263,10 +263,14 @@ export function PromptInput(props: {
     setAttachments((current) => mergeAttachments(current, read.map(imageAttachment)))
     images.clear()
   })
-  // Files dropped from the Explorer or an editor tab become `@` mentions at the caret.
+  // Files dropped from the Explorer or an editor tab become `@` mentions at the caret. A drop does not fire the
+  // textarea input event, so it invalidates a pending Enhance itself, as every other programmatic insert does.
   images.setFilePathDropHandler((paths) => {
     const ref = refs.input
     if (props.disabled || !ref) return
+    enhanceToken++
+    preEnhance = null
+    history.reset()
     const resolved = paths.map((path) => convertToMentionPath(path, v2.directory))
     const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
     ref.value = result.text

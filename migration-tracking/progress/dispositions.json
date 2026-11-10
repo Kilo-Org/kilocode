@@ -2319,7 +2319,7 @@
   },
   "module:packages/kilo-vscode/tests/unit/prompt-input-connection-guard.test.ts": {
     "state": "dropped",
-    "note": "The v1 test asserted statement order inside PromptInput.tsx source text: resolve the async terminal and git attachments, then recheck isDisabled, then clear the draft. The v2 composer starts the same reads and clears the draft in one synchronous step, then restores the draft when the send fails or a mention cannot be read, so there is no pre-clear window for the assertion. The restore path is covered by the composer fixture test (test/prompt-toolbar-flicker.test.ts) and the mention tests.",
+    "note": "The v1 test asserted statement order inside PromptInput.tsx source text: resolve the async terminal and git attachments, then recheck isDisabled, then clear the draft. The v2 composer starts the same reads and clears the draft in one synchronous step, then restores the draft when the send fails or a mention cannot be read, so there is no pre-clear window for the assertion. That restore path has no dedicated test yet: the mention tests cover the reads, and the composer fixture test asserts toolbar and draft-cache behaviour with a send stub that always succeeds.",
     "by": "port-at-mentions"
   },
   "module:packages/kilo-vscode/tests/helpers/prompt-input.ts": {

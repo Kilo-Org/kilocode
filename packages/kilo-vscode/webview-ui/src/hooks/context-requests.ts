@@ -31,7 +31,9 @@ export function createContextRequests(prefix: string, timeout: number, expired: 
     try {
       send(id)
     } catch (err) {
-      deferred.reject(err)
+      // Settle rather than only rejecting: the entry and its timer would otherwise keep `pending` true until the
+      // timeout, and the composer gates Send on it.
+      settle(id, (req) => req.reject(err instanceof Error ? err : new Error(String(err))))
     }
     return deferred.promise
   }

@@ -279,4 +279,21 @@ describe("message highlight", () => {
 
     expect(segments).toEqual([{ text: "using " }, { text: "@my folder/report.xlsx", type: "file" }, { text: " here" }])
   })
+
+  test("does not turn an email address into a file mention", () => {
+    expect(buildHighlightedTextSegments("mail foo@example.com later", [], [])).toEqual([
+      { text: "mail foo@example.com later" },
+    ])
+    expect(buildHighlightedTextSegments("write to bot@kilo.ai now", [], [])).toEqual([
+      { text: "write to bot@kilo.ai now" },
+    ])
+  })
+
+  test("still detects a mention that starts a token", () => {
+    expect(buildHighlightedTextSegments("see (@src/a.ts)", [], [])).toEqual([
+      { text: "see (" },
+      { text: "@src/a.ts", type: "file" },
+      { text: ")" },
+    ])
+  })
 })
