@@ -39,6 +39,7 @@ const BUILTIN_NON_MCP_TOOLS = new Set([
   "skill",
   "plan_enter",
   "plan_exit",
+  "open_plan",
 ])
 
 /** Whether a tool block starts open, or undefined when the renderer decides for itself. */
