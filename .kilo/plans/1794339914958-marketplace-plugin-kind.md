@@ -22,7 +22,7 @@ Exit criteria (copied from the master plan):
 
 - **Install-time resolution (v1 parity, chosen by the user).** The install RPC resolves the package before
   writing config: `git:` specs through `PluginGitSource.resolveGitPluginTarget` (clone into the cache), npm
-  specs through `Npm.add`, and both are checked with `Host.resolve` for a server/GUI/TUI entrypoint. A package
+  specs through `Npm.add`, and both are checked with `Host.resolve` for a server or GUI entrypoint. A package
   that cannot be resolved fails the install and never reaches the config. This differs from the master plan's
   "let the loader install on reload" recommendation; record the change in that plan when updating phase 3.
 - **No `id === pluginIdentity(spec)` rule.** v1 required it because installed state was keyed by the identity.
@@ -155,8 +155,11 @@ export const resolve = (input: { spec: string; npm: Npm.Interface }): Effect.Eff
 - otherwise: `Npm.isInstallablePackage(spec)` false → `invalid_params` ("a plugin target must be an npm registry
   package or a Git package specifier", the wording `plugin add` uses), then `npm.add(spec)`; an
   `InstallFailedError` becomes `fetch_failed`.
-- `Host.resolve` the resolved directory (with `name` for npm) and require at least one of
-  `server`/`gui`/`tui`, else `invalid_params` ("<spec> does not expose a server, GUI, or TUI entrypoint").
+- `Host.resolve` the resolved directory (with `name` for npm) and require `server` or `gui`, else
+  `invalid_params` ("<spec> does not expose a server or GUI entrypoint"). The server loader (`PluginModule.load`)
+  only accepts those, and v2 has one config shared by the server and the TUI, so a TUI-only spec would make every
+  location report a failed plugin. v1 took `server` or `tui` because it kept a separate TUI plugin list; that is a
+  deliberate v1 delta.
   Wrap the sync resolve so a malformed manifest is a `fetch_failed`/`invalid_params` error, not a defect.
 
 **7. Installer** — `packages/kilo-plugin/src/marketplace/installer.ts`
