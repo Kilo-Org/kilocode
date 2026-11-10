@@ -210,7 +210,8 @@ export const dict = {
   "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
-  "prompt.action.steer": "Steer now ({{steer}}). A running tool finishes first. {{queue}} queues, {{now}} stops everything",
+  "prompt.action.steer":
+    "Steer now ({{steer}}). A running tool finishes first. {{queue}} queues, {{now}} stops everything",
   "prompt.action.queue": "Queue for after this turn ({{key}})",
   "prompt.action.stopAndSend": "Stop everything, including running tools, and send ({{key}})",
   "prompt.action.stop": "Stop",
@@ -823,7 +824,6 @@ export const dict = {
   "prompt.placeholder.plainHint": "Type a message... ({{key}} {{action}})",
   "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
-
 
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",
@@ -1516,4 +1516,29 @@ export const dict = {
   "chat.search.invalidRegex": "Invalid regular expression",
   "chat.search.noResults": "No results",
   "chat.search.searchingHistory": "Searching earlier messages…",
+  "v1Import.title": "Bring over your Kilo v1 sessions",
+  "v1Import.description":
+    "Kilo found {{count}} sessions from your earlier Kilo install. Import them to keep your history here. Your Kilo v1 data stays as it is.",
+  "v1Import.waiting": "Kilo starts as soon as you choose.",
+  "v1Import.replace": "Your {{count}} current Kilo v2 sessions move to a backup first.",
+  "v1Import.import": "Import sessions",
+  "v1Import.later": "Not now",
+  "v1Import.fresh": "Start fresh",
+  "v1Import.copying.title": "Importing your Kilo v1 sessions",
+  "v1Import.copying.description": "Copying {{count}} sessions. A long history can take a few minutes.",
+  "v1Import.converting": "Imported {{converted}} of {{total}} sessions",
+  "v1Import.cancel": "Cancel",
+  "v1Import.done.title": "Your Kilo v1 sessions are here",
+  "v1Import.done.description":
+    "Imported {{count}} sessions. Each session shows in the history of the project it belongs to.",
+  "v1Import.openHistory": "Open history",
+  "v1Import.dismiss": "Dismiss",
+  "v1Import.failed.title": "The import did not finish",
+  "v1Import.failed.description": "Your Kilo v1 data is unchanged. Try again, or start it later from Settings.",
+  "v1Import.retry": "Try again",
+  "v1Import.settings.title": "Kilo v1 sessions",
+  "v1Import.settings.none": "No Kilo v1 install was found on this computer.",
+  "v1Import.settings.imported":
+    "Your Kilo v1 sessions were imported. Import again to bring in sessions you added in Kilo v1 since then. Your current Kilo v2 sessions move to a backup first.",
+  "v1Import.importAgain": "Import again",
 }

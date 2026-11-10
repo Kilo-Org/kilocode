@@ -2,6 +2,7 @@ import { homedir } from "node:os"
 import {
   ColorThemeKind,
   commands,
+  ConfigurationTarget,
   env,
   ExtensionMode,
   extensions,
@@ -22,12 +23,13 @@ import { clearLegacyTerminalDestination, ensureCommandsSkipShell } from "./agent
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
-import { chat } from "./chat"
+import { broadcast, chat } from "./chat"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, indexingEnvironment, manager, serverHome, settingsEnvironment } from "./server"
+import { createMigration } from "./import-v1"
+import { command, indexingEnvironment, manager, serverHome, settingsEnvironment, type Server } from "./server"
 import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -170,6 +172,35 @@ export function activate(context: ExtensionContext) {
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
+  // The Kilo v1 session import. The chat card and the Settings About tab render its state; on a first start the server
+  // waits for the user's choice there.
+  const migrationStatus = window.createStatusBarItem(StatusBarAlignment.Left)
+  // The server process that is running now. A start that has not spawned yet waits for the import in `settings`, so
+  // stopping it would wait for the import that waits for the stop.
+  const live: { server?: Server } = {}
+  const migration = createMigration({
+    command: serverCommand,
+    env: process.env,
+    log: (text) => output.appendLine(text),
+    status: migrationStatus,
+    memento: context.globalState,
+    stop: async () => {
+      const child = live.server?.process
+      if (!child) return
+      const exited = new Promise((resolve) => {
+        if (child.exitCode !== null || child.signalCode !== null) return resolve(undefined)
+        child.once("exit", resolve)
+      })
+      await server.stop()
+      await exited
+    },
+    notify: (state) => broadcast({ type: "v1Import.state", state }),
+  })
+  migration.activate()
+  const importV1 = () => {
+    void commands.executeCommand("kilo-code.v2.chat.focus")
+    void migration.start()
+  }
   // Plan mode writes plans under the server's home, so plan links resolve there too.
   usePlanHome(serverHome(serverCommand(), process.env))
   let indexing: IndexingHost | undefined
@@ -181,7 +212,11 @@ export function activate(context: ExtensionContext) {
     command: serverCommand,
     cwd: directory,
     env: process.env,
-    settings: serverSettings,
+    // The import runs before the store exists, and a server must not open the store the import is about to publish.
+    settings: async () => {
+      await migration.idle()
+      return { ...(await serverSettings()), KILO_DISABLE_V1_IMPORT: "1" }
+    },
     log: (text) => output.append(text),
     onImport: (event) => {
       if (event.kind === "progress") {
@@ -204,6 +239,7 @@ export function activate(context: ExtensionContext) {
     },
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
+      live.server = started
       // Also hides a status that only waited for another process's import, which reports no completion.
       importing.hide()
       shutdown.started(started)
@@ -215,6 +251,7 @@ export function activate(context: ExtensionContext) {
       void indexing?.sync()
     },
     onStop: () => {
+      live.server = undefined
       shutdown.stopped()
       connection.stopped()
       alerts.stop()
@@ -273,6 +310,7 @@ export function activate(context: ExtensionContext) {
     diff: diffs,
     changes,
     gitStats: (onStats) => gitChanges({ directory, onStats }),
+    v1Import: migration,
     worktree: {
       continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
       create: (baseBranch, branchName) =>
@@ -340,6 +378,7 @@ export function activate(context: ExtensionContext) {
     directory,
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
+    v1Import: migration,
   })
   const profilePanel = profile({ context, server, directory })
   const marketplacePanel = marketplace({ context, server, directory })
@@ -396,6 +435,14 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand("kilo-code.v2.showChanges", (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) =>
       changes.openFromCommand(arg),
     ),
+    commands.registerCommand("kilo-code.v2.importV1", importV1),
+    migrationStatus,
+    workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration("kilo-code.v2.importV1Sessions")) return
+      if (!workspace.getConfiguration("kilo-code.v2").get<boolean>("importV1Sessions")) return
+      void workspace.getConfiguration("kilo-code.v2").update("importV1Sessions", false, ConfigurationTarget.Global)
+      importV1()
+    }),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
       deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
     }),

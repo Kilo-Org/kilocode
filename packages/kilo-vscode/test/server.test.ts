@@ -264,7 +264,16 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const server = await start({
     command: found,
     cwd: path.join(root, "workspace"),
-    env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
+    // A bundled bin/kilo2, when a package build left one, uses these instead of the user's real Kilo stores.
+    env: {
+      ...process.env,
+      INIT_CWD: root,
+      OPENCODE_PASSWORD: "inherited",
+      XDG_DATA_HOME: path.join(root, "data"),
+      XDG_CONFIG_HOME: path.join(root, "config"),
+      XDG_STATE_HOME: path.join(root, "state"),
+      XDG_CACHE_HOME: path.join(root, "cache"),
+    },
   })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
   const info = await api

@@ -27,6 +27,29 @@ export default Runtime.handler(
       // The host selected the kilo2 store before this command started (./database).
       const file = process.env.OPENCODE_DB
       if (!file || file === ":memory:") return yield* Effect.fail(new Error("No kilo2 session store file is selected."))
+      if (input.status) {
+        const { Database } = yield* Effect.promise(() => import("bun:sqlite"))
+        const sessions = (store: string, table: string) => {
+          if (!existsSync(store)) return 0
+          const db = new Database(store, { readonly: true })
+          try {
+            return db.query<{ n: number }, []>(`SELECT count(*) AS n FROM ${table}`).get()?.n ?? 0
+          } catch {
+            return 0
+          } finally {
+            db.close()
+          }
+        }
+        process.stdout.write(
+          JSON.stringify({
+            source,
+            sourceSessions: sessions(source, "session"),
+            target: file,
+            targetSessions: sessions(file, "session_v2"),
+          }),
+        )
+        return
+      }
       if (!existsSync(source) || !KiloV1Store.isV1Store(source))
         return yield* Effect.fail(
           new Error(`No Kilo v1 session store at ${source}. Pass --from with the kilo.db file or its data directory.`),

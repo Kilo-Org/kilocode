@@ -14,6 +14,10 @@ export const ImportCommand = Spec.make("import", {
           ),
           Flag.optional,
         ),
+        status: Flag.Boolean("status").pipe(
+          Flag.withDescription("Print the Kilo v1 and kilo2 session store state as JSON and exit, without importing."),
+          Flag.withDefault(false),
+        ),
       },
     }),
   ],

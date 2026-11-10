@@ -12,6 +12,7 @@
 @import "./chat-layout.css";
 @import "./prompt-rail.css";
 @import "./banners.css";
+@import "./v1-import.css";
 @import "./session-actions.css";
 @import "./welcome.css";
 @import "./prompt-input.css";

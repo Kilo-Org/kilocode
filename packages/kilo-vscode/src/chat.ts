@@ -24,6 +24,7 @@ import {
   type ToHost,
   type ToWebview,
 } from "./protocol"
+import { routeV1Import, type Migration } from "./import-v1"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import { previewImage } from "./preview-image"
@@ -89,6 +90,8 @@ export function chat(input: {
   gitStats?: (onStats: (stats?: GitChangesStats) => void) => GitChanges
   /** The Agent Manager worktree actions of the sidebar chat. */
   worktree?: ChatWorktree
+  /** The Kilo v1 session import the chat card controls. */
+  v1Import?: Migration
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -216,6 +219,8 @@ export function wire(input: {
   openBrowser?: (sessionId: string, url: string) => boolean
   /** The editor tab that previews Markdown files, when this view has one. */
   documents?: () => DocumentViewerProvider | undefined
+  /** The Kilo v1 session import that the chat card and the Settings section control. */
+  v1Import?: Migration
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -462,6 +467,7 @@ export function wire(input: {
       return true
     }
     if (routeWorktreeMessage(message, input.worktree, post)) return true
+    if (routeV1Import(message, input.v1Import, post)) return true
     // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
@@ -547,6 +553,11 @@ export function wire(input: {
 }
 
 const surfaces = new Set<(message: ToWebview) => void>()
+
+/** Sends a host-wide message, such as the Kilo v1 import state, to every open webview. */
+export function broadcast(message: ToWebview) {
+  surfaces.forEach((post) => post(message))
+}
 
 /**
  * The composer state every webview shares through globalState: auto-approve, the model picker preferences and the

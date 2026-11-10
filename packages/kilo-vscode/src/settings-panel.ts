@@ -4,6 +4,7 @@
 import type { ExtensionContext } from "vscode"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { editorPanel } from "./editor-panel"
+import type { Migration } from "./import-v1"
 import type { SettingsNavigation, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 import { parseSettingsTarget } from "./settings-navigation"
@@ -21,6 +22,8 @@ export function settings(input: {
   onReset: () => void
   /** The Agent Manager project settings handler, shared with the provider that owns the projects. */
   agentManager?: () => SettingsHandler
+  /** The Kilo v1 session import that the About tab section controls. */
+  v1Import?: Migration
 }) {
   const state: { target: SettingsNavigation } = {
     target: {
@@ -54,6 +57,7 @@ export function settings(input: {
     handle,
     onReset: input.onReset,
     agentManager: input.agentManager,
+    v1Import: input.v1Import,
   })
   const open = (args: unknown[] = []) => {
     const requested = parseSettingsTarget(args)

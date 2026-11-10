@@ -33,7 +33,7 @@ const release = ["latest", "beta", "prod"]
  */
 export async function select(
   env: Record<string, string | undefined>,
-  input: { data?: string; channel?: string; v1?: boolean } = {},
+  input: { data?: string; channel?: string; v1?: boolean; status?: boolean } = {},
 ): Promise<string> {
   if (env.OPENCODE_DB) return env.OPENCODE_DB
   const data = input.data ?? Global.Path.data
@@ -44,7 +44,8 @@ export async function select(
   const file =
     shared || release.includes(selected) ? path.join(data, "kilo2.db") : path.join(data, `kilo2-${safe(selected)}.db`)
   await refuseV1Store(file)
-  await adopt(file, data, selected, shared, input.v1 !== false && !flag(env.KILO_DISABLE_V1_IMPORT))
+  // A status probe reports which store the next start would use, so it must not copy anything into place.
+  if (!input.status) await adopt(file, data, selected, shared, input.v1 !== false && !flag(env.KILO_DISABLE_V1_IMPORT))
   env.OPENCODE_DB = file
   return file
 }

@@ -192,6 +192,14 @@ test("the manual import command can skip the automatic adoption", async () => {
   expect(await strays(data)).toEqual([])
 })
 
+test("the status probe names the store without copying or adopting anything", async () => {
+  const { dir, data } = await root()
+  await v1Store(path.join(dir, "kilo", "kilo.db"), dir)
+  const file = await KiloDatabase.select({}, { data, channel: "local", status: true })
+  expect(file).toBe(path.join(data, "kilo2-local.db"))
+  expect(await readdir(data)).toEqual([])
+})
+
 test("the import API returns the session count and reports an existing store as skipped", async () => {
   const { dir, data } = await root()
   const store = KiloDatabase.v1Store(data)

@@ -12,6 +12,9 @@ export { ensurePluginRuntime }
 // first-start import run first.
 const { KiloDatabase } = await import("./database")
 const command = process.argv.slice(2).filter((arg) => !arg.startsWith("-"))
-await KiloDatabase.select(process.env, { v1: command[0] !== "import" })
+await KiloDatabase.select(process.env, {
+  v1: command[0] !== "import",
+  status: process.argv.includes("--status"),
+})
 
 await import("./main")
