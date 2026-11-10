@@ -31,6 +31,7 @@ import { ConfigMCP } from "@opencode/schema/config/mcp"
 import type { Session } from "@opencode/schema/session"
 import { isRecord } from "@opencode/util/record"
 import { McpStdio } from "./stdio.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 const DEFAULT_STARTUP_TIMEOUT = 30_000
 const DEFAULT_CATALOG_TIMEOUT = 30_000
@@ -196,6 +197,7 @@ export interface ConnectOptions {
   readonly clientInfo?: Implementation
   /** False declares no roots and leaves `roots/list` unanswered, for a connection no one directory owns. */
   readonly roots?: boolean
+  readonly host?: McpHost.Host // kilocode_change - embedding transport hooks
 }
 
 /**
@@ -324,22 +326,26 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
 
   const exit = yield* Effect.gen(function* () {
     if (config.type === "attached") return yield* initialize(config.transport)
+    // kilocode_change start - embedding command hook
     if (config.type === "local") {
       const [command, ...args] = config.command
+      const local = options.host?.localCommand?.({ command, args }) ?? { command, args }
       const transport = yield* McpStdio.make({
         server,
-        command,
-        args,
+        command: local.command,
+        args: local.args,
         cwd: McpStdio.resolveCwd(options.directory, config.cwd),
         environment: {
-          ...(command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
+          ...(local.command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
           ...config.environment,
         },
       })
       return yield* initialize(transport)
     }
+    // kilocode_change end
     const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
-    const fetch = yield* McpOAuth.loggedFetch({ server, directory: options.directory })
+    const baseFetch = yield* McpOAuth.loggedFetch({ server, directory: options.directory }) // kilocode_change - embedding transport hook
+    const fetch = options.host?.fetch?.(baseFetch) ?? baseFetch // kilocode_change - embedding transport hook
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked
     // with ?codemode=false, which is what our Code Mode wants. The configured URL stays the OAuth identity.
     const url = new URL(config.url)
