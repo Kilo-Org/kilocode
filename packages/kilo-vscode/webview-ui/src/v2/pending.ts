@@ -45,7 +45,9 @@ export function createPending(input: {
   }
 
   const request = (sessionID: string, inboxID: string, text: string, action: PendingAction) => {
-    if (action === "now") return v2.api.session.interrupt({ sessionID, resume: true })
+    // Sending this prompt now stops the current model call and its tools, but never a running compaction: the
+    // checkpoint finishes first and the prompt follows it. Only the composer's Stop ends a compaction.
+    if (action === "now") return v2.api.session.interrupt({ sessionID, resume: true, steer: true })
     if (action === "steer" || action === "queue")
       return v2.api.session.inbox.update({ sessionID, inboxID, delivery: action })
     const cancel = v2.api.session.inbox.cancel({ sessionID, inboxID })

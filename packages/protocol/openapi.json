@@ -4001,6 +4001,15 @@
               "enum": ["true", "false"]
             },
             "required": false
+          },
+          {
+            "name": "steer",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false
           }
         ],
         "security": [],
@@ -4046,7 +4055,7 @@
             }
           }
         },
-        "description": "Interrupt active execution owned by this OpenCode process. Returns interrupted=true when an active execution was interrupted and false for the idle no-op. When resume=true, execution resumes pending steering input and next-in-line control items (manual compaction, moves) while queued prompts remain parked.",
+        "description": "Interrupt active execution owned by this OpenCode process. Returns interrupted=true when an active execution was interrupted and false for the idle no-op. When resume=true, execution resumes pending steering input and next-in-line control items (manual compaction, moves) while queued prompts remain parked. When steer=true the interruption was issued to deliver a prompt: a running compaction is never cancelled for it, and the prompt is delivered at the boundary after the compaction.",
         "summary": "Interrupt session execution"
       }
     },
@@ -24468,7 +24477,7 @@
         "properties": {
           "interrupted": {
             "type": "boolean",
-            "description": "Whether an active execution owned by this OpenCode process was interrupted."
+            "description": "Whether an active execution owned by this OpenCode process was interrupted. False also when there was nothing a steer may stop."
           }
         },
         "required": ["interrupted"],

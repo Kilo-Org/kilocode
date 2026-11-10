@@ -20,7 +20,7 @@ import { SessionEvent } from "@opencode/core/session/event"
 import { SessionInbox } from "@opencode/core/session/inbox"
 import { SessionMessage } from "@opencode/core/session/message"
 import { SessionRunner } from "@opencode/core/session/runner/index"
-import { SessionInboxTable, SessionTable } from "@opencode/core/session/sql"
+import { SessionInboxTable, SessionMessageTable, SessionTable } from "@opencode/core/session/sql" // kilocode_change - steer
 import { SessionStore } from "@opencode/core/session/store"
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, LayerMap, Scope } from "effect"
 import { eq } from "drizzle-orm"
@@ -1247,6 +1247,39 @@ describe("SessionExecution interrupt continuation", () => {
     }),
   )
 
+  // kilocode_change start - steer: a steered interruption leaves a running compaction alone.
+  it.effect("leaves a running compaction alone when a steer interrupts", () =>
+    Effect.gen(function* () {
+      const database = yield* Database.Service
+      const bus = yield* Bus.Service
+      const sessionID = Session.ID.make("ses_continue_compacting")
+      yield* seedSessions(database, [sessionID])
+      // A compaction is durable before its summary request: this is the row a client reads to decide about a steer.
+      yield* bus.publish(SessionEvent.Compaction.Started, { sessionID, reason: "auto" })
+
+      const draining = yield* Deferred.make<void>()
+      const scope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
+      const context = yield* buildExecution(scope, () =>
+        Deferred.succeed(draining, undefined).pipe(Effect.andThen(Effect.never)),
+      )
+      const execution = Context.get(context, SessionExecution.Service)
+      yield* execution.resume(sessionID).pipe(Effect.forkScoped)
+      yield* Deferred.await(draining)
+
+      // A steer may stop a model call; it never stops the checkpoint being written for the same Session.
+      expect(yield* execution.interrupt(sessionID, { resume: true, steer: true })).toBeFalse()
+      expect(yield* execution.isActive(sessionID)).toBeTrue()
+      expect(yield* compactionStatus(database, sessionID)).toBe("running")
+
+      // The same request from a client that predates the flag is a stop, and a stop still cancels a compaction.
+      expect(yield* execution.interrupt(sessionID, { resume: true })).toBeTrue()
+      yield* execution.awaitIdle(sessionID)
+      expect(yield* execution.active).toEqual(new Set())
+    }),
+  )
+  // kilocode_change end
+
   it.effect("keeps a control item parked behind a queued prompt on continue", () =>
     Effect.gen(function* () {
       const database = yield* Database.Service
@@ -1359,6 +1392,22 @@ function claims(database: Database.Service["Service"]) {
       Effect.map((rows) => Object.fromEntries(rows.map((row) => [row.id, row.claimed !== null]))),
     )
 }
+
+// kilocode_change start - steer
+/** The newest compaction row's status, read as a client would: straight from the projection. */
+function compactionStatus(database: Database.Service["Service"], sessionID: Session.ID) {
+  return database.db
+    .select({ data: SessionMessageTable.data })
+    .from(SessionMessageTable)
+    .where(eq(SessionMessageTable.session_id, sessionID))
+    .all()
+    .pipe(
+      Effect.orDie,
+      Effect.map((rows) => rows.at(-1)?.data as { status?: string } | undefined),
+      Effect.map((data) => data?.status),
+    )
+}
+// kilocode_change end
 
 function attempts(database: Database.Service["Service"], sessionID: Session.ID) {
   return database.db

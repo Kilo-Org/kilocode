@@ -41,8 +41,9 @@ export function sendShortcuts(mac = isMac()) {
 /**
  * Whether a steer has to stop the current model call to reach the model now. That is the case while the model
  * thinks or writes: the next step boundary only comes after the whole response. A running tool or compaction is not
- * stopped; the steer is delivered when it finishes, which is the next step boundary. The message list also holds
- * input that is not delivered yet (`pending`), so the decision reads the newest delivered message.
+ * stopped; the steer is delivered when it finishes, which is the next step boundary. `pending` is input with no
+ * delivered message yet, so it cannot say what is running. The server enforces the compaction half of this too, so a
+ * stale transcript here can only cost a stop that was not needed, never a cancelled checkpoint.
  */
 export function steerInterrupts(messages: readonly Message[], pending: ReadonlySet<string>): boolean {
   // Scan back to the newest step. Queued and pending input, synthetic notifications and instruction updates can
