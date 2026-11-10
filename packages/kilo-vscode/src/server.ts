@@ -12,6 +12,8 @@ export type Server = { url: string; authorization: string; process: ChildProcess
 
 const ARGS = ["serve", "--port", "0", "--stdio"]
 const TIMEOUT = 60_000
+/** The longest first start while the server reports Kilo v1 import progress. */
+const IMPORT_LIMIT = 30 * 60_000
 const OUTPUT_LIMIT = 4096
 const RETRY = 10_000
 
@@ -142,6 +144,7 @@ export function start(input: {
   env: NodeJS.ProcessEnv
   settings?: Record<string, string>
   log?: (text: string) => void
+  onImport?: (event: ImportEvent) => void
   onExit?: (child: ChildProcess) => void
 }): Promise<Server> {
   const password = randomBytes(32).toString("hex")
@@ -160,17 +163,19 @@ export function start(input: {
     detached: process.platform !== "win32",
   })
   const ready = Promise.withResolvers<Server>()
-  const state = { output: "", errors: [] as string[], done: false, started: false }
+  const state = { output: "", errors: [] as string[], pending: "", done: false, started: false }
   const fail = (message: string) => {
     if (state.done) return
     state.done = true
-    clearTimeout(timer)
+    clearTimeout(timer.id)
     ready.reject(new Error([message, ...state.errors.slice(-20)].join("\n").trim()))
   }
-  const timer = setTimeout(() => {
-    fail(`The Kilo server did not start within ${TIMEOUT / 1000} seconds.`)
+  const expire = () => {
+    fail(`The Kilo server did not start or report progress within ${TIMEOUT / 1000} seconds.`)
     stop(child)
-  }, TIMEOUT)
+  }
+  const timer = { id: setTimeout(expire, TIMEOUT) }
+  const deadline = Date.now() + IMPORT_LIMIT
 
   child.stdout?.on("data", (chunk: Buffer) => {
     state.output = (state.output + chunk.toString()).slice(-OUTPUT_LIMIT)
@@ -178,7 +183,7 @@ export function start(input: {
     if (!found || state.done) return
     state.done = true
     state.started = true
-    clearTimeout(timer)
+    clearTimeout(timer.id)
     ready.resolve({
       url: found,
       authorization: `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`,
@@ -188,6 +193,23 @@ export function start(input: {
   child.stderr?.on("data", (chunk: Buffer) => {
     const text = chunk.toString()
     input.log?.(text)
+    // The first start imports the Kilo v1 sessions before the server listens and reports progress every few seconds.
+    // Lines are buffered, because a chunk can split one. The start times out when the progress stops, and in any case
+    // after IMPORT_LIMIT. A server that waits for another process's import also reports; the CLI takes the import over
+    // when that process stops making progress.
+    state.pending += text
+    const lines = state.pending.split(/\r?\n/)
+    state.pending = lines.pop() ?? ""
+    for (const line of lines) {
+      const event = importEvent(line)
+      if (!event) continue
+      input.onImport?.(event)
+      const left = deadline - Date.now()
+      if (!state.done && left > 0) {
+        clearTimeout(timer.id)
+        timer.id = setTimeout(expire, Math.min(TIMEOUT, left))
+      }
+    }
     // Only startup errors are reported; keep the tail and stop collecting once the server is ready.
     if (!state.done) state.errors = [...state.errors.slice(-19), text]
   })
@@ -197,6 +219,28 @@ export function start(input: {
     fail(`The Kilo server exited during startup (${signal ?? `code ${code}`}).`)
   })
   return ready.promise
+}
+
+/** One line of progress from the Kilo v1 session import the CLI host runs before the server starts. */
+export type ImportEvent =
+  | { kind: "start" }
+  | { kind: "waiting" }
+  | { kind: "progress"; imported: number; total: number }
+  | { kind: "done"; imported: number }
+  | { kind: "failed" }
+
+const IMPORT = "kilo2: importing Kilo v1 sessions"
+
+/** Reads one complete stderr line of the import; undefined for every other line. */
+export function importEvent(line: string): ImportEvent | undefined {
+  if (!line.includes(IMPORT)) return undefined
+  if (line.includes("failed,")) return { kind: "failed" }
+  if (line.includes("waiting for it")) return { kind: "waiting" }
+  const done = /done, (\d+) sessions/.exec(line)
+  if (done) return { kind: "done", imported: Number(done[1]) }
+  const progress = /^kilo2: importing Kilo v1 sessions (\d+)\/(\d+)$/.exec(line)
+  if (progress) return { kind: "progress", imported: Number(progress[1]), total: Number(progress[2]) }
+  return { kind: "start" }
 }
 
 /** Closes stdin, which stops the server. Signals the process group only when it does not exit in time. */
@@ -227,6 +271,7 @@ export function manager(input: {
   log?: (text: string) => void
   onError?: (error: Error) => void
   onStart?: (server: Server) => void
+  onImport?: (event: ImportEvent) => void
   onStop?: () => void
   retry?: number
 }) {
@@ -244,6 +289,7 @@ export function manager(input: {
         env: input.env,
         settings,
         log: input.log,
+        onImport: input.onImport,
         onExit: () => {
           if (state.current !== promise) return
           state.current = undefined

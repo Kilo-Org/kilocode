@@ -92,6 +92,7 @@ const mockVscode = {
     },
   },
   StatusBarAlignment: { Left: 1, Right: 2 },
+  ProgressLocation: { SourceControl: 1, Window: 10, Notification: 15 },
   ThemeColor: class {
     constructor(public id: string) {}
   },

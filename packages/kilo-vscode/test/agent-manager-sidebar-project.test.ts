@@ -13,7 +13,8 @@ import type { ProjectContext } from "../src/agent-manager/project/context"
 const temp: string[] = []
 
 afterEach(() => {
-  for (const dir of temp.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+  // Windows can still hold a handle in the directory for a moment; retry instead of failing the test on EBUSY.
+  for (const dir of temp.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 })
 })
 
 function repo(name: string, branch: string) {

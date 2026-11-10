@@ -2,6 +2,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { createSignal, type Component } from "solid-js"
+import { V1ImportCard } from "../shared/V1ImportCard"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import type { SettingsData } from "../../v2/settings"
@@ -273,6 +274,12 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             {language.t("settings.aboutKiloCode.importSettings")}
           </Button>
         </div>
+      </div>
+
+      {/* Kilo v1 sessions */}
+      <div data-search-label={language.t("v1Import.settings.title")} style={sectionStyle}>
+        <h4 style={headingStyle}>{language.t("v1Import.settings.title")}</h4>
+        <V1ImportCard placement="settings" />
       </div>
 
       {/* Reset Settings */}

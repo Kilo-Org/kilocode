@@ -19,6 +19,7 @@ import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useWorkStyle } from "../context/work-style"
 import type { ReferenceHandler } from "./append-ready"
 import { useV2 } from "./client"
+import { V1ImportCard } from "../components/shared/V1ImportCard"
 import { SessionList } from "./history"
 import { recordForkHandoff } from "../../../src/agent-manager/fork-handoff"
 import { createLocalTabs } from "./local-tabs"
@@ -190,8 +191,7 @@ export function Chat() {
     ).then((results) => results.flat())
   }
   // The Changes tab opens the whole working tree of the session, as v1's Changes button did.
-  const openChanges = () =>
-    vscode.postMessage({ type: "openChanges", sessionID: session() } satisfies ToHost as never)
+  const openChanges = () => vscode.postMessage({ type: "openChanges", sessionID: session() } satisfies ToHost as never)
 
   // A turn opens the Changes tab in turn scope: `turnID` is the user message that started it.
   const openTurnChanges = (sessionID: string, turnID: string) =>
@@ -256,6 +256,7 @@ export function Chat() {
         </div>
       </Match>
       <Match when={view() === "chat"}>
+        <V1ImportCard placement="chat" onOpenHistory={() => setView("history")} />
         <SessionView
           session={session()}
           onSession={settled}

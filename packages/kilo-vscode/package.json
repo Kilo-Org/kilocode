@@ -62,6 +62,11 @@
     "configuration": {
       "title": "Kilo Code (v2)",
       "properties": {
+        "kilo-code.v2.importV1Sessions": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Set to true to import the sessions of Kilo v1 into Kilo Code (v2). The import reads the Kilo v1 store and never changes it, and needs a new v2 session store, so the current one is backed up first. This setting resets to false after it starts the import."
+        },
         "kilo-code.v2.fontSize": {
           "type": [
             "number",
@@ -426,6 +431,12 @@
         "command": "kilo-code.v2.showChanges",
         "title": "Show Changes",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.importV1",
+        "title": "Import Kilo v1 Sessions",
+        "category": "Kilo Code (v2)",
+        "icon": "$(database)"
       },
       {
         "command": "kilo-code.v2.cycleAgentMode",

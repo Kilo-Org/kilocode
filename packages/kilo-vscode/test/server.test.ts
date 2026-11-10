@@ -5,7 +5,18 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, indexingEnvironment, manager, parse, serverHome, settingsEnvironment, start, stop } from "../src/server"
+import {
+  command,
+  environment,
+  importEvent,
+  indexingEnvironment,
+  manager,
+  parse,
+  serverHome,
+  settingsEnvironment,
+  start,
+  stop,
+} from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -30,6 +41,29 @@ describe("parse", () => {
   test("ignores other JSON and broken lines", () => {
     expect(parse('{"level":"info"}\n{not json\n{"url":"http://127.0.0.1:1"}\n')).toBe("http://127.0.0.1:1")
   })
+})
+
+test("importEvent reads every line of the Kilo v1 session import, so a long first start shows progress and never times out", () => {
+  // A store path with digits and slashes must not read as progress.
+  expect(
+    importEvent("kilo2: importing Kilo v1 sessions from /backups/2024/11/kilo.db once; it stays as it is."),
+  ).toEqual({ kind: "start" })
+  expect(importEvent("kilo2: importing Kilo v1 sessions in process 4242, waiting for it.")).toEqual({ kind: "waiting" })
+  expect(importEvent("kilo2: importing Kilo v1 sessions 1200/20000")).toEqual({
+    kind: "progress",
+    imported: 1200,
+    total: 20000,
+  })
+  expect(importEvent("kilo2: importing Kilo v1 sessions done, 20000 sessions in 30000 ms.")).toEqual({
+    kind: "done",
+    imported: 20000,
+  })
+  expect(importEvent("kilo2: importing Kilo v1 sessions failed, starting with a new database.")).toEqual({
+    kind: "failed",
+  })
+  expect(importEvent("kilo2: could not copy the sessions of a to b")).toBeUndefined()
+  // The manual command writes its own lines, which are not the server's import.
+  expect(importEvent("Importing Kilo v1 sessions 10/20")).toBeUndefined()
 })
 
 describe("command", () => {
@@ -101,7 +135,6 @@ test("environment drops inherited server passwords", () => {
   expect(env.OPENCODE_SERVER_PASSWORD).toBeUndefined()
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
 })
-
 
 describe("indexingEnvironment", () => {
   test("disables indexing when no workspace folder is open", () => {
@@ -231,7 +264,16 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const server = await start({
     command: found,
     cwd: path.join(root, "workspace"),
-    env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
+    // A bundled bin/kilo2, when a package build left one, uses these instead of the user's real Kilo stores.
+    env: {
+      ...process.env,
+      INIT_CWD: root,
+      OPENCODE_PASSWORD: "inherited",
+      XDG_DATA_HOME: path.join(root, "data"),
+      XDG_CONFIG_HOME: path.join(root, "config"),
+      XDG_STATE_HOME: path.join(root, "state"),
+      XDG_CACHE_HOME: path.join(root, "cache"),
+    },
   })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
   const info = await api

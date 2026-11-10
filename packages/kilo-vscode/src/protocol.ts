@@ -126,9 +126,36 @@ export type SidebarWorktree =
 /** Toggles Keep Awake from the composer slash menu. The Agent Manager provider owns the state. */
 export type AgentManagerCaffeination = { type: "agentManager.toggleCaffeination" }
 
+/**
+ * The Kilo v1 session import, as the host reports it to every webview. `available` carries what the probe found:
+ * `waiting` is true while the first server start waits for the user's choice, `imported` once this source was imported.
+ */
+export type V1ImportState =
+  | { phase: "none" }
+  | {
+      phase: "available"
+      sourceSessions: number
+      targetSessions: number
+      waiting: boolean
+      dismissed: boolean
+      imported: boolean
+    }
+  | { phase: "copying"; sourceSessions: number }
+  | { phase: "converting"; converted: number; total: number }
+  | { phase: "done"; imported: number }
+  | { phase: "failed"; message: string }
+
+export type V1ImportAction =
+  | { type: "v1Import.request" }
+  | { type: "v1Import.start" }
+  | { type: "v1Import.later" }
+  | { type: "v1Import.cancel" }
+  | { type: "v1Import.dismiss" }
+
 export type ToHost =
   | Request
   | BrowserTab
+  | V1ImportAction
   | { type: "sidebar.session"; sessionId?: string }
   | { type: "abort"; id: number }
   | { type: "open"; url: string; external?: boolean }
@@ -155,21 +182,21 @@ export type BrowserTab =
   | { type: "browserTab.openExternal"; url: string }
   | { type: "browserTab.reference"; sessionId: string; reference: BrowserReference }
   | BrowserScopeMessage<"browserTab.state">
-  | BrowserScopeMessage<"browserTab.open"> & { url: string }
+  | (BrowserScopeMessage<"browserTab.open"> & { url: string })
   | BrowserScopeMessage<"browserTab.refresh">
   | BrowserScopeMessage<"browserTab.back">
   | BrowserScopeMessage<"browserTab.forward">
   | BrowserScopeMessage<"browserTab.close">
-  | BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" }
-  | BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean }
-  | BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string }
-  | BrowserScopeMessage<"browserTab.viewport"> & {
+  | (BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" })
+  | (BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean })
+  | (BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string })
+  | (BrowserScopeMessage<"browserTab.viewport"> & {
       browserId: string
       navigation: number
       viewport: BrowserViewport
-    }
-  | BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction }
-  | BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number }
+    })
+  | (BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction })
+  | (BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number })
 
 export type BrowserScopeMessage<Type extends string> = {
   type: Type
@@ -304,7 +331,7 @@ export type ModelPreferenceMessage =
 
 /** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
 export type BrowserOut =
-  | BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean }
+  | (BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean })
   | BrowserStatePayload
   | BrowserFramePayload
   | BrowserCursorPayload
@@ -403,6 +430,7 @@ export type PromptAttachment = {
 
 export type ToWebview =
   | BrowserOut
+  | { type: "v1Import.state"; state: V1ImportState }
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }

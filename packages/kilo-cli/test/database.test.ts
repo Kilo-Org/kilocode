@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
-import { mkdtemp, rm, stat } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, stat } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../src/database"
@@ -9,10 +9,13 @@ import { translate } from "../src/env"
 const dirs: string[] = []
 afterEach(() => Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true }))))
 
+// The data directory is nested, so the Kilo v1 store beside it (`<parent>/kilo/kilo.db`) is inside the test directory
+// too and never a file of the machine.
 async function data() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-database-"))
   dirs.push(dir)
-  return dir
+  await mkdir(path.join(dir, "kilo2"))
+  return path.join(dir, "kilo2")
 }
 
 test("the Kilo channel names the file: release channels share kilo2.db, others get their own", async () => {

@@ -2,12 +2,14 @@ import { homedir } from "node:os"
 import {
   ColorThemeKind,
   commands,
+  ConfigurationTarget,
   env,
   ExtensionMode,
   extensions,
   l10n,
   languages,
   ProgressLocation,
+  StatusBarAlignment,
   window,
   workspace,
   type ExtensionContext,
@@ -21,12 +23,13 @@ import { clearLegacyTerminalDestination, ensureCommandsSkipShell } from "./agent
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
-import { chat } from "./chat"
+import { broadcast, chat } from "./chat"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
 import { createCostAlerts } from "./cost-alert"
-import { command, indexingEnvironment, manager, serverHome, settingsEnvironment } from "./server"
+import { createMigration } from "./import-v1"
+import { command, indexingEnvironment, manager, serverHome, settingsEnvironment, type Server } from "./server"
 import { usePlanHome } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
@@ -111,7 +114,10 @@ export function activate(context: ExtensionContext) {
       ...(agentManagerRef
         ? [...agentManagerRef.contexts.values()].flatMap((project) => [
             project.root,
-            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+            ...(project
+              .peekState()
+              ?.getWorktrees()
+              .map((worktree) => worktree.path) ?? []),
           ])
         : []),
     ],
@@ -166,17 +172,76 @@ export function activate(context: ExtensionContext) {
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
+  // The Kilo v1 session import. The chat card and the Settings About tab render its state; on a first start the server
+  // waits for the user's choice there.
+  const migrationStatus = window.createStatusBarItem(StatusBarAlignment.Left)
+  // The server process that is running now. A start that has not spawned yet waits for the import in `settings`, so
+  // stopping it would wait for the import that waits for the stop.
+  const live: { server?: Server } = {}
+  const migration = createMigration({
+    command: serverCommand,
+    env: process.env,
+    log: (text) => output.appendLine(text),
+    status: migrationStatus,
+    memento: context.globalState,
+    stop: async () => {
+      const child = live.server?.process
+      if (!child) return
+      const exited = new Promise((resolve) => {
+        if (child.exitCode !== null || child.signalCode !== null) return resolve(undefined)
+        child.once("exit", resolve)
+      })
+      await server.stop()
+      await exited
+    },
+    notify: (state) => broadcast({ type: "v1Import.state", state }),
+  })
+  migration.activate()
+  const importV1 = () => {
+    void commands.executeCommand("kilo-code.v2.chat.focus")
+    void migration.start()
+  }
   // Plan mode writes plans under the server's home, so plan links resolve there too.
   usePlanHome(serverHome(serverCommand(), process.env))
   let indexing: IndexingHost | undefined
+  // The first start imports the Kilo v1 sessions before the server listens, so the status bar is the only surface that
+  // exists while it runs.
+  const importing = window.createStatusBarItem(StatusBarAlignment.Left)
+  context.subscriptions.push(importing)
   const server = manager({
     command: serverCommand,
     cwd: directory,
     env: process.env,
-    settings: serverSettings,
+    // The import runs before the store exists, and a server must not open the store the import is about to publish.
+    settings: async () => {
+      await migration.idle()
+      return { ...(await serverSettings()), KILO_DISABLE_V1_IMPORT: "1" }
+    },
     log: (text) => output.append(text),
+    onImport: (event) => {
+      if (event.kind === "progress") {
+        importing.text = `$(sync~spin) Kilo: importing sessions ${event.imported}/${event.total}`
+        importing.show()
+        return
+      }
+      if (event.kind === "start" || event.kind === "waiting") {
+        importing.text = "$(sync~spin) Kilo: preparing your sessions"
+        importing.show()
+        return
+      }
+      importing.hide()
+      if (event.kind === "done")
+        void window.showInformationMessage(`Imported ${event.imported} Kilo v1 sessions from your earlier install.`)
+      if (event.kind === "failed")
+        void window.showWarningMessage(
+          "Kilo could not import the Kilo v1 sessions and starts with a new store. See the Kilo output for details.",
+        )
+    },
     // The autocomplete connection is declared below; the server starts only after activation returns.
     onStart: (started) => {
+      live.server = started
+      // Also hides a status that only waited for another process's import, which reports no completion.
+      importing.hide()
       shutdown.started(started)
       connection.started(started)
       alerts.start(started)
@@ -186,6 +251,7 @@ export function activate(context: ExtensionContext) {
       void indexing?.sync()
     },
     onStop: () => {
+      live.server = undefined
       shutdown.stopped()
       connection.stopped()
       alerts.stop()
@@ -244,6 +310,7 @@ export function activate(context: ExtensionContext) {
     diff: diffs,
     changes,
     gitStats: (onStats) => gitChanges({ directory, onStats }),
+    v1Import: migration,
     worktree: {
       continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
       create: (baseBranch, branchName) =>
@@ -272,7 +339,8 @@ export function activate(context: ExtensionContext) {
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  agentManager.onBrowserDebug = (...args) =>
+    output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
   browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -281,8 +349,7 @@ export function activate(context: ExtensionContext) {
       trusted: () => workspace.isTrusted,
       // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        editorTabOwns(route.sessionId) &&
-        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        editorTabOwns(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -311,6 +378,7 @@ export function activate(context: ExtensionContext) {
     directory,
     onReset: view.syncState,
     agentManager: () => agentManager.settings,
+    v1Import: migration,
   })
   const profilePanel = profile({ context, server, directory })
   const marketplacePanel = marketplace({ context, server, directory })
@@ -364,10 +432,17 @@ export function activate(context: ExtensionContext) {
     { dispose: () => diffs.dispose() },
     diffCatalog,
     changes,
-    commands.registerCommand(
-      "kilo-code.v2.showChanges",
-      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    commands.registerCommand("kilo-code.v2.showChanges", (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) =>
+      changes.openFromCommand(arg),
     ),
+    commands.registerCommand("kilo-code.v2.importV1", importV1),
+    migrationStatus,
+    workspace.onDidChangeConfiguration((event) => {
+      if (!event.affectsConfiguration("kilo-code.v2.importV1Sessions")) return
+      if (!workspace.getConfiguration("kilo-code.v2").get<boolean>("importV1Sessions")) return
+      void workspace.getConfiguration("kilo-code.v2").update("importV1Sessions", false, ConfigurationTarget.Global)
+      importV1()
+    }),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
       deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
     }),

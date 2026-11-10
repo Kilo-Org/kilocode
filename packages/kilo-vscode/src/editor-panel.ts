@@ -3,6 +3,7 @@
 import { Uri, ViewColumn, window, type Disposable, type ExtensionContext, type WebviewPanel } from "vscode"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import { wire } from "./chat"
+import type { Migration } from "./import-v1"
 import type { ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
 
@@ -16,6 +17,8 @@ export function editorPanel(input: {
   handle?: (message: ToHost) => boolean
   onReset?: () => void
   agentManager?: () => SettingsHandler
+  /** The Kilo v1 session import that the Settings section controls. */
+  v1Import?: Migration
   /** Extra window globals of the webview bundle. */
   globals?: Record<string, unknown>
 }) {
@@ -65,6 +68,7 @@ export function editorPanel(input: {
       onReset: input.onReset,
       agentManager: input.agentManager,
       globals: input.globals,
+      v1Import: input.v1Import,
     })
     state.post = surface.post
     panel.onDidDispose(() => {
