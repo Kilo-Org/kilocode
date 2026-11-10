@@ -17,11 +17,12 @@ import ai.kilocode.client.ui.diagram.ui.diagramPalette
 import ai.kilocode.client.ui.diagram.ui.diagramSpec
 import ai.kilocode.client.ui.diagram.ui.openDiagramWindow
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.md.MAX_SEARCH_HIGHLIGHTS
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCommon
-import ai.kilocode.client.ui.md.MdStyle
 import ai.kilocode.client.ui.md.MdSearchView
+import ai.kilocode.client.ui.md.MdStyle
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.log.KiloLog
 import com.intellij.execution.ui.ConsoleViewContentType
@@ -290,7 +291,7 @@ internal open class MdViewHybrid(
             val spec = highlights[view.searchId] ?: continue
             val normal = painter(false)
             val current = painter(true)
-            for (range in spec.ranges) addTag(view.searchId, pane, range, normal)
+            for (range in spec.ranges.take(MAX_SEARCH_HIGHLIGHTS)) addTag(view.searchId, pane, range, normal)
             spec.current?.let { addTag(view.searchId, pane, it, current) }
             pane.repaint()
         }
@@ -355,7 +356,6 @@ internal open class MdViewHybrid(
     private fun searchChanged() {
         if (disposed) return
         searchRev++
-        clearSearchHighlights()
         for (listener in searchListeners.toList()) listener.onSearchChanged()
     }
 

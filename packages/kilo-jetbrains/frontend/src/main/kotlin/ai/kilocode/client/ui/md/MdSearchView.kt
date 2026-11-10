@@ -4,6 +4,8 @@ import com.intellij.openapi.util.TextRange
 import java.awt.Rectangle
 import javax.swing.JComponent
 
+internal const val MAX_SEARCH_HIGHLIGHTS = 500
+
 /**
  * Optional search surface contract for rendered prose.
  *

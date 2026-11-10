@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.ui.md.MAX_SEARCH_HIGHLIGHTS
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -38,6 +39,77 @@ class SessionSearchTest : SessionUiTestBase() {
         assertTrue(
             "find previous reopens and starts at the last match",
             pumpUntil { bar.statusText == "2 of 2" },
+        )
+        ui.search.close()
+    }
+
+    fun `test match counter reports the full result set when highlights are capped`() {
+        showMessages()
+        textMessage("user_1", "needle ".repeat(MAX_SEARCH_HIGHLIGHTS + 100))
+
+        ui.search.open()
+        val bar = ui.search.getComponent()
+        bar.getSearchTextComponent().text = "needle"
+
+        assertTrue(
+            "counter includes matches beyond the highlight cap",
+            pumpUntil { bar.statusText == "1 of ${MAX_SEARCH_HIGHLIGHTS + 100}" },
+        )
+        ui.search.close()
+    }
+
+    fun `test results refresh while a response streams continuously`() {
+        showMessages()
+        textMessage("user_1", "hello")
+
+        ui.search.open()
+        val bar = ui.search.getComponent()
+        bar.getSearchTextComponent().text = "hello"
+        assertTrue("initial match is found", pumpUntil { bar.statusText == "1 of 1" })
+
+        emit(
+            ChatEventDto.MessageUpdated("ses_test", MessageDto("asst_stream", "ses_test", "assistant", MessageTimeDto(0.0))),
+            flush = false,
+        )
+        var content = "hello"
+        emit(ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)), flush = false)
+        forceFlushWithoutDispatch()
+
+        var refreshed = false
+        repeat(20) {
+            content += " hello"
+            emit(
+                ChatEventDto.PartUpdated("ses_test", part("asst_stream_text", "asst_stream", "text", content)),
+                flush = false,
+            )
+            forceFlushWithoutDispatch()
+            settleShort(20)
+            if (bar.statusText.matches(Regex("1 of [2-9]\\d*"))) refreshed = true
+        }
+
+        assertTrue("the throttled refresh must run during a continuous stream", refreshed)
+        ui.search.close()
+    }
+
+    fun `test find next from a closed bar reopens at the first match`() {
+        showMessages()
+        textMessage("user_long", "needle\n" + "filler\n".repeat(80))
+        assistant("asst_1", "needle")
+
+        ui.search.open()
+        val bar = ui.search.getComponent()
+        bar.getSearchTextComponent().text = "needle"
+        assertTrue("first match is selected", pumpUntil { bar.statusText == "1 of 2" })
+
+        ui.search.searchForward()
+        assertTrue("second match is selected", pumpUntil { bar.statusText == "2 of 2" })
+
+        ui.search.close()
+        ui.search.searchForward()
+
+        assertTrue(
+            "find next from closed starts at the first match, not the viewport",
+            pumpUntil { bar.statusText == "1 of 2" },
         )
         ui.search.close()
     }

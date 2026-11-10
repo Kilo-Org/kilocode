@@ -106,6 +106,30 @@ class MdViewSearchTest : BasePlatformTestCase() {
         assertEquals(1, pane.highlighter.highlights.size)
     }
 
+    fun `test highlight tags are capped per surface while current match stays visible`() {
+        view.set("x".repeat(MAX_SEARCH_HIGHLIGHTS + 100))
+        val surface = view.searchSurfaces().single()
+        val ranges = (0 until MAX_SEARCH_HIGHLIGHTS + 100).map { TextRange(it, it + 1) }
+
+        view.applySearchHighlights(mapOf(surface.id to MdSearchView.SearchHighlights(ranges, ranges.last())))
+
+        val pane = surface.component as JTextComponent
+        assertEquals(MAX_SEARCH_HIGHLIGHTS + 1, pane.highlighter.highlights.size)
+    }
+
+    fun `test streaming updates do not clear existing highlights`() {
+        view.set("target")
+        val surface = view.searchSurfaces().single()
+        view.applySearchHighlights(
+            mapOf(surface.id to MdSearchView.SearchHighlights(listOf(TextRange(0, 1)), null)),
+        )
+
+        view.append(" target")
+
+        val pane = view.searchSurfaces().single().component as JTextComponent
+        assertEquals(1, pane.highlighter.highlights.size)
+    }
+
     fun `test document replacement notifies search listeners`() {
         var count = 0
         val listener = MdSearchView.SearchListener { count++ }

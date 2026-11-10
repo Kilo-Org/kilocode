@@ -81,6 +81,7 @@ internal class SessionSearch(
     private var bar: SearchReplaceComponent? = null
     private var escape: Disposable? = null
     private var debounce: Job? = null
+    private var content: Job? = null
     private var search: Job? = null
     @Volatile
     private var generation = 0L
@@ -93,6 +94,7 @@ internal class SessionSearch(
     private var last = TranscriptMatchOptions("")
     private var restoreFocus: JComponent? = null
     private var pending = 0
+    private var revealPending = false
     private val watched = LinkedHashMap<MdView, MdSearchView.SearchListener>()
     private val cache = WeakHashMap<MdView, SurfaceCache>()
     private val listener = MdSearchView.SearchListener { if (active) schedule(false) }
@@ -187,6 +189,8 @@ internal class SessionSearch(
         active = false
         generation++
         debounce?.cancel()
+        content?.cancel()
+        content = null
         search?.cancel()
         searching = false
         clearHighlights()
@@ -248,10 +252,22 @@ internal class SessionSearch(
 
     private fun schedule(reveal: Boolean) {
         if (!active) return
+        if (!reveal) {
+            // Throttle content refreshes instead of restarting them on every streamed delta: a
+            // continuous stream must still let the search run periodically and restore highlights.
+            if (content?.isActive == true) return
+            content = scope.launch(Dispatchers.EDT) {
+                delay(DEBOUNCE_CONTENT_MS)
+                start(false)
+            }
+            return
+        }
+        content?.cancel()
+        content = null
         debounce?.cancel()
         debounce = scope.launch(Dispatchers.EDT) {
-            delay(if (reveal) DEBOUNCE_QUERY_MS else DEBOUNCE_CONTENT_MS)
-            start(reveal)
+            delay(DEBOUNCE_QUERY_MS)
+            start(true)
         }
     }
 
@@ -272,6 +288,7 @@ internal class SessionSearch(
             results = emptyList()
             current = -1
             error = null
+            revealPending = false
             updateStatus()
             return
         }
@@ -361,14 +378,14 @@ internal class SessionSearch(
                 error = outcome.key
                 results = emptyList()
                 current = -1
+                pending = 0
+                revealPending = false
                 clearHighlights()
                 updateStatus()
             }
             is Outcome.Results -> {
-                if (outcome.hits.any { it.surface.revision != it.body.md.searchRevision() }) {
-                    schedule(false)
-                    return
-                }
+                val stale = outcome.hits.any { it.surface.revision != it.body.md.searchRevision() }
+                val show = reveal || revealPending
                 val anchor = results.getOrNull(current)
                 val anchorKey = anchor?.body?.key
                 val anchorStart = anchor?.range?.startOffset
@@ -377,14 +394,23 @@ internal class SessionSearch(
                 current = when {
                     results.isEmpty() -> -1
                     pending < 0 -> results.lastIndex
-                    reveal -> firstVisible()
+                    pending > 0 -> 0
+                    show -> firstVisible()
                     anchorKey != null -> nearest(anchorKey, anchorStart ?: 0)
                     else -> current.coerceIn(0, results.lastIndex)
                 }
                 pending = 0
                 applyHighlights()
                 updateStatus()
-                if (reveal && current >= 0) reveal(results[current])
+                if (stale) {
+                    revealPending = revealPending || reveal
+                    schedule(false)
+                    return
+                }
+                if (show && current >= 0) {
+                    reveal(results[current])
+                    revealPending = false
+                }
             }
         }
     }
@@ -395,8 +421,6 @@ internal class SessionSearch(
             return same.firstOrNull { it.value.range.startOffset >= start }?.index
                 ?: same.last().index
         }
-        val old = results.indexOfFirst { it.body.key == key }
-        if (old >= 0) return old.coerceIn(0, results.lastIndex)
         return current.coerceIn(0, results.lastIndex)
     }
 
@@ -566,8 +590,10 @@ internal class SessionSearch(
         active = false
         generation++
         debounce?.cancel()
+        content?.cancel()
         search?.cancel()
         debounce = null
+        content = null
         search = null
         panel.onSearchInvalidated = null
         find.removeObserver(observer)
@@ -578,6 +604,7 @@ internal class SessionSearch(
         disposeEscape()
         results = emptyList()
         current = -1
+        revealPending = false
         bar = null
         host.removeAll()
     }
