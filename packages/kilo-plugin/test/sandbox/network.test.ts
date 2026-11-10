@@ -22,13 +22,15 @@ function denied(exit: Exit.Exit<unknown, unknown>) {
 
 describe("sandbox tool network classification", () => {
   // kilo_port(sandbox:fd6329a01ac1)
-  test("treats a namespaced tool as MCP unless it is a built-in in the opencode namespace", () => {
+  test("treats a namespaced tool as MCP unless it is a built-in in a built-in namespace", () => {
     const tool = (name: string, namespace?: string) => ({ name, options: namespace ? { namespace } : undefined })
     expect(Network.isMcp(tool("session_move", "session"))).toBe(true)
     expect(Network.isMcp(tool("touch", "probe"))).toBe(true)
     expect(Network.isMcp(tool("custom", "opencode"))).toBe(true)
     expect(Network.isMcp(tool("artifact_create", "opencode"))).toBe(false)
     expect(Network.isMcp(tool("list_mcp_resources", "opencode"))).toBe(false)
+    expect(Network.isMcp(tool("custom", "kilo"))).toBe(true)
+    expect(Network.isMcp(tool("artifact_create", "kilo"))).toBe(false)
     expect(Network.isMcp(tool("session_move"))).toBe(false)
   })
 

@@ -256,8 +256,15 @@ export const Plugin = define({
   }),
 })
 
-// Effective ids: the registry prefixes a namespaced tool with its namespace.
-const hidden = new Set(["opencode_list_mcp_resources", "opencode_read_mcp_resource", "execute"])
+// Effective ids: the registry prefixes a namespaced tool with its namespace, which branding renames to `kilo` when the
+// host loads it. Both spellings are listed so a run without that transform hides the same tools.
+const hidden = new Set([
+  "kilo_list_mcp_resources",
+  "kilo_read_mcp_resource",
+  "opencode_list_mcp_resources",
+  "opencode_read_mcp_resource",
+  "execute",
+])
 
 function describe(error: unknown) {
   if (typeof error === "object" && error !== null && "description" in error && typeof error.description === "string")
