@@ -60,8 +60,20 @@ export async function convert(file: string, options: Options) {
   return total
 }
 
-/** Whether `file` is a Kilo v1 store: the tables the V1 migration reads, and no `session_v2` of a kilo2 or V2 store. */
+/**
+ * Whether `file` is a Kilo v1 store: the tables the V1 migration reads, a table that only Kilo v1 creates, and no
+ * `session_v2` of a kilo2 or V2 store. The Kilo marker keeps an older upstream `opencode.db` (which the server may still
+ * migrate in place) and a kilo2 store from before the `session_v2` split out of this check.
+ */
 export function isV1Store(file: string) {
+  return inspect(file) === "v1"
+}
+
+/**
+ * The store at `file`: a Kilo v1 store, another SQLite database, or a file that cannot be read, which the caller must
+ * not treat as a normal store. A store that another process holds is `other`: it is in use, not a v1 store to protect.
+ */
+export function inspect(file: string): "v1" | "other" | "unreadable" {
   try {
     const db = new SQLite(file, { readonly: true })
     try {
@@ -71,15 +83,29 @@ export function isV1Store(file: string) {
           .all()
           .map((table) => table.name),
       )
-      return !tables.has("session_v2") && ["session", "message", "part", "project"].every((name) => tables.has(name))
+      const v2 = tables.has("session_v2")
+      const core = ["session", "message", "part", "project"].every((name) => tables.has(name))
+      return !v2 && core && kiloV1Tables.some((name) => tables.has(name)) ? "v1" : "other"
     } finally {
       db.close()
     }
-  } catch {
-    // Not a readable SQLite file, so not a v1 store.
-    return false
+  } catch (error) {
+    // A store that a running server holds is not a v1 store to protect, unlike a corrupt file or a permission error.
+    return /locked|busy/i.test(String(error)) ? "other" : "unreadable"
   }
 }
+
+/** Tables that only a Kilo v1 store creates: the v2 schema never does, and a conversion of v1 keeps `session_v2`. */
+const kiloV1Tables = [
+  "kilo_am_project",
+  "kilo_am_section",
+  "kilo_am_tab",
+  "kilo_am_worktree",
+  "kilo_board",
+  "kilo_board_message",
+  "kilo_continuation_intent",
+  "kilo_subscription",
+]
 
 export function requireV1Store(file: string) {
   if (!isV1Store(file)) throw new Error("not a Kilo v1 session store")

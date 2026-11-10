@@ -64,6 +64,11 @@ export default Runtime.handler(
         catch: asError,
       })
       const scope = window === undefined ? "" : ` (updated since ${new Date(window).toISOString().slice(0, 10)})`
+      // Another process took the lock and created the store while this one waited, so its sessions are the result.
+      if (result.skipped)
+        return process.stdout.write(
+          `Another kilo2 import created ${file} first, so this run imported nothing. It holds that run's sessions.${EOL}`,
+        )
       process.stdout.write(
         `Imported ${result.imported} Kilo v1 sessions${scope} from ${source} to ${file} in ${Date.now() - started} ms. ${source} is unchanged.${EOL}`,
       )

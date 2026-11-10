@@ -179,6 +179,33 @@ async function windowStore(file: string, work: string, now: number) {
         updated,
       ],
     )
+  // A message, a part and a board for a session inside the window and one outside it, so the copy proves which tables it
+  // filters. The event journal is filled too, because it is the one table that is never copied.
+  for (const [id, inside] of [
+    ["ses_recent", true],
+    ["ses_unrelated", false],
+  ] as const) {
+    db.run("INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, 1, 2, '{}')", [
+      `msg_${id}`,
+      id,
+    ])
+    db.run(
+      "INSERT INTO part (id, message_id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, 1, 2, '{}')",
+      [`prt_${id}`, `msg_${id}`, id],
+    )
+    db.run("INSERT INTO kilo_board (root_session_id, objective, time_created, time_updated) VALUES (?, ?, 1, 2)", [
+      id,
+      `Objective ${id}`,
+    ])
+    db.run(
+      "INSERT INTO kilo_board_message (id, board_root_session_id, seq, time_created, sender_session_id, recipient, type, body, source_message_id, source_call_id) VALUES (?, ?, 1, 1, ?, 'all', 'note', ?, '', '')",
+      [`bmsg_${id}`, id, id, inside ? "inside" : "outside"],
+    )
+    db.run("INSERT INTO event (id, aggregate_id, seq, type, data) VALUES (?, ?, 1, 'session.updated', '{}')", [
+      `evt_${id}`,
+      id,
+    ])
+  }
   return db
 }
 
@@ -223,11 +250,30 @@ test("refuses a Kilo v1 store as the target, so a naming mistake cannot migrate 
     .update(await readFile(target))
     .digest("hex")
   await expect(KiloDatabase.refuseV1Store(target)).rejects.toThrow("Kilo v1 session store")
+  // `KILO2_DB` reaches `select` as `OPENCODE_DB`, which must run the same guard as the default store file.
+  await expect(KiloDatabase.select({ OPENCODE_DB: target }, { data, channel: "local" })).rejects.toThrow(
+    "Kilo v1 session store",
+  )
   expect(
     createHash("sha256")
       .update(await readFile(target))
       .digest("hex"),
   ).toBe(before)
+})
+
+test("a file that cannot be read stops the start instead of counting as a normal store", async () => {
+  const { data } = await root()
+  await writeFile(path.join(data, "kilo2-local.db"), "not a database")
+  await expect(KiloDatabase.select({}, { data, channel: "local" })).rejects.toThrow("could not be read")
+})
+
+test("a Kilo v1 store is not adopted, so the start cannot create the store the guard refuses", async () => {
+  const { dir, data } = await root()
+  // An earlier build wrote its store under the upstream name; this one is a Kilo v1 store.
+  await v1Store(path.join(data, "opencode.db"), path.join(dir, "work"))
+  expect(await KiloDatabase.select({}, { data, channel: "local" })).toBe(path.join(data, "kilo2-local.db"))
+  expect(existsSync(path.join(data, "kilo2-local.db"))).toBe(false)
+  expect(existsSync(path.join(data, "opencode.db"))).toBe(true)
 })
 
 test("the import API returns the session count and reports an existing store as skipped", async () => {
@@ -370,6 +416,18 @@ test("--since imports the recent sessions and the complete parent and child tree
     expect(db.query("SELECT id FROM session_v2 ORDER BY id").all()).toEqual(selected.map((id) => ({ id })))
     // The legacy table of the private copy proves that the unrelated old session was never copied.
     expect(db.query("SELECT id FROM session ORDER BY id").all()).toEqual(selected.map((id) => ({ id })))
+    // The session-scoped tables are filtered by their own column, including the board, which keys sessions by root id.
+    expect(db.query("SELECT id FROM message").all()).toEqual([{ id: "msg_ses_recent" }])
+    expect(db.query("SELECT id FROM part").all()).toEqual([{ id: "prt_ses_recent" }])
+    expect(db.query("SELECT root_session_id FROM kilo_board").all()).toEqual([{ root_session_id: "ses_recent" }])
+    expect(db.query("SELECT body FROM kilo_board_message").all()).toEqual([{ body: "inside" }])
+    // The event journal is never copied: it carries no `session_id`, and the conversion clears it anyway.
+    expect(db.query("SELECT count(*) AS n FROM event").get()).toEqual({ n: 0 })
+    // The copy recreates the v1 indexes, including ones on an expression and a partial one.
+    for (const name of ["recall_part_search_idx", "part_session_step_finish_idx", "kilo_board_message_board_seq_idx"])
+      expect(db.query("SELECT 1 AS ok FROM sqlite_master WHERE type = 'index' AND name = ?").get(name)).toEqual({
+        ok: 1,
+      })
   })
 })
 

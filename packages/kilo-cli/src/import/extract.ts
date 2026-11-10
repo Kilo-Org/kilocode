@@ -7,13 +7,15 @@ import { Database as SQLite, type SQLQueryBindings } from "bun:sqlite"
 const BATCH = 1_000
 
 // The v1 event journal names its session in `aggregate_id`, not `session_id`. The conversion clears it, so copying every
-// event of a large store would defeat the window. The other session tables all carry a `session_id` column.
+// event of a large store would defeat the window. Every other session table names its session in a column that ends in
+// `session_id`, which is how `keyOf` finds it.
 const eventJournal = new Set(["event", "event_sequence"])
 
 type Table = {
   readonly name: string
   readonly columns: ReadonlyArray<string>
-  readonly scope: "session" | "session_id" | "full"
+  /** The column that names the session, or undefined when the table is not session scoped and is copied whole. */
+  readonly key?: string
 }
 
 /** Writes the v1 tables and the rows of the `since` window from `source` into the new file `target`. */
@@ -107,15 +109,18 @@ function readTables(from: SQLite): Table[] {
         .query<{ name: string }, [string]>("SELECT name FROM pragma_table_info(?)")
         .all(table.name)
         .map((column) => column.name)
-      return { name: table.name, columns, scope: scopeOf(table.name, columns) }
+      return { name: table.name, columns, key: keyOf(table.name, columns) }
     })
 }
 
-/** Session scope comes from the schema, so message, part and every other table that names its session is filtered. */
-function scopeOf(name: string, columns: ReadonlyArray<string>): Table["scope"] {
-  if (name === "session") return "session"
-  if (columns.some((column) => column === "session_id")) return "session_id"
-  return "full"
+/**
+ * The column that scopes a table to sessions, read from the schema: `id` for `session`, and any column that names a
+ * session, such as `session_id`, `root_session_id` of a board or `sender_session_id` of a board message. A table without
+ * one (projects, the migration journal, the account tables) is copied whole.
+ */
+function keyOf(name: string, columns: ReadonlyArray<string>) {
+  if (name === "session") return "id"
+  return columns.find((column) => /(^|_)session_id$/.test(column))
 }
 
 function copyTable(from: SQLite, to: SQLite, table: Table, window: string, onProgress: () => void) {
@@ -124,7 +129,7 @@ function copyTable(from: SQLite, to: SQLite, table: Table, window: string, onPro
     `INSERT INTO ${quote(table.name)} (${columns}) VALUES (${table.columns.map(() => "?").join(", ")})`,
   )
   const rows = from.query<Record<string, SQLQueryBindings>, SQLQueryBindings[]>(select(table, columns))
-  const iterator = table.scope === "full" ? rows.iterate() : rows.iterate(window)
+  const iterator = table.key === undefined ? rows.iterate() : rows.iterate(window)
   let count = 0
   for (const row of iterator) {
     insert.run(...table.columns.map((column) => row[column]))
@@ -135,8 +140,7 @@ function copyTable(from: SQLite, to: SQLite, table: Table, window: string, onPro
 }
 
 function select(table: Table, columns: string) {
-  const id = table.scope === "session" ? "id" : table.scope === "session_id" ? "session_id" : undefined
-  const where = id === undefined ? "" : ` WHERE ${quote(id)} IN (SELECT value FROM json_each(?))`
+  const where = table.key === undefined ? "" : ` WHERE ${quote(table.key)} IN (SELECT value FROM json_each(?))`
   return `SELECT ${columns} FROM ${quote(table.name)}${where}`
 }
 

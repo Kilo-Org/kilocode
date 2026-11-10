@@ -33,7 +33,12 @@ export async function select(
   env: Record<string, string | undefined>,
   input = { data: Global.Path.data, channel },
 ): Promise<string> {
-  if (env.OPENCODE_DB) return env.OPENCODE_DB
+  // A store named by the caller or by `KILO2_DB` goes through the same guard: the server would migrate a Kilo v1 store
+  // in place and v1 could no longer read it.
+  if (env.OPENCODE_DB) {
+    await refuseV1Store(env.OPENCODE_DB)
+    return env.OPENCODE_DB
+  }
   const shared = env.KILO_DISABLE_CHANNEL_DB === "1" || env.KILO_DISABLE_CHANNEL_DB === "true"
   // kilo_port(unattributed:core/database:a155cf41e765)
   const file =
@@ -98,6 +103,14 @@ async function adopt(file: string, data: string, channel: string, shared: boolea
   const primary = legacy(data, channel, shared)
   const source = populated[0]?.file ?? (files.includes(primary) ? primary : undefined)
   if (!source) return
+  // A Kilo v1 store stays where it is. Copying it would create the store that `refuseV1Store` protects, and only the
+  // explicit import may convert it.
+  if ((await import("./v1-store")).KiloV1Store.isV1Store(source)) {
+    console.error(
+      `kilo2: ${source} is a Kilo v1 session store, so it stays as it is and its sessions are not adopted. Run \`kilo2 import v1\` to bring them forward, and kilo2 starts with a new database meanwhile.`,
+    )
+    return
+  }
   try {
     await copy(source, file)
   } catch (error) {
@@ -135,22 +148,22 @@ export async function importV1(input: {
     // The copy, the Kilo steps and the conversion run one after another, and the copy and the Kilo steps block the
     // process, so no timer can refresh the lock during them. Progress before and after each phase, and every copied
     // batch, keeps the lock fresh as long as no single step takes longer than STALE.
-    const imported =
-      (await copy(input.store, input.file, {
-        since: input.since,
-        onProgress: () => touch(lock),
-        check: (copy) =>
-          KiloV1Store.convert(copy, {
-            data: input.data,
-            progress: (done, total) => {
-              touch(lock)
-              input.progress?.(done, total)
-            },
-          }),
-      })) ?? 0
+    const imported = await copy(input.store, input.file, {
+      since: input.since,
+      onProgress: () => touch(lock),
+      check: (copy) =>
+        KiloV1Store.convert(copy, {
+          data: input.data,
+          progress: (done, total) => {
+            touch(lock)
+            input.progress?.(done, total)
+          },
+        }),
+    })
+    if (imported === undefined) return { imported: 0, skipped: true }
     return { imported, skipped: false }
   } finally {
-    if (readOwner(lock) === process.pid) remove(lock)
+    if (readOwner(lock) === process.pid) releaseLock(lock, input.log)
   }
 }
 
@@ -171,6 +184,7 @@ async function acquire(lock: string, file: string, log?: (line: string) => void)
     if (existsSync(file)) return false
     try {
       writeFileSync(lock, String(process.pid), { flag: "wx" })
+      holding.add(lock)
       return true
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
@@ -178,8 +192,14 @@ async function acquire(lock: string, file: string, log?: (line: string) => void)
     const held = inspect(lock)
     // The owner released the lock between the two calls.
     if (!held) continue
-    if ((held.owner !== undefined && !alive(held.owner)) || Date.now() - held.touched > STALE) {
-      remove(lock)
+    // A lock that names this process but is not held here is left over from an earlier run, which this process cannot be
+    // waiting for.
+    const stale =
+      (held.owner === process.pid && !holding.has(lock)) ||
+      (held.owner !== undefined && !alive(held.owner)) ||
+      Date.now() - held.touched > STALE
+    if (stale) {
+      removeLock(lock)
       continue
     }
     if (Date.now() - notice.last >= 5_000) {
@@ -206,7 +226,37 @@ function touch(lock: string) {
   const now = new Date()
   try {
     utimesSync(lock, now, now)
-  } catch {}
+  } catch {
+    // A lock that another process took over is not ours to keep fresh, and reporting a lost lock here would turn every
+    // progress report into an error. The publish step detects the loss instead.
+  }
+}
+
+/**
+ * Removes the lock when the import ends. A lock that stays behind is visible in the log: the next run of this process
+ * takes it over at once, but another process waits for it to go stale.
+ */
+function releaseLock(lock: string, log?: (line: string) => void) {
+  holding.delete(lock)
+  try {
+    rmSync(lock, { force: true })
+  } catch (error) {
+    log?.(`kilo2: could not remove the import lock ${lock}: ${String(error)}`)
+  }
+}
+
+/** The locks this process holds, so a lock left over by an earlier run here is told apart from a running import. */
+const holding = new Set<string>()
+
+/** Removes a stale lock. A lock that cannot be removed fails the import, so `acquire` cannot spin on the same lock. */
+function removeLock(lock: string) {
+  try {
+    rmSync(lock, { force: true })
+  } catch (error) {
+    throw new Error(
+      `kilo2: could not remove the stale import lock ${lock}, so the import did not start. Delete it and run the import again: ${String(error)}`,
+    )
+  }
 }
 
 function readOwner(lock: string) {
@@ -247,7 +297,13 @@ export function v1Store(data = Global.Path.data) {
 export async function refuseV1Store(file: string) {
   if (!existsSync(file)) return
   const { KiloV1Store } = await import("./v1-store")
-  if (!KiloV1Store.isV1Store(file)) return
+  const verdict = KiloV1Store.inspect(file)
+  // Silence is only safe when the file is known not to be a v1 store, so an unreadable file stops the start instead.
+  if (verdict === "unreadable")
+    throw new Error(
+      `${file} could not be read, so kilo2 cannot check that it is not a Kilo v1 session store. Fix its permissions or move it away, then start kilo2 again.`,
+    )
+  if (verdict !== "v1") return
   throw new Error(
     `${file} is a Kilo v1 session store, and kilo2 never migrates it in place: v1 could no longer read it. Keep the kilo2 store name distinct from v1's (kilo2.db or kilo2-<channel>.db), or move the v1 store before starting kilo2.`,
   )
@@ -266,12 +322,18 @@ async function copy<A>(
   input: { since?: number; onProgress?: () => void; check?: (copy: string) => Promise<A> } = {},
 ): Promise<A | undefined> {
   const temp = `${file}.${process.pid}.adopt`
+  // SQLite creates the copy with the process umask, and a full copy holds the v1 credentials until the Kilo steps clear
+  // them, so the copy is written owner-only from the first byte instead of being tightened after it is complete.
+  const umask = process.umask(0o077)
   try {
     if (input.since === undefined) {
       const { Database } = await import("bun:sqlite")
       const db = new Database(source, { readonly: true })
       try {
+        // `VACUUM INTO` blocks for minutes on a large store, so the lock is refreshed on both sides of it.
+        input.onProgress?.()
         db.run("VACUUM INTO ?", [temp])
+        input.onProgress?.()
       } finally {
         db.close()
       }
@@ -282,11 +344,22 @@ async function copy<A>(
     // SQLite creates the copy with the process umask, so make it owner-only before it is reachable under `file`.
     ownerOnly(temp)
     const result = await input.check?.(temp)
-    linkSync(temp, file)
+    try {
+      linkSync(temp, file)
+    } catch (error) {
+      // Another process published its copy first. That copy is the store, so this one has nothing left to do.
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") return undefined
+      throw error
+    }
     ownerOnly(file)
     return result
   } finally {
-    for (const suffix of ["", "-wal", "-shm", "-journal"]) remove(`${temp}${suffix}`)
+    process.umask(umask)
+    for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+      const leftover = `${temp}${suffix}`
+      // A temporary copy that cannot be removed holds session data, so it is reported rather than dropped silently.
+      if (!remove(leftover)) console.error(`kilo2: could not remove the temporary copy ${leftover}. Delete it by hand.`)
+    }
   }
 }
 
@@ -295,18 +368,19 @@ function ownerOnly(file: string) {
 }
 
 /**
- * Removes a lock or a temporary copy. Windows can still hold the file for a moment after SQLite closes it, and a
- * leftover temporary file is harmless, so a removal retries and then gives up instead of failing the import.
+ * Removes a temporary copy, which Windows can still hold for a moment after SQLite closes it. Returns whether the file
+ * is gone, so the caller can report a copy that stays behind.
  */
 function remove(file: string) {
   for (let attempt = 0; attempt <= 4; attempt++) {
     try {
       rmSync(file, { force: true })
-      return
+      return true
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
-      if (attempt === 4 || (code !== "EBUSY" && code !== "EPERM" && code !== "ENOTEMPTY")) return
+      if (attempt === 4 || (code !== "EBUSY" && code !== "EPERM" && code !== "ENOTEMPTY")) return !existsSync(file)
       Bun.sleepSync(50)
     }
   }
+  return !existsSync(file)
 }
