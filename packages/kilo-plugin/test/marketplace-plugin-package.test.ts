@@ -102,7 +102,7 @@ describe("plugin package resolution", () => {
     const resolved = await Effect.runPromise(
       resolve({ spec: `git:${repo.path}`, npm: npm({ directory: "/nowhere", name: "x" }) }),
     )
-    expect(resolved.directory).toContain("packages/git")
+    expect(resolved.directory).toContain(path.join("packages", "git"))
     expect(await Bun.file(path.join(resolved.directory, "server.js")).exists()).toBe(true)
   })
   test("rejects a git package without an entrypoint and a missing repository", async () => {
