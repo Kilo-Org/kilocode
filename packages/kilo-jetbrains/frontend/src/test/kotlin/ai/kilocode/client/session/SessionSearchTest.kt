@@ -114,6 +114,32 @@ class SessionSearchTest : SessionUiTestBase() {
         ui.search.close()
     }
 
+    fun `test find next during streaming advances instead of resetting`() {
+        showMessages()
+        textMessage("user_1", "hello")
+        assistant("asst_1", "hello")
+
+        ui.search.open()
+        val bar = ui.search.getComponent()
+        bar.getSearchTextComponent().text = "hello"
+        assertTrue("first match is selected", pumpUntil { bar.statusText == "1 of 2" })
+
+        emit(
+            ChatEventDto.PartUpdated("ses_test", part("asst_1_text", "asst_1", "text", "hello extra")),
+            flush = false,
+        )
+        forceFlushWithoutDispatch()
+        settleShort(10)
+
+        ui.search.searchForward()
+
+        assertTrue(
+            "stale navigation advances instead of jumping to the first match",
+            pumpUntil { bar.statusText == "2 of 2" },
+        )
+        ui.search.close()
+    }
+
     fun `test find does not include tool content`() {
         showMessages()
         textMessage("user_1", "hello from the transcript")

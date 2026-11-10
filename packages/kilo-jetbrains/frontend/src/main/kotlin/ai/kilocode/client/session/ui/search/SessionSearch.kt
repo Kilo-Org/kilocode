@@ -94,7 +94,9 @@ internal class SessionSearch(
     private var last = TranscriptMatchOptions("")
     private var restoreFocus: JComponent? = null
     private var pending = 0
+    private var pendingIndex: Int? = null
     private var revealPending = false
+    private var refreshPending = false
     private val watched = LinkedHashMap<MdView, MdSearchView.SearchListener>()
     private val cache = WeakHashMap<MdView, SurfaceCache>()
     private val listener = MdSearchView.SearchListener { if (active) schedule(false) }
@@ -247,27 +249,41 @@ internal class SessionSearch(
         if (next == last) return
         val reveal = next.query != last.query
         last = next
+        if (reveal) {
+            pending = 0
+            pendingIndex = null
+            revealPending = false
+        }
         schedule(reveal)
     }
 
     private fun schedule(reveal: Boolean) {
         if (!active) return
         if (!reveal) {
-            // Throttle content refreshes instead of restarting them on every streamed delta: a
-            // continuous stream must still let the search run periodically and restore highlights.
-            if (content?.isActive == true) return
-            content = scope.launch(Dispatchers.EDT) {
-                delay(DEBOUNCE_CONTENT_MS)
-                start(false)
+            // Never cancel an in-flight search: a slow match on a long transcript must be allowed
+            // to publish. Defer the refresh until it finishes instead of restarting the wait.
+            if (search?.isActive == true) {
+                refreshPending = true
+                return
             }
+            scheduleContent()
             return
         }
         content?.cancel()
         content = null
+        refreshPending = false
         debounce?.cancel()
         debounce = scope.launch(Dispatchers.EDT) {
             delay(DEBOUNCE_QUERY_MS)
             start(true)
+        }
+    }
+
+    private fun scheduleContent() {
+        if (content?.isActive == true) return
+        content = scope.launch(Dispatchers.EDT) {
+            delay(DEBOUNCE_CONTENT_MS)
+            start(false)
         }
     }
 
@@ -288,7 +304,9 @@ internal class SessionSearch(
             results = emptyList()
             current = -1
             error = null
+            pendingIndex = null
             revealPending = false
+            refreshPending = false
             updateStatus()
             return
         }
@@ -307,6 +325,12 @@ internal class SessionSearch(
             withContext(Dispatchers.EDT) {
                 if (!active || id != generation) return@withContext
                 apply(outcome, reveal)
+            }
+            withContext(Dispatchers.EDT) {
+                if (active && id == generation && refreshPending) {
+                    refreshPending = false
+                    scheduleContent()
+                }
             }
         }
     }
@@ -374,45 +398,58 @@ internal class SessionSearch(
         searching = false
         when (outcome) {
             Outcome.Cancelled -> return
-            is Outcome.Error -> {
-                error = outcome.key
-                results = emptyList()
-                current = -1
-                pending = 0
-                revealPending = false
-                clearHighlights()
-                updateStatus()
-            }
-            is Outcome.Results -> {
-                val stale = outcome.hits.any { it.surface.revision != it.body.md.searchRevision() }
-                val show = reveal || revealPending
-                val anchor = results.getOrNull(current)
-                val anchorKey = anchor?.body?.key
-                val anchorStart = anchor?.range?.startOffset
-                results = outcome.hits
-                error = null
-                current = when {
-                    results.isEmpty() -> -1
-                    pending < 0 -> results.lastIndex
-                    pending > 0 -> 0
-                    show -> firstVisible()
-                    anchorKey != null -> nearest(anchorKey, anchorStart ?: 0)
-                    else -> current.coerceIn(0, results.lastIndex)
-                }
-                pending = 0
-                applyHighlights()
-                updateStatus()
-                if (stale) {
-                    revealPending = revealPending || reveal
-                    schedule(false)
-                    return
-                }
-                if (show && current >= 0) {
-                    reveal(results[current])
-                    revealPending = false
-                }
-            }
+            is Outcome.Error -> fail(outcome.key)
+            is Outcome.Results -> applyResults(outcome.hits, reveal)
         }
+    }
+
+    @RequiresEdt
+    private fun fail(key: String) {
+        error = key
+        results = emptyList()
+        current = -1
+        pending = 0
+        pendingIndex = null
+        revealPending = false
+        refreshPending = false
+        clearHighlights()
+        updateStatus()
+    }
+
+    @RequiresEdt
+    private fun applyResults(hits: List<Hit>, reveal: Boolean) {
+        val stale = hits.any { it.surface.revision != it.body.md.searchRevision() }
+        val show = reveal || revealPending
+        val anchor = results.getOrNull(current)
+        val anchorKey = anchor?.body?.key
+        val anchorStart = anchor?.range?.startOffset
+        results = hits
+        error = null
+        current = choose(show, anchorKey, anchorStart)
+        applyHighlights()
+        updateStatus()
+        if (stale) {
+            revealPending = revealPending || reveal
+            schedule(false)
+            return
+        }
+        pending = 0
+        pendingIndex = null
+        if (show && current >= 0) {
+            reveal(results[current])
+            revealPending = false
+        }
+    }
+
+    private fun choose(show: Boolean, anchorKey: String?, anchorStart: Int?): Int {
+        if (results.isEmpty()) return -1
+        val jump = pendingIndex
+        if (jump != null) return jump.coerceIn(0, results.lastIndex)
+        if (pending < 0) return results.lastIndex
+        if (pending > 0) return 0
+        if (show) return firstVisible()
+        if (anchorKey != null) return nearest(anchorKey, anchorStart ?: 0)
+        return current.coerceIn(0, results.lastIndex)
     }
 
     private fun nearest(key: String, start: Int): Int {
@@ -449,23 +486,29 @@ internal class SessionSearch(
         }
         if (results.isEmpty()) {
             pending = direction
+            revealPending = true
             schedule(false)
             return
         }
         if (results.any { it.surface.revision != it.body.md.searchRevision() }) {
-            pending = direction
+            pendingIndex = target(direction)
+            pending = 0
+            revealPending = true
             schedule(false)
             return
         }
-        current = if (current < 0) {
-            if (direction > 0) 0 else results.lastIndex
-        } else {
-            Math.floorMod(current + direction, results.size)
-        }
+        current = target(direction)
         applyHighlights()
         updateStatus()
         reveal(results[current])
     }
+
+    private fun target(direction: Int): Int =
+        if (current < 0) {
+            if (direction > 0) 0 else results.lastIndex
+        } else {
+            Math.floorMod(current + direction, results.size)
+        }
 
     @RequiresEdt
     private fun reveal(hit: Hit) {
@@ -604,7 +647,9 @@ internal class SessionSearch(
         disposeEscape()
         results = emptyList()
         current = -1
+        pendingIndex = null
         revealPending = false
+        refreshPending = false
         bar = null
         host.removeAll()
     }
