@@ -291,7 +291,7 @@
   },
   "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2.",
+    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2. Inference sends the User-Agent `Kilo-Code/v2/<version>` where v1 sent `Kilo-Code/<version>`, so the Gateway attributes the line from the User-Agent it already stores; no v2-only header is added, because the Gateway would need a new column to store it.",
     "by": "gateway-finish"
   },
   "patch:agent:063e034b577a": {

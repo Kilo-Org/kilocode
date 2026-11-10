@@ -2390,7 +2390,7 @@ describe("KiloGatewayPlugin", () => {
                   "X-KILOCODE-PARENT-TASKID": parent.id,
                   "X-KILOCODE-MACHINEID": "mach-test",
                   "x-kilocode-mode": "code",
-                  "User-Agent": "opencode-kilo-provider/unknown",
+                  "User-Agent": "Kilo-Code/v2/unknown",
                 })
 
                 const httpReq = yield* hooks.trigger("session", "http.request", {
@@ -2400,7 +2400,17 @@ describe("KiloGatewayPlugin", () => {
                   kind: "primary",
                   request: new Request(`${backend.url}/api/gateway/responses`, {
                     method: "POST",
-                    headers: { "content-type": "application/json", "x-api-key": "env-token" },
+                    headers: {
+                      "content-type": "application/json",
+                      "x-api-key": "env-token",
+                      "x-session-affinity": child.id,
+                      "X-Session-Id": child.id,
+                      "x-opencode-session-id": child.id,
+                      "x-opencode-parent-session-id": parent.id,
+                      "x-opencode-project": "prj_1",
+                      "x-opencode-session": child.id,
+                      "x-opencode-client": "kilo2",
+                    },
                     body: JSON.stringify({
                       model: "openai/gpt-5.4",
                       server: backend.url,
@@ -2414,6 +2424,15 @@ describe("KiloGatewayPlugin", () => {
                 })
                 expect(httpReq.request.headers.get("authorization")).toBe("Bearer env-token")
                 expect(httpReq.request.headers.get("x-api-key")).toBeNull()
+                // Upstream OpenCode request identity stays out of Gateway traffic; v1 never sent it.
+                expect(httpReq.request.headers.get("x-opencode-session-id")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-parent-session-id")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-project")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-session")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-client")).toBeNull()
+                // The affinity headers are v1 behaviour and stay.
+                expect(httpReq.request.headers.get("x-session-affinity")).toBe(child.id)
+                expect(httpReq.request.headers.get("x-session-id")).toBe(child.id)
                 expect(yield* Effect.promise(() => httpReq.request.json())).toEqual({
                   model: "openai/gpt-5.4",
                   input: [{ type: "message", role: "user", content: "hello" }],

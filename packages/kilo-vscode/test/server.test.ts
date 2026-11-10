@@ -117,24 +117,32 @@ describe("indexingEnvironment", () => {
 })
 
 describe("settingsEnvironment", () => {
-  test("disables Claude Code loading by default", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "" })).toEqual({
+  const editor = "Visual Studio Code 1.114.0"
+
+  test("reports the editor to the Gateway and disables Claude Code loading by default", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
       KILO_DISABLE_CLAUDE_CODE: "true",
     })
   })
 
   test("leaves Claude Code loading on when compatibility is enabled", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "" })).toEqual({})
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+    })
   })
 
   test("sets the extra CA certificates path, trimmed", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem " })).toEqual({
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem ", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
       NODE_EXTRA_CA_CERTS: "/certs/ca.pem",
     })
   })
 
   test("ignores a blank CA certificates value", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   " })).toEqual({})
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   ", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+    })
   })
 })
 
