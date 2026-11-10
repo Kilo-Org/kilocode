@@ -370,6 +370,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 id: input.id,
                 scope: input.scope,
                 project: input.scope === "project" ? project : undefined,
+                option: input.option,
                 ...(written.config ? { config: path.relative(directory(input.scope), written.config) } : {}),
                 ...(written.server ? { server: written.server } : {}),
                 resources: written.resources?.map(store),

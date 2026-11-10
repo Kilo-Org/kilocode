@@ -1,4 +1,5 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloAgentRemovePlugin } from "./agent/plugin"
 import { KiloBranchNamePlugin } from "./branch-name"
 import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
@@ -64,6 +65,7 @@ export const KiloPlugins = [
   KiloSkillPlugin,
   // Replaces the upstream OpenCode and report built-in skills with Kilo's config guide.
   KiloSkillConfigPlugin.Plugin,
+  KiloAgentRemovePlugin,
   // Rung 1: names the extracted formats in the native read tool description. The host swaps the
   // reader behind it for the filesystem service (rung 2).
   KiloReadPlugin,

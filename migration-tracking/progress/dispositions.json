@@ -231,7 +231,7 @@
   "module:packages/opencode/src/kilocode/agent/index.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/agent/index.ts",
-    "note": "Agent set (Code, hidden build copy, Ask, Debug, Orchestrator, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units), agent remove (open API cell).",
+    "note": "Agent set (Code, hidden build copy, Ask, Debug, Orchestrator, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units). Agent remove lives in packages/kilo-plugin/src/agent/plugin.ts (kilocode.agent RPC) and deletes only the markdown file that defines the agent.",
     "by": "agents-plugin"
   },
   "module:packages/opencode/src/kilocode/agent/scout.txt": {
@@ -844,6 +844,12 @@
     "v2": "packages/kilo-plugin/test/skill-remove.test.ts",
     "note": "The v2 tests cover the v1 cases (built-in, unregistered, relative, non-manifest, URL cache, accepted registered manifest) plus configured roots, flat skills, nested non-manifest files, traversal, the root itself, non-markdown files, and the removable list.",
     "by": "skill-removal"
+  },
+  "api:POST /kilocode/agent/remove": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/agent.ts",
+    "note": "The Kilo plugin RPC kilocode.agent remove replaces the v1 POST /kilocode/agent/remove route. It deletes the markdown file the config agent plugin discovered (under <root>/{agent,agents,mode,modes}/ in the project .kilo2 or the global config directory) and publishes config.updated so the registry rescans. A config-only or built-in agent has no file and is never offered. A config-defined agent (`agents.<id>` in kilo2.jsonc) is still a real agent on v2 and is removed by unsetting that key, which the Agents subtab keeps on the config path. The VS Code Agents subtab calls remove for the agents the RPC lists.",
+    "by": "agent-removal"
   },
   "api:POST /kilocode/skill/remove": {
     "state": "ported",
@@ -1958,5 +1964,104 @@
     "state": "ported",
     "note": "packages/kilo-vscode/test/slash.test.ts carries the sortByScore cases for the v2 matchSlash within one group: exact before prefix before substring before a description match (commit, commit-all, recommit, notes), case-insensitive queries, and hint matches (/clear finds /new, /review fast finds /review quick). v2 also keeps the Actions, Commands and Skills groups contiguous, which a separate test covers.",
     "by": "slash-commands"
+  },
+  "module:packages/kilo-vscode/src/MarketplacePanelProvider.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/marketplace-panel.ts",
+    "note": "The marketplace panel is a marketplace editor panel built with the shared editorPanel host and the shared settings webview bundle (view 'marketplace'). It opens one 'Kilo Marketplace' tab, restores it after a window reload, and passes KILO_HAS_WORKSPACE so project scope is hidden without a workspace.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/src/services/marketplace/actions.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/marketplace/index.ts, packages/kilo-vscode/webview-ui/src/v2/marketplace-data.ts",
+    "note": "Catalog, preview, install and uninstall are server-owned by the kilocode.marketplace RPC in packages/kilo-plugin/src/marketplace; the webview data layer in webview-ui/src/v2/marketplace-data.ts lists the three kinds and the installed records, previews MCP config, installs and uninstalls through those RPCs. Integrity, scope resolution and owned-resource cleanup moved behind that boundary.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/src/services/marketplace/bundles.ts": {
+    "state": "dropped",
+    "note": "v1 bundled catalog snapshots and extracted them on the extension side. v2 serves the catalog from registries through kilocode.marketplace.list, with no client-side bundle or extraction step.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/src/services/marketplace/notifier.ts": {
+    "state": "dropped",
+    "note": "v1 notified the UI about install and MCP-auth progress over extension messages. v2 returns the installed record from the RPC and the panel polls MCP status locally (createMcp), so no extension-side notifier exists.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/src/services/marketplace/notify.ts": {
+    "state": "dropped",
+    "note": "v1 emitted marketplace notifications from the extension host. v2 reports install and sign-in progress inside the panel and the existing MCP status surface; there is no marketplace notification channel.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/src/services/marketplace/relevance.ts": {
+    "state": "dropped",
+    "note": "v1 scored catalog items against workspace context and suggest_for data to show a relevant filter and suggested installs. v2 has no relevance RPC or suggestion entry point; the panel searches and filters the catalog client-side.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/webview-ui/marketplace/MarketplaceApp.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/SettingsApp.tsx, packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceView.tsx",
+    "note": "The marketplace root app and its own bundle are replaced by the shared settings bundle's marketplace view: SettingsApp mounts MarketplaceView under the same providers, and chat.ts maps the marketplace entry to the settings bundle.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/context/marketplace-session.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/webview-ui/src/v2/marketplace.ts, packages/kilo-vscode/webview-ui/src/v2/marketplace-data.ts",
+    "note": "The message-driven session provider is replaced by createMarketplace over the kilocode.marketplace RPC. The data layer keeps catalog and installed-record load failures separate, refreshes records after install and uninstall, and exposes the same install/remove/preview actions to the ported components.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/types/marketplace.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/marketplace.ts",
+    "note": "Marketplace item, record, scope, parameter and option types now come from the KiloMarketplaceRpc contract in packages/schema/src/kilocode/marketplace.ts. The webview imports those types instead of keeping a parallel client-only model.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/fixtures/marketplace-install-modal.tsx": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/fixtures/marketplace-install-modal.tsx",
+    "note": "The fixture now drives the v2 install dialog through the shared DialogProvider: scope and method selection, masked secret parameters, MCP preview, install result warnings and inline sign-in.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-actions.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/marketplace-data.test.ts, packages/kilo-cli/test/marketplace.test.ts",
+    "note": "Client-side catalog and installed-record behavior is covered by packages/kilo-vscode/test/marketplace-data.test.ts (per-kind failures, independent installed failure, install and uninstall refresh, record joins). The server-side install, uninstall and integrity behavior is covered by packages/kilo-cli/test/marketplace.test.ts.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-bundles.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped extension-side bundle extraction (module:packages/kilo-vscode/src/services/marketplace/bundles.ts). v2 has no bundled catalog.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-install-modal.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/marketplace-install-modal.test.ts",
+    "note": "The fixture-driven render test covers the v2 dialog: required and optional parameters, secret masking, the MCP preview step, the install call, record warnings, and the needs_auth sign-in path.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-notify.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped extension-side notify modules. v2 has no marketplace notification channel.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-panel-arch.test.ts": {
+    "state": "dropped",
+    "note": "Asserted the architecture of a separate marketplace panel and its own webview bundle, which v2 does not have. The shared-bundle panel contract is covered by packages/kilo-vscode/test/webview-surface.test.ts and test/editor-panel.test.ts.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-panel-mcp-auth-refresh.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/marketplace-install-modal.test.ts, packages/kilo-vscode/webview-ui/src/v2/mcp.ts",
+    "note": "v2 refreshes MCP status through createMcp.sync after install and after sign-in, and the install dialog test asserts the needs_auth to connected transition. The separate extension-side refresh message is gone.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/tests/unit/marketplace-relevance.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped relevance scorer (module:packages/kilo-vscode/src/services/marketplace/relevance.ts). v2 has no relevance RPC or suggested-install surface.",
+    "by": "marketplace-panel"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/stories/marketplace.stories.tsx": {
+    "state": "dropped",
+    "note": "v2 has no webview storybook surface for the extension; the marketplace components are exercised by test/marketplace-render.test.ts and test/marketplace-install-modal.test.ts against the real components.",
+    "by": "marketplace-panel"
   }
 }

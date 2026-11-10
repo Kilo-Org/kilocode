@@ -21,6 +21,7 @@
     "onStartupFinished",
     "onWebviewPanel:kilo-code.v2.settingsPanel",
     "onWebviewPanel:kilo-code.v2.profilePanel",
+    "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
     "onWebviewPanel:kilo-code.v2.documentsPanel"
   ],
@@ -392,6 +393,12 @@
         "title": "Profile",
         "category": "Kilo Code (v2)",
         "icon": "$(account)"
+      },
+      {
+        "command": "kilo-code.v2.marketplace",
+        "title": "Marketplace",
+        "category": "Kilo Code (v2)",
+        "icon": "$(extensions)"
       },
       {
         "command": "kilo-code.v2.showOpenTabs",
@@ -938,9 +945,14 @@
           "group": "navigation@3"
         },
         {
-          "command": "kilo-code.v2.settings",
+          "command": "kilo-code.v2.marketplace",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@4"
+        },
+        {
+          "command": "kilo-code.v2.settings",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation@5"
         }
       ],
       "scm/title": [

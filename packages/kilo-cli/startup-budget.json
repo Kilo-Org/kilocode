@@ -14,6 +14,7 @@
     "kilocode.remote": 10,
     "kilocode.skill": 10,
     "kilocode.skill-config": 10,
+    "kilocode.agent": 10,
     "kilocode.tool-todo": 10,
     "kilocode.tool-write": 10,
     "kilocode.tool-browser": 10,
