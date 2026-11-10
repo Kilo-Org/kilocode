@@ -140,3 +140,52 @@ test("a user interruption during the handover summary stops the handoff, a failu
   )
   expect(failed).toBe("")
 })
+
+test("the tail read finds plan_exit near the end of a long turn", async () => {
+  const result = await handoff({ tail: longTurn(4), answer: PlanFollowup.KEEP_REFINING })
+  expect(result.asked).toHaveLength(1)
+})
+
+test("the tail read is bounded: a plan_exit followed by more than the tail window does not ask", async () => {
+  const result = await handoff({ tail: longTurn(14), answer: PlanFollowup.KEEP_REFINING })
+  expect(result.asked).toHaveLength(0)
+})
+
+test("the new session takes the Code agent's own model when it has one", async () => {
+  const result = await handoff({
+    answer: PlanFollowup.NEW_SESSION,
+    codeModel: { id: "code-model", providerID: "code-provider" },
+  })
+  expect(result.createdModels).toEqual([{ id: "code-model", providerID: "code-provider" }])
+})
+
+/** A turn with the plan_exit call followed by `after` closing assistant messages. */
+function longTurn(after: number) {
+  const created = DateTime.makeUnsafe(0)
+  const exit: SessionMessage.Info = {
+    id: SessionMessage.ID.create(),
+    time: { created },
+    type: "assistant",
+    agent: Agent.ID.make("plan"),
+    model: { id: Model.ID.make("test-model"), providerID: Provider.ID.make("test") },
+    content: [
+      {
+        type: "tool",
+        id: Tool.CallID.make("call-plan-exit"),
+        name: "plan_exit",
+        time: { created },
+        state: { status: "completed", input: {}, content: [{ type: "text", text: "done" }], metadata: {} },
+      },
+    ],
+  }
+  const closing: SessionMessage.Info[] = Array.from({ length: after }, (_, index) => ({
+    id: SessionMessage.ID.create(),
+    time: { created },
+    type: "assistant",
+    agent: Agent.ID.make("plan"),
+    model: { id: Model.ID.make("test-model"), providerID: Provider.ID.make("test") },
+    content: [{ type: "text", text: `closing ${index}` }],
+  }))
+  const user: SessionMessage.Info = { id: SessionMessage.ID.create(), time: { created }, type: "user", text: "Plan dark mode" }
+  return [user, exit, ...closing]
+}

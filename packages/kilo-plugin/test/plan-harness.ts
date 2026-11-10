@@ -68,6 +68,10 @@ export async function handoff(input: {
   exitAgent?: Agent.ID
   todos?: unknown[]
   handover?: string | Generate.UnavailableError
+  /** Messages of the session, newest last, when a test needs a longer turn than one assistant message. */
+  tail?: SessionMessage.Info[]
+  /** The Code agent's configured model, when a test needs the new session to take it. */
+  codeModel?: unknown
 }) {
   const space = await workspace()
   const user: SessionMessage.Info = { id: SessionMessage.ID.create(), time: { created }, type: "user", text: "Plan dark mode" }
@@ -83,7 +87,7 @@ export async function handoff(input: {
       ...(input.exit === false ? [] : [tool("plan_exit", { plan: planPath })]),
     ],
   }
-  const messages = [user, assistant]
+  const messages = input.tail ?? [user, assistant]
   const session = { id: sessionID, agent: code, time: { created, updated: created } } as unknown as Session.Info
   const next = { id: nextSessionID, agent: code, time: { created, updated: created } } as unknown as Session.Info
 
@@ -103,7 +107,18 @@ export async function handoff(input: {
           yield* KiloPlanPlugin.effect(
             host({
               location: space.location,
-              agent: { ...host().agent, get: () => Effect.fail(new Error("no compaction agent")) } as Plugin.Context["agent"],
+              agent: {
+                ...host().agent,
+                get: () => Effect.fail(new Error("no compaction agent")),
+                ...(input.codeModel
+                  ? {
+                      get: (request: { agentID: Agent.ID }) =>
+                        request.agentID === code
+                          ? Effect.succeed({ data: { model: input.codeModel } })
+                          : Effect.fail(new Error("no compaction agent")),
+                    }
+                  : {}),
+              } as unknown as Plugin.Context["agent"],
               tool: {
                 transform: () => Effect.succeed({ dispose: Effect.void }),
                 hook: () => Effect.succeed({ dispose: Effect.void }),
@@ -148,7 +163,9 @@ export async function handoff(input: {
                 get: () => Effect.succeed(session),
                 messages: (request) => {
                   if (request.type === "user") return Effect.succeed([user])
-                  return Effect.succeed(request.order === "desc" ? messages.toReversed() : messages)
+                  if (request.order !== "desc") return Effect.succeed(messages)
+                  const newest = messages.toReversed()
+                  return Effect.succeed(request.limit === undefined ? newest : newest.slice(0, request.limit))
                 },
               }),
               Layer.mock(Form.Service, {
