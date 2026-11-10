@@ -4,11 +4,15 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import { expect, spyOn } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Skill } from "../../src/skill"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Skill.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
+const layer = AppNodeBuilder.build(Skill.node, [
+  [RuntimeFlags.node, RuntimeFlags.layer({ disableExternalSkills: false, disableClaudeCodeSkills: false })],
+])
+const it = testEffect(Layer.mergeAll(layer, AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 const body = (name: string, description: string) => `---
 name: ${name}
