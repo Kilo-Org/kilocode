@@ -4,7 +4,8 @@ import { Effect, Option, Schema } from "effect"
 import { json, request } from "./http.js"
 import { KiloServer } from "./server.js"
 
-export const DEFAULT_MODEL = "kilo-auto/frontier"
+// v1 `api/constants.ts`: both the signed-in and the anonymous fallback are the free router.
+export const DEFAULT_MODEL = "kilo-auto/free"
 export const DEFAULT_FREE_MODEL = "kilo-auto/free"
 export const SMALL_MODEL = "kilo-auto/small"
 
@@ -23,8 +24,8 @@ export interface Scope {
 }
 
 // Team callers select their first allowed model when defaults are unavailable, as in
-// v1 `provider/catalog.ts:recommend`. Personal accounts on the Kilo API keep v2's Frontier fallback.
-// As in v1, a custom or self-hosted server gets no defaults request and no fallback.
+// v1 `provider/catalog.ts:recommend`. Personal and anonymous callers fall back to Kilo Auto Free, as v1
+// `api/constants.ts` did. As in v1, a custom or self-hosted server gets no defaults request and no fallback.
 export function get(scope: Scope): Effect.Effect<string | undefined> {
   if (scope.endpoint && !kiloOrigin(scope.endpoint)) return Effect.succeed(undefined)
   const fallback = scope.token && scope.organizationID ? undefined : scope.token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
