@@ -37,7 +37,7 @@ export default Runtime.handler(
         return yield* Effect.fail(
           new Error(`No Kilo v1 session store at ${source}. Pass --from with the kilo.db file or its data directory.`),
         )
-      if (KiloV1Store.isV1Store(file))
+      if (KiloV1Store.isKiloV1Store(file))
         return yield* Effect.fail(
           new Error(
             `${file} is a Kilo v1 session store, and kilo2 never migrates it in place: v1 could no longer read it. Use a kilo2 store name that differs from v1's.`,

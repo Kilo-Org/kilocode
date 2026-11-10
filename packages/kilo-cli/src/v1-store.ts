@@ -61,19 +61,37 @@ export async function convert(file: string, options: Options) {
 }
 
 /**
- * Whether `file` is a Kilo v1 store: the tables the V1 migration reads, a table that only Kilo v1 creates, and no
- * `session_v2` of a kilo2 or V2 store. The Kilo marker keeps an older upstream `opencode.db` (which the server may still
- * migrate in place) and a kilo2 store from before the `session_v2` split out of this check.
+ * Whether `file` holds a v1 session schema the V1 migration can convert: the tables it reads and no `session_v2` of a
+ * kilo2 or V2 store. This is the check for a store the user names as the import source, so it accepts every v1 store,
+ * also one that no Kilo v1 version has opened since its own tables were added.
  */
 export function isV1Store(file: string) {
-  return inspect(file) === "v1"
+  return tablesOf(file)?.v1 === true
 }
 
 /**
- * The store at `file`: a Kilo v1 store, another SQLite database, or a file that cannot be read, which the caller must
- * not treat as a normal store. A store that another process holds is `other`: it is in use, not a v1 store to protect.
+ * The store at `file` for the guard that protects Kilo v1's only copy: a Kilo v1 store, another SQLite database, or a
+ * file that cannot be read, which the caller must not treat as a normal store. It is stricter than `isV1Store`: a v1
+ * schema counts only with a table that only Kilo v1 creates, so an older upstream `opencode.db` (which the server may
+ * still migrate in place) and a kilo2 store from before the `session_v2` split do not stop a start. A store that another
+ * process holds is `other`: it is in use, not a v1 store to protect.
  */
 export function inspect(file: string): "v1" | "other" | "unreadable" {
+  try {
+    const found = tablesOf(file, { strict: true })
+    return found?.v1 && found.kilo ? "v1" : "other"
+  } catch (error) {
+    return /locked|busy/i.test(String(error)) ? "other" : "unreadable"
+  }
+}
+
+/** Whether `file` is a Kilo v1 store by the guard's strict check. */
+export function isKiloV1Store(file: string) {
+  return inspect(file) === "v1"
+}
+
+/** The v1 traits of the tables in `file`; undefined when it cannot be read, unless `strict` asks for the error. */
+function tablesOf(file: string, options: { strict?: boolean } = {}) {
   try {
     const db = new SQLite(file, { readonly: true })
     try {
@@ -83,15 +101,17 @@ export function inspect(file: string): "v1" | "other" | "unreadable" {
           .all()
           .map((table) => table.name),
       )
-      const v2 = tables.has("session_v2")
-      const core = ["session", "message", "part", "project"].every((name) => tables.has(name))
-      return !v2 && core && kiloV1Tables.some((name) => tables.has(name)) ? "v1" : "other"
+      return {
+        v1: !tables.has("session_v2") && ["session", "message", "part", "project"].every((name) => tables.has(name)),
+        kilo: kiloV1Tables.some((name) => tables.has(name)),
+      }
     } finally {
       db.close()
     }
   } catch (error) {
-    // A store that a running server holds is not a v1 store to protect, unlike a corrupt file or a permission error.
-    return /locked|busy/i.test(String(error)) ? "other" : "unreadable"
+    if (options.strict) throw error
+    // Not a readable SQLite file, so not a store to import.
+    return undefined
   }
 }
 
@@ -108,7 +128,7 @@ const kiloV1Tables = [
 ]
 
 export function requireV1Store(file: string) {
-  if (!isV1Store(file)) throw new Error("not a Kilo v1 session store")
+  if (!isV1Store(file)) throw new Error("not a v1 session store")
 }
 
 /**

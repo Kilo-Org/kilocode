@@ -269,11 +269,23 @@ test("a file that cannot be read stops the start instead of counting as a normal
 
 test("a Kilo v1 store is not adopted, so the start cannot create the store the guard refuses", async () => {
   const { dir, data } = await root()
-  // An earlier build wrote its store under the upstream name; this one is a Kilo v1 store.
-  await v1Store(path.join(data, "opencode.db"), path.join(dir, "work"))
+  // The upstream-named file of an earlier build for this channel is the one `adopt` copies when no file has sessions.
+  await v1Store(path.join(data, "opencode-local.db"), path.join(dir, "work"))
   expect(await KiloDatabase.select({}, { data, channel: "local" })).toBe(path.join(data, "kilo2-local.db"))
   expect(existsSync(path.join(data, "kilo2-local.db"))).toBe(false)
-  expect(existsSync(path.join(data, "opencode.db"))).toBe(true)
+  expect(existsSync(path.join(data, "opencode-local.db"))).toBe(true)
+})
+
+test("a v1 store from before the Kilo tables is still imported, and is not taken for a store to protect", async () => {
+  const { dir, data } = await root()
+  const store = KiloDatabase.v1Store(data)
+  const v1 = await v1Store(store, path.join(dir, "work"))
+  for (const table of ["kilo_board_message", "kilo_board", "kilo_continuation_intent"]) v1.db.run(`DROP TABLE ${table}`)
+  await expect(KiloDatabase.refuseV1Store(store)).resolves.toBeUndefined()
+  expect(await KiloDatabase.importV1({ store, file: path.join(data, "kilo2.db"), data })).toEqual({
+    imported: 2,
+    skipped: false,
+  })
 })
 
 test("the import API returns the session count and reports an existing store as skipped", async () => {

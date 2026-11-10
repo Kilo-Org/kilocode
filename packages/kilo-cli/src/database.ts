@@ -105,7 +105,7 @@ async function adopt(file: string, data: string, channel: string, shared: boolea
   if (!source) return
   // A Kilo v1 store stays where it is. Copying it would create the store that `refuseV1Store` protects, and only the
   // explicit import may convert it.
-  if ((await import("./v1-store")).KiloV1Store.isV1Store(source)) {
+  if ((await import("./v1-store")).KiloV1Store.isKiloV1Store(source)) {
     console.error(
       `kilo2: ${source} is a Kilo v1 session store, so it stays as it is and its sessions are not adopted. Run \`kilo2 import v1\` to bring them forward, and kilo2 starts with a new database meanwhile.`,
     )
