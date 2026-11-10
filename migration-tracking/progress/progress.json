@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1906,
+    "done": 1927,
     "total": 9756,
-    "percent": 19.5,
+    "percent": 19.8,
     "dropped": 98,
     "kinds": [
       {
         "kind": "module",
-        "done": 1404,
+        "done": 1415,
         "total": 3513
       },
       {
@@ -21,22 +21,22 @@
       },
       {
         "kind": "patch",
-        "done": 110,
+        "done": 111,
         "total": 3440
       },
       {
         "kind": "test",
-        "done": 380,
+        "done": 389,
         "total": 2767
       }
     ],
     "landed": {
-      "plugin": 73,
+      "plugin": 74,
       "host": 15,
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 51,
+    "coreImports": 52,
     "sharedPatches": {
       "seam": 61,
       "patch": 46
@@ -60,6 +60,7 @@
     "@opencode/core/config/discovery",
     "@opencode/core/config/normalize",
     "@opencode/core/config/plugin/skill-file",
+    "@opencode/core/config/plugin/source",
     "@opencode/core/credential",
     "@opencode/core/database/database",
     "@opencode/core/database/path",
@@ -1459,12 +1460,12 @@
     },
     {
       "feature": "plan",
-      "done": 0,
+      "done": 6,
       "total": 6,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 2,
           "total": 2
         },
         "api": {
@@ -1476,7 +1477,7 @@
           "total": 0
         },
         "test": {
-          "done": 0,
+          "done": 4,
           "total": 4
         }
       }
@@ -1915,12 +1916,12 @@
     },
     {
       "feature": "session",
-      "done": 2,
+      "done": 4,
       "total": 113,
       "dropped": 2,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 2,
           "total": 23
         },
         "api": {
@@ -1932,7 +1933,7 @@
           "total": 17
         },
         "test": {
-          "done": 1,
+          "done": 2,
           "total": 69
         }
       }
@@ -2329,12 +2330,12 @@
     },
     {
       "feature": "tool",
-      "done": 17,
+      "done": 21,
       "total": 109,
       "dropped": 2,
       "kinds": {
         "module": {
-          "done": 10,
+          "done": 12,
           "total": 61
         },
         "api": {
@@ -2342,13 +2343,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 7
         },
         "test": {
-          "done": 7,
+          "done": 8,
           "total": 41
         }
+      },
+      "landed": {
+        "plugin": 1,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6139,12 +6146,12 @@
     },
     {
       "feature": "vscode",
-      "done": 1249,
+      "done": 1258,
       "total": 2022,
       "dropped": 35,
       "kinds": {
         "module": {
-          "done": 1006,
+          "done": 1012,
           "total": 1419
         },
         "api": {
@@ -6156,7 +6163,7 @@
           "total": 0
         },
         "test": {
-          "done": 243,
+          "done": 246,
           "total": 603
         }
       }
@@ -6292,6 +6299,7 @@
     "patch:server:5e0f8563b425": "plugin",
     "patch:snapshot:80d332891272": "plugin",
     "patch:snapshot:8579451b046f": "plugin",
+    "patch:tool:fabed9da976a": "plugin",
     "patch:tui:c29e2d297ca2": "plugin",
     "patch:unattributed:agent:161afe543464": "plugin",
     "patch:unattributed:agent:55cce67688d4": "plugin",
@@ -7371,6 +7379,7 @@
     "module:packages/kilo-vscode/tests/unit/document-reader.test.ts",
     "module:packages/kilo-vscode/tests/unit/edit-preview.test.ts",
     "module:packages/kilo-vscode/tests/unit/env-copy.test.ts",
+    "module:packages/kilo-vscode/tests/unit/escape-regexp.test.ts",
     "module:packages/kilo-vscode/tests/unit/fork-session.test.ts",
     "module:packages/kilo-vscode/tests/unit/git-executable.test.ts",
     "module:packages/kilo-vscode/tests/unit/git-import.test.ts",
@@ -7402,6 +7411,7 @@
     "module:packages/kilo-vscode/tests/unit/new-worktree-branch.test.ts",
     "module:packages/kilo-vscode/tests/unit/notebook-core.test.ts",
     "module:packages/kilo-vscode/tests/unit/open-config.test.ts",
+    "module:packages/kilo-vscode/tests/unit/open-plan.test.ts",
     "module:packages/kilo-vscode/tests/unit/permission-editor.test.ts",
     "module:packages/kilo-vscode/tests/unit/pr-actions.test.ts",
     "module:packages/kilo-vscode/tests/unit/pr-check-feedback.test.ts",
@@ -7449,6 +7459,7 @@
     "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts",
     "module:packages/kilo-vscode/tests/unit/tool-default-open.test.ts",
     "module:packages/kilo-vscode/tests/unit/transcript-parts.test.ts",
+    "module:packages/kilo-vscode/tests/unit/transcript-search-text.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-paste-collapse.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-speech-to-text.test.ts",
@@ -7742,6 +7753,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskHeader.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskTimeline.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskUsage.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/TranscriptSearch.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/index.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-fold.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-input-utils.ts",
@@ -7750,6 +7762,8 @@
     "module:packages/kilo-vscode/webview-ui/src/components/chat/tool-default-open.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-cache.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-row-handoff.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-search-highlight.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/transcript-search-text.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/history/HistoryView.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/marketplace/ItemCard.tsx",
@@ -7866,6 +7880,7 @@
     "module:packages/kilo-vscode/webview-ui/src/context/onboarding/work-style-toasts.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/rich-provider.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts",
+    "module:packages/kilo-vscode/webview-ui/src/context/transcript-search.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/vscode.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/work-style-state.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/work-style.tsx",
@@ -7935,12 +7950,14 @@
     "module:packages/kilo-vscode/webview-ui/src/utils/config-scope.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/config-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/date.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/escape-regexp.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/focus.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/format.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/ime-enter.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/keybind-tokens.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/local-tabs.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/message-time.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/open-plan.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/path-mentions.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/pr-review.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/prompt-mention-drop.ts",
@@ -8007,6 +8024,8 @@
     "module:packages/opencode/src/kilocode/notebook/service.ts",
     "module:packages/opencode/src/kilocode/permission/agent-manager.ts",
     "module:packages/opencode/src/kilocode/pii.ts",
+    "module:packages/opencode/src/kilocode/plan-file.ts",
+    "module:packages/opencode/src/kilocode/plan-followup.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
     "module:packages/opencode/src/kilocode/plugins/permissions.ts",
@@ -8032,6 +8051,7 @@
     "module:packages/opencode/src/kilocode/server/httpapi/groups/indexing.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/indexing.ts",
+    "module:packages/opencode/src/kilocode/session/native-plan-prompt.txt",
     "module:packages/opencode/src/kilocode/session/recall-search.ts",
     "module:packages/opencode/src/kilocode/skill-remove.ts",
     "module:packages/opencode/src/kilocode/skills/builtin.ts",
@@ -8041,6 +8061,8 @@
     "module:packages/opencode/src/kilocode/tool/browser-open.txt",
     "module:packages/opencode/src/kilocode/tool/notebook.ts",
     "module:packages/opencode/src/kilocode/tool/ods.ts",
+    "module:packages/opencode/src/kilocode/tool/open-plan.ts",
+    "module:packages/opencode/src/kilocode/tool/plan.ts",
     "module:packages/opencode/src/kilocode/tool/read-docx.ts",
     "module:packages/opencode/src/kilocode/tool/read-extract.ts",
     "module:packages/opencode/src/kilocode/tool/semantic-search-output.ts",
@@ -8066,6 +8088,7 @@
     "module:packages/opencode/test/kilocode/commit-message/git-context.test.ts",
     "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts",
     "module:packages/opencode/test/kilocode/enhance-prompt.test.ts",
+    "module:packages/opencode/test/kilocode/ensure-plan-dir.test.ts",
     "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
     "module:packages/opencode/test/kilocode/indexing-auth.test.ts",
     "module:packages/opencode/test/kilocode/indexing-dialog-state.test.ts",
@@ -8087,6 +8110,10 @@
     "module:packages/opencode/test/kilocode/notebook-tools.test.ts",
     "module:packages/opencode/test/kilocode/patch-jsonc.test.ts",
     "module:packages/opencode/test/kilocode/permission/agent-manager-prompt.test.ts",
+    "module:packages/opencode/test/kilocode/plan-exit-detection.test.ts",
+    "module:packages/opencode/test/kilocode/plan-file.test.ts",
+    "module:packages/opencode/test/kilocode/plan-followup.test.ts",
+    "module:packages/opencode/test/kilocode/plan-mode-ruleset-stacking.test.ts",
     "module:packages/opencode/test/kilocode/primary-worktree.test.ts",
     "module:packages/opencode/test/kilocode/question-option-schema.test.ts",
     "module:packages/opencode/test/kilocode/read-docx.test.ts",
@@ -8116,6 +8143,7 @@
     "module:packages/opencode/test/kilocode/terminal-activity.test.ts",
     "module:packages/opencode/test/kilocode/todowrite-description.test.ts",
     "module:packages/opencode/test/kilocode/tool-registry-indexing.test.ts",
+    "module:packages/opencode/test/kilocode/tool/open-plan.test.ts",
     "module:packages/opencode/test/kilocode/tool/semantic-search-output.test.ts",
     "module:packages/opencode/test/kilocode/tui/usage.test.ts",
     "module:packages/opencode/test/kilocode/worktree-diff.test.ts",
@@ -8182,6 +8210,7 @@
     "patch:server:5e0f8563b425",
     "patch:snapshot:80d332891272",
     "patch:snapshot:8579451b046f",
+    "patch:tool:fabed9da976a",
     "patch:tui:c29e2d297ca2",
     "patch:unattributed:agent:0a0c97da2c48",
     "patch:unattributed:agent:161afe543464",
