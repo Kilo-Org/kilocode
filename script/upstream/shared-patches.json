@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 115,
-    "markedLines": 1889,
-    "unmarkedLines": 300,
+    "files": 121,
+    "markedLines": 2028,
+    "unmarkedLines": 326,
     "deletedFiles": 0
   },
   "files": {
@@ -100,12 +100,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -325,7 +325,7 @@
     },
     "packages/core/src/session/compaction.ts": {
       "rung": 4,
-      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. The v2.1.4 resolution adds one marked line to retain upstream's background usage callback in the multiline billing call. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
+      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. The v2.1.4 resolution adds one marked line to retain upstream's background usage callback in the multiline billing call. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction. The steer guard reads the compaction's durability, so the automatic Started event now opens before the compaction resolves its model and `SessionCompaction.running` exposes that check to SessionExecution."
     },
     "packages/core/src/session/stats.ts": {
       "rung": 4,
@@ -452,17 +452,17 @@
     },
     "packages/client/src/effect/api/api.ts": {
       "rung": 3,
-      "seam": "Generated Effect client types for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "seam": "Generated Effect client types for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/client/src/effect/generated/client.ts": {
       "rung": 3,
-      "seam": "Generated Effect client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "seam": "Generated Effect client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/client/src/promise/generated/client.ts": {
       "rung": 3,
-      "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/core/src/tool/read-filesystem.ts": {
@@ -481,6 +481,30 @@
     "packages/patchmark/test/slow-inputs.test.ts": {
       "rung": 4,
       "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
+    },
+    "packages/core/src/session.ts": {
+      "rung": 3,
+      "seam": "`Session.Interface.interrupt` accepts the optional `steer` flag and passes it to `SessionExecution`. A client that steers a running turn needs the server to tell 'stop this model call' apart from 'stop everything'; the interrupt options are the only input the execution layer reads, and no plugin hook reaches interruption. Upstream callers never set the flag, so their behavior does not change."
+    },
+    "packages/core/src/session/execution.ts": {
+      "rung": 3,
+      "seam": "`SessionExecution.interrupt` does not stop the execution when the interruption carries `steer` and a compaction is durably running, so a steered prompt can never cancel a checkpoint. The checkpoint is all-or-nothing and its summary may already be paid for; the admitted prompt is delivered at the boundary after the compaction. An interruption without the flag still cancels one. No plugin hook reaches interruption, and upstream never sets the flag. Rung 1 cannot do this: a Kilo RPC can read the Session context and then call interrupt, but that is check-then-act across awaits, and the gap is exactly when a steer is sent, right after a response ends and automatic compaction opens. No plugin hook runs before interruption; plugins only observe it afterwards, so only the interruption itself can decide atomically. A host mirror of SessionExecution would duplicate the coordinator, the write-ahead claim and restart recovery for this one row read."
+    },
+    "packages/core/src/session/session.ts": {
+      "rung": 3,
+      "seam": "Pass the optional `steer` flag from the Session handle to `SessionExecution.interrupt`. The handle is the only path to interruption, so no plugin seam exists. Omitted, the call is unchanged."
+    },
+    "packages/core/test/session-execution.test.ts": {
+      "rung": 3,
+      "seam": "Test for the steer guard: a steer-marked interruption returns false and leaves the running compaction row alone, while the same request without the flag still interrupts. The suite belongs to the upstream package, and the case only exists for Kilo's flag."
+    },
+    "packages/protocol/src/groups/session.ts": {
+      "rung": 3,
+      "seam": "Optional `steer` query parameter on `session.interrupt`, with descriptions for it and its response, so a client can mark an interruption issued to deliver a prompt. Omitted, the endpoint behaves as upstream."
+    },
+    "packages/server/src/handlers/session.ts": {
+      "rung": 3,
+      "seam": "Forward the `steer` query parameter to `Session.interrupt`. The handler owns the endpoint input and no plugin hook sees it; omitted, the call is unchanged."
     }
   }
 }
