@@ -17,6 +17,7 @@ function create(directory: string, chat: boolean) {
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const event = events()
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
+  const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
   const connection = createClientConnection(api, { onEvent: event.emit, pageLifecycle: true })
 
@@ -24,7 +25,11 @@ function create(directory: string, chat: boolean) {
     const message = event.data
     if (!message || typeof message !== "object" || !("type" in message)) return
     if (message.type === "command") return commands.forEach((handler) => handler(message.name))
-    if (message.type === "keybindings") return setBindings(message.bindings)
+    if (message.type === "keybindings") {
+      setBindings(message.bindings)
+      setSelection(message.selection)
+      return
+    }
     bridge.receive(message)
   }
   window.addEventListener("message", receive)
@@ -37,6 +42,7 @@ function create(directory: string, chat: boolean) {
     event,
     directory,
     bindings,
+    selection,
     chat,
     onCommand(handler) {
       commands.add(handler)

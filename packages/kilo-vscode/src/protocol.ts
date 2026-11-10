@@ -434,7 +434,7 @@ export type ToWebview =
   /** Shows a session in the sidebar, for example the parent of a closed subagent tab. */
   | { type: "openSession"; sessionID: string }
   | ({ type: "navigate" } & SettingsNavigation)
-  | { type: "keybindings"; bindings: Record<string, string> }
+  | { type: "keybindings"; bindings: Record<string, string>; selection: boolean }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "modelPreferencesLoaded"; value: ModelPreferences }

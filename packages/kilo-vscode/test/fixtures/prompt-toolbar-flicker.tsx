@@ -111,6 +111,9 @@ const workspace = (directory: string) =>
     connection: { status: () => "connected" },
     report: () => undefined,
     directory,
+    // The prompt hint reads the keybindings and the editor selection of the scope.
+    bindings: () => ({}),
+    selection: () => false,
     api: { generate: { text: async () => ({ text: "" }) }, rpc: () => sandbox },
     data: {
       listen: () => () => undefined,
