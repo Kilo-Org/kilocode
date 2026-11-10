@@ -31,6 +31,7 @@
     "@opencode/core": "workspace:*",
     "@opencode/plugin": "workspace:*",
     "@opencode/schema": "workspace:*",
+    "@opencode/tui": "workspace:*",
     "@opencode/util": "workspace:*",
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",

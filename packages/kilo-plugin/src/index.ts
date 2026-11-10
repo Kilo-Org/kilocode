@@ -35,6 +35,7 @@ import { KiloQuestionPlugin } from "./question"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
+import { KiloSessionDrain } from "./session-drain"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloSandbox } from "./sandbox"
@@ -86,6 +87,8 @@ export const KiloPlugins = [
   KiloAgentManagerPlugin,
   // Per-job list, stop and continue-in-background for the subagents of one session.
   KiloBackgroundJobs.Plugin,
+  // Waits until a session and the work it started have gone quiet. kilo_port(goals:b983b6af7e4b)
+  KiloSessionDrain.Plugin,
   KiloRecallPlugin,
   // v1 enabled codebase indexing through a built-in plugin entry. kilo_port(indexing:2e5dfe2574c6)
   KiloIndexingPlugin,
