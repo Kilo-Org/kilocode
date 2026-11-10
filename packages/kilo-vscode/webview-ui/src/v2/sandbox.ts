@@ -28,6 +28,11 @@ type Remembered = {
   unsupported?: boolean
   statuses: Record<string, SandboxStatus>
 }
+
+// The webview outlives every worktree and session it visited, so the cache keeps a bounded number of directories
+// and, inside each, of session statuses. An evicted entry only costs a first-frame read, never correctness.
+const MAX_DIRECTORIES = 20
+const MAX_STATUSES = 50
 const remembered = new Map<string, Remembered>()
 
 function reason(error: unknown): string {
@@ -57,26 +62,40 @@ export function createSandbox(input: {
   let retry: ReturnType<typeof setTimeout> | undefined
   let attempts = 0
 
-  // Every answer is kept for the next composer of this directory.
+  // Every answer is kept for the next composer of this directory. Re-inserting the directory keeps the map's
+  // insertion order as recency order, so the entry cap evicts the worktree that has gone longest without a read.
   const remember = (patch: Partial<Remembered>) => {
-    const current = remembered.get(directory)
-    remembered.set(directory, {
-      ...current,
-      statuses: { ...current?.statuses, ...statuses() },
-      ...patch,
-    })
+    const current = remembered.get(directory) ?? { statuses: {} }
+    remembered.delete(directory)
+    remembered.set(directory, { ...current, ...patch })
+    if (remembered.size <= MAX_DIRECTORIES) return
+    const oldest = remembered.keys().next().value
+    if (oldest !== undefined) remembered.delete(oldest)
   }
   const storeStatus = (sessionID: string, value: SandboxStatus) => {
     const next = mergeStatus(statuses(), sessionID, value)
     setStatuses(next)
-    remember({ statuses: next })
+    // Merge one session into the shared record instead of writing this instance's whole map back: a sibling composer
+    // for the same directory can hold an older snapshot, and its own updates must not replace newer statuses.
+    const current = remembered.get(directory) ?? { statuses: {} }
+    const shared = mergeStatus(current.statuses, sessionID, value)
+    if (shared === current.statuses) return
+    const entries = Object.entries(shared)
+    remember({
+      statuses: Object.fromEntries(
+        entries.length > MAX_STATUSES ? entries.slice(entries.length - MAX_STATUSES) : entries,
+      ),
+    })
   }
 
   const waiters: (() => void)[] = []
   // A server without the sandbox plugin fails `support`; the first prompt must not wait for it.
   let unsupported = saved?.unsupported ?? false
+  // A reply that predates the first prompt cannot seed it: the default may have changed while this composer was
+  // unmounted, so `metadata` waits for a reply of its own request.
+  let fresh = false
   const settle = () => {
-    if (preference() && (support() || unsupported)) for (const resolve of waiters.splice(0)) resolve()
+    if (preference() && (support() || unsupported) && fresh) for (const resolve of waiters.splice(0)) resolve()
   }
   const defaultsReady = () =>
     new Promise<void>((resolve) => {
@@ -87,6 +106,7 @@ export function createSandbox(input: {
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "sandboxDefaultLoaded") return
+    fresh = true
     setPreference({ explicit: message.explicit })
     remember({ preference: { explicit: message.explicit } })
     settle()
@@ -222,9 +242,13 @@ export function createSandbox(input: {
     },
     /** The session metadata for the first prompt. */
     async metadata() {
-      if (!preference()) requestDefaults()
+      // Always ask again: the remembered default is only a rendering hint, and the user may have changed it while
+      // this composer was unmounted. The cached support still keeps the first prompt from waiting for a second read.
+      fresh = false
+      requestDefaults()
       if (!support()) readSupport()
       await defaultsReady()
+      fresh = false
       return { "kilocode.sandbox": { enabled: desired(), version: 0 } }
     },
   }
