@@ -74,14 +74,27 @@ runs:
         key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ steps.cache.outputs.version }}-${{ hashFiles('bun.lock', 'patches/**') }}
         # Each dev merge changes beta's bun.lock. Beta falls back to the newest cache for the same Bun version
         # (Bun's cache stores every package version separately) instead of installing everything from npm.
-        restore-keys: ${{ (github.ref_name == 'beta' && format('{0}-{1}-bun-{2}-', runner.os, runner.arch, steps.cache.outputs.version)) || '' }}
+        restore-keys: ${{ ((github.ref_name == 'beta' || github.event_name == 'pull_request') && format('{0}-{1}-bun-{2}-', runner.os, runner.arch, steps.cache.outputs.version)) || '' }} # kilocode_change - pull requests never save, so they also fall back instead of downloading every package after a lockfile change
 
     - name: Install setuptools for distutils compatibility
       run: python3 -m pip install setuptools || pip install setuptools || true
       shell: bash
 
     - name: Install dependencies
-      run: bun install --frozen-lockfile ${{ inputs.install-flags }}
+      # kilocode_change start - bun install has no network timeout, so a stalled download held the job for its full hour.
+      # A cold install takes about two minutes; stop an attempt after ten and try again.
+      run: |
+        for attempt in 1 2 3; do
+          bun install --frozen-lockfile ${{ inputs.install-flags }} &
+          pid=$!
+          (sleep 600 && kill "$pid" 2>/dev/null) &
+          watchdog=$!
+          if wait "$pid"; then kill "$watchdog" 2>/dev/null; exit 0; fi
+          kill "$watchdog" 2>/dev/null
+          echo "::warning::bun install attempt $attempt failed or timed out"
+        done
+        exit 1
+      # kilocode_change end
       shell: bash
 
     - name: Save Bun dependencies

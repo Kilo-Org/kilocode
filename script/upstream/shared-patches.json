@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 107,
-    "markedLines": 1747,
+    "markedLines": 1762,
     "unmarkedLines": 300,
     "deletedFiles": 0
   },
@@ -29,7 +29,7 @@
     },
     ".github/actions/setup-bun/action.yml": {
       "rung": 3,
-      "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it. Also pins `actions/setup-node` (v7.1.0) and `actions/cache` (v6.1.0) to current releases; upstream's pins lag and an action reference cannot be overridden from outside the composite action."
+      "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it. Also pins `actions/setup-node` (v7.1.0) and `actions/cache` (v6.1.0) to current releases; upstream's pins lag and an action reference cannot be overridden from outside the composite action. Pull requests restore the newest Bun cache for the same OS, CPU and Bun version (they never save it), and the install stops an attempt after ten minutes and retries up to three times, because `bun install` has no network timeout and a stalled download held a job for its full hour."
     },
     ".github/actions/setup-git-committer/action.yml": {
       "rung": 3,
