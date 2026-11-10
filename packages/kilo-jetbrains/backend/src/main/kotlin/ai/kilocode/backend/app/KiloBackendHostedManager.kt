@@ -314,6 +314,19 @@ class KiloBackendHostedManager(
                     is ChatEventDto.SessionIdle -> if (HostedIDs.isSession(event.sessionID)) {
                         _statuses.update { it + (event.sessionID to SessionStatusDto("idle")) }
                     }
+                    // Local sessions get `busy` from the server's session.status stream; the Cloud
+                    // session host only reliably emits the turn lifecycle. Derive the same status
+                    // from it so the shared statuses map — and every running indicator built on it
+                    // (tree row, session rows, tab) — treats a Cloud turn exactly like a local one.
+                    is ChatEventDto.TurnOpen -> if (HostedIDs.isSession(event.sessionID)) {
+                        _statuses.update { it + (event.sessionID to SessionStatusDto("busy")) }
+                    }
+                    is ChatEventDto.TurnClose -> if (HostedIDs.isSession(event.sessionID)) {
+                        _statuses.update { current ->
+                            if (current[event.sessionID]?.type == "busy") current + (event.sessionID to SessionStatusDto("idle"))
+                            else current
+                        }
+                    }
                     is ChatEventDto.PermissionAsked -> if (HostedIDs.isSession(event.sessionID)) {
                         permissionOwner[event.request.id] = event.sessionID
                     }

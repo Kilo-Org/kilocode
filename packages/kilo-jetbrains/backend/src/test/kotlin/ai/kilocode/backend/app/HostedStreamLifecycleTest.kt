@@ -117,6 +117,27 @@ class HostedStreamLifecycleTest {
     }
 
     @Test
+    fun `hosted turn lifecycle drives busy and idle when no session status is emitted`() = runBlocking(Dispatchers.Default) {
+        mock.sessionStatuses = """{"ses_cloud":{"type":"idle"}}"""
+        ready()
+        open()
+        fence()
+        next { it is ChatEventDto.Resnapshot && it.phase == "complete" }
+        assertEquals("idle", app.hosted.statuses.value[session]?.type)
+
+        // Cloud streams the turn but not session.status; the running indicator must still light up
+        // through the shared statuses map, exactly like a local session's busy status.
+        mock.pushFeed(path, """{"type":"session.turn.open","properties":{"sessionID":"ses_cloud"}}""")
+        next { it is ChatEventDto.TurnOpen && it.sessionID == session }
+        withTimeout(TIMEOUT) { app.hosted.statuses.first { it[session]?.type == "busy" } }
+
+        mock.pushFeed(path, """{"type":"session.turn.close","properties":{"sessionID":"ses_cloud","reason":"completed"}}""")
+        next { it is ChatEventDto.TurnClose && it.sessionID == session }
+        withTimeout(TIMEOUT) { app.hosted.statuses.first { it[session]?.type == "idle" } }
+        Unit
+    }
+
+    @Test
     fun `completed fence waits for authoritative status before buffered live events`() = runBlocking(Dispatchers.Default) {
         mock.sessionStatuses = """{"ses_cloud":{"type":"idle"}}"""
         ready()
