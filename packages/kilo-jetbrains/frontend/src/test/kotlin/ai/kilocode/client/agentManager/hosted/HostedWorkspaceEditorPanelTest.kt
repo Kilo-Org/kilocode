@@ -692,6 +692,30 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         assertEquals(0, rpc.starts)
     }
 
+    fun testBlankNewSessionNeverInheritsThePreviousSessionsPreparation() {
+        emit(HostedSystemEventDto(key, "cloud.status", step = "allocate", message = "Preparing compute",
+            cloudStatus = "preparing", observedAt = 110.0))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<ProgressPanel>().any { it.isVisible && it.labelText() == "Preparing compute" }
+        } })
+        val manager = HostedWorkspaceEditorPanel::class.java
+            .getDeclaredField("manager")
+            .apply { isAccessible = true }
+            .get(panel) as ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
+
+        edtWait { manager.newSession() }
+        assertTrue(coroutines.pumpUntil { edtWait { descendants(panel).filterIsInstance<SessionUi>().any { it.blank } } })
+        // Another status tick while the blank panel is current must not paint the old session's strip on it.
+        emit(HostedSystemEventDto(key, "preparing", step = "cloning", action = "step_progress",
+            message = "Cloning repository", observedAt = 120.0))
+        coroutines.drain()
+
+        edtWait {
+            val blank = descendants(panel).filterIsInstance<SessionUi>().single { it.blank }
+            assertTrue(descendants(blank).filterIsInstance<ProgressPanel>().none { it.isVisible })
+        }
+    }
+
     fun testWorkspaceHeaderUsesTheSessionTitleThenFallsBackToWorkspaceMetadata() {
         val title = edtWait { descendants(panel).filterIsInstance<SimpleColoredComponent>().first() }
         // A titled session wins everywhere: tree row, header, tab, and status bar agree.

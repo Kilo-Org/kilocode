@@ -4,6 +4,7 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.rpc.dto.PromptDto
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * A hosted editor starts blank. The first prompt must create the Cloud session in one call and then
@@ -35,6 +36,38 @@ class SessionUiHostedCreateTest : SessionUiTestBase() {
         // The Cloud start call owns the prompt, so the generic prompt endpoint stays untouched.
         assertTrue(pumpUntil { ui.title() == "Created session" })
         assertTrue("hosted creation must not send the prompt twice", rpc.prompts.isEmpty())
+    }
+
+    fun `test a prompt sent while the hosted session is still being created is not dropped`() {
+        val gate = CompletableDeferred<Unit>()
+        val manager = object : SessionManager {
+            override val hosted = true
+            override fun newSession() = Unit
+            override fun showHistory(back: (() -> Unit)?) = Unit
+            override fun openSession(ref: SessionRef) = Unit
+            override suspend fun createSession(prompt: PromptDto): SessionRef {
+                gate.await()
+                return SessionRef.Hosted("kilo-cloud", "worktree_1", "ses_one", "Created session")
+            }
+        }
+        ui = newUi(null, manager = manager)
+        layout()
+        settle()
+        val panel = find(ui, PromptPanel::class.java)!!
+
+        panel.setText("first")
+        panel.send()
+        settle()
+        panel.setText("second")
+        panel.send()
+        settle()
+        gate.complete(Unit)
+
+        // The start call carried "first"; "second" joined the same create and still needs its own send.
+        assertTrue(pumpUntil { rpc.prompts.size == 1 })
+        val sent = rpc.prompts.single()
+        assertEquals("hosted:kilo-cloud:worktree_1:ses_one", sent.first)
+        assertEquals("second", sent.third.parts.single().text)
     }
 
     fun `test a failed hosted creation surfaces its error`() {

@@ -49,7 +49,6 @@ import ai.kilocode.client.agentManager.worktree.aggregateSessionActivity
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
 import ai.kilocode.rpc.dto.HostedIDs
-import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
@@ -512,31 +511,6 @@ class AgentManagerPanel(
     }
 
     @RequiresEdt
-    internal fun startHosted(ref: ai.kilocode.rpc.dto.HostedWorkspaceRefDto, request: HostedStartSessionDto) {
-        val target = project ?: return
-        hostedCs.launch {
-            val result = target.service<KiloHostedService>().start(ref, request)
-            edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
-                val workspace = result.workspace
-                val session = result.session
-                if (result.failure != null || workspace == null || session == null) {
-                    KiloNotifications.error(
-                        target,
-                        KiloBundle.message("hosted.workspace.session.failed"),
-                        result.failure?.message,
-                        KiloBundle.message("common.retry"),
-                    ) { startHosted(ref, request) }
-                    return@edt
-                }
-                target.service<HostedManagementService>().select(ref, session.id)
-                openHostedWorkspace(target, workspace)
-                sync()
-                target.service<KiloHostedService>().refresh(controller.directory)
-            }
-        }
-    }
-
-    @RequiresEdt
     internal fun dismissHosted(item: HostedWorkspaceDto) {
         val target = project ?: return
         target.service<HostedManagementService>().dismiss(item.ref)
@@ -549,6 +523,7 @@ class AgentManagerPanel(
     internal fun deleteHosted(item: HostedWorkspaceDto) {
         val target = project ?: return
         val removal = target.service<HostedWorkspaceRemoval>()
+        tree.reveal(item.ref.key)
         val anchor = tree.point(item.ref.key) ?: return
         removal.confirm(anchor, item.ref, controller.directory)
     }

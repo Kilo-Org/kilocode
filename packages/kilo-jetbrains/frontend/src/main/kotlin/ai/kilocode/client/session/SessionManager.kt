@@ -42,8 +42,9 @@ interface SessionManager {
     fun openSession(ref: SessionRef)
 
     /**
-     * Hosted backends create their session from the first prompt. Returns the live ref, or null to
-     * fall back to the local create path. Only called when [hosted] is true.
+     * Hosted backends create their session from the first prompt and return the live ref. Only
+     * called when [hosted] is true; there is no local fallback, so a null return (this default) is
+     * reported as a failed Cloud session start.
      */
     suspend fun createSession(prompt: PromptDto): SessionRef? = null
 

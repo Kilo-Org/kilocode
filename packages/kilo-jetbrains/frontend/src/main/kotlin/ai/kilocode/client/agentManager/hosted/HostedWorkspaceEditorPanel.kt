@@ -333,8 +333,9 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     @RequiresEdt
     private fun applyStatus() {
         val state = hosted.state.value
-        val session = selected
-        // A blank New Session panel keeps its prompt; only a real Cloud session shows preparation.
+        // A blank New Session panel keeps its prompt; only the Cloud session that is actually shown
+        // receives preparation, never the one that was selected before "+" was pressed.
+        val session = selected?.takeIf { manager.currentKey() == it }
         session?.let { manager.setPreparation(state.readiness(ref, it), state.preparations[it]) }
         val item = state.presentation(ref)
         val status = HostedWorkspaceStatus.of(item)

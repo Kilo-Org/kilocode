@@ -123,6 +123,9 @@ internal class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     override fun onStart() {
         manager.start()
+    }
+
+    override fun onShown() {
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
     }

@@ -84,6 +84,9 @@ internal abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
 
     protected open fun onStart() {}
 
+    /** Every transition to showing, after [onStart] on the first one; refresh anything polled. */
+    protected open fun onShown() {}
+
     protected open fun onHostChanged() {}
 
     private var started = false
@@ -254,7 +257,9 @@ internal abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
         host().onListChanged = { onHostChanged() }
         addHierarchyListener { event ->
             if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
-            if (isShowing) start()
+            if (!isShowing) return@addHierarchyListener
+            start()
+            onShown()
         }
     }
 

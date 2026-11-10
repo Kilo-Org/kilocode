@@ -131,7 +131,8 @@ class SessionController(
 
     private data class OrganizationTarget(val org: String?)
     private data class Followup(val dir: String, val time: Long)
-    private data class Created(val id: String, val submitted: Boolean)
+    /** [submitted] is the message the create call itself delivered; every other dispatch still sends. */
+    private data class Created(val id: String, val submitted: String? = null)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
     private data class RevertOp(val key: Long)
     private data class Dispatch(
@@ -149,6 +150,8 @@ class SessionController(
         internal const val DISPLAY_DELAY_MS = 1_000L
         internal const val REVERT_TIMEOUT_MS = 30_000L
         internal const val HOSTED_UNKNOWN_GRACE_MS = 2_000L
+        /** Retryable history failures deferred while the sandbox boots before the error card shows. */
+        internal const val HOSTED_DEFERRAL_LIMIT = 15
         private const val FOLLOWUP_TTL_MS = 30_000L
         private const val FOLLOWUP_NEW_SESSION = "Start new session"
     }
@@ -203,6 +206,7 @@ class SessionController(
     private var hostedStarted = false
     private var hostedRetryToken: SessionLoadState.Loading? = null
     private var lastReadiness = HostedReadiness.Unknown
+    private var hostedDeferrals = 0
     private var hostedFallback: UiTimer? = null
     // The app-readiness observed on the previous AppChanged tick. Recovery requires both a later
     // non-READY -> READY edge and a READY observed before that edge: restored tabs commonly see
@@ -409,11 +413,13 @@ class SessionController(
         ) + props)
         showSession()
         optimistic?.let(::addOptimistic)
-        val pending = sid?.let { CompletableDeferred(Created(it, false)) } ?: session(optimistic)
+        val pending = sid?.let { CompletableDeferred(Created(it)) } ?: session(optimistic)
         cs.launch {
             try {
                 val created = pending.await() ?: return@launch
-                if (!created.submitted) send(created.id)
+                // A dispatch that joined an in-flight hosted create still owns its own prompt; only
+                // the message the start call carried is already on the server.
+                if (created.submitted == null || created.submitted != optimistic?.messageID) send(created.id)
                 capture("Conversation Message", sessionProps(created.id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + props)
                 LOG.debug { "${ChatLogSummary.sid(created.id)} kind=${data.kind} dispatched=true" }
             } catch (e: Exception) {
@@ -479,8 +485,9 @@ class SessionController(
     private suspend fun createSession(prompt: PromptDto?): Created? {
         if (isHosted) {
             val starter = create ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed"))
-            val hosted = starter(prompt ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed")))
-                ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed"))
+            val request = prompt ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed"))
+            // The manager contract has no local fallback: a hosted surface without a Cloud start is a bug.
+            val hosted = starter(request) ?: throw IllegalStateException(KiloBundle.message("hosted.workspace.session.failed"))
             runEdt {
                 if (disposed) return@runEdt
                 ref = hosted
@@ -498,7 +505,7 @@ class SessionController(
                 created(hosted)
             }
             LOG.info("${ChatLogSummary.sid(hosted.id)} kind=session hosted=true created=true")
-            return Created(hosted.id, submitted = true)
+            return Created(hosted.id, submitted = prompt.messageID)
         }
         val session = sessions.create(directory)
         runEdt {
@@ -518,7 +525,7 @@ class SessionController(
             subscribeEvents()
             created(SessionRef.Local(session))
         }
-        return Created(session.id, submitted = false)
+        return Created(session.id)
     }
 
     fun abort() {
@@ -805,10 +812,11 @@ class SessionController(
         loadSession(token)
     }
 
+    /** Only an explicit upstream 5xx or the live-runtime code is a booting sandbox; anything else is real. */
     private fun retryableHosted(e: Exception): Boolean {
         val raw = e.message.orEmpty()
         val status = Regex("""HTTP (\d{3})""").find(raw)?.groupValues?.get(1)?.toIntOrNull()
-        return status == null || status >= 500 || raw.contains("KILO_LIVE_RUNTIME_UNAVAILABLE")
+        return (status != null && status >= 500) || raw.contains("KILO_LIVE_RUNTIME_UNAVAILABLE")
     }
 
     private fun historyError(target: SessionRef, e: Exception): SessionState.Error {
@@ -1549,10 +1557,16 @@ class SessionController(
                         if (epoch != generation) return@edt
                         if (promptRevision != revision) return@edt
                         // The sandbox may still be booting: keep the preparation progress and load
-                        // again when Cloud reports ready instead of showing "not available".
-                        if (retryableHosted(e) && lastReadiness != HostedReadiness.Ready) {
+                        // again when Cloud reports ready instead of showing "not available". The
+                        // fallback timer bounds the wait so a readiness that never settles still ends
+                        // in the retryable error card rather than an indefinite Loading.
+                        if (retryableHosted(e) && lastReadiness != HostedReadiness.Ready &&
+                            hostedDeferrals < HOSTED_DEFERRAL_LIMIT
+                        ) {
+                            hostedDeferrals++
                             hostedToken = token
                             hostedStarted = false
+                            scheduleHostedFallback()
                             return@edt
                         }
                     }
