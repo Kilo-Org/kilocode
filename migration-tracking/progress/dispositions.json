@@ -60,7 +60,7 @@
   },
   "module:packages/kilo-gateway/src/api/constants.ts": {
     "state": "ported",
-    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers and backend prompt directive enum). packages/kilo-plugin/src/gateway/prompt.ts applies those directives through native session hooks, using current v2 templates and narrow model-specific adaptations. The event service URL goes with event-service/client.ts. The signed-in personal fallback remains v2's kilo-auto/frontier decision; unavailable team defaults select the first team model, as main provider/catalog.ts recommend does. As recommend does, a custom or token-embedded server origin gets no defaults request: teams select the first team model and personal accounts the first model in v1 Provider.sort order (KiloDefaults.firstSorted).",
+    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers and backend prompt directive enum). packages/kilo-plugin/src/gateway/prompt.ts applies those directives through native session hooks, using current v2 templates and narrow model-specific adaptations. The event service URL goes with event-service/client.ts. Both the signed-in and the anonymous fallback are kilo-auto/free, as v1 api/constants.ts; unavailable team defaults select the first team model, as main provider/catalog.ts recommend does. As recommend does, a custom or token-embedded server origin gets no defaults request: teams select the first team model and personal accounts the first model in v1 Provider.sort order (KiloDefaults.firstSorted).",
     "by": "gateway-model-parity"
   },
   "module:packages/kilo-gateway/src/api/embedding-models.ts": {
@@ -291,7 +291,7 @@
   },
   "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2.",
+    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2. Inference sends the User-Agent `Kilo-Code/v2/<version>` where v1 sent `Kilo-Code/<version>`, so the Gateway attributes the line from the User-Agent it already stores; no v2-only header is added, because the Gateway would need a new column to store it.",
     "by": "gateway-finish"
   },
   "patch:agent:063e034b577a": {
@@ -1561,13 +1561,13 @@
   "module:packages/kilo-vscode/webview-ui/src/context/model-selection.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/model-default.ts",
-    "note": "initialModel keeps the v1 resolveModelSelection order for a new session: agent model, configured model (when still in the catalog), the team default for a team account, the first recent pick still in the catalog, then the server default (kilo-auto/free when signed out). The v1 null result while providers load is not needed: v2 falls through to the server default until the catalog arrives. The session pick lives in createSelection (v2/selectors.tsx).",
+    "note": "initialModel keeps the v1 resolveModelSelection order for a new session: the pick of this scope and agent, the agent model, the configured model (when still in the catalog), the team default for a team account, the first recent pick still in the catalog, then Kilo Auto Free (v1 KILO_AUTO, validated against the Gateway catalog) and the server default when that model is gone. It also keeps the v1 pending rule where it cannot block: a Kilo candidate is not trusted before the account is known, and the recents wait for the preferences, so a dialog cannot open on the server default and then jump to a recent pick. The server default, resolved for the scope, stands in when the account read fails, and a team account never waits for the recents. createSelection keeps the draft pick per agent (v1 Pick(composer, agent)), every explicit pick, the New Worktree dialog included, pushes the shared recents and the agent's effort (new-worktree-models.ts rememberPick), as v1 apply did, and an effort-only change writes the effort without touching the recents (rememberEffort).",
     "by": "model-picker-parity"
   },
   "module:packages/kilo-vscode/tests/unit/model-selection.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/model-default.test.ts",
-    "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent, team accounts skipping recents and the fallback. The v1 pending-provider cases have no v2 equivalent (see the model-selection.ts disposition).",
+    "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent, team accounts skipping recents (and falling back to the first Kilo model), the fallback, and the v1 pending rule while the account or the recents are unknown (including Kilo agent and configured models). packages/kilo-vscode/test/agent-manager-new-worktree-models.test.ts covers the dialog's model memory: a pick is recorded for the next new session with its effort, and a Kilo choice waits for the account.",
     "by": "model-picker-parity"
   },
   "module:packages/kilo-vscode/docs/features/remember-last-model.md": {

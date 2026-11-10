@@ -330,9 +330,8 @@ describe("KiloDefaults", () => {
     ).toBe("anthropic/claude-sonnet-4.6")
     backend.state.defaultsStatus = 500
     expect(await Effect.runPromise(KiloDefaults.get({ server: backend.url }))).toBe("kilo-auto/free")
-    expect(await Effect.runPromise(KiloDefaults.get({ server: backend.url, token: "token" }))).toBe(
-      "kilo-auto/frontier",
-    )
+    // v1 `api/constants.ts`: the signed-in fallback is the free router too.
+    expect(await Effect.runPromise(KiloDefaults.get({ server: backend.url, token: "token" }))).toBe("kilo-auto/free")
   })
 
   for (const defaults of [

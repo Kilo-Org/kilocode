@@ -42,7 +42,7 @@ describe("KiloHeaders.request", () => {
   test("adds only the request headers that have a value and lower-cases the mode", () => {
     expect(KiloHeaders.request({ version: "2.0.0", sessionID: "ses_1", mode: "Code" }, {})).toEqual({
       ...KiloHeaders.provider({ version: "2.0.0" }, {}),
-      "User-Agent": "opencode-kilo-provider/2.0.0",
+      "User-Agent": "Kilo-Code/v2/2.0.0",
       "X-KILOCODE-TASKID": "ses_1",
       "x-kilocode-mode": "code",
     })
@@ -50,7 +50,7 @@ describe("KiloHeaders.request", () => {
 
   test("uses KILOCODE_VERSION for the User-Agent and the editor name", () => {
     const headers = KiloHeaders.request({ version: "local" }, { KILOCODE_VERSION: "7.1.0" })
-    expect(headers["User-Agent"]).toBe("opencode-kilo-provider/7.1.0")
+    expect(headers["User-Agent"]).toBe("Kilo-Code/v2/7.1.0")
     expect(headers[KiloHeaders.HEADER_EDITOR]).toBe("Kilo CLI 7.1.0")
   })
 })
