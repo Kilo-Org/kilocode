@@ -1,6 +1,7 @@
 export * as KiloHost from "./host"
 
 import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { PluginGitSource } from "@kilocode/kilo-plugin/plugin/git-source"
 import { networkHttpLayer } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
 import { LayerNodePlatform as UtilPlatform } from "@opencode/util/effect/app-node-platform"
@@ -16,19 +17,22 @@ import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
+import { Plugin } from "@opencode/core/plugin"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionStore } from "@opencode/core/session/store"
 import { ToolOutput } from "@opencode/core/tool-output"
 import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
-import type { Plugin } from "@opencode/plugin/effect/plugin"
+import type { Plugin as PluginDefinition } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
+import { Npm } from "@opencode/util/npm"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { Context, Duration, Effect, Layer, type Scope } from "effect"
 import { KiloApp } from "./app"
 import { KiloGatewayErrors } from "./gateway-errors"
+import { KiloPluginNpm } from "./plugin-npm"
 import { KiloGatewayModel } from "./gateway-model"
 import { KiloSmallModel } from "./small-model"
 import { SessionSync } from "./session-sync"
@@ -70,7 +74,7 @@ const plugins = makeGlobalNode({
         >(),
       )
       const register = (
-        plugin: Plugin<
+        plugin: PluginDefinition<
           | Bus.Service
           | FSUtil.Service
           | Global.Service
@@ -116,6 +120,11 @@ export const overrides: LayerNode.Replacements = [
   // replacement): upstream keeps ownership of the tool, its description, pages and instructions.
   ReadToolFileSystem.node.replace(KiloRead.node),
   SdkPlugins.node.replace(plugins),
+  // `git:` plugin specs clone into a cache directory and load from there; npm and local path targets keep the
+  // upstream loader. kilo_port(plugin:25cfde80052f)
+  Plugin.node.replace(Plugin.configured({ pluginSource: PluginGitSource.pluginSource })),
+  // The plugin update check and `plugin.update` see the same cache instead of asking npm about a `git:` spec.
+  Npm.node.replace(KiloPluginNpm.node),
   // Kilo Plan mode (kilocode.plan) replaces the native one: a remove operation runs before the config operations.
   ConfigPluginSource.node.replace(
     ConfigPluginSource.node.mapLayer((layer) =>
