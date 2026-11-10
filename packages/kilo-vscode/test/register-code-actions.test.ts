@@ -303,7 +303,14 @@ describe("registerCodeActions", () => {
 
     await state.handlers.get("kilo-code.v2.generateTerminalCommand")?.()
 
-    expect(state.posts).toEqual([{ type: "startPrompt", text: "Generate a terminal command: find . -name '*.ts'" }])
+    expect(state.posts).toEqual([
+      {
+        type: "startPrompt",
+        text: "Generate a terminal command: find . -name '*.ts'",
+        items: undefined,
+        injectedTitle: "Generate terminal command",
+      },
+    ])
   })
 
   it("does nothing when the terminal command input is cancelled", async () => {
