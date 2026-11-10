@@ -19,6 +19,17 @@ type Preference = { explicit?: boolean }
 
 const RETRY = 1000
 
+// What the last composer for a directory learned about the sandbox. The Agent Manager mounts one composer per
+// worktree and disposes it on every switch, so a remount shows the known state instead of hiding the lock until the
+// reads answer again. A different worktree has its own directory, so it starts empty like before.
+type Remembered = {
+  preference?: Preference
+  support?: SandboxSupport
+  unsupported?: boolean
+  statuses: Record<string, SandboxStatus>
+}
+const remembered = new Map<string, Remembered>()
+
 function reason(error: unknown): string {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string")
     return error.message
@@ -34,19 +45,36 @@ export function createSandbox(input: {
   const vscode = useVSCode()
   const language = useLanguage()
   const rpc = v2.api.rpc(KiloSandboxRpc.Definition)
-  const location = { directory: v2.directory }
-  const [preference, setPreference] = createSignal<Preference>()
-  const [support, setSupport] = createSignal<SandboxSupport>()
-  const [statuses, setStatuses] = createSignal<Record<string, SandboxStatus>>({})
+  const directory = v2.directory
+  const location = { directory }
+  const saved = remembered.get(directory)
+  const [preference, setPreference] = createSignal<Preference | undefined>(saved?.preference)
+  const [support, setSupport] = createSignal<SandboxSupport | undefined>(saved?.support)
+  const [statuses, setStatuses] = createSignal<Record<string, SandboxStatus>>(saved?.statuses ?? {})
   const [pending, setPending] = createSignal(false)
   // Each read owns a token, so a late answer for another session cannot replace the current state.
   let reads = 0
   let retry: ReturnType<typeof setTimeout> | undefined
   let attempts = 0
 
+  // Every answer is kept for the next composer of this directory.
+  const remember = (patch: Partial<Remembered>) => {
+    const current = remembered.get(directory)
+    remembered.set(directory, {
+      ...current,
+      statuses: { ...current?.statuses, ...statuses() },
+      ...patch,
+    })
+  }
+  const storeStatus = (sessionID: string, value: SandboxStatus) => {
+    const next = mergeStatus(statuses(), sessionID, value)
+    setStatuses(next)
+    remember({ statuses: next })
+  }
+
   const waiters: (() => void)[] = []
   // A server without the sandbox plugin fails `support`; the first prompt must not wait for it.
-  let unsupported = false
+  let unsupported = saved?.unsupported ?? false
   const settle = () => {
     if (preference() && (support() || unsupported)) for (const resolve of waiters.splice(0)) resolve()
   }
@@ -60,6 +88,7 @@ export function createSandbox(input: {
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "sandboxDefaultLoaded") return
     setPreference({ explicit: message.explicit })
+    remember({ preference: { explicit: message.explicit } })
     settle()
   })
   onCleanup(unsubscribe)
@@ -72,11 +101,13 @@ export function createSandbox(input: {
       .then((value) => {
         unsupported = false
         setSupport(value)
+        remember({ support: value, unsupported: false })
         settle()
       })
       .catch(() => {
         unsupported = true
         setSupport(undefined)
+        remember({ support: undefined, unsupported: true })
         settle()
       })
   }
@@ -92,7 +123,7 @@ export function createSandbox(input: {
       const value = await rpc.status({ sessionID }, { location })
       if (token !== reads || input.session() !== sessionID) return
       attempts = 0
-      setStatuses((current) => mergeStatus(current, sessionID, value))
+      storeStatus(sessionID, value)
     } catch (error: unknown) {
       if (token !== reads) return
       const handling = failureHandling(error)
@@ -117,7 +148,7 @@ export function createSandbox(input: {
 
   const subscribe = rpc.events.on("changed", (event) => {
     const data = event.data
-    setStatuses((current) => mergeStatus(current, data.sessionID, data))
+    storeStatus(data.sessionID, data)
   })
   onCleanup(subscribe)
   onCleanup(() => {
@@ -175,13 +206,14 @@ export function createSandbox(input: {
       if (!id) {
         const next = !desired()
         setPreference({ explicit: next })
+        remember({ preference: { explicit: next } })
         post({ type: "persistSandboxDefault", enabled: next })
         return
       }
       setPending(true)
       try {
         const value = await rpc.toggle({ sessionID: id }, { location })
-        setStatuses((current) => mergeStatus(current, id, value))
+        storeStatus(id, value)
       } catch (error: unknown) {
         toast(reason(error))
       } finally {
