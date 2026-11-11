@@ -290,8 +290,10 @@ export function SessionView(props: {
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
-    const seed = session() ? undefined : await sandbox.metadata()
-    const id = session() ?? selection.create(seed)
+    const existing = session()
+    const seed = existing ? undefined : await sandbox.metadata()
+    const id = existing ?? selection.create(seed)
+    if (existing) selection.ensure(id)
     const gate = selection.gate(id)
     // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
     // Read both before onSession changes the session identity.

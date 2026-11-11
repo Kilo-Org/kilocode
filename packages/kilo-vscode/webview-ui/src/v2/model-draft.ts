@@ -53,6 +53,14 @@ export function createModelDrafts() {
       pending.delete(sessionID)
       clear(setDrafts, sessionID)
     },
+    /**
+     * Seeds the draft of a session the host created without a model (a worktree): unlike a composer-created session,
+     * it has nothing to show, so the prompt must commit the model the composer displays instead of the server default.
+     */
+    ensure(sessionID: string, current: ModelRef | undefined, shown: ModelRef | undefined) {
+      if (current || !shown || drafts()[sessionID]) return
+      write(setDrafts, sessionID, shown)
+    },
   }
 }
 
