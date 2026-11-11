@@ -15,6 +15,7 @@ import { KiloHandshakePlugin } from "./handshake"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloReadPlugin } from "./read"
+import { KiloRequestIdentity } from "./request-identity"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
 import { KiloSessionSync } from "./session-sync"
@@ -67,6 +68,9 @@ export const KiloPlugins = [
   // The plan_exit tool and the post-plan handoff question.
   KiloPlanPlugin,
   KiloGoal.Plugin,
+  // Names Kilo on model requests to other providers. Before the Gateway, whose request headers are its own, and
+  // before the config plugins, so a user plugin can still replace these headers.
+  KiloRequestIdentity.Plugin,
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
