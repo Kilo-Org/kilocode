@@ -16,6 +16,10 @@ import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Point
 import java.awt.event.MouseEvent
+import java.awt.event.ActionEvent
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
+import javax.swing.KeyStroke
 import javax.swing.plaf.metal.MetalTreeUI
 import javax.swing.tree.TreePath
 
@@ -191,6 +195,26 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         }
         assertEquals(listOf("main"), tree.selectedKeys())
         assertEquals(0, selections)
+    }
+
+    fun `test shift F10 checks branch menu eligibility`() {
+        val calls = mutableListOf<String>()
+        val menu = ActiveMenu(DataKey.create<String>("test.menu.branch.keyboard"), DefaultActionGroup(), { it.key },
+            eligible = {
+                calls += it.key
+                false
+            })
+        val tree = ActiveTree("", menu = menu)
+        tree.update(nodes())
+        tree.select("group", false)
+        val view = tree.preferredFocus() as ActiveTreeView
+        calls.clear()
+
+        val action = view.getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_F10, InputEvent.SHIFT_DOWN_MASK))
+        assertNotNull(action)
+        action.actionPerformed(ActionEvent(view, ActionEvent.ACTION_PERFORMED, "menu"))
+
+        assertEquals(listOf("group"), calls)
     }
 
     @RequiresEdt

@@ -12,6 +12,7 @@ import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.components.service
@@ -27,7 +28,7 @@ class AgentManagerAddAction : ActionGroup(
     KiloBundle.message("action.Kilo.AgentManager.Add.description"),
     KiloActionIcons.add,
 ), DumbAware, CustomComponentAction {
-    private val items = arrayOf<AnAction>(Local(), Cloud())
+    private val items = arrayOf<AnAction>(Local(), Cloud(), Separator.getInstance(), Section())
 
     init {
         isPopup = true
@@ -101,6 +102,19 @@ class AgentManagerAddAction : ActionGroup(
             val panel = e.getData(SidePanelKeys.WORKTREE_PANEL) ?: return
             Telemetry.send("Cloud Workspace Create Clicked", mapOf("surface" to "tool_window"))
             panel.createHosted(panel.component)
+        }
+    }
+
+    private class Section : AnAction(KiloBundle.message("agentManager.section.new")), DumbAware {
+        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = e.getData(SidePanelKeys.WORKTREE_PANEL) != null
+        }
+
+        @RequiresEdt
+        override fun actionPerformed(e: AnActionEvent) {
+            e.getData(SidePanelKeys.WORKTREE_PANEL)?.createSection()
         }
     }
 }
