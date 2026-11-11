@@ -122,19 +122,6 @@ function board(ctx: ScenarioContext) {
   }).pipe(Effect.provide(Database.layerFromPath(exerciseDatabasePath)), Effect.orDie)
 }
 
-const edit = {
-  provider: "kilo",
-  model: "inception/mercury-next-edit",
-  currentFilePath: "src/index.ts",
-  currentFileContent: "export const value = 1\n",
-  cursorLine: 0,
-  cursorCharacter: 0,
-  editableRegionStartLine: 0,
-  editableRegionEndLine: 0,
-  recentlyViewedSnippets: [],
-  editDiffHistory: [],
-}
-
 export const kiloScenarios: Scenario[] = [
   ...anacondaDesktopScenarios,
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
@@ -439,10 +426,6 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilo/fim", "kilo.fim")
     .at((ctx) => ({ path: "/kilo/fim", headers: ctx.headers(), body: { prefix: "const value = ", suffix: "\n" } }))
-    .status(401),
-  http.protected
-    .post("/kilo/edit", "kilo.edit")
-    .at((ctx) => ({ path: "/kilo/edit", headers: ctx.headers(), body: edit }))
     .status(401),
   http.protected
     .post("/kilo/audio/transcriptions", "kilo.audio.transcriptions")
