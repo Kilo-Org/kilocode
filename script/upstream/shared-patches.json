@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 124,
-    "markedLines": 2104,
+    "markedLines": 2105,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -58,7 +58,7 @@
     },
     "AGENTS.md": {
       "rung": 4,
-      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, direction of code movement, checks, read `migration-tracking/principles.md` first), pointing at the plan, the principles, issue #15297 and the skills, plus replacing the upstream desktop-beta `### Visual` animated SVG rule under Commits and PR Titles with Kilo `## Proof` verification (screenshots/recordings or real `bun dev` run output). It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file."
+      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, direction of code movement, checks, read `migration-tracking/principles.md` first), pointing at the plan, the principles, issue #15297 and the skills, plus requiring localization: every Kilo UI string ships with its key in all `packages/kilo-i18n/src` locales (upstream's \"English source strings only\" rule applies to upstream copy only). It also replaces the upstream desktop-beta `### Visual` animated SVG rule under Commits and PR Titles with Kilo `## Proof` verification (screenshots/recordings or real `bun dev` run output). It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file."
     },
     "CONTRIBUTING.md": {
       "rung": 4,
