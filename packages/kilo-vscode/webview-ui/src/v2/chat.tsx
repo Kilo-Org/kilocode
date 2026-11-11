@@ -341,6 +341,10 @@ export function Chat() {
           onReviewAppendReady={reviewQueue.ready}
           onComposerReady={composerQueue.ready}
           draftKey={tabs.active()}
+          // v1's sidebar focused the prompt whenever its draft key changed, so a switched session or a new tab type
+          // straight into the composer. The Agent Manager mounts the same composer per worktree and passes its own
+          // predicate, which also keeps a visible terminal in control.
+          focusOnDraftChange={() => true}
           onMissing={(id) => tabs.close(id)}
           tabs={showTabStrip(tabs.ids())}
           tabStrip={

@@ -106,6 +106,10 @@ export function SessionView(props: {
   tabs?: boolean
   /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
   manager?: () => ManagerContext | undefined
+  /** Whether a composer mounted for a switched draft takes focus, as v1's draft-change effect did. */
+  focusOnDraftChange?: () => boolean
+  /** Receives each focus and blur of the composer, so the Agent Manager restores the prompt on return. */
+  onFocusChange?: (focused: boolean) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -538,6 +542,8 @@ export function SessionView(props: {
                   slash={{ entries: slashEntries, run: runSlash }}
                   tabs={props.tabs}
                   manager={props.manager}
+                  focusOnDraftChange={props.focusOnDraftChange}
+                  onFocusChange={props.onFocusChange}
                   selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                   autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                   sandbox={sandboxControl}
