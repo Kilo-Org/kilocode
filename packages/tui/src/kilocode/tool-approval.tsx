@@ -8,7 +8,7 @@ export function stateMetadata(state: ToolState | undefined) {
   return state && "metadata" in state ? state.metadata : undefined
 }
 
-const SOURCES = ["agent", "global", "project", "yolo", "session", "manual", "default"] as const
+const SOURCES = ["agent", "global", "project", "yolo", "session", "manual", "auto", "default"] as const
 
 /** Read the approval/denial provenance off a tool part's metadata, if present. */
 export function toolApprovalFrom(metadata: Record<string, unknown> | undefined) {
@@ -30,6 +30,8 @@ function sourceLabel(approval: PermissionProvenance.Approval): string | undefine
       return "by auto-approve (YOLO) mode"
     case "session":
       return "by a session auto-approve rule"
+    case "auto":
+      return "by auto mode"
     case "default":
       return "by default"
     default:
