@@ -9,11 +9,21 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.HostedAgentDto
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedDeleteResultDto
+import ai.kilocode.rpc.dto.HostedDeletionDto
+import ai.kilocode.rpc.dto.HostedFailureDto
 import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedMutationResultDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -36,12 +46,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,10 +59,14 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -63,6 +74,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -84,6 +96,9 @@ class KiloBackendHostedManager(
         private const val SESSION_LIMIT = "50"
         private const val MAX_BACKOFF_MS = 10_000L
         private const val INITIAL_BACKOFF_MS = 500L
+        private const val OUTPUT_LIMIT = 65_536
+        private const val ATTEMPT_LIMIT = 2
+        internal const val COLLECTOR_CAPACITY = 128
         private val MODEL = Regex("[a-zA-Z0-9._/\\-:~]{1,255}")
         private val AGENT = Regex("[a-z][a-z0-9-]{0,49}")
         private val MESSAGE = Regex("msg_[0-9a-f]{12}[0-9A-Za-z]{14}")
@@ -112,9 +127,145 @@ class KiloBackendHostedManager(
         var snapshot = false
         var generation: String? = null
         val revision = java.util.concurrent.atomic.AtomicLong()
+        private val replay = linkedMapOf<Triple<String, String?, String?>, HostedSystemEventDto>()
+        private val attempts = linkedMapOf<String, Double>()
+        private val collectors = mutableSetOf<Collector>()
 
         val retained: Boolean get() = retainers > 0
         val unused: Boolean get() = retainers == 0 && subscribers == 0 && calls == 0
+
+        @Synchronized
+        fun subscribe(collector: Collector) {
+            replay.values.forEach(collector::offer)
+            collectors.add(collector)
+        }
+
+        @Synchronized
+        fun unsubscribe(collector: Collector) {
+            collectors.remove(collector)
+            collector.close()
+        }
+
+        @Synchronized
+        fun publish(event: HostedSystemEventDto) {
+            val attempt = event.attemptID
+            if (event.kind == "preparing" && attempt != null) {
+                if (attempt !in attempts && attempts.size == ATTEMPT_LIMIT) {
+                    val oldest = attempts.entries.first()
+                    // Cloud replays every attempt before its independent steps. An evicted
+                    // historical step must not displace the current attempt's diagnostics.
+                    if (event.observedAt > 0 && oldest.value > event.observedAt) return
+                    attempts.remove(oldest.key)
+                    replay.keys.removeAll { it.second == oldest.key }
+                }
+                attempts[attempt] = maxOf(attempts[attempt] ?: 0.0, event.observedAt)
+            }
+            // Keep the latest envelope for every attempt/step, not the last N events globally.
+            val step = event.stepID ?: event.step?.takeUnless { event.action?.startsWith("attempt_") == true }
+            val key = Triple(event.kind, event.attemptID, step)
+            val previous = replay[key]
+            val failed = event.action in setOf("failed", "step_failed", "attempt_failed")
+            val before = previous?.revision
+            val revision = event.revision
+            if (event.kind == "preparing") {
+                if (previous?.action in setOf("failed", "step_failed", "attempt_failed") && !failed) return
+                if (before != null && revision != null) {
+                    if (before > revision) return
+                    if (before == revision && event.action == "step_output") return
+                }
+            }
+            val value = if (event.kind == "preparing" && step != null) {
+                val output = when {
+                    event.action == "step_started" -> event.output
+                    event.action == "step_output" && event.output != null -> previous?.output.orEmpty() + event.output
+                    event.output != null -> event.output
+                    else -> previous?.output
+                }
+                val bytes = output?.toByteArray(Charsets.UTF_8)
+                var offset = ((bytes?.size ?: 0) - OUTPUT_LIMIT).coerceAtLeast(0)
+                // A byte-tail cut may land inside a UTF-8 code point.
+                while (bytes?.getOrNull(offset)?.toInt()?.and(0xC0) == 0x80) offset++
+                val tail = bytes?.decodeToString(startIndex = offset)
+                event.copy(
+                    stepKind = event.stepKind ?: previous?.stepKind,
+                    output = tail,
+                    outputTruncated = event.outputTruncated || (bytes?.size ?: 0) > OUTPUT_LIMIT ||
+                        (event.action != "step_started" && (event.output == null || event.action == "step_output") &&
+                            previous?.outputTruncated == true),
+                    detail = if (!failed || tail == null || tail.isEmpty()) event.detail else {
+                        val header = event.detail?.removeSuffix(event.output?.let { "\n$it" }.orEmpty())
+                            ?: previous?.detail?.removeSuffix(previous.output?.let { "\n$it" }.orEmpty())
+                            ?: "${event.message ?: previous?.message ?: "Preparation step"} failed"
+                        "$header\n$tail"
+                    },
+                )
+            } else event
+            replay.remove(key)
+            replay[key] = value
+            collectors.forEach { it.offer(value) }
+        }
+
+        @Synchronized
+        fun close() {
+            val channels = collectors.toList()
+            collectors.clear()
+            replay.clear()
+            attempts.clear()
+            channels.forEach { it.close() }
+        }
+    }
+
+    internal class Collector {
+        private val queue = ArrayDeque<HostedSystemEventDto>()
+        private val wake = Channel<Unit>(Channel.CONFLATED)
+        private var closed = false
+
+        @Synchronized
+        fun offer(event: HostedSystemEventDto) {
+            if (closed) return
+            if (event.action == "step_output") {
+                val step = event.stepID ?: event.step
+                val index = queue.indexOfLast {
+                    it.action == "step_output" && it.attemptID == event.attemptID && (it.stepID ?: it.step) == step
+                }
+                if (index >= 0) {
+                    queue[index] = event
+                    wake.trySend(Unit)
+                    return
+                }
+            }
+            queue.addLast(event)
+            while (queue.size > COLLECTOR_CAPACITY) {
+                val index = queue.indexOfFirst {
+                    it.action == "step_output" || (it.kind == "preparing" && !terminal(it))
+                }
+                // The bound is hard even when every queued event is protected. Keep the newest
+                // event by evicting the oldest protected one once no coalescible event remains.
+                queue.removeAt(if (index >= 0) index else 0)
+            }
+            wake.trySend(Unit)
+        }
+
+        suspend fun receive(): HostedSystemEventDto? {
+            while (true) {
+                synchronized(this) {
+                    if (queue.isNotEmpty()) return queue.removeAt(0)
+                    if (closed) return null
+                }
+                wake.receive()
+            }
+        }
+
+        @Synchronized
+        fun close() {
+            closed = true
+            wake.trySend(Unit)
+        }
+
+        private fun terminal(event: HostedSystemEventDto): Boolean =
+            event.failure != null ||
+                event.action in setOf("failed", "step_failed", "attempt_failed", "attempt_completed") ||
+                (event.kind == "cloud.status" && event.cloudStatus == "error")
     }
 
     private class HostedHttpException(val code: Int, message: String) : RuntimeException(message)
@@ -132,10 +283,6 @@ class KiloBackendHostedManager(
 
     private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
-
-    // Replayed so a workspace editor opened just after attach still gets the latest preparation step.
-    private val _system = MutableSharedFlow<HostedSystemEventDto>(replay = 8, extraBufferCapacity = 64)
-    val systemEvents = _system.asSharedFlow()
 
     private var api: DefaultApi? = null
     private var http: OkHttpClient? = null
@@ -166,6 +313,19 @@ class KiloBackendHostedManager(
                     }
                     is ChatEventDto.SessionIdle -> if (HostedIDs.isSession(event.sessionID)) {
                         _statuses.update { it + (event.sessionID to SessionStatusDto("idle")) }
+                    }
+                    // Local sessions get `busy` from the server's session.status stream; the Cloud
+                    // session host only reliably emits the turn lifecycle. Derive the same status
+                    // from it so the shared statuses map — and every running indicator built on it
+                    // (tree row, session rows, tab) — treats a Cloud turn exactly like a local one.
+                    is ChatEventDto.TurnOpen -> if (HostedIDs.isSession(event.sessionID)) {
+                        _statuses.update { it + (event.sessionID to SessionStatusDto("busy")) }
+                    }
+                    is ChatEventDto.TurnClose -> if (HostedIDs.isSession(event.sessionID)) {
+                        _statuses.update { current ->
+                            if (current[event.sessionID]?.type == "busy") current + (event.sessionID to SessionStatusDto("idle"))
+                            else current
+                        }
                     }
                     is ChatEventDto.PermissionAsked -> if (HostedIDs.isSession(event.sessionID)) {
                         permissionOwner[event.request.id] = event.sessionID
@@ -288,23 +448,166 @@ class KiloBackendHostedManager(
             dto(requireApi().sessionHostGetWorkspaceStatus(ref.providerID, ref.workspaceID, organizationID), ref)
         }
 
+    suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto =
+        withContext(Dispatchers.IO) {
+            val path = buildString {
+                append("/kilocode/session-host/workspace/profiles")
+                organizationID?.let { append("?organizationID=").append(encode(it)) }
+            }
+            val response = control("GET", path, null)
+            if (response.code !in 200..299) {
+                return@withContext HostedWorkspaceProfileListDto(error = failure(response, "profile list"))
+            }
+            val root = parse(response.body) ?: return@withContext HostedWorkspaceProfileListDto(
+                error = HostedFailureDto("invalid_response", "Cloud profiles unavailable", retryable = true),
+            )
+            val personal = root["personalProfiles"]?.jsonArray.orEmpty().mapNotNull { profile(it.jsonObject) }
+            val organization = root["organizationProfiles"]?.jsonArray.orEmpty().mapNotNull { profile(it.jsonObject) }
+            val items = if (personal.isNotEmpty() || organization.isNotEmpty()) {
+                personal + organization
+            } else {
+                root["items"]?.jsonArray.orEmpty().mapNotNull { profile(it.jsonObject) }
+            }
+            HostedWorkspaceProfileListDto(
+                items = items,
+                personalDefaultProfileID = root.string("personalDefaultProfileID"),
+                organizationDefaultProfileID = root.string("organizationDefaultProfileID"),
+                effectiveDefaultProfileID = root.string("effectiveDefaultProfileID"),
+            )
+        }
+
+    suspend fun setPersonalDefaultProfile(profileID: String, organizationID: String?): HostedProfileDefaultDto =
+        withContext(Dispatchers.IO) {
+            val body = buildJsonObject {
+                put("id", profileID)
+                organizationID?.let { put("organizationID", it) }
+            }.toString()
+            val response = control("POST", "/kilocode/session-host/workspace/profiles/personal-default", body)
+            if (response.code !in 200..299) {
+                return@withContext HostedProfileDefaultDto(failure = failure(response, "set default profile"))
+            }
+            val root = parse(response.body)
+                ?: return@withContext HostedProfileDefaultDto(
+                    failure = HostedFailureDto("invalid_response", "Cloud profile default unavailable", retryable = true),
+                )
+            HostedProfileDefaultDto(success = root["success"]?.jsonPrimitive?.booleanOrNull == true)
+        }
+
+    private fun profile(obj: JsonObject): HostedWorkspaceProfileDto? {
+        val id = obj.string("id") ?: return null
+        return HostedWorkspaceProfileDto(
+            id = id,
+            name = obj.string("name") ?: id,
+            description = obj["description"]?.jsonPrimitive?.contentOrNull,
+            ownerType = obj.string("ownerType"),
+            isPersonalDefault = obj["isPersonalDefault"]?.jsonPrimitive?.booleanOrNull == true,
+            isOrganizationDefault = obj["isOrganizationDefault"]?.jsonPrimitive?.booleanOrNull == true,
+            isDefault = obj["isDefault"]?.jsonPrimitive?.booleanOrNull == true,
+        )
+    }
+
+    suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto =
+        withContext(Dispatchers.IO) {
+            val body = createBody(request)
+            val response = control("POST", "/kilocode/session-host/workspace", body)
+            if (response.code !in 200..299) return@withContext mutationFailure(response, "create workspace")
+            val result = parseResult(response.body, request.messageID)
+                ?: return@withContext mutationFailure(response, "create workspace")
+            val ref = HostedWorkspaceRefDto(result.provider, result.workspace)
+            val workspace = runCatching { workspace(ref, null, request.organizationID) }.getOrElse {
+                if (it is CancellationException) throw it
+                null
+            } ?: HostedWorkspaceDto(ref)
+            val session = workspacesession(ref, result.session, workspace)
+            HostedMutationResultDto(
+                workspace = workspace,
+                session = session,
+                messageID = result.messageID,
+                replayed = result.replayed,
+            )
+        }
+
+    suspend fun startWorkspaceSession(
+        ref: HostedWorkspaceRefDto,
+        request: HostedStartSessionDto,
+    ): HostedMutationResultDto = withContext(Dispatchers.IO) {
+        val body = startBody(request)
+        val response = control(
+            "POST",
+            "/kilocode/session-host/workspace/${encode(ref.providerID)}/${encode(ref.workspaceID)}/session",
+            body,
+        )
+        if (response.code !in 200..299) return@withContext mutationFailure(response, "start session")
+        val result = parseResult(response.body, request.messageID)
+            ?: return@withContext mutationFailure(response, "start session")
+        val workspace = runCatching { workspace(ref, null, request.organizationID) }.getOrElse {
+            if (it is CancellationException) throw it
+            null
+        } ?: HostedWorkspaceDto(ref)
+        HostedMutationResultDto(
+            workspace = workspace,
+            session = workspacesession(ref, result.session, workspace),
+            messageID = result.messageID,
+            replayed = result.replayed,
+        )
+    }
+
+    suspend fun deleteWorkspace(
+        ref: HostedWorkspaceRefDto,
+        organizationID: String?,
+    ): HostedDeleteResultDto = withContext(Dispatchers.IO) {
+        val path = buildString {
+            append("/kilocode/session-host/workspace/${encode(ref.providerID)}/${encode(ref.workspaceID)}")
+            organizationID?.let { append("?organizationID=").append(encode(it)) }
+        }
+        val response = control("DELETE", path, null)
+        if (response.code !in 200..299) {
+            // Cloud already removed the workspace, so local attachments and statuses are stale.
+            if (response.code == 404) {
+                disposeWorkspace(ref)
+                return@withContext HostedDeleteResultDto(ref, success = true)
+            }
+            return@withContext HostedDeleteResultDto(ref, failure = failure(response, "delete workspace"))
+        }
+        val root = parse(response.body)
+        val success = root?.get("success")?.jsonPrimitive?.contentOrNull == "true"
+        if (!success) {
+            // The request may have been dispatched before Cloud returned an unreadable body.
+            disposeWorkspace(ref)
+            return@withContext HostedDeleteResultDto(
+                ref,
+                failure = HostedFailureDto("invalid_response", "Cloud did not confirm deletion", retryable = true),
+            )
+        }
+        disposeWorkspace(ref)
+        HostedDeleteResultDto(ref, success = true)
+    }
+
     suspend fun systemEvents(ref: HostedWorkspaceRefDto, native: String, organizationID: String?): Flow<HostedSystemEventDto> {
         val composite = HostedIDs.session(ref.providerID, ref.workspaceID, native)
         return flow {
+            // Register before ensure() can start the passive feed. Slow RPC collectors must not
+            // drop a preparation failure or prevent another session's replay from progressing.
+            val collector = Collector()
             val state = lock.withLock {
                 continuity.computeIfAbsent(composite) { Continuity() }.also {
+                    it.subscribe(collector)
                     it.subscribers++
                     it.organizationID = organizationID ?: it.organizationID
                 }
             }
             try {
                 ensure(composite, organizationID)
-                systemEvents.filter { it.sessionID == composite }.collect { emit(it) }
+                while (true) {
+                    val event = collector.receive() ?: break
+                    emit(event)
+                }
             } finally {
                 withContext(kotlinx.coroutines.NonCancellable) {
                     lock.withLock {
+                        state.unsubscribe(collector)
                         state.subscribers--
-                        if (state.subscribers == 0) {
+                        if (continuity[composite] === state && state.subscribers == 0) {
                             attachments[composite]?.let { attachment ->
                                 attachment.system?.cancel()
                                 attachment.system = null
@@ -342,8 +645,11 @@ class KiloBackendHostedManager(
 
     suspend fun messages(id: String, organizationID: String?): List<MessageWithPartsDto> =
         attached(id, organizationID) { attachment ->
-            val raw = get("/session/${attachment.native}/message?workspace=${encode(attachment.id)}", "messages")
-                ?: return@attached emptyList()
+            val raw = get(
+                "/session/${attachment.native}/message?workspace=${encode(attachment.id)}",
+                "messages",
+                strict = true,
+            ) ?: error("Hosted messages response missing")
             HostedEventMapper.messages(KiloCliDataParser.parseMessages(raw), id)
         }
 
@@ -769,9 +1075,20 @@ class KiloBackendHostedManager(
         var backoff = INITIAL_BACKOFF_MS
         while (started && attachments[attachment.session] === attachment) {
             val opened = stream("/cloud-agent/event?workspace=${encode(attachment.id)}") { type, data ->
-                runCatching { HostedSystemEventParser.parse(attachment.session, attachment.native, type, data) }
+                val event = runCatching { HostedSystemEventParser.parse(attachment.session, attachment.native, type, data) }
                     .onFailure { log.warn("hosted system event parse failed message=${it.message}") }
-                    .getOrNull()?.let { _system.tryEmit(it) }
+                    .getOrNull()
+                if (event == null) {
+                    log.debug { "hosted system event ignored session=${attachment.session} type=${type ?: "message"}" }
+                    return@stream
+                }
+                log.debug {
+                    "hosted system event session=${attachment.session} kind=${event.kind} " +
+                        "action=${event.action} attempt=${event.attemptID} revision=${event.revision}"
+                }
+                lock.withLock {
+                    if (attachments[attachment.session] === attachment) continuity[attachment.session]?.publish(event)
+                }
             }
             if (!started || attachments[attachment.session] !== attachment) return
             if (opened in setOf(404, 410)) {
@@ -808,6 +1125,7 @@ class KiloBackendHostedManager(
             override fun onOpen(eventSource: EventSource, response: okhttp3.Response) {
                 source.set(eventSource)
                 code.set(response.code)
+                log.debug { "hosted stream connected path=$path code=${response.code}" }
                 frames.trySend(Frame(null, null))
             }
 
@@ -868,9 +1186,10 @@ class KiloBackendHostedManager(
     }
 
     private fun discard(id: String, state: Continuity) {
-        if (!state.unused) return
+        if (!state.unused || continuity[id] !== state) return
         attachments.remove(id)?.let { close(it) }
         continuity.remove(id, state)
+        state.close()
         _statuses.update { it - id }
     }
 
@@ -879,6 +1198,7 @@ class KiloBackendHostedManager(
         statusJob = null
         attachments.values.forEach { close(it, detach, client = client) }
         attachments.clear()
+        continuity.values.forEach { it.close() }
         continuity.clear()
         lifecycle?.cancel()
         lifecycle = null
@@ -898,6 +1218,146 @@ class KiloBackendHostedManager(
     }
 
     // ------ helpers ------
+
+    private data class Result(
+        val provider: String,
+        val workspace: String,
+        val session: String,
+        val messageID: String,
+        val replayed: Boolean,
+    )
+
+    private fun createBody(request: HostedCreateWorkspaceDto): String = buildJsonObject {
+        putJsonObject("repository") {
+            put("type", request.repository.type)
+            when (request.repository.type) {
+                "github" -> put("repo", request.repository.repo ?: request.repository.url.orEmpty())
+                else -> put("url", request.repository.url ?: request.repository.repo.orEmpty())
+            }
+            request.repository.branch?.takeIf { it.isNotBlank() }?.let { put("branch", it) }
+        }
+        request.profileID?.let { putJsonObject("profile") { put("id", it) } }
+        if (request.prompt.isNotBlank()) {
+            put("prompt", request.prompt)
+            put("messageID", request.messageID)
+        }
+        putJsonObject("agent") {
+            put("mode", request.agent.mode)
+            put("model", request.agent.model)
+            request.agent.variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
+        }
+        put("operationKey", request.operationKey)
+        request.organizationID?.takeIf { it.isNotBlank() }?.let { put("organizationID", it) }
+    }.toString()
+
+    private fun startBody(request: HostedStartSessionDto): String = buildJsonObject {
+        put("prompt", request.prompt)
+        putJsonObject("agent") {
+            put("mode", request.agent.mode)
+            put("model", request.agent.model)
+            request.agent.variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
+        }
+        put("operationKey", request.operationKey)
+        put("messageID", request.messageID)
+        request.organizationID?.takeIf { it.isNotBlank() }?.let { put("organizationID", it) }
+    }.toString()
+
+    private fun parseResult(raw: String?, messageID: String): Result? {
+        val root = parse(raw) ?: return null
+        val workspace = root["workspace"]?.jsonObject ?: return null
+        val session = root["session"]?.jsonObject ?: return null
+        val provider = workspace.string("providerID") ?: return null
+        val workspaceID = workspace.string("workspaceID") ?: return null
+        val sessionID = session.string("sessionID") ?: return null
+        return Result(
+            provider = provider,
+            workspace = workspaceID,
+            session = sessionID,
+            messageID = root.string("messageID") ?: messageID,
+            replayed = root["replayed"]?.jsonPrimitive?.contentOrNull == "true",
+        )
+    }
+
+    private fun workspacesession(
+        ref: HostedWorkspaceRefDto,
+        native: String,
+        workspace: HostedWorkspaceDto,
+    ): HostedWorkspaceSessionDto =
+        workspace.sessions.firstOrNull { it.nativeSessionID == native }
+            ?: HostedWorkspaceSessionDto(
+                id = HostedIDs.session(ref.providerID, ref.workspaceID, native),
+                nativeSessionID = native,
+            )
+
+    private fun mutationFailure(response: Control, op: String): HostedMutationResultDto =
+        HostedMutationResultDto(failure = failure(response, op))
+
+    private fun failure(response: Control, op: String): HostedFailureDto {
+        val kind = when (response.code) {
+            400 -> "invalid_request"
+            401 -> "signed_out"
+            402 -> "payment_required"
+            404 -> "not_found"
+            409 -> "conflict"
+            502 -> "invalid_response"
+            503 -> "unavailable"
+            else -> if (response.code >= 500) "unavailable" else "rejected"
+        }
+        val message = parse(response.body)?.string("message")
+            ?: parse(response.body)?.string("code")
+            ?: "$op failed: HTTP ${response.code}"
+        log.warn("hosted $op failed status=${response.code} code=$kind")
+        return HostedFailureDto(
+            code = kind,
+            message = message.take(300),
+            retryable = response.code == 502 || response.code == 503 || response.code >= 500,
+        )
+    }
+
+    private fun parse(raw: String?): JsonObject? =
+        raw?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
+
+    private data class Control(val code: Int, val body: String?)
+
+    private fun control(method: String, path: String, body: String?): Control {
+        val client = http ?: throw IllegalStateException("Hosted session manager not started")
+        val url = base ?: throw IllegalStateException("Hosted session manager not started")
+        val builder = Request.Builder().url("$url$path")
+        when (method) {
+            "GET" -> builder.get()
+            "DELETE" -> builder.delete()
+            else -> builder.method(method, body.orEmpty().toRequestBody(media))
+        }
+        return try {
+            client.newCall(builder.build()).execute().use { response ->
+                Control(response.code, response.body?.string())
+            }
+        } catch (e: IOException) {
+            log.warn("hosted $method request failed", e)
+            Control(503, null)
+        }
+    }
+
+    private suspend fun disposeWorkspace(ref: HostedWorkspaceRefDto) {
+        lock.withLock {
+            val ids = attachments.entries.filter { it.value.ref == ref }.map { it.key }
+            ids.forEach { id ->
+                attachments[id]?.let { attachment ->
+                    attachment.invalid = true
+                    attachment.events?.cancel()
+                    attachment.system?.cancel()
+                    attachment.recovery?.cancel()
+                }
+                attachments.remove(id)
+                continuity.remove(id)?.close()
+                sessions.remove(id)
+            }
+            _statuses.update { statuses -> statuses.filterKeys { id ->
+                HostedIDs.parseSession(id)?.let { it.first != ref.providerID || it.second != ref.workspaceID } ?: true
+            } }
+        }
+    }
+
 
     private suspend fun refresh(attachment: Attachment) {
         val state = continuity[attachment.session] ?: return
@@ -1027,6 +1487,16 @@ class KiloBackendHostedManager(
             wakeBlockedReason = model.wakeOnInput.blockedReason?.value,
             rateMicrodollarsPerHour = model.billing.rate?.estimatedHourlyMicrodollars,
             billingBlocked = model.billing.blocked,
+            deletion = HostedDeletionDto(
+                started = model.deletion.started,
+                completed = model.deletion.completed,
+                startedAt = model.deletion.startedAt,
+                phase = model.deletion.phase.value,
+                sessionCount = model.deletion.sessionCount.toInt(),
+                runtimeLocationCount = model.deletion.runtimeLocationCount.toInt(),
+                completedRuntimeLocationCount = model.deletion.completedRuntimeLocationCount.toInt(),
+                remainingRuntimeLocationCount = model.deletion.remainingRuntimeLocationCount.toInt(),
+            ),
         )
 
     private fun JsonObject.string(name: String): String? =

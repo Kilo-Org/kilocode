@@ -13,8 +13,10 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
     SETTING_UP("settingUp", UiStyle.Badge.Secondary),
     SLEEPING("sleeping", UiStyle.Badge.Secondary),
     STARTING("starting", UiStyle.Badge.Secondary),
+    FAILED("failed", UiStyle.Badge.ActivityError),
     STOPPING("stopping", UiStyle.Badge.Secondary),
     STOPPED("stopped", UiStyle.Badge.Secondary),
+    DELETING("deleting", UiStyle.Badge.Secondary),
     UNAVAILABLE("unavailable", UiStyle.Badge.ActivityError),
     UNKNOWN("unknown", UiStyle.Badge.Secondary),
     ;
@@ -25,17 +27,32 @@ internal enum class HostedWorkspaceStatus(private val value: String, private val
         id = "cloud-compute",
     )
 
+    /**
+     * Sandbox boot or teardown. Rows show the same running spinner local sessions use so Cloud work
+     * in progress reads the same at a glance; the compute badge still names the phase.
+     */
+    fun busy(): Boolean = this == STARTING || this == SETTING_UP || this == LOADING || this == STOPPING
+
     companion object {
-        fun of(status: HostedWorkspaceStatusDto?): HostedWorkspaceStatus = when (status?.computeStatus) {
-            null -> LOADING
-            "active", "running" -> ACTIVE
-            "setting_up" -> SETTING_UP
-            "sleeping" -> SLEEPING
-            "starting" -> STARTING
-            "stopping" -> STOPPING
-            "stopped" -> STOPPED
-            "error", "unreachable", "unavailable" -> UNAVAILABLE
-            else -> UNKNOWN
+        fun of(status: HostedWorkspaceStatusDto?): HostedWorkspaceStatus {
+            if (status?.deletionState == "deleting" ||
+                (status?.deletion?.started == true && status?.deletion?.completed != true)
+            ) {
+                return DELETING
+            }
+            if (status?.deletionState == "deleted") return UNAVAILABLE
+            return when (status?.computeStatus) {
+                null -> LOADING
+                "active", "running" -> ACTIVE
+                "setting_up" -> SETTING_UP
+                "sleeping" -> SLEEPING
+                "starting" -> STARTING
+                "failed" -> FAILED
+                "stopping" -> STOPPING
+                "stopped" -> STOPPED
+                "error", "unreachable", "unavailable" -> UNAVAILABLE
+                else -> UNKNOWN
+            }
         }
     }
 }

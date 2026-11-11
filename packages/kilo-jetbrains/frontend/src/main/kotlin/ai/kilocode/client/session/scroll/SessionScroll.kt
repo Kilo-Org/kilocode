@@ -223,6 +223,65 @@ internal class SessionScroll(
         return jump(::topPass) { messages.findPart(message, part) ?: messages.findMessage(message) }
     }
 
+    /**
+     * Reveals an exact rectangle inside [component] (a rendered prose surface) rather than pinning a
+     * whole message or part. Used by transcript search to land on the matched substring, including
+     * horizontal scrolling inside tables. Result navigation deliberately leaves bottom-follow off.
+     */
+    @RequiresEdt
+    fun scrollToRect(target: JComponent, rect: Rectangle): Boolean {
+        if (!target.isShowing || !SwingUtilities.isDescendingFrom(target, messages)) return false
+        user = false
+        pause = false
+        stable = -1
+        auto = true
+        show(messages)
+        auto = false
+        val id = ++seq
+        if (SwingUtilities.isEventDispatchThread()) {
+            rectPass(id, FOLLOW_PASSES, target, rect)
+            return true
+        }
+        ApplicationManager.getApplication().invokeLater {
+            rectPass(id, FOLLOW_PASSES, target, rect)
+        }
+        return true
+    }
+
+    @RequiresEdt
+    private fun rectPass(id: Int, remaining: Int, target: JComponent, rect: Rectangle) {
+        if (id != seq) return
+        if (!target.isShowing || !SwingUtilities.isDescendingFrom(target, messages)) return
+        auto = true
+        try {
+            layoutScroll()
+            target.scrollRectToVisible(rect)
+            layoutScroll()
+            val point = SwingUtilities.convertPoint(target, rect.x, rect.y, messages)
+            val gap = UiStyle.Gap.pad()
+            val y = (point.y - gap).coerceIn(0, bottom())
+            component.viewport.viewPosition = Point(0, y)
+            bar.value = y
+            // Same follow policy as an exact top jump: only a transcript that cannot scroll stays
+            // followed, so later streaming does not pull the view away from the selected match.
+            tail = bar.maximum <= bar.visibleAmount
+            updateJump()
+        } finally {
+            auto = false
+        }
+        syncValue()
+        if (remaining <= 0) {
+            stable = -1
+            return
+        }
+        val next = SwingUtilities.convertPoint(target, rect.x, rect.y, messages).y
+        val left = if (next == stable) remaining - 1 else FOLLOW_PASSES
+        stable = next
+        ApplicationManager.getApplication().invokeLater {
+            rectPass(id, left, target, rect)
+        }
+    }
+
     @RequiresEdt
     private fun jump(pass: (Int, Int, () -> JComponent?) -> Unit, resolve: () -> JComponent?): Boolean {
         val target = resolve() ?: return false
