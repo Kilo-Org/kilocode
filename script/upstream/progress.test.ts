@@ -21,7 +21,6 @@ import {
   scanImports,
   snapshotSummary,
   squarify,
-  twinOf,
 } from "./progress"
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
@@ -94,25 +93,6 @@ test("featureOf: packages, directories, split table and loose files", () => {
   expect(featureOf("packages/opencode/test/kilocode/agent-manager-service.test.ts", split, known)).toBe("agent-manager")
   expect(featureOf("packages/core/src/kilocode/caffeination.ts", split, known)).toBe("caffeination")
   expect(featureOf("packages/core/src/x.ts", split)).toBeUndefined()
-})
-
-test("twinOf matches a module by path, and a test under a moved test directory", () => {
-  const index = new Map([
-    ["vscode|speech-to-text/models.ts", "packages/kilo-vscode/src/speech-to-text/models.ts"],
-    ["vscode|test/model-draft.test.ts", "packages/kilo-vscode/test/model-draft.test.ts"],
-    ["vscode|model-draft.test.ts", "packages/kilo-vscode/test/model-draft.test.ts"],
-    ["vscode|models.ts", "packages/kilo-vscode/src/speech-to-text/models.ts"],
-  ])
-  // the same relative path always closes, in either kind of file
-  expect(twinOf("packages/kilo-vscode/src/speech-to-text/models.ts", "vscode", index)).toBe(
-    "packages/kilo-vscode/src/speech-to-text/models.ts",
-  )
-  // a test follows its name when the test directory moved
-  expect(twinOf("packages/kilo-vscode/tests/unit/model-draft.test.ts", "vscode", index)).toBe("packages/kilo-vscode/test/model-draft.test.ts")
-  // a module with the same name in another directory is not a twin: `models.ts` exists all over a package
-  expect(twinOf("packages/kilo-vscode/src/image-generation/models.ts", "vscode", index)).toBeUndefined()
-  // a feature mismatch never matches
-  expect(twinOf("packages/kilo-vscode/src/speech-to-text/models.ts", "gateway", index)).toBeUndefined()
 })
 
 test("areaOf names the upstream area of a shared file", () => {

@@ -126,11 +126,14 @@ function relativeOf(file: string) {
  * The v2 file that stands for a v1 file: the same relative path, or for a test file the same name in
  * another test directory. Other renames need a disposition with the v2 path, because a same-name module
  * in a different directory is usually an unrelated file (`index.ts`, `models.ts`, `service.ts`).
+ *
+ * The index keeps paths and names under separate prefixes. A v1 file in its feature root has a relative
+ * path equal to its basename, so a shared key space would let the name of a nested file close it.
  */
 export function twinOf(file: string, feature: string, index: Map<string, string>) {
-  const same = index.get(`${feature}|${relativeOf(file)}`)
+  const same = index.get(`path|${feature}|${relativeOf(file)}`)
   if (same || !isTestPath(file)) return same
-  return index.get(`${feature}|${path.basename(file)}`)
+  return index.get(`name|${feature}|${path.basename(file)}`)
 }
 
 /** Upstream area of a shared file, for the `unattributed:<area>` boxes. */
@@ -288,6 +291,13 @@ async function readJson<T>(dir: string, file: string): Promise<T> {
 
 async function collect(config: Config, dispositions: Record<string, Disposition>, root = DEFAULT_ROOT) {
   const git = gitAt(root)
+  // `--root` compares another checkout, whose inputs describe that commit. Entries that do not fit the
+  // current rules there are reported and skipped: only this checkout's inputs are ours to keep valid.
+  const foreign = root !== DEFAULT_ROOT
+  const reject = (message: string) => {
+    if (!foreign) throw new Error(message)
+    console.error(`note: ${message.split("\n")[0]} (another checkout, skipped)`)
+  }
   const { v1Target, v1Base } = config.pins
   const split = config.split
   for (const pin of [v1Target, v1Base]) {
@@ -304,8 +314,8 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
   for (const f of v2Files) {
     const feature = featureOf(f, split, known)
     if (!feature) continue
-    v2Modules.set(`${feature}|${relativeOf(f)}`, f)
-    v2Modules.set(`${feature}|${path.basename(f)}`, f)
+    v2Modules.set(`path|${feature}|${relativeOf(f)}`, f)
+    v2Modules.set(`name|${feature}|${path.basename(f)}`, f)
   }
   const baseline = await readBaseline(root)
   // Done-proofs of patch cells, from the working tree like the files above.
@@ -400,16 +410,16 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
   // Done-proofs and dispositions name cells. Unknown IDs and misplaced or incomplete entries are errors so they cannot rot.
   const ids = new Set(cells.map((c) => c.id))
   const unknown = found.filter((p) => !ids.has(p.id)).map((p) => `${p.at}: ${p.tag}`)
-  if (unknown.length) throw new Error(`done-proofs name cells that do not exist on the v1 target:\n  ${unknown.join("\n  ")}`)
+  if (unknown.length) reject(`done-proofs name cells that do not exist on the v1 target:\n  ${unknown.join("\n  ")}`)
   const misplaced = found.filter((p) => p.misplaced).map((p) => `${p.at}: ${p.tag}`)
   if (misplaced.length)
-    throw new Error(`done-proofs in the wrong kind of file (kilocode_change in shared upstream files, kilo_port in Kilo-owned files):\n  ${misplaced.join("\n  ")}`)
+    reject(`done-proofs in the wrong kind of file (kilocode_change in shared upstream files, kilo_port in Kilo-owned files):\n  ${misplaced.join("\n  ")}`)
   const stale = Object.keys(dispositions).filter((id) => !ids.has(id))
-  if (stale.length) throw new Error(`dispositions.json names cells that do not exist on the v1 target:\n  ${stale.join("\n  ")}`)
+  if (stale.length) reject(`dispositions.json names cells that do not exist on the v1 target:\n  ${stale.join("\n  ")}`)
   const invalid = Object.entries(dispositions)
     .filter(([, d]) => !["ported", "native", "facade", "dropped"].includes(d.state) || !d.note || !d.by)
     .map(([id]) => id)
-  if (invalid.length) throw new Error(`dispositions.json entries need state (ported|native|facade|dropped), note and by:\n  ${invalid.join("\n  ")}`)
+  if (invalid.length) reject(`dispositions.json entries need state (ported|native|facade|dropped), note and by:\n  ${invalid.join("\n  ")}`)
   for (const cell of cells) {
     const d = dispositions[cell.id]
     if (!d) continue
