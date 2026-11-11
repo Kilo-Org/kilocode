@@ -202,6 +202,7 @@ const serverRoutes = HttpApiBuilder.layer(ServerApi).pipe(
   Layer.provide(handlers.pipe(Layer.provide(locationServiceMapLayer), Layer.provide(referenceReconcilerLayer))),
   // kilocode_change end
   Layer.provide(PluginPtyEnvironment.layer),
+  Layer.provide(ServerAuth.Config.layer), // kilocode_change - PTY Origin policy reads auth
   Layer.provide([serverHttpApiAuthLayer, v2SchemaErrorLayer]),
 )
 

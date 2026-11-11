@@ -8,6 +8,7 @@ import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import * as Socket from "effect/unstable/socket/Socket"
 import { Api } from "../api"
 import { CorsConfig, isAllowedRequestOrigin } from "../cors"
+import { ServerAuth } from "../auth" // kilocode_change
 import { ForbiddenError, PtyNotFoundError } from "@opencode-ai/protocol/errors"
 import {
   PTY_CONNECT_TICKET_QUERY,
@@ -27,6 +28,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
   Effect.gen(function* () {
     const tickets = yield* PtyTicket.Service
     const cors = yield* CorsConfig
+    const auth = yield* ServerAuth.Config // kilocode_change
     const environment = yield* PtyEnvironment.Service
 
     return handlers
@@ -150,6 +152,14 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
 
           const url = new URL(ctx.request.url, "http://localhost")
           const ticket = url.searchParams.get(PTY_CONNECT_TICKET_QUERY)
+          // kilocode_change start - without a ticket or password auth, Origin is the only cross-site guard
+          if (
+            !ticket &&
+            !ServerAuth.required(auth) &&
+            !isAllowedRequestOrigin(ctx.request.headers.origin, ctx.request.headers.host, cors)
+          )
+            return HttpServerResponse.empty({ status: 403 })
+          // kilocode_change end
           if (ticket) {
             const valid = isAllowedRequestOrigin(ctx.request.headers.origin, ctx.request.headers.host, cors)
               ? yield* tickets.consume({ ticket, ptyID: ctx.params.ptyID, ...(yield* ticketScope) })
