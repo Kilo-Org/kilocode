@@ -177,6 +177,7 @@ export const InstallModal = (props: Props) => {
     if (isMcp()) items.push(language.t("marketplace.install.mcp.warning"))
     if (props.item.kind === "agent") items.push(language.t("marketplace.install.agent.warning"))
     if (props.item.kind === "skill") items.push(language.t("marketplace.install.skill.warning"))
+    if (props.item.kind === "plugin") items.push(language.t("marketplace.install.plugin.warning"))
     if (currentScope() === "project") items.push(language.t("marketplace.install.project.warning"))
     return items
   }
