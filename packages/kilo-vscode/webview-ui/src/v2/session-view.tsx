@@ -3,8 +3,11 @@
 import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import type { MentionFile } from "../hooks/context-mention-utils"
+import type { GitChangesTarget } from "../hooks/useGitChangesContext"
+import type { WorktreeReference } from "../utils/prompt-mention-drop"
 import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
 import { focusPrompt } from "../utils/tab-navigation"
@@ -17,7 +20,7 @@ import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
-import { toPromptFiles } from "./prompt-attachments"
+import { promptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { ErrorBanner } from "./error-banner"
@@ -90,6 +93,16 @@ export function SessionView(props: {
   onMissing?: (sessionID: string) => void
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** Agent Manager worktrees the composer's `@` menu can reference. */
+  worktrees?: Accessor<WorktreeReference[]>
+  /** Whether the composer's `@` menu offers Git changes. */
+  git?: () => boolean
+  /** What `@git-changes` diffs in this view. */
+  gitTarget?: () => GitChangesTarget | undefined
+  /** The Agent Manager worktree, or `local`, whose terminal `@terminal` reads. */
+  terminalContext?: () => string | undefined
+  /** Reads the focused Agent Manager terminal for `@terminal`. */
+  resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
   /** Another session tab is open, so the prompt suggests switching tabs. */
   tabs?: boolean
   /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
@@ -311,16 +324,17 @@ export function SessionView(props: {
   const send = async (
     text: string,
     mode: SendMode = "steer",
-    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
   ) => {
     const { id, gate, model } = await begin(mode)
+    const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
         sessionID: id,
         text,
         gate,
         metadata: input?.metadata,
-        files: input?.items?.length ? toPromptFiles(input.items) : undefined,
+        files,
         delivery: mode === "queue" ? "queue" : "steer",
       })
       .then(() => prompted(id, text, gate ? selection.attributed(id) : model))
@@ -379,7 +393,13 @@ export function SessionView(props: {
     }),
   )
 
-  const runSlash = async (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => {
+  const runSlash = async (
+    entry: SlashEntry,
+    args: string,
+    mode: SendMode,
+    items: PromptAttachment[],
+    mentions: MentionFile[] = [],
+  ) => {
     const { id, gate } = await begin(mode)
     const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     // A command with its own model runs on that model, which the server switches the session to.
@@ -388,7 +408,7 @@ export function SessionView(props: {
       {
         entry,
         args,
-        files: items.length ? toPromptFiles(items) : undefined,
+        files: promptFiles(items, mentions),
         delivery: mode === "queue" ? "queue" : "steer",
       },
       {
@@ -510,6 +530,12 @@ export function SessionView(props: {
                   selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                   autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                   sandbox={sandboxControl}
+                  worktrees={props.worktrees}
+                  git={props.git}
+                  gitTarget={props.gitTarget}
+                  terminalContext={props.terminalContext}
+                  resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  onOpenFile={(path) => props.actions.openFile?.(path, undefined, undefined, session())}
                 />
               )}
             </Show>

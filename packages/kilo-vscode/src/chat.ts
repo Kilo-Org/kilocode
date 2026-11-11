@@ -49,6 +49,7 @@ import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
+import { createMentionHost, isMentionRequest } from "./kilo-provider/mention-requests"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -243,6 +244,8 @@ export function wire(input: {
     log: (message, error) => console.error(`Kilo indexing: ${message}`, error),
   })
   const detachIndexing = indexing.attach(post)
+  // The composer's `@` menu: file and past-chat search, the file picker, terminal output and git changes.
+  const mentions = createMentionHost({ server: input.server, directory: input.directory, post })
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
@@ -499,6 +502,7 @@ export function wire(input: {
       return
     }
     if (input.handle?.(message) || speech.handle(message)) return
+    if (isMentionRequest(message)) return mentions.handle(message)
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
