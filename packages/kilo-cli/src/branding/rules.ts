@@ -28,10 +28,8 @@ export const overrides = [
 
 // Exact fragments that are not a simple word swap: domains, the upstream repo,
 // the config file name and the terminal-title prefix. Applied longest-first so
-// a longer fragment wins over a shorter one it contains (the docs URL before
-// the bare domain).
+// a longer fragment wins over a shorter one it contains.
 export const literals = [
-  ["https://opencode.ai/v2/docs", "https://kilo.ai/docs"],
   ["github.com/anomalyco/opencode", "github.com/Kilo-Org/kilocode"],
   ["opencode.json", KiloConfigFiles.newFile],
   ["opencode.ai", "kilo.ai"],

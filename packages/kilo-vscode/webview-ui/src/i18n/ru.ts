@@ -306,6 +306,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.noChanges": "Изменений нет.",
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
   "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
@@ -349,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "Обзор",
   "session.review.filesChanged": "{{count}} файлов изменено",
+  "session.review.viewTurnChanges": "Показать изменения за ход",
+  "session.review.turnChangesEmpty": "В этом ходе нет изменений.",
   "session.review.loadingChanges": "Загрузка изменений...",
   "session.review.noChanges": "Нет изменений",
   "session.messages.loadingEarlier": "Загрузка предыдущих сообщений...",
@@ -1322,6 +1325,11 @@ export const dict = {
     "Выберите, будут ли блоки MCP и общих инструментов изначально развёрнуты или свёрнуты.",
   "settings.display.mcpTool.expanded": "Развёрнуты",
   "settings.display.mcpTool.collapsed": "Свёрнуты",
+  "settings.display.codeMode.title": "Блоки Code Mode",
+  "settings.display.codeMode.description":
+    "Выберите, будут ли блоки Code Mode начинаться со списка вызовов инструментов или с одной строки. Скрипт всегда остаётся скрытым, пока вы его не откроете.",
+  "settings.display.codeMode.expanded": "Развёрнуты",
+  "settings.display.codeMode.collapsed": "Свёрнуты",
 
   "settings.display.shortcutHints.title": "Показывать подсказки по сочетаниям клавиш",
   "settings.display.shortcutHints.description":
@@ -1410,6 +1418,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
+  "task.backgroundAgents.promoteFailed": "Этот агент не смог продолжить работу в фоне. Возможно, он уже завершился.",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
   "task.backgroundAgents.clearFinished": "Очистить завершённые",
@@ -1447,6 +1456,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Файлы, изменённые в рабочем дереве, но ещё не проиндексированные, плюс неотслеживаемые (новые) файлы.",
   "diffViewer.source.session.label": "Сессия",
+  "diffViewer.source.turn.tooltip": "Файлы, изменённые Kilo за один ход.",
+  "diffViewer.source.turn.label": "Ход",
   "diffViewer.source.session.tooltip":
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",
@@ -1494,6 +1505,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Системный браузер",
   "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "chat.reply.toolbar": "Выделенный текст",
+  "chat.reply.quote": "Цитировать",
+  "chat.reply.quoteHint": "Цитировать в ответе",
+  "chat.reply.commentHint": "Прокомментировать этот фрагмент",
+  "chat.reply.copy": "Копировать",
+  "chat.reply.sendHint": "Отправить этот комментарий в Kilo сейчас",
+  "chat.reply.commentLater": "Сохранить для следующего сообщения",
+  "chat.reply.count": "Ответы ({{count}})",
+  "chat.reply.sendAll": "Отправить все",
+  "chat.reply.showInChat": "Показать в чате",
   "browserTab.noSession":
     "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
   "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",

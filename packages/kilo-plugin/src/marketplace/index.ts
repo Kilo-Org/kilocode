@@ -7,6 +7,7 @@ import { Global } from "@opencode/util/global"
 import path from "node:path"
 import { Effect, Exit, Option, Result, Schema, Scope } from "effect"
 import { KiloMarketplaceRegistry } from "./kilo"
+import { Agent, AgentError } from "./agent"
 import { Installer } from "./installer"
 import { MarketplaceMcp, McpError, configFile } from "./mcp"
 import { catalogKey, type Entry } from "./registry"
@@ -14,7 +15,14 @@ import { SkillError, safe } from "./skill"
 
 const CATALOG_TTL = 10 * 60 * 1000
 
-const decodeInstalled = Schema.decodeUnknownOption(Schema.fromJsonString(KiloMarketplaceRpc.Installed))
+// Resources are decoded one at a time: a resource kind this build does not know (an agent written by a newer
+// build, say) is dropped instead of failing the record and orphaning the files it names.
+const Stored = Schema.Struct({
+  ...KiloMarketplaceRpc.Installed.fields,
+  resources: Schema.optional(Schema.Array(Schema.Unknown)),
+  pending: Schema.optional(Schema.Array(Schema.Unknown)),
+})
+const decodeStored = Schema.decodeUnknownOption(Schema.fromJsonString(Stored))
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Array(
@@ -71,11 +79,14 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         "Couldn't save marketplace installation. Retry install or uninstall",
       )
 
-    // Absolute resources exist only in memory; stored records keep skill ids, server names and a scope-relative config.
+    // Absolute resources exist only in memory; stored records keep skill ids, agent ids, server names and a
+    // scope-relative config.
     const store = (resource: Installer.Resource): KiloMarketplaceRpc.Resource =>
-      "path" in resource
-        ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
-        : { server: resource.server, fingerprints: resource.fingerprints }
+      "agent" in resource
+        ? { agent: resource.agent, fingerprints: resource.fingerprints }
+        : "path" in resource
+          ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
+          : { server: resource.server, fingerprints: resource.fingerprints }
 
     const configs = (scope: KiloMarketplaceRpc.Scope) =>
       KiloConfigFiles.writeCandidates(directory(scope), scope === "global")
@@ -106,6 +117,13 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
       const owned = async (resource: KiloMarketplaceRpc.Resource, preferred?: string): Promise<Installer.Resource> => {
         if ("id" in resource)
           return { path: path.join(roots(record.scope), "skills", resource.id), fingerprints: resource.fingerprints }
+        // An agent document is named by its id and located from the current scope, so a project move is safe.
+        if ("agent" in resource)
+          return {
+            agent: resource.agent,
+            path: Agent.target(path.join(roots(record.scope), "agents"), resource.agent),
+            fingerprints: resource.fingerprints,
+          }
         const hinted =
           preferred &&
           (await MarketplaceMcp.fingerprint(preferred, resource.server).catch(() => undefined)) !== undefined
@@ -232,17 +250,31 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
           (inside(record.config) &&
             configs(record.scope).includes(path.join(directory(record.scope), record.config)))) &&
         [...(record.resources ?? []), ...(record.pending ?? [])].every(
-          (resource) => !("id" in resource) || safe(resource.id),
+          (resource) =>
+            !("id" in resource || "agent" in resource) ||
+            safe("id" in resource ? resource.id : resource.agent),
         )
       )
     }
+
+    // A resource this build cannot decode is dropped, not fatal: the rest of the record stays owned and removable.
+    // Without that, one unknown member would hide every resource the record owns and leave its files behind.
+    const known = (stored: typeof Stored.Type): KiloMarketplaceRpc.Installed => ({
+      ...stored,
+      resources: stored.resources && resources(stored.resources),
+      pending: stored.pending && resources(stored.pending),
+    })
+
+    const resources = (values: readonly unknown[]) =>
+      values.flatMap((value) => Option.toArray(Schema.decodeUnknownOption(KiloMarketplaceRpc.Resource)(value)))
 
     // Unreadable or untrustworthy rows are skipped so one bad record cannot hide the others; installs stay
     // protected by fingerprints and conflict checks.
     const decode = (value: unknown, key: string) =>
       Effect.gen(function* () {
-        const decoded = typeof value === "string" ? decodeInstalled(value) : Option.none()
-        if (Option.isSome(decoded) && valid(decoded.value)) return decoded.value
+        const decoded = typeof value === "string" ? decodeStored(value) : Option.none()
+        const record = Option.isSome(decoded) ? known(decoded.value) : undefined
+        if (record && valid(record)) return record
         yield* Effect.logWarning(`Skipping invalid marketplace record ${key}; no files were removed`)
         return undefined
       })
@@ -338,6 +370,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 id: input.id,
                 scope: input.scope,
                 project: input.scope === "project" ? project : undefined,
+                option: input.option,
                 ...(written.config ? { config: path.relative(directory(input.scope), written.config) } : {}),
                 ...(written.server ? { server: written.server } : {}),
                 resources: written.resources?.map(store),
@@ -350,10 +383,15 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                   Installer.install({
                     entry,
                     skills: path.join(roots(input.scope), "skills"),
+                    // The config agent plugin discovers `{agent,agents}/**/*.md` under each config directory.
+                    agents: path.join(roots(input.scope), "agents"),
+                    // Only skills and MCPs read this, and resolving it can reject an unrelated MCP config.
                     config:
                       input.kind === "skill"
                         ? path.join(directory(input.scope), KiloConfigFiles.newFile)
-                        : await configFile(directory(input.scope), input.scope === "global"),
+                        : input.kind === "mcp"
+                          ? await configFile(directory(input.scope), input.scope === "global")
+                          : "",
                     option: input.option,
                     params: input.params,
                     previous,
@@ -432,6 +470,8 @@ function reason(cause: unknown): readonly [keyof typeof KiloMarketplaceRpc.Defin
   if (cause instanceof AggregateError) return [reason(cause.cause ?? cause.errors[0])[0], cause.message]
   if (cause instanceof StorageError) return [cause.reason, cause.message] as const
   if (cause instanceof SkillError)
+    return [cause.reason === "conflict" ? "conflict" : "invalid_params", cause.message] as const
+  if (cause instanceof AgentError)
     return [cause.reason === "conflict" ? "conflict" : "invalid_params", cause.message] as const
   if (cause instanceof McpError) return [cause.reason, cause.message] as const
   if (cause instanceof Installer.FetchError) return ["fetch_failed", cause.message] as const

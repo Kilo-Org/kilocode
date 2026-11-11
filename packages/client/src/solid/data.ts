@@ -409,6 +409,16 @@ export function createData(config: CreateDataInput) {
   // failure does not block the next.
   const sending = new Map<string, Promise<unknown>>()
   const messageLoads = new Map<string, Promise<unknown>>()
+  // kilocode_change start - session-history: sessions whose loaded page reached the start of the transcript
+  const [messageStart, setMessageStart] = createSignal<ReadonlySet<string>>(new Set())
+  const markStart = (sessionID: string, complete: boolean) =>
+    setMessageStart((current) => {
+      const next = new Set(current)
+      if (complete) next.add(sessionID)
+      else next.delete(sessionID)
+      return next
+    })
+  // kilocode_change end
   const compacting = new Map<string, { id: string; observed: Set<string>; request: Promise<SessionInboxCompaction> }>()
   onCleanup(() => compacting.clear())
 
@@ -623,6 +633,9 @@ export function createData(config: CreateDataInput) {
     sync.invalidate(`session.pending:${sessionID}`)
     sync.invalidate(`session.message:${sessionID}`)
     messageLoads.delete(sessionID)
+    // kilocode_change start - session-history
+    markStart(sessionID, false)
+    // kilocode_change end
     // Keep unacknowledged submissions until their echo or rollback settles them.
     const pending = store.session.pending[sessionID]?.filter((item) => outbox.has(item.id)) ?? []
     const messages = store.session.message[sessionID]?.filter((item) => outbox.has(item.id)) ?? []
@@ -675,6 +688,9 @@ export function createData(config: CreateDataInput) {
     activeUpdates?.set(sessionID, undefined)
     store.session.pending[sessionID]?.forEach((item) => outbox.delete(item.id))
     messageIndex.delete(sessionID)
+    // kilocode_change start - session-history
+    markStart(sessionID, false)
+    // kilocode_change end
     sync.invalidate(`session:${sessionID}`)
     sync.invalidate(`session.family:${sessionID}`)
     sync.invalidate(`session.pending:${sessionID}`)
@@ -1817,13 +1833,26 @@ export function createData(config: CreateDataInput) {
           const position = messageIndex.get(sessionID)?.get(messageID)
           return position === undefined ? undefined : messages?.[position]
         },
+        // kilocode_change start
+        /** Drop the cached messages of one session without touching its parent or children. */
+        evict(sessionID: string) {
+          evictSession(sessionID)
+        },
+        /** Whether the loaded transcript reaches the start of the session history. */
+        startLoaded(sessionID: string) {
+          return messageStart().has(sessionID)
+        },
+        // kilocode_change end
         sync(sessionID: string) {
           return sync.run(`session.message:${sessionID}`, async () => {
             const started = deletionEpoch
+            // kilocode_change start - session-history: the limit also decides whether the page is the start
+            const limit = config.initialMessageLimit?.() ?? messagePageLimit
+            // kilocode_change end
             const response = await api()
               .message.list({
                 sessionID,
-                limit: config.initialMessageLimit?.() ?? messagePageLimit,
+                limit, // kilocode_change(session-history)
                 order: "desc",
               })
               .catch(evictMissing)
@@ -1841,7 +1870,17 @@ export function createData(config: CreateDataInput) {
               (item) => !ids.has(item.id) && (outbox.has(item.id) || admitted.has(item.id)),
             )
             const messages = local.length === 0 ? fetched : [...fetched, ...local]
+            // The transcript only holds delivered input, so a pending row it contains missed its
+            // inbox.delivered event (and maybe its enqueued echo) while the event stream was down.
+            const delivered = [...admitted].filter((id) => ids.has(id))
             batch(() => {
+              // kilocode_change start - session-history
+              markStart(sessionID, response.data.length < limit)
+              // kilocode_change end
+              delivered.forEach((id) => {
+                outbox.delete(id)
+                removePending(sessionID, id)
+              })
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
               setStore("session", "messageCursor", sessionID, response.cursor.next ?? undefined)
@@ -1886,16 +1925,27 @@ export function createData(config: CreateDataInput) {
           const request = (async () => {
             const fetched: SessionMessageInfo[] = []
             let next: string | undefined = cursor
+            // kilocode_change start - session-history
+            let lastPage = 0
+            let lastLimit = 0
+            // kilocode_change end
             do {
+              // kilocode_change start - session-history
+              const limit = options?.all ? 200 : messagePageLimit
+              lastLimit = limit
+              // kilocode_change end
               const response = await api().message.list(
                 {
                   sessionID,
-                  limit: options?.all ? 200 : messagePageLimit,
+                  limit, // kilocode_change(session-history)
                   cursor: next,
                 },
                 { signal },
               )
               if (signal?.aborted) return
+              // kilocode_change start - session-history
+              lastPage = response.data.length
+              // kilocode_change end
               fetched.push(...response.data.map(stored))
               next = response.cursor.next ?? undefined
               if (!options?.all) break
@@ -1905,6 +1955,9 @@ export function createData(config: CreateDataInput) {
             const ids = new Set(existing.map((item) => item.id))
             const messages = [...fetched.reverse().filter((item) => !ids.has(item.id)), ...existing]
             batch(() => {
+              // kilocode_change start - session-history
+              markStart(sessionID, !next || lastPage < lastLimit)
+              // kilocode_change end
               options?.beforePublish?.()
               messageIndex.set(sessionID, new Map(messages.map((item, position) => [item.id, position])))
               setStore("session", "message", sessionID, reconcile(messages))

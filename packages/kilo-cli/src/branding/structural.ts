@@ -56,6 +56,24 @@ const logic: Record<string, ReadonlyArray<readonly [string, string, number]>> = 
       1,
     ],
   ],
+  // The built-in tool namespace is a product name the model and the user read
+  // (`tools.kilo.session_move`). These are runtime IDs, not display text: the
+  // rule engine leaves the bare `"opencode"` and dotted or underscored IDs alone,
+  // so they are renamed here, and a new upstream tool fails the count.
+  "core/src/tool/plugin/opencode.ts": [
+    ['namespace: "opencode"', 'namespace: "kilo"', 6],
+    ['name: "opencode"', 'name: "kilo"', 1],
+    ["tools.opencode.session_move", "tools.kilo.session_move", 1],
+  ],
+  "core/src/tool/plugin/artifact.ts": [['namespace: "opencode"', 'namespace: "kilo"', 4]],
+  "core/src/tool/plugin/schedule.ts": [['namespace: "opencode"', 'namespace: "kilo"', 5]],
+  "core/src/tool/plugin/mcp-resource.ts": [
+    ['namespace: "opencode"', 'namespace: "kilo"', 2],
+    ["opencode_list_mcp_resources", "kilo_list_mcp_resources", 1],
+    ["opencode_read_mcp_resource", "kilo_read_mcp_resource", 1],
+  ],
+  // Code Mode paths of the tools a schedule check may not call.
+  "core/src/schedule/check.ts": [['"opencode.', '"kilo.', 8]],
 }
 
 const OAUTH_PAGE = "core/src/oauth/page.ts"

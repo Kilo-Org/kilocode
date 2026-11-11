@@ -309,6 +309,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "이 명령에만 적용되며, 파일 시스템 및 네트워크 제한을 해제하고 명령 전체를 실행합니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 해당 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
+  "ui.permission.noChanges": "변경 사항이 없습니다.",
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
   "ui.permission.feedbackHint": "Enter로 거부, Esc로 취소",
@@ -351,6 +352,8 @@ export const dict = {
 
   "session.tab.review": "검토",
   "session.review.filesChanged": "{{count}}개 파일 변경됨",
+  "session.review.viewTurnChanges": "턴 변경 사항 보기",
+  "session.review.turnChangesEmpty": "이번 턴에 변경 사항이 없습니다.",
   "session.review.loadingChanges": "변경 사항 로드 중...",
   "session.review.noChanges": "변경 없음",
   "session.messages.loadingEarlier": "이전 메시지 로드 중...",
@@ -1299,6 +1302,11 @@ export const dict = {
   "settings.display.mcpTool.description": "MCP 및 범용 도구 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.mcpTool.expanded": "펼침",
   "settings.display.mcpTool.collapsed": "접힘",
+  "settings.display.codeMode.title": "Code Mode 블록",
+  "settings.display.codeMode.description":
+    "Code Mode 블록을 도구 호출이 나열된 상태로 시작할지 한 줄로 시작할지 선택합니다. 스크립트는 열기 전까지 항상 숨겨집니다.",
+  "settings.display.codeMode.expanded": "펼침",
+  "settings.display.codeMode.collapsed": "접힘",
 
   "settings.display.shortcutHints.title": "단축키 힌트 표시",
   "settings.display.shortcutHints.description":
@@ -1387,6 +1395,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
+  "task.backgroundAgents.promoteFailed": "이 에이전트를 백그라운드에서 계속할 수 없습니다. 이미 완료되었을 수 있습니다.",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",
@@ -1424,6 +1433,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "작업 트리에서 수정되었지만 아직 스테이징되지 않은 파일과 추적되지 않는(새) 파일입니다.",
   "diffViewer.source.session.label": "세션",
+  "diffViewer.source.turn.tooltip": "한 턴 동안 Kilo가 변경한 파일.",
+  "diffViewer.source.turn.label": "턴",
   "diffViewer.source.session.tooltip":
     "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
@@ -1471,6 +1482,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "시스템 브라우저",
   "settings.experimental.browserLinks.integrated": "통합 브라우저",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
+  "chat.reply.toolbar": "선택한 텍스트",
+  "chat.reply.quote": "인용",
+  "chat.reply.quoteHint": "답변에서 인용하기",
+  "chat.reply.commentHint": "이 부분에 댓글 달기",
+  "chat.reply.copy": "복사",
+  "chat.reply.sendHint": "이 댓글을 지금 Kilo에 보내기",
+  "chat.reply.commentLater": "다음 메시지로 저장",
+  "chat.reply.count": "답글 ({{count}})",
+  "chat.reply.sendAll": "모두 보내기",
+  "chat.reply.showInChat": "채팅에서 보기",
   "browserTab.noSession": "세션에서 브라우저를 열어 로컬 애플리케이션이나 공개 HTTPS 페이지를 미리 보세요.",
   "browserTab.disabled": "통합 브라우저가 비활성화되어 있습니다. Kilo 설정 > 실험에서 활성화하세요.",
 }

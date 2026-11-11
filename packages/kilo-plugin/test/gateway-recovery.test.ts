@@ -42,7 +42,7 @@ const addPlugin = Effect.fn(function* () {
       editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
     })
     const plugin = yield* Plugin.Service
-    const host = yield* PluginHost.make(plugin)
+    const host = yield* PluginHost.make(plugin, "test")
     yield* KiloPlugin.effect(host)
     yield* KiloGatewayPlugin.effect({
       ...host,

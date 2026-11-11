@@ -293,6 +293,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "这会移除文件系统和网络限制，运行整条命令，且仅限此命令。Git 必须写入 .git，该路径在沙盒中为只读，且在链接的 worktree 中位于该 worktree 之外。Bash 允许规则和自动审批永远不会自动批准此提示。",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
+  "ui.permission.noChanges": "无更改。",
   "ui.permission.reject": "拒绝",
   "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
@@ -335,6 +336,8 @@ export const dict = {
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
+  "session.review.viewTurnChanges": "查看轮次更改",
+  "session.review.turnChangesEmpty": "本轮次无更改。",
   "session.review.loadingChanges": "正在加载更改...",
   "session.review.noChanges": "无更改",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
@@ -1247,6 +1250,11 @@ export const dict = {
   "settings.display.mcpTool.description": "选择 MCP 与通用工具块的初始状态：展开或折叠。",
   "settings.display.mcpTool.expanded": "展开",
   "settings.display.mcpTool.collapsed": "折叠",
+  "settings.display.codeMode.title": "Code Mode 块",
+  "settings.display.codeMode.description":
+    "选择 Code Mode 块的初始状态：列出工具调用或显示为一行。脚本在您打开之前始终保持隐藏。",
+  "settings.display.codeMode.expanded": "展开",
+  "settings.display.codeMode.collapsed": "折叠",
 
   "settings.display.shortcutHints.title": "显示快捷键提示",
   "settings.display.shortcutHints.description":
@@ -1332,6 +1340,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
+  "task.backgroundAgents.promoteFailed": "此代理无法在后台继续。它可能已经完成。",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
   "task.backgroundAgents.needsInput": "需要输入",
   "task.backgroundAgents.clearFinished": "清除已完成",
@@ -1367,6 +1376,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "未暂存",
   "diffViewer.source.unstaged.tooltip": "在工作树中已修改但尚未暂存的文件，以及未跟踪（新）的文件。",
   "diffViewer.source.session.label": "会话",
+  "diffViewer.source.turn.tooltip": "Kilo 在一个轮次中更改的文件。",
+  "diffViewer.source.turn.label": "轮次",
   "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
@@ -1411,6 +1422,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "系统浏览器",
   "settings.experimental.browserLinks.integrated": "集成浏览器",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "chat.reply.toolbar": "选中的文本",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "在回复中引用",
+  "chat.reply.commentHint": "评论此段",
+  "chat.reply.copy": "复制",
+  "chat.reply.sendHint": "立即将此评论发送给 Kilo",
+  "chat.reply.commentLater": "保存到下次消息",
+  "chat.reply.count": "回复 ({{count}})",
+  "chat.reply.sendAll": "全部发送",
+  "chat.reply.showInChat": "在聊天中显示",
   "browserTab.noSession": "从会话中打开浏览器以预览本地应用或公共 HTTPS 页面。",
   "browserTab.disabled": "集成浏览器已禁用。请在 Kilo 设置 > 实验性中启用。",
 } satisfies Partial<Record<Keys, string>>

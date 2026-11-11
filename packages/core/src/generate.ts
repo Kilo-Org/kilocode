@@ -1,6 +1,7 @@
 export * as Generate from "./generate.js"
 
 import { ai, AIError, DecisionClient, ImageClient, LLMClient, Media } from "@opencode/ai/effect"
+import type { GenerationOptionsFields, SystemPart } from "@opencode/ai/effect" // kilocode_change(branch-name) seam - stateless request options
 import type { DecisionRequest, DecisionResult, ImageRequest, ImageResult } from "@opencode/schema/generate"
 import { Money } from "@opencode/schema/money"
 import { SessionID } from "@opencode/schema/session-id"
@@ -16,6 +17,10 @@ import { ModelRetry } from "./model-retry.js"
 export interface TextInput {
   readonly prompt: string
   readonly model?: Model.Ref
+  // kilocode_change start - branch-name seam: optional system prompt and generation settings for a stateless call
+  readonly system?: string | ReadonlyArray<SystemPart>
+  readonly generation?: GenerationOptionsFields
+  // kilocode_change end
 }
 
 export class UnavailableError extends Schema.TaggedError<UnavailableError>()("Generate.UnavailableError", {
@@ -116,8 +121,12 @@ export const layer = Layer.effect(
           ai.request({
             model: resolved.model,
             prompt: input.prompt,
+            // kilocode_change start - branch-name seam: pass through the optional system prompt and generation settings
+            system: input.system,
+            ...input.generation,
+            // kilocode_change end
             // Gateways require session attribution even for a stateless call; no Session is stored.
-            http: { headers: { "x-opencode-session": SessionID.create() } },
+            headers: { "x-opencode-session": SessionID.create() },
           }),
         )
         .pipe(

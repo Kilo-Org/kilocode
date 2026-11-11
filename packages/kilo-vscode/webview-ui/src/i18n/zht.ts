@@ -291,6 +291,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
+  "ui.permission.noChanges": "無變更。",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
@@ -333,6 +334,8 @@ export const dict = {
 
   "session.tab.review": "審查",
   "session.review.filesChanged": "{{count}} 個檔案變更",
+  "session.review.viewTurnChanges": "查看輪次變更",
+  "session.review.turnChangesEmpty": "本輪次無變更。",
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.noChanges": "沒有變更",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
@@ -1211,6 +1214,11 @@ export const dict = {
   "settings.display.mcpTool.description": "選擇 MCP 與通用工具區塊的初始狀態：展開或收合。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "收合",
+  "settings.display.codeMode.title": "Code Mode 區塊",
+  "settings.display.codeMode.description":
+    "選擇 Code Mode 區塊的初始狀態：列出工具呼叫或顯示為一行。指令碼在您開啟之前始終保持隱藏。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "收合",
 
   "settings.display.shortcutHints.title": "顯示快捷鍵提示",
   "settings.display.shortcutHints.description":
@@ -1337,6 +1345,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "開啟所有背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
+  "task.backgroundAgents.promoteFailed": "此代理無法在背景繼續。它可能已經完成。",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
   "task.backgroundAgents.clearFinished": "清除已完成",
@@ -1372,6 +1381,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "未暫存",
   "diffViewer.source.unstaged.tooltip": "在工作樹中已修改但尚未暫存的檔案，以及未追蹤（新）的檔案。",
   "diffViewer.source.session.label": "工作階段",
+  "diffViewer.source.turn.tooltip": "Kilo 在一個輪次中變更的檔案。",
+  "diffViewer.source.turn.label": "輪次",
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
@@ -1416,6 +1427,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "系統瀏覽器",
   "settings.experimental.browserLinks.integrated": "整合瀏覽器",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "chat.reply.toolbar": "選取的文字",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "在回覆中引用",
+  "chat.reply.commentHint": "對此段落留言",
+  "chat.reply.copy": "複製",
+  "chat.reply.sendHint": "立即將此留言傳送給 Kilo",
+  "chat.reply.commentLater": "儲存至下一則訊息",
+  "chat.reply.count": "回覆 ({{count}})",
+  "chat.reply.sendAll": "全部傳送",
+  "chat.reply.showInChat": "在聊天中顯示",
   "browserTab.noSession": "從工作階段開啟瀏覽器以預覽本機應用程式或公開 HTTPS 頁面。",
   "browserTab.disabled": "整合瀏覽器已停用。請在 Kilo 設定 > 實驗性中啟用。",
 } satisfies Partial<Record<Keys, string>>

@@ -240,7 +240,12 @@ export interface Interface {
   readonly active: Effect.Effect<ReadonlySet<SessionSchema.ID>>
   readonly background: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError>
   readonly resume: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | SessionRunner.RunError>
-  readonly interrupt: (sessionID: SessionSchema.ID, options?: { readonly resume?: boolean }) => Effect.Effect<boolean>
+  // kilocode_change start - steer: a steered interruption never cancels a running compaction.
+  readonly interrupt: (
+    sessionID: SessionSchema.ID,
+    options?: { readonly resume?: boolean; readonly steer?: boolean },
+  ) => Effect.Effect<boolean>
+  // kilocode_change end
   readonly synthetic: (
     input: Parameters<Session.Handle["synthetic"]>[0] & { sessionID: SessionSchema.ID },
   ) => ReturnType<Session.Handle["synthetic"]>
@@ -280,7 +285,7 @@ const layer = Layer.effect(
     const environments = yield* SessionEnvironment.Service
     const locations = yield* LocationServiceMap.Service
     const sessions = yield* Session.make()
-    const mediaBlob = (session: SessionSchema.Info) => SessionBlob.enabledFor(instances, session)
+    const mediaBlob = (session: SessionSchema.Info) => SessionBlob.enabledFor(instances, app, session)
     const isDurableSessionEvent = (item: Bus.LogItem): item is SessionEvent.DurableEvent =>
       Object.hasOwn(SessionEvent.Durable.cases, item.type)
 

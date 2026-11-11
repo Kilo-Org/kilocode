@@ -307,6 +307,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.noChanges": "تغییری وجود ندارد.",
   "ui.permission.reject": "رد",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
   "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
@@ -349,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",
+  "session.review.viewTurnChanges": "مشاهده تغییرات نوبت",
+  "session.review.turnChangesEmpty": "در این نوبت تغییری وجود ندارد.",
   "session.review.change.other": "تغییرات",
   "session.review.loadingChanges": "در حال بارگذاری تغییرات...",
   "session.review.noChanges": "بدون تغییر",
@@ -1306,6 +1309,11 @@ export const dict = {
     "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
   "settings.display.mcpTool.expanded": "گسترش‌یافته",
   "settings.display.mcpTool.collapsed": "جمع‌شده",
+  "settings.display.codeMode.title": "بلوک‌های Code Mode",
+  "settings.display.codeMode.description":
+    "انتخاب کنید که بلوک‌های Code Mode با فهرست فراخوانی‌های ابزار شروع شوند یا در یک خط. اسکریپت همیشه تا زمانی که آن را باز نکنید پنهان می‌ماند.",
+  "settings.display.codeMode.expanded": "گسترش‌یافته",
+  "settings.display.codeMode.collapsed": "جمع‌شده",
   "settings.display.shortcutHints.title": "نمایش راهنمای میانبرها",
   "settings.display.shortcutHints.description":
     "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
@@ -1405,6 +1413,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "باز کردن همه عامل‌های پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
+  "task.backgroundAgents.promoteFailed": "این عامل نتوانست در پس‌زمینه ادامه دهد. ممکن است کارش تمام شده باشد.",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
   "task.backgroundAgents.needsInput": "ورودی لازم است",
   "task.backgroundAgents.clearFinished": "پاک کردن موارد تکمیل‌شده",
@@ -1445,6 +1454,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "فایل‌های تغییر یافته در working tree شما که هنوز stage نشده‌اند، به علاوه فایل‌های ردیابی‌نشده (جدید).",
   "diffViewer.source.session.label": "جلسه",
+  "diffViewer.source.turn.tooltip": "فایل‌های تغییر یافته توسط Kilo در یک نوبت.",
+  "diffViewer.source.turn.label": "نوبت",
   "diffViewer.source.session.tooltip":
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
@@ -1493,6 +1504,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "مرورگر سیستم",
   "settings.experimental.browserLinks.integrated": "مرورگر یکپارچه",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "chat.reply.toolbar": "متن انتخاب‌شده",
+  "chat.reply.quote": "نقل قول",
+  "chat.reply.quoteHint": "در پاسخ خود نقل قول کن",
+  "chat.reply.commentHint": "درباره این بخش نظر بده",
+  "chat.reply.copy": "کپی",
+  "chat.reply.sendHint": "این نظر را همین حالا برای Kilo بفرست",
+  "chat.reply.commentLater": "ذخیره برای پیام بعدی",
+  "chat.reply.count": "پاسخ‌ها ({{count}})",
+  "chat.reply.sendAll": "ارسال همه",
+  "chat.reply.showInChat": "نمایش در چت",
   "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
   "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
 }

@@ -3,6 +3,7 @@ export * as Permission from "./permission.js"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { Context, Deferred, Effect, Layer, Schema } from "effect"
 import { Permission } from "@opencode/schema/permission"
+import type { Tool } from "@opencode/schema/tool"
 import { Bus } from "./bus.js"
 import { Location } from "./location.js"
 import { Agent } from "./agent.js"
@@ -34,6 +35,13 @@ export interface AssertInput extends Omit<Request, "id" | "message"> {
   readonly id?: ID
   readonly agent?: Agent.ID
 }
+
+/** The requester fields of a permission request made by a tool call. */
+export const invocation = (context: Pick<Tool.Context, "sessionID" | "agent" | "messageID" | "id">) => ({
+  sessionID: context.sessionID,
+  agent: context.agent,
+  source: { type: "tool" as const, messageID: context.messageID, id: context.id },
+})
 
 export interface ReplyInput {
   readonly requestID: ID
@@ -187,6 +195,8 @@ const layer = Layer.effect(
         metadata: input.metadata,
         source: input.source,
         effect,
+        rules: all, // kilocode_change(permission) seam - the rules the effect was evaluated against
+        unattended: yield* Unattended, // kilocode_change(permission) seam - the rules that settle an unanswered ask
       })
       const unattended = yield* Unattended
       if (event.effect !== "ask" || unattended === undefined)

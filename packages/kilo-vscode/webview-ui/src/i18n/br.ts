@@ -312,6 +312,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Isto executa todo o comando sem as restrições de sistema de arquivos e rede, apenas para este comando. O Git precisa gravar em .git, que é somente leitura na sandbox e fica fora da árvore de trabalho em um worktree vinculado. Regras de permissão do Bash e a aprovação automática nunca aprovam esta solicitação automaticamente.",
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
+  "ui.permission.noChanges": "Sem alterações.",
   "ui.permission.reject": "Rejeitar",
   "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",
   "ui.permission.feedbackHint": "Enter para rejeitar, Esc para cancelar",
@@ -354,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Revisão",
   "session.review.filesChanged": "{{count}} Arquivos Alterados",
+  "session.review.viewTurnChanges": "Ver alterações do turno",
+  "session.review.turnChangesEmpty": "Nenhuma alteração neste turno.",
   "session.review.loadingChanges": "Carregando alterações...",
   "session.review.noChanges": "Sem alterações",
   "session.messages.loadingEarlier": "Carregando mensagens anteriores...",
@@ -1339,6 +1342,11 @@ export const dict = {
     "Escolha se os blocos de ferramentas MCP e genéricas começam expandidos ou recolhidos.",
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Recolhidos",
+  "settings.display.codeMode.title": "Blocos do Code Mode",
+  "settings.display.codeMode.description":
+    "Escolha se os blocos do Code Mode começam com as chamadas de ferramenta listadas ou em uma única linha. O script permanece sempre oculto até você abri-lo.",
+  "settings.display.codeMode.expanded": "Expandidos",
+  "settings.display.codeMode.collapsed": "Recolhidos",
 
   "settings.display.shortcutHints.title": "Mostrar dicas de atalhos",
   "settings.display.shortcutHints.description":
@@ -1428,6 +1436,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Abrir todos os agentes em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",
+  "task.backgroundAgents.promoteFailed": "Este agente não pôde continuar em segundo plano. Ele pode já ter terminado.",
   "task.backgroundAgents.waiting": "Um agente em segundo plano precisa da sua entrada",
   "task.backgroundAgents.needsInput": "Entrada necessária",
   "task.backgroundAgents.clearFinished": "Limpar concluídos",
@@ -1465,6 +1474,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Arquivos modificados na sua árvore de trabalho mas ainda não preparados, mais arquivos não rastreados (novos).",
   "diffViewer.source.session.label": "Sessão",
+  "diffViewer.source.turn.tooltip": "Arquivos alterados pelo Kilo durante um turno.",
+  "diffViewer.source.turn.label": "Turno",
   "diffViewer.source.session.tooltip":
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",
@@ -1512,6 +1523,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navegador do sistema",
   "settings.experimental.browserLinks.integrated": "Navegador Integrado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
+  "chat.reply.toolbar": "Texto selecionado",
+  "chat.reply.quote": "Citar",
+  "chat.reply.quoteHint": "Citar na sua resposta",
+  "chat.reply.commentHint": "Comentar este trecho",
+  "chat.reply.copy": "Copiar",
+  "chat.reply.sendHint": "Enviar este comentário para o Kilo agora",
+  "chat.reply.commentLater": "Salvar para sua próxima mensagem",
+  "chat.reply.count": "Respostas ({{count}})",
+  "chat.reply.sendAll": "Enviar tudo",
+  "chat.reply.showInChat": "Mostrar no chat",
   "browserTab.noSession":
     "Abra o navegador de uma sessão para visualizar um aplicativo local ou uma página HTTPS pública.",
   "browserTab.disabled": "O navegador integrado está desativado. Ative-o em Configurações do Kilo > Experimental.",

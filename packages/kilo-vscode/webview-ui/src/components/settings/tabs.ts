@@ -4,6 +4,7 @@
 import { lazy, type Component } from "solid-js"
 import type { SettingsData } from "../../v2/settings"
 import type { SettingsNavigationTarget } from "./settings-search"
+import { sandboxControls } from "./sandboxing"
 
 /** Props every tab component receives. */
 export interface SettingsTabProps {
@@ -14,6 +15,8 @@ export interface SettingsTabProps {
   focus?: string
   /** Increments on each search navigation so a subtab can reset its editor without remounting. */
   navigation: number
+  /** Agent Manager project a project-scoped tab opens for, as the project gear selected it. */
+  projectId?: string
   onSubtabChange: (subtab: string) => void
   onNavigate: (target: SettingsNavigationTarget) => void
 }
@@ -23,6 +26,8 @@ export interface SettingsTabV2 {
   icon: string
   title: string
   ready: boolean
+  /** Renders only when the platform supports it, such as the sandbox controls outside Windows. */
+  visible?: () => boolean
   component: Component<SettingsTabProps>
 }
 
@@ -54,6 +59,13 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     title: "settings.autoApprove.title",
     ready: true,
     component: lazy(() => import("./AutoApproveTab")),
+  },
+  {
+    id: "agentManager",
+    icon: "settings-gear",
+    title: "agentManager.settings.title",
+    ready: true,
+    component: lazy(() => import("./AgentManagerTab")),
   },
   {
     id: "browser",
@@ -91,6 +103,13 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     component: lazy(() => import("./ContextTab")),
   },
   {
+    id: "indexing",
+    icon: "database",
+    title: "settings.indexing.title",
+    ready: true,
+    component: lazy(() => import("./IndexingTab")),
+  },
+  {
     id: "commitMessage",
     icon: "edit",
     title: "settings.commitMessage.title",
@@ -103,6 +122,14 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     title: "settings.experimental.title",
     ready: true,
     component: lazy(() => import("./ExperimentalTab")),
+  },
+  {
+    id: "sandboxing",
+    icon: "shield",
+    title: "settings.sandboxing.title",
+    ready: true,
+    visible: sandboxControls,
+    component: lazy(() => import("./SandboxingTab")),
   },
   {
     id: "language",

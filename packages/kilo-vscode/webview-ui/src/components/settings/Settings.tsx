@@ -31,9 +31,11 @@ export interface SettingsProps {
   onTabChange?: (tab: string) => void
   /** Opens the Profile view, where the Kilo Gateway sign-in runs. */
   onLogin: () => void
+  /** Agent Manager project the project-scoped tab opens for. */
+  projectId?: string
 }
 
-const READY_TABS = SETTINGS_TABS_V2.filter((tab) => tab.ready)
+const READY_TABS = SETTINGS_TABS_V2.filter((tab) => tab.ready && (tab.visible?.() ?? true))
 const READY_IDS = new Set(READY_TABS.map((tab) => tab.id))
 
 const initialTab = (tab?: string) => (tab && READY_IDS.has(tab) ? tab : (READY_TABS[0]?.id ?? "providers"))
@@ -162,6 +164,7 @@ const Settings: Component<SettingsProps> = (props) => {
                 subtab={subtab()}
                 focus={focus()}
                 navigation={navigation()}
+                projectId={props.projectId}
                 onSubtabChange={setSubtab}
                 onNavigate={search.navigate}
               />
@@ -171,11 +174,12 @@ const Settings: Component<SettingsProps> = (props) => {
 
         <Show when={search.searching()}>
           <SettingsSearchResults
-            query={search.query()}
+            query={search.resultsQuery()}
             results={search.results()}
             active={search.active()}
             listId={search.listId}
             tabs={searchTabs()}
+            pending={search.pending()}
             onHover={search.setActive}
             onSelect={search.select}
           />

@@ -45,6 +45,11 @@ export const files: readonly string[] = [
   "tui/src/feature-plugins/system/stats.tsx",
   "tui/src/feature-plugins/sidebar/footer.tsx",
   "tui/src/config/index.tsx",
+  "core/src/tool/plugin/opencode.ts",
+  "core/src/tool/plugin/artifact.ts",
+  "core/src/tool/plugin/schedule.ts",
+  "core/src/tool/plugin/mcp-resource.ts",
+  "core/src/schedule/check.ts",
   "core/src/oauth/page.ts",
 ]
 

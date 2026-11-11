@@ -6,25 +6,28 @@
 <line class="l" x1="40" y1="95.00" x2="990" y2="95.00"/><text x="4" y="99.00">50%</text>
 <line class="l" x1="40" y1="57.50" x2="990" y2="57.50"/><text x="4" y="61.50">75%</text>
 <line class="l" x1="40" y1="20.00" x2="990" y2="20.00"/><text x="4" y="24.00">100%</text>
-<polyline class="p" points="40.00,169.85 145.56,168.65 251.11,168.65 356.67,168.65 462.22,168.65 567.78,167.75 673.33,167.60 778.89,161.00 884.44,160.85 990.00,160.10"/>
-<circle class="m" cx="40.00" cy="169.85" r="3"><title>2026-10-16: 0.1% (12/9854)</title></circle>
+<polyline class="p" points="40.00,169.70 107.86,168.20 175.71,168.20 243.57,168.20 311.43,168.05 379.29,167.15 447.14,166.85 515.00,154.85 582.86,154.70 650.71,153.35 718.57,126.65 786.43,119.15 854.29,118.85 922.14,117.65 990.00,115.25"/>
+<circle class="m" cx="40.00" cy="169.70" r="3"><title>2026-10-16: 0.2% (12/5440)</title></circle>
 <text x="40.00" y="192" text-anchor="middle">2026-10-16</text>
-<circle class="m" cx="145.56" cy="168.65" r="3"><title>2026-10-19: 0.9% (87/9829)</title></circle>
-<text x="145.56" y="192" text-anchor="middle">2026-10-19</text>
-<circle class="m" cx="251.11" cy="168.65" r="3"><title>2026-10-20: 0.9% (87/9829)</title></circle>
-<text x="251.11" y="192" text-anchor="middle">2026-10-20</text>
-<circle class="m" cx="356.67" cy="168.65" r="3"><title>2026-10-21: 0.9% (90/9829)</title></circle>
-<text x="356.67" y="192" text-anchor="middle">2026-10-21</text>
-<circle class="m" cx="462.22" cy="168.65" r="3"><title>2026-10-22: 0.9% (93/9829)</title></circle>
-<text x="462.22" y="192" text-anchor="middle">2026-10-22</text>
-<circle class="m" cx="567.78" cy="167.75" r="3"><title>2026-10-23: 1.5% (150/9828)</title></circle>
-<text x="567.78" y="192" text-anchor="middle">2026-10-23</text>
-<circle class="m" cx="673.33" cy="167.60" r="3"><title>2026-10-26: 1.6% (157/9828)</title></circle>
-<text x="673.33" y="192" text-anchor="middle">2026-10-26</text>
-<circle class="m" cx="778.89" cy="161.00" r="3"><title>2026-10-28: 6% (594/9819)</title></circle>
-<text x="778.89" y="192" text-anchor="middle">2026-10-28</text>
-<circle class="m" cx="884.44" cy="160.85" r="3"><title>2026-10-29: 6.1% (597/9819)</title></circle>
-<text x="884.44" y="192" text-anchor="middle">2026-10-29</text>
-<circle class="m" cx="990.00" cy="160.10" r="3"><title>now: 6.6% (646/9817)</title></circle>
+<circle class="m" cx="107.86" cy="168.20" r="3"><title>2026-10-19: 1.2% (66/5426)</title></circle>
+<circle class="m" cx="175.71" cy="168.20" r="3"><title>2026-10-20: 1.2% (66/5426)</title></circle>
+<text x="175.71" y="192" text-anchor="middle">2026-10-20</text>
+<circle class="m" cx="243.57" cy="168.20" r="3"><title>2026-10-21: 1.2% (67/5426)</title></circle>
+<circle class="m" cx="311.43" cy="168.05" r="3"><title>2026-10-22: 1.3% (70/5426)</title></circle>
+<text x="311.43" y="192" text-anchor="middle">2026-10-22</text>
+<circle class="m" cx="379.29" cy="167.15" r="3"><title>2026-10-23: 1.9% (105/5426)</title></circle>
+<circle class="m" cx="447.14" cy="166.85" r="3"><title>2026-10-26: 2.1% (112/5426)</title></circle>
+<text x="447.14" y="192" text-anchor="middle">2026-10-26</text>
+<circle class="m" cx="515.00" cy="154.85" r="3"><title>2026-10-28: 10.1% (549/5417)</title></circle>
+<circle class="m" cx="582.86" cy="154.70" r="3"><title>2026-10-29: 10.2% (552/5417)</title></circle>
+<text x="582.86" y="192" text-anchor="middle">2026-10-29</text>
+<circle class="m" cx="650.71" cy="153.35" r="3"><title>2026-10-30: 11.1% (601/5415)</title></circle>
+<circle class="m" cx="718.57" cy="126.65" r="3"><title>2026-11-05: 28.9% (1558/5384)</title></circle>
+<text x="718.57" y="192" text-anchor="middle">2026-11-05</text>
+<circle class="m" cx="786.43" cy="119.15" r="3"><title>2026-11-06: 33.9% (1817/5364)</title></circle>
+<circle class="m" cx="854.29" cy="118.85" r="3"><title>2026-11-09: 34.1% (1830/5364)</title></circle>
+<text x="854.29" y="192" text-anchor="middle">2026-11-09</text>
+<circle class="m" cx="922.14" cy="117.65" r="3"><title>2026-11-10: 34.9% (1869/5355)</title></circle>
+<circle class="m" cx="990.00" cy="115.25" r="3"><title>now: 36.5% (1952/5348)</title></circle>
 <text x="990.00" y="192" text-anchor="middle">now</text>
 </svg>

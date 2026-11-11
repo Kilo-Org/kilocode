@@ -27,8 +27,8 @@ type Subscriber = {
 type Active = {
   info: Info
   process: Proc
+  // Retained output ending at cursor.
   buffer: string
-  bufferCursor: number
   cursor: number
   subscribers: Map<object, Subscriber>
   listeners: Disp[]
@@ -57,6 +57,7 @@ export type AttachInput = {
   readonly onData: (chunk: string) => void
   // Fired once when the session stops producing output: process exit (exitCode set), removal, or service teardown.
   readonly onEnd: (event: { exitCode?: number }) => void
+  readonly allowExited?: boolean // kilocode_change - replay an exited session's retained output, then end
 }
 
 export type Attachment = {
@@ -181,7 +182,12 @@ const layer = Layer.effect(
       }
       yield* Effect.logInfo("creating session", { id, cmd: command, args, cwd })
       const { spawn } = yield* Effect.promise(() => pty())
-      const proc = yield* Effect.sync(() => spawn(command, args, { name: "xterm-256color", cwd, env }))
+      // kilocode_change start - pty: start at the requested size instead of node-pty's default of 80x24
+      const size = input.size
+      const proc = yield* Effect.sync(() =>
+        spawn(command, args, { name: "xterm-256color", cwd, env, ...(size ? { cols: size.cols, rows: size.rows } : {}) }),
+      )
+      // kilocode_change end
       const info: Info = {
         id,
         title: input.title || `Terminal ${id.slice(-4)}`,
@@ -195,7 +201,6 @@ const layer = Layer.effect(
         info,
         process: proc,
         buffer: "",
-        bufferCursor: 0,
         cursor: 0,
         subscribers: new Map(),
         listeners: [],
@@ -217,9 +222,7 @@ const layer = Layer.effect(
           }
           session.buffer += chunk
           if (session.buffer.length <= BUFFER_LIMIT) return
-          const excess = session.buffer.length - BUFFER_LIMIT
-          session.buffer = session.buffer.slice(excess)
-          session.bufferCursor += excess
+          session.buffer = session.buffer.slice(session.buffer.length - BUFFER_LIMIT)
         }),
         proc.onExit(({ exitCode }) => {
           if (session.info.status === "exited") return
@@ -259,7 +262,7 @@ const layer = Layer.effect(
 
     const attach = Effect.fn("Pty.attach")(function* (id: ID, input: AttachInput) {
       const session = yield* requireSession(id)
-      if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
+      if (session.info.status !== "running" && !input.allowExited) return yield* new ExitedError({ ptyID: id }) // kilocode_change
       yield* Effect.logInfo("client attached to session", { id, directory: location.directory })
       const token = {}
       const subscriber: Subscriber = {
@@ -268,9 +271,9 @@ const layer = Layer.effect(
         active: false,
         detached: false,
         pending: [],
+        end: session.info.status === "exited" ? { exitCode: session.info.exitCode } : undefined, // kilocode_change
       }
       session.subscribers.set(token, subscriber)
-      const start = session.bufferCursor
       const end = session.cursor
       const from =
         input.cursor === -1
@@ -278,14 +281,8 @@ const layer = Layer.effect(
           : input.cursor !== undefined && Number.isSafeInteger(input.cursor)
             ? Math.max(0, input.cursor)
             : 0
-      const replay = (() => {
-        if (!session.buffer || from >= end) return ""
-        const offset = Math.max(0, from - start)
-        if (offset >= session.buffer.length) return ""
-        return session.buffer.slice(offset)
-      })()
       return {
-        replay,
+        replay: session.buffer.slice(Math.max(0, from - (end - session.buffer.length))),
         cursor: end,
         write: (data: string) => {
           if (session.info.status === "running") session.process.write(data)

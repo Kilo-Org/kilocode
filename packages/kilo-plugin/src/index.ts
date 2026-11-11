@@ -1,4 +1,8 @@
 import { KiloAgentPlugin } from "./agent"
+import { KiloAgentRemovePlugin } from "./agent/plugin"
+// The plan file, the plan_exit tool and the post-plan follow-up question live in one plugin.
+import { KiloPlanPlugin } from "./plan"
+import { KiloBranchNamePlugin } from "./branch-name"
 import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "./gateway"
@@ -8,12 +12,36 @@ import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
+import { KiloReadPlugin } from "./read"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
+import { KiloSessionSync } from "./session-sync"
+import { KiloRemote } from "./remote"
+
+export { KiloSessionSync }
+export { KiloRemote }
+import { KiloPrivacyPlugin } from "./privacy"
+import { KiloFlowPlugin } from "./flow"
+import { KiloSettingsPlugin } from "./settings"
 import { KiloSkillPlugin } from "./skill"
+import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
+import { KiloBrowserToolPlugin } from "./browser"
 import { KiloWriteToolPlugin } from "./tool-write"
+// kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
+import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
+import { KiloQuestionPlugin } from "./question"
+// kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
+import { KiloAgentManagerPlugin } from "./agent-manager"
+import { KiloBackgroundJobs } from "./background-jobs"
+import { KiloSubagentBackgroundPlugin } from "./subagent-background"
+import { KiloRecallPlugin } from "./recall"
+import { KiloIndexingPlugin } from "./indexing"
+import { KiloSandbox } from "./sandbox"
+import { KiloBoard } from "./board"
+
+export { KiloSandbox }
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -31,17 +59,44 @@ export const KiloPlugins = [
   KiloHandshakePlugin,
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
+  // The plan_exit tool and the post-plan handoff question.
+  KiloPlanPlugin,
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloFlowPlugin,
+  KiloSessionSync.plugin,
+  KiloRemote.plugin,
   KiloSkillPlugin,
+  // Replaces the upstream OpenCode and report built-in skills with Kilo's config guide.
+  KiloSkillConfigPlugin.Plugin,
+  KiloAgentRemovePlugin,
+  // Rung 1: names the extracted formats in the native read tool description. The host swaps the
+  // reader behind it for the filesystem service (rung 2).
+  KiloReadPlugin,
   KiloTodoPlugin,
   KiloWriteToolPlugin,
+  KiloBrowserToolPlugin,
+  KiloNotebookPlugin,
   KiloCommitMessagePlugin,
+  KiloPrivacyPlugin,
+  KiloSettingsPlugin,
+  KiloBranchNamePlugin,
+  KiloAgentManagerPlugin,
+  // Per-job list, stop and continue-in-background for the subagents of one session.
+  KiloBackgroundJobs.Plugin,
+  // Runs subagents in the background unless the call passes `background: false`.
+  KiloSubagentBackgroundPlugin,
+  KiloRecallPlugin,
+  // v1 enabled codebase indexing through a built-in plugin entry. kilo_port(indexing:2e5dfe2574c6)
+  KiloIndexingPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
+  KiloQuestionPlugin.Plugin,
+  // Kilo Swarm: the shared board of a main session and its subagents.
+  KiloBoard.Plugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */
@@ -50,4 +105,6 @@ export const KiloPostPlugins = [
   KiloAgentPlugin.Ceiling,
   GatewayOptions.Plugin,
   OpencodeFreeTier.Plugin,
+  // The sandbox wraps every tool, so it registers after the config plugins and their tools.
+  KiloSandbox.Plugin,
 ] as const

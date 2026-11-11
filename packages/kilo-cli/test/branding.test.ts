@@ -28,6 +28,27 @@ for (const file of KiloBranding.files) {
   })
 }
 
+test("brands the built-in tool namespace to kilo", async () => {
+  for (const file of [
+    "core/src/tool/plugin/opencode.ts",
+    "core/src/tool/plugin/artifact.ts",
+    "core/src/tool/plugin/schedule.ts",
+    "core/src/tool/plugin/mcp-resource.ts",
+  ]) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    expect(branded).not.toContain('namespace: "opencode"')
+    expect(branded).toContain('namespace: "kilo"')
+  }
+})
+
+test("brands the namespace of the tools a schedule check may not call", async () => {
+  const filename = path.join(repo, "packages/core/src/schedule/check.ts")
+  const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+  expect(branded).not.toContain('"opencode.')
+  expect(branded).toContain('"kilo.session_move"')
+})
+
 test("does not rewrite the upstream theme registry", async () => {
   const filename = path.join(repo, "packages/tui/src/theme/index.ts")
   const original = await Bun.file(filename).text()

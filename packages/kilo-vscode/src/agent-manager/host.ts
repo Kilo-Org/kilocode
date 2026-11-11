@@ -1,0 +1,177 @@
+/**
+ * Host interface — abstracts all VS Code capabilities the Agent Manager needs.
+ *
+ * Implemented by vscode-host.ts using real VS Code APIs. Alternative
+ * implementations (Tauri, web, CLI) can provide their own adapter.
+ *
+ * No file in src/agent-manager/ should import "vscode" except the adapter
+ * files listed in the architecture test allowlist.
+ */
+
+import type { PRMergeMethod } from "./types"
+
+// ---------------------------------------------------------------------------
+// Primitives
+// ---------------------------------------------------------------------------
+
+export interface Disposable {
+  dispose(): void
+}
+
+// ---------------------------------------------------------------------------
+// Output channel
+// ---------------------------------------------------------------------------
+
+export interface OutputHandle {
+  appendLine(msg: string): void
+  /** Reveal the channel, e.g. after writing a report the user asked for. */
+  show?(): void
+  dispose(): void
+}
+
+// ---------------------------------------------------------------------------
+// Host — the single interface for all platform capabilities
+// ---------------------------------------------------------------------------
+
+/** Result of opening a panel — bundles the messaging handle + session provider. */
+export interface PanelContext {
+  /** Send a message to the webview. */
+  postMessage(msg: unknown): void
+
+  /** Resolve once the panel webview is ready to receive messages. */
+  waitForReady(): Promise<void>
+
+  /** Resolve once the panel is the active editor tab. */
+  waitForActive(): Promise<void>
+
+  /** Reveal the panel. */
+  reveal(preserveFocus?: boolean): void
+
+  /** Whether the panel is currently the active tab. */
+  readonly active: boolean
+
+  /** Whether the panel is visible (may be unfocused in a split editor group). */
+  readonly visible: boolean
+
+  /** Register a callback for when panel visibility changes. */
+  onDidChangeVisibility(cb: (visible: boolean) => void): Disposable
+
+  /** Register a callback for when the panel is disposed. */
+  onDidDispose(cb: () => void): Disposable
+
+  /** Dispose the panel and all associated resources. */
+  dispose(): void
+}
+
+export interface Host {
+  /**
+   * Create (or restore) a webview panel wired with a session provider.
+   * The host handles HTML generation, icon paths, CSP, and KiloProvider setup.
+   *
+   * @param opts.onBeforeMessage — interceptor for messages from the webview
+   */
+  openPanel(opts: {
+    onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+  }): PanelContext
+
+  /** Get the workspace/project root path. */
+  workspacePath(): string | undefined
+
+  /** Local files with unsaved editor changes. */
+  dirtyFiles(): string[]
+
+  /** Show a folder picker and return the selected path, or undefined when cancelled. */
+  pickFolder(opts?: { defaultPath?: string; title?: string }): Promise<string | undefined>
+
+  input(opts: {
+    title: string
+    prompt?: string
+    value?: string
+    validate?: (value: string) => string | undefined
+  }): Promise<string | undefined>
+
+  /** Show a native modal confirmation. Dismissal means no. */
+  confirm(message: string, action: string): Promise<boolean>
+
+  /** Clone without changing workspace membership; return the verified checkout path. */
+  cloneRepository(url: string, parent: string): Promise<string | undefined>
+
+  /** Whether background worktree pre-warming is enabled. */
+  worktreePool(): boolean
+
+  /** Listen for changes to the worktree pre-warming setting. */
+  onDidChangeWorktreePool(cb: (enabled: boolean) => void): Disposable
+
+  /** Read the persisted additional-project registry payload. */
+  readProjects(): unknown
+
+  /** Persist the additional-project registry payload. */
+  writeProjects(value: unknown): Promise<void>
+
+  /** Read and persist the user's last PR merge method per repository. */
+  getPRMergeMethod?(repo: string): PRMergeMethod | undefined
+  savePRMergeMethod?(repo: string, method: PRMergeMethod): Promise<void>
+
+  unregisterProjectRoutes(projectId: string): void
+
+  /** Subscribe to workspace folder changes (pinned project re-derivation). */
+  onDidChangeWorkspaceFolders(cb: () => void): Disposable
+
+  /** Whether the workspace permits executing configured scripts. */
+  isTrusted(): boolean
+
+  /** Whether the Integrated Browser is available to this workspace. */
+  browserAutomation(): boolean
+
+  /** Ask the user to approve a browser navigation to an origin. */
+  approveBrowserNavigation?(origin: string): Promise<boolean>
+
+  /** Read the user's automatic branch naming preferences. */
+  autoBranchNaming(): { enabled: boolean; prefix: string }
+
+  /** Show an error notification. */
+  showError(msg: string): void
+
+  /** Show an info, warning, or error notification. */
+  notify(kind: "info" | "warning" | "error", msg: string): void
+
+  /** Reveal a path in the OS file manager. A no-op (logged) on a remote workspace. */
+  revealInOS(path: string): void
+
+  /** Run a cancellable background task behind a progress notification. */
+  withProgress<T>(title: string, task: (cancelled: () => boolean) => Promise<T>): Promise<T>
+
+  /** Open a text document in an editor (e.g. setup script). */
+  openDocument(path: string): Promise<void>
+
+  /** Open a file at a specific location in the editor. */
+  openFile(path: string, line?: number, column?: number): void
+
+  /** Open a folder (optionally in a new window). */
+  openFolder(path: string, newWindow: boolean): void
+
+  /** Create an output channel for logging. */
+  createOutput(name: string): OutputHandle
+
+  /** Read extension keybindings, with the user's keybindings.json applied. */
+  extensionKeybindings(): Array<{ command: string; key?: string; mac?: string; when?: string }>
+
+  /** Notify when the user's keybindings.json changes. */
+  onDidChangeKeybindings?(cb: () => void): Disposable
+
+  /** Copy text to the system clipboard. */
+  copyToClipboard(text: string): void | Promise<void>
+  readClipboard?(): Promise<string>
+
+  /** Open a URL in the user's default browser. */
+  openExternal(url: string): void
+
+  /** Open Kilo Settings, optionally focused on a tab and project. */
+  openSettings(tab?: string, projectId?: string): void
+
+  /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
+  refreshGit(): void
+
+  /** Dispose all host resources. */
+  dispose(): void
+}

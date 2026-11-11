@@ -115,6 +115,14 @@ export const dict = {
   "agentManager.hoverCard.commits": "Коміти",
 
   "agentManager.session.new": "Нова сесія",
+
+  "agentManager.history.title": "Відкриті сесії",
+
+  "agentManager.history.back": "Назад",
+
+  "agentManager.sidebar.resize": "Змінити розмір бічної панелі",
+
+  "agentManager.review.resize": "Змінити розмір огляду",
   "agentManager.session.untitled": "Без назви",
   "agentManager.session.newSession": "Нова сесія",
   "agentManager.session.openInWorktree": "Відкрити у робочому дереві",
@@ -131,7 +139,6 @@ export const dict = {
   "agentManager.tab.unpin": "Відкріпити",
   "agentManager.tab.pinned": "Закріплено",
   "agentManager.tab.terminal": "Термінал",
-  "agentManager.tab.openTerminal": "Відкрити термінал",
   "agentManager.tab.newOptions": "Інші параметри нової вкладки",
   "agentManager.sidebarSearch.label": "Пошук робочих дерев і сесій",
   "agentManager.sidebarSearch.scope":
@@ -151,9 +158,6 @@ export const dict = {
   "agentManager.terminal.add": "Новий термінал",
   "agentManager.terminal.empty": "Тут ще немає термінала",
   "agentManager.terminal.start": "Запустити термінал",
-  "agentManager.terminal.destination": "Виберіть, що відкриватиме кнопка термінала",
-  "agentManager.terminal.openInVscode": "Термінал VS Code",
-  "agentManager.terminal.openInPanel": "Панель Agent Manager",
   "agentManager.terminal.errorTitle": "Помилка термінала",
 
   "agentManager.setup.failed": "Налаштування робочого дерева не вдалося",

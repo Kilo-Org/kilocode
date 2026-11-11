@@ -312,6 +312,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Cette action exécute toute la commande sans les restrictions de système de fichiers et de réseau, pour cette commande uniquement. Git doit écrire dans .git, qui est en lecture seule dans le bac à sable et se trouve hors de l’arborescence de travail pour un worktree lié. Les règles d’autorisation Bash et l’approbation automatique n’approuvent jamais cette demande automatiquement.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
+  "ui.permission.noChanges": "Aucune modification.",
   "ui.permission.reject": "Rejeter",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
   "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
@@ -354,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Revue",
   "session.review.filesChanged": "{{count}} fichiers modifiés",
+  "session.review.viewTurnChanges": "Afficher les modifications du tour",
+  "session.review.turnChangesEmpty": "Aucune modification dans ce tour.",
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.noChanges": "Aucune modification",
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
@@ -1360,6 +1363,11 @@ export const dict = {
     "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
   "settings.display.mcpTool.expanded": "Développés",
   "settings.display.mcpTool.collapsed": "Réduits",
+  "settings.display.codeMode.title": "Blocs Code Mode",
+  "settings.display.codeMode.description":
+    "Choisissez si les blocs Code Mode démarrent avec leurs appels d'outils listés ou sur une seule ligne. Le script reste toujours masqué jusqu'à ce que vous l'ouvriez.",
+  "settings.display.codeMode.expanded": "Développés",
+  "settings.display.codeMode.collapsed": "Réduits",
 
   "settings.display.shortcutHints.title": "Afficher les astuces de raccourcis",
   "settings.display.shortcutHints.description":
@@ -1451,6 +1459,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Ouvrir tous les agents en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
+  "task.backgroundAgents.promoteFailed": "Cet agent n'a pas pu continuer en arrière-plan. Il est peut-être déjà terminé.",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
   "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
@@ -1488,6 +1497,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Fichiers modifiés dans votre arborescence de travail mais pas encore indexés, plus les fichiers non suivis (nouveaux).",
   "diffViewer.source.session.label": "Session",
+  "diffViewer.source.turn.tooltip": "Fichiers modifiés par Kilo pendant un tour.",
+  "diffViewer.source.turn.label": "Tour",
   "diffViewer.source.session.tooltip":
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
@@ -1535,6 +1546,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navigateur système",
   "settings.experimental.browserLinks.integrated": "Navigateur intégré",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
+  "chat.reply.toolbar": "Texte sélectionné",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citer dans votre réponse",
+  "chat.reply.commentHint": "Commenter ce passage",
+  "chat.reply.copy": "Copier",
+  "chat.reply.sendHint": "Envoyer ce commentaire à Kilo maintenant",
+  "chat.reply.commentLater": "Enregistrer pour votre prochain message",
+  "chat.reply.count": "Réponses ({{count}})",
+  "chat.reply.sendAll": "Tout envoyer",
+  "chat.reply.showInChat": "Afficher dans le chat",
   "browserTab.noSession":
     "Ouvrez le navigateur depuis une session pour prévisualiser une application locale ou une page HTTPS publique.",
   "browserTab.disabled": "Le navigateur intégré est désactivé. Activez-le dans Paramètres Kilo > Expérimental.",

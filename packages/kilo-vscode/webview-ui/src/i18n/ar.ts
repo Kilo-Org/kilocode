@@ -301,6 +301,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.noChanges": "لا توجد تغييرات.",
   "ui.permission.reject": "رفض",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
   "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
@@ -343,6 +344,8 @@ export const dict = {
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
+  "session.review.viewTurnChanges": "عرض تغييرات الدور",
+  "session.review.turnChangesEmpty": "لا توجد تغييرات في هذا الدور.",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
@@ -1289,6 +1292,11 @@ export const dict = {
   "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
   "settings.display.mcpTool.expanded": "موسّعة",
   "settings.display.mcpTool.collapsed": "مطوية",
+  "settings.display.codeMode.title": "كتل Code Mode",
+  "settings.display.codeMode.description":
+    "اختر ما إذا كانت كتل Code Mode تبدأ بقائمة استدعاءات الأدوات الخاصة بها أم كسطر واحد. يظل النص البرمجي مخفيًا دائمًا حتى تفتحه.",
+  "settings.display.codeMode.expanded": "موسّعة",
+  "settings.display.codeMode.collapsed": "مطوية",
 
   "settings.display.shortcutHints.title": "إظهار تلميحات الاختصارات",
   "settings.display.shortcutHints.description":
@@ -1378,6 +1386,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
+  "task.backgroundAgents.promoteFailed": "تعذّر على هذا الوكيل المتابعة في الخلفية. ربما انتهى بالفعل.",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
   "task.backgroundAgents.clearFinished": "مسح المكتمل",
@@ -1415,6 +1424,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "الملفات المعدّلة في شجرة العمل ولكن لم يتم تهيئتها بعد، بالإضافة إلى الملفات غير المتتبعة (الجديدة).",
   "diffViewer.source.session.label": "الجلسة",
+  "diffViewer.source.turn.tooltip": "الملفات التي غيّرها Kilo خلال دور واحد.",
+  "diffViewer.source.turn.label": "الدور",
   "diffViewer.source.session.tooltip":
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
@@ -1461,6 +1472,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "متصفح النظام",
   "settings.experimental.browserLinks.integrated": "المتصفح المدمج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "chat.reply.toolbar": "النص المحدد",
+  "chat.reply.quote": "اقتباس",
+  "chat.reply.quoteHint": "اقتبس في ردك",
+  "chat.reply.commentHint": "علّق على هذا المقطع",
+  "chat.reply.copy": "نسخ",
+  "chat.reply.sendHint": "أرسل هذا التعليق إلى Kilo الآن",
+  "chat.reply.commentLater": "حفظ لرسالتك التالية",
+  "chat.reply.count": "الردود ({{count}})",
+  "chat.reply.sendAll": "إرسال الكل",
+  "chat.reply.showInChat": "عرض في الدردشة",
   "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
   "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",
 }

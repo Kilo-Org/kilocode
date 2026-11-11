@@ -7,6 +7,7 @@ import {
 } from "@pierre/diffs"
 import { ComponentProps } from "solid-js"
 import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/ui/pierre"
+import { EXTREME_DIFF_CHANGED_LINES, MAX_EAGER_DIFF_BYTES } from "./limits"
 
 export { styleVariables }
 
@@ -18,11 +19,7 @@ export interface DiffHandle {
 // existing symbols. Word-alt keeps those logical additions visually intact.
 export const LINE_DIFF_TYPE = "word-alt" as const
 
-// A file this large renders through Pierre's line virtualizer instead of being
-// drawn in one pass. The review panel open policy shares these limits so eager
-// and virtualized diffs agree on what counts as extreme.
-export const EXTREME_DIFF_CHANGED_LINES = 2_000
-export const MAX_EAGER_DIFF_BYTES = 256 * 1024
+export { EXTREME_DIFF_CHANGED_LINES, MAX_EAGER_DIFF_BYTES } from "./limits"
 
 function bytes(lines: string[]) {
   return lines.reduce((total, line) => total + line.length, 0)
@@ -76,8 +73,9 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
 }
 
 // Extends upstream DiffProps with a `fileDiff` variant so Pierre can render
-// a precomputed FileDiffMetadata directly. The pair (before/after) variant
-// stays compatible with upstream usage.
+// a precomputed FileDiffMetadata directly, and a patch-only variant so callers
+// can defer parsing a patch until the diff becomes visible. The pair
+// (before/after) variant stays compatible with upstream usage.
 type DiffShared<T> = FileDiffOptions<T> & {
   annotations?: DiffLineAnnotation<T>[]
   selectedLines?: SelectedLineRange | null
@@ -114,4 +112,11 @@ type DiffPatch<T> = DiffShared<T> & {
   patch?: undefined
 }
 
-export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T>
+type DiffPatchText<T> = DiffShared<T> & {
+  patch: string
+  before?: undefined
+  after?: undefined
+  fileDiff?: undefined
+}
+
+export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T> | DiffPatchText<T>

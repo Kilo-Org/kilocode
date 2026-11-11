@@ -1,11 +1,13 @@
 // Kilo TUI sidebar balance, ported from v1 `packages/opencode/src/kilocode/plugins/sidebar-footer.tsx`:
 // the wallet of the active Kilo account, the Kilo Pass sub-rows of the personal scope, the refresh
 // policy, and the "Kilo <version>" line below the upstream footer. The getting-started box and the
-// path line stay in the upstream footer. v1 privacy mode is not ported: v2 has no privacy_mode config.
+// path line stay in the upstream footer. In privacy mode (`privacy_mode`) the balance is masked, a team shows as "Team
+// credits" and the Kilo Pass rows are hidden.
 import type { LocationRef, SessionMessageInfo } from "@opencode/client"
 import { Plugin } from "@opencode/plugin/tui"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show } from "solid-js"
+import { privacyMode, REDACTED_BALANCE } from "../pii"
 
 const TEAM_POLL_MS = 5 * 60_000
 const BILLED_REFRESH_MS = 10_000
@@ -22,6 +24,7 @@ type State = {
   balance?: number
   scope: ReturnType<typeof scope>
   pass: Pass | null
+  privacy: boolean
 }
 
 export function format(value: number) {
@@ -38,8 +41,9 @@ export function scope(org: string | null | undefined, list?: readonly { id: stri
   }
 }
 
-export function creditLabel(value: ReturnType<typeof scope>) {
+export function creditLabel(value: ReturnType<typeof scope>, masked = false) {
   if (value.kind === "Personal") return "Personal credits"
+  if (masked) return "Team credits"
   return value.name ? `${value.name} team` : "Team credits"
 }
 
@@ -77,13 +81,15 @@ function View(props: { context: Plugin.Context }) {
     if (data.scope.kind === "Personal" && data.pass) return data
     return undefined
   })
+  // A masked balance does not reveal a low balance through its color.
   const tone = createMemo(() => {
-    const value = state()?.balance
-    return value !== undefined && value <= 2 ? theme().text.feedback.error.base : theme().text.muted
+    const data = state()
+    if (data?.privacy) return theme().text.muted
+    return data?.balance !== undefined && data.balance <= 2 ? theme().text.feedback.error.base : theme().text.muted
   })
   const personalPass = createMemo(() => {
     const data = wallet()
-    if (!data || data.scope.kind !== "Personal") return null
+    if (!data || data.privacy || data.scope.kind !== "Personal") return null
     return data.pass
   })
   const location = (): LocationRef => props.context.location ?? props.context.data.location.default()
@@ -108,7 +114,12 @@ function View(props: { context: Plugin.Context }) {
     inflight = controller
     const timeout = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS)
     const options = { location: { directory: location().directory }, signal: controller.signal }
-    void Promise.all([rpc.profile({}, options), rpc.balance({}, options), rpc.kiloPass({}, options).catch(() => null)])
+    void Promise.all([
+      rpc.profile({}, options),
+      rpc.balance({}, options),
+      rpc.kiloPass({}, options).catch(() => null),
+      privacyMode(props.context.client, location(), controller.signal),
+    ])
       .then((result) => {
         if (id !== seq) return
         // Show the wallet whenever authenticated. An empty or zero balance is real data, not "still loading".
@@ -116,6 +127,7 @@ function View(props: { context: Plugin.Context }) {
           balance: result[1].balance ?? undefined,
           scope: scope(result[0].organizationID, result[0].organizations),
           pass: result[2] ?? null,
+          privacy: result[3],
         }
         setState(next)
         // Team balances move with other members' usage, so poll while on a team; personal updates on spend.
@@ -136,6 +148,8 @@ function View(props: { context: Plugin.Context }) {
   onMount(() => {
     // Switching org via /teams publishes this, so the balance updates immediately.
     onCleanup(rpc.events.on("organization", () => refresh()))
+    // Editing `privacy_mode` reloads the config, so the panel applies or lifts the redaction without a restart.
+    onCleanup(props.context.data.on("config.updated", () => refresh()))
     // Refresh shortly after a billed turn so the balance reflects new spend. The store applies the event
     // before this handler, so the assistant message already carries the completed time and cost.
     let billed: ReturnType<typeof setTimeout> | undefined
@@ -166,10 +180,10 @@ function View(props: { context: Plugin.Context }) {
               <box flexDirection="row" gap={1}>
                 <text fg={tone()}>•</text>
                 <text fg={theme().text.base}>
-                  <b>{creditLabel(data().scope)}</b>
+                  <b>{creditLabel(data().scope, data().privacy)}</b>
                 </text>
               </box>
-              <text fg={tone()}>{format(data().balance ?? 0)}</text>
+              <text fg={tone()}>{data().privacy ? REDACTED_BALANCE : format(data().balance ?? 0)}</text>
             </box>
           </Show>
           <Show when={personalPass()}>

@@ -6,11 +6,12 @@ export type PermissionRuleset = Permission.Rule[]
 
 const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
 
-// The level shown for a tool with no configured rule. The built-in policy starts by allowing every tool, and the
-// shell table is the only appended default that asks.
+// The level shown for a tool with no configured rule. The built-in policy starts by allowing every tool. The shell
+// table asks, and the browser plugin asks for browser_open unless a rule names it.
 export const DEFAULT_RULES: PermissionRuleset = [
   { action: "*", resource: "*", effect: "allow" },
   { action: "shell", resource: "*", effect: "ask" },
+  { action: "browser_open", resource: "*", effect: "ask" },
 ]
 
 // The webview cannot import core, so this mirrors `core/util/wildcard.ts` so levels match the cli evaluation.
@@ -111,6 +112,25 @@ export function setSimpleLevel(rules: PermissionRuleset, action: string, level: 
 /** Inherit a tool and drop its rules, for simple rows. */
 export function clearSimpleLevel(rules: PermissionRuleset, action: string): PermissionRuleset {
   return replaceTool(rules, action, [])
+}
+
+// A browser_open ruleset can carry per-origin navigate approvals, and its row has no exception editor. A level
+// change must keep them, so the row uses the wildcard setters instead of the simple ones.
+const SAVED_EXCEPTIONS: ReadonlySet<string> = new Set(["browser_open"])
+
+/** True when a row lists and keeps per-pattern rules across a level change. */
+export function keepsExceptions(action: string): boolean {
+  return SAVED_EXCEPTIONS.has(action)
+}
+
+/** Set the level of a row without an exception editor, keeping the action's per-pattern approvals. */
+export function setRowLevel(rules: PermissionRuleset, action: string, level: PermissionLevel): PermissionRuleset {
+  return keepsExceptions(action) ? setWildcardLevel(rules, action, level) : setSimpleLevel(rules, action, level)
+}
+
+/** Inherit a row without an exception editor, keeping the action's per-pattern approvals. */
+export function clearRowLevel(rules: PermissionRuleset, action: string): PermissionRuleset {
+  return keepsExceptions(action) ? clearWildcardLevel(rules, action) : clearSimpleLevel(rules, action)
 }
 
 export function setExceptionLevel(

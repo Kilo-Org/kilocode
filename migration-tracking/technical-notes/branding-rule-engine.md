@@ -116,7 +116,6 @@ even though they are string literals:
 
 1. **Literal map** (longest-match-first, exact): URLs and config names that do
    not map by a simple word swap. Seeded from today's list:
-   - `https://opencode.ai/v2/docs` -> `https://kilo.ai/docs`
    - `opencode.ai` -> `kilo.ai`
    - `github.com/anomalyco/opencode` -> `github.com/Kilo-Org/kilocode`
    - `https://github.com/anomalyco/opencode/issues/new` -> `https://github.com/Kilo-Org/kilocode/issues/new`

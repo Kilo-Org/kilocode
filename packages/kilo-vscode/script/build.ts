@@ -2,7 +2,7 @@
 // Shiki workers) into dist/. The webview config follows main's esbuild.js for the v1 UI packages.
 import { build, type Plugin } from "esbuild"
 import { existsSync } from "node:fs"
-import { copyFile, mkdir, rm } from "node:fs/promises"
+import { copyFile, cp, mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { currentFfmpegTarget, ensureFfmpegForTarget, hasFfmpegPackage } from "./ffmpeg-helper"
 import { createSolidPlugin } from "./solid-cache"
@@ -16,13 +16,14 @@ const meta = Bun.argv.includes("--meta")
 await rm(dist, { recursive: true, force: true })
 await mkdir(dist, { recursive: true })
 // A production package ships the build host's FFmpeg fallback, which Linux, Windows and a failed native macOS
-// capture need. Build each target's package on that target, as v1 did.
+// capture need. Build each target's package on that target. `KILO_VSCODE_TARGET` selects the helper for a
+// cross-target package.
 if (production) {
-  const target = currentFfmpegTarget()
+  const target = process.env.KILO_VSCODE_TARGET ?? currentFfmpegTarget()
   const bin = path.join(root, "bin")
   await mkdir(bin, { recursive: true })
   await ensureFfmpegForTarget(target, bin)
-  const helper = path.join(bin, process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg")
+  const helper = path.join(bin, target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg")
   if (!existsSync(helper)) {
     // win32-arm64 has no helper package. v1 shipped it without one, and capture falls back to a system FFmpeg.
     if (hasFfmpegPackage(target)) throw new Error(`FFmpeg helper was not bundled at ${helper}`)
@@ -126,26 +127,57 @@ const common = {
   metafile: meta,
 }
 
+// `playwright-core` stays external: the host bundle requires it at runtime from `dist/node_modules`, because it
+// carries the Chromium launcher and its protocol generated code, which compile slowly and would be minified away.
 const host = Bun.build({
   entrypoints: [path.join(root, "src/extension.ts")],
   outdir: dist,
   target: "node",
   format: "cjs",
-  external: ["vscode"],
+  external: ["vscode", "playwright-core"],
   sourcemap: "linked",
 })
 
 const results = await Promise.all([
-  host.then((result) => {
-    if (result.success) return
-    result.logs.forEach((log) => console.error(log))
-    throw new Error("extension host build failed")
+  host.then(async (result) => {
+    if (!result.success) {
+      result.logs.forEach((log) => console.error(log))
+      throw new Error("extension host build failed")
+    }
+    // A CommonJS host cannot parse `import.meta`; it reaches the bundle when a dynamic import wraps an ESM graph.
+    if ((await Bun.file(path.join(dist, "extension.js")).text()).includes("import.meta"))
+      throw new Error("extension host bundle contains import.meta and would fail to activate")
+    const playwright = path.dirname(Bun.resolveSync("playwright-core/package.json", root))
+    await cp(playwright, path.join(dist, "node_modules", "playwright-core"), {
+      recursive: true,
+      dereference: true,
+      filter: (file) => path.basename(file) !== "node_modules",
+    })
   }),
   build({
     ...common,
-    entryPoints: { webview: path.join(root, "webview-ui/src/index.tsx") },
+    entryPoints: {
+      webview: path.join(root, "webview-ui/src/index.tsx"),
+      "agent-manager": path.join(root, "webview-ui/agent-manager/index.tsx"),
+      "browser-tab": path.join(root, "webview-ui/browser-tab/index.tsx"),
+      documents: path.join(root, "webview-ui/documents/index.tsx"),
+      "diff-viewer": path.join(root, "webview-ui/diff-viewer/index.tsx"),
+      "diff-virtual": path.join(root, "webview-ui/diff-virtual/index.tsx"),
+    },
     outdir: dist,
     format: "iife",
+    platform: "browser",
+    loader: { ".woff": "file", ".woff2": "file", ".ttf": "file" },
+    plugins: [dedupe, pierre, markdown, sprite, css, solid],
+  }),
+  // The Settings and Profile panels split their lazy tabs and the message-part stack into chunks, so their first
+  // paint does not download the Markdown, code and diff graph. The chat bundle stays one IIFE file.
+  build({
+    ...common,
+    entryPoints: { settings: path.join(root, "webview-ui/settings/index.tsx") },
+    outdir: dist,
+    format: "esm",
+    splitting: true,
     platform: "browser",
     loader: { ".woff": "file", ".woff2": "file", ".ttf": "file" },
     plugins: [dedupe, pierre, markdown, sprite, css, solid],

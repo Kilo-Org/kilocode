@@ -1,5 +1,5 @@
-// Pure keybinding helpers, ported from main's `agent-manager/format-keybinding.ts` and
-// `agent-manager/user-keybindings.ts`. They keep no VS Code import so a unit test can call them.
+// Pure keybinding helpers shared by the sidebar and the Agent Manager.
+// They keep no VS Code import so a unit test can call them.
 import path from "node:path"
 
 export type Binding = { command: string; key?: string; mac?: string; when?: string }
@@ -125,10 +125,26 @@ export function userKeybindingFiles(storage: string): string[] {
   return files.map((file) => path.normalize(file))
 }
 
-/** Prompt actions whose keybindings are forwarded to the webview, keyed by command id. */
+/**
+ * Prompt and session actions whose keybindings are forwarded to the webview, keyed by command id. The prompt hint
+ * names one of them at a time, so the webview decides from the same labels VS Code shows.
+ */
 export const PROMPT_COMMANDS: Record<string, string> = {
   "kilo-code.v2.cycleAgentMode": "cycleAgentMode",
   "kilo-code.v2.cyclePreviousAgentMode": "cyclePreviousAgentMode",
+  "kilo-code.v2.addToContext": "addToContext",
+  "kilo-code.v2.focusChatInput": "focusChatInput",
+  "kilo-code.v2.agentManager.open": "agentManagerOpen",
+  "kilo-code.v2.agentManager.previousTab": "previousTab",
+  "kilo-code.v2.agentManager.nextTab": "nextTab",
+  "kilo-code.v2.agentManager.previousSession": "previousSession",
+  "kilo-code.v2.agentManager.nextSession": "nextSession",
+  "kilo-code.v2.agentManager.toggleDiff": "toggleDiff",
+  "kilo-code.v2.agentManager.openPR": "openPR",
+  "kilo-code.v2.agentManager.quickWorktree": "quickWorktree",
+  ...Object.fromEntries(
+    Array.from({ length: 9 }, (_, index) => [`kilo-code.v2.agentManager.jumpTo${index + 1}`, `jumpTo${index + 1}`]),
+  ),
 }
 
 /** Format the prompt-action keybindings, with the user's keybindings.json applied. */

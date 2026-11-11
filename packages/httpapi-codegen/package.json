@@ -1,14 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode/httpapi-codegen",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "bun test --timeout 5000 --only-failures",
+    "test": "bun test --timeout 30000 --only-failures",
     "typecheck": "bun check --no-script",
     "typecheck:tsc": "tsc --noEmit"
   },

@@ -267,6 +267,8 @@ import type {
   ExperimentalArtifactsUpdateOutput,
   ExperimentalArtifactsDeleteInput,
   ExperimentalArtifactsDeleteOutput,
+  ExperimentalJobListInput,
+  ExperimentalJobListOutput,
   ShellListInput,
   ShellListOutput,
   ShellCreateInput,
@@ -670,9 +672,10 @@ const EndpointSessionGenerate = (raw: RawClient["server.session"]) => (input: Se
 
 const EndpointSessionInterrupt = (raw: RawClient["server.session"]) => (input: SessionInterruptInput) =>
   preserveEffect<SessionInterruptOutput>()(
-    raw["session.interrupt"]({ params: { sessionID: input["sessionID"] }, query: { resume: input["resume"] } }).pipe(
-      Effect.mapError(mapClientError),
-    ),
+    raw["session.interrupt"]({
+      params: { sessionID: input["sessionID"] },
+      query: { resume: input["resume"], steer: input["steer"] },
+    }).pipe(Effect.mapError(mapClientError)),
   )
 
 const EndpointSessionBackground = (raw: RawClient["server.session"]) => (input: SessionBackgroundInput) =>
@@ -1440,6 +1443,7 @@ const EndpointPtyCreate = (raw: RawClient["server.pty"]) => (input?: PtyCreateIn
         cwd: input?.["cwd"],
         title: input?.["title"],
         env: input?.["env"],
+        size: input?.["size"],
       },
     }).pipe(Effect.mapError(mapClientError)),
   )
@@ -1698,6 +1702,21 @@ const EndpointExperimentalArtifactsDelete =
       }).pipe(Effect.mapError(mapClientError)),
     )
 
+const EndpointExperimentalJobList = (raw: RawClient["server.experimental"]) => (input?: ExperimentalJobListInput) =>
+  preserveEffect<ExperimentalJobListOutput>()(
+    raw["job.list"]({
+      query: {
+        sessionID: input?.["sessionID"],
+        kind: input?.["kind"],
+        status: input?.["status"],
+        descendants: input?.["descendants"],
+      },
+    }).pipe(
+      Effect.mapError(mapClientError),
+      Effect.map((value) => value.data),
+    ),
+  )
+
 const adaptGroupExperimental = (raw: RawClient["server.experimental"]) => ({
   persistentPty: {
     read: EndpointExperimentalPersistentPtyRead(raw),
@@ -1727,6 +1746,7 @@ const adaptGroupExperimental = (raw: RawClient["server.experimental"]) => ({
     update: EndpointExperimentalArtifactsUpdate(raw),
     delete: EndpointExperimentalArtifactsDelete(raw),
   },
+  job: { list: EndpointExperimentalJobList(raw) },
 })
 
 const EndpointShellList = (raw: RawClient["server.shell"]) => (input?: ShellListInput) =>

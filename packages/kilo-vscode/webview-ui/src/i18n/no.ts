@@ -315,6 +315,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Dette kjører hele kommandoen uten begrensninger for filsystem og nettverk, kun for denne kommandoen. Git må skrive til .git, som er skrivebeskyttet i sandkassen og ligger utenfor arbeidstreet i et koblet worktree. Bash-tillatelsesregler og automatisk godkjenning godkjenner aldri denne forespørselen automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.noChanges": "Ingen endringer.",
   "ui.permission.reject": "Avvis",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
   "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
@@ -357,6 +358,8 @@ export const dict = {
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
+  "session.review.viewTurnChanges": "Vis endringer i turen",
+  "session.review.turnChangesEmpty": "Ingen endringer i denne turen.",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
@@ -1322,6 +1325,11 @@ export const dict = {
     "Velg om blokker for MCP- og generiske verktøy skal være utvidet eller skjult fra start.",
   "settings.display.mcpTool.expanded": "Utvidet",
   "settings.display.mcpTool.collapsed": "Skjult",
+  "settings.display.codeMode.title": "Blokker for Code Mode",
+  "settings.display.codeMode.description":
+    "Velg om blokker for Code Mode starter med verktøykallene oppført eller som én linje. Skriptet forblir alltid skjult til du åpner det.",
+  "settings.display.codeMode.expanded": "Utvidet",
+  "settings.display.codeMode.collapsed": "Skjult",
 
   "settings.display.shortcutHints.title": "Vis snarveitips",
   "settings.display.shortcutHints.description":
@@ -1408,6 +1416,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
+  "task.backgroundAgents.promoteFailed": "Denne agenten kunne ikke fortsette i bakgrunnen. Den kan allerede være ferdig.",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",
@@ -1444,6 +1453,8 @@ export const dict = {
   "diffViewer.source.unstaged.label": "Unstaged",
   "diffViewer.source.unstaged.tooltip": "Filer endret i arbeidstreet, men ikke staget ennå, pluss usporet (nye) filer.",
   "diffViewer.source.session.label": "Økt",
+  "diffViewer.source.turn.tooltip": "Filer endret av Kilo i løpet av en tur.",
+  "diffViewer.source.turn.label": "Tur",
   "diffViewer.source.session.tooltip":
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
@@ -1492,6 +1503,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systemnettleser",
   "settings.experimental.browserLinks.integrated": "Integrert nettleser",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "chat.reply.toolbar": "Merket tekst",
+  "chat.reply.quote": "Siter",
+  "chat.reply.quoteHint": "Siter i svaret ditt",
+  "chat.reply.commentHint": "Kommenter denne delen",
+  "chat.reply.copy": "Kopier",
+  "chat.reply.sendHint": "Send denne kommentaren til Kilo nå",
+  "chat.reply.commentLater": "Lagre til neste melding",
+  "chat.reply.count": "Svar ({{count}})",
+  "chat.reply.sendAll": "Send alle",
+  "chat.reply.showInChat": "Vis i chatten",
   "browserTab.noSession":
     "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",
   "browserTab.disabled": "Den integrerte nettleseren er deaktivert. Aktiver den i Kilo-innstillinger > Eksperimentelt.",

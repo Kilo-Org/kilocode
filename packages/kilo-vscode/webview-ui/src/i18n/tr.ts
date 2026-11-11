@@ -307,6 +307,7 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.noChanges": "Değişiklik yok.",
   "ui.permission.reject": "Reddet",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
   "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
@@ -349,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
+  "session.review.viewTurnChanges": "Tur değişikliklerini görüntüle",
+  "session.review.turnChangesEmpty": "Bu turda değişiklik yok.",
   "session.review.loadingChanges": "Değişiklikler yükleniyor...",
   "session.review.noChanges": "Değişiklik yok",
 
@@ -1282,6 +1285,11 @@ export const dict = {
     "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
+  "settings.display.codeMode.title": "Code Mode Blokları",
+  "settings.display.codeMode.description":
+    "Code Mode bloklarının araç çağrıları listelenmiş halde mi yoksa tek satır olarak mı başlayacağını seçin. Betik, siz açana kadar her zaman gizli kalır.",
+  "settings.display.codeMode.expanded": "Genişletilmiş",
+  "settings.display.codeMode.collapsed": "Daraltılmış",
 
   "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
   "settings.display.shortcutHints.description":
@@ -1382,6 +1390,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
+  "task.backgroundAgents.promoteFailed": "Bu ajan arka planda devam edemedi. Zaten bitmiş olabilir.",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
@@ -1465,6 +1474,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Çalışma ağacında değiştirilmiş ancak henüz staged edilmemiş dosyalar, artı takip edilmeyen (yeni) dosyalar.",
   "diffViewer.source.session.label": "Oturum",
+  "diffViewer.source.turn.tooltip": "Kilo tarafından bir turda değiştirilen dosyalar.",
+  "diffViewer.source.turn.label": "Tur",
   "diffViewer.source.session.tooltip":
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
@@ -1512,6 +1523,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
   "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "chat.reply.toolbar": "Seçili metin",
+  "chat.reply.quote": "Alıntıla",
+  "chat.reply.quoteHint": "Yanıtında alıntıla",
+  "chat.reply.commentHint": "Bu bölümü yorumla",
+  "chat.reply.copy": "Kopyala",
+  "chat.reply.sendHint": "Bu yorumu şimdi Kilo'ya gönder",
+  "chat.reply.commentLater": "Sonraki mesajın için kaydet",
+  "chat.reply.count": "Yanıtlar ({{count}})",
+  "chat.reply.sendAll": "Tümünü gönder",
+  "chat.reply.showInChat": "Sohbette göster",
   "browserTab.noSession":
     "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
   "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",

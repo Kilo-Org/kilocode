@@ -6,6 +6,7 @@ import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
 import { FileMutation } from "@opencode/core/file-mutation"
+import { FileWrite } from "@opencode/core/file-write"
 import { Formatter } from "@opencode/core/formatter"
 import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
@@ -46,7 +47,7 @@ const node = (directory: string, worktree = directory) =>
         })
       }),
     ),
-    deps: [Tool.node, FileAccess.node, FileMutation.node, Environment.node, Formatter.node, FSUtil.node, Permission.node],
+    deps: [Tool.node, FileWrite.node, FSUtil.node],
   })
 
 const withTool = <A, E, R>(

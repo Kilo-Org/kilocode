@@ -14,6 +14,8 @@ export const TRANSCRIPT_CHUNK_SIZE = 8
 interface TranscriptRowBase {
   key: string
   turn: string
+  /** The turn's first user message, when one is on the page. */
+  userTurn?: string
 }
 
 export interface TranscriptUserRow extends TranscriptRowBase {
@@ -64,12 +66,18 @@ export function transcriptRows(messages: readonly SessionMessageInfo[], previous
   return reuseRows(buildRows(messages), previous)
 }
 
+/** Rows of the active turn kept out of the virtual window. */
+export const DIRECT_TAIL_ROWS = 8
+
 /**
  * Splits the rows into the virtual window and the direct tail. Only the latest
  * turn can render directly, and only when it is in `direct` and has an
- * assistant row. The whole turn stays direct: handing each finished step to
- * the virtualizer mid-turn mounts it at the estimated size while the bottom
- * pin follows the stream. One handoff happens when the next turn starts.
+ * assistant row. Only its last few rows stay direct: a long autonomous turn can
+ * carry hundreds of steps, and mounting all of them keeps every tool card and
+ * Markdown body alive, which blocks the first paint and every scroll frame for
+ * rows that are far above the viewport. Older rows of the turn settle before
+ * they leave the tail, so handing them to the virtualizer mid-turn does not
+ * remount the streaming step.
  */
 export function partitionTranscript(
   rows: readonly TranscriptRow[],
@@ -124,7 +132,7 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
     if (range) turn = range.turn
 
     if (message.type === "user" && range) {
-      rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, message })
+      rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, userTurn: range.userTurn, message })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
@@ -147,7 +155,16 @@ function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange
   const metadata = range.metadata?.carrierID === message.id ? range.metadata : undefined
   if (message.content.length === 0) {
     return [
-      { type: "assistant", key: `${message.id}:assistant:0`, turn: range.turn, message, start: 0, parts: [], metadata },
+      {
+        type: "assistant",
+        key: `${message.id}:assistant:0`,
+        turn: range.turn,
+        userTurn: range.userTurn,
+        message,
+        start: 0,
+        parts: [],
+        metadata,
+      },
     ]
   }
   const rows: TranscriptAssistantRow[] = []
@@ -156,6 +173,7 @@ function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange
       type: "assistant",
       key: `${message.id}:assistant:${start}`,
       turn: range.turn,
+      userTurn: range.userTurn,
       message,
       start,
       parts: message.content.slice(start, start + TRANSCRIPT_CHUNK_SIZE),
@@ -190,7 +208,8 @@ export function shiftedScroll(scrollTop: number, previousStart: number, nextStar
 function splitDirect(rows: readonly TranscriptRow[], direct: ReadonlySet<string>) {
   const turn = rows.at(-1)?.turn
   if (!turn || !direct.has(turn)) return { virtual: rows, direct: [] }
-  const boundary = rows.findIndex((row) => row.turn === turn)
+  const start = rows.findIndex((row) => row.turn === turn)
+  const boundary = Math.max(start, rows.length - DIRECT_TAIL_ROWS)
   const tail = rows.slice(boundary)
   // The turn has no renderable assistant row yet, so keep it virtualized.
   if (!tail.some((row) => row.type === "assistant")) return { virtual: rows, direct: [] }
@@ -211,7 +230,7 @@ function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
 }
 
 function sameRow(left: TranscriptRow, right: TranscriptRow) {
-  if (left.type !== right.type || left.turn !== right.turn) return false
+  if (left.type !== right.type || left.turn !== right.turn || left.userTurn !== right.userTurn) return false
   if (left.type === "user" && right.type === "user") return left.message === right.message
   if (left.type === "assistant" && right.type === "assistant") {
     return (
