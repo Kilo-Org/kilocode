@@ -1,6 +1,8 @@
 // Prompt navigator data: one item per user prompt, the tick entries the rail
 // shows for them, and the preview text of the card rows.
 import type { SessionMessageAssistant } from "@opencode/client"
+import { partFeedback } from "../../../src/shared/browser-feedback"
+import { injectedView } from "../../../src/shared/injected-prompt"
 import type { TranscriptQueuedRow, TranscriptRow } from "./transcript"
 
 export interface PromptRailItem {
@@ -73,6 +75,20 @@ function text(parts: SessionMessageAssistant["content"], limit: number): string 
   return truncate(previewText(joined), limit)
 }
 
+/**
+ * The row label for one user prompt. The structured review and browser sections lead the stored text and are shown as
+ * cards in the transcript, so resolve the body they leave behind first, the same way the bubble does. A prompt Kilo
+ * composed or extended then names the invocation instead of showing the template the model received, and a prompt
+ * another session delivered keeps its text with that origin in front.
+ */
+function promptText(value: string, metadata: unknown): string {
+  const body = partFeedback(metadata, value)?.body ?? value
+  const view = injectedView(metadata, body)
+  if (!view) return previewText(body)
+  if (view.source) return previewText(`${view.label}: ${view.text}`)
+  return view.label
+}
+
 function truncate(value: string, limit: number) {
   return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`
 }
@@ -93,7 +109,7 @@ export function promptItems(
         key: row.key,
         turn: row.turn,
         queued: false,
-        prompt: truncate(previewText(row.message.text), PROMPT_LIMIT),
+        prompt: truncate(promptText(row.message.text, row.message.metadata), PROMPT_LIMIT),
         answer: "",
       }
       items.push(current)
@@ -122,7 +138,7 @@ export function promptItems(
       key: row.key,
       turn: row.key,
       queued: true,
-      prompt: truncate(previewText(row.item.payload.text), PROMPT_LIMIT),
+      prompt: truncate(promptText(row.item.payload.text, row.item.payload.metadata), PROMPT_LIMIT),
       answer: "",
     })
   }

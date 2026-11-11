@@ -25,7 +25,11 @@ export function registerTerminalActions(context: ExtensionContext, target: ChatT
         void window.showInformationMessage(NO_CONTENT)
         return
       }
-      await target.prompt(createPrompt("TERMINAL_FIX", { terminalContent: content, userInput: "" }))
+      await target.prompt(
+        createPrompt("TERMINAL_FIX", { terminalContent: content, userInput: "" }),
+        undefined,
+        "Fix terminal command",
+      )
     }),
 
     commands.registerCommand("kilo-code.v2.terminalExplainCommand", async (args: TerminalArgs) => {
@@ -34,7 +38,11 @@ export function registerTerminalActions(context: ExtensionContext, target: ChatT
         void window.showInformationMessage(NO_CONTENT)
         return
       }
-      await target.prompt(createPrompt("TERMINAL_EXPLAIN", { terminalContent: content, userInput: "" }))
+      await target.prompt(
+        createPrompt("TERMINAL_EXPLAIN", { terminalContent: content, userInput: "" }),
+        undefined,
+        "Explain terminal command",
+      )
     }),
   )
 }

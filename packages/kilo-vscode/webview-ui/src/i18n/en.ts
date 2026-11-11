@@ -1519,4 +1519,7 @@ export const dict = {
   "chat.search.historyFailed": "Could not search earlier messages",
   "chat.search.noResults": "No results",
   "chat.search.searchingHistory": "Searching earlier messages…",
+  "chat.injected.goToSource": "Go to originating session",
+  "chat.injected.showPrompt": "Show prompt",
+  "chat.injected.hidePrompt": "Hide prompt",
 }

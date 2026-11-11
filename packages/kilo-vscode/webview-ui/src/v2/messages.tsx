@@ -781,6 +781,7 @@ export function MessageList(props: {
           searchActive={activeKey() === key}
           onViewTurnChanges={props.onViewTurnChanges}
           onForkMessage={row().message.id === firstUser() ? undefined : props.onForkMessage}
+          onSelectSession={props.onSelectSession}
           pending={props.pending}
         />
       ) as HTMLElement
@@ -906,6 +907,7 @@ export function MessageList(props: {
                     <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
                       <UserMessage
                         message={{ ...row.item.payload, id: row.item.id, type: "user", time: row.item.time }}
+                        onSelectSession={props.onSelectSession}
                         pending={props.pending?.(row.item.id)}
                       />
                     </div>

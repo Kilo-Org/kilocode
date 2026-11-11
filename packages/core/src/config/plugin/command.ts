@@ -16,6 +16,7 @@ import { ShellSelect } from "../../shell/select.js"
 import { FSUtil } from "@opencode/util/fs-util"
 import { ConfigMarkdown } from "../markdown.js"
 import { ConfigEntryObserver } from "./entry-observer.js"
+import { KiloPromptInjected } from "../../kilocode/session/injected.js" // kilocode_change(injected-prompt) - label an expanded command template in the transcript
 
 const decodeCommand = Schema.decodeUnknownOption(ConfigCommand.Info)
 
@@ -85,6 +86,7 @@ export const Plugin = define({
                     ...input.prompt,
                     sessionID: child.id,
                     text: ["You are a subagent spawned by another session.", text].join("\n"),
+                    metadata: KiloPromptInjected.command(name, input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
                     resume: false,
                   })
                   const recovery = {
@@ -107,6 +109,7 @@ export const Plugin = define({
                   ...input.prompt,
                   sessionID: input.sessionID,
                   text,
+                  metadata: KiloPromptInjected.command(name, input.prompt.text), // kilocode_change(injected-prompt) - "/name args" title
                   delivery: input.delivery,
                 })
               }).pipe(Effect.asVoid),

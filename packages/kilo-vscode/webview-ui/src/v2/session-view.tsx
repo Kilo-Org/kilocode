@@ -34,7 +34,7 @@ import { createSandbox } from "./sandbox"
 import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
 import { createPending } from "./pending"
-import { steerInterrupts, type SendMode } from "./pending-actions"
+import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
 import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
@@ -290,12 +290,14 @@ export function SessionView(props: {
     // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
     // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
     // and the stop would then end that answer. The partial response stays in the transcript and the run continues
-    // with the prompt. A failed stop still sends the prompt as a steer.
+    // with the prompt. A failed stop still sends the prompt as a steer. Sending a prompt never cancels a running
+    // compaction either way: `now` still stops the model call and running tools, but the checkpoint finishes first
+    // and the prompt follows it. Only Stop itself, and Escape with it, may cancel a compaction.
     const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
     const interrupt =
       running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
     if (interrupt)
-      await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
+      await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
     return { id, gate, model, draft }
   }
 

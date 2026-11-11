@@ -1,6 +1,7 @@
 export * as KiloReview from "./index"
 
 import { define } from "@opencode/plugin/effect/plugin"
+import { KiloPromptInjected } from "@opencode/core/kilocode/session/injected"
 import { Effect } from "effect"
 import PROMPT from "./review.txt"
 
@@ -27,6 +28,7 @@ export const Plugin = define({
               ...input.prompt,
               sessionID: input.sessionID,
               text: template(input.prompt.text),
+              metadata: KiloPromptInjected.command(name, input.prompt.text),
               delivery: input.delivery,
             })
             .pipe(Effect.asVoid),

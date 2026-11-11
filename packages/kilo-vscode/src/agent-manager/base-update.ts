@@ -5,6 +5,7 @@ import type { Worktree } from "./WorktreeStateManager"
 import { prompt } from "./orchestration-domain"
 import { startSession } from "./mcp-warmup"
 import { fetchRunningSessions } from "../session-status"
+import { injectedMetadata } from "../shared/injected-prompt"
 
 import type { BaseUpdateRequest } from "./types"
 
@@ -99,7 +100,7 @@ export async function handleBaseUpdate(
       state,
       sessionID: id,
       text: baseUpdatePrompt(worktree, push),
-      metadata: { kilo: { injected: { title: `Update from ${worktree.parentBranch}` } } },
+      metadata: injectedMetadata(`Update from ${worktree.parentBranch}`),
       questions: "dismiss",
       model: msg.model,
       variant: msg.variant,

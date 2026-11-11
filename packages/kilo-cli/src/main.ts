@@ -13,6 +13,7 @@ import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Observability } from "@opencode/util/observability"
 import { KiloUpdater } from "./updater"
+import { KiloPluginNpm } from "./plugin-npm"
 import { OPENCODE_CHANNEL, OPENCODE_LOCAL, OPENCODE_VERSION } from "@opencode/cli/version"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
@@ -198,6 +199,8 @@ Effect.gen(function* () {
         Global.node.replace(
           Global.layerWith(process.env.OPENCODE_CONFIG_DIR ? { config: process.env.OPENCODE_CONFIG_DIR } : {}),
         ),
+        // Kilo: the TUI resolves configured plugin targets itself, so a `git:` spec must not reach npm there.
+        Npm.node.replace(KiloPluginNpm.node),
       ],
     }),
   ),
