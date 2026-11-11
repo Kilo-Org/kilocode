@@ -10,6 +10,10 @@ const Background = Schema.Boolean.annotate({
     "Defaults to true: runs in the background and returns immediately. Set false to wait for the final response.",
 }).pipe(Schema.withDecodingDefaultKey(Effect.succeed(true)))
 
+// Composed once: a State replay re-runs the transform, and rebuilding the struct would re-derive its JSON schema
+// for every replay.
+const Input = Schema.Struct({ ...SubagentTool.Input.fields, background: Background })
+
 export const KiloSubagentBackgroundPlugin = define({
   id: "kilocode.subagent-background",
   effect: Effect.fn("KiloSubagentBackground.Plugin")(function* (ctx) {
@@ -20,7 +24,7 @@ export const KiloSubagentBackgroundPlugin = define({
             "Foreground (default) runs the subagent to completion and returns its final response.",
             "Runs in the background by default.",
           )
-          tool.input = Schema.Struct({ ...SubagentTool.Input.fields, background: Background })
+          tool.input = Input
         }),
       )
       .pipe(Effect.orDie)
