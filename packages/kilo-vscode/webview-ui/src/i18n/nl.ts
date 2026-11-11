@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Voltooid (gemeld door het model)",
+  "session.goal.complete": "Voltooid",
   "session.goal.blocked": "Geblokkeerd",
   "session.goal.restart": "Doel opnieuw starten",
   ...anacondaDesktopDict,

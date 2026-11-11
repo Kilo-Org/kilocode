@@ -58,7 +58,7 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
-  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.complete": "완료",
   "session.goal.blocked": "차단됨",
   "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
