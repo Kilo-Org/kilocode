@@ -289,9 +289,10 @@ export function SessionView(props: {
     const seed = session() ? undefined : await sandbox.metadata()
     const id = session() ?? selection.create(seed)
     const gate = selection.gate(id)
-    // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
-    // Without one the selection is current, and it must be read before onSession changes the session identity.
-    const model = gate ? undefined : selection.model()
+    // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
+    // Read both before onSession changes the session identity.
+    const model = selection.model()
+    const draft = selection.draft(id)
     // A pending question is dismissed when the user sends instead.
     const questions = forms()
     props.onSession(id, key)
@@ -312,7 +313,7 @@ export function SessionView(props: {
       running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
     if (interrupt)
       await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
-    return { id, gate, model }
+    return { id, gate, model, draft }
   }
 
   // The prompt is admitted on the server; the Most used group counts sent prompts per model, as v1.
@@ -327,18 +328,21 @@ export function SessionView(props: {
     mode: SendMode = "steer",
     input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
   ) => {
-    const { id, gate, model } = await begin(mode)
+    const { id, gate, model, draft } = await begin(mode)
     const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
         sessionID: id,
         text,
+        // A pending switch, such as an agent change, fails the prompt instead of running under another agent.
         gate,
+        // The draft commits after earlier prompts are admitted, as the TUI; a failed switch fails the prompt.
+        prepare: () => selection.commit(id, draft),
         metadata: input?.metadata,
         files,
         delivery: mode === "queue" ? "queue" : "steer",
       })
-      .then(() => prompted(id, text, gate ? selection.attributed(id) : model))
+      .then(() => prompted(id, text, model))
       .catch((err: unknown) => {
         v2.report(err)
         return false
@@ -360,6 +364,9 @@ export function SessionView(props: {
   )
   // The selectors listen for these events, so a slash action opens the same picker as a click.
   const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
+  // Compaction runs on the composer's selection, as the TUI: an uncommitted draft switches the session first.
+  const compact = (id: string) =>
+    void v2.data.session.compact({ sessionID: id, model: selection.draft(id) }).catch(v2.report)
   const handlers = (): SlashHandlers => {
     const id = session()
     const start = props.onNewSession
@@ -375,7 +382,7 @@ export function SessionView(props: {
       models: picker("openModelPicker"),
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
-      compact: id ? () => void v2.data.session.compact({ sessionID: id }).catch(v2.report) : undefined,
+      compact: id ? () => compact(id) : undefined,
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
@@ -401,7 +408,7 @@ export function SessionView(props: {
     items: PromptAttachment[],
     mentions: MentionFile[] = [],
   ) => {
-    const { id, gate } = await begin(mode)
+    const { id, gate, model } = await begin(mode)
     const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     // A command with its own model runs on that model, which the server switches the session to.
     const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
@@ -418,13 +425,13 @@ export function SessionView(props: {
           await gate
           return id
         },
-        selected: (sessionID) => selection.attributed(sessionID),
+        selected: (sessionID) => selection.selected(sessionID),
         switchModel: (input) => v2.api.session.switchModel(input),
         command: (input) => v2.api.session.command(input),
         prompt: (input) => v2.data.session.prompt(input),
       },
     )
-      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : selection.attributed(id)))
+      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : model))
       .catch((err: unknown) => {
         v2.report(err)
         return false
@@ -456,7 +463,14 @@ export function SessionView(props: {
       <div class="chat-view">
         {props.tabStrip}
         <Show when={session()} keyed>
-          {(id) => <TaskHeader sessionID={id} readonly={props.readOnly} searchCommand={props.searchCommand} />}
+          {(id) => (
+            <TaskHeader
+              sessionID={id}
+              readonly={props.readOnly}
+              searchCommand={props.searchCommand}
+              onCompact={() => compact(id)}
+            />
+          )}
         </Show>
         <div class="chat-messages-wrapper">
           <ToolChildSessionProvider value={childSessions}>
