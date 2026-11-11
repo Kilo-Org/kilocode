@@ -387,15 +387,18 @@ test("a feature excluded between two snapshots does not look like reopened cells
   expect(delta).toContain("| console | 1/2 | excluded | -1 module done, -2 modules total |")
 })
 
-test("the snapshot cell record keeps proved and dropped cells whatever the exclusion says", () => {
+test("the snapshot cell record drops unattributed cells but keeps excluded ones", () => {
   const record = cellRecord([
+    // an excluded feature keeps its done cell, so it never looks reopened
     { id: "module:a", kind: "module", feature: "console", source: "a", v2: "a" },
     { id: "patch:gateway:0123456789ab", kind: "patch", feature: "gateway", source: "b:1", v2: "c.ts:1", rung: 1 },
+    // unattributed hunks belong to no feature, so they stay out of the record and out of `summary`
     { id: "patch:unattributed:session:ffffffffffff", kind: "patch", feature: "unattributed:session", source: "d:1", state: "dropped" },
+    { id: "patch:unattributed:session:0123456789ab", kind: "patch", feature: "unattributed:session", source: "e:1", v2: "f.ts:1", rung: 1 },
   ])
   expect(record).toEqual({
     done: ["module:a", "patch:gateway:0123456789ab"],
-    dropped: ["patch:unattributed:session:ffffffffffff"],
+    dropped: [],
     landed: { "patch:gateway:0123456789ab": "plugin" },
   })
 })

@@ -442,19 +442,20 @@ const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 const pct = (done: number, total: number) => (total ? Math.round((1000 * done) / total) / 10 : 0)
 
 /**
- * The cell record a snapshot stores. Exclusion and unattributed filtering belong to the counted summary, so these
- * lists stay complete: a feature that becomes excluded keeps its cells in both snapshots and `compare` does not
- * report them as reopened.
+ * The cell record a snapshot stores. Exclusion belongs to the counted summary only, so these lists keep the cells of a
+ * feature that becomes excluded and `compare` does not report them as reopened. Unattributed hunks are not cells of any
+ * feature, so they stay out of the record and `progress.json` keeps agreeing with its own `summary`.
  */
 export function cellRecord(cells: Cell[]) {
+  const recordable = cells.filter((c) => !c.feature.startsWith("unattributed:"))
   return {
-    done: cells
+    done: recordable
       .filter((c) => c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
       .map((c) => c.id)
       .sort(byName),
-    dropped: cells.filter((c) => c.state === "dropped").map((c) => c.id).sort(byName),
+    dropped: recordable.filter((c) => c.state === "dropped").map((c) => c.id).sort(byName),
     landed: Object.fromEntries(
-      cells.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
+      recordable.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
     ),
   }
 }
@@ -787,7 +788,6 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
   const features = all.filter((b) => !b.excluded && !b.feature.startsWith("unattributed:"))
   const excluded = all.filter((b) => b.excluded)
   const counted = features
-  const isCounted = (c: Cell) => !config.exclude[c.feature] && !c.feature.startsWith("unattributed:")
   const total = counted.reduce((s, b) => s + b.total, 0)
   const done = counted.reduce((s, b) => s + b.done, 0)
   const dropped = counted.reduce((s, b) => s + b.dropped, 0)
@@ -796,9 +796,6 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     done: counted.reduce((s, b) => s + b.kinds[k].done, 0),
     total: counted.reduce((s, b) => s + b.kinds[k].total, 0),
   }))
-  // The cell lists stay complete: exclusion only changes the counted view above, so a newly excluded
-  // feature does not look like a set of reopened cells in the PR delta.
-  const droppedCells = data.cells.filter((c) => c.state === "dropped").sort((a, b) => byName(a.id, b.id))
   const record = cellRecord(data.cells)
   const landed = { plugin: 0, host: 0, seam: 0, patch: 0 }
   for (const b of counted) for (const r of Object.values(RUNG)) landed[r] += b.landed[r]
@@ -873,7 +870,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `## Dropped`,
     "",
-    ...(droppedCells.filter(isCounted).length ? droppedCells.filter(isCounted).map((c) => `- \`${c.id}\`: ${dispositions[c.id].note} (${dispositions[c.id].by})`) : ["None."]),
+    ...(record.dropped.length ? record.dropped.map((id) => `- \`${id}\`: ${dispositions[id].note} (${dispositions[id].by})`) : ["None."]),
     "",
     `## Counting rules`,
     "",
