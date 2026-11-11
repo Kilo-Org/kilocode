@@ -5,7 +5,9 @@ import { KiloOauthCallbackPage } from "@opencode/core/kilocode/oauth/page"
  * Kilo's app identity: the Kilo name, with the version and channel of this build. A release build defines the
  * version and channel at build time, as for the upstream CLI. A client that starts the host can set its own name
  * with `KILO_CLIENT` (see ./env). The product is what the OpenAI Codex sign-in sends, as on v1: the
- * `originator`, the token-request user agent and the OAuth callback page.
+ * `originator`, the token-request user agent and the OAuth callback page. Its id also leads the general user agent
+ * (`kilo/<channel>/<version>/<name>`) that the server sends on model requests, the model catalog fetch and the
+ * requests of the provider and web search plugins. The Kilo Gateway sends its own user agent.
  */
 export const KiloApp = {
   name: process.env.OPENCODE_CLIENT ?? "kilo2",

@@ -26,7 +26,7 @@ export function make(input: Partial<Info> = {}): Info {
 }
 
 export function useragent(app: Info) {
-  return `opencode/${app.channel}/${app.version}/${app.name}`
+  return `${app.product?.id ?? "opencode"}/${app.channel}/${app.version}/${app.name}` // kilocode_change(user-agent) seam - an embedder's product id leads the user agent
 }
 
 export const layer = (input?: Partial<Info>) => Layer.succeed(Metadata, make(input))

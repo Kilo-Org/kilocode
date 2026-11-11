@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 125,
-    "markedLines": 2118,
+    "markedLines": 2119,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -385,7 +385,7 @@
     },
     "packages/core/src/app.ts": {
       "rung": 3,
-      "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+      "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged. useragent() also leads with the product id when a product is set (issue #15324; +1 non-empty marked line, the exact growth raises only the markedLines budget from 2118 to 2119, while the file, unmarked-line and deletion budgets are unchanged). Core builds every general User-Agent from this one function: model requests, the model catalog fetch, and the provider and web search plugins. Rung 1 cannot supply it: the session model.request hook reaches the headers of a model request only, not the catalog fetch or the sign-in, discovery and search requests the upstream plugins send themselves. Rung 2 cannot supply it: useragent() is a plain function, not a service the host can replace, and no App.Info field reached it. Without a product the result is byte-identical (opencode/<channel>/<version>/<name>)."
     },
     "packages/core/src/oauth/page.ts": {
       "rung": 3,
