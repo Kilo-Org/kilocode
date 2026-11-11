@@ -19,7 +19,7 @@ async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolea
 }
 
 test("the host reports a remote authentication failure as needs_auth", async () => {
-  const remote = Bun.serve({
+  using remote = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     fetch: () => new Response(null, { status: 403 }),
@@ -81,7 +81,6 @@ test("the host reports a remote authentication failure as needs_auth", async () 
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Error")),
     )
   } finally {
-    remote.stop(true)
     await rm(directory, { recursive: true, force: true })
   }
 }, 30_000)
