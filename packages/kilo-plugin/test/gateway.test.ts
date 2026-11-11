@@ -1171,6 +1171,13 @@ describe("KiloGatewayPlugin", () => {
                     supported_parameters: ["tools", "reasoning"],
                     opencode: { ai_sdk_provider: "openai-compatible", variants: legacy, reasoning_options: [] },
                   },
+                  ...[true, false].map((reasoning) => ({
+                    id: `test/heuristic-${reasoning}`,
+                    name: "Neither field",
+                    context_length: 128000,
+                    supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                    opencode: { ai_sdk_provider: "openai-compatible" },
+                  })),
                 ],
               }
               yield* addPlugin()
@@ -1185,6 +1192,10 @@ describe("KiloGatewayPlugin", () => {
               }
               // `[]` means reasoning is always on, so legacy variants must not reintroduce a picker.
               expect((yield* models.get(kilo, Model.ID.make("test/always-on")))?.variants).toEqual([])
+              expect(
+                (yield* models.get(kilo, Model.ID.make("test/heuristic-true")))?.variants.map((variant) => variant.id),
+              ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("medium"), Model.VariantID.make("high")])
+              expect((yield* models.get(kilo, Model.ID.make("test/heuristic-false")))?.variants).toEqual([])
             }),
           ),
         (backend) => Effect.sync(() => backend[Symbol.dispose]()),
