@@ -1,7 +1,7 @@
 // The v2 transcript: a virtualized, turn-based list with load-earlier, the last
 // live turn as a direct tail, queued prompts outside the virtual window and
 // scroll-to-bottom.
-import type { SessionInboxUser } from "@opencode/client"
+import type { FormInfo, SessionInboxUser } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions, UserMessagePending } from "@kilocode/kilo-ui/message-part"
@@ -16,6 +16,7 @@ import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/h
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { instructionFilesByRead } from "./instruction-files"
+import { QuestionDock } from "./question"
 import type { Selection } from "./selectors"
 import { sessionStarting } from "./session-loading"
 import {
@@ -94,6 +95,8 @@ export function MessageList(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** The delivery state and controls of a user message the server has not handed to the model yet. */
   pending?: (messageID: string) => UserMessagePending | undefined
+  /** The question awaiting an answer, appended to the transcript so it scrolls with it as in v1. */
+  question?: () => FormInfo | undefined
 }) {
   const v2 = useV2()
   const vscode = useVSCode()
@@ -913,6 +916,9 @@ export function MessageList(props: {
                     </div>
                   )}
                 </For>
+                <Show when={props.question?.()} keyed>
+                  {(form) => <QuestionDock form={form} />}
+                </Show>
               </>
             )}
           </Show>

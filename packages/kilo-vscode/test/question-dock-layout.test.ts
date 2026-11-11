@@ -13,16 +13,13 @@ const ruleBody = (selector: string) => {
   return layout.slice(layout.indexOf("{", start) + 1, layout.indexOf("}", start))
 }
 
-// v2 renders the question dock in the composer column, unlike v1 where it
-// streamed inline inside the transcript lane. Without its own lane it spanned
-// the whole surface width on wide layouts such as Agent Manager.
-test("question dock keeps the composer readable lane", () => {
-  const body = ruleBody('.chat-view .chat-input > [data-component="question-dock"]')
+// The question dock streams inline at the end of the transcript, as in v1, so
+// it scrolls with the output. It shares the readable lane of the other inline
+// rows rather than spanning the whole surface width on wide layouts.
+test("question dock keeps the transcript readable lane", () => {
+  const body = ruleBody('.chat-view .message-list-content > [data-component="question-dock"]')
 
   expect(body).toBeDefined()
-  expect(body).toContain("box-sizing: border-box")
-  expect(body).toContain(
-    "width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width))",
-  )
+  expect(body).toContain("max-width: var(--chat-readable-width)")
   expect(body).toContain("margin-inline: auto")
 })

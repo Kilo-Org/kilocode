@@ -604,12 +604,11 @@
   margin-block: var(--prompt-gutter) var(--prompt-min-gutter);
 }
 
-/* v2 renders the question dock in the composer column instead of the transcript
-   (v1 streamed it inline), so it needs the same readable lane as the composer
-   rather than the full width of a wide surface such as Agent Manager. */
+/* The startup error and the permission card live in the composer column, so
+   they need the same readable lane as the composer rather than the full width
+   of a wide surface such as Agent Manager. */
 .chat-view .chat-input > .startup-error-banner,
-.chat-view .chat-input > [data-component="permission-shortcuts"],
-.chat-view .chat-input > [data-component="question-dock"] {
+.chat-view .chat-input > [data-component="permission-shortcuts"] {
   box-sizing: border-box;
   width: min(calc(100% - var(--prompt-gutter) - var(--prompt-gutter)), var(--chat-readable-width));
   margin-inline: auto;

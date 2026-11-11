@@ -25,7 +25,6 @@ import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
-import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
@@ -451,6 +450,7 @@ export function SessionView(props: {
                 onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                 onViewTurnChanges={props.onViewTurnChanges}
                 pending={pending}
+                question={() => (props.readOnly ? undefined : forms()[0])}
               />
             </div>
           </ToolChildSessionProvider>
@@ -467,9 +467,6 @@ export function SessionView(props: {
             </Show>
             <Show when={permissions()[0]} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
-            </Show>
-            <Show when={forms()[0]} keyed>
-              {(form) => <QuestionDock form={form} />}
             </Show>
             <SessionDock
               session={session()}
