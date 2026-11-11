@@ -9,6 +9,9 @@ import SOUL from "./soul.txt"
  * agents with their own prompt, and is left out of title requests. It is its own first system part, so the
  * model-specific templates that replace `system[0]` (the upstream prompt optimizer and the Gateway prompt) keep it as
  * long as this plugin runs after them; the host registers it after the config plugins for that reason.
+ *
+ * Claude Agent provider requests do not get the persona: that provider copies the system parts into its own
+ * instructions option before this hook runs, and Claude Code's prompt replaces the first part.
  */
 export const KiloSoulPlugin = define({
   id: "kilocode.soul",
