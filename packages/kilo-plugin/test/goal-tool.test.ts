@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect, Layer, Option, Schema } from "effect"
+import { Effect, Layer, Option, Schedule, Schema } from "effect"
 import { LanguageModel, type LLMRequest } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
 import { TestLLM } from "@opencode/ai/testing"
@@ -207,6 +207,37 @@ describe("kilocode.goal tool", () => {
       yield* sessions.wait(session.id)
 
       expect(yield* goal(session.id)).toMatchObject({ objective: "pause", status: "complete" })
+    }),
+  )
+
+  it.live("pauses an active goal when its session is archived", () =>
+    Effect.gen(function* () {
+      const session = yield* project()
+      const sessions = yield* Session.Service
+      yield* setGoal(session.id, {
+        id: "archived",
+        objective: "Ship the release",
+        status: "active",
+        rounds: 0,
+        maxRounds: 50,
+        boot: "another-process",
+        updatedAt: 0,
+      })
+
+      yield* sessions.archive(session.id)
+      const settled = yield* goal(session.id).pipe(
+        Effect.repeat({
+          until: (value) => value?.status === "paused",
+          schedule: Schedule.spaced("20 millis"),
+        }),
+        Effect.timeout("10 seconds"),
+      )
+
+      expect(settled).toMatchObject({
+        objective: "Ship the release",
+        status: "paused",
+        reason: "The session was archived",
+      })
     }),
   )
 })

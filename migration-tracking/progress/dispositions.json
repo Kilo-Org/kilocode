@@ -2459,5 +2459,17 @@
     "v2": "packages/schema/src/kilocode/session-drain.ts",
     "note": "Served by the kilocode.session-drain RPC method drain (contract packages/schema/src/kilocode/session-drain.ts, handler packages/kilo-plugin/src/session-drain/index.ts) with the drained event carrying the caller token. Round trip: packages/kilo-cli/test/session-drain.test.ts.",
     "by": "kilo/graceful-tower-qr8"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/tool.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/goal/index.ts",
+    "note": "The v1 `goal` tool (`GoalTool` in session/goal/tool.ts, `arm` in runner.ts) is ported to the Kilo goal plugin's `goal` tool: action start|resume, the v1 order of checks and messages (active goal, permission, delegated session, archived or reverted session, objective required, 10,000 character limit), and the same permission action `goal`. `goal_report` is not carried: v2's reviewer decides completion, so the tool result text names the reviewer instead. Tests: packages/kilo-plugin/test/goal-tool.test.ts.",
+    "by": "port-v1-goal-to-vscode"
+  },
+  "patch:goals:8f2a39a24f88": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/goal/index.ts",
+    "note": "v1 paused a session's goal in `setArchived` (session.ts). The Kilo goal plugin now subscribes to `session.archived` and pauses an active goal with the reason \"The session was archived\", covered by packages/kilo-plugin/test/goal-tool.test.ts.",
+    "by": "port-v1-goal-to-vscode"
   }
 }

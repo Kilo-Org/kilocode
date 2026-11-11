@@ -301,11 +301,19 @@ export const Plugin = define({
           "session.step.started",
           "session.step.ended",
           "session.deleted",
+          // v1 paused a goal when its session was archived (kilocode_change in session.ts setArchived).
+          "session.archived",
         ],
       })
       .pipe(
         Stream.runForEach((event) => {
           const sessionID = event.data.sessionID
+          if (event.type === "session.archived")
+            return pauseActive(sessionID, "The session was archived").pipe(
+              Effect.catchCause((cause) =>
+                Effect.logWarning("failed to pause the goal of an archived session", { sessionID, cause }),
+              ),
+            )
           if (event.type === "session.deleted")
             return FiberMap.remove(timers, sessionID).pipe(Effect.andThen(ctx.storage.remove(PREFIX + sessionID)))
           if (event.type === "session.step.started" || event.type === "session.step.ended")
