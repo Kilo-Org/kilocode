@@ -326,23 +326,20 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
 
   const exit = yield* Effect.gen(function* () {
     if (config.type === "attached") return yield* initialize(config.transport)
-    // kilocode_change start - embedding command hook
     if (config.type === "local") {
       const [command, ...args] = config.command
-      const local = options.host?.localCommand?.({ command, args }) ?? { command, args }
       const transport = yield* McpStdio.make({
         server,
-        command: local.command,
-        args: local.args,
+        command,
+        args,
         cwd: McpStdio.resolveCwd(options.directory, config.cwd),
         environment: {
-          ...(local.command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
+          ...(command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
           ...config.environment,
         },
       })
       return yield* initialize(transport)
     }
-    // kilocode_change end
     const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
     const baseFetch = yield* McpOAuth.loggedFetch({ server, directory: options.directory }) // kilocode_change - embedding transport hook
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked

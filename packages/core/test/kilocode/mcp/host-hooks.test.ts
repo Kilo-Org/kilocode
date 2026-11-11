@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test"
-import path from "node:path"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
 import { Credential } from "@opencode/core/credential"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
@@ -9,28 +8,6 @@ import { McpOAuth } from "@opencode/core/mcp/oauth"
 import { Effect, Exit } from "effect"
 import { hostEnvironmentLayer } from "../../fixture/environment"
 import { echoMcpHandler } from "../../fixture/mcp-echo"
-
-const fixture = path.join(import.meta.dir, "fixture.ts")
-
-test("applies the host localCommand hook before spawning a local server", async () => {
-  const tools = await Effect.runPromise(
-    Effect.scoped(
-      McpClient.connect({
-        server: "hooks",
-        config: { type: "local", command: [process.execPath, fixture] },
-        directory: import.meta.dir,
-        host: {
-          localCommand: ({ command, args }) => ({ command, args: [...args, "--host-hook"] }),
-        },
-      }).pipe(
-        Effect.flatMap((connection) => connection.tools()),
-        Effect.provide(hostEnvironmentLayer),
-      ),
-    ),
-  )
-
-  expect(tools.map((tool) => tool.name)).toContain("echo")
-})
 
 test("wraps the remote transport fetch with the host hook", async () => {
   const server = Bun.serve({

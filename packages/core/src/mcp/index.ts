@@ -444,7 +444,7 @@ export const layer = (options?: Options) =>
             elicitation,
             environment,
             fetch,
-            host: options?.host, // kilocode_change - embedding transport, command and OAuth hooks
+            host: options?.host, // kilocode_change - embedding transport and OAuth hooks
             scope: servers,
             lock: locks.withLock(name),
             callbacks,

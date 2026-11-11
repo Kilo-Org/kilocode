@@ -4,11 +4,6 @@ export * as McpHost from "./host.js"
 import type { FetchLike, StoredOAuthClientInformation } from "@modelcontextprotocol/client"
 import type { ConfigMCP } from "@opencode/schema/config/mcp"
 
-export interface LocalCommand {
-  readonly command: string
-  readonly args: ReadonlyArray<string>
-}
-
 /** OAuth settings of one remote server, as configured. Absent means every CIMD default applies. */
 export type OAuthConfig = typeof ConfigMCP.OAuth.Type
 
@@ -44,14 +39,12 @@ export interface OAuth {
 
 /**
  * Embedding hooks for the MCP service. The upstream server leaves `host` unset and keeps its own
- * behavior; a host may set any hook to adapt transport, command or OAuth identity without copying
- * the MCP implementation.
+ * behavior; a host may set any hook to adapt the transport, OAuth identity or auth classification
+ * without copying the MCP implementation.
  */
 export interface Host {
   /** Wraps the remote transport fetch for one attempt; `endpoint` is the URL that attempt dials. */
   readonly fetch?: (fetch: FetchLike, endpoint: string) => FetchLike
-  /** Rewrites a local server command before it is spawned, for example to add container flags. */
-  readonly localCommand?: (command: LocalCommand) => LocalCommand
   /** Client identity, client document and credential binding used for MCP OAuth. */
   readonly oauth?: OAuth
   /**
