@@ -1,3 +1,4 @@
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -130,44 +131,9 @@ export const promptDrafts = {
   },
 }
 
-// The new Send icon scales in instead of swapping in one frame. The clock also draws its dial from 12 o'clock and turns
-// its hand into place, so the queue preview reads as "later". The kilo-ui clock artwork is inline SVG, so its circle and
-// hand can be animated directly.
-function animateSendIcon(button: HTMLElement, icon: string) {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-  if (document.body.classList.contains("vscode-reduce-motion")) return
-  const svg = button.querySelector<SVGElement>("[data-slot='icon-svg']")
-  if (!svg) return
-  const easing = "cubic-bezier(0.2, 0.9, 0.3, 1)"
-  svg.animate(
-    [
-      { opacity: 0, transform: "scale(0.6)" },
-      { opacity: 1, transform: "none" },
-    ],
-    { duration: 180, easing },
-  )
-  if (icon !== "clock") return
-  const dial = { strokeDasharray: "44", transform: "rotate(-90deg)", transformOrigin: "10px 10px" }
-  svg.querySelector("circle")?.animate(
-    [
-      { ...dial, strokeDashoffset: "44" },
-      { ...dial, strokeDashoffset: "0" },
-    ],
-    { duration: 420, easing },
-  )
-  svg.querySelector("path")?.animate(
-    [
-      { transform: "rotate(-300deg)", transformOrigin: "10px 10px" },
-      { transform: "none", transformOrigin: "10px 10px" },
-    ],
-    {
-      duration: 520,
-      delay: 60,
-      easing,
-      fill: "backwards",
-    },
-  )
-}
+// Send keeps every icon it can show mounted and crossfades between them, so a modifier pressed and released quickly
+// reverses the transition instead of restarting it.
+const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
 
 export function PromptInput(props: {
   session?: string
@@ -530,14 +496,17 @@ export function PromptInput(props: {
   // pending row.
   const sendIcon = () =>
     busySend() ? ({ steer: "arrow-up", queue: "clock", now: "arrow-right" } as const)[sendAction()] : "send"
-  let sendRef: HTMLButtonElement | undefined
-  createEffect(on(sendIcon, (icon) => sendRef && animateSendIcon(sendRef, icon), { defer: true }))
+  // While the agent runs, the tooltip names what Send does now and its key, like the other composer tooltips. Holding a
+  // modifier switches it to that action; the placeholder suggests ⌥↵ to queue.
   const sendHint = () => {
     if (!busySend()) return sendLabel()
-    const keys = sendShortcuts()
-    if (held() === "queue") return language.t("prompt.action.queue", { key: keys.queue })
-    if (held() === "now") return language.t("prompt.action.stopAndSend", { key: keys.now })
-    return language.t("prompt.action.steer", keys)
+    const action = sendAction()
+    return (
+      <div data-slot="tooltip-keybind">
+        <span>{language.t(action === "now" ? "prompt.action.stopAndSend" : `prompt.action.${action}`)}</span>
+        <span data-slot="tooltip-keybind-key">{sendShortcuts()[action]}</span>
+      </div>
+    )
   }
   // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
   // whose prompt steers the running turn at its next step. A pending question is not running work. Stop is not shown
@@ -1435,15 +1404,29 @@ export function PromptInput(props: {
               when={showStop()}
               fallback={
                 <Tooltip value={sendHint()} placement="top" openDelay={0}>
-                  <IconButton
-                    ref={(el) => (sendRef = el)}
-                    icon={sendIcon()}
-                    variant="ghost"
-                    size="small"
+                  <button
+                    type="button"
+                    data-component="icon-button"
+                    data-size="small"
+                    data-variant="ghost"
+                    data-icon={sendIcon()}
+                    class="prompt-send-button"
                     onClick={(event) => send(sendMode(event, props.running))}
                     disabled={!canSend()}
                     aria-label={sendLabel()}
-                  />
+                  >
+                    <For each={SEND_ICONS}>
+                      {(name) => (
+                        <span
+                          class="prompt-send-icon"
+                          data-name={name}
+                          data-active={sendIcon() === name ? "" : undefined}
+                        >
+                          <Icon name={name} size="small" />
+                        </span>
+                      )}
+                    </For>
+                  </button>
                 </Tooltip>
               }
             >
