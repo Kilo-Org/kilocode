@@ -13,6 +13,7 @@ import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
@@ -151,7 +152,7 @@ export const overrides: LayerNode.Replacements = [
   Mcp.node.replace(
     Mcp.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
-      host: { oauth: { name: "Kilo", uri: "https://kilo.ai" } },
+      host: { oauth: { name: "Kilo", uri: "https://kilo.ai" }, authFailure },
     }),
   ),
   Model.node.replace(

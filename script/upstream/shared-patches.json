@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 124,
-    "markedLines": 2105,
+    "markedLines": 2120,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -167,7 +167,7 @@
     },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
-      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity) for an embedding host. No plugin hook reaches the MCP transport or OAuth registration, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity, auth-failure predicate) for an embedding host. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
@@ -175,7 +175,7 @@
     },
     "packages/core/src/mcp/connection.ts": {
       "rung": 3,
-      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` and `localCommand` hooks also reach connections the connection service and the pool open rather than only a direct client connect. No plugin hook reaches the MCP transport or spawn command; with `host` unset nothing changes."
+      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` and `localCommand` hooks also reach connections the connection service and the pool open rather than only a direct client connect, and let the host `authFailure` predicate reclassify a remote connection failure as `needs_auth` while the server may sign in. No plugin hook reaches the MCP transport, spawn command or connection status; with `host` unset nothing changes. The exact 15-line growth raises only the markedLines budget from 2105 to 2120; file, unmarked-line and deletion budgets are unchanged."
     },
     "packages/core/src/mcp/pool.ts": {
       "rung": 3,
