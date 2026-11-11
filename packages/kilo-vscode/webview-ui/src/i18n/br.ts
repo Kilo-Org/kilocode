@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gerenciar regras de aprovação automática",
   "ui.permission.noChanges": "Sem alterações.",
   "ui.permission.reject": "Rejeitar",
+  "ui.permission.allowAllSites": "Permitir todos os sites",
   "ui.permission.feedbackPlaceholder": "Diga ao Kilo o que fazer de forma diferente",
   "ui.permission.feedbackHint": "Enter para rejeitar, Esc para cancelar",
   "ui.permission.doomLoop.prompt": "Possível loop detectado na ferramenta {{tool}}. Continuar executando?",

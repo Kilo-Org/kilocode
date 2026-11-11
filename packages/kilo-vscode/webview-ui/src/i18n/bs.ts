@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.noChanges": "Nema promjena.",
   "ui.permission.reject": "Odbij",
+  "ui.permission.allowAllSites": "Dozvoli sve stranice",
   "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",
   "ui.permission.feedbackHint": "Enter za odbijanje, Esc za otkazivanje",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",

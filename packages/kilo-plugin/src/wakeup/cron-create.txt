@@ -1,0 +1,1 @@
+Resume this session on a wall-clock schedule: a 5-field cron expression for a recurring task, or one when/delay for a one-shot. A task expires 7 days after creation, and a session holds at most 10. Use schedule_wakeup for a single future point.

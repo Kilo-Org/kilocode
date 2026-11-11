@@ -308,6 +308,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.noChanges": "Изменений нет.",
   "ui.permission.reject": "Отклонить",
+  "ui.permission.allowAllSites": "Разрешить все сайты",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
   "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
