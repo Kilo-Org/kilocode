@@ -130,6 +130,45 @@ export const promptDrafts = {
   },
 }
 
+// The new Send icon scales in instead of swapping in one frame. The clock also draws its dial from 12 o'clock and turns
+// its hand into place, so the queue preview reads as "later". The kilo-ui clock artwork is inline SVG, so its circle and
+// hand can be animated directly.
+function animateSendIcon(button: HTMLElement, icon: string) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+  if (document.body.classList.contains("vscode-reduce-motion")) return
+  const svg = button.querySelector<SVGElement>("[data-slot='icon-svg']")
+  if (!svg) return
+  const easing = "cubic-bezier(0.2, 0.9, 0.3, 1)"
+  svg.animate(
+    [
+      { opacity: 0, transform: "scale(0.6)" },
+      { opacity: 1, transform: "none" },
+    ],
+    { duration: 180, easing },
+  )
+  if (icon !== "clock") return
+  const dial = { strokeDasharray: "44", transform: "rotate(-90deg)", transformOrigin: "10px 10px" }
+  svg.querySelector("circle")?.animate(
+    [
+      { ...dial, strokeDashoffset: "44" },
+      { ...dial, strokeDashoffset: "0" },
+    ],
+    { duration: 420, easing },
+  )
+  svg.querySelector("path")?.animate(
+    [
+      { transform: "rotate(-300deg)", transformOrigin: "10px 10px" },
+      { transform: "none", transformOrigin: "10px 10px" },
+    ],
+    {
+      duration: 520,
+      delay: 60,
+      easing,
+      fill: "backwards",
+    },
+  )
+}
+
 export function PromptInput(props: {
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
@@ -486,7 +525,13 @@ export function PromptInput(props: {
       : language.t("prompt.placeholder.connecting")
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
   const sendAction = (): SendMode => (busySend() ? held() : "steer")
-  const sendIcon = () => (({ steer: "send", queue: "clock", now: "arrow-right" }) as const)[sendAction()]
+  // While the agent runs, Send draws the steer arrow the pending prompt rows use, so Enter reads as "join this turn"
+  // rather than "start a new one". Queueing has no button of its own: ⌥↵ (previewed here) or Move to queue on the
+  // pending row.
+  const sendIcon = () =>
+    busySend() ? ({ steer: "arrow-up", queue: "clock", now: "arrow-right" } as const)[sendAction()] : "send"
+  let sendRef: HTMLButtonElement | undefined
+  createEffect(on(sendIcon, (icon) => sendRef && animateSendIcon(sendRef, icon), { defer: true }))
   const sendHint = () => {
     if (!busySend()) return sendLabel()
     const keys = sendShortcuts()
@@ -835,7 +880,6 @@ export function PromptInput(props: {
     }
     submit(undefined, mode)
   }
-  const queue = () => send("queue")
 
   registerComposer(props.onComposerReady, {
     attach: (items) => {
@@ -1387,27 +1431,12 @@ export function PromptInput(props: {
             <Show when={canUseSpeech()}>
               <SpeechToTextButton speech={speech} disabled={props.disabled} start={startSpeech} label={language.t} />
             </Show>
-            <Show when={props.running && (!!text().trim() || browsers().length > 0)}>
-              <Tooltip
-                value={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
-                placement="top"
-                openDelay={0}
-              >
-                <IconButton
-                  icon="clock"
-                  variant="ghost"
-                  size="small"
-                  onClick={queue}
-                  disabled={!canSend() || speech.state() === "recording"}
-                  aria-label={language.t("prompt.action.queue", { key: sendShortcuts().queue })}
-                />
-              </Tooltip>
-            </Show>
             <Show
               when={showStop()}
               fallback={
                 <Tooltip value={sendHint()} placement="top" openDelay={0}>
                   <IconButton
+                    ref={(el) => (sendRef = el)}
                     icon={sendIcon()}
                     variant="ghost"
                     size="small"
