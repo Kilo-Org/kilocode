@@ -57,6 +57,15 @@ const openRouterModelSchema = z.object({
       family: z.string().optional(),
       prompt: z.enum(PROMPTS).optional().catch(undefined),
       variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+      reasoning_options: z
+        .array(
+          z.discriminatedUnion("type", [
+            z.object({ type: z.literal("toggle") }),
+            z.object({ type: z.literal("effort"), values: z.array(z.unknown()) }),
+          ]),
+        )
+        .optional()
+        .catch(undefined),
       ai_sdk_provider: z.enum(AI_SDK_PROVIDERS).optional().catch(undefined),
     })
     .optional(),
@@ -310,7 +319,11 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     reasoning: supportsReasoning,
     temperature: supportsTemperature,
     recommendedIndex: model.preferredIndex,
-    variants: model.opencode?.variants,
+    // The gateway's `variants` are legacy; they only apply when `reasoning_options` is absent
+    // (e.g. admin-authored custom LLM variants).
+    variants: model.opencode?.reasoning_options
+      ? legacyVariants(model.opencode.reasoning_options, model.opencode.ai_sdk_provider)
+      : model.opencode?.variants,
     prompt: model.opencode?.prompt,
     ai_sdk_provider: model.opencode?.ai_sdk_provider,
     tool_call: tools,
@@ -342,6 +355,52 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
       ...(model.description && { description: model.description }),
     },
   }
+}
+
+const REASONING_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+const VERBOSITIES = ["low", "medium", "high", "xhigh", "max"]
+
+/**
+ * Builds the OpenRouter-shaped variants from the gateway's `reasoning_options`, the same way the
+ * gateway builds its legacy `variants`. `[]` (reasoning that is always on) keeps a single
+ * `thinking` variant, a lone toggle becomes `instant`/`thinking`, and effort variants of Anthropic
+ * models also get the matching `verbosity`, which the gateway maps to Anthropic's `effort`.
+ */
+function legacyVariants(
+  options: NonNullable<NonNullable<OpenRouterModel["opencode"]>["reasoning_options"]>,
+  aiSdkProvider: NonNullable<OpenRouterModel["opencode"]>["ai_sdk_provider"],
+) {
+  const toggle = options.some((option) => option.type === "toggle")
+  const efforts = [
+    ...new Set(
+      options.flatMap((option) =>
+        option.type === "effort"
+          ? option.values.filter((value): value is string => typeof value === "string" && REASONING_EFFORTS.includes(value))
+          : [],
+      ),
+    ),
+  ]
+  const entries =
+    options.length === 0
+      ? [["thinking", "high"]]
+      : efforts.length === 0
+        ? toggle
+          ? [
+              ["instant", "none"],
+              ["thinking", "high"],
+            ]
+          : []
+        : [...(toggle && !efforts.includes("none") ? ["none"] : []), ...efforts].map((effort) => [effort, effort])
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(
+    entries.map(([name, effort]) => [
+      name,
+      {
+        reasoning: { enabled: effort !== "none", effort },
+        ...(aiSdkProvider === "anthropic" && name === effort && VERBOSITIES.includes(effort) && { verbosity: effort }),
+      },
+    ]),
+  )
 }
 
 /**
