@@ -105,6 +105,12 @@ Later phases extend the same host interface; they do not rework the hook mechani
    - Tests: port `mcp-cimd.test.ts` and `mcp/oauth-issuer.test.ts`. Required cases: a configured
      secret is never sent to a second issuer; refresh against the new issuer; custom callback
      port/redirect/secret use DCR; explicit default redirect uses CIMD.
+   - **Status:** implemented in this worktree (PR `mcp-oauth-issuer`). Deliberate differences from v1:
+     `retain` is not ported because v2 has no pending provider and finalizes from the same store the
+     provider wrote to; CIMD eligibility is the config rule only, and the SDK's advertised
+     `client_id_metadata_document_supported` decides CIMD vs DCR (v2's extra
+     `token_endpoint_auth_methods` check stays on the upstream path only). `callback_port` keeps
+     upstream's `/callback` listener path rather than v1's `/mcp/oauth/callback`.
 
 2. **Callback handoff**
    - Port `mcp-oauth-callback.ts` to `packages/core/src/kilocode/mcp/`.

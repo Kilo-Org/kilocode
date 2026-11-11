@@ -113,7 +113,7 @@ test("uses the host OAuth client identity and keeps the upstream default", async
   })
   const config = new ConfigMCP.Remote({ type: "remote", url: "https://example.com/mcp" })
   // An anonymous connect-time provider reads no credential, so it only needs the service to exist.
-  const identity = (clientMetadata?: McpHost.OAuthClientMetadata) =>
+  const identity = (clientMetadata?: McpHost.OAuth) =>
     Effect.runPromise(
       McpOAuth.connectProvider({ config, credential: undefined, clientMetadata }).pipe(
         Effect.provideService(Credential.Service, credentials),

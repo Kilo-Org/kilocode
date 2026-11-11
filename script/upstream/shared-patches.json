@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 125,
-    "markedLines": 2133,
+    "markedLines": 2204,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -167,7 +167,7 @@
     },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
-      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity, client document, loopback callback, registration redirect and credential binding, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
@@ -187,7 +187,7 @@
     },
     "packages/core/src/mcp/oauth.ts": {
       "rung": 3,
-      "seam": "Use the optional host OAuth client identity for `client_name`, `client_uri` and the initialize challenge, and let the host name the CIMD document URL. No plugin hook reaches OAuth registration; the host supplies the values through `Mcp.configured`. Defaults stay `opencode` and the upstream document."
+      "seam": "Use the optional host OAuth policy: `client_name`, `client_uri` and the initialize challenge, the client ID metadata document and the loopback callback it lists, the redirect a non-interactive registration must record, and the client-information binding that keeps a configured client's secret with the authorization server that issued it. No plugin hook reaches OAuth registration; the host supplies the policy through `Mcp.configured({ host })`. With `host` unset, defaults stay upstream's own document, callback, redirect and static client."
     },
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
