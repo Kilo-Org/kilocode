@@ -522,6 +522,7 @@ const AgentManagerContent: Component = () => {
     restore: () => restoreSession(),
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
+  /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
   const focusOnDraftChange = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
@@ -2329,6 +2330,8 @@ const AgentManagerContent: Component = () => {
                     onNewSession={handleNewTabForCurrentSelection}
                     worktree={!!selection() && selection() !== LOCAL}
                     manager={hints.manager}
+                    focusOnDraftChange={focusOnDraftChange}
+                    onFocusChange={focusCtl.prompt}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}

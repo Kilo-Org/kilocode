@@ -203,6 +203,13 @@ export function PromptInput(props: {
   tabs?: boolean
   /** Agent Manager state for the suggested shortcut. Missing in the sidebar, which has no worktrees or panels. */
   manager?: () => ManagerContext | undefined
+  /**
+   * Whether this composer takes focus when it mounts for a new draft. The Agent Manager mounts one composer per
+   * worktree and session, so that mount is v1's draft change; the sidebar does the same for its session tabs.
+   */
+  focusOnDraftChange?: () => boolean
+  /** Receives each focus and blur, so the Agent Manager remembers that this context returns to the composer. */
+  onFocusChange?: (focused: boolean) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -670,6 +677,16 @@ export function PromptInput(props: {
     })
   }
   onMount(() => window.addEventListener("focusPrompt", onFocusPrompt))
+  // v1 focused the prompt from its draft-change effect. This composer is remounted per draft instead, so mounting for
+  // a switched worktree or session is that event: ask the owner whether this context keeps focus, for example on a
+  // visible terminal, then take it once this composer exists. Like v1, this is one immediate attempt with no restore
+  // chain, so a surface that moves focus on purpose afterwards, such as the tab strip under arrow keys, keeps it.
+  // The request runs after the listener above so the new composer receives it, and only while its window has focus.
+  onMount(() => {
+    if (!document.hasFocus() || hasQuestionOption()) return
+    if (props.focusOnDraftChange?.() !== true) return
+    window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { deferFocusToQuestion: true } }))
+  })
   // Session tabs, worktree cards, terminal tabs, diff headers and document tabs drop as a mention at the caret.
   onMount(() => {
     registerPromptMentionDrop(refs.container, (drop) => {
@@ -1306,8 +1323,14 @@ export function PromptInput(props: {
               if (refs.input) mention.snapSelection(refs.input)
             }}
             onScroll={scroll}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onFocus={() => {
+              setFocused(true)
+              props.onFocusChange?.(true)
+            }}
+            onBlur={() => {
+              setFocused(false)
+              props.onFocusChange?.(false)
+            }}
             aria-disabled={props.disabled}
             readOnly={props.disabled}
             rows={1}
