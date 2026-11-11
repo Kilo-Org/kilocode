@@ -75,7 +75,13 @@ export function createWakeups(input: {
   )
 
   return {
-    /** Whether the session holds a future wakeup, which clients show as `scheduled` instead of idle. */
-    scheduled: (sessionID: string) => Object.values(pending()).some((map) => map[sessionID] !== undefined),
+    /**
+     * Whether the session holds a future wakeup, which clients show as `scheduled` instead of idle. The due time is
+     * compared too, so a fire whose `changed` event was missed stops reporting `scheduled` once its time passes.
+     */
+    scheduled: (sessionID: string) => {
+      const now = Date.now()
+      return Object.values(pending()).some((map) => (map[sessionID] ?? 0) > now)
+    },
   }
 }

@@ -5,6 +5,7 @@ import type { Context } from "@opencode/plugin/effect/plugin"
 import { Schedule } from "@opencode/core/schedule"
 import type { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { Identifier } from "@opencode/schema/identifier"
+import { SessionMessage } from "@opencode/schema/session-message"
 import { SessionID } from "@opencode/schema/session-id"
 import { DateTime, Effect, Option, Semaphore } from "effect"
 import {
@@ -23,6 +24,7 @@ type Ctx = {
   readonly session: {
     readonly get: (input: { readonly sessionID: SessionID }) => Effect.Effect<{ location: { directory: string } }, unknown>
     readonly synthetic: (input: {
+      readonly id?: SessionMessage.ID
       readonly sessionID: SessionID
       readonly text: string
       readonly description?: string
@@ -53,6 +55,9 @@ export interface CreateCronInput {
 export type CreateResult =
   | { readonly ok: true; readonly wakeup: KiloWakeupRpc.Wakeup; readonly notice?: string }
   | { readonly ok: false; readonly error: string; readonly past?: boolean }
+
+const notFound = (error: unknown) =>
+  typeof error === "object" && error !== null && "_tag" in error && error._tag === "Session.NotFoundError"
 
 const KEY = "wakeup:"
 const present = (value: string | undefined) => (value != null && value !== "" ? value : undefined)
@@ -109,7 +114,9 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       const live: { record: WakeupRecord; info: Schedule.Info }[] = []
       for (const record of records) {
         const info = infos.get(record.scheduleID)
-        if (info === undefined || info.status === "done") {
+        // Only an active row can fire. A paused row keeps its due time, so counting it would leave the session
+        // `scheduled` and hold Keep Awake until the horizon although nothing can fire.
+        if (info === undefined || info.status !== "active") {
           yield* ctx.storage.remove(KEY + record.id).pipe(Effect.ignore)
           continue
         }
@@ -317,27 +324,47 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       if (record === undefined) return false
       const now = Date.now()
       const dueAt = millis(info.nextDueAt) ?? record.dueAt
-      const next = record.schedule === undefined ? undefined : nextOccurrence(record.schedule, info.tz, now)
-      const endsAt = millis(info.endsAt)
-      if (next === undefined || (endsAt !== undefined && next > endsAt)) yield* drop(record)
-      else yield* write({ ...record, dueAt: next })
       const label = record.kind === "cron" ? "scheduled cron task" : "scheduled wakeup"
       const sentence =
         record.kind === "cron"
           ? `You scheduled this recurring task yourself as ${record.id}, due ${iso(dueAt)}.`
           : `You scheduled this wakeup yourself as ${record.id}, due ${iso(dueAt)}.`
-      yield* ctx.session
+      // Deliver before the record is retired, with an id derived from the occurrence, so a retried delivery is the same
+      // admission rather than a second message. A session that no longer exists retires the record; any other failure
+      // keeps it (a one-shot then shows in `cancel_wakeup list` instead of vanishing) and reports the occurrence as
+      // unclaimed. The session hook cannot fail, so the native row still advances; this is what v1 did, minus the loss.
+      const delivered = yield* ctx.session
         .synthetic({
+          id: SessionMessage.ID.make(`msg_${record.id}_${dueAt}`),
           sessionID: SessionID.make(record.sessionID),
           text: `[${label}] ${record.prompt}\n\n(No user is present. ${sentence})`,
           description: record.reason ?? record.prompt,
           metadata: { source: "wakeup", wakeup: true, wakeupID: record.id, kind: record.kind, dueAt },
         })
         .pipe(
+          Effect.as(true),
+          Effect.catchIf(notFound, () => Effect.succeed(false)),
           Effect.catchCause((cause) =>
-            Effect.logError("wakeup could not resume the session", { id: record.id, sessionID: record.sessionID, cause }),
+            Effect.logError("wakeup could not resume the session", {
+              id: record.id,
+              sessionID: record.sessionID,
+              cause,
+            }).pipe(Effect.as("failed" as const)),
           ),
         )
+      if (delivered === false) {
+        yield* drop(record)
+        yield* announce(record.sessionID, record.directory)
+        return false
+      }
+      if (delivered === "failed") {
+        yield* announce(record.sessionID, record.directory)
+        return false
+      }
+      const next = record.schedule === undefined ? undefined : nextOccurrence(record.schedule, info.tz, now)
+      const endsAt = millis(info.endsAt)
+      if (next === undefined || (endsAt !== undefined && next > endsAt)) yield* drop(record)
+      else yield* write({ ...record, dueAt: next })
       yield* announce(record.sessionID, record.directory)
       return true
       }),

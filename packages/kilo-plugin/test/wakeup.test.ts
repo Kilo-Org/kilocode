@@ -82,15 +82,21 @@ function setup() {
       }),
   }
 
+  const failure: { mode?: "notfound" | "error" } = {}
+  const deliver = (input: { id?: string; sessionID: SessionID; text: string; metadata?: Record<string, unknown> }) => {
+    if (failure.mode === "notfound")
+      return Effect.fail({ _tag: "Session.NotFoundError", message: "Session not found" })
+    if (failure.mode === "error") return Effect.fail(new Error("admission failed"))
+    return Effect.sync(() => void prompts.push(input))
+  }
+
   const session = {
     get: (input: { sessionID: SessionID }) =>
       input.sessionID === sessionID
         ? Effect.succeed({ location: { directory } })
         : Effect.fail(new Error("unknown session")),
-    synthetic: (input: { sessionID: SessionID; text: string; metadata?: Record<string, unknown> }) =>
-      Effect.sync(() => {
-        prompts.push(input)
-      }),
+    synthetic: (input: { id?: string; sessionID: SessionID; text: string; metadata?: Record<string, unknown> }) =>
+      deliver(input),
   }
 
   const wake = makeService(
@@ -98,7 +104,7 @@ function setup() {
     schedules as unknown as Schedule.Interface,
     () => (event) => Effect.sync(() => void events.push(event)),
   )
-  return { wake, memory, events, prompts, infos, creates }
+  return { wake, memory, events, prompts, infos, creates, failure }
 }
 
 const decodeInfo = (value: unknown) => Schema.decodeUnknownSync(Schedule.Info)(value)
@@ -233,6 +239,54 @@ describe("wakeup service", () => {
       const remaining = yield* wake.list(sessionID)
       expect(remaining).toHaveLength(1)
       expect(remaining[0]?.dueAt).toBeGreaterThan(Date.now())
+    }),
+  )
+
+  it.effect("keeps a one-shot when delivery fails, and retires it once the session is gone", () =>
+    Effect.gen(function* () {
+      const { wake, infos, failure, prompts } = setup()
+      const created = yield* wake.scheduleWakeup({ sessionID, prompt: "check", delay: "1m" })
+      if (!created.ok) throw new Error(created.error)
+      const info = [...infos.values()][0]!
+
+      failure.mode = "error"
+      expect(yield* wake.fire(info)).toBe(false)
+      expect(prompts).toHaveLength(0)
+      // The task survives so the agent can still see and cancel it.
+      expect(yield* wake.list(sessionID)).toHaveLength(1)
+
+      failure.mode = "notfound"
+      expect(yield* wake.fire(info)).toBe(false)
+      expect(yield* wake.list(sessionID)).toEqual([])
+      expect(infos.has(info.id)).toBe(false)
+    }),
+  )
+
+  it.effect("cancel-session retires every task and its native row", () =>
+    Effect.gen(function* () {
+      const { wake, infos, memory } = setup()
+      yield* wake.scheduleWakeup({ sessionID, prompt: "one", delay: "1m" })
+      yield* wake.scheduleCron({ sessionID, prompt: "many", cron: "*/5 * * * *" })
+      expect(infos.size).toBe(2)
+
+      yield* wake.cancelSession(sessionID)
+      expect(infos.size).toBe(0)
+      expect(yield* wake.list(sessionID)).toEqual([])
+      expect([...memory.keys()].filter((key) => key.startsWith("wakeup:"))).toEqual([])
+    }),
+  )
+
+  it.effect("does not count a paused schedule as pending", () =>
+    Effect.gen(function* () {
+      const { wake, infos, memory } = setup()
+      const created = yield* wake.scheduleWakeup({ sessionID, prompt: "check", delay: "1m" })
+      if (!created.ok) throw new Error(created.error)
+      const [scheduleID, info] = [...infos.entries()][0]!
+      infos.set(scheduleID, { ...info, status: "paused" })
+      // The native loop pauses a row whose directory disappeared, and a paused row keeps its due time.
+      expect(yield* wake.pending(directory)).toEqual([])
+      expect(yield* wake.list(sessionID)).toEqual([])
+      expect(memory.has(`wakeup:${created.wakeup.id}`)).toBe(false)
     }),
   )
 

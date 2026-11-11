@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { definition } from "@opencode/core/tool/runtime"
 import type { Tool } from "@opencode/schema/tool"
 import { Effect } from "effect"
+import { builtin } from "../src/sandbox/network-tools"
 import { makeTools } from "../src/wakeup/tools"
 import type { WakeupService } from "../src/wakeup/service"
 
@@ -54,6 +55,14 @@ describe("scheduling tools", () => {
     expect(tools.cronCreate.name).toBe("cron_create")
     expect(tools.cronList.name).toBe("cron_list")
     expect(tools.cronDelete.name).toBe("cron_delete")
+  })
+
+  test("every scheduling tool runs inside the sandbox profile", () => {
+    // A tool outside the builtin list is delegated authority and is refused while the sandbox network is denied.
+    const tools = make()
+    for (const name of ["schedule_wakeup", "cancel_wakeup", "cron_create", "cron_list", "cron_delete"])
+      expect(builtin).toContain(name as (typeof builtin)[number])
+    expect(tools.wakeup.name).toBe("schedule_wakeup")
   })
 
   test("keeps the always-on definition budget", () => {

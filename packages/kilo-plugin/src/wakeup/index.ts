@@ -8,6 +8,18 @@ import { Cause, Effect, Ref, Stream } from "effect"
 import { makeService } from "./service"
 import { makeTools } from "./tools"
 
+/**
+ * The session whose tasks an event retires, or undefined when the event does not affect them. The goal contract publishes
+ * `changed` on every write, including clearing the goal as null, so only a goal that is still active keeps the tasks.
+ */
+export function cleanup(event: { readonly type: string; readonly data: unknown }) {
+  const data = event.data as { readonly sessionID?: string; readonly goal?: { readonly status?: string } | null }
+  if (data?.sessionID === undefined) return undefined
+  if (event.type === "session.deleted") return data.sessionID
+  if (event.type !== "rpc.opencode.goal.changed") return undefined
+  return data.goal === null || data.goal?.status !== "active" ? data.sessionID : undefined
+}
+
 export const KiloWakeupPlugin = define({
   id: "kilocode.wakeup",
   effect: Effect.fn("KiloWakeupPlugin")(function* (ctx) {
@@ -35,42 +47,34 @@ export const KiloWakeupPlugin = define({
       })
       .pipe(Effect.orDie)
 
-    // A due occurrence is ours when the record still exists. Leaving it unclaimed would let the native action path
-    // advance the row without delivering anything, so a failure here fails the tick and the native retry re-fires it.
+    // A due occurrence is ours when the record still exists. `fire` delivers before it retires the record, so a delivery
+    // failure keeps the task instead of losing it; only a deleted session drops it.
     yield* ctx.session.hook("experimental.schedule", (event) =>
-      wake.fire(event.schedule).pipe(
-        Effect.tap((ours) =>
-          Effect.sync(() => {
-            if (ours) event.claimed = true
-          }),
+      wake
+        .fire(event.schedule)
+        .pipe(
+          Effect.tap((ours) =>
+            Effect.sync(() => {
+              if (ours) event.claimed = true
+            }),
+          ),
+          Effect.asVoid,
         ),
-      ),
     )
 
     // A session that goes away, or a goal that finishes, pauses or is cleared, takes its scheduled tasks with it.
-    // The goal contract publishes `changed` on every write, including clearing the goal as null.
     yield* ctx.event
       .subscribe({ types: ["session.deleted", "rpc.opencode.goal.changed"] })
       .pipe(
-        Stream.runForEach((event) =>
-          Effect.gen(function* () {
-            const data = event.data as { readonly sessionID?: string; readonly goal?: { readonly status?: string } | null }
-            if (!data.sessionID) return
-            if (event.type !== "session.deleted") {
-              // The subscription also sees other events; only the goal's own state decides a cleanup.
-              if (event.type !== "rpc.opencode.goal.changed") return
-              if (data.goal !== null && data.goal?.status === "active") return
-            }
-            yield* wake.cancelSession(data.sessionID).pipe(
-              Effect.catchCause((cause) =>
-                Effect.logWarning("failed to cancel the session's scheduled tasks", {
-                  sessionID: data.sessionID,
-                  cause,
-                }),
-              ),
-            )
-          }),
-        ),
+        Stream.runForEach((event) => {
+          const sessionID = cleanup(event)
+          if (sessionID === undefined) return Effect.void
+          return wake.cancelSession(sessionID).pipe(
+            Effect.catchCause((cause) =>
+              Effect.logWarning("failed to cancel the session's scheduled tasks", { sessionID, cause }),
+            ),
+          )
+        }),
         Effect.forkScoped({ startImmediately: true }),
       )
 
