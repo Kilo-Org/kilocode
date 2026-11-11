@@ -70,6 +70,13 @@ export function ChartTool(props: ToolProps) {
       return
     }
 
+    // A model can send `type` and `data` without a usable dataset list. The card shows its error instead of
+    // letting the dataset mapping throw out of the effect.
+    if (!Array.isArray(config.data.datasets)) {
+      setError(i18n.t("ui.tool.chart.invalid"))
+      return
+    }
+
     let chart: Chart | undefined
     onCleanup(() => {
       chart?.destroy()
@@ -78,27 +85,27 @@ export function ChartTool(props: ToolProps) {
 
     if (!el.isConnected) return
 
-    const colors = getThemeColors()
-    const isPolar = config.type === "pie" || config.type === "doughnut" || config.type === "polarArea"
-
-    const datasets = config.data.datasets.map((dataset, i) => {
-      if (dataset.backgroundColor) return dataset
-      if (isPolar) {
-        const data = dataset.data as unknown[]
-        return {
-          ...dataset,
-          backgroundColor: data.map((_, j) => colors.series[j % colors.series.length]),
-          borderColor: data.map((_, j) => colors.series[j % colors.series.length]),
-        }
-      }
-      return {
-        backgroundColor: colors.series[i % colors.series.length],
-        borderColor: colors.series[i % colors.series.length],
-        ...dataset,
-      }
-    })
-
     try {
+      const colors = getThemeColors()
+      const isPolar = config.type === "pie" || config.type === "doughnut" || config.type === "polarArea"
+
+      const datasets = config.data.datasets.map((dataset, i) => {
+        if (dataset.backgroundColor) return dataset
+        if (isPolar) {
+          const data = dataset.data as unknown[]
+          return {
+            ...dataset,
+            backgroundColor: data.map((_, j) => colors.series[j % colors.series.length]),
+            borderColor: data.map((_, j) => colors.series[j % colors.series.length]),
+          }
+        }
+        return {
+          backgroundColor: colors.series[i % colors.series.length],
+          borderColor: colors.series[i % colors.series.length],
+          ...dataset,
+        }
+      })
+
       chart = new Chart(el, {
         type: config.type as ChartType,
         data: { ...config.data, datasets } as ChartConfiguration["data"],

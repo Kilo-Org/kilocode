@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
 import { dict as kilo } from "@kilocode/kilo-i18n/en"
 import { dict as ui } from "@opencode-ai/ui/i18n/en"
+import { Chart } from "chart.js"
 import { ToolRegistry, type ToolProps } from "../src/components/message-part"
 import { resetToolOpenState } from "../src/components/tool-open-state"
 import { I18nProvider, type UiI18nSource } from "../src/context/i18n"
@@ -62,15 +63,17 @@ test("renders the chart card with the title and description of the call", async 
   expect(value.host.querySelector('[data-slot="basic-tool-tool-subtitle"]')?.textContent).toBe("Q1 2026")
 })
 
-test("draws the config on a canvas instead of showing it", async () => {
+test("parses the config and draws it instead of showing it", async () => {
+  const existing = new Set(Object.keys(Chart.instances))
   const value = card({ input: { title: "Revenue" }, output: bar })
 
-  // The test DOM has no canvas implementation, so Chart.js reports the failure through the card's error slot. Both
-  // outcomes prove the card took the config to the chart renderer; what it must never do is print the JSON.
-  const slot = await waitFor(() =>
-    value.host.querySelector('[data-slot="chart-render"], [data-slot="chart-error"]'),
+  // Chart.js records every chart it constructs in `Chart.instances`, including one it rejects because the test DOM
+  // has no 2D context. That instance carries the parsed config with the card's themed dataset colors, so finding it
+  // proves the effect ran: the output was parsed, the datasets were themed and Chart.js was constructed.
+  const chart = await waitFor(() =>
+    Object.values(Chart.instances).find((item) => item && !existing.has(String(item.id))),
   )
-  expect(slot.parentElement?.getAttribute("data-component")).toBe("chart-container")
+  expect(chart.config.data.datasets?.[0]?.backgroundColor).toBe("#3B82F6")
   expect(value.host.querySelector('[data-component="chart-container"]')?.textContent).not.toContain('"labels"')
 })
 
@@ -79,6 +82,23 @@ test("shows the config error for a spec without type and data", async () => {
 
   const error = await waitFor(() => value.host.querySelector('[data-slot="chart-error"]'))
   expect(error.textContent).toBe("Invalid chart config — must include type and data")
+})
+
+test.each(['{"type":"bar","data":{}}', '{"type":"bar","data":{"datasets":"none"}}'])(
+  "shows the config error for %s instead of throwing",
+  async (spec) => {
+    const value = card({ input: { title: "Revenue" }, output: spec })
+
+    const error = await waitFor(() => value.host.querySelector('[data-slot="chart-error"]'))
+    expect(error.textContent).toBe("Invalid chart config — must include type and data")
+  },
+)
+
+test("shows the render error for a dataset the chart cannot draw instead of throwing", async () => {
+  const value = card({ input: { title: "Revenue" }, output: '{"type":"bar","data":{"datasets":[null]}}' })
+
+  const error = await waitFor(() => value.host.querySelector('[data-slot="chart-error"]'))
+  expect(error.textContent).not.toBe("")
 })
 
 test("stays empty while the tool is still running", async () => {
