@@ -1490,6 +1490,8 @@ export const layer = Layer.effect(
         if (!ticket.running()) return message
         const dismiss = Effect.gen(function* () {
           yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID)).pipe(Effect.orDie)
+          // Background results must wait for the user's answer, not dismiss it.
+          if (background) return
           yield* question.dismissAll(input.sessionID)
         })
         if (input.noReply === true) {
@@ -1512,6 +1514,7 @@ export const layer = Layer.effect(
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
           dismiss,
+          !background,
         )
         // kilocode_change end
       },

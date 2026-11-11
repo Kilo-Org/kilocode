@@ -1,38 +1,19 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.actions.reloadCoreSettings
+import ai.kilocode.client.agentManager.AgentManagerDialog
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
-import ai.kilocode.client.session.controller.key
-import ai.kilocode.client.session.controller.resolveSessionAgent
-import ai.kilocode.client.session.controller.resolveSessionDefaultModel
-import ai.kilocode.client.session.controller.resolveSessionModel
-import ai.kilocode.client.session.ui.ReasoningPicker
-import ai.kilocode.client.session.ui.mode.modeItems
-import ai.kilocode.client.session.ui.model.ModelPicker
-import ai.kilocode.client.session.ui.model.modelItems
-import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
-import ai.kilocode.client.session.ui.prompt.MentionAction
-import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsRows
 import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.rpc.dto.KiloAppStatusDto
-import ai.kilocode.rpc.dto.ModelSelectionDto
-import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.foreignPr
 import ai.kilocode.rpc.parsePrUrl
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.tabs.JBTabs
@@ -43,12 +24,6 @@ import com.intellij.ui.tabs.TabsListener
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.GridBagConstraints
 import javax.swing.JComponent
@@ -95,42 +70,22 @@ interface NewWorktreeHandle {
  */
 internal class NewWorktreeDialog(
     parent: Component,
-    private val project: Project,
-    private val directory: String,
+    project: Project,
+    directory: String,
     private val suggestedName: String,
     private val defaultBase: String,
     private val branches: List<String>,
     // `owner/repo` for the checkout's origin remote; null when there is no GitHub origin. Used to
     // reject a pull request URL that belongs to a different repository before it is ever fetched.
     private val origin: String? = null,
-    private val app: KiloAppService = service(),
-    private val workspaces: KiloWorkspaceService = service(),
-) : DialogWrapper(parent, false), NewWorktreeHandle {
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    app: KiloAppService = service(),
+    workspaces: KiloWorkspaceService = service(),
+) : AgentManagerDialog(parent, project, directory, true, app, workspaces), NewWorktreeHandle {
 
     // Sizes the dialog: the name field is its widest fixed-width child.
     private val name = JBTextField(NAME_COLUMNS).apply {
         emptyText.text = KiloBundle.message("worktree.dialog.name.placeholder")
     }
-    private val completion = KiloPromptCompletionProvider(
-        workspace = workspaces.workspace(directory),
-        service = workspaces,
-        actions = slashActions(),
-        mentions = MentionAction.ALL.map(::mention),
-        scope = scope,
-    )
-    private val prompt = PromptPanel(
-        project = project,
-        onSend = { text, _ -> submitCreate(text) },
-        onAbort = {},
-        completion = completion,
-        cs = scope,
-        rounded = false,
-        showSubmit = false,
-        approve = false,
-        showEnhance = false,
-    )
     private val branch = JBTextField(suggestedName)
     private val base = BranchPicker(branches, defaultBase)
     private val fetch = JBCheckBox(
@@ -144,24 +99,6 @@ internal class NewWorktreeDialog(
     private var tab = DialogTab.NEW
 
     private var plan: NewWorktreePlan? = null
-
-    /** The agent (mode) for the new session; model selections persist against it. */
-    private var agent: String? = null
-
-    /** The currently displayed model key, used to key the reasoning selection. */
-    private var modelKey: String? = null
-
-    /** The loaded catalog, so mode changes can re-point the model picker without a reload. */
-    private var items: List<ModelPicker.Item> = emptyList()
-
-    /** The directory-scoped providers and agents used by normal-session selection resolution. */
-    private var workspace: ModelsWorkspaceDto? = null
-
-    /** The reasoning effort currently displayed by the picker. */
-    private var variant: String? = null
-
-    @Volatile
-    private var disposed = false
 
     private var center: JComponent? = null
 
@@ -186,18 +123,12 @@ internal class NewWorktreeDialog(
 
     override fun doOKAction() = submit()
 
-    override fun dispose() {
-        disposed = true
-        scope.cancel()
-        super.dispose()
-    }
-
     internal fun submit() {
         setErrorText(null)
         when (tab) {
             DialogTab.PR -> submitPr()
             DialogTab.BRANCH -> submitBranch()
-            DialogTab.NEW -> submitCreate()
+            DialogTab.NEW -> submitCreate(prompt.text())
         }
     }
 
@@ -237,16 +168,7 @@ internal class NewWorktreeDialog(
         return tabs.component
     }
 
-    private fun newContent(): JComponent {
-        wirePickers()
-        watchModels()
-        loadModels()
-        return Stack.vertical(gap = UiStyle.Gap.pad())
-            .next(name)
-            .next(prompt)
-            .next(fields())
-            .apply { border = JBUI.Borders.empty(UiStyle.Gap.sm()) }
-    }
+    private fun newContent(): JComponent = content(name, fields())
 
     private fun prContent(): JComponent = importContent(SettingsStackedRow(
         KiloBundle.message("worktree.import.pr.section"),
@@ -279,91 +201,6 @@ internal class NewWorktreeDialog(
         .addComponent(fetch)
         .panel
 
-    private fun wirePickers() {
-        prompt.mode.onSelect = { item -> selectAgent(item.id) }
-        prompt.model.favorites = { app.favorites.value }
-        prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
-        prompt.model.onSelect = { item ->
-            modelKey = item.key
-            agent?.let { app.selectModel(it, item.provider, item.id) }
-            syncReasoning(item)
-            prompt.setAttachmentEnabled(item.attachment)
-        }
-        prompt.reasoning.onSelect = { item ->
-            variant = item.id
-            modelKey?.let { app.selectVariant(it, item.id) }
-        }
-    }
-
-    private fun watchModels() {
-        scope.launch {
-            combine(app.state, app.models) { _, _ -> Unit }.collect { ui(::syncSelection) }
-        }
-    }
-
-    private fun loadModels() {
-        app.scope.launch {
-            val result = workspaces.models(directory)
-            ui { applyModels(result) }
-        }
-    }
-
-    private fun applyModels(ws: ModelsWorkspaceDto) {
-        workspace = ws
-        items = modelItems(ws.providers)
-        agent = resolveSessionAgent(ws.agents, KiloPluginSettings.getAgent())
-        prompt.mode.setItems(modeItems(ws.agents?.agents), agent)
-        if (items.isEmpty()) {
-            prompt.setReady(true)
-            return
-        }
-        syncSelection()
-        prompt.setReady(true)
-    }
-
-    private fun selectAgent(id: String) {
-        // The picked agent travels with the initial prompt (see submitCreate), so the dialog no
-        // longer writes default_agent to the global config here — doing so changed the mode for
-        // every other workspace and raced the new session's own model load.
-        agent = id
-        syncSelection()
-    }
-
-    private fun syncSelection() {
-        val ws = workspace ?: return
-        val first = items.firstOrNull() ?: return
-        val id = agent
-        val current = if (id == null) {
-            first
-        } else {
-            val state = app.models.value
-            val cfg = app.state.value
-            val fallback = resolveSessionDefaultModel(
-                providers = ws.providers,
-                agent = id,
-                state = state,
-                config = cfg.config,
-                ready = cfg.status == KiloAppStatusDto.READY,
-                first = ModelSelectionDto(first.provider, first.id),
-            )
-            val selection = resolveSessionModel(ws.providers, id, state, cfg.config, fallback)
-            items.firstOrNull { it.key == selection?.key } ?: first
-        }
-        prompt.model.setItems(items, current.key)
-        modelKey = current.key
-        syncReasoning(current)
-        prompt.setAttachmentEnabled(current.attachment)
-    }
-
-    private fun syncReasoning(item: ModelPicker.Item) {
-        val saved = app.models.value.variant[item.key]?.takeIf { it in item.variants }
-        variant = saved ?: item.variants.firstOrNull()
-        prompt.reasoning.setItems(
-            item.variants.map { ReasoningPicker.Item(it, variantTitle(it)) },
-            variant,
-        )
-    }
-
     private fun validBase(value: String?): Boolean {
         if (base.known(value)) return true
         KiloNotifications.error(
@@ -375,7 +212,7 @@ internal class NewWorktreeDialog(
         return false
     }
 
-    private fun submitCreate(text: String = prompt.text()) {
+    override fun submitCreate(text: String) {
         val explicit = branch.text.trim()
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = base.resolve()
@@ -426,48 +263,6 @@ internal class NewWorktreeDialog(
         DialogTab.BRANCH -> pick
         DialogTab.NEW -> prompt.defaultFocusedComponent
     }
-
-    /** Bundles the typed prompt with the picked mode / model / reasoning, or null when empty. */
-    private fun pending(text: String): PendingPrompt? {
-        val body = text.trim()
-        if (body.isEmpty()) return null
-        val item = items.firstOrNull { it.key == modelKey }
-        return PendingPrompt(
-            text = body,
-            agent = agent,
-            provider = item?.provider,
-            model = item?.id,
-            variant = variant,
-        )
-    }
-
-    // The dialog is modal, so its EDT runs a nested event loop. A plain invokeLater carries the
-    // caller's (non-modal) modality and would be deferred until the dialog closes, leaving the
-    // pickers empty. ModalityState.any() lets these UI-only updates run while the dialog is showing.
-    private fun ui(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeLater({ if (!disposed) block() }, ModalityState.any())
-    }
-
-    private fun slashActions(): List<SlashAction> {
-        val actions = mapOf(
-            SlashAction.MODELS to { prompt.model.open() },
-            SlashAction.AGENTS to { prompt.mode.open() },
-            SlashAction.VARIANT to { prompt.reasoning.open() },
-            SlashAction.RELOAD to { reloadCoreSettings(workspaces, directory, project, "slash_command") },
-        )
-        return SlashAction.ALL.map { spec ->
-            SlashAction(spec.name, KiloBundle.message(spec.descriptionKey), spec.hints, actions[spec] ?: {})
-        }
-    }
-
-    private fun mention(spec: MentionAction.Spec) = MentionAction(
-        spec.name,
-        KiloBundle.message(spec.descriptionKey),
-        spec.hints,
-        spec.available,
-    )
-
-    private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
 
     private enum class DialogTab { NEW, PR, BRANCH }
 }

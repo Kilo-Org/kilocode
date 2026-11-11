@@ -134,6 +134,7 @@ class PromptPanel(
     private val approve: Boolean = true,
     private val showEnhance: Boolean = true,
     private val hostedInEditorTab: Boolean = false,
+    private val framed: Boolean = false,
     private val files: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, PromptSelectors, UiDataProvider {
 
@@ -405,6 +406,7 @@ class PromptPanel(
         syncTooltip()
         syncAutoApprove()
         syncEnhance()
+        syncBorder()
     }
 
     override fun updateUI() {
@@ -430,6 +432,10 @@ class PromptPanel(
     }
 
     private fun syncBorder() {
+        if (framed) {
+            border = JBUI.Borders.customLine(UiStyle.Colors.contentBorder())
+            return
+        }
         border = JBUI.Borders.compound(
             if (focused) {
                 JBUI.Borders.emptyTop(JBUI.scale(1))

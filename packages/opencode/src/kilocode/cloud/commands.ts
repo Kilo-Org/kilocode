@@ -2,6 +2,7 @@ import { CliError, fail } from "@/cli/effect-cmd"
 import { Effect, Layer, Redacted } from "effect"
 import { CloudAuth } from "./auth"
 import { CloudCatalog } from "./catalog"
+import { ControlTokenError, createControlTokenClient } from "./control-token"
 import {
   CloudAgentSessionIdSchema,
   MessageIdSchema,
@@ -137,14 +138,23 @@ export namespace CloudCommands {
     return yield* CloudAuth.token({ KILO_API_KEY: env.KILO_API_KEY })
   })
 
-  function client(token: CloudAuth.Resolved["token"], deps: Deps) {
-    return Effect.try({
-      try: () => {
+  function client(token: CloudAuth.Resolved["token"], deps: Deps, organizationID?: string) {
+    return Effect.tryPromise({
+      try: async () => {
         const env = deps.env ?? process.env
         const origin = resolveCloudAgentOrigin(env)
-        return (deps.make ?? factory)({ origin, apiKey: Redacted.value(token) })
+        const control = await createControlTokenClient().exchange({
+          source: token,
+          organizationID,
+          issuer: resolveWebAppOrigin(env),
+          worker: origin,
+        })
+        return (deps.make ?? factory)({ origin, apiKey: Redacted.value(control.token) })
       },
-      catch: (error) => (error instanceof CloudError ? error : new CloudError("Cloud Agent client setup failed")),
+      catch: (error) =>
+        error instanceof CloudError
+          ? error
+          : new CloudError(error instanceof ControlTokenError ? error.message : "Cloud Agent client setup failed"),
     })
   }
 
@@ -183,7 +193,7 @@ export namespace CloudCommands {
           ...(input.repoType === undefined ? {} : { type: input.repoType }),
           ...(input.branch === undefined ? {} : { branch: input.branch }),
         })
-        const agent = yield* client(defaults.token, deps)
+        const agent = yield* client(defaults.token, deps, defaults.organizationID)
         const request = {
           message: { prompt: input.prompt },
           agent: { mode: defaults.mode, model: defaults.model },

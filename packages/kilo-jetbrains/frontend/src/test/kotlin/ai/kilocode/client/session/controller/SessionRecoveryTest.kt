@@ -1,15 +1,22 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -211,6 +218,306 @@ class SessionRecoveryTest : SessionControllerTestBase() {
         rpc.historyGate!!.complete(Unit)
         flush()
         assertModel("assistant#new\ntext#answer:\n  new result", m)
+    }
+
+    fun `test cloud create prompt survives empty initial history without being sent twice`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        rpc.pendingError = IllegalStateException("HTTP 503")
+        val m = controller(id)
+        collect(m)
+        flush()
+        val prompt = PromptDto(
+            parts = listOf(PromptPartDto(type = "text", text = "Tell me about Kilo Code")),
+            messageID = "msg_initial",
+            agent = "code", providerID = "kilo", modelID = "kilo-auto/free",
+        )
+
+        edt { m.seedHostedPrompt(prompt) }
+        assertEquals("msg_initial", m.model.messages().single().info.id)
+        assertTrue(m.model.showSession)
+        assertTrue(rpc.prompts.isEmpty())
+
+        gate.complete(Unit)
+        flush()
+        assertEquals("msg_initial", m.model.messages().single().info.id)
+        assertTrue(m.model.showSession)
+        assertTrue(m.canRetryPreparation())
+        assertTrue(rpc.prompts.isEmpty())
+
+        emit(ChatEventDto.Resnapshot(id, "start"))
+        emit(ChatEventDto.Resnapshot(id, "complete"))
+        assertEquals("msg_initial", m.model.messages().single().info.id)
+
+        emit(ChatEventDto.MessageUpdated(id, msg("msg_initial", id, "user")))
+        emit(ChatEventDto.PartUpdated(id, part("real", id, "msg_initial", "text", text = "Tell me about Kilo Code")))
+        assertFalse(m.model.isOptimistic("msg_initial"))
+        assertEquals(listOf("real"), m.model.messages().single().parts.keys.toList())
+    }
+
+    fun `test hosted history loads when readiness stays unknown`() {
+        val id = "hosted:kilo-cloud:worktree_unknown:ses_unknown"
+        val before = rpc.historyCalls
+        controller(id, ready = false)
+
+        assertEquals("Unknown readiness must not load immediately", before, rpc.historyCalls)
+        pause(SessionController.HOSTED_UNKNOWN_GRACE_MS)
+        flush()
+        assertTrue("Unknown readiness must eventually fall back to loading history", rpc.historyCalls > before)
+    }
+
+    fun `test failed preparation retry keeps the optimistic prompt retryable`() {
+        val id = "hosted:kilo-cloud:worktree_retry:ses_retry"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        edt {
+            m.seedHostedPrompt(PromptDto(
+                parts = listOf(PromptPartDto(type = "text", text = "Prepare this workspace")),
+                messageID = "msg_retry", agent = "code", providerID = "kilo", modelID = "gpt-5",
+            ))
+        }
+        val failure = HostedSystemEventDto(id, "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "msg_retry")
+        rpc.promptThrows = IllegalStateException("Cloud unavailable")
+        edt { m.retryPreparation(failure) }
+        flush()
+
+        edt {
+            assertTrue(m.model.state is SessionState.Error)
+            assertEquals(1, m.model.messages().count { it.info.role == "user" })
+            assertTrue("The failed retry must leave the prompt retryable", m.canRetryPreparation())
+        }
+    }
+
+    fun `test preparation retry requires the current failure and preserves native pending state`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        collect(m)
+        flush()
+        edt {
+            m.seedHostedPrompt(PromptDto(
+                parts = listOf(PromptPartDto(type = "text", text = "Prepare this workspace")),
+                messageID = "msg_initial", agent = "code", providerID = "kilo", modelID = "gpt-5",
+            ))
+        }
+        val failure = HostedSystemEventDto(id, "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "msg_initial")
+
+        for (status in listOf(
+            SessionStatusDto("busy"),
+            SessionStatusDto("retry", message = "Retrying", attempt = 2),
+            SessionStatusDto("offline", message = "Offline", requestID = "request"),
+        )) {
+            emit(ChatEventDto.SessionStatusChanged(id, status))
+            edt {
+                val state = m.model.state
+                assertTrue(state.isBusy())
+                assertFalse("Native Busy alone must still block retries", m.canRetryPreparation())
+                assertTrue("The authoritative failure can authorize retry for its own prompt", m.canRetryPreparation(failure))
+                assertFalse(m.canRetryPreparation(failure.copy(triggerMessageID = "older")))
+                assertFalse(m.canRetryPreparation(failure.copy(sessionID = "another")))
+                assertSame("Retry eligibility must not change native state", state, m.model.state)
+            }
+        }
+
+        edt { m.retryPreparation(failure) }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+        val first = rpc.prompts.single().third.messageID!!
+        edt {
+            assertTrue(m.model.state is SessionState.Busy)
+            assertFalse("The previous failure cannot authorize another retry of a new prompt", m.canRetryPreparation(failure))
+            m.retryPreparation(failure)
+        }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+        edt { m.retryPreparation(failure.copy(triggerMessageID = first, attemptID = "second")) }
+        flush()
+        assertEquals(2, rpc.prompts.size)
+        val current = failure.copy(triggerMessageID = rpc.prompts.last().third.messageID, attemptID = "third")
+
+        for (event in listOf(
+            ChatEventDto.QuestionAsked(id, QuestionRequestDto("question", id, listOf(QuestionInfoDto("Proceed?", "Question")))),
+            ChatEventDto.PermissionAsked(id, PermissionRequestDto("permission", id, "edit", listOf("*.kt"))),
+            ChatEventDto.Error(id, MessageErrorDto("APIError", statusCode = 401,
+                responseBody = """{"code":"PAID_MODEL_AUTH_REQUIRED"}""")),
+        )) {
+            if (event is ChatEventDto.PermissionAsked) emit(ChatEventDto.QuestionRejected(id, "question"))
+            emit(event)
+            edt {
+                val state = m.model.state
+                assertTrue(when (event) {
+                    is ChatEventDto.QuestionAsked -> state is SessionState.AwaitingQuestion
+                    is ChatEventDto.PermissionAsked -> state is SessionState.AwaitingPermission
+                    is ChatEventDto.Error -> state is SessionState.LoginRequired
+                    else -> false
+                })
+                assertFalse(m.canRetryPreparation(current))
+                m.retryPreparation(current)
+                assertSame(state, m.model.state)
+            }
+            flush()
+            assertEquals("Preparation retry must not resolve or replace pending input", 2, rpc.prompts.size)
+        }
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(rpc.questionReplies.isEmpty())
+    }
+
+    fun `test older untriggered preparation cannot retry a newer terminal or idle prompt`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        projectRpc.state.value = workspaceReady()
+        val m = controller(id)
+        flush()
+        emit(ChatEventDto.MessageUpdated(id, msg("u2", id, "user").copy(time = MessageTimeDto(200.0))))
+        emit(ChatEventDto.PartUpdated(id, part("text", id, "u2", "text", text = "A newer request")))
+        val failure = HostedSystemEventDto(id, "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", observedAt = 110.0)
+
+        for (state in listOf(
+            SessionState.Busy("Working"),
+            SessionState.Error("Newer error"),
+            SessionState.TurnEnded(Outcome.FAILED),
+            SessionState.Idle,
+        )) {
+            edt {
+                m.model.setState(state)
+                assertFalse(m.canRetryPreparation(failure))
+                m.retryPreparation(failure)
+                assertSame("An older setup failure must not authorize a new request", state, m.model.state)
+                assertTrue("Explicit identity still takes precedence over the clock",
+                    m.canRetryPreparation(failure.copy(triggerMessageID = "u2")))
+            }
+            flush()
+            assertTrue(rpc.prompts.isEmpty())
+        }
+    }
+
+    fun `test hosted pending question survives late initial history failure without a fence`() {
+        stale("question", false)
+    }
+
+    fun `test hosted pending permission survives late initial history failure without a fence`() {
+        stale("permission", false)
+    }
+
+    fun `test hosted question survives late initial history failure and subsequent fence`() {
+        stale("question", true)
+    }
+
+    fun `test hosted permission survives late initial history failure and subsequent fence`() {
+        stale("permission", true)
+    }
+
+    private fun stale(kind: String, fence: Boolean) {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        projectRpc.state.value = workspaceReady()
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        rpc.pendingError = IllegalStateException("HTTP 503")
+        val m = controller(id)
+        val changes = collectModelEvents(m)
+        flush()
+        assertEquals(1, rpc.historyCalls)
+        hide(m)
+        edt {
+            m.seedHostedPrompt(PromptDto(
+                parts = listOf(PromptPartDto(type = "text", text = "Current request")),
+                messageID = "current", agent = "code", providerID = "kilo", modelID = "gpt-5",
+            ))
+        }
+        val event = if (kind == "question") {
+            ChatEventDto.QuestionAsked(id, QuestionRequestDto("request", id, listOf(QuestionInfoDto("Proceed?", "Question"))))
+        } else {
+            ChatEventDto.PermissionAsked(id, PermissionRequestDto("request", id, "edit", listOf("*.kt")))
+        }
+        emit(event)
+        val state = m.model.state
+        assertTrue(when (kind) {
+            "question" -> state is SessionState.AwaitingQuestion
+            else -> state is SessionState.AwaitingPermission
+        })
+        val failure = HostedSystemEventDto(id, "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "current")
+
+        gate.completeExceptionally(IllegalStateException("HTTP 503"))
+        flush()
+
+        edt {
+            assertSame("A superseded initial history failure must preserve the current request", state, m.model.state)
+            assertFalse(m.canRetryPreparation(failure))
+            m.retryPreparation(failure)
+            assertSame(state, m.model.state)
+        }
+        flush()
+        if (fence) {
+            emit(ChatEventDto.Resnapshot(id, "start"))
+            emit(ChatEventDto.MessageUpdated(id, msg("current", id, "user")))
+            emit(ChatEventDto.PartUpdated(id, part("native", id, "current", "text", text = "Current request")))
+            emit(event)
+            emit(ChatEventDto.Resnapshot(id, "complete"))
+            val current = m.model.state
+            assertEquals(state::class, current::class)
+            assertEquals("request", when (current) {
+                is SessionState.AwaitingQuestion -> current.question.id
+                is SessionState.AwaitingPermission -> current.permission.id
+                else -> null
+            })
+            edt { assertFalse(m.canRetryPreparation(failure)) }
+            assertFalse("The real fence must replace the seeded prompt", m.model.isOptimistic("current"))
+        }
+        assertTrue("No intermediate history error may replace the interaction",
+            changes.filterIsInstance<SessionModelEvent.StateChanged>().none { it.state is SessionState.Error })
+        assertEquals("current", m.model.messages().single().info.id)
+        assertTrue(rpc.prompts.isEmpty())
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(rpc.questionReplies.isEmpty())
+    }
+
+    fun `test hosted current initial history failure remains a real error`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        projectRpc.state.value = workspaceReady()
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        val m = controller(id)
+        flush()
+
+        gate.completeExceptionally(IllegalStateException("HTTP 503"))
+        flush()
+
+        val state = m.model.state as SessionState.Error
+        assertEquals(KiloBundle.message("hosted.session.error.unavailable"), state.message)
+        assertTrue(state.retryable)
+        assertFalse(state.dismissible)
+    }
+
+    fun `test hosted new prompt invalidates initial history failure before native status arrives`() {
+        val id = "hosted:kilo-cloud:worktree_one:ses_one"
+        rpc.session = rpc.session.copy(id = id)
+        projectRpc.state.value = workspaceReady()
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        val m = controller(id)
+        val changes = collectModelEvents(m)
+        flush()
+        edt { m.prompt("A newer request") }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+        val state = m.model.state
+
+        gate.completeExceptionally(IllegalStateException("HTTP 503"))
+        flush()
+
+        assertSame(state, m.model.state)
+        assertEquals("A newer request", (m.model.messages().single().parts.values.single() as ai.kilocode.client.session.model.Text).content.toString())
+        assertTrue(changes.filterIsInstance<SessionModelEvent.StateChanged>().none { it.state is SessionState.Error })
     }
 
     override fun setUp() {

@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.agentManager.WorkspaceSessionEditorPanel
 import ai.kilocode.client.agentManager.WorkspaceSessionRow
 import ai.kilocode.client.app.KiloSessionService
@@ -10,7 +11,6 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
-import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.telemetry.Telemetry
@@ -19,8 +19,6 @@ import ai.kilocode.client.ui.active.ActiveDeleteOptions
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveEditOptions
 import ai.kilocode.client.ui.active.ActiveMenu
-import ai.kilocode.client.ui.active.ActiveSelection
-import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreeDirtyDto
@@ -57,11 +55,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 import java.awt.Frame
-import java.awt.event.HierarchyEvent
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
-class WorktreeSessionEditorPanel @RequiresEdt constructor(
+internal class WorktreeSessionEditorPanel @RequiresEdt constructor(
     parent: Disposable,
     private val manager: WorktreeSessionEditorManager,
     private val controller: WorktreeSessionListController,
@@ -96,10 +93,11 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         run = run?.button,
     )
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var started = false
     private var stats: WorktreeStatsDto? = null
     private var dirty: WorktreeDirtyDto? = null
     private var pr: WorktreePrDto? = null
+
+    override fun host(): WorkspaceSessionEditorManager = manager
 
     init {
         project?.let { banner(GhBanner(it, this)) }
@@ -110,30 +108,43 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
             menu = ActiveMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
                 item(row.key)?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
             }),
-            open = ::open,
+            open = ::openRow,
         )
         list.installPopup(group)
         bindModel()
-        manager.onPresent = { key -> key?.let { list.select(it) } }
-        manager.onListChanged = {
-            sync()
-            project?.service<WorktreeStatusService>()?.refreshStats()
-        }
+        bindHost()
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
             rename.registerCustomShortcutSet(set, list, this)
         }
-        addHierarchyListener { event ->
-            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
-            if (isShowing) {
-                start()
-                project?.service<WorktreeStatusService>()?.refreshStats()
-                project?.service<WorktreeStatusService>()?.refreshPr()
-            }
-        }
         bindStatus()
-        sync()
+        syncList()
         visibility(load, save)
     }
+
+    override fun onStart() {
+        manager.start()
+    }
+
+    override fun onShown() {
+        project?.service<WorktreeStatusService>()?.refreshStats()
+        project?.service<WorktreeStatusService>()?.refreshPr()
+    }
+
+    override fun onHostChanged() {
+        syncList()
+        project?.service<WorktreeStatusService>()?.refreshStats()
+    }
+
+    override fun rows(): List<ActiveItem> {
+        val kinds = manager.activity()
+        val titles = manager.titles()
+        val deleting = manager.deleting()
+        return HistoryTime.sorted(controller.sessions().map { LocalHistoryItem(it) })
+            .map { WorkspaceSessionRow(it, kinds[it.id], deleting = it.id in deleting, live = titles[it.id],
+                search = listOf(it.title, it.id, it.directory).joinToString(" ")) }
+    }
+
+    override fun sessionIds(): Set<String> = controller.sessions().mapTo(mutableSetOf()) { it.id }
 
     @RequiresEdt
     fun selectSessions(keys: List<String>) {
@@ -237,12 +248,33 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    private fun start() {
-        if (started) return
-        started = true
-        manager.start()
-        project?.service<WorktreeStatusService>()?.refreshStats()
-        project?.service<WorktreeStatusService>()?.refreshPr()
+    override fun openKey(key: String, focus: Boolean) {
+        val item = item(key) ?: return
+        manager.openSession(SessionRef.Local(item), focus)
+    }
+
+    @RequiresEdt
+    private fun item(key: String): SessionDto? = controller.session(key)
+
+    @RequiresEdt
+    private fun title(key: String): String {
+        return item(key)?.title?.takeIf { it.isNotBlank() } ?: KiloBundle.message("worktree.session.untitled")
+    }
+
+    @RequiresEdt
+    private fun bindModel() {
+        val listener = object : ListDataListener {
+            @RequiresEdt
+            override fun intervalAdded(e: ListDataEvent) = syncList()
+
+            @RequiresEdt
+            override fun intervalRemoved(e: ListDataEvent) = syncList()
+
+            @RequiresEdt
+            override fun contentsChanged(e: ListDataEvent) = syncList()
+        }
+        controller.model.addListDataListener(listener)
+        Disposer.register(this) { controller.model.removeListDataListener(listener) }
     }
 
     @RequiresEdt
@@ -344,62 +376,6 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    private fun open(row: ActiveItem, focus: Boolean) {
-        if (row.key == SessionHost.NEW) {
-            manager.newSession()
-            return
-        }
-        val item = item(row.key) ?: return
-        manager.openSession(SessionRef.Local(item), focus)
-    }
-
-    @RequiresEdt
-    private fun sync() {
-        val rows = mutableListOf<ActiveItem>()
-        val key = manager.currentKey()
-        val pending = manager.hasPendingNew()
-        val kinds = manager.activity()
-        val titles = manager.titles()
-        val deleting = manager.deleting()
-        if (pending || key == SessionHost.NEW) rows += NewRow
-        rows += HistoryTime.sorted(controller.sessions().map { LocalHistoryItem(it) })
-            .map { WorkspaceSessionRow(it, kinds[it.id], deleting = it.id in deleting, live = titles[it.id],
-                search = listOf(it.title, it.id, it.directory).joinToString(" ")) }
-        // The host owns which session is shown, so it also owns the selection: name the row and let
-        // the list hold that key until a refresh brings it in.
-        val shown = if (pending) SessionHost.NEW else key
-        list.update(rows, shown?.let { ActiveSelection.Key(it) } ?: ActiveSelection.Preserve)
-        syncToggle(controller.sessions().mapTo(mutableSetOf()) { it.id }, kinds, key, deleting)
-    }
-
-    @RequiresEdt
-    private fun item(key: String): SessionDto? = controller.session(key)
-
-    @RequiresEdt
-    private fun title(key: String): String {
-        return item(key)?.title?.takeIf { it.isNotBlank() } ?: KiloBundle.message("worktree.session.untitled")
-    }
-
-    @RequiresEdt
-    private fun selectedKeys(): List<String> = list.selectedKeys().filter { it != SessionHost.NEW && it !in manager.deleting() }
-
-    @RequiresEdt
-    private fun bindModel() {
-        val listener = object : ListDataListener {
-            @RequiresEdt
-            override fun intervalAdded(e: ListDataEvent) = sync()
-
-            @RequiresEdt
-            override fun intervalRemoved(e: ListDataEvent) = sync()
-
-            @RequiresEdt
-            override fun contentsChanged(e: ListDataEvent) = sync()
-        }
-        controller.model.addListDataListener(listener)
-        Disposer.register(this) { controller.model.removeListDataListener(listener) }
-    }
-
-    @RequiresEdt
     private fun bindStatus() {
         val key = normalizeWorktreePath(worktree.directory)
         syncHeader()
@@ -421,7 +397,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         // changes, so a badge for a background session would otherwise never clear.
         cs.launch {
             target.service<KiloSessionService>().activity.collectLatest {
-                edt({ !Disposer.isDisposed(this@WorktreeSessionEditorPanel) }) { sync() }
+                edt({ !Disposer.isDisposed(this@WorktreeSessionEditorPanel) }) { syncList() }
             }
         }
     }
@@ -441,28 +417,15 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     override fun uiDataSnapshot(sink: DataSink) {
+        snapshot(sink)
         sink[WorktreeSessionDataKeys.PANEL] = this
         selectedSession()?.let { sink[WorktreeSessionDataKeys.SESSION] = it }
-        sink[SessionManager.KEY] = manager
         sink[SessionManager.WORKSPACE_KEY] = worktree
     }
 
     override fun dispose() {
-        manager.onPresent = null
-        manager.onListChanged = null
+        super.dispose()
         cs.cancel()
-    }
-
-    private inner class NewAction : DumbAwareAction(
-        KiloBundle.message("worktree.session.new.action"),
-        null,
-        AllIcons.General.Add,
-    ) {
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-
-        override fun actionPerformed(e: AnActionEvent) {
-            manager.newSession()
-        }
     }
 
     private inner class DeleteAction : DumbAwareAction(
@@ -497,14 +460,6 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         override fun actionPerformed(e: AnActionEvent) {
             renameSelected()
         }
-    }
-
-    private object NewRow : ActiveSection {
-        override val key: String get() = SessionHost.NEW
-        override val title: String get() = KiloBundle.message("worktree.session.new")
-        // Group the pending session under Today so it appears inside the list right away instead of
-        // as a detached row pinned above the first section header.
-        override val section: String get() = HistoryTime.title(HistorySection.TODAY)
     }
 
     private companion object {
