@@ -121,6 +121,16 @@ Later phases extend the same host interface; they do not rework the hook mechani
    - Normalize a 200 GET whose content type is not `text/event-stream` to 405; leave event-stream and
      4xx/5xx unchanged.
    - Tests: port `mcp-sse-probe.test.ts`; add the non-SSE 200 case that currently loops.
+   - **Status:** implemented in this worktree (PR branch `mcp-sse-probe`). Deltas from the text above:
+     v2 has one remote transport, so there is a single site; the hook is applied per transport
+     attempt and now receives the endpoint URL (the Code Mode query and the retry at the configured
+     URL both change the dialed URL, so the probe cannot be scoped from the connect-level URL); and
+     the probe keeps the endpoint plus `Accept` scoping even though the hook only wraps the transport
+     fetch, because `@modelcontextprotocol/client@2.3.1` serves the transport's own OAuth discovery,
+     refresh and step-up requests through that same fetch. Covered by the ported transport tests
+     (probe once, same-origin redirect, redirect chain, http to https upgrade on default ports, OAuth
+     discovery with an SSE `Accept`) and an end-to-end `McpClient.connect` test against a server that
+     answers the probe with `200` `text/html`.
 
 4. **Auth-failure surfacing**
    - Port `auth-failure.ts` to `packages/core/src/kilocode/mcp/`.
