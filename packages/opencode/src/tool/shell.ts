@@ -357,6 +357,30 @@ export const ShellPermission = Effect.gen(function* () {
     return path.resolve(root, text)
   })
 
+  // A path inside the project can still point outside through a symlink that already exists.
+  // Commands that create the link and read it in the same invocation are not visible yet.
+  const normalize = (file: string) => (process.platform === "win32" ? FSUtil.normalizePath(file) : file)
+  const physical = Effect.fn("ShellTool.physical")(function* (file: string) {
+    const hit = yield* fs.realPath(file).pipe(Effect.option)
+    if (hit._tag === "Some") return normalize(hit.value)
+    const tail: string[] = []
+    let current = file
+    while (true) {
+      const parent = path.dirname(current)
+      if (parent === current) return normalize(file)
+      tail.unshift(path.basename(current))
+      const base = yield* fs.realPath(parent).pipe(Effect.option)
+      if (base._tag === "Some") return normalize(path.join(base.value, ...tail))
+      current = parent
+    }
+  })
+  const external = Effect.fn("ShellTool.external")(function* (file: string, instance: InstanceContext) {
+    if (!containsPath(file, instance)) return file
+    const real = yield* physical(file)
+    if (containsPath(real, instance)) return undefined
+    return real
+  })
+
   const argpath = Effect.fn("ShellTool.argPath")(function* (arg: string, cwd: string, ps: boolean, shell: string) {
     const text = ps ? expand(arg, cwd, shell) : home(unquote(arg))
     const file = text && prefix(text)
@@ -397,8 +421,10 @@ export const ShellPermission = Effect.gen(function* () {
         for (const arg of pathArgs(command, ps, kind === "cmd")) {
           const resolved = yield* argpath(arg, cwd, ps, shell)
           yield* Effect.logInfo("resolved path", { arg, resolved })
-          if (!resolved || containsPath(resolved, instance)) continue
-          const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
+          if (!resolved) continue
+          const target = yield* external(resolved, instance)
+          if (!target) continue
+          const dir = (yield* fs.isDir(target)) ? target : path.dirname(target)
           scan.dirs.add(dir)
           if (accessKind !== "read") scan.access = "unknown"
         }
@@ -429,10 +455,13 @@ export const ShellPermission = Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
         const metadata = heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))) // kilocode_change
-        if (!containsPath(input.cwd, instance)) {
-          scan.dirs.add(input.cwd)
+        // kilocode_change start - a symlinked working directory can escape the project
+        const outside = yield* external(input.cwd, instance)
+        if (outside) {
+          scan.dirs.add(outside)
           scan.access = "unknown"
         }
+        // kilocode_change end
         yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
@@ -465,7 +494,8 @@ export const ShellPermission = Effect.gen(function* () {
       Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
-        if (!containsPath(input.cwd, instance)) scan.dirs.add(input.cwd)
+        const outside = yield* external(input.cwd, instance)
+        if (outside) scan.dirs.add(outside)
         return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob) }
       }),
     )
