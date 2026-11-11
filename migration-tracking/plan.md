@@ -30,7 +30,7 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 - [#15171](https://github.com/Kilo-Org/kilocode/issues/15171) Foundation: the Kilo host, plugin and RPC scaffolding, and the v2 CI lane.
 - [#15020](https://github.com/Kilo-Org/kilocode/issues/15020) Upstream sync: merge tooling and regular syncs from `upstream/dev`, with the shared-patch checks.
 - [#14991](https://github.com/Kilo-Org/kilocode/issues/14991) Kilo Gateway, login and enterprise: the Gateway as the only source of Kilo models, accounts, teams and Kilo request identity, as a Kilo-owned layer.
-- [#15298](https://github.com/Kilo-Org/kilocode/issues/15298) Identity, branding and store: v2 runs as Kilo, with its own `kilo2` store that never touches v1 files. Open: TUI `.opencode` themes and plugins.
+- [#15298](https://github.com/Kilo-Org/kilocode/issues/15298) Identity, branding and store: v2 runs as Kilo, with its own `kilo2` store that never touches v1 files.
 - [#15299](https://github.com/Kilo-Org/kilocode/issues/15299) Config and settings: `kilo2.json` and `.kilo2` discovery, key mapping, managed policy, a settings RPC that owns reload, and the server extension surface. Open: system and MDM config names.
 - [#15300](https://github.com/Kilo-Org/kilocode/issues/15300) Session policy and snapshots: offline network wait, overflow and compaction thresholds, snapshot policy and retention, transcript recall.
 - [#15301](https://github.com/Kilo-Org/kilocode/issues/15301) Agents, modes and plan: the Kilo agents, mode reminders, the agent builder, the Plan workflow and Plan-to-Code handoff, the review policy. Open: Plan storage.

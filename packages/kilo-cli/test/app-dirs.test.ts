@@ -183,6 +183,37 @@ test("v1 storage variables leave v1's database, config and credentials untouched
   }
 }, 120_000)
 
+// The TUI's local plugins come from the project's `.kilo2/plugins`, as its config does. `plugin list` runs the same
+// discovery as the TUI, in the host process: a plugin in upstream's `.opencode`, or in v1 Kilo's `.kilo` or
+// `.kilocode`, is not listed, and the run creates none of those directories.
+test("plugin list reads the project's local plugins from .kilo2 only", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-plugins-")))
+  const project = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-project-")))
+  try {
+    using backend = fixture()
+    const env = environment(root, { KILO_API_URL: backend.url })
+    await mkdir(env.TMPDIR, { recursive: true })
+    await mkdir(path.join(project, ".git"))
+    const names = [".kilo2", ".opencode", ".kilo", ".kilocode"]
+    await Promise.all(
+      names.map((name) =>
+        Bun.write(path.join(project, name, "plugins", `from-${name.slice(1)}`, "tui.ts"), "export default {}\n"),
+      ),
+    )
+    const before = await strays(project)
+
+    const output = await cliIn(project, env, "plugin", "list", "--standalone")
+
+    expect(output).toContain(path.join(project, ".kilo2", "plugins", "from-kilo2"))
+    for (const name of names.slice(1)) expect(output).not.toContain(path.join(project, name, "plugins"))
+    expect(await strays(project)).toEqual(before)
+    expect(await strays(root)).toEqual([])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(project, { recursive: true, force: true })
+  }
+}, 120_000)
+
 // Runs `debug paths`, a background service lifecycle with one Location boot, and a `serve --stdio` server with one
 // Location boot. Returns the paths the CLI reports.
 async function boot(root: string, xdg: Record<string, string>) {
@@ -305,11 +336,14 @@ async function created(expected: Record<string, string>) {
   expect((await readdir(path.join(expected.data, "log"))).some((name) => name.endsWith(".log"))).toBe(true)
 }
 
-// Every directory under the root that is named after the opencode or Kilo v1 app directory.
+// Every directory under the root that is named after the opencode or Kilo v1 app directory, or after their project
+// directories.
 async function strays(root: string) {
   const entries = await readdir(root, { recursive: true, withFileTypes: true })
   return entries
-    .filter((entry) => entry.isDirectory() && (entry.name === "opencode" || entry.name === "kilo"))
+    .filter(
+      (entry) => entry.isDirectory() && ["opencode", "kilo", ".opencode", ".kilo", ".kilocode"].includes(entry.name),
+    )
     .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)))
     .toSorted()
 }
