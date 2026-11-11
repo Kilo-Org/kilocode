@@ -687,7 +687,9 @@ test("a late run result leaves the history of the Flow opened since", async () =
     await app.waitForFrame((frame) => frame.includes("Periodic / Beta") && frame.includes("Running"))
     // The late reload for Alpha sent no request, so it could not abort Beta's.
     expect(
-      fake.calls.filter((call) => call.method === "runs").map((call) => (call.input as KiloFlowRpc.ControlInput).flowID),
+      fake.calls
+        .filter((call) => call.method === "runs")
+        .map((call) => String((call.input as KiloFlowRpc.ControlInput).flowID)),
     ).toEqual(["flw_alpha", "flw_beta"])
   } finally {
     app.renderer.destroy()
