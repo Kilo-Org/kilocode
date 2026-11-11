@@ -6,6 +6,7 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.handshake",
     "kilo.agent",
     "kilocode.plan",
+    "kilocode.goal",
     "kilocode.gateway",
     "kilocode.provider-usage",
     "kilocode.openai",

@@ -32,6 +32,7 @@
     "kilocode.indexing": 30,
     "kilocode.review": 10,
     "kilocode.plan": 10,
+    "kilocode.goal": 10,
     "kilocode.read": 10,
     "kilocode.question": 10,
     "kilocode.wakeup": 10,
