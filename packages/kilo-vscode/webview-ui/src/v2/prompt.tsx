@@ -3,7 +3,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
 import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
-import { record, type ReviewCommentEntry } from "../../../src/shared/review-comments"
+import { isChatReference, record, type ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
 import { ReviewComments } from "../components/chat/ReviewComments"
@@ -35,6 +35,7 @@ import {
   registerReviewAppend,
   type AppendHandler,
   type ReferenceHandler,
+  type ReplyHandler,
   type ReviewAppendHandler,
 } from "./append-ready"
 import { BrowserReferences } from "./browser-references"
@@ -143,6 +144,8 @@ export function PromptInput(props: {
   onReferenceReady?: (add: ReferenceHandler | undefined) => void
   /** Receives a function that adds review comments to the draft; undefined on unmount. */
   onReviewAppendReady?: (append: ReviewAppendHandler | undefined) => void
+  /** Receives the handle the transcript quotes and comments through; undefined on unmount. */
+  onReplyReady?: (reply: ReplyHandler | undefined) => void
   /** Receives the context actions handle of this composer; undefined on unmount. */
   onComposerReady?: (composer: ComposerHandle | undefined) => void
   /** The slash command menu: its entries, and the runner of a sent server command or skill. */
@@ -678,6 +681,19 @@ export function PromptInput(props: {
 
   registerReviewAppend(props.onReviewAppendReady, appendComments)
 
+  registerAppend<ReplyHandler>(props.onReplyReady, {
+    pending: () => comments().filter(isChatReference),
+    add: (reference, focus) => {
+      replaceComments(mergeReviewComments(comments(), [reference]))
+      if (focus) focusInput()
+    },
+    remove: (id) => replaceComments(comments().filter((item) => item.id !== id)),
+    send: (reference) => {
+      const review = composeReviewPrompt([reference], "", false)
+      submit({ text: review.text, items: [], metadata: review.metadata })
+    },
+  })
+
   // A reference for another session is dropped: the browser tab can outlive the session the composer shows.
   registerAppend<ReferenceHandler>(props.onReferenceReady, (reference) => {
     if (props.session && reference.sessionId !== props.session) return
@@ -916,7 +932,8 @@ export function PromptInput(props: {
           comments={comments()}
           sessionID={props.session}
           onRemove={(id) => replaceComments(comments().filter((item) => item.id !== id))}
-          onClear={() => replaceComments([])}
+          onClear={(ids) => replaceComments(comments().filter((item) => !ids.includes(item.id)))}
+          onSend={() => send()}
         />
       </Show>
       <Show when={browsers().length > 0}>

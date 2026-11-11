@@ -16,3 +16,6 @@ export const ReviewCommentActionsContext = createContext<ReviewCommentActions>()
 export function useReviewCommentActions(): ReviewCommentActions {
   return useContext(ReviewCommentActionsContext) ?? {}
 }
+
+/** Window event that scrolls the transcript to a quoted passage. Its detail is the `ChatReferenceData`. */
+export const REVEAL_CHAT_REFERENCE = "kilo.revealChatReference"

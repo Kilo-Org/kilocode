@@ -46,6 +46,10 @@ import { buildSearchPattern, searchMatches } from "./transcript-search-match"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
 import { PromptRail } from "./prompt-rail"
+import { TranscriptReply } from "./transcript-reply"
+import type { ReplyHandler } from "./append-ready"
+import { partFeedback } from "../../../src/shared/browser-feedback"
+import { isChatReference } from "../../../src/shared/review-comments"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
 
 /**
@@ -94,6 +98,8 @@ export function MessageList(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** The delivery state and controls of a user message the server has not handed to the model yet. */
   pending?: (messageID: string) => UserMessagePending | undefined
+  /** Quotes and comments on selected answer text through the composer. Missing where there is no composer. */
+  reply?: ReplyHandler
 }) {
   const v2 = useV2()
   const vscode = useVSCode()
@@ -125,6 +131,13 @@ export function MessageList(props: {
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
   const instructionFiles = createMemo(() => instructionFilesByRead(messages(), v2.directory))
+  const sentReferences = createMemo(() =>
+    messages().flatMap((message) =>
+      message.type === "user"
+        ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
+        : [],
+    ),
+  )
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
   // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
@@ -942,6 +955,9 @@ export function MessageList(props: {
         prepending={() => prepending().value}
         seeking={() => Boolean(seek())}
       />
+      <Show when={props.reply}>
+        {(reply) => <TranscriptReply root={scrollEl} reply={reply()} sent={sentReferences} />}
+      </Show>
       <Show when={!empty() && autoScroll.userScrolled()}>
         <IconButton
           icon="arrow-down-to-line"

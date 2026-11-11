@@ -1535,6 +1535,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systeembrowser",
   "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "chat.reply.toolbar": "Geselecteerde tekst",
+  "chat.reply.quote": "Citeren",
+  "chat.reply.quoteHint": "Citeer in je antwoord",
+  "chat.reply.commentHint": "Deze passage becommentariëren",
+  "chat.reply.copy": "Kopiëren",
+  "chat.reply.sendHint": "Dit commentaar nu naar Kilo sturen",
+  "chat.reply.commentLater": "Bewaren voor je volgende bericht",
+  "chat.reply.count": "Antwoorden ({{count}})",
+  "chat.reply.sendAll": "Alles sturen",
+  "chat.reply.showInChat": "In chat tonen",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
   "browserTab.disabled":

@@ -1537,6 +1537,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systembrowser",
   "settings.experimental.browserLinks.integrated": "Integrierter Browser",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
+  "chat.reply.toolbar": "Ausgewählter Text",
+  "chat.reply.quote": "Zitieren",
+  "chat.reply.quoteHint": "In deiner Antwort zitieren",
+  "chat.reply.commentHint": "Diese Stelle kommentieren",
+  "chat.reply.copy": "Kopieren",
+  "chat.reply.sendHint": "Diesen Kommentar jetzt an Kilo senden",
+  "chat.reply.commentLater": "Für deine nächste Nachricht speichern",
+  "chat.reply.count": "Antworten ({{count}})",
+  "chat.reply.sendAll": "Alle senden",
+  "chat.reply.showInChat": "Im Chat anzeigen",
   "browserTab.noSession":
     "Öffne den Browser aus einer Sitzung, um eine lokale Anwendung oder eine öffentliche HTTPS-Seite anzuzeigen.",
   "browserTab.disabled":
