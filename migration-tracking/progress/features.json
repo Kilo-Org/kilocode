@@ -381,12 +381,6 @@
     "worktree-remove-lock": "worktree",
     "zero-id": "util"
   },
-  "clients": [
-    "anaconda-desktop",
-    "jetbrains",
-    "ui",
-    "vscode"
-  ],
   "exclude": {
     "console": "Deprecated browser UI served at /console (packages/kilo-console, src/kilocode/console). Out of scope: the v2 CLI embeds no web UI (plan.md).",
     "docs": "Documentation site (packages/kilo-docs). Not part of the runtime port.",

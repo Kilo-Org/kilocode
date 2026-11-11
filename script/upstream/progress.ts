@@ -4,7 +4,7 @@
  * Measures Kilo's v1 feature delta (the pinned v1 target over its upstream base) as cells grouped into
  * feature boxes, and checks every cell against the v2 working tree. Everything is mechanical: paths,
  * imports, identifiers, markers and string equality. The only hand-written inputs are
- * `migration-tracking/progress/features.json` (pins, feature split, client boxes, exclusions) and
+ * `migration-tracking/progress/features.json` (pins, feature split, exclusions) and
  * `migration-tracking/progress/dispositions.json` (decisions per cell).
  *
  * Cell kinds and the rule that marks a cell done on v2:
@@ -49,8 +49,6 @@ type Config = {
   pins: { v1Target: string; v1Base: string }
   /** `dir`, `dir/sub` or `kilo-<pkg>` -> feature. Checked longest key first. */
   split: Record<string, string>
-  /** Client features shown in the Clients treemap panel; all other counted features are Runtime & CLI. */
-  clients?: string[]
   /** feature -> reason. Excluded features are listed, not counted. */
   exclude: Record<string, string>
 }
@@ -546,27 +544,20 @@ function panel(title: string, items: Box[], left: number, width = PANEL) {
   return parts
 }
 
-function svg(runtime: Box[], clients: Box[], landed: Rungs) {
+function svg(features: Box[], landed: Rungs) {
   const width = 2 * PANEL + GAP
   const height = HEADER + MAP + LEGEND
   const y = HEADER + MAP + 6
-  const allDone = [...runtime, ...clients].reduce((s, b) => s + b.done, 0)
-  const allTotal = [...runtime, ...clients].reduce((s, b) => s + b.total, 0)
   const swatch = (x: number, cls: string, text: string) => `<rect class="${cls}" x="${x}" y="${y}" width="12" height="12"/>${label(x + 16, y + 11, text, 12)}`
-  const splitPanels = clients.some((b) => b.total + b.dropped > 0) && runtime.some((b) => b.total + b.dropped > 0)
-  const panels = splitPanels
-    ? [...panel("Runtime & CLI", runtime, 0), ...panel("Clients", clients, PANEL + GAP)]
-    : panel("Features", [...runtime, ...clients], 0, width)
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`,
     `<style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>`,
     `<rect x="0" y="0" width="${width}" height="${height}" fill="#0d1117" stroke="none"/>`,
-    ...panels,
+    ...panel("Features", features, 0, width),
     swatch(4, "d", "done"),
     swatch(60, "o", "open"),
     swatch(112, "x", "dropped"),
     label(190, y + 11, `Landed by rung: ${rungText(landed, true)}`, 12),
-    `<text x="${width - 4}" y="${n(y + 11)}" font-size="12" text-anchor="end">Total: ${pct(allDone, allTotal)}% (${allDone}/${allTotal})</text>`,
     "</svg>",
     "",
   ].join("\n")
@@ -775,19 +766,12 @@ function chart(points: Point[]) {
 function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispositions: Record<string, Disposition>, past: Point[] = []) {
   const all = boxes(data.cells, config)
   const features = all.filter((b) => !b.excluded && !b.feature.startsWith("unattributed:"))
-  const clientSet = new Set(config.clients ?? [])
-  const runtime = features.filter((b) => !clientSet.has(b.feature))
-  const clients = features.filter((b) => clientSet.has(b.feature))
   const excluded = all.filter((b) => b.excluded)
   const counted = features
   const isCounted = (c: Cell) => !config.exclude[c.feature] && !c.feature.startsWith("unattributed:")
   const total = counted.reduce((s, b) => s + b.total, 0)
   const done = counted.reduce((s, b) => s + b.done, 0)
   const dropped = counted.reduce((s, b) => s + b.dropped, 0)
-  const runtimeDone = runtime.reduce((s, b) => s + b.done, 0)
-  const runtimeTotal = runtime.reduce((s, b) => s + b.total, 0)
-  const clientsDone = clients.reduce((s, b) => s + b.done, 0)
-  const clientsTotal = clients.reduce((s, b) => s + b.total, 0)
   const kinds = (["module", "api", "patch", "test"] as Kind[]).map((k) => ({
     kind: k,
     done: counted.reduce((s, b) => s + b.kinds[k].done, 0),
@@ -828,9 +812,6 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
   const row = (b: Box) =>
     `| ${b.feature} | ${ratio(b.kinds.module)} | ${ratio(b.kinds.api)} | ${ratio(b.kinds.patch)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% | \`${bar(b.done, b.total)}\` | ${rungText(b.landed)} |`
   const imports = data.coreImports.length ? ` (${data.coreImports.map((m) => `\`${m}\``).join(", ")})` : ""
-  const surfaces = clientsTotal
-    ? [`Runtime & CLI: **${runtimeDone} / ${runtimeTotal}** (${pct(runtimeDone, runtimeTotal)}%). Clients: **${clientsDone} / ${clientsTotal}** (${pct(clientsDone, clientsTotal)}%).`, ""]
-    : []
   const md = [
     "# Kilo v2 migration progress",
     "",
@@ -838,13 +819,12 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `Measures Kilo's v1 feature delta: Kilo \`main\` pinned at \`${config.pins.v1Target.slice(0, 12)}\` (the v1 target) compared with the upstream commit it was synced to, \`${config.pins.v1Base.slice(0, 12)}\` (pins in \`features.json\`). Every Kilo feature change becomes a cell; a cell is done when the tracked v2 working tree has it.`,
     "",
-    `![Progress map: Runtime & CLI and Clients sized by their cells, green done, grey open, yellow dropped](progress.svg)`,
+    `![Progress map: one box per feature sized by its cells, green done, grey open, yellow dropped](progress.svg)`,
     "",
     `## Summary`,
     "",
     `**${done} / ${total} cells done (${pct(done, total)}%)**, ${dropped} dropped. \`${bar(done, total)}\``,
     "",
-    ...surfaces,
     `| Kind | Done | Total | % |`,
     `|---|---:|---:|---:|`,
     ...kinds.map((k) => `| ${k.kind} | ${k.done} | ${k.total} | ${pct(k.done, k.total)}% |`),
@@ -883,7 +863,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `## Counting rules`,
     "",
-    `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`. \`clients\` in \`features.json\` separates the Clients treemap panel from Runtime & CLI.`,
+    `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`.`,
     `- module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.`,
     `- api: a \`/kilocode/*\` operation in the v1 OpenAPI document. Done when the path literal appears in \`packages/protocol/src\`, \`packages/server/src\` or a Kilo-owned v2 file.`,
     `- patch: one feature-attributed Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base, attributed by \`kilocode_change(<feature>)\`, a Kilo import or a Kilo identifier). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
@@ -908,7 +888,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
   ].join("\n")
 
-  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(runtime, clients, landed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
+  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, landed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
 }
 
 const OUTPUTS = ["progress.json", "README.md", "progress.svg", "history.svg", "badge.svg"] as const
