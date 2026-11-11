@@ -62,16 +62,9 @@ export class DisabledError extends Schema.TaggedError<DisabledError>()("Schedule
   }
 }
 
-// kilocode_change start - flows seam: an internal owner can create a hook-claimed schedule without the native feature flag
-export interface CreateOptions {
-  readonly requireEnabled?: boolean
-}
-// kilocode_change end
-
 export interface Interface {
   readonly create: (
     input: CreateInput,
-    options?: CreateOptions, // kilocode_change(flows) seam - preserve the enabled check by default
   ) => Effect.Effect<Info, InvalidError | DisabledError | Session.NotFoundError | Permission.Error>
   readonly list: (input?: { readonly sessionID?: SessionSchema.ID }) => Effect.Effect<Info[]>
   readonly get: (id: ID) => Effect.Effect<Info, NotFoundError>
@@ -446,7 +439,13 @@ const layer = Layer.effect(
       if (due === null || row.session_id === null) return
       if (!(yield* claimLeader(yield* Clock.currentTimeMillis))) return
       const session = yield* sessions.get(row.session_id)
-      // kilocode_change start - flows seam: offer the due occurrence to activated location plugins before prompt delivery; a claimed occurrence is owned by its plugin, so only unclaimed ones honor the native flag
+      if (!(yield* settings(session)).enabled) {
+        // Reading the flag boots the Session's location, so check again in an hour rather than every tick. The row
+        // keeps its due time, so once the flag is back on it catches up like any missed slot.
+        yield* update(row, { last_outcome: "disabled", retry_at: now + DISABLED_RETRY, time_updated: now })
+        return
+      }
+      // kilocode_change start - flows seam: offer the due occurrence to activated location plugins before prompt delivery; a claimed occurrence is owned by its plugin
       const claimed =
         row.check === null
           ? yield* Effect.gen(function* () {
@@ -461,12 +460,6 @@ const layer = Layer.effect(
             }).pipe(instances.provide(session))
           : false
       // kilocode_change end
-      if (!claimed && !(yield* settings(session)).enabled) { // kilocode_change(flows) seam - plugin-claimed occurrences bypass the native flag
-        // Reading the flag boots the Session's location, so check again in an hour rather than every tick. The row
-        // keeps its due time, so once the flag is back on it catches up like any missed slot.
-        yield* update(row, { last_outcome: "disabled", retry_at: now + DISABLED_RETRY, time_updated: now })
-        return
-      }
       if (row.last_message_id !== null && (yield* pending(row.last_message_id))) {
         // The wake that followed admission may have been lost; waking again is harmless.
         yield* execution.wake(session.id)
@@ -711,9 +704,7 @@ const layer = Layer.effect(
     })
 
     return Service.of({
-      // kilocode_change start - flows seam: accept the optional internal creation policy
-      create: Effect.fn("Schedule.create")(function* (input, options) {
-        // kilocode_change end
+      create: Effect.fn("Schedule.create")(function* (input) {
         const session = yield* sessions.get(input.sessionID)
         if (input.action.type === "hook" && (input.if !== undefined || input.until !== undefined)) // kilocode_change(flows) seam - hook actions never use native conditions
           return yield* new InvalidError({ reason: "Hook-owned schedule actions do not support conditions" }) // kilocode_change(flows) seam - a hook action must never reach native conditional admission
@@ -722,9 +713,7 @@ const layer = Layer.effect(
         const config = yield* settings(session).pipe(
           Effect.catchTag("FileSystem.DirectoryNotFoundError", missingDirectory),
         )
-        // kilocode_change start - flows seam: internal hook owners may schedule while the native UI remains disabled
-        if (!config.enabled && options?.requireEnabled !== false) return yield* new DisabledError()
-        // kilocode_change end
+        if (!config.enabled) return yield* new DisabledError()
         const check = yield* resolveStoredCheck(input)
         const when = input.when ?? (check?.mode === "until" ? DEFAULT_UNTIL_EVERY : undefined)
         if (when === undefined)

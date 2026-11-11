@@ -29,6 +29,7 @@ import { AutoCommand } from "./auto/auto"
 import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
+import { KiloServiceCommands } from "./service/service"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -61,6 +62,8 @@ const KiloCommands = {
     service: {
       ...Commands.commands.service,
       spec: Commands.commands.service.spec.pipe(Command.withAlias("daemon")),
+      // Kilo: `install` and `uninstall` manage the OS login unit that starts the background server.
+      commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
     auto: AutoCommand,
     import: ImportCommand,
@@ -74,7 +77,8 @@ let terminated = false
 const Handlers = Runtime.handlers(KiloCommands, {
   $: () => import("@opencode/cli/commands/handlers/default"),
   upgrade: () => import("./upgrade"),
-  uninstall: () => import("@opencode/cli/commands/handlers/uninstall"),
+  // Kilo: the wrapper removes the login unit before the upstream uninstall.
+  uninstall: () => import("./commands/uninstall"),
   acp: () => import("@opencode/cli/commands/handlers/acp"),
   api: () => import("@opencode/cli/commands/handlers/api"),
   auth: {
@@ -120,11 +124,15 @@ const Handlers = Runtime.handlers(KiloCommands, {
   service: {
     start: () => import("@opencode/cli/commands/handlers/service/start"),
     restart: () => import("@opencode/cli/commands/handlers/service/restart"),
-    status: () => import("@opencode/cli/commands/handlers/service/status"),
+    // Kilo: the wrapper adds the login unit state.
+    status: () => import("./service/status"),
     stop: () => import("@opencode/cli/commands/handlers/service/stop"),
     get: () => import("@opencode/cli/commands/handlers/service/get"),
     set: () => import("@opencode/cli/commands/handlers/service/set"),
     unset: () => import("@opencode/cli/commands/handlers/service/unset"),
+    // Kilo: the OS login unit.
+    install: () => import("./service/install"),
+    uninstall: () => import("./service/uninstall"),
   },
   // Kilo: the server gets the Kilo plugins and service overrides.
   serve: () => import("./serve"),

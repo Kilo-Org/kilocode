@@ -105,6 +105,8 @@ export const ManagedReference = Schema.Struct({
 export const NativeScheduleReference = Schema.Struct({
   type: Schema.tag("native-schedule"),
   scheduleID: Schedule.ID,
+  /** `hook` rows belong to another schedule owner, such as an agent's wakeup or cron task; they are read-only here. */
+  action: Schema.Literals(["prompt", "hook"]).pipe(optional),
 }).annotate({ identifier: "KiloFlow.Reference.NativeSchedule" })
 
 export const Reference = Schema.Union([ManagedReference, NativeScheduleReference]).pipe(
@@ -149,6 +151,8 @@ export const Run = Schema.Struct({
   worktree: Schema.Literals(["reuse", "new"]),
   sessionID: SessionID.pipe(optional),
   directory: AbsolutePath.pipe(optional),
+  /** Root of the worktree created for this run, recorded before its Session exists so cleanup can find it. */
+  worktreeDirectory: AbsolutePath.pipe(optional),
   scheduled: ScheduledOccurrence.pipe(optional),
   error: Schema.String.pipe(optional),
   time: Schema.Struct({
@@ -186,6 +190,9 @@ export const Info = Schema.Struct({
   context: Context,
   prompt: Schema.String,
   permissions: Schema.Array(PermissionGrant).pipe(optional),
+  ends: Schedule.Ends.pipe(optional),
+  endsAt: Schema.Finite.pipe(optional),
+  remainingRuns: Schema.Finite.pipe(optional),
   status: Status,
   nextRunAt: Schema.Finite.pipe(optional),
   lastRunAt: Schema.Finite.pipe(optional),
@@ -207,26 +214,49 @@ export const Record = Schema.Struct({
   context: Context,
   prompt: Schema.String,
   permissions: Schema.Array(PermissionGrant).pipe(optional),
+  ends: Schedule.Ends.pipe(optional),
   scheduleID: Schedule.ID.pipe(optional),
   time: Schema.Struct({ created: Schema.Finite, updated: Schema.Finite }),
 }).annotate({ identifier: "KiloFlow.Record.V1" })
 export type Record = typeof Record.Type
 
+const permissionsDescription =
+  "Additional unattended permission patterns beyond the repository-local read, glob, and grep baseline added to every new Flow. Identify each action and its narrowest stable resource. Shell resources match parsed command text, such as `taskctl *`; filesystem paths never belong in shell resources. File actions use paths or search patterns, webfetch uses URL patterns, websearch uses query patterns, and MCP tools currently require resource `*`. Paths outside the Flow directory also need external_directory with a bounded directory wildcard such as `/home/user/*`, separately from any command permission; an exact directory path does not cover its contents. The user reviews the exact baseline plus additional patterns before creation, and the executor receives the available tools and same allowlist as constraints. Use an empty array when the baseline is sufficient."
+
+const endsDescription =
+  'Stops a repeating Flow at the first limit reached: { times: 3 }, { after: "30 days" }, or { at: "2026-12-31T18:00" }.'
+
 const CreateFields = {
   name: Schema.String.check(Schema.isMinLength(1)).annotate({ description: "Short name shown in Flow inventories." }),
   when: Schedule.WhenInput.annotate({ description: "Time trigger for the Flow." }),
+  ends: Schedule.Ends.pipe(optional).annotate({ description: endsDescription }),
   prompt: Schema.String.check(Schema.isMinLength(1)).annotate({
     description: "Prompt each fresh local Session will run.",
   }),
   worktree: Schema.Literals(["reuse", "new"]).annotate({
     description: "Reuse the source directory or create a new worktree for each run.",
   }),
-  permissions: Schema.Array(CreatePermissionGrant).annotate({
-    description:
-      "Additional unattended permission patterns beyond the repository-local read, glob, and grep baseline added to every new Flow. Identify each action and its narrowest stable resource. Shell resources match parsed command text, such as `taskctl *`; filesystem paths never belong in shell resources. File actions use paths or search patterns, webfetch uses URL patterns, websearch uses query patterns, and MCP tools currently require resource `*`. Paths outside the Flow directory also need external_directory with a bounded directory wildcard such as `/home/user/*`, separately from any command permission; an exact directory path does not cover its contents. The user reviews the exact baseline plus additional patterns before creation, and the executor receives the available tools and same allowlist as constraints. Use an empty array when the baseline is sufficient.",
-  }),
+  permissions: Schema.Array(CreatePermissionGrant).annotate({ description: permissionsDescription }),
   model: Model.Ref.pipe(optional).annotate({ description: "Model override. Defaults to the source Session model." }),
   agent: Agent.ID.pipe(optional).annotate({ description: "Agent override. Defaults to the source Session agent." }),
+}
+
+const UpdateFields = {
+  flowID: ID,
+  name: CreateFields.name.pipe(optional),
+  when: Schedule.WhenInput.pipe(optional).annotate({ description: "New time trigger. Omit to keep the current one." }),
+  ends: Schema.NullOr(Schedule.Ends)
+    .pipe(optional)
+    .annotate({ description: `${endsDescription} null removes the limit; omit to keep the current one.` }),
+  prompt: CreateFields.prompt.pipe(optional),
+  worktree: CreateFields.worktree.pipe(optional),
+  permissions: Schema.Array(CreatePermissionGrant)
+    .pipe(optional)
+    .annotate({
+      description: `${permissionsDescription} Replaces the current additional patterns and asks the user to approve them again; omit to keep them.`,
+    }),
+  model: Model.Ref.pipe(optional).annotate({ description: "New model. Omit to keep the current one." }),
+  agent: Agent.ID.pipe(optional).annotate({ description: "New agent. Omit to keep the current one." }),
 }
 
 /** The fields exposed by the agent tool, which supplies its own Session ID. */
@@ -245,6 +275,32 @@ export type RunInput = typeof RunInput.Type
 export const ControlInput = Schema.Struct({ flowID: ID }).annotate({ identifier: "KiloFlow.ControlInput" })
 export type ControlInput = typeof ControlInput.Type
 
+/** The fields exposed by the agent tool, which asks for approval in its own Session. */
+export const UpdateRequest = Schema.Struct(UpdateFields).annotate({ identifier: "KiloFlow.UpdateRequest" })
+export type UpdateRequest = typeof UpdateRequest.Type
+
+export const UpdateInput = Schema.Struct({
+  ...UpdateFields,
+  sessionID: SessionID.pipe(optional).annotate({
+    description: "Session that receives a permission approval request. Defaults to the Flow's source Session.",
+  }),
+}).annotate({ identifier: "KiloFlow.UpdateInput" })
+export type UpdateInput = typeof UpdateInput.Type
+
+export const RemoveInput = Schema.Struct({
+  flowID: ID,
+  deleteWorktrees: Schema.Boolean.pipe(optional).annotate({
+    description: "Also delete the worktrees created by the Flow's retained runs. A worktree with changes is kept.",
+  }),
+}).annotate({ identifier: "KiloFlow.RemoveInput" })
+export type RemoveInput = typeof RemoveInput.Type
+
+export const RemoveOutput = Schema.Struct({
+  removedWorktrees: Schema.Array(AbsolutePath).pipe(optional),
+  keptWorktrees: Schema.Array(AbsolutePath).pipe(optional),
+}).annotate({ identifier: "KiloFlow.RemoveOutput" })
+export type RemoveOutput = typeof RemoveOutput.Type
+
 export const Warning = Schema.Struct({
   source: Schema.Literals(["managed", "managed-run", "native-schedule"]),
   reference: Schema.String.pipe(optional),
@@ -258,6 +314,20 @@ export const ListOutput = Schema.Struct({
   observedAt: Schema.Finite,
 }).annotate({ identifier: "KiloFlow.ListOutput" })
 export type ListOutput = typeof ListOutput.Type
+
+export const RunsOutput = Schema.Struct({
+  runs: Schema.Array(Run),
+  warnings: Schema.Array(Warning),
+}).annotate({ identifier: "KiloFlow.RunsOutput" })
+export type RunsOutput = typeof RunsOutput.Type
+
+/** Published on every change to a managed Flow or one of its runs, so clients refresh instead of polling. */
+export const Changed = Schema.Struct({
+  projectID: Project.ID,
+  flowID: ID.pipe(optional),
+  kind: Schema.Literals(["created", "updated", "removed", "run"]),
+}).annotate({ identifier: "KiloFlow.Changed" })
+export type Changed = typeof Changed.Type
 
 export const Definition = Rpc.define({
   id: "kilocode.flow",
@@ -297,13 +367,29 @@ export const Definition = Rpc.define({
       description:
         "Experimental: may change without compatibility guarantees. Resumes future scheduled executions of a managed Flow.",
     },
-    remove: {
+    update: {
+      input: portable(UpdateInput),
+      output: portable(Info),
+      errors: { failed: portable(Schema.Undefined) },
+      description:
+        "Experimental: may change without compatibility guarantees. Changes a managed Flow; new permissions are approved again.",
+    },
+    runs: {
       input: portable(ControlInput),
-      output: portable(Schema.Struct({})),
+      output: portable(RunsOutput),
+      errors: { failed: portable(Schema.Undefined) },
+      description:
+        "Experimental: may change without compatibility guarantees. Lists the retained runs of a managed Flow, newest first.",
+    },
+    remove: {
+      input: portable(RemoveInput),
+      output: portable(RemoveOutput),
       errors: { failed: portable(Schema.Undefined) },
       description:
         "Experimental: may change without compatibility guarantees. Stops and removes a managed Flow and its retained run records.",
     },
   },
-  events: {},
+  events: {
+    changed: { schema: portable(Changed) },
+  },
 })

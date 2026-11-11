@@ -10,6 +10,7 @@ import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
 import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
+import { Flag } from "@opencode/core/flag"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
@@ -157,6 +158,23 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
+  // Scheduling is always on: the wakeup and Flow plugins own Kilo's schedules, so the scheduler reads
+  // `experimental.schedules` as on whatever a config or OPENCODE_FLAGS says. Appended last, so it wins over `-schedules`.
+  Schedule.node.replace(
+    Schedule.node.mapLayer((layer) =>
+      layer.pipe(
+        Layer.provide(
+          Layer.effect(
+            Flag.Overrides,
+            Effect.gen(function* () {
+              const overrides = yield* Flag.Overrides
+              return [overrides, "schedules"].filter(Boolean).join(",")
+            }),
+          ),
+        ),
+      ),
+    ),
+  ),
   // MCP servers see the Kilo client identity, OAuth registration uses Kilo's product name and URI, and a
   // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop.
   // kilo_port(mcp:18028d867142)

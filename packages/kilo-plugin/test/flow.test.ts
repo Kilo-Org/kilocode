@@ -14,40 +14,71 @@ import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
+import { FSUtil } from "@opencode/util/fs-util"
 import { DateTime, Effect, Layer, Schema } from "effect"
 import { testEffect } from "../../core/test/lib/effect"
-import { PluginTestLayer } from "../../core/test/plugin/fixture"
+import { makePluginTestLayer, PluginTestLayer } from "../../core/test/plugin/fixture"
 
 const backingSchedules = new Map<Schedule.ID, Schedule.Info>()
-const createOptions: (Schedule.CreateOptions | undefined)[] = []
 let scheduleCounter = 0
 
-const it = testEffect(
-  Layer.merge(
-    PluginTestLayer,
-    Layer.mock(Schedule.Service, {
-      list: () => Effect.succeed([...backingSchedules.values()]),
-      create: (input, options) =>
-        Effect.sync(() => {
-          createOptions.push(options)
-          const now = Date.now()
-          const schedule = Schema.decodeUnknownSync(Schedule.Info)({
-            id: `sch_flow_${++scheduleCounter}`,
-            sessionID: input.sessionID,
-            name: input.name,
-            when: input.when,
-            tz: input.when?.tz ?? "UTC",
-            action: input.action,
-            status: "active",
-            nextDueAt: now + 60_000,
-            runCount: 0,
-            time: { created: now, updated: now },
-          })
-          backingSchedules.set(schedule.id, schedule)
-          return schedule
-        }),
-      remove: (scheduleID) => Effect.sync(() => backingSchedules.delete(scheduleID)).pipe(Effect.asVoid),
+const scheduleMock = Layer.mock(Schedule.Service, {
+  list: () => Effect.succeed([...backingSchedules.values()]),
+  get: (scheduleID) => {
+    const found = backingSchedules.get(scheduleID)
+    return found ? Effect.succeed(found) : Effect.fail(new Schedule.NotFoundError({ scheduleID }))
+  },
+  create: (input) =>
+    Effect.sync(() => {
+      const now = Date.now()
+      const schedule = Schema.decodeUnknownSync(Schedule.Info)({
+        id: `sch_flow_${++scheduleCounter}`,
+        sessionID: input.sessionID,
+        name: input.name,
+        when: input.when,
+        tz: input.when?.tz ?? "UTC",
+        action: input.action,
+        status: "active",
+        nextDueAt: now + 60_000,
+        ...(input.ends?.times === undefined ? {} : { remainingRuns: input.ends.times }),
+        runCount: 0,
+        time: { created: now, updated: now },
+      })
+      backingSchedules.set(schedule.id, schedule)
+      return schedule
     }),
+  pause: (scheduleID) => {
+    const found = backingSchedules.get(scheduleID)
+    if (!found) return Effect.fail(new Schedule.NotFoundError({ scheduleID }))
+    const paused: Schedule.Info = { ...found, status: "paused" }
+    backingSchedules.set(scheduleID, paused)
+    return Effect.succeed(paused)
+  },
+  remove: (scheduleID) => Effect.sync(() => backingSchedules.delete(scheduleID)).pipe(Effect.asVoid),
+})
+
+const it = testEffect(Layer.merge(PluginTestLayer, scheduleMock))
+
+const approvals: Parameters<Permission.Interface["assert"]>[0][] = []
+const recording = testEffect(
+  Layer.merge(
+    makePluginTestLayer(
+      Layer.succeed(
+        Permission.Service,
+        Permission.Service.of({
+          close: Effect.void,
+          ask: (input) => Effect.succeed({ id: input.id ?? Permission.ID.create(), effect: "ask" }),
+          assert: (input) => Effect.sync(() => void approvals.push(input)),
+          assertNotDenied: () => Effect.void,
+          allows: () => Effect.succeed(false),
+          reply: () => Effect.void,
+          get: () => Effect.succeed(undefined),
+          forSession: () => Effect.succeed([]),
+          list: () => Effect.succeed([]),
+        }),
+      ),
+    ),
+    scheduleMock,
   ),
 )
 
@@ -349,11 +380,11 @@ test("missing Sessions and malformed stored records are isolated", () => {
 it.live("registers and executes the managed Flow creation and run tools", () =>
   Effect.gen(function* () {
     backingSchedules.clear()
-    createOptions.length = 0
     scheduleCounter = 0
     const plugins = yield* Plugin.Service
     const context = yield* PluginHost.make(plugins, "test")
     const schedules = yield* Schedule.Service
+    const fs = yield* FSUtil.Service
     const abandoned = record("flw_abandoned")
     const abandonedRun = Schema.decodeUnknownSync(KiloFlowRpc.Run)({
       version: 1,
@@ -510,11 +541,10 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       status: "active",
       nextRunAt: expect.any(Number),
     })
-    // The backing row must exist even where native schedules are disabled; the scheduler then fires it only when
-    // the Flow hook claims it (packages/kilo-cli/test/flow.test.ts covers the disabled project end to end).
-    expect(createOptions).toEqual([{ requireEnabled: false }])
     const backing = (yield* schedules.list())[0]
     if (!backing?.nextDueAt) return yield* Effect.die("Expected a due backing schedule")
+    // The scheduler never admits a hook prompt; it only lets schedule inventories show what the Flow runs.
+    expect(backing.action).toEqual({ type: "hook", prompt: "Check the project" })
     expect(yield* context.storage.get(`flow-schedule:v1:${backing.id}`)).toBe(created.output.reference.flowID)
     const mimic = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
       sessionID: source.id,
@@ -698,7 +728,7 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     )
     yield* context.storage.remove(deniedKey)
     yield* Effect.yieldNow
-    expect(yield* list(context, schedules, source.projectID)).toMatchObject({
+    expect(yield* list(context, schedules, source.projectID, fs)).toMatchObject({
       flows: [
         {
           name: "Nightly check",
@@ -717,10 +747,10 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
       warnings: [],
     })
     yield* context.storage.set(`flow-run:v1:${created.output.reference.flowID}:bad`, "not json")
-    expect((yield* list(context, schedules, source.projectID)).warnings).toEqual([])
+    expect((yield* list(context, schedules, source.projectID, fs)).warnings).toEqual([])
     // The latest-run index avoids scanning run records on every poll; a rebuild reports malformed records.
     yield* context.storage.remove(`flow-latest:v1:${created.output.reference.flowID}`)
-    expect(yield* list(context, schedules, source.projectID)).toMatchObject({
+    expect(yield* list(context, schedules, source.projectID, fs)).toMatchObject({
       warnings: [
         {
           source: "managed-run",
@@ -753,3 +783,194 @@ it.live("registers and executes the managed Flow creation and run tools", () =>
     )
   }),
 )
+
+const call = (sessionID: Session.ID, id: string) => ({
+  sessionID,
+  agent: Agent.ID.make("build"),
+  messageID: SessionMessage.ID.create(),
+  id: Tool.CallID.make(id),
+  progress: () => Effect.void,
+})
+
+recording.live("lists, updates, and deletes Flows through the agent tools, approving only changed permissions", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    approvals.length = 0
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Schedule.Service
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const registered = yield* tools.list()
+    const tool = (name: string) => {
+      const found = registered.find((item) => item.id === name)
+      if (!found) throw new Error(`Expected ${name} to be registered`)
+      return found
+    }
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const created = yield* tool("flow_create").execute(
+      {
+        name: "Weekly report",
+        when: { every: "7 days", tz: "UTC" },
+        ends: { times: 4 },
+        prompt: "Write the report",
+        worktree: "reuse",
+        permissions: [{ action: "shell", resource: "taskctl *" }],
+      },
+      call(source.id, "call_create_report"),
+    )
+    if (created.output?.reference.type !== "managed" || !created.output.reference.scheduleID)
+      return yield* Effect.die("Expected a managed Flow with a schedule")
+    const flowID = created.output.reference.flowID
+    const firstScheduleID = created.output.reference.scheduleID
+    expect(created.output).toMatchObject({ ends: { times: 4 }, remainingRuns: 4 })
+    expect(approvals).toHaveLength(1)
+
+    const listed = yield* tool("flow_list").execute({}, call(source.id, "call_list"))
+    expect(listed.content).toContain(flowID)
+    expect(listed.content).toContain("every 7 days")
+
+    // Text-only changes keep the backing schedule and ask for nothing.
+    const renamed = yield* tool("flow_update").execute(
+      { flowID, name: "Weekly summary", prompt: "Summarize the week" },
+      call(source.id, "call_rename"),
+    )
+    expect(renamed.output).toMatchObject({
+      name: "Weekly summary",
+      prompt: "Summarize the week",
+      reference: { scheduleID: firstScheduleID },
+    })
+    expect(approvals).toHaveLength(1)
+
+    // A new trigger replaces the backing row, keeps the pause, and moves the schedule index.
+    yield* schedules.pause(firstScheduleID)
+    const rescheduled = yield* tool("flow_update").execute(
+      { flowID, when: { cron: "0 9 * * 1" }, ends: null },
+      call(source.id, "call_reschedule"),
+    )
+    if (rescheduled.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const secondScheduleID = rescheduled.output.reference.scheduleID
+    expect(secondScheduleID).toBeDefined()
+    expect(secondScheduleID).not.toBe(firstScheduleID)
+    expect(rescheduled.output).toMatchObject({
+      status: "paused",
+      trigger: { when: { type: "cron", cron: "0 9 * * 1", tz: "UTC" } },
+    })
+    expect(rescheduled.output.ends).toBeUndefined()
+    expect(backingSchedules.has(firstScheduleID)).toBeFalse()
+    expect(backingSchedules.get(secondScheduleID!)?.action).toEqual({ type: "hook", prompt: "Summarize the week" })
+    expect(yield* context.storage.get(`flow-schedule:v1:${firstScheduleID}`)).toBeUndefined()
+    expect(yield* context.storage.get(`flow-schedule:v1:${secondScheduleID}`)).toBe(flowID)
+    expect(approvals).toHaveLength(1)
+
+    // A changed allowlist is approved again before it is stored; the same allowlist is not.
+    yield* tool("flow_update").execute(
+      { flowID, permissions: [{ action: "shell", resource: "taskctl *" }] },
+      call(source.id, "call_same_permissions"),
+    )
+    expect(approvals).toHaveLength(1)
+    const widened = yield* tool("flow_update").execute(
+      {
+        flowID,
+        permissions: [
+          { action: "shell", resource: "taskctl *" },
+          { action: "edit", resource: "reports/*" },
+        ],
+      },
+      call(source.id, "call_widen"),
+    )
+    expect(approvals).toHaveLength(2)
+    expect(approvals[1]).toMatchObject({
+      action: "flow",
+      sessionID: source.id,
+      resources: ["read: *", "glob: *", "grep: *", "shell: taskctl *", "edit: reports/*"],
+    })
+    expect(widened.output?.permissions).toContainEqual({ action: "edit", resource: "reports/*" })
+    const invalid = yield* tool("flow_update")
+      .execute({ flowID, permissions: [{ action: "*", resource: "*" }] }, call(source.id, "call_invalid_update"))
+      .pipe(Effect.flip)
+    expect(invalid.message).toContain("must name one concrete capability")
+    expect(approvals).toHaveLength(2)
+
+    const removed = yield* tool("flow_delete").execute({ flowID }, call(source.id, "call_delete"))
+    expect(removed.output).toEqual({})
+    expect(yield* context.storage.get(`flow:v1:${flowID}`)).toBeUndefined()
+    expect(backingSchedules.size).toBe(0)
+  }),
+)
+
+it.live("pauses a scheduled Flow whose directory no longer exists instead of retrying it", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Schedule.Service
+    const fs = yield* FSUtil.Service
+    yield* KiloFlowPlugin.effect(context)
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const backing = yield* schedules.create({
+      sessionID: source.id,
+      name: "Flow: Gone",
+      when: { type: "every", every: "1 hour" },
+      action: { type: "hook", prompt: "Clean up" },
+    })
+    const gone = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
+      ...record("flw_gone", backing.id),
+      context: {
+        directory: "/definitely/missing/flow/directory",
+        projectID: source.projectID,
+        sessionID: source.id,
+        model: source.model,
+        agent: source.agent,
+      },
+    })
+    yield* context.storage.set(`flow:v1:${gone.id}`, JSON.stringify(gone))
+    yield* context.storage.set(`flow-schedule:v1:${backing.id}`, gone.id)
+
+    const result = yield* (yield* PluginHooks.Service).trigger("session", "experimental.schedule", {
+      sessionID: source.id,
+      schedule: backing,
+    })
+    expect(result.claimed).toBeTrue()
+    expect(backingSchedules.get(backing.id)?.status).toBe("paused")
+    const listed = (yield* list(context, schedules, source.projectID, fs)).flows.find(
+      (flow) => flow.reference.type === "managed" && flow.reference.flowID === gone.id,
+    )
+    expect(listed).toMatchObject({
+      status: "paused",
+      health: { status: "error", message: "Flow directory /definitely/missing/flow/directory no longer exists" },
+      latestRun: { status: "failed", error: "Flow directory /definitely/missing/flow/directory no longer exists" },
+    })
+  }),
+)
+
+test("labels a native row with the action that owns it", () => {
+  const hooked: Schedule.Info = {
+    ...schedule({ id: "sch_wakeup", sessionID: session.id }),
+    name: "Wakeup: check the build",
+    action: { type: "hook", prompt: "check the build" },
+  }
+  const output = assemble({
+    records: [],
+    schedules: [schedule({ id: "sch_prompt", sessionID: session.id }), hooked],
+    sessions: new Map([
+      [Schedule.ID.make("sch_prompt"), session],
+      [hooked.id, session],
+    ]),
+    warnings: [],
+    observedAt: 100,
+  })
+  expect(output.flows.map((flow) => flow.reference)).toEqual([
+    { type: "native-schedule", scheduleID: Schedule.ID.make("sch_prompt"), action: "prompt" },
+    { type: "native-schedule", scheduleID: hooked.id, action: "hook" },
+  ])
+  expect(output.flows[1]?.prompt).toBe("check the build")
+})
