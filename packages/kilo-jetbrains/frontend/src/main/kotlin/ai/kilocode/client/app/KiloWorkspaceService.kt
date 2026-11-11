@@ -177,6 +177,8 @@ class KiloWorkspaceService internal constructor(
     suspend fun models(directory: String): ModelsWorkspaceDto {
         return try {
             call { this.models(directory) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LOG.warn("models settings lookup failed for directory=$directory", e)
             ModelsWorkspaceDto(errors = listOf(LoadErrorDto(resource = "models", detail = e.message)))

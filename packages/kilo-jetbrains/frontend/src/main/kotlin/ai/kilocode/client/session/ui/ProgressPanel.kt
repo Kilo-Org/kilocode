@@ -126,9 +126,13 @@ class ProgressPanel(
         }
         elapsed.isVisible = failed == null
         if (failed != null) {
-            val key = if (failed.failure == "workspace_setup_failed")
-                "hosted.workspace.preparation.setupFailed" else "hosted.workspace.preparation.failed"
+            val setup = failed.failure == "workspace_setup_failed" ||
+                failed.step?.startsWith("setup") == true ||
+                failed.detail?.startsWith("Setup command") == true
+            val key = if (setup) "hosted.workspace.preparation.setupFailed"
+                else "hosted.workspace.preparation.failed"
             text = KiloBundle.message(key) +
+                (failed.detail?.takeIf { it.isNotBlank() }?.let { "\n$it" } ?: "") +
                 "\n" + KiloBundle.message("hosted.workspace.preparation.retry")
             spinner.isVisible = false
             busy.isShimmering = false
