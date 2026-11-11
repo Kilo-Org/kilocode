@@ -314,8 +314,11 @@ export const Plugin = define({
                 Effect.logWarning("failed to pause the goal of an archived session", { sessionID, cause }),
               ),
             )
-          if (event.type === "session.deleted")
+          if (event.type === "session.deleted") {
+            // The reviewer's overflow entry belongs to the deleted session too.
+            compacted.delete(sessionID)
             return FiberMap.remove(timers, sessionID).pipe(Effect.andThen(ctx.storage.remove(PREFIX + sessionID)))
+          }
           if (event.type === "session.step.started" || event.type === "session.step.ended")
             return touch(sessionID).pipe(
               Effect.catchCause((cause) => Effect.logWarning("failed to note goal activity", { sessionID, cause })),
