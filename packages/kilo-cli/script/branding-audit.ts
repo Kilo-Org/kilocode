@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 // Branding coverage audit. Runs the rule engine over the user-facing CLI/TUI/OAuth
-// surface and hard-fails when it finds user-visible OpenCode text that would ship
+// surface and the core prompt templates the model reads, and hard-fails when it finds user-visible OpenCode text that would ship
 // un-rebranded. Three failure modes:
 //
 //   - missing interception: a file the rules WOULD brand that is not in the loader's
@@ -31,11 +31,13 @@ import { KiloBrandingEngine } from "../src/branding/engine"
 import { allow } from "./branding-audit-allow"
 
 const repo = path.resolve(import.meta.dir, "../../..")
-const PATHSPECS = ["packages/cli/src", "packages/tui/src", "packages/core/src/oauth"]
+const PATHSPECS = ["packages/cli/src", "packages/tui/src", "packages/core/src"]
 const INCLUDE = [
   /^packages\/cli\/src\/.*\.tsx?$/,
   /^packages\/tui\/src\/.*\.tsx?$/,
   /^packages\/core\/src\/oauth\/.*\.ts$/,
+  // Prompt templates, bundled as strings: the model reads them as its own identity and instructions.
+  /^packages\/core\/src\/.*\.txt$/,
 ]
 // The built-in tool namespace is defined in core and named in model-facing text
 // across core and the Kilo plugin, including text assets bundled as strings
@@ -43,7 +45,7 @@ const INCLUDE = [
 // not only the user-facing surface.
 const NAMESPACE_PATHSPECS = ["packages/core/src", "packages/kilo-plugin/src"]
 const NAMESPACE_INCLUDE = [/^packages\/(core|kilo-plugin)\/src\/.*\.(tsx?|txt|md)$/]
-const NAMESPACE = /namespace: "opencode"|tools\.opencode\./g
+const NAMESPACE = /namespace: "opencode"|tools\.opencode\.|`opencode` namespace/g
 const EXCLUDE = [
   /\.test\.tsx?$/,
   /\.d\.ts$/,

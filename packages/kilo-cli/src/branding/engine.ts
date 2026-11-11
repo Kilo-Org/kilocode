@@ -18,9 +18,16 @@ export interface Span {
  * user-visible text span. This is the one place that decides what counts as
  * branding-eligible text (string literals, template text, JSX text, minus the
  * protected code contexts), shared by the rebrander and the branding audit.
+ * A `.txt` prompt template is bundled as a string and read by the model, so
+ * its whole content is one user-visible span.
  */
 export function userVisibleSpans(filePath: string, source: string): { normalized: string; spans: Span[] } {
   const normalized = source.replaceAll("\r\n", "\n")
+  if (filePath.endsWith(".txt"))
+    return {
+      normalized,
+      spans: [{ start: 0, end: normalized.length, raw: normalized, bareStringLiteral: false }],
+    }
   const file = parseSync(normalized, {
     filename: filePath,
     sourceType: "module",

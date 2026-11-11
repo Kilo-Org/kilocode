@@ -92,9 +92,16 @@ Later phases extend the same host interface; they do not rework the hook mechani
    - CIMD eligibility: no `client_id`, no `client_secret`, no `callback_port`, and a redirect equal
      to the documented default (`http://127.0.0.1:19876/mcp/oauth/callback`). Otherwise DCR.
    - Use the default `19876`/`/mcp/oauth/callback` when CIMD is selected; keep ephemeral ports for DCR.
-   - Provide the Kilo CIMD document at the configured URL (for example
-     `https://kilo.ai/docs/oauth/kilo/client.json`). If that host is unavailable, disable CIMD and
-     document the DCR fallback.
+     v2 today always listens on an ephemeral port and uses `/callback`, so the eligibility rule and the
+     listener have to change together or the authorization server rejects the document mismatch.
+   - The Kilo CIMD document is hosted and verified (2026-11-10) at
+     `https://kilo.ai/docs/oauth/kilo/client.json`: `client_id` is that URL, `client_name` "Kilo",
+     `client_uri` `https://kilo.ai`, `redirect_uris`
+     `["http://127.0.0.1:19876/mcp/oauth/callback"]`, `grant_types` authorization code + refresh,
+     `response_types` code, and `token_endpoint_auth_method` `none`. Default the host document URL to it
+     instead of the OpenCode URL `https://opencode.ai/oauth/opencode/client.json`; the authorization server
+     reads the hosted document, so the local `clientMetadata` only has to agree for DCR. The URL is the
+     client identity and must stay stable.
    - Tests: port `mcp-cimd.test.ts` and `mcp/oauth-issuer.test.ts`. Required cases: a configured
      secret is never sent to a second issuer; refresh against the new issuer; custom callback
      port/redirect/secret use DCR; explicit default redirect uses CIMD.
@@ -114,6 +121,16 @@ Later phases extend the same host interface; they do not rework the hook mechani
    - Normalize a 200 GET whose content type is not `text/event-stream` to 405; leave event-stream and
      4xx/5xx unchanged.
    - Tests: port `mcp-sse-probe.test.ts`; add the non-SSE 200 case that currently loops.
+   - **Status:** implemented in this worktree (PR branch `mcp-sse-probe`). Deltas from the text above:
+     v2 has one remote transport, so there is a single site; the hook is applied per transport
+     attempt and now receives the endpoint URL (the Code Mode query and the retry at the configured
+     URL both change the dialed URL, so the probe cannot be scoped from the connect-level URL); and
+     the probe keeps the endpoint plus `Accept` scoping even though the hook only wraps the transport
+     fetch, because `@modelcontextprotocol/client@2.3.1` serves the transport's own OAuth discovery,
+     refresh and step-up requests through that same fetch. Covered by the ported transport tests
+     (probe once, same-origin redirect, redirect chain, http to https upgrade on default ports, OAuth
+     discovery with an SSE `Accept`) and an end-to-end `McpClient.connect` test against a server that
+     answers the probe with `200` `text/html`.
 
 4. **Auth-failure surfacing**
    - Port `auth-failure.ts` to `packages/core/src/kilocode/mcp/`.
@@ -195,20 +212,35 @@ Later phases extend the same host interface; they do not rework the hook mechani
 
 ### Phase 3: Marketplace plugin kind
 
+Status: implemented (schema/registry/installer/RPC in one PR, clients in the next).
+
 1. **Schema and registry**
    - `packages/schema/src/kilocode/marketplace.ts`: add `"plugin"` to `Kind`; add
      `plugin?: { spec: string }` to `Item`; add `{ plugin: string, fingerprints? }` to `Resource`.
-   - Registry: parse plugin catalog entries; preview shows the spec and a "runs arbitrary code"
-     warning.
+   - Registry (`kilo.ts`): read the catalog `plugins` path and normalize `content` into
+     `plugin.spec`, skipping an entry without one. Clients show the spec and a "runs arbitrary code"
+     warning; `preview` rejects plugins like agents (no configuration to fill).
 
 2. **Installer and config**
-   - Add `installPlugin`/`removePlugin` to `packages/kilo-plugin/src/marketplace/installer.ts`.
+   - Extend `Installer.install`/cleanup with a `{ config, plugin, target?, fingerprints? }` resource
+     instead of parallel install/remove functions, so plugins share the ownership, conflict and
+     rollback path.
    - Port `plugin-spec.ts` (identity parsing for npm and `git:` specs) and `plugin-config.ts`
      (append/replace/remove in the `plugins` array), preserving JSONC comments and atomic writes.
    - Persist ownership in the existing durable `Installed` record. Remove only the owned spec; refuse
-     if the entry was modified.
-   - Preflight the spec through the same npm/git resolver used by the loader; write the config and
-     let the plugin loader install on reload.
+     if the entry was modified. A plugin record written by a newer build is skipped by older builds
+     (the stored `kind` stays closed), the config entry stays active, and older builds can disable it
+     from `/plugins`.
+   - Resolve the package during the install RPC through the same npm/git machinery the loader uses
+     (`Npm.add` or a `git:` clone plus a `Host.resolve` entrypoint check) and only then write the
+     config, as v1 did. A package that cannot resolve fails before config exists. Recorded decision
+     (2026-11-10): fail fast, accepting that the RPC blocks on the network and installs server-side.
+   - Deliberate difference from v1: the catalog `id` no longer has to equal `pluginIdentity(spec)`,
+     because v2 keys the durable record by catalog id and stores the identity in the resource.
+   - Deliberate difference from v1: a TUI-only package is refused. v1 kept a separate TUI plugin list, so
+     the server never saw such a package; v2 has one native config shared by the server and the TUI, and
+     the server loader requires a server or GUI entrypoint, so writing a TUI-only spec there would make
+     every location report a failed plugin.
    - Tests: installer unit tests for append/replace/remove, identity replacement, JSONC preservation,
      modified-entry refusal and git specs.
 
@@ -217,14 +249,16 @@ Later phases extend the same host interface; they do not rework the hook mechani
      (`packages/tui/src/kilocode/marketplace.tsx`).
    - VS Code: add `"plugin"` to `KINDS` and the corresponding tab/actions
      (`packages/kilo-vscode/webview-ui/src/v2/marketplace-data.ts` and the marketplace UI).
-   - Add a CLI/RPC round trip for `list -> preview -> install -> installed -> uninstall` in
-     `packages/kilo-cli/test/marketplace.test.ts`.
+   - Add a CLI/RPC round trip for `list -> install -> installed -> uninstall` in
+     `packages/kilo-cli/test/marketplace-plugin.test.ts`, including activation through `/api/plugin`.
+     Plugins have no configuration preview, so `preview` rejects them like agents.
 
 4. **Map**
    - After plugin support lands, update the dropped dispositions for `plugin-spec.ts` and
      `plugin-config.ts` to `ported`; keep `detection.ts` dropped (durable ownership records replace
      runtime detection) and `relevance.ts` dropped.
-   - Mark `installer.ts` and `schema.ts` as `ported` with the v2 paths. Marketplace becomes 13/13.
+   - Mark `installer.ts` and `schema.ts` as `ported` with the v2 paths. Marketplace becomes 13/13
+     (verified: `bun script/upstream/progress.ts --list marketplace` reports 0 open cells).
 
 ### Phase 4: Remaining MCP deltas (decide scope)
 
@@ -305,12 +339,14 @@ flowchart LR
 
 ## Decisions needed before implementation
 
-1. **CIMD hosting:** does `https://kilo.ai/docs/oauth/kilo/client.json` exist and who publishes it?
-   If not, CIMD must fall back to DCR.
+1. **CIMD hosting:** resolved 2026-11-10. `https://kilo.ai/docs/oauth/kilo/client.json` exists and
+   serves the Kilo client document (see Phase 1). CIMD stays enabled; DCR remains the fallback for custom
+   redirects, callback ports and secrets, and for servers without the capability.
 2. **MCP Apps:** confirm it stays in U-E11-05 rather than #15307.
 3. **Env sanitization:** confirm v1's credential stripping is still required on v2; if yes, it is a
    security fix, not a nice-to-have.
-4. **Plugin marketplace install model:** write the spec and let the loader install (recommended), or
-   stage/copy the plugin at install time.
+4. **Plugin marketplace install model:** resolved 2026-11-10: stage at install time (resolve the
+   package, then write the spec), matching v1 and failing fast on a package the loader could not
+   activate.
 5. **Client branding scope:** confirm `clientInfo.name` and OAuth `client_name` belong to this epic or
    to #15298.

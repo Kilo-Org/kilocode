@@ -81,6 +81,7 @@ import { PromptHint } from "./prompt-hint"
 import { recommend, type ManagerContext } from "./shortcut-hint"
 import { parseSlash, type SlashEntry } from "./slash"
 import { createSlashMenu, SlashMenu } from "./slash-menu"
+import { GoalHeader } from "../components/chat/goal/GoalHeader"
 
 // Drafts live outside the component so a composer remounted for another session restores its own text, as v1 did.
 // The key is the session id, or the pending tab id before a first prompt creates the session.
@@ -242,7 +243,18 @@ export function PromptInput(props: {
   }
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
-  const slash = createSlashMenu(() => props.slash?.entries() ?? [])
+  // Goal mode, as main's goal composer: `/goal` alone, or the goal command picked from the menu, turns the next send
+  // into the objective of a new session goal. The plugin's command sets it, so the mode needs that command.
+  const goalEntry = () => props.slash?.entries().find((entry) => entry.kind === "command" && entry.name === "goal")
+  const [goalMode, setGoalMode] = createSignal(false)
+  const slash = createSlashMenu(
+    () => props.slash?.entries() ?? [],
+    (entry) => {
+      if (entry !== goalEntry()) return false
+      setGoalMode(true)
+      return true
+    },
+  )
   // Editor selections, files, terminal output and images sent with the next prompt, per draft like the text.
   const [attachments, setAttachments] = createSignal<PromptAttachment[]>(attachmentDrafts.get(props.draftKey))
   const paste = usePasteCollapse({ enabled: () => !props.disabled, text })
@@ -416,15 +428,19 @@ export function PromptInput(props: {
     images.pending() === 0 &&
     !terminal.pending() &&
     !changes.pending()
+  // A goal needs an objective; attachments alone are not one.
   const canSend = () =>
     ready() &&
     (speech.state() === "recording" ||
       (!speech.active() &&
-        (!!text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0)))
+        (goalMode()
+          ? !!text().trim()
+          : !!text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0)))
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () => {
     if (props.blocked) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    if (goalMode()) return language.t("prompt.goal.start")
     return language.t("prompt.action.send")
   }
   // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
@@ -528,6 +544,7 @@ export function PromptInput(props: {
   // while the prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
   const showStop = () =>
     props.running &&
+    !goalMode() &&
     !text().trim() &&
     !browsers().length &&
     attachments().length === 0 &&
@@ -751,7 +768,7 @@ export function PromptInput(props: {
     const value = text()
     const session = props.session
     speech.stop({
-      done: () => void submit(),
+      done: () => void sendDraft(),
       ready: () => props.session === session && text() === value,
     })
   }
@@ -865,14 +882,79 @@ export function PromptInput(props: {
     return true
   }
 
+  // Goal mode sends the whole draft as the objective of the goal command. Browser references and review comments are
+  // not part of an objective, so they stay for the next prompt; a goal that did not start keeps goal mode and its
+  // objective for another try.
+  const submitGoal = (entry: SlashEntry, mode: SendMode) => {
+    const run = props.slash?.run
+    if (!run || !ready() || (speech.active() && speech.state() !== "recording") || !text().trim()) return
+    const draft = text()
+    const pastes = paste.pastes()
+    const backing = pastes.map((item) => item.text)
+    const items = attachments()
+    const sent = expandPastes(draft, pastes).trim()
+    const key = props.draftKey
+    const restore = () => {
+      setGoalMode(true)
+      if (text().trim() || attachments().length > 0) return
+      setText(draft)
+      paste.load(draft, backing)
+      mention.seedFromText(draft)
+      setAttachments(items)
+    }
+    const files = mentionFiles(sent)
+    setText("")
+    paste.load("", [])
+    setAttachments([])
+    mention.closeMention()
+    if (key) mentionDrafts.delete(key)
+    setGoalMode(false)
+    setSending(true)
+    void files
+      // `--` keeps an objective that is itself a control word, such as "pause", an objective, as in v1.
+      .then((list) => (list ? run(entry, `-- ${sent}`, mode, items, list) : false))
+      .then((ok) => {
+        if (!ok) return restore()
+        preEnhance = null
+        history.append(sent, key)
+        history.reset()
+      })
+      .catch((err: unknown) => {
+        v2.report(err)
+        restore()
+      })
+      .finally(() => setSending(false))
+  }
+
+  const sendDraft = (mode: SendMode = "steer") => {
+    const entry = goalMode() ? goalEntry() : undefined
+    if (entry) return submitGoal(entry, mode)
+    submit(undefined, mode)
+  }
+
+  // `/goal` alone enters goal mode instead of asking the plugin for its usage, as main's goal composer.
+  const enterGoal = () => {
+    if (goalMode() || !goalEntry() || speech.active() || paste.plainText(text()).trim() !== "/goal") return false
+    slash.close()
+    replaceDraft("", 0)
+    setGoalMode(true)
+    return true
+  }
+
+  const cancelGoal = () => {
+    setGoalMode(false)
+    focusInput()
+  }
+
   const send = (mode: SendMode = "steer") => {
-    if (runAction()) return
+    if (enterGoal()) return
+    if (!goalMode() && runAction()) return
     if (!canSend()) return
     if (speech.state() === "recording") {
       transcribeAndSend()
       return
     }
-    submit(undefined, mode)
+    sendDraft(mode)
   }
 
   registerComposer(props.onComposerReady, {
@@ -1195,6 +1277,9 @@ export function PromptInput(props: {
           }}
         />
       </Show>
+      <Show when={goalMode()}>
+        <GoalHeader onCancel={cancelGoal} />
+      </Show>
       <Show when={comments().length > 0 && !props.disabled}>
         <ReviewComments
           comments={comments()}
@@ -1320,7 +1405,8 @@ export function PromptInput(props: {
               setText(e.currentTarget.value)
               paste.afterInput()
               const cursor = e.currentTarget.selectionStart ?? e.currentTarget.value.length
-              slash.input(e.currentTarget.value, cursor)
+              // A goal objective is plain text, so it opens no command menu.
+              if (!goalMode()) slash.input(e.currentTarget.value, cursor)
               mention.onInput(e.currentTarget.value, cursor)
             }}
             onPaste={(e) => {
@@ -1339,6 +1425,13 @@ export function PromptInput(props: {
               if (slash.keyDown(e, text(), replaceDraft)) return
               if (mention.onKeyDown(e, refs.input, setText)) {
                 queueMicrotask(scrollMention)
+                return
+              }
+              // Escape leaves goal mode and keeps the draft; it only stops the turn outside goal mode.
+              if (e.key === "Escape" && goalMode() && !e.isComposing) {
+                e.preventDefault()
+                e.stopPropagation()
+                cancelGoal()
                 return
               }
               // A mention and a collapsed paste each delete as one unit.
@@ -1448,31 +1541,50 @@ export function PromptInput(props: {
             <Show
               when={showStop()}
               fallback={
-                <Tooltip value={sendHint()} placement="top" openDelay={0}>
-                  <button
-                    type="button"
-                    data-component="icon-button"
-                    data-size="small"
-                    data-variant="ghost"
-                    data-icon={sendIcon()}
-                    class="prompt-send-button"
-                    onClick={(event) => send(sendMode(event, props.running, runningDelivery()))}
-                    disabled={!canSend()}
-                    aria-label={sendLabel()}
-                  >
-                    <For each={SEND_ICONS}>
-                      {(name) => (
-                        <span
-                          class="prompt-send-icon"
-                          data-name={name}
-                          data-active={sendIcon() === name ? "" : undefined}
-                        >
-                          <Icon name={name} size="small" />
-                        </span>
-                      )}
-                    </For>
-                  </button>
-                </Tooltip>
+                <Show
+                  when={!goalMode()}
+                  fallback={
+                    <Tooltip value={sendLabel()} placement="top" openDelay={0}>
+                      <IconButton
+                        icon="send"
+                        variant="ghost"
+                        size="small"
+                        class="prompt-goal-start"
+                        onClick={() => send()}
+                        disabled={!canSend()}
+                        aria-label={sendLabel()}
+                      >
+                        {language.t("prompt.goal.start")}
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <Tooltip value={sendHint()} placement="top" openDelay={0}>
+                    <button
+                      type="button"
+                      data-component="icon-button"
+                      data-size="small"
+                      data-variant="ghost"
+                      data-icon={sendIcon()}
+                      class="prompt-send-button"
+                      onClick={(event) => send(sendMode(event, props.running, runningDelivery()))}
+                      disabled={!canSend()}
+                      aria-label={sendLabel()}
+                    >
+                      <For each={SEND_ICONS}>
+                        {(name) => (
+                          <span
+                            class="prompt-send-icon"
+                            data-name={name}
+                            data-active={sendIcon() === name ? "" : undefined}
+                          >
+                            <Icon name={name} size="small" />
+                          </span>
+                        )}
+                      </For>
+                    </button>
+                  </Tooltip>
+                </Show>
               }
             >
               <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>

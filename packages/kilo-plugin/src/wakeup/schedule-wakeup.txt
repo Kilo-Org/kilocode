@@ -1,0 +1,1 @@
+Wake this session once at a future time and resume it with the prompt you give. Use for waits that outlive this turn: a deploy, build, CI run, or a later check-in, not a short wait a blocking command covers. Give exactly one of delay or when.

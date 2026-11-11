@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "تکمیل‌شده (گزارش مدل)",
+  "session.goal.complete": "تکمیل‌شده",
   "session.goal.blocked": "مسدود",
   "session.goal.restart": "شروع مجدد هدف",
   ...anacondaDesktopDict,
@@ -309,6 +309,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.noChanges": "تغییری وجود ندارد.",
   "ui.permission.reject": "رد",
+  "ui.permission.allowAllSites": "اجازه به همه سایت‌ها",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
   "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",

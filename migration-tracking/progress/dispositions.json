@@ -551,17 +551,31 @@
   },
   "module:packages/opencode/src/kilocode/marketplace/detection.ts": {
     "state": "dropped",
-    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
+    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted. Agent and plugin installs are covered by the same record: a plugin entry is located by package identity in the scope config and compared by its value fingerprint (packages/kilo-plugin/src/marketplace/plugin-config.ts). Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts": {
-    "state": "dropped",
-    "note": "Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/marketplace/plugin-config.ts",
+    "note": "A plugin install owns one spec in the scope's native `plugins` array. Deliberate differences: one scoped config instead of v1's server/TUI files and `targets`; an entry is appended in place (isArrayInsertion keeps sibling comments) or replaced by identity; removal rewrites the array because jsonc-parser cannot delete the last element; writes share one canonical-file queue with the MCP writer (packages/kilo-plugin/src/marketplace/config.ts); ownership is a fingerprint in the database record instead of a receipt. Tested by packages/kilo-plugin/test/marketplace-plugin-config.test.ts and marketplace-plugin-kind.test.ts.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts": {
-    "state": "dropped",
-    "note": "Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded under U-E2-23 in the former plan (`e39551c9b0:migration-tracking/plans/kilo-v2-migration-plan.md`); marketplace epic #15307.",
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/marketplace/plugin-spec.ts",
+    "note": "pluginIdentity is ported with npm-package-arg name resolution (scoped names, tags, an alias by its installed name) and PluginGitSource.gitPluginIdentity for `git:` specs, and it reads v2 `{ package, options }` entries and v1 `[spec, options]` tuples from raw config JSON. Deliberate difference: v1 also required the catalog item id to equal the identity because installed state was keyed by it; v2 keys the record by catalog id and stores the identity in the resource, so a catalog id that differs stays installable and removable. Tested by packages/kilo-plugin/test/marketplace-plugin-spec.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/installer.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/marketplace/installer.ts",
+    "note": "Preparation, ownership preflight, durable intent, rollback and cleanup are ported with the database record and content fingerprints replacing staged receipts; skills, MCP servers and plugins are the resources. A plugin package is resolved and installed before the config write by packages/kilo-plugin/src/marketplace/plugin-package.ts (Npm.add or a git clone, then Host.resolve entrypoint check). Tested by packages/kilo-plugin/test/marketplace.test.ts, marketplace-mcp.test.ts, marketplace-plugin.test.ts and marketplace-plugin-kind.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/schema.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/marketplace.ts",
+    "note": "Catalog item, kind, install option, resource and installed schemas are ported as KiloMarketplaceRpc, which is also the RPC definition. v2 adds the plugin kind (`plugin: { spec }` on an item, `{ plugin, fingerprints }` as a resource), documents `Installed.config` as the native config file for MCP and plugin installs, and replaces v1's HTTP request/response shapes with RPC methods.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/relevance.ts": {
@@ -571,7 +585,7 @@
   },
   "patch:marketplace:5fc326e8ea39": {
     "state": "dropped",
-    "note": "The v1 kilocode_change in packages/opencode/src/plugin/install.ts (import of marketplace pluginIdentity for upstream plugin patching) serves plugin installs, which v2 does not carry for the default skills/MCP unit. The TUI registration patch is tracked by the updated shared-patches entry; plugin content re-lands with its unit.",
+    "note": "The v1 kilocode_change in packages/opencode/src/plugin/install.ts (import of marketplace pluginIdentity for upstream plugin patching) serves plugin installs through v1's upstream plugin patching. v2 never patches upstream install code: plugins are resolved by packages/kilo-plugin/src/marketplace/plugin-package.ts and written to the scope config by plugin-config.ts, so no upstream import is needed.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/test/kilocode/marketplace-api.test.ts": {
@@ -585,8 +599,8 @@
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts": {
-    "state": "dropped",
-    "note": "v1 tested plugin identity parsing and nested/global plugin source removal helpers. Plugin marketplace content is not carried on v2 (re-lands with the plugin content unit). The same-named v2 file hosts the replacement RPC-plugin lifecycle coverage, not a port of these assertions.",
+    "state": "ported",
+    "note": "Plugin identity parsing is carried by packages/kilo-plugin/test/marketplace-plugin-spec.test.ts; nested and shared source removal is carried by marketplace-plugin-config.test.ts (only the owned entry is removed, an unowned or modified entry is refused, other entries and comments survive) and marketplace-plugin-kind.test.ts (RPC install, status, refusal and uninstall). The same-named v2 file holds the RPC plugin-service lifecycle coverage.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/test/kilocode/marketplace-relevance.test.ts": {
@@ -621,7 +635,7 @@
   },
   "module:packages/opencode/src/kilocode/marketplace/paths.ts": {
     "state": "ported",
-    "note": "Scope paths are KiloConfigFiles candidates plus the roots/directory helpers in packages/kilo-plugin/src/marketplace/index.ts; isSafeId is restored as Skill.safe in packages/kilo-plugin/src/marketplace/skill.ts (reserved device names, trailing dot, double dot) and tested in marketplace.test.ts. The v1 worktree-depth plugin layout helpers are not needed without plugin content.",
+    "note": "Scope paths are KiloConfigFiles candidates plus the roots/directory helpers in packages/kilo-plugin/src/marketplace/index.ts; isSafeId is restored as Skill.safe in packages/kilo-plugin/src/marketplace/skill.ts (reserved device names, trailing dot, double dot) and tested in marketplace.test.ts. The v1 worktree-depth plugin layout helpers are not carried: v2 installs a plugin as one spec in the scope's native config, read by both the server and the TUI.",
     "by": "kilo-new-marketplace"
   },
   "module:packages/opencode/src/kilocode/marketplace/skill-archive.ts": {
@@ -1035,7 +1049,7 @@
   },
   "module:packages/opencode/src/kilocode/tool/browser-open.ts": {
     "state": "ported",
-    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text.",
+    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, saves only the origin on Always allow and lists navigate:* in metadata.rules for the broader choice, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text; packages/kilo-plugin/test/browser-permission.test.ts covers the permission request and the saved-origin evaluation.",
     "by": "am-browser"
   },
   "module:packages/opencode/src/kilocode/tool/browser-open.txt": {
@@ -1435,7 +1449,7 @@
   "module:packages/opencode/test/kilocode/sandbox/http-tools.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/test/sandbox/network.test.ts",
-    "note": "Webfetch classification and HTTP allow/deny/proxy through the decorated client are in network.test.ts and config-network.test.ts. Browser broker cases are not carried: v2 has no browser_open tool. Webfetch redirect/cancel internals were v1 tool plumbing.",
+    "note": "Webfetch classification and HTTP allow/deny/proxy through the decorated client are in network.test.ts and config-network.test.ts. The browser_open permission cases (navigate:<origin> save and the navigate:* broader rule) are in packages/kilo-plugin/test/browser-permission.test.ts. Webfetch redirect/cancel internals were v1 tool plumbing.",
     "by": "sandbox-port"
   },
   "module:packages/opencode/test/kilocode/sandbox/macos-confinement.test.ts": {
@@ -2422,6 +2436,126 @@
     "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
     "by": "plugin-git-sources"
   },
+  "module:packages/opencode/src/kilocode/wakeup/index.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/index.ts",
+    "note": "The service is ported as the `kilocode.wakeup` plugin. Each task is a native schedule with a hook action (created with `{ requireEnabled: false }`), so the native loop owns timers, persistence, restart recovery and the cross-process leader. The plugin keeps the service semantics: per-session 10-pending and 10-cron caps, the 10-second minimum and 7-day horizon, the 7-day cron expiry, idempotent cancel, session-delete cleanup, and a per-directory pending snapshot with a `changed` event. A session that goes away, or a goal that finishes, pauses or is cleared, takes its scheduled tasks with it (the goal contract's `changed` event). Goal suspension while a goal waits on a scheduled wakeup lands with the goals port, whose Wait model already carries wakeup and cron kinds.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/schema.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/schema.ts",
+    "note": "Ported: `resolveTime`, `parseWhen`, `parseDelay`, `clampNotice`, `MIN_DELAY_MS`, `MAX_HORIZON_MS`, `MAX_PER_SESSION`, `MAX_CRON_PER_SESSION`, `CRON_TTL_MS`, and the persisted record shape with schema decoding. The v1 `Info`/`CronInfo` service records are not carried; the public view is `KiloWakeupRpc.Wakeup`, and the ids keep the `wku_` prefix with `Identifier.ascending()`.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/resume.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/service.ts",
+    "note": "The fire path is ported as `fire` in the wakeup service: `ctx.session.synthetic` admits the v1 text `[scheduled wakeup] ...` / `[scheduled cron task] ...` with `metadata.wakeup`, replacing `SessionPrompt` with the synthetic-prompt API. Goal suspension while awaiting a scheduled wakeup (and the resume on fire) lands with the goals port, whose Wait model already carries wakeup and cron kinds; this PR keeps the fire path itself.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/wakeup.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/wakeup.test.ts",
+    "note": "The service assertions are ported to a fake native schedule service: schedule/list, cancel and its idempotence, clamps, the per-session cap, the pending snapshot, and the fire text. The file-backed adopt and multi-process claim tests do not apply because native schedules persist in the schedule table and the native leader owns adoption and single-fire.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/wakeup-cron.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/wakeup.test.ts",
+    "note": "The recurring assertions are ported: a cron task is created with a hook action and a 7-day `ends.at`, fires as `[scheduled cron task]`, and keeps its next slot. The v1 re-arm ordering is native: the schedule row advances in the native fire path whose hook the plugin claims.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/wakeup-resume.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/wakeup.test.ts",
+    "note": "The resume assertions are ported as the `fire` tests: the session receives the scheduled text through `ctx.session.synthetic` with the wakeup metadata, and a one-shot record is retired. The v1 paused-session refusal and in-place bootstrap resume do not apply on v2: a synthetic prompt wakes the execution, and the native loop never fires during a bootstrap it awaits.",
+    "by": "candy-cough"
+  },
+  "module:packages/schema/src/kilocode/wakeup-event.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/wakeup.ts",
+    "note": "The `session.wakeup` event ({ sessionID, pending }) is ported as the `kilocode.wakeup` RPC `changed` event with `{ sessionID, directory, pending, dueAt }`, plus `list` and `pending` methods. Clients seed from `pending` and follow `changed`; the due time lets them show `scheduled` without polling.",
+    "by": "candy-cough"
+  },
+  "api:GET /kilocode/wakeups": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/wakeup.ts",
+    "note": "The `GET /kilocode/wakeups` operation is ported as the `kilocode.wakeup` RPC `pending({ directory })` method, served by the generic `rpc.call` route. The response is `{ sessions: [{ sessionID, directory, pending, dueAt }] }` and the handler lives in `packages/kilo-plugin/src/wakeup/index.ts`.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/wakeup-format.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/schema.ts",
+    "note": "`relative` and `excerpt` are ported in the wakeup schema module and used by the tool results and lists.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/schedule-wakeup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/tools.ts",
+    "note": "Ported as the `schedule_wakeup` tool added by the `kilocode.wakeup` plugin, with the same input schema, validation, clamps, 10-pending cap, idempotent result text and `{ id, dueAt, prompt }` metadata. It creates a native hook-action schedule through the service and reports the `wku_` id. The long policy moved to the `scheduling` skill; the description is a pointer.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/schedule-wakeup.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/schedule-wakeup.txt",
+    "note": "Ported as a short tool description plus the action-time reminder in each successful result (reschedule/stop, self-contained prompt). The v1 long-form policy, including the goal paragraphs and cache-pacing prose, is not carried in the always-on prompt; the essential time rules, clamps and caps remain in the descriptions/annotations. The goal-wait rules land with the goals port.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cancel-wakeup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/tools.ts",
+    "note": "Ported as the `cancel_wakeup` tool with the v1 `action` list/cancel input and idempotent cancel result. Cancel removes the record and the backing native schedule.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cancel-wakeup.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cancel-wakeup.txt",
+    "note": "Ported with the same list/cancel guidance. The goal-wait paragraph is not carried because the goals port owns goal suspension.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/tools.ts",
+    "note": "`cron_create`, `cron_list` and `cron_delete` are all ported as separate tools with the v1 inputs, 10-task cap, 7-day expiry, one-shot clamping, idempotent delete and result text. Recurring timing and the next slot are native (`Effect` Cron through the schedule service).",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-create.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cron-create.txt",
+    "note": "Ported with the schedule guidance, one-shot clamps and the 7-day expiry. The goal-wait paragraph is not carried because the goals port owns goal suspension; the fire-time jitter sentence is dropped because native schedules do not jitter.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-list.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cron-list.txt",
+    "note": "Ported as the `cron_list` tool with the v1 list guidance; the tool lists only cron tasks. The long-form policy is in the `/schedule` command body.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-delete.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cron-delete.txt",
+    "note": "Ported as the `cron_delete` tool with the v1 idempotent delete guidance; it refuses a wakeup id and points at `cancel_wakeup` for those.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/cron.ts": {
+    "state": "native",
+    "v2": "packages/core/src/schedule.ts",
+    "note": "The hand-written 5-field engine is native: schedule times use Effect Cron (`Cron.parse`/`Cron.next`) in the schedule's zone. The wakeup plugin uses `Cron.parse`/`Cron.next` only to decide whether a fired recurring task has another slot before its 7-day expiry, so its record is retired on the last fire. v1's per-id deterministic jitter is not carried because the native loop polls a due-indexed row and does not jitter.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/cron.test.ts": {
+    "state": "native",
+    "v2": "packages/core/test/schedule.test.ts",
+    "note": "Cron parsing, next-slot and DST assertions are upstream's schedule tests (`Cron.parse`, `Cron.next`, the repeated and skipped hour). The plugin's retirement decision is covered in packages/kilo-plugin/test/wakeup.test.ts.",
+    "by": "candy-cough"
+  },
+  "patch:wakeup:9d6803e786ab": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/commands/session-list.ts",
+    "note": "`session list` is a Kilo-owned mirror of the upstream handler (`packages/kilo-cli/src/commands/session-list.ts`, registered in `main.ts`). It reads the `kilocode.wakeup` pending state once per directory in the page and adds a `scheduled <time>` status field (and `scheduledAt` in JSON) for a session with a future wakeup. v2 has no stored status map, so it reads the plugin instead.",
+    "by": "candy-cough"
+  },
   "module:packages/opencode/src/kilocode/session/drain.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/session-drain/drain.ts",
@@ -2445,5 +2579,23 @@
     "v2": "packages/schema/src/kilocode/session-drain.ts",
     "note": "Served by the kilocode.session-drain RPC method drain (contract packages/schema/src/kilocode/session-drain.ts, handler packages/kilo-plugin/src/session-drain/index.ts) with the drained event carrying the caller token. Round trip: packages/kilo-cli/test/session-drain.test.ts.",
     "by": "kilo/graceful-tower-qr8"
+  },
+  "module:packages/opencode/src/kilocode/session/goal/tool.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/goal/index.ts",
+    "note": "The v1 `goal` tool (`GoalTool` in session/goal/tool.ts, `arm` in runner.ts) is ported to the Kilo goal plugin's `goal` tool: action start|resume, the v1 order of checks and messages (active goal, permission, delegated session, archived or reverted session, objective required, 10,000 character limit), and the same permission action `goal`. `goal_report` is not carried: v2's reviewer decides completion, so the tool result text names the reviewer instead. Tests: packages/kilo-plugin/test/goal-tool.test.ts.",
+    "by": "port-v1-goal-to-vscode"
+  },
+  "patch:goals:8f2a39a24f88": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/goal/index.ts",
+    "note": "v1 paused a session's goal in `setArchived` (session.ts). The Kilo goal plugin now subscribes to `session.archived` and pauses an active goal with the reason \"The session was archived\", covered by packages/kilo-plugin/test/goal-tool.test.ts.",
+    "by": "port-v1-goal-to-vscode"
+  },
+  "module:packages/opencode/src/kilocode/soul.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/soul/soul.txt",
+    "note": "The persona keeps v1's identity line and is trimmed to personality only, on review of #16056: v1's tone rules (direct, clear and technical, no openers such as \"Great\", no closing offers) are condensed into three bullets. Not carried in the persona, on purpose: v1's working rules (work iteratively in steps, do not ask for more information than necessary, use the question tool only for a real answer, follow the codebase's conventions), which are left to the v2 model templates, agent prompts and tool descriptions, with two known gaps: the default and Claude templates have no line about asking the user sparingly, and agents with their own prompt (ask, debug, orchestrator) skip the base template and so no longer get the conventions rule; and the absolute ban on ending a message with a question, which is narrowed to questions that only prolong the conversation, because the debug, plan and orchestrator prompts tell the agent to ask the user. KiloSoulPlugin (packages/kilo-plugin/src/soul/index.ts, registered in KiloPostPlugins after the Gateway prompt and the upstream prompt optimizer) puts it first in the system prompt of every agent, compaction and generate request (goal reviewer, cache warming, the session.generate API), including agents with their own prompt, and leaves title requests out, which matches shouldIncludePersona and the soul lines of llm/request.ts. v2 has no OpenAI OAuth instructions split, so the first system part also covers OAuth. Tests: packages/kilo-plugin/test/soul.test.ts.",
+    "by": "soul-persona"
   }
 }

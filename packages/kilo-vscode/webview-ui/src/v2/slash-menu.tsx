@@ -6,7 +6,11 @@ import { hasChildren, matchSlash, slashQuery, type SlashEntry } from "./slash"
 /** Writes the draft and the cursor; the composer keeps its own bookkeeping for a text change. */
 type Replace = (value: string, cursor: number) => void
 
-export function createSlashMenu(entries: Accessor<SlashEntry[]>) {
+/**
+ * `pick` takes over a selected entry when it returns true, for example the goal command, which enters goal mode
+ * instead of writing itself into the draft.
+ */
+export function createSlashMenu(entries: Accessor<SlashEntry[]>, pick?: (entry: SlashEntry) => boolean) {
   const [query, setQuery] = createSignal<string>()
   const [index, setIndex] = createSignal(0)
   // Where the slash text ends in the draft; the text after it survives a selection.
@@ -24,6 +28,11 @@ export function createSlashMenu(entries: Accessor<SlashEntry[]>) {
 
   const select = (entry: SlashEntry, draft: string, replace: Replace) => {
     const rest = draft.slice(state.end)
+    if (pick?.(entry)) {
+      close()
+      replace(rest.trimStart(), 0)
+      return
+    }
     if (entry.kind === "action" && !hasChildren(entries(), entry)) {
       close()
       replace(rest, 0)

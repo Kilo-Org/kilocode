@@ -13,7 +13,7 @@ import {
   type MarketplaceRpc,
 } from "../webview-ui/src/v2/marketplace-data"
 
-const labels = { agent: "Agent", skill: "Skill", mcp: "MCP Server" }
+const labels = { agent: "Agent", skill: "Skill", mcp: "MCP Server", plugin: "Plugin" }
 
 function item(id: string, kind: MarketplaceItem["kind"], overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
   return {
@@ -62,7 +62,7 @@ describe("marketplace data", () => {
       }),
     })
     await data.load()
-    expect(data.items().map((entry) => entry.id).sort()).toEqual(["agent-one", "skill-one"])
+    expect(data.items().map((entry) => entry.id).sort()).toEqual(["agent-one", "plugin-one", "skill-one"])
     expect(data.errors()).toEqual(["mcp: offline"])
     expect(data.fetching()).toBe(false)
   })
@@ -93,7 +93,7 @@ describe("marketplace data", () => {
     await data.load()
     await data.refreshInstalled()
     expect(data.errors()).toEqual([])
-    expect(data.items().length).toBe(3)
+    expect(data.items().length).toBe(4)
     expect(data.installedError()).toBe("records failed")
   })
 

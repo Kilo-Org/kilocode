@@ -68,6 +68,22 @@ test("flags a tools.opencode reference in a bundled text asset", () => {
   expect(findings.map((f) => f.kind)).toEqual(["namespace-leak", "namespace-leak"])
 })
 
+test("flags a prompt template that names OpenCode and is not intercepted", () => {
+  const findings = KiloBrandingAudit.auditFile(
+    "core/src/plugin/system-prompt/new.txt",
+    "You are OpenCode, a coding agent. Run `opencode run` to start.",
+  )
+  expect(findings.map((f) => f.kind)).toEqual(["missing-interception"])
+})
+
+test("flags the schedule prompt's namespace if its transform is lost", () => {
+  const findings = KiloBrandingAudit.auditNamespace(
+    "kilo-plugin/src/command/new.txt",
+    "Use the schedule tools in the `opencode` namespace.",
+  )
+  expect(findings.map((f) => f.kind)).toEqual(["namespace-leak"])
+})
+
 test("baseline is clean: no unexpected unbranded OpenCode on the audited surface", async () => {
   const { unexpected, stale, unparseable } = await KiloBrandingAudit.run()
   expect(unexpected.map((f) => `${f.file}:${f.line} ${f.snippet}`)).toEqual([])

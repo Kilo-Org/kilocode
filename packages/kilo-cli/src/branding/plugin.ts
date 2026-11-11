@@ -17,6 +17,7 @@ export const brandingPlugin: BunPlugin = {
     build.onLoad({ filter: new RegExp(`[/\\\\]packages[/\\\\](?:${files})$`) }, async (args) => {
       const key = args.path.replaceAll("\\", "/").split("/packages/").at(-1) ?? args.path
       const contents = KiloBranding.transform(args.path, await Bun.file(args.path).text())
+      if (args.path.endsWith(".txt")) return { loader: "js", contents: `export default ${JSON.stringify(contents)}` }
       if (!args.path.endsWith(".tsx")) return { loader: "ts", contents }
       const { transformAsync } = await import("@babel/core")
       const solid = await import("babel-preset-solid")

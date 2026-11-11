@@ -24,6 +24,12 @@ export const overrides = [
   },
   { file: "cli/src/acp/service.ts", from: "Login with opencode", to: "Login with Kilo" },
   { file: "tui/src/app.tsx", from: "Update OpenCode", to: "Kilo update instructions" },
+  // The lowercase product name as the agent's identity, which the command rule would turn into `kilo2`.
+  {
+    file: "core/src/plugin/system-prompt/trinity.txt",
+    from: "You are opencode, an interactive",
+    to: "You are Kilo, an interactive",
+  },
 ] as const satisfies ReadonlyArray<{ file: string; from: string; to: string }>
 
 // Exact fragments that are not a simple word swap: domains, the upstream repo,

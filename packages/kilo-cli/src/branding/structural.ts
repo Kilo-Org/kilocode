@@ -74,6 +74,8 @@ const logic: Record<string, ReadonlyArray<readonly [string, string, number]>> = 
   ],
   // Code Mode paths of the tools a schedule check may not call.
   "core/src/schedule/check.ts": [['"opencode.', '"kilo.', 8]],
+  // The schedule command prompt names the namespace in prose, which the command rule would turn into `kilo2`.
+  "core/src/plugin/command/schedule.txt": [["the `opencode` namespace", "the `kilo` namespace", 1]],
 }
 
 const OAUTH_PAGE = "core/src/oauth/page.ts"
