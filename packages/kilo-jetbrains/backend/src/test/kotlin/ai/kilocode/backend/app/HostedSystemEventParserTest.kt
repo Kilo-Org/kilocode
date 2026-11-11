@@ -1,8 +1,10 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.rpc.dto.HostedIDs
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -36,7 +38,7 @@ class HostedSystemEventParserTest {
 
     @Test
     fun `cloud error has generic failure semantics without forwarding raw errors`() {
-        for (code in listOf("null", "\"Private error at /home/user\"", "\"${"a".repeat(65)}\"", "{}")) {
+        for (code in listOf("null", "\"Private error at /home/user\"", "\"workspace_setup_failed\"", "\"${"a".repeat(65)}\"", "{}")) {
             val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
                 {"type":"cloud.status","properties":{"cloudStatus":{"type":"error",
                     "safeError":$code,"message":"Private server error","error":{"message":"Secret"}}}}
@@ -44,6 +46,9 @@ class HostedSystemEventParserTest {
             assertEquals("error", event.cloudStatus)
             assertNull(event.failure)
             assertNull(event.message)
+            assertNull(event.detail)
+            assertNull(event.output)
+            assertFalse(event.outputTruncated)
         }
     }
 
@@ -122,6 +127,7 @@ class HostedSystemEventParserTest {
         assertEquals("Receiving objects: 33%", event.message)
         assertEquals("step_progress", event.action)
         assertEquals("cloning", event.step)
+        assertEquals("clone_1", event.stepID)
         assertEquals(1234.0, event.observedAt)
         assertEquals("attempt_1", event.attemptID)
         assertEquals(3L, event.revision)
@@ -168,6 +174,223 @@ class HostedSystemEventParserTest {
         """.trimIndent()))
         assertEquals("step_completed", event.action)
         assertEquals("Cloned", event.message)
+    }
+
+    @Test
+    fun `separate Cloud attempt command and phase snapshots retain their own identities and revisions`() {
+        val attempt = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,
+                "attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59",
+                "triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":21,"timestamp":1793812765086,
+                "step":"workspace_setup","message":"Preparation snapshot","action":"attempt_snapshot",
+                "attempt":{"id":"e718c48d-eae1-451a-a773-c84ddff94d59","status":"failed","revision":21,
+                    "completedAt":1793812765086,"safeError":"workspace_setup_failed"}}}}
+        """.trimIndent()))
+        val command = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,
+                "attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59",
+                "triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":19,"timestamp":1793812765084,
+                "step":"setup_commands","message":"Preparation snapshot","action":"step_snapshot",
+                "stepId":"setup_command:0","stepSnapshot":{"id":"setup_command:0","key":"setup_commands",
+                    "kind":"setup_command","label":"Setup command 1","status":"failed","revision":19,
+                    "commandIndex":0,"commandCount":1,"parentStepId":"phase:setup_commands",
+                    "outputTail":"bash: line 1: cd: cloud-agent: No such file or directory\n",
+                    "outputTruncated":false,"safeError":"Setup command 1 failed","exitCode":1}}}}
+        """.trimIndent()))
+        val phase = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,
+                "attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59",
+                "triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":20,"timestamp":1793812765085,
+                "step":"setup_commands","message":"Preparation snapshot","action":"step_snapshot",
+                "stepId":"phase:setup_commands","stepSnapshot":{"id":"phase:setup_commands","key":"setup_commands",
+                    "kind":"phase","label":"setup commands","status":"failed","revision":20,
+                    "safeError":"workspace_setup_failed"}}}}
+        """.trimIndent()))
+
+        assertEquals("attempt_failed", attempt.action)
+        assertEquals("workspace_setup_failed", attempt.failure)
+        assertNull(attempt.step)
+        assertNull(attempt.stepID)
+        assertNull(attempt.stepKind)
+        assertNull(attempt.message)
+        assertEquals(listOf(21L, 19L, 20L), listOf(attempt.revision, command.revision, phase.revision))
+        assertEquals(attempt.attemptID, command.attemptID)
+        assertEquals(attempt.attemptID, phase.attemptID)
+        assertEquals(attempt.triggerMessageID, command.triggerMessageID)
+        assertEquals("setup_commands", command.step)
+        assertEquals("failed", command.action)
+        assertEquals("setup_command:0", command.stepID)
+        assertEquals("setup_command", command.stepKind)
+        assertNull(command.failure)
+        assertEquals("Setup command 1 failed (exit code 1)\nbash: line 1: cd: cloud-agent: No such file or directory\n", command.detail)
+        assertEquals("bash: line 1: cd: cloud-agent: No such file or directory\n", command.output)
+        assertFalse(command.outputTruncated)
+        assertEquals("phase:setup_commands", phase.stepID)
+        assertEquals("phase", phase.stepKind)
+        assertEquals("workspace_setup_failed", phase.failure)
+        assertEquals("setup commands failed", phase.detail)
+    }
+
+    @Test
+    fun `failed setup command preserves the full provider bounded multiline output tail`() {
+        val output = "  ${"x".repeat(125)}\n".repeat(512)
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands","stepId":"setup_command:5",
+                "stepSnapshot":{"id":"setup_command:5","kind":"setup_command","key":"setup_commands",
+                    "label":"Setup command 6","status":"failed","exitCode":128,
+                    "safeError":"Setup command 6 failed","outputTail":${JsonPrimitive(output)}}}}}
+        """.trimIndent()))
+
+        assertEquals(65_536, output.toByteArray().size)
+        assertNull(event.failure)
+        assertEquals("Setup command 6 failed (exit code 128)\n$output", event.detail)
+        assertEquals("setup_command:5", event.stepID)
+        assertEquals("setup_command", event.stepKind)
+        assertEquals(output, event.output)
+    }
+
+    @Test
+    fun `failed command without output retains its exit code and label`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"action":"step_snapshot",
+                "stepSnapshot":{"id":"setup_command:0","key":"setup_commands","kind":"setup_command",
+                    "label":"Setup command 1","status":"failed","safeError":"Setup command 1 failed","exitCode":1}}}}
+        """.trimIndent()))
+
+        assertEquals("Setup command 1 failed (exit code 1)", event.detail)
+        assertEquals("setup_command:0", event.stepID)
+    }
+
+    @Test
+    fun `failed command output retains blank lines and whitespace without trimming`() {
+        val output = "\n  \t\n"
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"action":"step_snapshot",
+                "stepSnapshot":{"label":"Setup command 1","status":"failed","exitCode":1,
+                    "outputTail":${JsonPrimitive(output)}}}}}
+        """.trimIndent()))
+
+        assertEquals("Setup command 1 failed (exit code 1)\n$output", event.detail)
+    }
+
+    @Test
+    fun `live command start retains the provider step kind and identity`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_started",
+                "step":"setup_commands","stepId":"setup_command:0","kind":"setup_command","label":"Setup command 1"}}}
+        """.trimIndent()))
+
+        assertEquals("setup_command:0", event.stepID)
+        assertEquals("setup_command", event.stepKind)
+    }
+
+    @Test
+    fun `live command failure retains its provider safe label and exit code`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_failed",
+                "step":"setup_commands","stepId":"setup_command:0","safeError":"Setup command 1 failed","exitCode":1}}}
+        """.trimIndent()))
+
+        assertEquals("setup_command:0", event.stepID)
+        assertEquals("step_failed", event.action)
+        assertEquals("Setup command 1 failed (exit code 1)", event.detail)
+        assertNull(event.failure)
+    }
+
+    @Test
+    fun `live step output hands off the complete chunk without trimming or treating it as an error`() {
+        val output = "First line\n  ${"detail ".repeat(60)}\nLast line\n"
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"attempt_live",
+                "revision":2,"timestamp":1234,"action":"step_output","step":"setup_commands",
+                "stepId":"setup_command:0","output":${JsonPrimitive(output)}}}}
+        """.trimIndent()))
+
+        assertEquals("step_output", event.action)
+        assertEquals("setup_command:0", event.stepID)
+        assertEquals(output, event.output)
+        assertFalse(event.outputTruncated)
+        assertNull(event.detail)
+        assertNull(event.failure)
+    }
+
+    @Test
+    fun `step snapshot output exposes only a typed provider truncation flag`() {
+        for (flag in listOf("true", "false", "\"true\"", "null", "{}")) {
+            val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+                {"type":"preparing","properties":{"preparation":{"action":"step_snapshot",
+                    "stepSnapshot":{"id":"setup_command:0","kind":"setup_command","status":"running",
+                        "outputTail":"First line\nLast line\n","outputTruncated":$flag}}}}
+            """.trimIndent()))
+
+            assertEquals("First line\nLast line\n", event.output)
+            assertEquals(flag == "true", event.outputTruncated)
+        }
+    }
+
+    @Test
+    fun `cloud status never exposes preparation output or raw cloud error strings`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"cloud.status","properties":{"cloudStatus":{"type":"error",
+                "safeError":"Private error at /home/user","message":"Private server error"},
+                "preparation":{"action":"step_output","output":"Private output","outputTruncated":true}}}
+        """.trimIndent()))
+
+        assertNull(event.failure)
+        assertNull(event.message)
+        assertNull(event.detail)
+        assertNull(event.output)
+        assertFalse(event.outputTruncated)
+    }
+
+    @Test
+    fun `failed setup command without output exposes its safe error detail`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands",
+                "stepSnapshot":{"key":"setup_commands","label":"Setup command 6","status":"failed",
+                    "safeError":"Setup command 6 failed"}}}}
+        """.trimIndent()))
+
+        assertNull(event.failure)
+        assertEquals("Setup command 6 failed", event.detail)
+    }
+
+    @Test
+    fun `provider safe error detail takes precedence over the synthesized failed label`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands",
+                "stepSnapshot":{"key":"setup_commands","label":"Setup command 6","status":"failed",
+                    "safeError":"Permission denied"}}}}
+        """.trimIndent()))
+
+        assertNull(event.failure)
+        assertEquals("Permission denied", event.detail)
+    }
+
+    @Test
+    fun `failed setup command without output or safe error falls back to its label`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"step_snapshot",
+                "step":"setup_commands",
+                "stepSnapshot":{"key":"setup_commands","label":"Setup command 6","status":"failed"}}}}
+        """.trimIndent()))
+
+        assertNull(event.failure)
+        assertEquals("Setup command 6 failed", event.detail)
+    }
+
+    @Test
+    fun `failed attempt without a failed step keeps its safe error detail`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"action":"attempt_snapshot",
+                "attempt":{"status":"failed","safeError":"Preparation did not complete"}}}}
+        """.trimIndent()))
+
+        assertNull(event.failure)
+        assertEquals("Preparation did not complete", event.detail)
     }
 
     @Test

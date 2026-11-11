@@ -139,6 +139,10 @@ async function fixture(
     const pending: ServerResponse[] = []
     server.on("request", (request, response) => {
       requests.push(request.url ?? "/")
+      if (request.url === "/flaky" && requests.filter((url) => url === "/flaky").length === 1) {
+        request.socket.destroy()
+        return
+      }
       if (request.url === "/concurrent") {
         pending.push(response)
         if (pending.length === 2) for (const response of pending) response.end(bytes)
@@ -206,6 +210,16 @@ test.serial("recovers a truncated cache with one verified download", async () =>
     expect(await readFile(executable, "utf8")).toBe("fixture-runtime")
     expect(await readFile(file)).toEqual(bytes)
     expect(requests).toEqual(["/good"])
+  })
+})
+
+test.serial("retries a failed download before giving up", async () => {
+  await fixture(async ({ file, bytes, item, input, requests }) => {
+    item.tarball = new URL("/flaky", item.tarball).href
+    const executable = await stage(input)
+    expect(await readFile(executable, "utf8")).toBe("fixture-runtime")
+    expect(await readFile(file)).toEqual(bytes)
+    expect(requests).toEqual(["/flaky", "/flaky"])
   })
 })
 

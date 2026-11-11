@@ -204,7 +204,7 @@ internal class KiloToolWindowSetupService(
 
             val actions = listOfNotNull(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),
-                ActionManager.getInstance().getAction("Kilo.NewWorktree"),
+                ActionManager.getInstance().getAction("Kilo.AgentManager.Add"),
                 Separator.create(),
                 ActionManager.getInstance().getAction("Kilo.History"),
             )

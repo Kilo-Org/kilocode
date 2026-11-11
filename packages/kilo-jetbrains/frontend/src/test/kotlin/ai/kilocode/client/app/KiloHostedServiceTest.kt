@@ -2,7 +2,12 @@ package ai.kilocode.client.app
 
 import ai.kilocode.client.testing.TestLog
 import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.HostedAgentDto
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedRepositoryDto
+import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
@@ -52,6 +57,99 @@ class KiloHostedServiceTest {
         SwingUtilities.invokeAndWait { service.refresh("/repo") }
 
         assertEquals(false, withTimeout(WAIT) { thread.await() })
+    }
+
+    @Test
+    fun `terminal setup failure does not leave the workspace presentation starting`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val status = HostedWorkspaceStatusDto(ref, "active", "starting", "sandbox_starting", 100.0)
+        val failed = HostedSystemEventDto(key, "preparing", action = "attempt_failed", cloudStatus = "error",
+            failure = "workspace_setup_failed")
+        val state = KiloHostedService.HostedState(statuses = mapOf(ref.key to status),
+            preparations = mapOf(key to failed))
+
+        assertEquals("failed", state.presentation(ref)?.computeStatus)
+        assertEquals("starting", state.statuses[ref.key]?.computeStatus)
+        assertEquals("starting", state.copy(preparations = mapOf(key to failed.copy(
+            action = "attempt_started", cloudStatus = "preparing", failure = null,
+        ))).presentation(ref)?.computeStatus)
+        assertEquals("sleeping", state.copy(statuses = mapOf(ref.key to status.copy(computeStatus = "sleeping")))
+            .presentation(ref)?.computeStatus)
+    }
+
+    @Test
+    fun `active workspace without a preparation record is ready`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val state = KiloHostedService.HostedState(
+            statuses = mapOf(ref.key to HostedWorkspaceStatusDto(ref, "active", "active", "sandbox_ready", 100.0)),
+        )
+
+        // A session created after the sandbox came up has no preparation events of its own; it must
+        // not look like it is preparing forever.
+        assertEquals(HostedReadiness.Ready, state.readiness(ref, "${ref.key}:new"))
+    }
+
+    @Test
+    fun `booting workspace without a preparation record still prepares`() {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val state = KiloHostedService.HostedState(
+            statuses = mapOf(ref.key to HostedWorkspaceStatusDto(ref, "active", "starting", "sandbox_starting", 100.0)),
+        )
+
+        assertEquals(HostedReadiness.Preparing, state.readiness(ref, "${ref.key}:new"))
+    }
+
+    @Test
+    fun `workspace and session creation retain the submitted prompt for one editor seed`() = runBlocking {
+        val rpc = FakeRpc()
+        val session = session("one")
+        rpc.mutation = HostedMutationResultDto(session = session, messageID = "msg_accepted")
+        var enabled = true
+        val service = KiloHostedService(cs, rpc, gate = { enabled }, log = TestLog())
+        val agent = HostedAgentDto("code", "kilo/kilo-auto/free", "high")
+        service.create(HostedCreateWorkspaceDto(
+            HostedRepositoryDto("github", repo = "org/repo"), "profile", "Tell me about Kilo Code", agent,
+            "create", "msg_requested",
+        ))
+
+        val prompt = service.takePrompt(session.id)
+        assertEquals("Tell me about Kilo Code", prompt?.parts?.single()?.text)
+        assertEquals("msg_accepted", prompt?.messageID)
+        assertEquals("kilo", prompt?.providerID)
+        assertEquals("kilo-auto/free", prompt?.modelID)
+        assertEquals("high", prompt?.variant)
+        assertNull(service.takePrompt(session.id))
+
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        service.start(ref, HostedStartSessionDto("Another task", agent, "start", "msg_second"))
+        assertEquals("Another task", service.takePrompt(session.id)?.parts?.single()?.text)
+        service.start(ref, HostedStartSessionDto("Private task", agent, "start", "msg_third"))
+        enabled = false
+        service.refresh("/repo")
+        assertNull(service.takePrompt(session.id))
+    }
+
+    @Test
+    fun `seeded prompts are bounded when editors never open`() = runBlocking {
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val agent = HostedAgentDto("code", "kilo/kilo-auto/free")
+        repeat(17) { index ->
+            val session = session("bounded-$index")
+            rpc.mutation = HostedMutationResultDto(session = session, messageID = "msg_accepted_$index")
+            service.create(HostedCreateWorkspaceDto(
+                HostedRepositoryDto("github", repo = "org/repo"),
+                "profile",
+                "prompt $index",
+                agent,
+                "create-$index",
+                "msg_request_$index",
+            ))
+        }
+
+        assertNull(service.takePrompt(session("bounded-0").id))
+        assertEquals("prompt 16", service.takePrompt(session("bounded-16").id)?.parts?.single()?.text)
     }
 
     @Test
@@ -212,6 +310,68 @@ class KiloHostedServiceTest {
             assertNull(service.state.value.preparation(key))
             assertEquals("Finishing setup", service.state.value.failure(key)?.message)
             assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `failed attempt replay retains command output arriving after the terminal snapshot`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val failed = HostedSystemEventDto(key, "preparing", action = "attempt_failed",
+                failure = "workspace_setup_failed", attemptID = "attempt_1", revision = 21, observedAt = 120.0)
+            rpc.send(failed)
+            val detail = "Setup command 1 (exit 1)\nbash: line 1: cd: cloud-agent: No such file or directory"
+            rpc.send(failed.copy(step = "setup_commands", action = "failed", detail = detail, revision = 19,
+                observedAt = 110.0, stepID = "setup_command:0", stepKind = "setup_command"))
+
+            assertEquals(detail, service.state.value.failure(key)?.detail)
+            assertEquals(21L, service.state.value.failure(key)?.revision)
+            assertNull(service.state.value.preparation(key))
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 130.0))
+            assertEquals(detail, service.state.value.failure(key)?.detail)
+            rpc.send(failed.copy(step = "setup_commands", detail = null))
+            assertEquals(detail, service.state.value.failure(key)?.detail)
+            rpc.send(failed.copy(step = "setup_commands", action = "failed", detail = "setup commands failed",
+                revision = 20, stepID = "phase:setup_commands", stepKind = "phase"))
+            assertEquals(detail, service.state.value.failure(key)?.detail)
+
+            rpc.send(failed.copy(action = "attempt_started", failure = null, attemptID = "attempt_2",
+                revision = 1, observedAt = 200.0))
+            assertNull(service.state.value.failure(key))
+            assertNull(service.state.value.preparation(key)?.detail)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `live command failure retains its output through parent and attempt failure events`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val detail = "Setup command 1 (exit 1)\nbash: line 1: cd: cloud-agent: No such file or directory"
+            val step = HostedSystemEventDto(key, "preparing", action = "failed", step = "setup_commands",
+                detail = detail, attemptID = "attempt_1", revision = 19, observedAt = 110.0,
+                stepID = "setup_command:0", stepKind = "setup_command")
+            rpc.send(step)
+            rpc.send(step.copy(failure = "workspace_setup_failed", detail = "setup commands failed",
+                revision = 20, stepID = "phase:setup_commands", stepKind = "phase"))
+            rpc.send(step.copy(action = "attempt_failed", failure = "workspace_setup_failed", detail = null,
+                revision = 21, step = null, stepID = null, stepKind = null))
+
+            assertEquals(detail, service.state.value.failure(key)?.detail)
+            assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+            assertEquals(21L, service.state.value.failure(key)?.revision)
+            assertEquals("setup_command:0", service.state.value.failure(key)?.stepID)
         } finally { Disposer.dispose(parent) }
     }
 
@@ -402,6 +562,39 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `refresh queued during a discovery replays after the in-flight run`() = runBlocking(Dispatchers.Default) {
+        val started = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        val rpc = object : KiloHostedRpcApi by FakeRpc() {
+            override suspend fun workspaces(
+                repositoryUrl: String?,
+                cursor: String?,
+                organizationID: String?,
+            ): HostedWorkspaceListDto {
+                if (calls.incrementAndGet() == 1) {
+                    started.complete(Unit)
+                    gate.await()
+                    return HostedWorkspaceListDto(listOf(workspace("old")))
+                }
+                return HostedWorkspaceListDto(listOf(workspace("fresh")))
+            }
+        }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+
+        service.refresh("/repo")
+        withTimeout(WAIT) { started.await() }
+        service.refresh("/repo")
+        gate.complete(Unit)
+
+        val state = withTimeout(WAIT) {
+            service.state.first { !it.loading && it.items.singleOrNull()?.ref?.workspaceID == "wrk_fresh" }
+        }
+        assertEquals(2, calls.get())
+        assertEquals("wrk_fresh", state.items.single().ref.workspaceID)
+    }
+
+    @Test
     fun `live status is ordered independently from preparation and preserves billing`() = runBlocking {
         val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
         val key = "${ref.key}:same"
@@ -571,6 +764,35 @@ class KiloHostedServiceTest {
             rpc.send(attempt.copy(step = "cloning", action = "running", message = "Old attempt",
                 observedAt = 9999.0, revision = 100))
             assertEquals("attempt_2", service.state.value.preparation(key)?.attemptID)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `stale preparing status cannot reopen a completed attempt`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.send(HostedSystemEventDto(key, "preparing", action = "attempt_started",
+                observedAt = 100.0, attemptID = "attempt_1", revision = 1))
+            rpc.send(HostedSystemEventDto(key, "preparing", action = "attempt_completed",
+                observedAt = 110.0, attemptID = "attempt_1", revision = 2))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("attempt_completed", service.state.value.preparations[key]?.action)
+
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing", observedAt = 0.0))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("attempt_completed", service.state.value.preparations[key]?.action)
+
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing", observedAt = 100.0))
+            assertNull(service.state.value.preparation(key))
+
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing", observedAt = 120.0))
+            assertEquals("preparing", service.state.value.preparation(key)?.cloudStatus)
         } finally { Disposer.dispose(parent) }
     }
 
@@ -834,6 +1056,7 @@ class KiloHostedServiceTest {
         var gate: CompletableDeferred<Unit>? = null
         var status: HostedWorkspaceStatusDto? = null
         var fail = false
+        var mutation = HostedMutationResultDto()
         @Volatile var statusDelay = 0L
         @Volatile var maxStatuses = 0
         private val activeStatuses = java.util.concurrent.atomic.AtomicInteger()
@@ -900,5 +1123,21 @@ class KiloHostedServiceTest {
                 events.collect { emit(it); received.send(it) }
             } finally { closed.trySend(Unit) }
         }
+
+        override suspend fun workspaceProfiles(organizationID: String?) =
+            ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto()
+        override suspend fun setPersonalDefaultProfile(profileID: String) =
+            ai.kilocode.rpc.dto.HostedProfileDefaultDto(success = true)
+
+        override suspend fun createWorkspace(request: ai.kilocode.rpc.dto.HostedCreateWorkspaceDto) =
+            mutation
+
+        override suspend fun startWorkspaceSession(
+            ref: HostedWorkspaceRefDto,
+            request: ai.kilocode.rpc.dto.HostedStartSessionDto,
+        ) = mutation
+
+        override suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            ai.kilocode.rpc.dto.HostedDeleteResultDto(ref)
     }
 }
