@@ -6,6 +6,7 @@ import { createEffect, createSignal, For, onMount, type Component } from "solid-
 import { DISPLAY_DEFAULTS, type ReasoningDisplay, type ToolDisplayLayout } from "../../../../src/protocol"
 import { getWorkStylePreset, WORK_STYLE_CHOICES, type WorkStyle } from "../../../../src/shared/work-style-presets"
 import { useLanguage } from "../../context/language"
+import { RichProvider } from "../../context/rich-provider"
 import { useDisplaySettings } from "../../v2/display-settings"
 import { applyFontSize, clampFontSize, fallbackFontSize } from "../../v2/kilo-settings"
 import { resolveReasoningDisplay } from "../../v2/reasoning-display"
@@ -332,7 +333,11 @@ const DisplayTab: Component = () => {
           />
         </SettingsRow>
       </Card>
-      <SessionPreview />
+      {/* The preview renders the transcript's Markdown, code, diff and file parts, so it needs the rich providers that
+          the Settings panel otherwise leaves out of its first paint. */}
+      <RichProvider>
+        <SessionPreview />
+      </RichProvider>
     </div>
   )
 }

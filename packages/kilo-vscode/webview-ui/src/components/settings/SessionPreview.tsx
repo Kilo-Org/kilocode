@@ -4,7 +4,7 @@ import type {
   SessionMessageAssistantTool,
   SessionMessageUser,
 } from "@opencode/client"
-import { ToolApprovalVisibilityProvider, UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
+import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/message-part"
 import { touch, useReducedMotion } from "@kilocode/kilo-ui/tool-motion"
 import { createMemo, createUniqueId, onCleanup, onMount, Show, type Component } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
@@ -12,6 +12,7 @@ import { useLanguage } from "../../context/language"
 import { AssistantMessage } from "../../v2/assistant"
 import { autoApprovalReasonVisible } from "../../v2/kilo-settings"
 import type { TurnMetadata } from "../../v2/message-status"
+import { UserMessage } from "../../v2/user"
 import { previewDuration, previewFrame } from "./session-preview-playback"
 
 const SessionPreview: Component = () => {
@@ -85,6 +86,30 @@ const SessionPreview: Component = () => {
           },
         ),
         tool(
+          "execute",
+          {
+            code: [
+              'const matches = await tools.grep({ pattern: "greet(", path: "src" })',
+              'const file = await tools.read({ filePath: "/preview/greeting.ts" })',
+              "return { matches, file }",
+            ].join("\n"),
+          },
+          JSON.stringify(
+            {
+              matches: ["src/greeting.ts:1:export function greet(name: string) {"],
+              file: "export function greet(name: string) {\n  return name.trim()\n}",
+            },
+            null,
+            2,
+          ),
+          {
+            toolCalls: [
+              { tool: "grep", status: "completed", input: { pattern: "greet(", path: "src" } },
+              { tool: "read", status: "completed", input: { filePath: "/preview/greeting.ts" } },
+            ],
+          },
+        ),
+        tool(
           "shell",
           {
             command: "bun test greeting.test.ts",
@@ -153,18 +178,10 @@ const SessionPreview: Component = () => {
           if (body) following = body.scrollHeight - body.scrollTop - body.clientHeight < 32
         }}
       >
-        {/* Same row markup as the transcript, so spacing matches a real session. */}
+        {/* The real message rows, so spacing matches a real session. */}
         <div ref={content} class="settings-session-preview-content">
-          <div class="vscode-session-turn" data-row="user">
-            <div class="vscode-session-turn-user">
-              <UserMessageDisplay message={sample.user} />
-            </div>
-          </div>
-          <div class="vscode-session-turn" data-row="assistant">
-            <div class="vscode-session-turn-assistant">
-              <AssistantMessage message={state.message} session={state.message.id} metadata={meta()} />
-            </div>
-          </div>
+          <UserMessage message={sample.user} />
+          <AssistantMessage message={state.message} session={state.message.id} metadata={meta()} />
         </div>
       </div>
     )

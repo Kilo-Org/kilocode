@@ -3,6 +3,7 @@ import type {
   SessionMessageAssistant,
   SessionMessageIdle,
   SessionMessageInfo,
+  SessionMessageSynthetic,
   SessionMessageUser,
   SessionStructuredError,
 } from "@opencode/client"
@@ -39,7 +40,14 @@ export interface TranscriptErrorRow extends TranscriptRowBase {
   error: SessionStructuredError
 }
 
-export type TranscriptRow = TranscriptUserRow | TranscriptAssistantRow | TranscriptErrorRow
+/** Synthetic input with a description, such as the kickoff of a `/goal`, shown as one notice line. */
+export interface TranscriptNoticeRow extends TranscriptRowBase {
+  type: "notice"
+  message: SessionMessageSynthetic
+  text: string
+}
+
+export type TranscriptRow = TranscriptUserRow | TranscriptAssistantRow | TranscriptErrorRow | TranscriptNoticeRow
 
 export interface TranscriptQueuedRow {
   key: string
@@ -143,6 +151,16 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
       })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
+    } else if (message.type === "synthetic" && message.description && range) {
+      // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
+      rows.push({
+        type: "notice",
+        key: `${message.id}:notice`,
+        turn: range.turn,
+        userTurn: range.userTurn,
+        message,
+        text: message.description,
+      })
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
       // A run can fail before any step, for example without a usable model. The
       // idle row carries that error; a failed step shows its own error instead.
@@ -263,6 +281,7 @@ function sameRow(left: TranscriptRow, right: TranscriptRow) {
       sameMetadata(left.metadata, right.metadata)
     )
   }
+  if (left.type === "notice" && right.type === "notice") return left.message === right.message
   if (left.type === "error" && right.type === "error") {
     return left.message === right.message && left.error === right.error
   }

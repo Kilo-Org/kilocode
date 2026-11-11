@@ -55,7 +55,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完成（模型回報）",
+  "session.goal.complete": "完成",
   "session.goal.blocked": "受阻",
   "session.goal.restart": "重新開始目標",
   ...anacondaDesktopDict,

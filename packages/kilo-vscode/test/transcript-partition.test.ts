@@ -260,7 +260,11 @@ describe("partitionTranscript", () => {
   })
 
   test("cuts between the chunk rows of one message without moving either", () => {
-    const message = assistant({ id: "a1", created: 1, parts: textParts(TRANSCRIPT_CHUNK_SIZE * (DIRECT_TAIL_ROWS + 2)) })
+    const message = assistant({
+      id: "a1",
+      created: 1,
+      parts: textParts(TRANSCRIPT_CHUNK_SIZE * (DIRECT_TAIL_ROWS + 2)),
+    })
     const messages = [user("u1", 0), message]
     const rows = transcriptRows(messages)
     const partition = partitionTranscript(rows, [], new Set(["u1"]))
@@ -284,10 +288,7 @@ describe("partitionTranscript", () => {
       expect(new Set(shown).size).toBe(keys.length)
       expect(partition.directKeys.length).toBeLessThanOrEqual(DIRECT_TAIL_ROWS)
       if (previous) {
-        const moved = handedRows(
-          previous.directKeys,
-          new Map(partition.virtualKeys.map((key, index) => [key, index])),
-        )
+        const moved = handedRows(previous.directKeys, new Map(partition.virtualKeys.map((key, index) => [key, index])))
         expect(moved.length).toBeLessThanOrEqual(1)
         if (previous.directKeys.length === DIRECT_TAIL_ROWS) expect(moved).toEqual([previous.directKeys[0]])
       }
@@ -361,5 +362,29 @@ describe("scroll anchors", () => {
 
     expect(handedRows(["u2:user", "a2:assistant:0", "older:user"], index)).toEqual(["u2:user", "a2:assistant:0"])
     expect(handedRows(undefined, index)).toEqual([])
+  })
+})
+
+describe("transcript notices", () => {
+  const synthetic = (id: string, created: number, description?: string) =>
+    ({
+      id,
+      type: "synthetic",
+      text: "the whole goal kickoff template",
+      description,
+      metadata: { source: "goal" },
+      time: { created },
+    }) as unknown as SessionMessageInfo
+
+  test("shows a described synthetic input as one notice and hides one without a description", () => {
+    const rows = transcriptRows([
+      synthetic("s1", 1, "Goal: Ship the release"),
+      assistant({ id: "a1", created: 2, text: "Working", completed: 3 }),
+      idle("i1", 4),
+      synthetic("s2", 5),
+      assistant({ id: "a2", created: 6, text: "Still working", completed: 7 }),
+    ])
+    expect(rows.map((row) => row.type)).toEqual(["notice", "assistant", "assistant"])
+    expect(rows[0]).toMatchObject({ type: "notice", text: "Goal: Ship the release", turn: rows[1]?.turn })
   })
 })

@@ -1,5 +1,6 @@
 import type { ToolActions, UserMessagePending } from "@kilocode/kilo-ui/message-part"
-import { Match, Switch } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { Match, Show, Switch } from "solid-js"
 import type { TimelineHighlight } from "../utils/timeline/highlight"
 import { AssistantMessage, ErrorCard } from "./assistant"
 import type { TranscriptRow } from "./transcript"
@@ -44,11 +45,7 @@ export function TranscriptRowView(props: {
               searchActive={props.searchActive}
               pending={props.pending?.(row().message.id)}
               onSelectSession={props.onSelectSession}
-              onFork={
-                props.onForkMessage
-                  ? () => props.onForkMessage?.(props.session, row().message.id)
-                  : undefined
-              }
+              onFork={props.onForkMessage ? () => props.onForkMessage?.(props.session, row().message.id) : undefined}
               onRevert={
                 row().answered && props.onRevertMessage
                   ? () => {
@@ -77,6 +74,22 @@ export function TranscriptRowView(props: {
               rowKey={row().key}
               onViewTurnChanges={viewTurnChanges()}
             />
+          )}
+        </Match>
+        <Match when={props.row.type === "notice" && props.row}>
+          {(row) => (
+            <div
+              class="vscode-session-turn vscode-session-notice"
+              data-row="notice"
+              data-message={row().message.id}
+              data-row-key={row().key}
+              data-search-active={props.searchActive ? "" : undefined}
+            >
+              <Show when={row().message.metadata?.source === "goal"}>
+                <Icon name="target" size="small" />
+              </Show>
+              <span>{row().text}</span>
+            </div>
           )}
         </Match>
         <Match when={props.row.type === "error" && props.row}>

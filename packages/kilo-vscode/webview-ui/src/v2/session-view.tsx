@@ -39,6 +39,7 @@ import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
 import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
+import { createGoal } from "./goal"
 import { createPending } from "./pending"
 import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
@@ -260,13 +261,12 @@ export function SessionView(props: {
       if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
     })
   const working = createWorking(session)
+  const goal = createGoal(session, (id) => selection.commit(id, selection.draft(id)))
   // Subagent jobs feed the dock's agent stack and the stop and "continue in background" actions of subagent cards. A
   // read-only view has no dock and offers neither action.
   const jobs = createBackgroundJobs({ session })
   const actions = createMemo<ToolActions>(() =>
-    props.readOnly
-      ? props.actions
-      : { ...props.actions, stopSession: jobs.cancel, backgroundSession: jobs.promote },
+    props.readOnly ? props.actions : { ...props.actions, stopSession: jobs.cancel, backgroundSession: jobs.promote },
   )
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
@@ -400,10 +400,14 @@ export function SessionView(props: {
     // compaction either way: `now` still stops the model call and running tools, but the checkpoint finishes first
     // and the prompt follows it. Only Stop itself, and Escape with it, may cancel a compaction.
     const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
+    // The goal plugin pauses a goal whose run the user interrupts, so with an active goal a steer waits for the next
+    // step boundary instead of stopping the model call: a new message takes priority, then the goal continues, as in
+    // v1. Stop and "stop and send" still stop the run and pause the goal.
     const interrupt =
-      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
-    if (interrupt)
-      await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
+      running() &&
+      (mode === "now" ||
+        (mode === "steer" && !goal.active() && steerInterrupts(v2.data.session.message.list(id), waiting)))
+    if (interrupt) await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
     return { id, gate, model, draft }
   }
 
@@ -489,8 +493,7 @@ export function SessionView(props: {
   const slashEntries = createMemo(() =>
     mergeCatalog({
       actions: slashActions(handlers(), language.t),
-      // Goal mode needs its own composer state and banner, which this client does not have yet.
-      commands: catalog.commands().filter((command) => command.name !== "goal"),
+      commands: catalog.commands(),
       nested: reviewScopes(catalog.commands(), props.worktree === true),
       skills: catalog.skills(),
     }),
@@ -533,9 +536,13 @@ export function SessionView(props: {
       })
   }
 
+  // The goal plugin pauses an active goal when the user interrupts its run. Between runs, for example while it waits on
+  // background work, there is no run to interrupt, so Stop pauses the goal itself.
   const stop = () => {
     const id = session()
-    if (id) void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
+    if (!id) return
+    if (!running() && !working.submitting() && goal.active()) return goal.control("pause")
+    void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
   }
 
   // Escape interrupts the running turn, as v1's ChatView did. A question dock, popover or selector that handles
@@ -545,7 +552,7 @@ export function SessionView(props: {
     if (props.readOnly) return
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
-      if (!running() && !working.submitting()) return
+      if (!running() && !working.submitting() && !goal.active()) return
       event.preventDefault()
       stop()
     }
@@ -595,9 +602,7 @@ export function SessionView(props: {
         <Show when={!props.readOnly}>
           <div class="chat-input">
             <Show when={v2.handshake() ?? v2.failure()}>
-              {(failure) => (
-                <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />
-              )}
+              {(failure) => <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />}
             </Show>
             <Show when={permissions()[0]} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
@@ -618,13 +623,16 @@ export function SessionView(props: {
               retry={working.retry()}
               onCancel={stop}
               onScrollToBottom={() => scrollToBottom?.()}
+              goal={goal}
+              connected={v2.connection.status() === "connected"}
             />
             <Show when={draftKey()} keyed>
               {(key) => (
                 <PromptInput
                   draftKey={key}
                   session={session()}
-                  running={running()}
+                  // An active goal keeps working between its runs, so the composer offers Stop as main did.
+                  running={running() || goal.active()}
                   disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
                   blocked={blocked()}
                   questioning={questioning()}
