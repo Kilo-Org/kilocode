@@ -94,6 +94,6 @@ export function pendingActions(status: DataPendingStatus, editable: boolean): Pe
   return ["now", "queue", ...edit, "delete"]
 }
 
-function isMac(): boolean {
+export function isMac(): boolean {
   return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 }

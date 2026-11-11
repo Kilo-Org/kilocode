@@ -1,11 +1,22 @@
 import { onCleanup } from "solid-js"
 import type { BrowserReference } from "../../../src/shared/browser-feedback"
-import type { ReviewCommentEntry } from "../../../src/shared/review-comments"
+import type { ChatReferenceData, ReviewCommentEntry } from "../../../src/shared/review-comments"
 
 export type AppendHandler = (value: string, send: boolean) => void
 
 /** Adds review comments to the composer draft, where they show as chips instead of markdown text. */
 export type ReviewAppendHandler = (comments: ReviewCommentEntry[], send: boolean) => void
+
+/** Lets the transcript quote, comment on and send passages of an answer through the composer. */
+export type ReplyHandler = {
+  /** The chat references in the draft. */
+  pending: () => ChatReferenceData[]
+  /** Adds a reference to the draft, or replaces the one with the same id. `focus` moves focus to the composer. */
+  add: (reference: ChatReferenceData, focus: boolean) => void
+  remove: (id: string) => void
+  /** Sends one reference on its own. The draft and its other references stay. */
+  send: (reference: ChatReferenceData) => void
+}
 
 /** Adds an element picked in the Integrated Browser to the composer's reference list. */
 export type ReferenceHandler = (reference: BrowserReference) => void

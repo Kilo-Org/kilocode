@@ -18,7 +18,7 @@ import { movePromptHistory } from "../hooks/usePromptHistory"
 import { kiloSettings } from "./kilo-settings"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
-import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
+import type { AppendHandler, ReferenceHandler, ReplyHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
 import { promptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
@@ -268,6 +268,8 @@ export function SessionView(props: {
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
+  // The transcript quotes and comments through the composer, so it exists only while the composer does.
+  const [reply, setReply] = createSignal<ReplyHandler>()
   const pending = createPending({
     session,
     readOnly: () => !!props.readOnly,
@@ -489,6 +491,7 @@ export function SessionView(props: {
                 onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                 onViewTurnChanges={props.onViewTurnChanges}
                 pending={pending}
+                reply={props.readOnly ? undefined : reply()}
                 question={() => (props.readOnly ? undefined : forms()[0])}
               />
             </div>
@@ -537,6 +540,7 @@ export function SessionView(props: {
                     props.onAppendReady?.(append)
                   }}
                   onReviewAppendReady={props.onReviewAppendReady}
+                  onReplyReady={setReply}
                   onReferenceReady={props.onReferenceReady}
                   onComposerReady={props.onComposerReady}
                   slash={{ entries: slashEntries, run: runSlash }}
