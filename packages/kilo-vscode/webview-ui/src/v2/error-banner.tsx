@@ -1,7 +1,7 @@
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { createSignal, Show } from "solid-js"
 import { useLanguage } from "../context/language"
-import type { Failure } from "./error"
+import { failureText, type Failure } from "./error"
 
 /**
  * The failure banner above the composer. It names what happened in a sentence, keeps the technical
@@ -10,13 +10,11 @@ import type { Failure } from "./error"
 export function ErrorBanner(props: { failure: Failure; onDismiss?: () => void }) {
   const language = useLanguage()
   const [expanded, setExpanded] = createSignal(false)
+  const message = () => failureText(props.failure, language.t)
   return (
     <div class="startup-error-banner" role="alert" data-component="v2-error">
       <div class="startup-error-header">
-        <Show
-          when={props.failure.details}
-          fallback={<span class="startup-error-message">{props.failure.message}</span>}
-        >
+        <Show when={props.failure.details} fallback={<span class="startup-error-message">{message()}</span>}>
           <button class="startup-error-toggle" aria-expanded={expanded()} onClick={() => setExpanded((open) => !open)}>
             <span
               classList={{ "startup-error-chevron": true, "startup-error-chevron-expanded": expanded() }}
@@ -24,7 +22,7 @@ export function ErrorBanner(props: { failure: Failure; onDismiss?: () => void })
             >
               <Icon name="chevron-right" size="small" />
             </span>
-            <span class="startup-error-message">{props.failure.message}</span>
+            <span class="startup-error-message">{message()}</span>
           </button>
         </Show>
         <Show when={props.onDismiss}>

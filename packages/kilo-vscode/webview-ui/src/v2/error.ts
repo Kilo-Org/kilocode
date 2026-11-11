@@ -2,9 +2,14 @@
 // ("UnexpectedStatus: 408") and a provider can wrap its rejection in serialized JSON; the alert says
 // what happened in a sentence, and the technical text moves behind its details disclosure.
 
-/** A message for an alert, plus the technical text behind its details disclosure. */
+export type Translate = (key: string, params?: Record<string, string | number | boolean>) => string
+
+/** An alert's reason: its translation key and text, plus the technical text behind its details. */
 export interface Failure {
+  readonly key: string
+  /** The English text, used where no translator is available and as the fallback of last resort. */
   readonly message: string
+  readonly params?: Record<string, string | number | boolean> | undefined
   readonly details?: string | undefined
 }
 
@@ -12,15 +17,21 @@ const connectionFailed = "Couldn't reach the Kilo server. Check that it is runni
 const unreadableResponse = "The Kilo server sent a response this client couldn't read."
 
 export function toFailure(error: unknown): Failure {
-  const message = readableMessage(error)
+  const reason = reasonFor(error)
   const details = technicalDetails(error)
-  if (details === undefined || details === message) return { message }
-  return { message, details }
+  if (details === undefined || details.trim() === "" || details === reason.message) return reason
+  return { ...reason, details }
 }
 
 /** The readable sentence for an error, or for a message the server already recorded. */
-export function readableMessage(error: unknown): string {
-  return readable(message(error))
+export function readableMessage(error: unknown, t?: Translate): string {
+  const reason = reasonFor(error)
+  return t ? failureText(reason, t) : reason.message
+}
+
+/** The alert text in the user's language, falling back to the English text of an unknown key. */
+export function failureText(failure: Failure, t: Translate): string {
+  return t(failure.key, failure.params)
 }
 
 /** The best message an unknown error value carries, before any rewriting. */
@@ -39,22 +50,60 @@ export function message(error: unknown): string {
   return serialize(error) ?? "unknown error"
 }
 
-// The client names its failure reason for the wire, and a provider can report its rejection as a JSON
-// envelope inside the message; both reach here as text, so they are rewritten into a sentence.
-function readable(message: string) {
-  if (/^Transport(?::|$)/.test(message)) return connectionFailed
-  const status = /^UnexpectedStatus(?::\s*(\d{3}))?/.exec(message)
-  if (status) return statusMessage(status[1] === undefined ? undefined : Number(status[1]))
-  if (/^(?:UnsupportedContentType|MalformedResponse|SseEventTooLarge)(?::|$)/.test(message)) return unreadableResponse
-  return unwrap(message)
+function reasonFor(error: unknown): Failure {
+  const carried = message(error)
+  if (carried.trim() === "") return unknownFailure()
+  const client = clientFailure(carried, error)
+  if (client) return client
+  const readable = unwrap(carried)
+  if (readable.trim() === "") return unknownFailure()
+  return { key: "error.failure.message", message: readable, params: { message: readable } }
 }
 
-function statusMessage(status: number | undefined) {
-  if (status === undefined) return "The Kilo server returned an unexpected status."
-  if (status === 408) return "The Kilo server took too long to respond. Try again."
-  if (status === 429) return "The Kilo server is busy right now. Try again in a moment."
-  if (status >= 500) return "The Kilo server is having trouble right now. Try again in a moment."
-  return `The Kilo server returned an unexpected status (${status}).`
+function unknownFailure(): Failure {
+  return { key: "error.failure.unknown", message: "unknown error" }
+}
+
+// The client names its failure reason for the wire, and a provider can report its rejection as a JSON
+// envelope inside the message; both reach here as text, so they are rewritten into a sentence.
+function clientFailure(message: string, error: unknown): Failure | undefined {
+  if (/^Transport(?::|$)/.test(message)) return { key: "error.failure.transport", message: connectionFailed }
+  const status = /^UnexpectedStatus(?::\s*(\d{3}))?/.exec(message)
+  if (status) return statusFailure(status[1] === undefined ? causeStatus(error) : Number(status[1]))
+  if (/^(?:UnsupportedContentType|MalformedResponse|SseEventTooLarge)(?::|$)/.test(message))
+    return { key: "error.failure.unreadable", message: unreadableResponse }
+  return undefined
+}
+
+// A `ClientError` names the status on its cause, including when its message carries no detail.
+function causeStatus(error: unknown) {
+  if (!isRecord(error) || !isRecord(error.cause)) return undefined
+  return typeof error.cause.status === "number" ? error.cause.status : undefined
+}
+
+function statusFailure(status: number | undefined): Failure {
+  if (status === undefined)
+    return {
+      key: "error.failure.statusUnknown",
+      message: "The Kilo server returned an unexpected status.",
+    }
+  if (status === 408)
+    return {
+      key: "error.failure.timeout",
+      message: "The Kilo server took too long to respond. Try again.",
+    }
+  if (status === 429)
+    return {
+      key: "error.failure.busy",
+      message: "The Kilo server is busy right now. Try again in a moment.",
+    }
+  if (status >= 500)
+    return {
+      key: "error.failure.trouble",
+      message: "The Kilo server is having trouble right now. Try again in a moment.",
+    }
+  const readable = `The Kilo server returned an unexpected status (${status}).`
+  return { key: "error.failure.status", message: readable, params: { status } }
 }
 
 // A provider can report its rejection as a JSON envelope inside the message, and the hierarchy above

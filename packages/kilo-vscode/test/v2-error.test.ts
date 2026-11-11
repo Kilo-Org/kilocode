@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import { ClientError } from "@opencode/client"
-import { readableMessage, toFailure } from "../webview-ui/src/v2/error"
+import { dict } from "../webview-ui/src/i18n/en"
+import { failureText, readableMessage, toFailure } from "../webview-ui/src/v2/error"
+
+const t = (key: string, params?: Record<string, string | number | boolean>) =>
+  (dict as Record<string, string>)[key]?.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params?.[name] ?? "")) ??
+  key
 
 describe("chat error text", () => {
   test("names a timed-out server instead of the transport reason", () => {
@@ -44,8 +49,19 @@ describe("chat error text", () => {
     )
   })
 
-  test("keeps an unreadable failure harmless", () => {
-    expect(toFailure(undefined)).toEqual({ message: "unknown error" })
+  test("never renders a blank alert", () => {
+    expect(toFailure("")).toEqual({ key: "error.failure.unknown", message: "unknown error" })
+    expect(toFailure("   ").message).toBe("unknown error")
+    expect(toFailure(undefined).message).toBe("unknown error")
+  })
+
+  test("resolves a known reason through the locale and passes a server message through", () => {
+    const timeout = toFailure(new ClientError("UnexpectedStatus", { cause: { status: 408 }, detail: "408" }))
+    expect(failureText(timeout, t)).toBe("The Kilo server took too long to respond. Try again.")
+    expect(failureText(toFailure({ message: "Permission denied" }), t)).toBe("Permission denied")
+    expect(failureText(toFailure(new ClientError("UnexpectedStatus", { cause: { status: 418 } })), t)).toBe(
+      "The Kilo server returned an unexpected status (418).",
+    )
   })
 
   test("keeps the stack as details for an uncaught error", () => {

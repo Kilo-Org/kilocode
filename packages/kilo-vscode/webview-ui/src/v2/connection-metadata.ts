@@ -55,7 +55,11 @@ export function createConnectionMetadata(input: {
       .catch((err: unknown) => {
         if (read !== state.handshake) return
         const failure = toFailure(err)
-        setHandshake({ message: "Not a Kilo v2 server.", details: failure.details ?? failure.message })
+        setHandshake({
+          key: "error.failure.notKilo",
+          message: "Not a Kilo v2 server.",
+          details: failure.details ?? failure.message,
+        })
       })
   }
   createEffect(

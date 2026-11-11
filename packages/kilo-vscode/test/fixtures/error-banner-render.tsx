@@ -40,6 +40,7 @@ document.body.append(host)
 
 let dismissed = 0
 const failure = {
+  key: "error.failure.timeout",
   message: "The Kilo server took too long to respond. Try again.",
   details: "ClientError: UnexpectedStatus: 408\n    at stream",
 }
@@ -83,7 +84,7 @@ document.body.append(quiet)
 const disposeQuiet = render(
   () => (
     <LanguageContext.Provider value={language}>
-      <ErrorBanner failure={{ message: "Not a Kilo v2 server." }} />
+      <ErrorBanner failure={{ key: "error.failure.notKilo", message: "Not a Kilo v2 server." }} />
     </LanguageContext.Provider>
   ),
   quiet,

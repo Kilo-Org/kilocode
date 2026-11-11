@@ -246,7 +246,7 @@ export function ErrorCard(props: { error: { message: string } }) {
     <Card variant="error" class="error-card" role="alert">
       <div class="error-card-body">
         <Icon name="warning" size="small" />
-        <div class="error-card-message">{readableMessage(props.error)}</div>
+        <div class="error-card-message">{readableMessage(props.error, language.t)}</div>
       </div>
       <Collapsible variant="ghost">
         <Collapsible.Trigger class="error-details-trigger">

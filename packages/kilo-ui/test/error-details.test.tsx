@@ -28,8 +28,8 @@ test("shows the technical record of a structured error as readable JSON", () => 
 })
 
 test("falls back to the text of a value JSON cannot hold", () => {
-  const value = mount(() => <ErrorDetails error="plain failure" />)
+  const value = mount(() => <ErrorDetails error={10n} />)
   mounted.push(value)
 
-  expect(value.host.querySelector(".error-detail-pre")?.textContent).toBe("plain failure")
+  expect(value.host.querySelector(".error-detail-pre")?.textContent).toBe("10")
 })
