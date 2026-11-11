@@ -3,6 +3,7 @@ import { getErrorMessage } from "./errors"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { recordForkHandoff } from "./fork-handoff"
 import { canonicalizePath, samePath } from "./project/paths"
+import { moveSession } from "./session-move"
 
 export interface ForkContext {
   client: () => Promise<OpenCodeClient>
@@ -63,7 +64,7 @@ export async function forkSession(
 }
 
 /** Forks the session into the directory and returns the fork with its final location. */
-async function forkInto(
+export async function forkInto(
   client: OpenCodeClient,
   sessionId: string,
   directory: string | undefined,
@@ -84,8 +85,7 @@ async function forkInto(
       })
     })
   if (!directory || samePath(canonicalizePath(forked.location.directory), canonicalizePath(directory))) return forked
-  await client.session.move({ sessionID: forked.id, directory })
-  return { ...forked, location: { ...forked.location, directory } }
+  return moveSession(client, forked.id, directory)
 }
 
 /** True when the server rejects the fork because the source has no messages. */
