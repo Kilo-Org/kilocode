@@ -1999,7 +1999,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         createGate.complete(Unit)
         waitUntil { rows(panel) == 2 && edt { selectedValue(view)?.key } == createdRef.key }
-        assertEquals(2, calls.size)
+        waitUntil { calls.size == 2 }
 
         val removal = project.service<HostedWorkspaceRemoval>()
         edt { removal.delete(createdRef, project.basePath!!) }
@@ -2008,8 +2008,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(2, calls.size)
 
         deleteGate.complete(Unit)
-        waitUntil { rows(panel) == 1 }
-        assertEquals(3, calls.size)
+        waitUntil { rows(panel) == 1 && calls.size == 3 }
         // Successful deletion forgets the workspace entirely instead of leaving it in the
         // persisted exclusion set.
         assertFalse(project.service<HostedManagementService>().excluded(createdRef))
