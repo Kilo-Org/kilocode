@@ -376,8 +376,10 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         val initialSession = if (select) preferred ?: open.maxByOrNull { it.updated } ?: open.firstOrNull() else null
         val route = current?.let { key -> open.firstOrNull { it.id == key } } ?: initialSession
         syncList(select = route?.let { ActiveSelection.Key(it.id) })
+        // Session construction reports activity before the host registers it; never navigate from that callback.
+        if (!select) return
         if (open.isEmpty()) manager.blank()
-        if (!select || initialSession == null || initialSession.id == current) return
+        if (initialSession == null || initialSession.id == current) return
         open(initialSession, focus = false)
     }
 
