@@ -52,7 +52,7 @@ export interface Input {
    */
   readonly shared?: boolean
   readonly clientInfo?: { readonly name: string; readonly version: string }
-  readonly host?: McpHost.Host // kilocode_change - embedding transport, command and OAuth hooks
+  readonly host?: McpHost.Host // kilocode_change - embedding transport and OAuth hooks
   /** Read on every attempt, so a credential change applies to the next one. */
   readonly authProvider: Effect.Effect<OAuthClientProvider | undefined>
   readonly elicitation: McpClient.ElicitationHandler
