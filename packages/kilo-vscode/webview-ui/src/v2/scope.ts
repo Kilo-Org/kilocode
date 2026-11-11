@@ -4,6 +4,7 @@ import type { OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
 import { createEffect, createSignal, on, type Accessor } from "solid-js"
 import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
+import { toFailure, type Failure } from "./error"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
 
@@ -43,14 +44,14 @@ export function createV2Scope(input: {
   // The host inlines the extension version; the server handshake reports the server version separately.
   const extensionVersion =
     typeof window === "undefined" ? "" : ((window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? "")
-  const [error, setError] = createSignal("")
+  const [failure, setFailure] = createSignal<Failure>()
   const [loading, setLoading] = createSignal(true)
   const data = createData({
     api: () => api,
     directory,
     connection,
     event: input.event,
-    onError: (err) => setError(message(err)),
+    onError: (err) => setFailure(toFailure(err)),
   })
   const metadata =
     input.shared ??
@@ -88,7 +89,7 @@ export function createV2Scope(input: {
         void api.session
           .list({ directory, parentID: null, order: "desc", limit: 50 })
           .then((response) => response.data.forEach(data.session.remember))
-          .catch((err: unknown) => setError(message(err)))
+          .catch((err: unknown) => setFailure(toFailure(err)))
           .finally(() => setLoading(false))
       },
     ),
@@ -105,13 +106,14 @@ export function createV2Scope(input: {
     version: metadata.version,
     extensionVersion,
     handshake: metadata.handshake,
-    error,
+    /** The last failure this window reported; undefined once it is dismissed. */
+    failure,
     /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
     kiloFailure: metadata.kiloFailure,
     /** The Kilo Gateway model metadata and the account team, for the model pickers. */
     kiloModels,
-    setError,
-    report: (err: unknown) => setError(message(err)),
+    clearError: () => setFailure(undefined),
+    report: (err: unknown) => setFailure(toFailure(err)),
     open: input.open,
     onCommand: input.onCommand,
   }
@@ -124,8 +126,4 @@ export function sessionMissing(error: unknown) {
   return error instanceof Error && error.name === "SessionNotFoundError"
 }
 
-export function message(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
-  return String(error)
-}
+export { message } from "./error"
