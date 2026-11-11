@@ -36,14 +36,14 @@ class SessionOutcomeView(
     }
 
     @RequiresEdt
-    fun showError(message: String, kind: String?) {
+    fun showError(message: String, kind: String?, dismissible: Boolean = true) {
         setOutlined(true)
         setHeaderIcon(AllIcons.General.Error, kind ?: KiloBundle.message("session.error.title"))
         setHeader(KiloBundle.message("session.error.title"), kind)
         error.text = message
         setContentPadding(left = false, right = false)
         setContent(error.scroll)
-        syncRetry(true, dismissible = true)
+        syncRetry(true, dismissible = dismissible)
         isVisible = true
         refresh()
     }

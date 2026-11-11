@@ -21,6 +21,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.search.TranscriptSearchBody
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ApprovalReasonTarget
@@ -535,6 +536,30 @@ class MessageView(
     /** Ordered part ids — stable for test assertions. */
     fun partIds(): List<String> = parts.keys.toList()
 
+    /**
+     * Conversation prose bodies in display order. Only user/assistant [Text] parts qualify; tool,
+     * reasoning, diff, diagram, notice, and attachment renderers are never enumerated.
+     */
+    @RequiresEdt
+    internal fun searchBodies(): List<TranscriptSearchBody> {
+        if (!isVisible || reverted) return emptyList()
+        val out = ArrayList<TranscriptSearchBody>()
+        for ((id, view) in parts) {
+            if (contents[id] !is Text) continue
+            val text = view as? TextView ?: continue
+            val isPrompt = text === prompt
+            out.add(
+                TranscriptSearchBody(
+                    key = "${msg.info.id}/$id",
+                    md = text.md,
+                    reveal = { if (isPrompt) wrap?.setCollapsed(false) },
+                    collapsed = { isPrompt && wrap?.isCollapsed() == true },
+                ),
+            )
+        }
+        return out
+    }
+
     /** Compact dump for test assertions. */
     fun dump(): String = parts.values.joinToString(", ") { it.dumpLabel() }
 
@@ -888,6 +913,9 @@ class MessageView(
             revalidate()
             repaint()
         }
+
+        @RequiresEdt
+        fun isCollapsed(): Boolean = collapsed
 
         @RequiresEdt
         fun applyStyle(style: SessionEditorStyle) {
