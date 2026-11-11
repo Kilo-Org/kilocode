@@ -95,7 +95,21 @@ export function ReasoningContent(props: {
   const [follow, setFollow] = createSignal(true)
   const following = () => capped() && !done() && !manual() && follow()
   const [pinned, setPinned] = createSignal(following())
-  const glide = { height: 0, grown: 0, rate: 0, offset: 0, duration: 0, anim: undefined as Animation | undefined }
+  const glide = {
+    height: 0,
+    cap: 0,
+    grown: 0,
+    rate: 0,
+    offset: 0,
+    duration: 0,
+    anim: undefined as Animation | undefined,
+  }
+  // The cap comes from the theme stylesheet. Without a real length there is nothing to glide under, so following
+  // stays off instead of translating a box that is not capped and not anchored.
+  const capOf = (node: HTMLElement) => {
+    const value = Number.parseFloat(getComputedStyle(node).maxHeight)
+    return Number.isFinite(value) ? value : 0
+  }
   const remaining = () => {
     const anim = glide.anim
     if (!anim || anim.playState !== "running") return 0
@@ -119,9 +133,11 @@ export function ReasoningContent(props: {
     on(following, (value) => {
       if (!value) return unpin(follow())
       glide.height = body()?.offsetHeight ?? 0
+      const node = viewport()
+      glide.cap = node ? capOf(node) : 0
       glide.grown = 0
       glide.rate = 0
-      setPinned(true)
+      if (glide.cap) setPinned(true)
     }),
   )
   createResizeObserver(body, (rect) => {
@@ -129,6 +145,11 @@ export function ReasoningContent(props: {
     const el = body()
     if (!capped() || !node || !el) return
     if (!pinned()) {
+      // The theme stylesheet can land after the first layout, so try the cap again while following is on.
+      if (following() && !glide.cap) {
+        glide.cap = capOf(node)
+        if (glide.cap) setPinned(true)
+      }
       if (done() && follow()) node.scrollTop = node.scrollHeight
       return
     }
@@ -138,9 +159,11 @@ export function ReasoningContent(props: {
     }
     const delta = rect.height - glide.height
     glide.height = rect.height
+    if (!glide.cap) glide.cap = capOf(node)
+    if (!glide.cap) return
     // Until the content outgrows the box, the box itself grows and nothing needs to move. Overflow above an
     // anchored box is not scrollable, so `scrollHeight` cannot tell; the box reaching its cap can.
-    if (delta <= 0 || node.offsetHeight < parseFloat(getComputedStyle(node).maxHeight) - 0.5) return
+    if (delta <= 0 || node.offsetHeight < glide.cap - 0.5) return
     const now = performance.now()
     const gap = glide.grown ? Math.min(500, Math.max(8, now - glide.grown)) : 0
     glide.grown = now
