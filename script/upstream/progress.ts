@@ -28,7 +28,8 @@
  *
  * Usage, from the repository root:
  *   bun script/upstream/progress.ts                 regenerate progress.json and README.md
- *   bun script/upstream/progress.ts --root <dir>    regenerate for another checkout or worktree
+ *   bun script/upstream/progress.ts --root <dir>    regenerate for another checkout or worktree; <dir> resolves
+ *     from the current directory (CI passes ../base)
  *   bun script/upstream/progress.ts --check         exit 1 when the committed output is stale; this is the map
  *     bot PR check and fails by design on a feature branch while a bot PR is pending
  *   bun script/upstream/progress.ts --outputs       print the generated file paths (CI updates them in a bot PR)
@@ -60,7 +61,7 @@ type Kind = "module" | "api" | "patch" | "test"
 type Rung = 1 | 2 | 3 | 4
 const RUNG = { 1: "plugin", 2: "host", 3: "seam", 4: "patch" } as const
 type Rungs = Record<(typeof RUNG)[Rung], number>
-type Cell = { id: string; kind: Kind; feature: string; source: string; v2?: string; state?: State; rung?: Rung }
+export type Cell = { id: string; kind: Kind; feature: string; source: string; v2?: string; state?: State; rung?: Rung }
 /** Rung per shared file, from `script/upstream/shared-patches.json`. */
 type SharedRungs = Record<string, { rung: 3 | 4 }>
 
@@ -439,6 +440,24 @@ function boxes(cells: Cell[], config: Config) {
 
 const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 const pct = (done: number, total: number) => (total ? Math.round((1000 * done) / total) / 10 : 0)
+
+/**
+ * The cell record a snapshot stores. Exclusion and unattributed filtering belong to the counted summary, so these
+ * lists stay complete: a feature that becomes excluded keeps its cells in both snapshots and `compare` does not
+ * report them as reopened.
+ */
+export function cellRecord(cells: Cell[]) {
+  return {
+    done: cells
+      .filter((c) => c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
+      .map((c) => c.id)
+      .sort(byName),
+    dropped: cells.filter((c) => c.state === "dropped").map((c) => c.id).sort(byName),
+    landed: Object.fromEntries(
+      cells.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
+    ),
+  }
+}
 const bar = (done: number, total: number) => {
   const filled = total ? Math.round((16 * done) / total) : 0
   return "█".repeat(filled) + "░".repeat(16 - filled)
@@ -780,10 +799,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
   // The cell lists stay complete: exclusion only changes the counted view above, so a newly excluded
   // feature does not look like a set of reopened cells in the PR delta.
   const droppedCells = data.cells.filter((c) => c.state === "dropped").sort((a, b) => byName(a.id, b.id))
-  const doneIds = data.cells
-    .filter((c) => c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
-    .map((c) => c.id)
-    .sort()
+  const record = cellRecord(data.cells)
   const landed = { plugin: 0, host: 0, seam: 0, patch: 0 }
   for (const b of counted) for (const r of Object.values(RUNG)) landed[r] += b.landed[r]
   const notCounted = { ...data.notCounted, unattributed: data.attribution.unattributed }
@@ -803,11 +819,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
       landed: Object.values(b.landed).some(Boolean) ? b.landed : undefined,
       excluded: b.excluded,
     })),
-    landed: Object.fromEntries(
-      data.cells.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
-    ),
-    done: doneIds,
-    dropped: droppedCells.map((c) => c.id),
+    ...record,
   }
 
   const points = [...past, { date: "now", done, total, percent: pct(done, total) }]

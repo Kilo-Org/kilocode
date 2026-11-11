@@ -3,6 +3,7 @@ import {
   apiLiterals,
   areaOf,
   canon,
+  cellRecord,
   classify,
   compare,
   countedFeatures,
@@ -344,7 +345,7 @@ test("compare and history count only non-excluded feature boxes and ignore legac
       { feature: "docs", done: 0, total: 500, dropped: 0, kinds: kinds(0, 500), excluded: "Docs site" },
     ],
     done: ["module:gateway/a.ts", "module:gateway/b.ts"],
-    dropped: ["patch:gateway:0123456789ab", "patch:unattributed:session:ffffffffffff"],
+    dropped: ["patch:gateway:0123456789ab", "patch:unattributed:session:ffffffffffff", "patch:unattributed:session:0123456789ab"],
   }
 
   expect(countedFeatures(legacyBase, { console: "Out of scope" }).map((f) => f.feature)).toEqual(["gateway"])
@@ -374,14 +375,27 @@ test("compare and history count only non-excluded feature boxes and ignore legac
 
 test("a feature excluded between two snapshots does not look like reopened cells", () => {
   const kinds = () => ({ module: { done: 1, total: 2 }, api: { done: 0, total: 0 }, patch: { done: 0, total: 0 }, test: { done: 0, total: 0 } })
-  const base = { features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds() }], done: ["module:packages/kilo-console/src/App.tsx"], dropped: [] }
-  const head = {
-    features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds(), excluded: "Out of scope" }],
-    // render keeps the cell lists complete, so the excluded cell is still recorded on the head
-    done: ["module:packages/kilo-console/src/App.tsx"],
-    dropped: [],
-  }
+  const cell = { kind: "module" as const, feature: "console", source: "packages/kilo-console/src/App.tsx" }
+  const cells = [{ id: "module:packages/kilo-console/src/App.tsx", ...cell, v2: "packages/kilo-console/src/App.tsx" }]
+  // The snapshot record keeps the cell even though `console` is excluded, so both snapshots list it.
+  expect(cellRecord(cells).done).toEqual(["module:packages/kilo-console/src/App.tsx"])
+
+  const base = { features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds() }], ...cellRecord(cells) }
+  const head = { features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds(), excluded: "Out of scope" }], ...cellRecord(cells) }
   const delta = compare(base, head)
   expect(delta).not.toContain("cells reopened")
   expect(delta).toContain("| console | 1/2 | excluded | -1 module done, -2 modules total |")
+})
+
+test("the snapshot cell record keeps proved and dropped cells whatever the exclusion says", () => {
+  const record = cellRecord([
+    { id: "module:a", kind: "module", feature: "console", source: "a", v2: "a" },
+    { id: "patch:gateway:0123456789ab", kind: "patch", feature: "gateway", source: "b:1", v2: "c.ts:1", rung: 1 },
+    { id: "patch:unattributed:session:ffffffffffff", kind: "patch", feature: "unattributed:session", source: "d:1", state: "dropped" },
+  ])
+  expect(record).toEqual({
+    done: ["module:a", "patch:gateway:0123456789ab"],
+    dropped: ["patch:unattributed:session:ffffffffffff"],
+    landed: { "patch:gateway:0123456789ab": "plugin" },
+  })
 })
