@@ -1299,6 +1299,11 @@ export const dict = {
   "settings.display.mcpTool.description": "เลือกว่าบล็อกเครื่องมือ MCP และเครื่องมือทั่วไปจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
+  "settings.display.codeMode.title": "บล็อก Code Mode",
+  "settings.display.codeMode.description":
+    "เลือกว่าบล็อก Code Mode จะเริ่มต้นด้วยรายการการเรียกใช้เครื่องมือหรือเป็นบรรทัดเดียว สคริปต์จะถูกซ่อนไว้เสมอจนกว่าคุณจะเปิด",
+  "settings.display.codeMode.expanded": "ขยาย",
+  "settings.display.codeMode.collapsed": "ยุบ",
 
   "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
   "settings.display.shortcutHints.description":
@@ -1387,6 +1392,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
+  "task.backgroundAgents.promoteFailed": "เอเจนต์นี้ไม่สามารถทำงานต่อในเบื้องหลังได้ อาจเสร็จสิ้นไปแล้ว",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
   "task.backgroundAgents.clearFinished": "ล้างรายการที่เสร็จแล้ว",
@@ -1472,6 +1478,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "เบราว์เซอร์ของระบบ",
   "settings.experimental.browserLinks.integrated": "เบราว์เซอร์ในตัว",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "chat.reply.toolbar": "ข้อความที่เลือก",
+  "chat.reply.quote": "อ้างอิง",
+  "chat.reply.quoteHint": "อ้างอิงในคำตอบของคุณ",
+  "chat.reply.commentHint": "แสดงความคิดเห็นต่อข้อความนี้",
+  "chat.reply.copy": "คัดลอก",
+  "chat.reply.sendHint": "ส่งความคิดเห็นนี้ถึง Kilo ทันที",
+  "chat.reply.commentLater": "บันทึกไว้ใช้ในข้อความถัดไป",
+  "chat.reply.count": "การตอบกลับ ({{count}})",
+  "chat.reply.sendAll": "ส่งทั้งหมด",
+  "chat.reply.showInChat": "แสดงในการแชท",
   "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
   "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
 }

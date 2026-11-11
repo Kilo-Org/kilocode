@@ -13,6 +13,7 @@ import {
   Show,
   createSignal,
   createMemo,
+  createUniqueId,
   createEffect,
   on,
   untrack,
@@ -31,7 +32,6 @@ import type {
   LocalGitStats,
   PRStatus,
   SessionInfo,
-  TerminalDestination,
   TerminalFont,
   WorktreeGitStats,
 } from "../src/types/messages/agent-manager"
@@ -47,6 +47,13 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { openSubagent } from "../src/v2/open-subagent"
+import { SessionActionsRow } from "../src/v2/session-actions-row"
+import { createWorktreeTransfer } from "../src/v2/worktree-transfer"
+import { createComposerQueue } from "../src/v2/composer"
+import { createPlanOpener } from "../src/v2/open-plan"
+import type { ToWebview } from "../../src/protocol"
+import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
 import { createAppSession } from "./app-session"
 import {
@@ -102,6 +109,7 @@ import * as modifier from "./modifier"
 import { ProjectList } from "./ProjectList"
 import { reportFailure } from "./failure-toast"
 import { TabBar } from "./TabBar"
+import { createBrowserPanel } from "./BrowserPanel"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { createShortcutHints } from "./ShortcutHints"
 import { baseUpdateTarget } from "./base-update-target"
@@ -127,9 +135,6 @@ import {
   createAmbientSetup,
   hasSetupTerminal,
   keepTerminalStack,
-  readSavedDestination,
-  resolveRunScriptRequest,
-  resolveVscodeTerminalRequest,
 } from "./terminal"
 import { createEmbeddedTerminalReader } from "./terminal/output"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -154,9 +159,14 @@ import type { ReviewComment } from "../diff-viewer/review-comments"
 import type { PRComment } from "./pr/pr-types"
 import {
   APPEND_REVIEW_COMMENTS,
-  takeReviewCommentsForPrompt,
+  takeReviewCommentsForPromptBatch,
   type AppendReviewCommentsDetail,
 } from "../diff-viewer/review-annotations"
+import { ReviewCommentActionsContext, type ReviewCommentActions } from "../src/components/chat/review-actions"
+import { openPRComment } from "../src/utils/pr-review"
+import type { ReviewAppendHandler } from "../src/v2/append-ready"
+import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
+import { injectedMetadata } from "../../src/shared/injected-prompt"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -165,6 +175,9 @@ import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFo
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
+import { createDocumentInspector, isMarkdownPath } from "../documents/state"
+import { chunkPaths } from "../src/v2/validate-paths"
+import { DocumentPanelHost } from "./documents/DocumentPanelHost"
 import { SubagentPanel } from "./SubagentPanel"
 import { attachSubagentEvent, createSubagentController } from "./subagent-tabs"
 import { EditPreviewPanel } from "./EditPreviewPanel"
@@ -188,6 +201,7 @@ import { useDisplaySettings } from "../src/v2/display-settings"
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
+
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -214,6 +228,8 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  // Agent Manager owns worktree creation and movement, so its chat row reports transfer progress from the host.
+  const transfer = createWorktreeTransfer({ project: activeProjectId })
   const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
 
   const DEFAULT_SIDEBAR_WIDTH = 260
@@ -277,6 +293,13 @@ const AgentManagerContent: Component = () => {
   const rootDirectory = createMemo(() => directories.root(activeProjectId() ?? currentProjectId()))
   const appSession = createAppSession({ vscode, directories, rootDirectory })
   const panel = appSession.panel
+  // The open session is visible, so its directory loads a session list before the worktree card selection settles.
+  createEffect(() => {
+    const id = appSession.sessions.currentSessionID()
+    if (!id) return
+    const directory = directories.directoryOf(id)
+    if (directory) panel.show([directory])
+  })
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
   const display = useDisplaySettings()
   createEffect(
@@ -357,7 +380,12 @@ const AgentManagerContent: Component = () => {
   createEffect(
     on(projectList, (next, previous) => {
       const ids = new Set(next.map((project) => project.id))
-      previous?.filter((project) => !ids.has(project.id)).forEach((project) => composers.clearProject(project.id))
+      previous
+        ?.filter((project) => !ids.has(project.id))
+        .forEach((project) => {
+          composers.clearProject(project.id)
+          documentInspector.clearProject(project.id)
+        })
     }),
   )
   const reviewState = createReviewState()
@@ -370,6 +398,34 @@ const AgentManagerContent: Component = () => {
     setDiffStyle(style)
     to({ type: "agentManager.setReviewDiffStyle", style })
   }
+  const documentInspector = createDocumentInspector(
+    {
+      send: (sessionId, file, contextKey) => to({ type: "agentManager.requestDocument", sessionId, file, contextKey }),
+      openFile: (file, sessionId, line, column) => {
+        if (!sessionId) return false
+        to({ type: "agentManager.openFile", sessionId, filePath: file, line, column })
+        return true
+      },
+      copyPath: (file, sessionId) => {
+        if (!sessionId) return false
+        to({ type: "agentManager.copyFilePath", sessionId, filePath: file })
+        return true
+      },
+      onMessage: (handler) =>
+        onHostMessage((message) => {
+          if (message.type === "agentManager.document") handler(message)
+        }),
+    },
+    selection,
+    currentProjectId,
+    () => sidePanel() === SidePanel.Documents,
+    () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Documents)
+    },
+    () => panels.close(SidePanel.Documents),
+  )
   const subagentCtl = createSubagentController({
     project: currentProjectId,
     current: () => sessions.currentSessionID(),
@@ -466,6 +522,7 @@ const AgentManagerContent: Component = () => {
     restore: () => restoreSession(),
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
+  /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
   const focusOnDraftChange = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
@@ -595,18 +652,18 @@ const AgentManagerContent: Component = () => {
     },
     refresh: ({ projectId, worktreeId }) => to({ type: "agentManager.refreshPR", projectId, worktreeId }),
   })
-  const runWorktree = (id: string, destination: TerminalDestination) => {
+  const runWorktree = (id: string) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
       to({ type: "agentManager.stopRunScript", worktreeId: id })
       return
     }
-    to(resolveRunScriptRequest(id, destination))
+    to({ type: "agentManager.runScript", worktreeId: id })
   }
   const configureRunScript = () => to({ type: "agentManager.configureRunScript" })
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel, sideCtl.destination())
+    if (sel) runWorktree(sel)
   }
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
   const releaseTabs = () => setTabWidths(false)
@@ -717,12 +774,17 @@ const AgentManagerContent: Component = () => {
     untrack(() => {
       const current = sessions.currentSessionID()
       if (selection() !== LOCAL || !current || !previous.includes(current) || next.ids.includes(current)) return
-      activateAfterRemoval(previous.filter((id) => id === current || next.ids.includes(id)), current)
+      activateAfterRemoval(
+        previous.filter((id) => id === current || next.ids.includes(id)),
+        current,
+      )
     })
   })
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
     composers.prune(ids)
+    const selected = selection()
+    documentInspector.prune(currentProjectId() ?? "single", new Set([...ids, "local", ...(selected ? [selected] : [])]))
     untrack(() => diffs.prune(ids))
     setReviewOpenByContext((prev) => {
       const next = pruneReviewState(prev, currentProjectId() ?? "single", ids)
@@ -751,7 +813,18 @@ const AgentManagerContent: Component = () => {
     managed: managedSessions,
     locals: localSet,
   })
+  // Past-chat mentions use the loaded session lists plus the host catalog, so a worktree whose store is not shown yet
+  // still offers its sessions.
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
+  // `@git-changes` in a worktree diffs against the branch the worktree was created from, on its remote when it has one.
+  const gitTarget = () => {
+    const id = selection()
+    if (!id || id === LOCAL) return undefined
+    const worktree = worktrees().find((item) => item.id === id)
+    if (!worktree) return undefined
+    const base = worktree.remote ? `${worktree.remote}/${worktree.parentBranch}` : worktree.parentBranch
+    return { directory: worktree.path, base }
+  }
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
     if (!pid) return undefined
@@ -760,15 +833,22 @@ const AgentManagerContent: Component = () => {
     if (!list) return new Set<string>()
     return new Set(list.filter(isKnownRootSession).map((item) => item.id))
   })
-  // Every root session the panel knows; the history tabs narrow it to the project or its worktrees.
-  const historyList = createMemo(() =>
-    sessions
-      .sessions()
+  // Every root session the panel knows; the history tabs narrow it to the project or its worktrees. The host catalog
+  // keeps the sessions of worktrees whose store has not loaded a session list yet.
+  const historyList = createMemo(() => {
+    const known = new Map<string, SessionInfo>()
+    for (const session of sessions.sessions()) known.set(session.id, session)
+    const projects = new Set([currentProjectId(), historyProject()].filter((id): id is string => !!id))
+    for (const project of projects)
+      for (const session of projectSessionsLive()[project] ?? [])
+        if (!known.has(session.id)) known.set(session.id, session)
+    return [...known.values()]
       .filter(
         (session) =>
           isKnownRootSession(session) || managedSessions().some((item) => item.id === session.id && item.worktreeId),
-      ),
-  )
+      )
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+  })
   const localSessions = createLocalSessions({
     ids: localSessionIDs,
     sessions: () => {
@@ -830,7 +910,7 @@ const AgentManagerContent: Component = () => {
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
   const sideHostVisible = () =>
-    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length)
+    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache() ? 1 : 0)
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -1013,6 +1093,13 @@ const AgentManagerContent: Component = () => {
     routeCatalog: router.routeCatalog,
     routeState: router.routeState,
     font: (font) => font && setTerminalFont(font),
+    activeProject: activeProjectId,
+    currentSession: () => sessions.currentSessionID(),
+    revealBrowser: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
   })
   const preserveSidebarScroll = createSidebarScrollPreserver(() => selection() ?? sessions.currentSessionID())
   const applyActiveState = createProjectHydration({
@@ -1073,10 +1160,49 @@ const AgentManagerContent: Component = () => {
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
   let promptAppend: ((value: string, send: boolean) => void) | undefined
+  let promptReviewAppend: ReviewAppendHandler | undefined
+  // The same composer's browser reference list; an element picked in the browser panel joins it.
+  let promptReference: ReferenceHandler | undefined
   const appendToPrompt = (text: string, autoSend: boolean) => {
     promptAppend?.(text, autoSend)
     requestChatFocus(true)
   }
+  const appendCommentsToPrompt = (comments: ReviewCommentEntry[], autoSend: boolean) => {
+    // A composer without review-comment support still gets the batch as markdown text.
+    if (promptReviewAppend) promptReviewAppend(comments, autoSend)
+    else appendToPrompt(formatReviewCommentsMarkdown(comments), autoSend)
+    requestChatFocus(true)
+  }
+  // Review comment rows open files and PR threads through the surface that owns those panels.
+  const reviewCommentActions: ReviewCommentActions = {
+    showInDiff: (comment, sessionID) => openPRComment(comment, sessionID ?? sessions.currentSessionID()),
+    openFile: (filePath, line, sessionID) => {
+      const sessionId = sessionID ?? sessions.currentSessionID()
+      if (!sessionId) return
+      to({ type: "agentManager.openFile", sessionId, filePath, line })
+    },
+  }
+  // Editor and terminal context actions target the visible composer, and wait while no composer is mounted.
+  const composerQueue = createComposerQueue()
+
+  // One browser page per session, kept alive across worktree and session switches.
+  const browser = createBrowserPanel({
+    active: () => sidePanel() === SidePanel.Browser,
+    open: () => {
+      closeHistory()
+      setReviewActive(false)
+      panels.open(SidePanel.Browser)
+    },
+    close: () => panels.close(SidePanel.Browser),
+    sessionId: () => sessions.currentSessionID(),
+    projectId: activeProjectId,
+    sessions: () => sessions.sessions(),
+    onReference: (reference) => {
+      if (reference.sessionId !== sessions.currentSessionID()) return
+      promptReference?.(reference)
+      requestChatFocus(true)
+    },
+  })
 
   const handleSessionCreated = (id: string | undefined) => {
     if (!id) {
@@ -1113,18 +1239,93 @@ const AgentManagerContent: Component = () => {
           }
     editPreview.open(diff, sessionID, diffStyle())
   }
+  // Inline file candidates are validated by the host, which owns filesystem access and the worktree boundary.
+  const fileChecks = new Map<string, { resolve: (existing: string[]) => void; reject: (error: Error) => void }>()
+  const fileCheckPrefix = createUniqueId()
+  let fileCheckCount = 0
+  const stopFileChecks = onHostMessage((message) => {
+    if (message.type !== "agentManager.validateFilesResult") return
+    const pending = fileChecks.get(message.id)
+    if (!pending) return
+    fileChecks.delete(message.id)
+    pending.resolve(message.existing)
+  })
+  onCleanup(() => {
+    stopFileChecks()
+    // Reject on dispose so the shared cache keeps these paths unknown instead of caching them as missing.
+    for (const pending of fileChecks.values()) pending.reject(new Error("validateFiles cancelled"))
+    fileChecks.clear()
+  })
+  // Keep each host request small so one frame with many candidates stays responsive; every path is still checked.
+  const FILE_CHECK_CHUNK = 64
+  const validateFiles = (sessionID: string, paths: string[]) => {
+    const chunks = chunkPaths(paths, FILE_CHECK_CHUNK)
+    return Promise.all(
+      chunks.map(
+        (chunk) =>
+          new Promise<string[]>((resolve, reject) => {
+            const id = `${fileCheckPrefix}-${++fileCheckCount}`
+            fileChecks.set(id, { resolve, reject })
+            to({ type: "agentManager.validateFiles", id, sessionId: sessionID, paths: chunk })
+            setTimeout(() => {
+              const pending = fileChecks.get(id)
+              if (!pending) return
+              fileChecks.delete(id)
+              pending.reject(new Error("validateFiles timed out"))
+            }, 3000)
+          }),
+      ),
+    ).then((results) => results.flat())
+  }
+  // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
+  const openToolFile = (filePath: string, line?: number, column?: number, sessionID?: string) => {
+    const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
+    if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
+    to({ type: "agentManager.openFile", sessionId, filePath, line, column })
+  }
   const toolActions: ToolActions = {
-    openFile: (filePath, line) => {
-      const sessionId = sessions.currentSessionID()
-      if (!sessionId) return
-      to({ type: "agentManager.openFile", sessionId, filePath, line })
-    },
+    openFile: openToolFile,
+    validateFiles,
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {
       if (!focusExistingSession(id)) to({ type: "agentManager.openSessionLocally", sessionId: id })
     },
+    // A subagent opens in the inspector beside its parent chat.
+    openSubagent: (sessionID, title) =>
+      openSubagent({
+        sessionID,
+        title,
+        parentSessionID: sessions.currentSessionID(),
+        surface: "inspector",
+        post: to,
+      }),
   }
+
+  // A completed open_plan call opens its plan file once its session is the visible one. Plan calls from inactive
+  // sessions stay deferred until that session is selected.
+  const planOpener = createPlanOpener(
+    () => sessions.currentSessionID(),
+    (plan) => openToolFile(plan.path, undefined, undefined, plan.sessionID),
+  )
+  createEffect(() => planOpener.flush(sessions.currentSessionID()))
+  createEffect(() => {
+    for (const directory of directories.sessionDirectories()) {
+      const store = panel.store(directory)
+      onCleanup(
+        store.data.on("session.tool.input.started", (event) =>
+          planOpener.started(event.data.sessionID, event.data.id, event.data.name),
+        ),
+      )
+      onCleanup(
+        store.data.on("session.tool.success", (event) =>
+          planOpener.completed(event.data.sessionID, event.data.id, event.data.metadata),
+        ),
+      )
+      onCleanup(store.data.on("session.tool.failed", (event) => planOpener.failed(event.data.sessionID, event.data.id)))
+      onCleanup(store.data.on("session.deleted", (event) => planOpener.forget(event.data.sessionID)))
+    }
+  })
 
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
@@ -1173,6 +1374,19 @@ const AgentManagerContent: Component = () => {
       selectSession: (sessionID) => sessions.selectSession(sessionID),
       setReviewActive,
     })
+  // The plan handoff creates a new session on the server and asks the client to show it. Select the new
+  // session in its worktree so the Agent Manager leaves the plan tab for the Code session.
+  createEffect(() => {
+    for (const directory of directories.sessionDirectories()) {
+      const store = panel.store(directory)
+      onCleanup(
+        store.data.on("tui.session.select", (event) => {
+          if (event.location && event.location.directory !== directory) return
+          selectSessionTab(event.data.sessionID, false)
+        }),
+      )
+    }
+  })
   const handleNewTabForCurrentSelection = () =>
     newTabForSelection({
       selection: selection(),
@@ -1225,19 +1439,6 @@ const AgentManagerContent: Component = () => {
       panels.close(SidePanel.Terminal)
     },
     refocus: requestChatFocus,
-    postMessage: to,
-    track: () => undefined,
-    saved: readSavedDestination(vscode.getState<Record<string, unknown>>()),
-    save: (destination) =>
-      vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: destination }),
-    openVscode: () =>
-      to(
-        resolveVscodeTerminalRequest(
-          selection(),
-          sessions.currentSessionID(),
-          (worktree) => managedSessions().find((entry) => entry.worktreeId === worktree)?.id,
-        ),
-      ),
   })
   createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
   const handleReviewTabMouseDown = (event: MouseEvent) => {
@@ -1407,7 +1608,10 @@ const AgentManagerContent: Component = () => {
     selection,
     registry,
     activePR,
+    sidePanel,
     nav: () => buildProjectNavEntries(projectList(), projectStates()),
+    activeProjectId,
+    activity,
   })
   const intro = createIntro({
     hints: hints.list,
@@ -1590,12 +1794,54 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
-            sessions={appSession.mentionSessions()}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
     ))
   }
+  // The worktree actions above the composer, as the sidebar shows them. The chat is the shared SessionView, so the
+  // row only differs in where it starts a worktree.
+  const showChanges = () => {
+    closeHistory()
+    setReviewActive(false)
+    panels.open(SidePanel.Diff)
+  }
+  const sessionActions = (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => {
+    const id = sessions.currentSessionID()
+    const movable = selection() === LOCAL && !readOnly() && !!id && localSessionIDs().includes(id) && !isPending(id)
+    const stats = selection() === LOCAL ? localStats() : worktreeStats()[selection() ?? ""]
+    return (
+      <SessionActionsRow
+        hasMessages={hasMessages}
+        branch={isGitRepo() ? transfer.branch() : undefined}
+        onNewWorktree={handleCreateWorktree}
+        onNewWorktreeFromBranch={(branch) => {
+          if (!loaded()) return
+          expandSidebar()
+          to({ type: "agentManager.createWorktree", baseBranch: branch })
+        }}
+        onConfigureWorktree={() => showNewWorktreeDialog()}
+        onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
+        moving={transfer.transferring()}
+        moveDetail={transfer.detail()}
+        stats={stats}
+        onShowChanges={showChanges}
+        todos={todos}
+        agents={agents}
+      />
+    )
+  }
+  // The workspace branch changes with a checkout or a project switch, and the row's worktree actions follow it.
+  createEffect(
+    on(
+      activeProjectId,
+      () => {
+        transfer.clear()
+        transfer.request()
+      },
+      { defer: true },
+    ),
+  )
   // The keyboard action updates the selected worktree in the session the user is reading, with its model and agent.
   const update = () => {
     const worktreeId = selection()
@@ -1629,7 +1875,7 @@ const AgentManagerContent: Component = () => {
             requestAnimationFrame(() => sidebarSearchMenu?.open())
           }
         },
-        showTerminal: () => sideCtl.openPreferred("keyboard_shortcut"),
+        showTerminal: () => sideCtl.toggle("keyboard_shortcut"),
         toggleDiff: () => diffPanels.toggleCommand(),
         newTab: handleNewTabForCurrentSelection,
         closeTask: () => closeFocusedTask(visibleTabId(), tabLookup(), handleCloseTab),
@@ -1684,6 +1930,7 @@ const AgentManagerContent: Component = () => {
       subagents.open(detail.sessionID, typeof detail.title === "string" ? detail.title : undefined, parent)
     }
     window.addEventListener("agentManager.openSubagent", subagent)
+    const documents = documentInspector.subscribe((message) => documentInspector.documents.onMessage(message))
 
     const terminalDispatch = createTerminalMessageHandler({
       state: terms,
@@ -1708,7 +1955,6 @@ const AgentManagerContent: Component = () => {
         terms.setSideActive(contextKey, terminalId)
         terms.requestFocus(terminalId)
       },
-      onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
 
     const unsubscribe = vscode.onMessage((raw) => {
@@ -1721,7 +1967,9 @@ const AgentManagerContent: Component = () => {
       if (message.type === "agentManager.terminal.fontChanged") setTerminalFont(message.font)
       terminalDispatch(message as unknown as Parameters<typeof terminalDispatch>[0])
       stateHandlers.projects(message)
+      stateHandlers.browser(message)
       if (message.type === "agentManager.state") {
+        browser.bind().browser(message.browserAutomation === true)
         preserveSidebarScroll(() => stateHandlers.state(message))
         return
       }
@@ -1775,6 +2023,10 @@ const AgentManagerContent: Component = () => {
           setSelection: (id) => setSelection(id),
           evictLocal,
           selectSession: (id) => sessions.selectSession(id),
+          remember: (session) => {
+            const directory = session.location?.directory
+            if (directory) panel.store(directory).data.session.remember(session)
+          },
           requestChatFocus,
         })
         return
@@ -1861,17 +2113,35 @@ const AgentManagerContent: Component = () => {
 
     const reviewCommentsEvent = (event: Event) => {
       const detail = (event as CustomEvent<AppendReviewCommentsDetail>).detail
-      const text = takeReviewCommentsForPrompt(detail)
-      if (text === undefined) return
-      appendToPrompt(text, detail.autoSend)
+      const comments = takeReviewCommentsForPromptBatch(detail)
+      if (!comments) return
+      appendCommentsToPrompt(comments, detail.autoSend)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+    // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
+    const context = vscode.onMessage((raw) => {
+      const message = raw as unknown as ToWebview
+      if (message.type === "appendContext") {
+        composerQueue.push({ type: "attach", items: message.items })
+        requestChatFocus(true)
+        return
+      }
+      if (message.type !== "startPrompt") return
+      composerQueue.push({
+        type: "submit",
+        text: message.text,
+        items: message.items ?? [],
+        metadata: message.injectedTitle ? injectedMetadata(message.injectedTitle) : undefined,
+      })
+    })
 
     onCleanup(() => {
       keys()
       stopModifier()
       window.removeEventListener("agentManager.openSubagent", subagent)
       window.removeEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
+      context()
+      documents()
       unsubscribe()
     })
   })
@@ -1983,9 +2253,7 @@ const AgentManagerContent: Component = () => {
           requestChatFocus(true)
           return true
         }
-        const managed = worktreeSessionIds().has(id)
-          ? managedSessions().find((entry) => entry.id === id)
-          : undefined
+        const managed = worktreeSessionIds().has(id) ? managedSessions().find((entry) => entry.id === id) : undefined
         if (managed?.worktreeId) {
           selectWorktree(managed.worktreeId)
           sessions.selectSession(id)
@@ -2035,43 +2303,61 @@ const AgentManagerContent: Component = () => {
           when={chatStore()}
           keyed
           fallback={
-            <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
-              {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
-            </Show>
+            <div class="am-intro-fallback">
+              <Show when={appSession.rootStore()} keyed fallback={intro.render()}>
+                {(store) => <V2Scope value={store}>{intro.render()}</V2Scope>}
+              </Show>
+            </div>
           }
         >
           {(store) => (
             <V2Scope value={store}>
-              <SpeechToTextStatusProvider>
-                <SessionView
-                  session={
-                    sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                      ? sessions.currentSessionID()
-                      : undefined
-                  }
-                  draftKey={sessions.currentSessionID() ?? activePendingId()}
-                  readOnly={readOnly()}
-                  onSession={handleSessionCreated}
-                  actions={toolActions}
-                  onShowHistory={() => openHistory()}
-                  empty={intro.render}
-                  onAppendReady={(append) => (promptAppend = append)}
-                  onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                  onViewTurnChanges={openTurnChanges}
-                  onForkSession={handleForkSession}
-                  onForkMessage={handleForkSession}
-                  onMissing={(id) => handleCloseTab(id)}
-                  onPrompted={(sessionId, text, model) =>
-                    to({
-                      type: "agentManager.promptSent",
-                      sessionId,
-                      text,
-                      providerID: model?.providerID,
-                      modelID: model?.id,
-                    })
-                  }
-                />
-              </SpeechToTextStatusProvider>
+              <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
+                <SpeechToTextStatusProvider>
+                  <SessionView
+                    session={
+                      sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
+                        ? sessions.currentSessionID()
+                        : undefined
+                    }
+                    draftKey={sessions.currentSessionID() ?? activePendingId()}
+                    readOnly={readOnly()}
+                    onSession={handleSessionCreated}
+                    actions={toolActions}
+                    onShowHistory={() => openHistory()}
+                    row={sessionActions}
+                    rowWhenEmpty={!!transfer.branch()}
+                    onNewSession={handleNewTabForCurrentSelection}
+                    worktree={!!selection() && selection() !== LOCAL}
+                    manager={hints.manager}
+                    focusOnDraftChange={focusOnDraftChange}
+                    onFocusChange={focusCtl.prompt}
+                    empty={intro.render}
+                    onAppendReady={(append) => (promptAppend = append)}
+                    onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                    onComposerReady={composerQueue.ready}
+                    onReferenceReady={(add) => (promptReference = add)}
+                    onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                    onViewTurnChanges={openTurnChanges}
+                    onForkMessage={handleForkSession}
+                    onMissing={(id) => handleCloseTab(id)}
+                    worktrees={references}
+                    git={isGitRepo}
+                    gitTarget={gitTarget}
+                    terminalContext={() => selection() ?? undefined}
+                    resolveEmbeddedTerminal={resolveTerminal}
+                    onPrompted={(sessionId, text, model) =>
+                      to({
+                        type: "agentManager.promptSent",
+                        sessionId,
+                        text,
+                        providerID: model?.providerID,
+                        modelID: model?.id,
+                      })
+                    }
+                  />
+                </SpeechToTextStatusProvider>
+              </ReviewCommentActionsContext.Provider>
             </V2Scope>
           )}
         </Show>
@@ -2123,6 +2409,7 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <div class="am-diff-panel-wrapper">
+          {browser.render()}
           <DiffPanelCache
             current={diffScopeId}
             context={diffCtx}
@@ -2157,6 +2444,7 @@ const AgentManagerContent: Component = () => {
             onOpenFile={(ctx: string, file: string, line?: number) =>
               to({ type: "agentManager.openFile", sessionId: ctx, filePath: file, line })
             }
+            onOpenDocument={(file: string) => documentInspector.open(file)}
             onRevertFile={(key, ctx, file) => revertCtl.revertFor(key, ctx, review.scope(), file)}
             revertingFiles={revertCtl.revertingFor}
             activeTerminalId={terms.activeId()}
@@ -2198,6 +2486,13 @@ const AgentManagerContent: Component = () => {
           <Show when={editPreview.preview()}>
             <EditPreviewPanel state={editPreview} visible={() => sidePanel() === SidePanel.EditPreview} />
           </Show>
+          <DocumentPanelHost
+            inspector={documentInspector}
+            onClosePanel={() => panels.close(SidePanel.Documents)}
+            onSendAll={focusCtl.focus}
+            activeTerminalId={terms.activeId()}
+            visible={() => sidePanel() === SidePanel.Documents}
+          />
           <SideTerminalPanel
             state={terms}
             contextKey={terms.sideKey}
@@ -2299,31 +2594,29 @@ const AgentManagerContent: Component = () => {
         onOpen={openWorktreeDirectory}
         runStatuses={runStatuses}
         runConfigured={runScriptConfigured}
-        onRun={(id) => runWorktree(id, sideCtl.destination())}
+        onRun={runWorktree}
         onConfigureRun={configureRunScript}
         diffOpen={diffOpen}
         reviewActive={reviewActive}
         onToggleDiff={diffPanels.toggleToolbar}
-        browserOpen={() => false}
-        browserAutomation={() => false}
-        onToggleBrowser={() => undefined}
+        browserOpen={browser.tabs.browserOpen}
+        browserAutomation={browser.tabs.browserAutomation}
+        onToggleBrowser={browser.tabs.onToggleBrowser}
         prStatus={() => activePR()?.pr}
         prOpen={prOpen}
         onTogglePR={togglePRPanel}
-        documentsOpen={() => false}
-        documentsAvailable={() => false}
-        onToggleDocuments={() => undefined}
+        documentsOpen={documentInspector.isOpen}
+        documentsAvailable={documentInspector.available}
+        onToggleDocuments={documentInspector.toggle}
         subagentsAvailable={() => subagentCtl.tabs.tabs().length > 0 || subagentCtl.toolbar.available().length > 0}
         subagentsOpen={() => sidePanel() === SidePanel.Subagents}
         onToggleSubagents={subagentCtl.toolbar.toggle}
-        terminalDestination={sideCtl.destination}
-        terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
+        terminalOpen={() => sidePanel() === SidePanel.Terminal}
         terminalKeybind={() => kb().showTerminal ?? ""}
-        onTerminalDestinationOpen={() => {
+        onTerminalOpen={() => {
           cancelAmbientSetup()
-          sideCtl.openPreferred("tab_toolbar")
+          sideCtl.toggle("tab_toolbar")
         }}
-        onTerminalDestinationChoose={sideCtl.choose}
       />
 
       <Show when={restricted()}>

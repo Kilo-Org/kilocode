@@ -3,10 +3,12 @@ import {
   FileDiff,
   type FileDiffMetadata,
   type FileDiffOptions,
+  parseDiffFromFile,
   processFile,
   type SelectedLineRange,
   VirtualizedFileDiff,
 } from "@pierre/diffs"
+import { parsePatch } from "diff"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createComputed, createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
 import { createDefaultOptions, type DiffHandle, type DiffProps, styleVariables } from "../pierre"
@@ -29,6 +31,28 @@ type Job = { run: () => void; cancelled: boolean }
 
 const sizes = new WeakMap<object, Map<number, number>>()
 const WIDTH_LIMIT = 8
+
+// Mirrors the session-diff fallback for a patch that `processFile` rejects.
+function fallbackDiff(patch: string) {
+  const [file] = parsePatch(patch)
+  if (!file) return
+  const before: string[] = []
+  const after: string[] = []
+  for (const hunk of file.hunks) {
+    for (const line of hunk.lines) {
+      if (line.startsWith("-")) before.push(line.slice(1))
+      else if (line.startsWith("+")) after.push(line.slice(1))
+      else {
+        before.push(line.slice(1))
+        after.push(line.slice(1))
+      }
+    }
+  }
+  return parseDiffFromFile(
+    { name: "", contents: before.join("\n") + "\n" },
+    { name: "", contents: after.join("\n") + "\n" },
+  )
+}
 
 function remember(key: object | undefined, width: number, height: number) {
   if (!key || width <= 0 || height <= 0) return
@@ -236,13 +260,17 @@ export function Diff<T>(props: DiffProps<T>) {
   const patchDiff = () => {
     if (!("patch" in local) || typeof local.patch !== "string" || local.patch.length === 0) return
     if (parsed?.patch === local.patch) return parsed.diff
-    const diff = processFile(local.patch, { cacheKey: local.patch })
+    const diff = processFile(local.patch, { cacheKey: local.patch }) ?? fallbackDiff(local.patch)
     if (!diff) return
     parsed = { patch: local.patch, diff }
     return diff
   }
 
   const large = createMemo(() => {
+    // A patch-only diff has no before/after contents; size it from the patch.
+    if (!local.fileDiff && !local.before && !local.after && "patch" in local && typeof local.patch === "string") {
+      return local.patch.length > 500_000
+    }
     return Math.max(before().length, after().length) > 500_000
   })
 
@@ -681,8 +709,8 @@ export function Diff<T>(props: DiffProps<T>) {
         lineAnnotations: annotations,
         containerWrapper: container,
       })
-    } else {
-      const oldFile = local.before!
+    } else if (local.before && local.after) {
+      const oldFile = local.before
       const newFile = local.after!
       const beforeContents = before()
       const afterContents = after()

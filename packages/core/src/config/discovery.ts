@@ -2,7 +2,7 @@ export * as ConfigDiscovery from "./discovery.js"
 
 import os from "os"
 import path from "path"
-import { Context, Effect, Layer } from "effect" // kilocode_change(config) seam - discovery layout service
+import { Context, Effect, Layer, Option } from "effect" // kilocode_change(config) seam - discovery layout service
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node" // kilocode_change(config) seam - discovery layout node
@@ -91,7 +91,7 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const fs = yield* FSUtil.Service
   const global = yield* Global.Service
   const location = yield* Location.Service
-  const layout = yield* LayoutService // kilocode_change(config) seam
+  const layout = Option.getOrElse(yield* Effect.serviceOption(LayoutService), () => defaults) // kilocode_change(config) seam - callers without the node keep the defaults
   const system = (() => {
     if (options?.system === false) return
     if (typeof options?.system === "string") return AbsolutePath.make(path.resolve(options.system))
@@ -104,22 +104,41 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const globalRoots = yield* Effect.forEach(
     [...configDirectories, globalClaudeDirectory, globalAgentsDirectory],
     (item) => fs.resolve(item),
+    { concurrency: "unbounded" },
   )
   const current = yield* fs.resolve(location.directory)
   const directories =
     globalRoots.slice(0, configDirectories.length).includes(current) || options?.project === false
       ? []
       : yield* fs.up({ targets: ["."], start: location.directory }).pipe(Effect.flatMap((ancestors) => layout.walk({ ancestors, location, fs })), Effect.orDie) // kilocode_change(config) seam
-  const discovered = yield* Effect.forEach(directories, (directory) =>
-    Effect.gen(function* () {
-      // Resolve the parent too: missing children must honor symlinked global roots.
-      const parent = yield* fs.resolve(directory)
-      return yield* Effect.forEach([".claude", ".agents", ...layout.directories.toReversed(), ...layout.names.toReversed()], (name) => // kilocode_change(config) seam
-        fs
-          .resolve(path.join(parent, name))
-          .pipe(Effect.map((resolved) => ({ item: AbsolutePath.make(path.join(directory, name)), resolved }))),
-      )
-    }),
+  const candidates = [".claude", ".agents", ...layout.directories.toReversed(), ...layout.names.toReversed()] // kilocode_change(config) seam
+  const discovered = yield* Effect.forEach(
+    directories,
+    (directory) =>
+      Effect.gen(function* () {
+        // Resolve the parent too: missing children must honor symlinked global roots.
+        const parent = directory === location.directory ? current : yield* fs.resolve(directory)
+        // One directory listing skips realpath and stat on absent candidates; sandboxes that deny
+        // listing an ancestor fall back to probing each candidate directly.
+        const entries = yield* fs.readDirectory(parent).pipe(
+          Effect.map((list) => new Set(list.map((entry) => entry.toLowerCase()))),
+          Effect.orElseSucceed(() => undefined),
+        )
+        return yield* Effect.forEach(
+          candidates,
+          (name) => {
+            const item = AbsolutePath.make(path.join(directory, name))
+            if (entries && !entries.has(name.toLowerCase())) {
+              return Effect.succeed({ item, resolved: path.resolve(parent, name), missing: true })
+            }
+            return fs
+              .resolve(path.join(parent, name))
+              .pipe(Effect.map((resolved) => ({ item, resolved, missing: false })))
+          },
+          { concurrency: "unbounded" },
+        )
+      }),
+    { concurrency: "unbounded" },
   ).pipe(
     Effect.map((items) => items.flat()),
     Effect.orDie,
@@ -129,15 +148,15 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const globalFiles = yield* Effect.forEach(
     configDirectories.flatMap((directory) => layout.names.map((name) => path.join(directory, name))), // kilocode_change(config) seam
     (file) => fs.resolve(file),
+    { concurrency: "unbounded" },
   )
   // Global sources must not re-enter through the project walk.
-  const visible = discovered
-    .filter(({ resolved }) =>
-      globalEnabled
-        ? !globalRoots.includes(resolved) && !globalFiles.includes(resolved)
-        : !globalRoots.some((root) => resolved === root || resolved.startsWith(root + path.sep)),
-    )
-    .map(({ item }) => item)
+  const visibleEntries = discovered.filter((entry) =>
+    globalEnabled
+      ? !globalRoots.includes(entry.resolved) && !globalFiles.includes(entry.resolved)
+      : !globalRoots.some((root) => entry.resolved === root || entry.resolved.startsWith(root + path.sep)),
+  )
+  const visible = visibleEntries.map((entry) => entry.item)
 
   // A custom system directory replaces platform discovery, so it also skips host MDM preferences.
   const preferences =
@@ -155,8 +174,12 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
     explicit: options?.file ? AbsolutePath.make(path.resolve(options.file)) : undefined,
     direct: visible.filter((item) => ![".agents", ".claude", ...layout.directories].includes(path.basename(item))).toReversed(), // kilocode_change(config) seam
     project: yield* Effect.forEach(
-      visible.filter((item) => layout.directories.includes(path.basename(item))).toReversed(), // kilocode_change(config) seam
-      (directory) => fs.isDir(directory).pipe(Effect.map((present) => ({ path: directory, present }))),
+      visibleEntries.filter((entry) => layout.directories.includes(path.basename(entry.item))).toReversed(), // kilocode_change(config) seam
+      (entry) =>
+        entry.missing
+          ? Effect.succeed({ path: entry.item, present: false })
+          : fs.isDir(entry.item).pipe(Effect.map((present) => ({ path: entry.item, present }))),
+      { concurrency: "unbounded" },
     ),
     claude:
       options?.claude === false

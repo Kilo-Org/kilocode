@@ -167,6 +167,9 @@ export async function main(argv: string[]) {
     logger.warn(`${merged.conflicts.length} conflict(s):`)
     logger.list(merged.conflicts)
     await resolve(config, options, sync)
+  } else {
+    // A clean merge skips resolve(), so the files Kilo dropped need their own pass.
+    await skipRemoved(options)
   }
 
   const workflows = await checkWorkflows()
@@ -306,6 +309,12 @@ function printAnalysis(sync: report.SyncReport) {
   logger.list(a.sharedTouched)
 }
 
+/** Remove upstream files under the packages Kilo dropped. Also runs after a clean merge, which skips resolve(). */
+async function skipRemoved(options: MergeOptions) {
+  const skipped = (await skipFiles({ dryRun: false, verbose: options.verbose })).filter((r) => r.action === "removed")
+  if (skipped.length > 0) logger.success(`Removed ${skipped.length} skipped file(s)`)
+}
+
 /** Resolve the known conflict types. Files that need a person stay conflicted. */
 async function resolve(config: MergeConfig, options: MergeOptions, sync: report.SyncReport) {
   const transform = { dryRun: false, verbose: options.verbose }
@@ -315,8 +324,7 @@ async function resolve(config: MergeConfig, options: MergeOptions, sync: report.
   const removed = fix.stdout.toString().split("\n").filter((line) => line.startsWith("check-workflows: removed"))
   if (removed.length > 0) logger.success(`Removed ${removed.length} workflow(s) that Kilo dropped`)
 
-  const skipped = (await skipFiles(transform)).filter((r) => r.action === "removed")
-  if (skipped.length > 0) logger.success(`Removed ${skipped.length} skipped file(s)`)
+  await skipRemoved(options)
 
   const kept = (await keepOursFiles(transform)).filter((r) => r.action === "kept")
   if (kept.length > 0) logger.success(`Kept Kilo's version of ${kept.length} Kilo-owned file(s)`)

@@ -62,6 +62,14 @@ export interface CreatedVersion {
   versionIndex: number
 }
 
+/** A file of a new worktree's first prompt. An `@` mention keeps its name and span for the transcript. */
+export type InitialFile = {
+  mime: string
+  url: string
+  name?: string
+  mention?: { start: number; end: number; text: string }
+}
+
 export interface InitialMessage {
   sessionId: string
   worktreeId: string
@@ -72,7 +80,7 @@ export interface InitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 /**
@@ -87,7 +95,7 @@ export function buildInitialMessages(
   prompt?: string,
   agent?: string,
   variant?: string,
-  files?: Array<{ mime: string; url: string }>,
+  files?: InitialFile[],
   command?: { command: string; arguments: string },
 ): InitialMessage[] {
   return created.map((entry) => {

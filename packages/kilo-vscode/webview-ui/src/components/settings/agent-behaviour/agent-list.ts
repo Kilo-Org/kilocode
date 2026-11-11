@@ -30,6 +30,17 @@ export function isAgentNameTaken(id: string, taken: string[]) {
   return isBuiltInAgent(id) || taken.includes(id)
 }
 
+export type RemovableAgent = { readonly name: string; readonly scope: "global" | "project" }
+
+/**
+ * The scopes whose markdown file defines `id`. A built-in agent owns its base definition, so a file for it only
+ * overrides that definition and deleting the file would leave the agent in place; it is never offered for removal.
+ */
+export function removableScopes(id: string, agents: readonly RemovableAgent[]) {
+  if (isBuiltInAgent(id)) return []
+  return [...new Set(agents.filter((agent) => agent.name === id).map((agent) => agent.scope))]
+}
+
 export const agentPath = (id: string) => ["agents", id]
 export const agentField = (id: string, ...rest: string[]) => ["agents", id, ...rest]
 

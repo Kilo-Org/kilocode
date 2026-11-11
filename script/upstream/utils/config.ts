@@ -132,6 +132,8 @@ export const defaultConfig: MergeConfig = {
     "infra/**",
     "sst.config.ts",
     "salesforce/**",
+    // opencode.ai site Worker: upstream v2.2.6 merged the docs (`services/www`) and `packages/console/app` into it
+    "services/site/**",
     // Upstream VS Code extension (Kilo ships its own)
     "sdks/vscode/**",
     // Upstream's own project config for developing OpenCode: contributor agents, commands, skills, glossaries,

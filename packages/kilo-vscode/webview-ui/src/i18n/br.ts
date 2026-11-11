@@ -1342,6 +1342,11 @@ export const dict = {
     "Escolha se os blocos de ferramentas MCP e genéricas começam expandidos ou recolhidos.",
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Recolhidos",
+  "settings.display.codeMode.title": "Blocos do Code Mode",
+  "settings.display.codeMode.description":
+    "Escolha se os blocos do Code Mode começam com as chamadas de ferramenta listadas ou em uma única linha. O script permanece sempre oculto até você abri-lo.",
+  "settings.display.codeMode.expanded": "Expandidos",
+  "settings.display.codeMode.collapsed": "Recolhidos",
 
   "settings.display.shortcutHints.title": "Mostrar dicas de atalhos",
   "settings.display.shortcutHints.description":
@@ -1431,6 +1436,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Abrir todos os agentes em segundo plano",
   "task.backgroundAgents.cancel": "Parar",
   "task.backgroundAgents.continueInBackground": "Continuar em segundo plano",
+  "task.backgroundAgents.promoteFailed": "Este agente não pôde continuar em segundo plano. Ele pode já ter terminado.",
   "task.backgroundAgents.waiting": "Um agente em segundo plano precisa da sua entrada",
   "task.backgroundAgents.needsInput": "Entrada necessária",
   "task.backgroundAgents.clearFinished": "Limpar concluídos",
@@ -1517,6 +1523,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navegador do sistema",
   "settings.experimental.browserLinks.integrated": "Navegador Integrado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
+  "chat.reply.toolbar": "Texto selecionado",
+  "chat.reply.quote": "Citar",
+  "chat.reply.quoteHint": "Citar na sua resposta",
+  "chat.reply.commentHint": "Comentar este trecho",
+  "chat.reply.copy": "Copiar",
+  "chat.reply.sendHint": "Enviar este comentário para o Kilo agora",
+  "chat.reply.commentLater": "Salvar para sua próxima mensagem",
+  "chat.reply.count": "Respostas ({{count}})",
+  "chat.reply.sendAll": "Enviar tudo",
+  "chat.reply.showInChat": "Mostrar no chat",
   "browserTab.noSession":
     "Abra o navegador de uma sessão para visualizar um aplicativo local ou uma página HTTPS pública.",
   "browserTab.disabled": "O navegador integrado está desativado. Ative-o em Configurações do Kilo > Experimental.",

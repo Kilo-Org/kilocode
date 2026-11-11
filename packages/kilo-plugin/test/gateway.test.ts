@@ -80,7 +80,7 @@ const addPlugin = Effect.fn(function* () {
     editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
   })
   const plugin = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugin)
+  const host = yield* PluginHost.make(plugin, "test")
   yield* KiloPlugin.effect(host)
   // The host gives a registered Kilo plugin the global services it requires (packages/kilo-cli/src/host.ts).
   yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
@@ -104,7 +104,7 @@ describe("KiloGatewayPlugin", () => {
   it.live("fails explicitly if an embedder does not provide Location config", () =>
     Effect.gen(function* () {
       const plugin = yield* Plugin.Service
-      const host = yield* PluginHost.make(plugin)
+      const host = yield* PluginHost.make(plugin, "test")
       const bus = yield* Bus.Service
       const result = yield* Effect.promise(() =>
         Effect.runPromiseExit(
@@ -451,7 +451,7 @@ describe("KiloGatewayPlugin", () => {
               })
             })
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             const paused = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>()
             const release = yield* Deferred.make<void>()
             let pauseNextReload = false
@@ -536,7 +536,7 @@ describe("KiloGatewayPlugin", () => {
               })
             })
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             const paused = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>()
             const release = yield* Deferred.make<void>()
             const invalidated = yield* Deferred.make<void>()
@@ -779,7 +779,7 @@ describe("KiloGatewayPlugin", () => {
               })
             })
             const plugins = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugins)
+            const host = yield* PluginHost.make(plugins, "test")
             yield* KiloPlugin.effect(host)
             yield* KiloGatewayPlugin.effect(host).pipe(
               Effect.provideService(Config.Service, {
@@ -1394,7 +1394,7 @@ describe("KiloGatewayPlugin", () => {
                 ],
               }
               const plugins = yield* Plugin.Service
-              yield* VerbosityPlugin.Plugin.effect(yield* PluginHost.make(plugins))
+              yield* VerbosityPlugin.Plugin.effect(yield* PluginHost.make(plugins, "test"))
               const host = yield* addPlugin()
               yield* ConfigProviderPlugin.Plugin.effect(host).pipe(
                 Effect.provide(
@@ -2002,7 +2002,7 @@ describe("KiloGatewayPlugin", () => {
           withEnv({ ...env, KILO_API_URL: backend.url }, () =>
             Effect.gen(function* () {
               const plugin = yield* Plugin.Service
-              const host = yield* PluginHost.make(plugin)
+              const host = yield* PluginHost.make(plugin, "test")
               const input = legacy.name === "team"
                 ? { KILO_API_KEY: `${backend.url}/api:legacy-token` }
                 : legacy.input
@@ -2191,7 +2191,7 @@ describe("KiloGatewayPlugin", () => {
           () =>
             Effect.gen(function* () {
               const plugin = yield* Plugin.Service
-              const host = yield* PluginHost.make(plugin)
+              const host = yield* PluginHost.make(plugin, "test")
               yield* host.storage.set("organization:env", { organizationID: "selected" })
               yield* addPlugin()
               expect((yield* (yield* Model.Service).available()).filter((model) => model.providerID === kilo)).toEqual(
@@ -2390,7 +2390,7 @@ describe("KiloGatewayPlugin", () => {
                   "X-KILOCODE-PARENT-TASKID": parent.id,
                   "X-KILOCODE-MACHINEID": "mach-test",
                   "x-kilocode-mode": "code",
-                  "User-Agent": "opencode-kilo-provider/unknown",
+                  "User-Agent": "Kilo-Code/v2/unknown",
                 })
 
                 const httpReq = yield* hooks.trigger("session", "http.request", {
@@ -2400,7 +2400,17 @@ describe("KiloGatewayPlugin", () => {
                   kind: "primary",
                   request: new Request(`${backend.url}/api/gateway/responses`, {
                     method: "POST",
-                    headers: { "content-type": "application/json", "x-api-key": "env-token" },
+                    headers: {
+                      "content-type": "application/json",
+                      "x-api-key": "env-token",
+                      "x-session-affinity": child.id,
+                      "X-Session-Id": child.id,
+                      "x-opencode-session-id": child.id,
+                      "x-opencode-parent-session-id": parent.id,
+                      "x-opencode-project": "prj_1",
+                      "x-opencode-session": child.id,
+                      "x-opencode-client": "kilo2",
+                    },
                     body: JSON.stringify({
                       model: "openai/gpt-5.4",
                       server: backend.url,
@@ -2414,6 +2424,15 @@ describe("KiloGatewayPlugin", () => {
                 })
                 expect(httpReq.request.headers.get("authorization")).toBe("Bearer env-token")
                 expect(httpReq.request.headers.get("x-api-key")).toBeNull()
+                // Upstream OpenCode request identity stays out of Gateway traffic; v1 never sent it.
+                expect(httpReq.request.headers.get("x-opencode-session-id")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-parent-session-id")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-project")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-session")).toBeNull()
+                expect(httpReq.request.headers.get("x-opencode-client")).toBeNull()
+                // The affinity headers are v1 behaviour and stay.
+                expect(httpReq.request.headers.get("x-session-affinity")).toBe(child.id)
+                expect(httpReq.request.headers.get("x-session-id")).toBe(child.id)
                 expect(yield* Effect.promise(() => httpReq.request.json())).toEqual({
                   model: "openai/gpt-5.4",
                   input: [{ type: "message", role: "user", content: "hello" }],

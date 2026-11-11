@@ -1292,6 +1292,11 @@ export const dict = {
   "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
   "settings.display.mcpTool.expanded": "موسّعة",
   "settings.display.mcpTool.collapsed": "مطوية",
+  "settings.display.codeMode.title": "كتل Code Mode",
+  "settings.display.codeMode.description":
+    "اختر ما إذا كانت كتل Code Mode تبدأ بقائمة استدعاءات الأدوات الخاصة بها أم كسطر واحد. يظل النص البرمجي مخفيًا دائمًا حتى تفتحه.",
+  "settings.display.codeMode.expanded": "موسّعة",
+  "settings.display.codeMode.collapsed": "مطوية",
 
   "settings.display.shortcutHints.title": "إظهار تلميحات الاختصارات",
   "settings.display.shortcutHints.description":
@@ -1381,6 +1386,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
+  "task.backgroundAgents.promoteFailed": "تعذّر على هذا الوكيل المتابعة في الخلفية. ربما انتهى بالفعل.",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
   "task.backgroundAgents.clearFinished": "مسح المكتمل",
@@ -1466,6 +1472,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "متصفح النظام",
   "settings.experimental.browserLinks.integrated": "المتصفح المدمج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "chat.reply.toolbar": "النص المحدد",
+  "chat.reply.quote": "اقتباس",
+  "chat.reply.quoteHint": "اقتبس في ردك",
+  "chat.reply.commentHint": "علّق على هذا المقطع",
+  "chat.reply.copy": "نسخ",
+  "chat.reply.sendHint": "أرسل هذا التعليق إلى Kilo الآن",
+  "chat.reply.commentLater": "حفظ لرسالتك التالية",
+  "chat.reply.count": "الردود ({{count}})",
+  "chat.reply.sendAll": "إرسال الكل",
+  "chat.reply.showInChat": "عرض في الدردشة",
   "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
   "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",
 }

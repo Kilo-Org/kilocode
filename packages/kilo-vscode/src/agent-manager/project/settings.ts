@@ -59,11 +59,18 @@ async function loadSettingsProjects(
   const snapshots = contexts.snapshots()
   const selected = snapshots.some((project) => project.id === projectId) ? projectId : snapshots.at(0)?.id
   const ctx = selected ? contexts.resolve(selected) : undefined
-  if (ctx && !ctx.missing()) {
-    const init = await initContextState(ctx, log)
-    if (init.ok && init.current) ctx.setupService()
-  }
+  // Show the cached snapshot at once and let the first load run git discovery and reconcile in the background. The
+  // rows read the same context, so a later open shows the hydrated values.
+  if (ctx && !ctx.missing()) hydrateSettingsProject(ctx, log)
   return settingsProjects(contexts)
+}
+
+function hydrateSettingsProject(ctx: ProjectContext, log: (...args: unknown[]) => void): void {
+  void initContextState(ctx, log)
+    .then((init) => {
+      if (init.ok && init.current) ctx.setupService()
+    })
+    .catch((err) => log("Failed to initialize the Agent Manager settings project:", err))
 }
 
 function settingsProject(contexts: ProjectContexts, project: ProjectSnapshot): SettingsProject {

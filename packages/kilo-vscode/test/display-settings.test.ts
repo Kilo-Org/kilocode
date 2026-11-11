@@ -22,7 +22,9 @@ async function directory() {
 
 afterEach(async () => {
   entries = []
-  await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })))
+  await Promise.all(
+    directories.splice(0).map((path) => rm(path, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })),
+  )
 })
 
 afterAll(() => server.stop(true))
@@ -50,6 +52,8 @@ describe("readDisplaySettings", () => {
       terminalCommandDisplay: "collapsed",
       codeEditDisplay: "expanded",
       mcpToolDisplay: "collapsed",
+      codeModeDisplay: "collapsed",
+      reasoningDisplay: "expanded",
     })
   })
 
@@ -65,6 +69,29 @@ describe("readDisplaySettings", () => {
       terminalCommandDisplay: "expanded",
       codeEditDisplay: "collapsed",
       mcpToolDisplay: "collapsed",
+      codeModeDisplay: "collapsed",
+      reasoningDisplay: "expanded",
     })
+  })
+
+  test("reads the reasoning mode and maps the legacy boolean", async () => {
+    const root = await directory()
+    const global = join(root, "kilo2.json")
+    const project = join(root, "project.json")
+    await writeFile(global, '{"auto_collapse_reasoning": true}')
+    await writeFile(project, '{"reasoning_display": "preview"}')
+    entries = [
+      { type: "document", path: global },
+      { type: "document", path: project },
+    ]
+
+    expect(
+      (
+        await readDisplaySettings({
+          server: { url: `http://127.0.0.1:${server.port}`, authorization: "test" },
+          directory: root,
+        })
+      ).reasoningDisplay,
+    ).toBe("preview")
   })
 })

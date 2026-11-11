@@ -4,10 +4,8 @@ import { getShellEnvironment } from "../shell-env"
 import { RunScriptManager, type RunHandle, type RunStatus } from "./manager"
 import { RunScriptService } from "./service"
 import type { WorktreeStateManager } from "../WorktreeStateManager"
-import type { RunTerminalDestination } from "./destination"
 
 export interface RunTaskConfig {
-  destination: RunTerminalDestination
   worktreeId: string
   branch: string
   command: string
@@ -64,7 +62,7 @@ export class RunController {
     this.opts.refresh?.()
   }
 
-  async run(worktreeId: string, destination: RunTerminalDestination): Promise<void> {
+  async run(worktreeId: string): Promise<void> {
     const status = this.manager.status(worktreeId)
     if (status.state !== "idle") {
       this.stop(worktreeId)
@@ -115,7 +113,7 @@ export class RunController {
 
     const start = () =>
       this.opts.start(
-        { destination, worktreeId, branch, command: script.command, args: script.args, cwd, env },
+        { worktreeId, branch, command: script.command, args: script.args, cwd, env },
         (exit) => this.manager.finish(worktreeId, exit),
       )
     await this.manager.start(worktreeId, start)

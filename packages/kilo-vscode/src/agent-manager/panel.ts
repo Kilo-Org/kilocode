@@ -3,10 +3,11 @@
 // tool files, display settings, cost alerts) are handled by the shared webview wiring.
 import { Uri, ViewColumn, commands, window, type ExtensionContext, type WebviewPanel } from "vscode"
 import { composerState, wire } from "../chat"
-import { promptKeybindings, watchKeybindings } from "../prompt-keybindings"
+import { promptKeybindings, promptSelection, watchPromptContext } from "../prompt-keybindings"
 import type { ToHost, ToWebview } from "../protocol"
 import type { Manager } from "../server"
 import type { Disposable, PanelContext } from "./host"
+import { chatFocus } from "../services/code-actions/target"
 
 export const PANEL_TYPE = "kilo-code.v2.agentManagerPanel"
 const INTRO = "kilo.agentManager.introDismissed"
@@ -79,12 +80,28 @@ export function createPanel(input: {
           onMessage(item)
           return true
         }
+        // Chat links arrive as the shared client's `open`; the provider decides between the panel and the browser.
+        if (item.type === "open" && typeof item.url === "string") {
+          onMessage({ type: "agentManager.openWebLink", url: item.url, external: item.external === true } as PanelMessage)
+          return true
+        }
         if (item.type === "agentManagerFocusChanged") {
           sideTerminal(item.target === "sideTerminal")
           return true
         }
+        // `@terminal` reads the panel's own terminal tabs in the webview. It asks here only when the selection has
+        // none, and the panel has no VS Code terminal to fall back to.
+        if (message.type === "requestTerminalContext") {
+          void panel.webview.postMessage({
+            type: "terminalContextError",
+            requestId: message.requestId,
+            error: "No terminal is associated with this session",
+          } satisfies ToWebview)
+          return true
+        }
         // Focus can return straight to the side terminal, so the panel reports its current focus target again.
         if (item.type === "webviewFocusChanged") {
+          if (item.focused === true) chatFocus.gained("agentManager")
           if (item.focused === true) void panel.webview.postMessage({ type: "agentManager.focusContextRequested" })
           else sideTerminal(false)
           return false
@@ -100,16 +117,18 @@ export function createPanel(input: {
       if (!state.ready) return void state.queued.push(message)
       void panel.webview.postMessage(message)
     }
-    const keybindings = () => queue({ type: "keybindings", bindings: promptKeybindings(input.context) })
+    const keybindings = () =>
+      queue({ type: "keybindings", bindings: promptKeybindings(input.context), selection: promptSelection() })
     keybindings()
     queue({ type: "webviewActiveChanged", active: panel.visible })
-    const watcher = watchKeybindings(input.context, keybindings)
+    const watcher = watchPromptContext(input.context, keybindings)
     const visibility = panel.onDidChangeViewState((event) => {
       queue({ type: "webviewActiveChanged", active: event.webviewPanel.visible })
       if (event.webviewPanel.visible) composerState(input.context).forEach(queue)
     })
     const disposed: (() => void)[] = []
     panel.onDidDispose(() => {
+      chatFocus.closed("agentManager")
       sideTerminal(false)
       surface.dispose()
       watcher.dispose()

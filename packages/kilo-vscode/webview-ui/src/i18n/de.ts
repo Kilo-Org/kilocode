@@ -1355,6 +1355,11 @@ export const dict = {
     "Wählen Sie, ob Blöcke für MCP- und generische Werkzeuge anfangs aus- oder eingeklappt sind.",
   "settings.display.mcpTool.expanded": "Ausgeklappt",
   "settings.display.mcpTool.collapsed": "Eingeklappt",
+  "settings.display.codeMode.title": "Blöcke für Code Mode",
+  "settings.display.codeMode.description":
+    "Wählen Sie, ob Blöcke für Code Mode mit aufgelisteten Tool-Aufrufen oder als eine Zeile starten. Das Skript bleibt immer ausgeblendet, bis Sie es öffnen.",
+  "settings.display.codeMode.expanded": "Ausgeklappt",
+  "settings.display.codeMode.collapsed": "Eingeklappt",
 
   "settings.display.shortcutHints.title": "Tastenkürzel-Hinweise anzeigen",
   "settings.display.shortcutHints.description":
@@ -1445,6 +1450,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Alle Hintergrund-Agenten öffnen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Im Hintergrund fortsetzen",
+  "task.backgroundAgents.promoteFailed": "Dieser Agent konnte nicht im Hintergrund weiterlaufen. Möglicherweise ist er bereits fertig.",
   "task.backgroundAgents.waiting": "Ein Hintergrund-Agent benötigt deine Eingabe",
   "task.backgroundAgents.needsInput": "Eingabe erforderlich",
   "task.backgroundAgents.clearFinished": "Abgeschlossene löschen",
@@ -1531,6 +1537,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systembrowser",
   "settings.experimental.browserLinks.integrated": "Integrierter Browser",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
+  "chat.reply.toolbar": "Ausgewählter Text",
+  "chat.reply.quote": "Zitieren",
+  "chat.reply.quoteHint": "In deiner Antwort zitieren",
+  "chat.reply.commentHint": "Diese Stelle kommentieren",
+  "chat.reply.copy": "Kopieren",
+  "chat.reply.sendHint": "Diesen Kommentar jetzt an Kilo senden",
+  "chat.reply.commentLater": "Für deine nächste Nachricht speichern",
+  "chat.reply.count": "Antworten ({{count}})",
+  "chat.reply.sendAll": "Alle senden",
+  "chat.reply.showInChat": "Im Chat anzeigen",
   "browserTab.noSession":
     "Öffne den Browser aus einer Sitzung, um eine lokale Anwendung oder eine öffentliche HTTPS-Seite anzuzeigen.",
   "browserTab.disabled":

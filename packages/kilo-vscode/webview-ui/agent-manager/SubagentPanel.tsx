@@ -4,7 +4,6 @@
  * Each subagent is a session of the same directory as its parent, so the panel reads it from the directory store of the
  * sessions layer and renders the shared v2 session view without docks or a prompt.
  */
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { AgentAvatar, AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
@@ -65,14 +64,6 @@ const SubagentContent: Component<ContentProps> = (props) => {
       aria-hidden={!props.visible()}
       inert={!props.visible()}
     >
-      <header class="am-subagent-header">
-        <div class="am-subagent-heading">
-          <Icon name="task" size="small" />
-          <span>Subagents</span>
-          <span class="am-subagent-count">{props.tabs().length}</span>
-        </div>
-        <IconButton icon="x" size="small" variant="ghost" aria-label="Close subagents panel" onClick={props.onClosePanel} />
-      </header>
       <InspectorTabStrip
         ids={ids}
         active={props.active}
@@ -114,6 +105,17 @@ const SubagentContent: Component<ContentProps> = (props) => {
             />
           )
         }}
+        action={() => (
+          <div class="am-subagent-close">
+            <IconButton
+              icon="close"
+              size="small"
+              variant="ghost"
+              aria-label="Close subagents panel"
+              onClick={props.onClosePanel}
+            />
+          </div>
+        )}
       />
       <div class="am-subagent-chat">
         <Show when={props.active()} keyed>
@@ -125,6 +127,7 @@ const SubagentContent: Component<ContentProps> = (props) => {
                 actions={props.actions}
                 onShowHistory={props.onShowHistory}
                 readOnly
+                searchCommand={false}
               />
             </V2Scope>
           )}

@@ -1330,6 +1330,11 @@ export const dict = {
     "Odaberite da li će blokovi MCP i generičkih alata u početku biti prošireni ili sažeti.",
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
+  "settings.display.codeMode.title": "Blokovi Code Mode",
+  "settings.display.codeMode.description":
+    "Odaberite da li blokovi Code Mode počinju s navedenim pozivima alata ili kao jedan red. Skripta je uvijek skrivena dok je ne otvorite.",
+  "settings.display.codeMode.expanded": "Prošireni",
+  "settings.display.codeMode.collapsed": "Sažeti",
 
   "settings.display.shortcutHints.title": "Prikaži savjete za prečice",
   "settings.display.shortcutHints.description":
@@ -1419,6 +1424,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
+  "task.backgroundAgents.promoteFailed": "Ovaj agent nije mogao nastaviti u pozadini. Možda je već završio.",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
   "task.backgroundAgents.clearFinished": "Obriši završene",
@@ -1505,6 +1511,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Sistemski preglednik",
   "settings.experimental.browserLinks.integrated": "Integrirani preglednik",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "chat.reply.toolbar": "Odabrani tekst",
+  "chat.reply.quote": "Citiraj",
+  "chat.reply.quoteHint": "Citiraj u svom odgovoru",
+  "chat.reply.commentHint": "Komentariši ovaj dio",
+  "chat.reply.copy": "Kopiraj",
+  "chat.reply.sendHint": "Pošalji ovaj komentar Kilu sada",
+  "chat.reply.commentLater": "Sačuvaj za sljedeću poruku",
+  "chat.reply.count": "Odgovori ({{count}})",
+  "chat.reply.sendAll": "Pošalji sve",
+  "chat.reply.showInChat": "Prikaži u chatu",
   "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
   "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",
 }

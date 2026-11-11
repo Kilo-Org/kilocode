@@ -1324,6 +1324,11 @@ export const dict = {
   "settings.display.mcpTool.description": "Vælg, om MCP- og generiske værktøjsblokke starter foldet ud eller sammen.",
   "settings.display.mcpTool.expanded": "Foldet ud",
   "settings.display.mcpTool.collapsed": "Foldet sammen",
+  "settings.display.codeMode.title": "Code Mode-blokke",
+  "settings.display.codeMode.description":
+    "Vælg, om Code Mode-blokke starter med værktøjskaldene vist i en liste eller som én linje. Scriptet forbliver altid skjult, indtil du åbner det.",
+  "settings.display.codeMode.expanded": "Foldet ud",
+  "settings.display.codeMode.collapsed": "Foldet sammen",
 
   "settings.display.shortcutHints.title": "Vis genvejstips",
   "settings.display.shortcutHints.description":
@@ -1413,6 +1418,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Åbn alle baggrundsagenter",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
+  "task.backgroundAgents.promoteFailed": "Denne agent kunne ikke fortsætte i baggrunden. Den er måske allerede færdig.",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
   "task.backgroundAgents.needsInput": "Input kræves",
   "task.backgroundAgents.clearFinished": "Ryd færdige",
@@ -1499,6 +1505,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systembrowser",
   "settings.experimental.browserLinks.integrated": "Integreret browser",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "chat.reply.toolbar": "Markeret tekst",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citér i dit svar",
+  "chat.reply.commentHint": "Kommentér dette afsnit",
+  "chat.reply.copy": "Kopier",
+  "chat.reply.sendHint": "Send denne kommentar til Kilo nu",
+  "chat.reply.commentLater": "Gem til din næste besked",
+  "chat.reply.count": "Svar ({{count}})",
+  "chat.reply.sendAll": "Send alle",
+  "chat.reply.showInChat": "Vis i chatten",
   "browserTab.noSession":
     "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",
   "browserTab.disabled": "Den integrerede browser er deaktiveret. Aktivér den i Kilo-indstillinger > Eksperimentel.",

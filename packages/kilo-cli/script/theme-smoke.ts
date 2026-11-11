@@ -69,7 +69,7 @@ export async function runThemeSmoke(executable?: string) {
         check()
         const timeout = setTimeout(
           () => found.reject(new Error(`Timed out waiting for ${label}\n${Bun.stripANSI(state.output)}`)),
-          45_000,
+          90_000,
         )
         try {
           await Promise.race([
@@ -83,21 +83,45 @@ export async function runThemeSmoke(executable?: string) {
           state.change = () => {}
         }
       }
-      const send = async (keys: string, label: string, predicate: (output: string) => boolean) => {
+      // `retry` for a key that is safe to repeat: a slow runner can drop it or paint after the wait started.
+      const send = async (
+        keys: string,
+        label: string,
+        predicate: (output: string) => boolean,
+        retry = false,
+      ) => {
         state.output = ""
         const found = until(label, predicate)
         terminal.write(keys)
-        await found
+        const again = retry ? setInterval(() => terminal.write(keys), 10_000) : undefined
+        try {
+          await found
+        } finally {
+          if (again) clearInterval(again)
+        }
+      }
+      // A slow runner paints the slash list before it finishes filtering the typed command. Enter on an
+      // unsettled list can pick another entry, so wait until the screen stops changing.
+      const settle = async (quiet = 500, limit = 10_000) => {
+        const start = Date.now()
+        let last = state.output.length
+        while (Date.now() - start < limit) {
+          await Bun.sleep(quiet)
+          if (state.output.length === last) return
+          last = state.output.length
+        }
       }
       try {
         await until(`default Kilo ${mode} home screen`, (output) => isKiloHome(output, mode))
         console.log(`PASS: ${binary ? "compiled" : "source"} default Kilo ${mode} home screen`)
         await send("/themes", "theme command", (output) => Bun.stripANSI(output).includes("Switch theme"))
+        await settle()
         await send("\r", "Kilo in theme picker", isKiloThemePicker)
         await send("opencode", "OpenCode preview", (output) =>
           output.includes(mode === "dark" ? ";250;178;131" : ";59;125;216"),
         )
-        await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrompt(output, mode))
+        // Escape cancels the preview and is safe to repeat when a slow runner drops or delays it.
+        await send("\x1b", "Kilo restored on cancel", (output) => hasKiloPrompt(output, mode), true)
         console.log(`PASS: ${binary ? "compiled" : "source"} ${mode} picker, upstream preview and cancel`)
       } finally {
         try {

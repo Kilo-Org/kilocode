@@ -9,6 +9,10 @@ import { emptySpeechStatus } from "./availability"
 
 const EVENTS = new Set(["config.updated", "integration.updated", "model.updated", "provider.updated"])
 
+// The last status the host sent. The Agent Manager mounts this provider per worktree, so the composer that replaces
+// the previous worktree starts with the known status instead of dropping the mic until the next reply.
+let lastStatus: SpeechToTextStatus | undefined
+
 type SpeechStatusValue = {
   status: () => SpeechToTextStatus
   /** Re-reads the config and the Gateway account; coalesces bursts from one settings write. */
@@ -22,7 +26,7 @@ const Context = createContext<SpeechStatusValue>()
 export const SpeechToTextStatusProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const v2 = useV2()
-  const [status, setStatus] = createSignal<SpeechToTextStatus>(emptySpeechStatus())
+  const [status, setStatus] = createSignal<SpeechToTextStatus>(lastStatus ?? emptySpeechStatus())
   const saves = new Map<string, { resolve: () => void; reject: (error: Error) => void }>()
   let timer: ReturnType<typeof setTimeout> | undefined
   let prepared = false
@@ -43,6 +47,7 @@ export const SpeechToTextStatusProvider: ParentComponent = (props) => {
       return
     }
     if (message.type !== "speechToTextConfigLoaded") return
+    lastStatus = message.status
     setStatus(message.status)
     if (message.status.enabled && !prepared) {
       prepared = true

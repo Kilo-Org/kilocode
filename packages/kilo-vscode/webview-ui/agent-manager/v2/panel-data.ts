@@ -5,11 +5,13 @@ import { OpenCode, type OpenCodeClient, type OpenCodeEvent } from "@opencode/cli
 import { createClientConnection } from "@opencode/client/solid"
 import { createRoot, createSignal, onCleanup } from "solid-js"
 import { createV2Scope, type V2 } from "../../src/v2/scope"
+import { createConnectionMetadata, type ConnectionMetadata } from "../../src/v2/connection-metadata"
+import { catalogEvent } from "../../src/v2/kilo-catalog"
 import { events } from "../../src/v2/events"
 import { transport } from "../../src/v2/transport"
 import type { ToHost, ToWebview } from "../../../src/protocol"
 
-type Entry = { scope: V2; emit: (event: OpenCodeEvent) => void; dispose: () => void }
+type Entry = { scope: V2; emit: (event: OpenCodeEvent) => void; dispose: () => void; show: () => void }
 
 /**
  * Events that every store must see: a move changes the directory of a session, so the old and the new store both
@@ -34,10 +36,26 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
   const api = input.api ?? OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const stores = new Map<string, Entry>()
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
+  const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
-  const route = (event: OpenCodeEvent) => targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
+  const catalogHandlers = new Set<() => void>()
+  let metadata: ConnectionMetadata | undefined
+  const route = (event: OpenCodeEvent) => {
+    if (event.type === catalogEvent) catalogHandlers.forEach((handler) => handler())
+    targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
+  }
   const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
-  const open = (url: string) => input.post({ type: "open", url } as never)
+  metadata = createConnectionMetadata({
+    api,
+    connection,
+    subscribe: (_type, handler) => {
+      catalogHandlers.add(handler)
+      return () => {
+        catalogHandlers.delete(handler)
+      }
+    },
+  })
+  const open = (url: string, external?: boolean) => input.post({ type: "open", url, external })
   const onCommand = (handler: (name: string) => void) => {
     commands.add(handler)
     onCleanup(() => commands.delete(handler))
@@ -51,11 +69,31 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
     const entry = createRoot((dispose) => {
       const event = events()
       onCleanup(event.clear)
-      const scope = createV2Scope({ api, connection, event, directory: id, bindings, onCommand, open })
-      return { scope, emit: event.emit, dispose }
+      const [visible, setVisible] = createSignal(false)
+      const scope = createV2Scope({
+        api,
+        connection,
+        event,
+        directory: id,
+        shared: metadata,
+        visible,
+        bindings,
+        selection,
+        onCommand,
+        open,
+      })
+      return { scope, emit: event.emit, dispose, show: () => setVisible(true) }
     })
     stores.set(id, entry)
     return entry.scope
+  }
+
+  /** Loads the session list of each directory that the panel shows; the others keep it unloaded. */
+  const show = (directories: Iterable<string>) => {
+    for (const directory of directories) {
+      store(directory)
+      stores.get(key(directory))?.show()
+    }
   }
 
   const release = (directory: string) => {
@@ -76,6 +114,8 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
     api,
     connection,
     store,
+    find: (directory: string) => stores.get(key(directory))?.scope,
+    show,
     release,
     retain,
     directories: () => [...stores.keys()],
@@ -87,6 +127,7 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
       }
       if (message.type === "keybindings") {
         setBindings(message.bindings)
+        setSelection(message.selection)
         return true
       }
       if (message.type === "response" || message.type === "chunk" || message.type === "end" || message.type === "error") {

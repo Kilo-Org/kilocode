@@ -6,7 +6,6 @@ import { pushState, type ProviderStateHost } from "../src/agent-manager/provider
 import { handleSessionLifecycle } from "../src/agent-manager/session-lifecycle"
 import type { AgentManagerOutMessage } from "../src/agent-manager/types"
 import type { Worktree, WorktreeStateManager } from "../src/agent-manager/WorktreeStateManager"
-import { DestinationState } from "../src/agent-manager/terminal-destination"
 
 const ROOT = "/repo"
 const WORKTREE = "/repo/wt1"
@@ -110,7 +109,6 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
     run: { state: () => ({ runStatuses: [] }) },
     terminalRouter: { dispose: async () => {} },
     scripts: { manager: { snapshot: async () => {} } },
-    destination: new DestinationState("vscode"),
     healthScheduler: { schedule: () => {} },
     busySessions: new Set<string>(),
     staleIds: new Set<string>(),
@@ -120,6 +118,7 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
     stateReady: undefined,
     context: ctx,
     state: ctx.peekState(),
+    browserAutomation: () => false,
     postToWebview: (message: AgentManagerOutMessage) => posts.push(message),
     sendRepoInfo: async () => {},
     initializeState: async () => {},

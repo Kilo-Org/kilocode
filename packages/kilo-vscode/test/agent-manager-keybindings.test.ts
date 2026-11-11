@@ -7,16 +7,11 @@ import { mergeUserKeybindings } from "../src/keybinding-format"
 const ROOT = join(import.meta.dir, "..")
 
 type Binding = { command: string; key?: string; mac?: string; when?: string }
-type Contribution = {
-  type: string
-  properties: Record<string, { type: string; description?: string }>
-}
 type Manifest = {
   scripts: Record<string, string>
   repository: { type: string; url: string; directory: string }
   contributes: {
     configurationDefaults: Record<string, Record<string, boolean>>
-    taskDefinitions: Contribution[]
     configuration: { properties: Record<string, { default?: unknown }> }
     keybindings: Binding[]
   }
@@ -35,7 +30,7 @@ describe("Agent Manager keybindings", () => {
       agentManagerOpen: "⌘⇧M",
       cycleAgentMode: "⌘.",
       cyclePreviousAgentMode: "⌘⇧.",
-      search: "⌘F",
+      search: "⌘⇧F",
       previousSession: "⌘⌥↑",
       nextSession: "⌘⌥↓",
       previousTab: "⌘⌥←",
@@ -58,6 +53,24 @@ describe("Agent Manager keybindings", () => {
       jumpTo1: "⌘1",
       jumpTo9: "⌘9",
     })
+  })
+
+  it("binds worktree search to Cmd+Shift+F and keeps Cmd+F for v1 parity", () => {
+    const search = manifestKeybindings()
+      .filter((binding) => binding.command === "kilo-code.v2.agentManager.search")
+      .map((binding) => ({ key: binding.key, mac: binding.mac, when: binding.when }))
+    expect(search).toEqual([
+      {
+        key: "ctrl+f",
+        mac: "cmd+f",
+        when: "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus",
+      },
+      {
+        key: "ctrl+shift+f",
+        mac: "cmd+shift+f",
+        when: "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus",
+      },
+    ])
   })
 
   it("shows user keybindings.json overrides", () => {
@@ -86,12 +99,6 @@ describe("extension manifest", () => {
     })
   })
 
-  it("declares the worktree setup task the setup runner creates", () => {
-    const definition = manifest.contributes.taskDefinitions.find((item) => item.type === "kilo-worktree-setup")
-    expect(definition?.properties.script.type).toBe("string")
-    expect(definition?.properties.worktree.type).toBe("string")
-  })
-
   it("unbinds the Problems view from the Agent Manager shortcut", () => {
     const unbind = manifest.contributes.keybindings.findIndex(
       (binding) => binding.command === "-workbench.actions.view.problems" && binding.key === "ctrl+shift+m",
@@ -103,8 +110,8 @@ describe("extension manifest", () => {
     expect(open).toBe(unbind + 1)
   })
 
-  it("shows the task timeline by default", () => {
-    expect(manifest.contributes.configuration.properties["kilo-code.v2.showTaskTimeline"]?.default).toBe(true)
+  it("collapses the task timeline by default", () => {
+    expect(manifest.contributes.configuration.properties["kilo-code.v2.showTaskTimeline"]?.default).toBe(false)
   })
 
   it("carries the CLI and bundles into the VSIX", () => {

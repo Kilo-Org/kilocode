@@ -1284,6 +1284,11 @@ export const dict = {
     "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
+  "settings.display.codeMode.title": "Блоки Code Mode",
+  "settings.display.codeMode.description":
+    "Виберіть, чи блоки Code Mode починаються зі списку викликів інструментів, чи з одного рядка. Скрипт завжди залишається прихованим, доки ви його не відкриєте.",
+  "settings.display.codeMode.expanded": "Розгорнуті",
+  "settings.display.codeMode.collapsed": "Згорнуті",
 
   "settings.display.shortcutHints.title": "Показувати підказки клавіш",
   "settings.display.shortcutHints.description":
@@ -1384,6 +1389,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
+  "task.backgroundAgents.promoteFailed": "Цей агент не зміг продовжити роботу у фоні. Можливо, він уже завершився.",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
   "task.backgroundAgents.clearFinished": "Очистити завершені",
@@ -1517,6 +1523,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Системний браузер",
   "settings.experimental.browserLinks.integrated": "Вбудований браузер",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "chat.reply.toolbar": "Виділений текст",
+  "chat.reply.quote": "Цитувати",
+  "chat.reply.quoteHint": "Цитувати у відповіді",
+  "chat.reply.commentHint": "Прокоментувати цей фрагмент",
+  "chat.reply.copy": "Копіювати",
+  "chat.reply.sendHint": "Надіслати цей коментар до Kilo зараз",
+  "chat.reply.commentLater": "Зберегти для наступного повідомлення",
+  "chat.reply.count": "Відповіді ({{count}})",
+  "chat.reply.sendAll": "Надіслати все",
+  "chat.reply.showInChat": "Показати в чаті",
   "browserTab.noSession":
     "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",
   "browserTab.disabled": "Вбудований браузер вимкнено. Увімкніть його в Налаштуваннях Kilo > Експериментальні.",

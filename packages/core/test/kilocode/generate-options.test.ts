@@ -84,6 +84,6 @@ it.effect("forwards the optional system prompt and generation settings", () =>
     expect(requests).toHaveLength(1)
     expect(requests[0]!.system).toEqual([{ type: "text", text: "Generate a Git branch name" }])
     expect(JSON.stringify(requests[0]!.messages)).toContain("Fix auth")
-    expect(requests[0]!.generation?.temperature).toBe(0.1)
+    expect(requests[0]!.temperature).toBe(0.1)
   }),
 )

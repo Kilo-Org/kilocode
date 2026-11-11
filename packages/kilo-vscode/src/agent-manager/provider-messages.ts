@@ -13,7 +13,6 @@ import { STATE_GATED } from "./project/state-gate"
 import { handleSection } from "./section-handler"
 import { handleTabLayoutMessage } from "./tab-layout"
 import { handleRunMessage } from "./run/message"
-import { handleDestination, type DestinationState } from "./terminal-destination"
 import { normalizeBaseBranch } from "./base-branch"
 import { handleBaseUpdate } from "./base-update"
 import { pushFixes } from "../kilo-provider/push-fixes-settings"
@@ -24,7 +23,6 @@ import type { BranchNamingController } from "./branch-naming"
 import type { WorktreeImporter } from "./worktree-importer"
 import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { TerminalRouter } from "./terminal-routing"
-import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { RunController } from "./run/controller"
 import type { RecoveryMessage } from "./worktree-recovery"
@@ -41,10 +39,8 @@ export interface MessageHost {
   importer: WorktreeImporter
   diffs: WorktreeDiffController
   terminals: TerminalRouter
-  integrated: SessionTerminalManager
   scripts: { manager: ScriptTerminalManager }
   run: RunController
-  destination: DestinationState
   panel: () => PanelContext | undefined
   context: () => ProjectContext | undefined
   state: () => WorktreeStateManager | undefined
@@ -71,16 +67,23 @@ export interface MessageHost {
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ) => Promise<void>
+  continueInWorktree: (
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ) => Promise<void>
   configureSetupScript: () => Promise<void>
   sendRepoInfo: () => Promise<void>
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
   openWorktreeDirectory: (worktreeId: string) => void
   openWorktreeFile: (id: string, filePath: string, line?: number, column?: number) => void
+  readDocument: (sessionId: string, file: string, contextKey?: string) => Promise<void>
+  validateFiles: (id: string, sessionId: string, paths: string[]) => Promise<void>
   runKey: (worktreeId: string) => string
   view: (sessionIds: string[]) => void
   trackOpenSessions: (sessionIds: string[]) => void
   trackVisibleSession: (sessionId: string | null) => void
   setCaffeination: (enabled: boolean) => Promise<void>
+  toggleCaffeination: () => Promise<void>
   postCaffeination: () => void
   setReviewMarkdownRender: (value: boolean) => Promise<void>
 }
@@ -114,11 +117,7 @@ async function shouldWaitForState(m: AgentManagerInMessage, ctx: ProjectContext,
   return true
 }
 
-async function handleWorktree(
-  m: AgentManagerInMessage,
-  ctx: ProjectContext,
-  host: MessageHost,
-): Promise<boolean> {
+async function handleWorktree(m: AgentManagerInMessage, ctx: ProjectContext, host: MessageHost): Promise<boolean> {
   if (m.type === "agentManager.createWorktree") {
     await host.onCreateWorktree(m.baseBranch, m.branchName)
     return true
@@ -171,10 +170,10 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     }
     return true
   }
-  if (m.type === "continueInWorktree") {
-    void host.continueFromSidebar(m.sessionId, (status, detail, error) => {
+  if (m.type === "agentManager.continueInWorktree") {
+    void host.continueInWorktree(m.sessionId, (status, detail, error) => {
       host.log(`continueInWorktree: ${status}${detail ? ` ${detail}` : ""}${error ? ` (${error})` : ""}`)
-      if (error) host.post({ type: "error", message: error })
+      host.post({ type: "continueInWorktreeProgress", status, detail, error })
     })
     return true
   }
@@ -215,6 +214,10 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     await host.setCaffeination(m.enabled)
     return true
   }
+  if (m.type === "agentManager.toggleCaffeination") {
+    await host.toggleCaffeination()
+    return true
+  }
   return false
 }
 
@@ -223,24 +226,7 @@ function handleUi(m: AgentManagerInMessage, host: MessageHost): boolean {
     void host.configureSetupScript()
     return true
   }
-  if (handleDestination(host.destination, m, (message) => host.log("[XTerm]", message))) return true
   if (handleRunMessage(host.run, m, (id) => host.runKey(id))) return true
-  if (m.type === "agentManager.showTerminal") {
-    host.integrated.showTerminal(m.sessionId, host.state())
-    return true
-  }
-  if (m.type === "agentManager.showLocalTerminal") {
-    host.integrated.showLocalTerminal()
-    return true
-  }
-  if (m.type === "agentManager.showWorktreeTerminal") {
-    host.integrated.showWorktreeTerminal(m.worktreeId, host.state())
-    return true
-  }
-  if (m.type === "agentManager.showExistingLocalTerminal") {
-    host.integrated.syncLocalOnSessionSwitch()
-    return true
-  }
   if (m.type === "agentManager.openWorktree") {
     host.openWorktreeDirectory(m.worktreeId)
     return true
@@ -288,7 +274,15 @@ function handleState(m: AgentManagerInMessage, host: MessageHost): boolean {
     host.state()?.setSidebarCollapsed(m.collapsed)
     return true
   }
-  if (handleSection(host.state(), m, () => host.pushState(), (...args) => host.log(...args))) return true
+  if (
+    handleSection(
+      host.state(),
+      m,
+      () => host.pushState(),
+      (...args) => host.log(...args),
+    )
+  )
+    return true
   if (m.type === "agentManager.setReviewDiffStyle") {
     host.state()?.setReviewDiffStyle(m.style)
     return true
@@ -333,10 +327,7 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
     return true
   }
   if (m.type === "agentManager.requestWorktreeDiffFile") {
-    void host.diffs.requestFile(
-      composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId),
-      m.file,
-    )
+    void host.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId, m.turnId), m.file)
     return true
   }
   if (m.type === "agentManager.applyWorktreeDiff") {
@@ -368,6 +359,18 @@ async function handleDiff(m: AgentManagerInMessage, host: MessageHost): Promise<
   }
   if (m.type === "agentManager.openFile") {
     host.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
+    return true
+  }
+  if (m.type === "agentManager.openExternal") {
+    if (URL.canParse(m.url) && ["http:", "https:"].includes(new URL(m.url).protocol)) host.host.openExternal(m.url)
+    return true
+  }
+  if (m.type === "agentManager.validateFiles") {
+    void host.validateFiles(m.id, m.sessionId, m.paths)
+    return true
+  }
+  if (m.type === "agentManager.requestDocument") {
+    void host.readDocument(m.sessionId, m.file, m.contextKey)
     return true
   }
   if (m.type === "agentManager.copyFilePath") {

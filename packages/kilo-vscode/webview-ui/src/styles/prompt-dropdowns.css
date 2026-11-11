@@ -240,13 +240,3 @@
   background: var(--vscode-editorWidget-border, var(--vscode-input-border));
   opacity: 0.5;
 }
-
-.slash-command-group-label {
-  padding: 4px 10px 2px;
-  font-size: var(--kilo-font-size-10);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--vscode-descriptionForeground);
-  opacity: 0.7;
-}

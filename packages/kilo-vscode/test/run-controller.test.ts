@@ -4,9 +4,6 @@ import { tmpdir } from "node:os"
 import * as path from "node:path"
 import { RunController, type RunTaskConfig } from "../src/agent-manager/run/controller"
 import type { RunStatus } from "../src/agent-manager/run/manager"
-import type { RunTerminalDestination } from "../src/agent-manager/run/destination"
-
-const destination: RunTerminalDestination = "vscode"
 
 function setup() {
   const root = mkdtempSync(path.join(tmpdir(), "kilo-run-controller-"))
@@ -32,7 +29,7 @@ describe("RunController local key scoping", () => {
     const { root, configs, controller, cleanup } = setup()
     try {
       await controller.configure()
-      await controller.run("prj-a:local", destination)
+      await controller.run("prj-a:local")
 
       expect(configs).toHaveLength(1)
       expect(configs[0]!.worktreeId).toBe("prj-a:local")
@@ -47,8 +44,8 @@ describe("RunController local key scoping", () => {
     const { statuses, controller, cleanup } = setup()
     try {
       await controller.configure()
-      await controller.run("prj-a:local", destination)
-      await controller.run("prj-b:local", destination)
+      await controller.run("prj-a:local")
+      await controller.run("prj-b:local")
 
       // Starting B must not stop A: both entries report running.
       const all = controller.state().runStatuses
@@ -71,7 +68,7 @@ describe("RunController local key scoping", () => {
     const { root, configs, controller, cleanup } = setup()
     try {
       await controller.configure()
-      await controller.run("local", destination)
+      await controller.run("local")
 
       expect(configs[0]!.worktreeId).toBe("local")
       expect(configs[0]!.cwd).toBe(root)

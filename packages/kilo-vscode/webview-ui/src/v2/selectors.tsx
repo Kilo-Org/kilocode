@@ -1,18 +1,22 @@
-// Agent, model and reasoning variant for the prompt, on native v2 data. The server session owns the selection: an
-// existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
-// exists, the choice is a local draft that `create` passes to session.create.
-import type { ModelRef } from "@opencode/client"
-import { createModelAttribution } from "./attribution"
+// Agent, model and reasoning variant for the prompt, on native v2 data. An existing session commits an agent change
+// with switchAgent at once. A model or effort change is a composer draft (`v2.drafts`) that the next prompt commits
+// with switchModel, as the TUI does, so a pick or Shift+Tab never waits for the server. Before a session exists, the
+// choice is a local draft that `create` passes to session.create.
+import type { JsonValue, ModelRef } from "@opencode/client"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { createEffect, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
+import ModelDescription from "../components/shared/ModelDescription"
 import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { useLanguage } from "../context/language"
+import { useModelPreferences } from "../context/model-preferences"
 import { useV2, type V2 } from "./client"
 import { failureMessage } from "./kilo-catalog"
 import { shiftTabCyclesVariant } from "./kilo-settings"
+import { configuredModel, initialModel } from "./model-default"
+import { kiloTeam } from "./kilo-models"
 import { cycleVariant, preserveVariant } from "./variant"
 
 const DEFAULT = "default"
@@ -22,13 +26,16 @@ export function createSelection(
   draftKey: Accessor<string | undefined> = session,
 ) {
   const v2 = useV2()
+  const prefs = useModelPreferences()
   const [draftAgent, setDraftAgent] = createSignal<string>()
   const [draftModel, setDraftModel] = createSignal<ModelRef>()
+  // Fallback per-agent picks when no ModelPreferencesProvider wraps the selector.
+  const picks = new Map<string, ModelRef>()
   const fallback = createDefaultModel(v2)
   // The latest switch request per session, so a prompt waits for it. Prompts gate on session creation themselves.
   const commits = new Map<string, Promise<unknown>>()
   const creates = new Map<string, Promise<unknown>>()
-  const attribution = createModelAttribution()
+  const drafts = v2.drafts
 
   createEffect(
     on(v2.connection.status, (status) => {
@@ -37,6 +44,7 @@ export function createSelection(
         v2.data.location.agent.sync(),
         v2.data.location.model.sync(),
         v2.data.location.provider.sync(),
+        v2.data.location.config.sync(),
       ]).catch(v2.report)
     }),
   )
@@ -75,20 +83,45 @@ export function createSelection(
     const id = session() ? info()?.agent : draftAgent()
     return agents().find((item) => item.id === id) ?? agents()[0]
   }
-  const model = (): ModelRef | undefined => {
-    const value = (session() ? info()?.model : draftModel()) ?? agent()?.model ?? fallback()
-    // The server reports "no explicit variant" as "default" (core session/info.ts), as the TUI normalizes it.
-    if (value?.variant !== DEFAULT) return value
-    return { id: value.id, providerID: value.providerID }
-  }
   const models = () => v2.data.location.model.list()
-  const variants = () => {
-    const current = model()
-    const found = models()?.find((item) => item.providerID === current?.providerID && item.id === current?.id)
-    return found?.variants.map((variant) => variant.id) ?? []
+  const find = (ref: { providerID: string; id: string } | undefined) =>
+    ref ? models()?.find((item) => item.providerID === ref.providerID && item.id === ref.id && item.enabled) : undefined
+  const variantsOf = (ref: { providerID: string; id: string } | undefined) =>
+    find(ref)?.variants.map((variant) => variant.id) ?? []
+  const configured = createMemo(() => configuredModel(v2.data.location.config.list()))
+  const initial = () =>
+    initialModel({
+      pick: prefs ? prefs.pick(agent()?.id) : picks.get(agent()?.id ?? ""),
+      agent: agent()?.model ?? undefined,
+      configured: configured(),
+      team: kiloTeam(v2.kiloModels()),
+      loaded: prefs?.loaded() ?? true,
+      recents: prefs?.recents() ?? [],
+      models: models() ?? [],
+      serverDefault: fallback(),
+      valid: (ref) => !!find(ref),
+    })
+  // The remembered effort of the agent on a model: v1 keeps the last effort a new session chose ("" is Default), on
+  // the nearest effort the model still has.
+  const remembered = (ref: { providerID: string; id: string }) => {
+    const id = agent()?.id
+    const saved = id ? prefs?.variant(id, ref.providerID, ref.id) : undefined
+    return saved ? preserveVariant(saved, variantsOf(ref)) : undefined
   }
+  const model = (): ModelRef | undefined => {
+    const id = session()
+    const own = id ? (drafts.get(id) ?? info()?.model) : draftModel()
+    const value = own ?? initial()
+    // The server reports "no explicit variant" as "default" (core session/info.ts), as the TUI normalizes it.
+    if (value?.variant === DEFAULT) return { id: value.id, providerID: value.providerID }
+    if (own || !value) return value
+    // A configured or agent effort the model no longer has moves to the nearest one, as v1 and the TUI.
+    const variant = value.variant ? preserveVariant(value.variant, variantsOf(value)) : remembered(value)
+    return { id: value.id, providerID: value.providerID, ...(variant ? { variant } : {}) }
+  }
+  const variants = () => variantsOf(model())
 
-  const commit = (id: string, run: () => Promise<unknown>) => {
+  const chain = (id: string, run: () => Promise<unknown>) => {
     const request = Promise.all([creates.get(id), commits.get(id)])
       .catch(() => undefined)
       .then(run)
@@ -101,17 +134,12 @@ export function createSelection(
   const setModel = (next: ModelRef) => {
     const id = session()
     if (!id) return void setDraftModel(next)
-    attribution.request(id, next)
-    // An explicit "default" clears a previous variant: a model without the field would keep it in createData.
-    commit(id, () =>
-      v2.api.session.switchModel({ sessionID: id, model: { ...next, variant: next.variant ?? DEFAULT } }).catch(
-        (error: unknown) => {
-          // A switch that did not apply must not name a later prompt, unless a newer request replaced it.
-          attribution.clear(id, next)
-          throw error
-        },
-      ),
-    )
+    drafts.set(id, next, info()?.model)
+  }
+
+  const remember = (ref: { providerID: string; id: string }, variant: string | undefined) => {
+    const id = agent()?.id
+    if (id) prefs?.rememberVariant(id, ref.providerID, ref.id, variant)
   }
 
   // The same writer for a click and a cycle: a draft keeps the value locally, an existing session commits
@@ -120,9 +148,7 @@ export function createSelection(
     const id = session()
     if (!id) return void setDraftAgent(value)
     if (value === agent()?.id) return
-    // The agent decides the model the prompt runs on, so it replaces a model request that the store already applied.
-    attribution.clear(id)
-    commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
+    chain(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
   }
 
   return {
@@ -145,32 +171,87 @@ export function createSelection(
     },
     selectModel(providerID: string, modelID: string) {
       const current = model()
-      const found = models()?.find((item) => item.providerID === providerID && item.id === modelID)
-      // Carry the effort to the new model when it has it or a nearby effort, as v1; otherwise fall back to default.
-      const variant = preserveVariant(current?.variant, found?.variants.map((item) => item.id) ?? [])
-      setModel({ id: modelID, providerID, ...(variant ? { variant } : {}) })
+      const next = { providerID, id: modelID }
+      // Carry the effort to the new model when it has it or a nearby effort, as v1. Without an effort, the new model
+      // keeps the effort the agent last chose for it.
+      const variant = (current?.variant && preserveVariant(current.variant, variantsOf(next))) || remembered(next)
+      const draft = !session()
+      const agentID = agent()?.id
+      if (draft && prefs) prefs.rememberPick(agentID, providerID, modelID)
+      if (!draft || !prefs) prefs?.pushRecent(providerID, modelID)
+      if (draft && !prefs && agentID) picks.set(agentID, next)
+      if (draft && variant) remember(next, variant)
+      setModel({ ...next, ...(variant ? { variant } : {}) })
     },
     selectVariant(variant: string | undefined) {
       const current = model()
-      if (current) setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
+      if (!current) return
+      // A new session remembers the effort for the next one; a session keeps it until its next prompt, as v1.
+      if (!session()) remember(current, variant)
+      setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
     },
-    /** Creates a session with the current selection. */
-    create() {
+    /** Creates a session with the current selection, then writes the metadata the caller passes. */
+    create(metadata?: Record<string, JsonValue>) {
       const created = v2.data.session.create({ agent: agent()?.id, model: model() })
-      creates.set(created.id, created.request)
-      void created.request.catch(() => undefined).finally(() => creates.delete(created.id))
+      // The server reads the sandbox metadata when it first resolves the session state, so write it before the first
+      // prompt or status call, which both wait for this request.
+      const request = metadata
+        ? created.request.then(() =>
+            v2.api.session.update({ sessionID: created.id, metadata }).catch((error: unknown) => {
+              // The session keeps the config default while the draft toggle looked applied. A failed create keeps
+              // failing the prompt, which reports it.
+              v2.report(error)
+              throw error
+            }),
+          )
+        : created.request
+      creates.set(created.id, request)
+      void request.catch(() => undefined).finally(() => creates.delete(created.id))
       return created.id
+    },
+    /**
+     * Seeds the composer's draft for a host-created session (a worktree) that started without a server model, so the
+     * prompt commits the model the composer shows instead of running on the server default.
+     */
+    ensure(id: string) {
+      drafts.ensure(id, v2.data.session.get(id)?.model, model())
+    },
+    /** The pending create of a session, including its metadata write. */
+    created(id: string) {
+      return creates.get(id)
     },
     /** The pending switch of a session; a failed switch fails the prompt instead of using another model. */
     gate(id: string) {
       return commits.get(id)
     },
+    /** The composer's uncommitted model of a session as a switchModel payload; undefined when it shows the session's. */
+    draft(id: string) {
+      const next = drafts.get(id)
+      // An explicit "default" clears a previous variant: a model without the field would keep it in createData.
+      return next && { ...next, variant: next.variant ?? DEFAULT }
+    },
     /**
-     * The model a prompt of this session runs on. A switch that settled but is not in the store yet keeps its
-     * requested value until the store reports it.
+     * Commits a draft taken when the prompt was sent, after a pending agent switch, as the TUI's commitModel, and
+     * returns the pending switch so the prompt waits for it and fails with it.
      */
-    attributed(id: string) {
-      return attribution.read(id, v2.data.session.get(id)?.model)
+    commit(id: string, next: ModelRef | undefined) {
+      if (next)
+        chain(id, () => {
+          // Marked before the request: the stored model still reports the previous one until the echo.
+          drafts.commit(id, next)
+          return v2.api.session.switchModel({ sessionID: id, model: next }).then(
+            () => drafts.committed(id, v2.data.session.get(id)?.model),
+            (error: unknown) => {
+              drafts.failed(id, next)
+              throw error
+            },
+          )
+        })
+      return Promise.resolve(commits.get(id))
+    },
+    /** The model and effort the composer shows for a session: its draft, else the session's own model. */
+    selected(id: string) {
+      return drafts.get(id) ?? v2.data.session.get(id)?.model
     },
   }
 }
@@ -178,8 +259,8 @@ export function createSelection(
 export type Selection = ReturnType<typeof createSelection>
 
 /**
- * The server default model of the directory, the last fallback of every composer after its own choice and the agent
- * model. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog.
+ * The server default model of the directory, the fallback of every composer after its own choice, the agent model and
+ * Kilo Auto Free. Sign-in, sign-out and a team switch reload the catalog, so the default follows the catalog.
  */
 export function createDefaultModel(v2: V2) {
   const [model, setModel] = createSignal<ModelRef>()
@@ -209,12 +290,15 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
   }
   // Shift+Tab cycles the effort while the prompt input has focus, gated on the
   // `kilo-code.v2.chat.shiftTabCyclesVariant` setting (on by default). The tooltip hint follows the same setting.
+  // Only the prompt of this composer counts: the Agent Manager's New Worktree dialog has its own prompt and cycle.
+  let root: HTMLDivElement | undefined
   onMount(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Tab" || !event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
       if (!shiftTabCyclesVariant()) return
       const active = document.activeElement
       if (!(active instanceof HTMLTextAreaElement) || !active.classList.contains("prompt-input")) return
+      if (!root || !active.closest(".prompt-input-container")?.contains(root)) return
       const variants = props.selection.variants()
       if (variants.length === 0) return
       event.preventDefault()
@@ -223,11 +307,15 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
     window.addEventListener("keydown", onKeyDown, true)
     onCleanup(() => window.removeEventListener("keydown", onKeyDown, true))
   })
+  // As v1's chat ModelSelector: a pick or Escape returns focus to the prompt.
+  const restore = () =>
+    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
   // The cycle shortcut label the host resolved, as main's modeHint(): the keybind shows next to the title,
   // and an empty keybind hides the tooltip.
   const keybind = () => v2.bindings().cycleAgentMode ?? ""
   return (
     <PromptSelectors
+      ref={(el) => (root = el)}
       agent={
         <TooltipKeybind
           title={language.t("prompt.shortcutHint.mode")}
@@ -251,10 +339,14 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
         <ModelSelectorBase
           models={props.selection.models()}
           providers={props.selection.providers()}
+          gateway={v2.kiloModels().entries}
           value={model()}
           blocked={props.blocked}
+          descriptionRenderer={ModelDescription}
           failure={failureMessage(language.t, v2.kiloFailure())}
           onSelect={props.selection.selectModel}
+          onPick={restore}
+          onCancel={restore}
         />
       }
       variant={

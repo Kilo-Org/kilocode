@@ -37,11 +37,13 @@ import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
+import { KiloGatewayAccounts } from "./accounts"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
+import { KiloSessionSync } from "../session-sync"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
@@ -53,6 +55,15 @@ const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
 const IS_TEST_RUNNER = /\.test\.[cm]?[jt]sx?$/.test(process.argv[1] ?? "")
+// Upstream OpenCode request identity from `packages/core/src/session/model-request.ts`. The Gateway attributes through
+// the X-KILOCODE-* headers, which v1 sent without these, so they are removed at the last boundary.
+const UPSTREAM_REQUEST_HEADERS = [
+  "x-opencode-session-id",
+  "x-opencode-parent-session-id",
+  "x-opencode-project",
+  "x-opencode-session",
+  "x-opencode-client",
+]
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
@@ -108,6 +119,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
     const global = yield* Global.Service
+    const sessionSync = yield* Effect.serviceOption(KiloSessionSync.Service)
+    let reportedOrganization: string | null | undefined
+    let reportedToken: string | undefined
     const configService = yield* Effect.serviceOption(Config.Service)
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
@@ -218,6 +232,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       if (key && Option.isSome(legacy) && account && KiloAccount.compatible(account)) {
         if (Option.isNone(storedSelection)) yield* ctx.storage.set(key, legacy.value)
         yield* ctx.storage.remove("organization:env")
+      }
+      const activeOrganization = account
+        ? account.organizationID
+        : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null
+      if (activeOrganization !== reportedOrganization || account?.token !== reportedToken) {
+        reportedOrganization = undefined
+        reportedToken = undefined
+        if (Option.isSome(sessionSync))
+          yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: undefined })
       }
       return {
         server: KiloServer.apiBase(configuredServer),
@@ -407,6 +430,17 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         yield* ctx.agent.reload()
         catalog = { account: current, connection, envActive, models: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
         return
+      }
+
+      // A null local selection is provisional until the profile confirms Personal is available or
+      // resolves the default team. Never enroll under Personal before this decision is complete.
+      if (
+        current && Option.isSome(profile) && Option.isSome(sessionSync) &&
+        (organizationID !== reportedOrganization || current.token !== reportedToken)
+      ) {
+        reportedOrganization = organizationID
+        reportedToken = current.token
+        yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID })
       }
 
       // Organization agents share the same resolved account as the catalog. Errors and empty responses
@@ -602,6 +636,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
     }
     yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
+    // Other Kilo plugins of this Location read the account once the first catalog state has it.
+    const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
+    yield* Effect.addFinalizer(() => Effect.sync(unregister))
 
     // v1 loaded organization modes above built-ins and below local agent definitions. This transform
     // occupies that same pre-config position; replay restores built-ins when a mode is removed.
@@ -802,6 +839,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           if (catalog.failed) throw new Error("Unable to retrieve Kilo model catalog")
           const headers = new Headers(event.request.headers)
           headers.delete("x-api-key")
+          UPSTREAM_REQUEST_HEADERS.forEach((name) => headers.delete(name))
           const token = catalog.anonymous
             ? KiloAccount.ANONYMOUS_KEY
             : catalog.account?.token ?? KiloAccount.ANONYMOUS_KEY

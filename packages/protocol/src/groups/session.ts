@@ -407,15 +407,13 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
         }),
         success: Schema.Struct({ data: SessionInbox.Synthetic }),
         error: [ConflictError, SessionNotFoundError],
-      })
-        .middleware(sessionLocationMiddleware)
-        .annotateMerge(
-          OpenApi.annotations({
-            identifier: "session.synthetic",
-            summary: "Add synthetic message",
-            description: "Durably admit synthetic session input and schedule execution unless resume is false.",
-          }),
-        ),
+      }).annotateMerge(
+        OpenApi.annotations({
+          identifier: "session.synthetic",
+          summary: "Add synthetic message",
+          description: "Durably admit synthetic session input and schedule execution unless resume is false.",
+        }),
+      ),
     )
     .add(
       HttpApiEndpoint.post("session.shell", "/api/session/:sessionID/shell", {
@@ -446,16 +444,14 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
         }),
         success: Schema.Struct({ data: SessionInbox.Compaction }),
         error: [ConflictError, SessionNotFoundError],
-      })
-        .middleware(sessionLocationMiddleware)
-        .annotateMerge(
-          OpenApi.annotations({
-            identifier: "session.compact",
-            summary: "Compact session",
-            description:
-              "Durably admit a session compaction request. Steers by default: it runs at the next step boundary instead of waiting behind queued prompts.",
-          }),
-        ),
+      }).annotateMerge(
+        OpenApi.annotations({
+          identifier: "session.compact",
+          summary: "Compact session",
+          description:
+            "Durably admit a session compaction request. Steers by default: it runs at the next step boundary instead of waiting behind queued prompts.",
+        }),
+      ),
     )
     .add(
       HttpApiEndpoint.post("session.wait", "/api/experimental/session/:sessionID/wait", {
@@ -675,10 +671,18 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
     .add(
       HttpApiEndpoint.post("session.interrupt", "/api/session/:sessionID/interrupt", {
         params: { sessionID: Session.ID },
-        query: { resume: BooleanFromString.pipe(Schema.optional) },
+        // kilocode_change start - steer: an interruption issued to deliver a prompt never cancels a compaction.
+        query: {
+          resume: BooleanFromString.pipe(Schema.optional),
+          steer: BooleanFromString.pipe(Schema.optional),
+        },
+        // kilocode_change end
         success: Schema.Struct({
           interrupted: Schema.Boolean.annotate({
-            description: "Whether an active execution owned by this OpenCode process was interrupted.",
+            // kilocode_change start - steer: false also when a running compaction was left alone.
+            description:
+              "Whether an active execution owned by this OpenCode process was interrupted. False also when there was nothing a steer may stop.",
+            // kilocode_change end
           }),
         }).annotate({ identifier: "SessionInterruptResponse" }),
         error: SessionNotFoundError,
@@ -686,8 +690,10 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S, FormI ext
         OpenApi.annotations({
           identifier: "session.interrupt",
           summary: "Interrupt session execution",
+          // kilocode_change start - steer: document what the flag protects.
           description:
-            "Interrupt active execution owned by this OpenCode process. Returns interrupted=true when an active execution was interrupted and false for the idle no-op. When resume=true, execution resumes pending steering input and next-in-line control items (manual compaction, moves) while queued prompts remain parked.",
+            "Interrupt active execution owned by this OpenCode process. Returns interrupted=true when an active execution was interrupted and false for the idle no-op. When resume=true, execution resumes pending steering input and next-in-line control items (manual compaction, moves) while queued prompts remain parked. When steer=true the interruption was issued to deliver a prompt: a running compaction is never cancelled for it, and the prompt is delivered at the boundary after the compaction.",
+          // kilocode_change end
         }),
       ),
     )

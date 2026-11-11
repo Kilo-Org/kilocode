@@ -63,10 +63,17 @@ export const PromptAction = Schema.Struct({ type: Schema.tag("prompt"), prompt: 
   identifier: "Schedule.Action.Prompt",
 })
 
-export const Action = Schema.Union([PromptAction]).pipe(
+// kilocode_change start - flows seam: hook-owned actions never fall back to native prompt admission
+export const HookAction = Schema.Struct({ type: Schema.tag("hook"), prompt: Schema.String }).annotate({
+  identifier: "Schedule.Action.Hook",
+  description: "An action owned by the experimental schedule hook. The prompt is descriptive and is never admitted.",
+})
+
+export const Action = Schema.Union([PromptAction, HookAction]).pipe(
   Schema.toTaggedUnion("type"),
   Schema.annotate({ identifier: "Schedule.Action" }),
 )
+// kilocode_change end
 export type Action = typeof Action.Type
 
 /**

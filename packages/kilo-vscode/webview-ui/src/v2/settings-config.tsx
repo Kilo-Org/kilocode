@@ -34,8 +34,10 @@ export type KiloSettingKey =
   | "fontSize"
   | "language"
   | "chat.shiftTabCyclesVariant"
+  | "chat.sendWhileRunning"
   | "showShortcutHints"
   | "showTokenThroughput"
+  | "showAutoApprovalReason"
   | "agentManager.autoBranchNaming"
   | "agentManager.branchPrefix"
   | "agentManager.worktreePool"
@@ -44,11 +46,20 @@ export type KiloSettingKey =
   | "claudeCodeCompat"
   | "extraCaCerts"
   | "languageCommitMessage"
+  | "indexing.showButtonWhenDisabled"
   | "autocomplete.enableAutoTrigger"
   | "autocomplete.enableSmartInlineTaskKeybinding"
   | "autocomplete.enableChatAutocomplete"
   | "autocomplete.provider"
   | "autocomplete.model"
+  | "integratedBrowser"
+  | "agentManager.browser.useSystemChrome"
+  | "agentManager.browser.openLinksIn"
+  | "browserAutomation.enabled"
+  | "browserAutomation.useSystemChrome"
+  | "browserAutomation.headless"
+  | "experimental.nativeNotebookTools"
+  | "experimental.conversationPromptHistory"
 
 type Json = Record<string, unknown>
 
@@ -111,25 +122,28 @@ export function createSettingsConfig() {
   const toastError = (message: string) =>
     showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
 
+  // Apply one raw document. A write keeps its optimistic value until the merged config covers it, see the effect
+  // below, so a control does not revert while the server is still reloading the file.
+  const applyFile = (scope: SettingsScope, file: ConfigFileContent) => {
+    setFiles((current) => ({ ...current, [scope]: file }))
+  }
+
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as unknown as ToWebview
     if (message.type === "configLoaded") {
       if (message.error) toastError(message.error)
-      setFiles({ global: message.global, project: message.project })
+      applyFile("global", message.global)
+      applyFile("project", message.project)
       setPolicy(message.policy)
       filesReady.open()
-      // Drop only the optimistic values the new file content now covers, so an in-flight edit keeps its value.
-      setOptimistic((list) =>
-        list.filter((item) => {
-          const text = item.scope === "project" ? message.project.text : message.global.text
-          return !sameValue(readPath(parseJson(text), item.path), item.value)
-        }),
-      )
       return
     }
     if (message.type === "configWritten") {
       const resolve = writers.get(message.id)
       writers.delete(message.id)
+      const file = message.file
+      // A write carries the document it wrote, so the panel does not read every config file again for one edit.
+      if (file) applyFile(file.scope, { path: file.path, text: file.text })
       resolve?.({ ok: message.ok, error: message.error })
       return
     }
@@ -149,12 +163,6 @@ export function createSettingsConfig() {
   post({ type: "configRead" })
 
   const entries = () => v2.data.location.config.list() ?? []
-
-  // The server reloads a written file on its own, then `config.updated` resyncs the config resource. Re-read the raw
-  // files; the `configLoaded` reply drops the optimistic values the new content covers.
-  createEffect(
-    on(entries, () => post({ type: "configRead" }), { defer: true }),
-  )
 
   const merged = createMemo(() => mergeConfigDocuments(entries()))
 
@@ -184,6 +192,25 @@ export function createSettingsConfig() {
 
   /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
   const pending = (path: string[]) => inflight().some((item) => item.path === pathKey(path))
+
+  // Drop an optimistic value once the merged config carries it, or carries a different effective value. A Kilo-only
+  // key never appears in the merged config, so it keeps its optimistic value until the panel reopens.
+  createEffect(
+    on(
+      entries,
+      () => {
+        const current = merged()
+        setOptimistic((list) =>
+          list.filter((item) => {
+            if (pending(item.path)) return true
+            const next = readPath(current, item.path)
+            return next === undefined || sameValue(next, item.value)
+          }),
+        )
+      },
+      { defer: true },
+    ),
+  )
 
   const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
     new Promise<{ ok: boolean; error?: string }>((resolve) => {

@@ -1,0 +1,339 @@
+import assert from "node:assert/strict"
+import { Window } from "happy-dom"
+
+const window = new Window({ url: "http://localhost" })
+Object.assign(globalThis, {
+  window,
+  document: window.document,
+  navigator: window.navigator,
+  Node: window.Node,
+  NodeFilter: window.NodeFilter,
+  Element: window.Element,
+  HTMLElement: window.HTMLElement,
+  HTMLHeadElement: window.HTMLHeadElement,
+  HTMLDivElement: window.HTMLDivElement,
+  HTMLSpanElement: window.HTMLSpanElement,
+  HTMLParagraphElement: window.HTMLParagraphElement,
+  HTMLUListElement: window.HTMLUListElement,
+  HTMLLIElement: window.HTMLLIElement,
+  HTMLPreElement: window.HTMLPreElement,
+  HTMLInputElement: window.HTMLInputElement,
+  HTMLTextAreaElement: window.HTMLTextAreaElement,
+  HTMLButtonElement: window.HTMLButtonElement,
+  SVGElement: window.SVGElement,
+  MutationObserver: window.MutationObserver,
+  ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: window.IntersectionObserver,
+  Event: window.Event,
+  MouseEvent: window.MouseEvent,
+  KeyboardEvent: window.KeyboardEvent,
+  CustomEvent: window.CustomEvent,
+  FocusEvent: window.FocusEvent,
+  PointerEvent: window.PointerEvent,
+  getComputedStyle: window.getComputedStyle.bind(window),
+  requestAnimationFrame: window.requestAnimationFrame.bind(window),
+  cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+})
+Object.assign(globalThis, {
+  acquireVsCodeApi: () => ({ postMessage: () => undefined, getState: () => undefined, setState: () => undefined }),
+})
+
+const { render } = await import("solid-js/web")
+const { onMount } = await import("solid-js")
+const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
+const { LanguageProvider } = await import("../../webview-ui/src/context/language")
+const { DialogProvider, useDialog } = await import("@kilocode/kilo-ui/context/dialog")
+const { InstallModal } = await import("../../webview-ui/src/components/marketplace/InstallModal")
+
+const item = {
+  registry: "kilo",
+  kind: "mcp",
+  id: "docs",
+  name: "Docs",
+  description: "Search the documentation.",
+  tags: [],
+  prerequisites: ["Node.js"],
+  parameters: [],
+  options: [
+    {
+      name: "remote",
+      description: "Hosted endpoint",
+      prerequisites: [],
+      parameters: [
+        { key: "url", name: "Endpoint", optional: true },
+        { key: "token", name: "Access token", optional: false, secret: true },
+      ],
+    },
+  ],
+}
+
+let serverStatus = "needs_auth"
+const calls = {
+  preview: [] as unknown[],
+  install: [] as unknown[],
+  signIn: [] as string[],
+  open: [] as string[],
+}
+const mcp = {
+  servers: () => [],
+  status: () => ({ status: serverStatus, error: "" }),
+  canSignIn: () => false,
+  sync: async () => undefined,
+  busy: () => [],
+  cancel: () => undefined,
+  signIn: async (name: string) => {
+    calls.signIn.push(name)
+    serverStatus = "connected"
+  },
+}
+const record = {
+  version: 1,
+  registry: "kilo",
+  kind: "mcp",
+  id: "docs",
+  scope: "project",
+  server: "docs",
+  installedAt: 0,
+  status: "ready",
+  warnings: ["Restart the server to load the new entry."],
+}
+
+const root = document.createElement("div")
+document.body.append(root)
+let closed = 0
+const Harness = () => {
+  const dialog = useDialog()
+  onMount(() =>
+    dialog.show(() => (
+      <InstallModal
+        item={item}
+        workspace={true}
+        mcp={mcp}
+        onClose={() => {
+          closed++
+          dialog.close()
+        }}
+        onPreview={async (_, input) => {
+          calls.preview.push(input)
+          return {
+            config: "/tmp/project/.kilo/kilo.json",
+            server: '{"docs":{"url":"https://example.com/mcp"}}',
+            parameters: ["Access token"],
+            secrets: ["token"],
+          }
+        }}
+        onInstall={async (_, input) => {
+          calls.install.push(input)
+          return record
+        }}
+        onOpen={(url) => calls.open.push(url)}
+      />
+    )),
+  )
+  return null
+}
+const dispose = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <DialogProvider>
+          <Harness />
+        </DialogProvider>
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  root,
+)
+await new Promise((resolve) => setTimeout(resolve, 0))
+
+const text = () => document.body.textContent ?? ""
+const button = (label: string) =>
+  [...document.body.querySelectorAll("button")].find((node) => node.textContent?.trim() === label) as
+    | HTMLButtonElement
+    | undefined
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+// A disposed render root does not remove the dialog it portalled to document.body, so every scenario starts clean.
+const reset = () => document.body.replaceChildren()
+
+assert.ok(text().includes("Node.js"))
+assert.ok(text().includes("Where should this be available?"))
+assert.equal(document.body.querySelectorAll('input[type="radio"]').length, 2)
+assert.ok(button("Review"))
+assert.equal(button("Review")!.disabled, true)
+
+const token = document.body.querySelector('input[type="password"]') as HTMLInputElement
+assert.ok(token, "the secret parameter is masked")
+token.value = "secret-value"
+token.dispatchEvent(new window.Event("input", { bubbles: true }))
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.equal(button("Review")!.disabled, false)
+
+button("Review")!.click()
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.deepEqual(calls.preview, [{ scope: "project", option: "remote", params: { token: "secret-value" } }])
+assert.ok(text().includes("/tmp/project/.kilo/kilo.json"))
+assert.ok(text().includes("plaintext"))
+assert.ok(text().includes("token"))
+
+button("Install")!.click()
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.deepEqual(calls.install, [{ scope: "project", option: "remote", params: { token: "secret-value" } }])
+assert.ok(text().includes("Restart the server to load the new entry."))
+
+button("Sign In")!.click()
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.deepEqual(calls.signIn, ["docs"])
+assert.ok(text().includes("Signed in to docs."))
+
+button("Done")!.click()
+assert.equal(closed, 1)
+
+dispose()
+reset()
+
+// Repair: a record installed with a non-default method opens the dialog on that method, not the item's first option.
+const repairCalls: unknown[] = []
+const repairItem = {
+  ...item,
+  id: "repair",
+  name: "Repair Docs",
+  prerequisites: [],
+  parameters: [],
+  options: [
+    { name: "remote", description: "Hosted endpoint", prerequisites: [], parameters: [] },
+    { name: "local", description: "Runs on this machine", prerequisites: [], parameters: [] },
+  ],
+}
+const repairRoot = document.createElement("div")
+document.body.append(repairRoot)
+const RepairHarness = () => {
+  const dialog = useDialog()
+  onMount(() =>
+    dialog.show(() => (
+      <InstallModal
+        item={repairItem}
+        workspace={true}
+        defaultOption="local"
+        mcp={mcp}
+        onClose={() => dialog.close()}
+        onPreview={async (_, input) => {
+          repairCalls.push(input)
+          return { config: "/tmp/project/.kilo/kilo.json", server: "{}", parameters: [], secrets: [] }
+        }}
+        onInstall={async () => record}
+        onOpen={() => undefined}
+      />
+    )),
+  )
+  return null
+}
+const disposeRepair = render(
+  () => (
+    <VSCodeProvider>
+      <LanguageProvider>
+        <DialogProvider>
+          <RepairHarness />
+        </DialogProvider>
+      </LanguageProvider>
+    </VSCodeProvider>
+  ),
+  repairRoot,
+)
+await tick()
+// The selected method's own description is rendered, and only the `local` option has it, so this fails if the
+// recorded method is not preselected.
+assert.ok(text().includes("Runs on this machine"), "the recorded method is preselected")
+button("Review")!.click()
+await tick()
+assert.equal((repairCalls[0] as { option?: string }).option, "local")
+
+disposeRepair()
+reset()
+
+// Timed-out poll: the post-install status is neither pending/disabled nor a known outcome, so the dialog lands on
+// `unknown` and has to offer a way out.
+const timedOutItem = { ...item, id: "timed-out", name: "Timed Out Docs", parameters: [], prerequisites: [], options: [] }
+const openResult = (canSignIn: boolean, id: string, signIn: () => Promise<void> = async () => undefined) => {
+  const host = document.createElement("div")
+  document.body.append(host)
+  const mcpMock = {
+    servers: () => [],
+    status: () => ({ status: "stopped", error: "" }),
+    canSignIn: () => canSignIn,
+    sync: async () => undefined,
+    busy: () => [],
+    cancel: () => undefined,
+    signIn,
+  }
+  const Harness = () => {
+    const dialog = useDialog()
+    onMount(() =>
+      dialog.show(() => (
+        <InstallModal
+          item={timedOutItem}
+          workspace={true}
+          mcp={mcpMock}
+          onClose={() => dialog.close()}
+          onPreview={async () => ({ config: "/tmp/project/.kilo/kilo.json", server: "{}", parameters: [], secrets: [] })}
+          onInstall={async () => ({ ...record, id })}
+          onOpen={() => undefined}
+        />
+      )),
+    )
+    return null
+  }
+  const disposeHost = render(
+    () => (
+      <VSCodeProvider>
+        <LanguageProvider>
+          <DialogProvider>
+            <Harness />
+          </DialogProvider>
+        </LanguageProvider>
+      </VSCodeProvider>
+    ),
+    host,
+  )
+  return disposeHost
+}
+
+const withAuth = openResult(true, "timed-out-auth")
+await tick()
+button("Review")!.click()
+await tick()
+button("Install")!.click()
+await tick()
+assert.ok(button("Done"), "a timed-out poll still offers Done")
+assert.ok(button("Sign In"), "sign-in is offered when the server has an OAuth method")
+// The attempt settles without connecting, so the branch's error paragraph is what tells the user it failed.
+button("Sign In")!.click()
+await tick()
+assert.ok(text().includes("Sign-in to docs failed."), "a failed sign-in from the timed-out branch is reported")
+withAuth()
+reset()
+
+const pending = openResult(true, "timed-out-pending", () => new Promise(() => undefined))
+await tick()
+button("Review")!.click()
+await tick()
+button("Install")!.click()
+await tick()
+button("Sign In")!.click()
+await tick()
+assert.equal(button("Sign In"), undefined, "sign-in is replaced while the attempt is in flight")
+assert.ok(button("Cancel"), "an in-flight attempt can be cancelled")
+pending()
+reset()
+
+const withoutAuth = openResult(false, "timed-out-plain")
+await tick()
+button("Review")!.click()
+await tick()
+button("Install")!.click()
+await tick()
+assert.ok(button("Done"), "a timed-out poll still offers Done")
+assert.equal(button("Sign In"), undefined, "sign-in is hidden when the server has no OAuth method")
+withoutAuth()
+reset()
+
+await window.happyDOM.close()

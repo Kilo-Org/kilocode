@@ -11,12 +11,13 @@ import { transport } from "./transport"
 
 export { message, type V2 } from "./scope"
 
-function create(directory: string) {
+function create(directory: string, chat: boolean) {
   const vscode = getVSCodeAPI()
   const bridge = transport((message) => vscode.postMessage(message as never))
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const event = events()
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
+  const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
   const connection = createClientConnection(api, { onEvent: event.emit, pageLifecycle: true })
 
@@ -24,7 +25,11 @@ function create(directory: string) {
     const message = event.data
     if (!message || typeof message !== "object" || !("type" in message)) return
     if (message.type === "command") return commands.forEach((handler) => handler(message.name))
-    if (message.type === "keybindings") return setBindings(message.bindings)
+    if (message.type === "keybindings") {
+      setBindings(message.bindings)
+      setSelection(message.selection)
+      return
+    }
     bridge.receive(message)
   }
   window.addEventListener("message", receive)
@@ -37,18 +42,20 @@ function create(directory: string) {
     event,
     directory,
     bindings,
+    selection,
+    chat,
     onCommand(handler) {
       commands.add(handler)
       onCleanup(() => commands.delete(handler))
     },
-    open: (url) => vscode.postMessage({ type: "open", url } as never),
+    open: (url, external) => vscode.postMessage({ type: "open", url, external } as never),
   })
 }
 
 const Context = createContext<V2>()
 
-export const V2Provider: ParentComponent<{ directory: string }> = (props) => (
-  <Context.Provider value={create(props.directory)}>{props.children}</Context.Provider>
+export const V2Provider: ParentComponent<{ directory: string; chat?: boolean }> = (props) => (
+  <Context.Provider value={create(props.directory, props.chat ?? true)}>{props.children}</Context.Provider>
 )
 
 /** Provides an existing directory scope, for example one Agent Manager worktree. */

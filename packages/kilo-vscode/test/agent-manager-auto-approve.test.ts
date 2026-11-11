@@ -11,20 +11,36 @@ import type { Host } from "../src/agent-manager/host"
 import {
   createHostAutoApprove,
   setHostAutoApprove,
+  shouldApprove,
   type HostAutoApproveState,
 } from "../src/agent-manager/provider-auto-approve"
 
 const window = vscode.window as unknown as Record<string, unknown>
-window.onDidCloseTerminal ??= () => ({ dispose: () => undefined })
-window.onDidChangeActiveTerminal ??= () => ({ dispose: () => undefined })
 window.createTerminal ??= () => ({ show: () => undefined, dispose: () => undefined, exitStatus: undefined })
 window.createOutputChannel ??= () => ({ appendLine: () => undefined, show: () => undefined, dispose: () => undefined })
 
 const directories: string[] = []
 
-afterEach(() => {
-  for (const dir of directories.splice(0)) fs.rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+afterEach(async () => {
+  for (const dir of directories.splice(0)) await removeTemporaryWorkspace(dir)
 })
+
+// Provider shutdown is asynchronous and can still have a process with this directory as its working directory on
+// Windows, which locks it for a moment. Keep retrying, then leave the disposable directory to the OS.
+async function removeTemporaryWorkspace(dir: string) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true })
+      return
+    } catch (error) {
+      if (attempt === 49) {
+        console.warn(`Could not remove the temporary workspace ${dir}: ${String(error)}`)
+        return
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+}
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -125,6 +141,13 @@ describe("host auto-approve sweep", () => {
     await tick()
 
     expect(replied).toEqual(["per_once"])
+  })
+
+  test("never approves a request whose action is sandbox_escalation", () => {
+    const escalation = { id: "per_action", sessionID: "ses_1", action: "sandbox_escalation", resources: [] } as never
+    const normal = { id: "per_bash", sessionID: "ses_1", action: "bash", resources: ["ls"] } as never
+    expect(shouldApprove(escalation, true, new Set())).toBe(false)
+    expect(shouldApprove(normal, true, new Set())).toBe(true)
   })
 })
 

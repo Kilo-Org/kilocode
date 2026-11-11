@@ -1363,6 +1363,11 @@ export const dict = {
     "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
   "settings.display.mcpTool.expanded": "Développés",
   "settings.display.mcpTool.collapsed": "Réduits",
+  "settings.display.codeMode.title": "Blocs Code Mode",
+  "settings.display.codeMode.description":
+    "Choisissez si les blocs Code Mode démarrent avec leurs appels d'outils listés ou sur une seule ligne. Le script reste toujours masqué jusqu'à ce que vous l'ouvriez.",
+  "settings.display.codeMode.expanded": "Développés",
+  "settings.display.codeMode.collapsed": "Réduits",
 
   "settings.display.shortcutHints.title": "Afficher les astuces de raccourcis",
   "settings.display.shortcutHints.description":
@@ -1454,6 +1459,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Ouvrir tous les agents en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
+  "task.backgroundAgents.promoteFailed": "Cet agent n'a pas pu continuer en arrière-plan. Il est peut-être déjà terminé.",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
   "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
@@ -1540,6 +1546,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navigateur système",
   "settings.experimental.browserLinks.integrated": "Navigateur intégré",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
+  "chat.reply.toolbar": "Texte sélectionné",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citer dans votre réponse",
+  "chat.reply.commentHint": "Commenter ce passage",
+  "chat.reply.copy": "Copier",
+  "chat.reply.sendHint": "Envoyer ce commentaire à Kilo maintenant",
+  "chat.reply.commentLater": "Enregistrer pour votre prochain message",
+  "chat.reply.count": "Réponses ({{count}})",
+  "chat.reply.sendAll": "Tout envoyer",
+  "chat.reply.showInChat": "Afficher dans le chat",
   "browserTab.noSession":
     "Ouvrez le navigateur depuis une session pour prévisualiser une application locale ou une page HTTPS publique.",
   "browserTab.disabled": "Le navigateur intégré est désactivé. Activez-le dans Paramètres Kilo > Expérimental.",

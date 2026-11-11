@@ -7,7 +7,9 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiffInfo } from "@opencode/client"
+import type { FileDiffInfo, SessionInfo } from "@opencode/client"
+import type { BrowserElement } from "../services/browser-automation"
+import type { BrowserCursor, BrowserFrame, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { DiffImage } from "../diff/types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
@@ -15,11 +17,11 @@ import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { OrphanDirectory, WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
+import type { InitialFile } from "./multi-version"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { ProjectSessionView } from "./project/session-view"
 import type { SidebarTarget } from "./project/route"
-import type { TerminalDestination } from "./terminal-destination"
 
 type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
@@ -190,9 +192,9 @@ interface StateMessage {
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
-  terminalDestination?: TerminalDestination
   terminalFont?: TerminalFont
   restricted?: boolean
+  browserAutomation?: boolean
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -259,11 +261,6 @@ interface TerminalErrorMessage {
   message: string
 }
 
-interface TerminalDestinationChangedMessage {
-  type: "agentManager.terminal.destinationChanged"
-  destination: TerminalDestination
-}
-
 interface TerminalFontChangedMessage {
   type: "agentManager.terminal.fontChanged"
   font: TerminalFont
@@ -314,6 +311,7 @@ interface SessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+  session: SessionInfo
 }
 
 interface SessionClosedMessage {
@@ -355,7 +353,7 @@ interface SendInitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 interface BranchesMessage {
@@ -433,6 +431,27 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+/** Which of the requested paths exist for a session, used to turn inline code spans into file links. */
+interface ValidateFilesResultMessage {
+  type: "agentManager.validateFilesResult"
+  id: string
+  existing: string[]
+}
+
+/** One document read for the Documents panel: the canonical path plus the preview, or the read error. */
+interface DocumentMessage {
+  type: "agentManager.document"
+  sessionId: string
+  contextKey?: string
+  file: string
+  requestedFile?: string
+  content?: string
+  kind?: "text" | "image"
+  mime?: string
+  data?: string
+  error?: string
+}
+
 interface RevertWorktreeFileResultMessage {
   type: "agentManager.revertWorktreeFileResult"
   projectId?: string
@@ -490,6 +509,58 @@ interface CommentReactionResultMessage {
   error?: string
 }
 
+interface BrowserStateMessage {
+  type: "agentManager.browserState"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  missing?: "chrome" | "chromium"
+  frameError?: string
+  back?: boolean
+  forward?: boolean
+}
+
+interface BrowserInspectionMessage {
+  type: "agentManager.browserInspection"
+  error?: string
+  requestId: string
+  projectId?: string
+  sessionId: string
+  url?: string
+  title?: string
+  element?: BrowserElement
+  logs: string[]
+  hover?: boolean
+}
+
+interface BrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
+}
+
+interface BrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
+interface BrowserDevtoolsMessage {
+  type: "agentManager.browserDevtools"
+  browserId: string
+  projectId?: string
+  sessionId: string
+  url: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -501,8 +572,21 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
+interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | ContinueInWorktreeProgressMessage
+  | BrowserStateMessage
+  | BrowserInspectionMessage
+  | BrowserFrameMessage
+  | BrowserCursorMessage
+  | BrowserDevtoolsMessage
   | WorktreeDeletedMessage
   | PRCommentResult
   | WorktreeActivityMessage
@@ -531,6 +615,8 @@ export type AgentManagerOutMessage =
   | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | DocumentMessage
+  | ValidateFilesResultMessage
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
@@ -543,7 +629,6 @@ export type AgentManagerOutMessage =
   | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
-  | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
   | ScriptTerminalsMessage
   | TerminalSocketOpenedMessage
@@ -729,25 +814,10 @@ interface RunScriptIn {
   type: "agentManager.runScript"
   projectId?: string
   worktreeId: string
-  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {
   type: "agentManager.stopRunScript"
-  worktreeId: string
-}
-
-interface ShowTerminalIn {
-  type: "agentManager.showTerminal"
-  sessionId: string
-}
-
-interface ShowLocalTerminalIn {
-  type: "agentManager.showLocalTerminal"
-}
-
-interface ShowWorktreeTerminalIn {
-  type: "agentManager.showWorktreeTerminal"
   worktreeId: string
 }
 
@@ -760,10 +830,6 @@ interface OpenWorktreeIn {
 interface CopyToClipboardIn {
   type: "agentManager.copyToClipboard"
   text: string
-}
-
-interface ShowExistingLocalTerminalIn {
-  type: "agentManager.showExistingLocalTerminal"
 }
 
 interface RequestRepoInfoIn {
@@ -783,7 +849,7 @@ interface CreateMultiVersionIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
   baseBranch?: string
   branchName?: string
   modelAllocations?: Array<{ providerID: string; modelID: string; count: number; variant?: string }>
@@ -994,6 +1060,10 @@ interface SetCaffeinationIn {
   enabled: boolean
 }
 
+interface ToggleCaffeinationIn {
+  type: "agentManager.toggleCaffeination"
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -1002,10 +1072,36 @@ interface OpenFileIn {
   column?: number
 }
 
+interface OpenExternalIn {
+  type: "agentManager.openExternal"
+  url: string
+}
+
+interface OpenWebLinkIn {
+  type: "agentManager.openWebLink"
+  url: string
+  /** Shift-click: open in the system browser even when links route into the Integrated Browser. */
+  external?: boolean
+}
+
 interface CopyFilePathIn {
   type: "agentManager.copyFilePath"
   sessionId: string
   filePath: string
+}
+
+interface ValidateFilesIn {
+  type: "agentManager.validateFiles"
+  id: string
+  sessionId: string
+  paths: string[]
+}
+
+interface RequestDocumentIn {
+  type: "agentManager.requestDocument"
+  sessionId: string
+  file: string
+  contextKey?: string
 }
 
 // Pass-through messages intercepted for side effects
@@ -1106,7 +1202,7 @@ interface AbortIn {
 }
 
 interface ContinueInWorktreeIn {
-  type: "continueInWorktree"
+  type: "agentManager.continueInWorktree"
   sessionId: string
 }
 
@@ -1223,13 +1319,45 @@ interface TerminalSocketCloseIn {
   reason?: string
 }
 
-interface TerminalDestinationSelectedIn {
-  type: "agentManager.terminal.destinationSelected"
-  destination: TerminalDestination
+/** All messages the Agent Manager expects from the webview (onMessage input). */
+interface BrowserRequestIn {
+  type:
+    | "agentManager.browser.open"
+    | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
+    | "agentManager.browser.close"
+    | "agentManager.browser.state"
+    | "agentManager.browser.inspect"
+    | "agentManager.browser.input"
+    | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
+  sessionId: string
+  requestId?: string
+  projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
+  url?: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  hover?: boolean
+  click?: boolean
+  theme?: "dark" | "light"
 }
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
+  | BrowserRequestIn
+  | OpenExternalIn
+  | OpenWebLinkIn
   | PRCommentRequest
   | CreateWorktreeIn
   | RequestProjectsIn
@@ -1262,12 +1390,8 @@ export type AgentManagerInMessage =
   | ConfigureRunScriptIn
   | RunScriptIn
   | StopRunScriptIn
-  | ShowTerminalIn
-  | ShowLocalTerminalIn
-  | ShowWorktreeTerminalIn
   | OpenWorktreeIn
   | CopyToClipboardIn
-  | ShowExistingLocalTerminalIn
   | RequestRepoInfoIn
   | CreateMultiVersionIn
   | RenameWorktreeIn
@@ -1301,8 +1425,11 @@ export type AgentManagerInMessage =
   | PromptSentIn
   | RequestCaffeinationIn
   | SetCaffeinationIn
+  | ToggleCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
+  | RequestDocumentIn
+  | ValidateFilesIn
   | GenericOpenFileIn
   | PreviewImageIn
   | SaveImageIn
@@ -1329,4 +1456,3 @@ export type AgentManagerInMessage =
   | TerminalSocketOpenIn
   | TerminalSocketSendIn
   | TerminalSocketCloseIn
-  | TerminalDestinationSelectedIn
