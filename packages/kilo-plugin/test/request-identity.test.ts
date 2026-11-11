@@ -14,88 +14,119 @@ import { Effect } from "effect"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
-import { KiloPlugins } from "../src"
+import { KiloPlugins, KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
 import { KiloRequestIdentity } from "../src/request-identity"
 
 const it = testEffect(PluginTestLayer)
 const app = { name: "vscode", version: "7.1.0", channel: "latest" }
-const client = { "User-Agent": "kilo/latest/7.1.0/vscode" }
-const product = { "HTTP-Referer": "https://kilocode.ai", "X-Title": "Kilo Code", "User-Agent": "Kilo-Code/7.1.0" }
-const untouched = ["kilo", "openai", "github-copilot", "github-copilot-enterprise", "snowflake-cortex", "claude-agent"]
+const clientAgent = "kilo/latest/7.1.0/vscode"
+const productAgent = "Kilo-Code/7.1.0"
+const kilo = { "HTTP-Referer": "https://kilocode.ai", "X-Title": "Kilo Code" }
+const upstream = { "HTTP-Referer": "https://opencode.ai/", "X-Title": "opencode" }
+const clients = ["opencode", "opencode-go", "opencode-anything", "anthropic"]
+const untouched = ["kilo", "openai", "github-copilot", "xai", "snowflake-cortex", "claude-agent"]
+// A user names a custom provider. IDs that look like object members, like another provider in a different case or
+// like a longer form of an untouched one are ordinary providers.
+const ordinary = [
+  "openrouter",
+  "azure",
+  "google",
+  "amazon-bedrock",
+  "my-proxy",
+  "anthropic-proxy",
+  "xopencode",
+  "github-copilot-proxy",
+  "",
+  " ",
+  "__proto__",
+  "constructor",
+  "toString",
+  "hasOwnProperty",
+  "Kilo",
+  "OpenAI",
+  "Anthropic",
+  " openai",
+]
 
-describe("KiloRequestIdentity.headers", () => {
-  test.each(["opencode", "opencode-go", "opencode-anything", "anthropic"])(
-    "%s gets the client user agent only",
-    (id) => {
-      expect(KiloRequestIdentity.headers(id, app)).toEqual(client)
-    },
-  )
-
-  test.each(["openrouter", "azure", "xai", "google", "amazon-bedrock", "my-proxy", "anthropic-proxy", "xopencode"])(
-    "%s gets the product user agent, referer and title",
-    (id) => {
-      expect(KiloRequestIdentity.headers(id, app)).toEqual(product)
-    },
-  )
-
-  test.each(untouched)("%s is left as built", (id) => {
-    expect(KiloRequestIdentity.headers(id, app)).toBeUndefined()
+describe("KiloRequestIdentity.userAgent", () => {
+  test.each(clients)("%s gets the client user agent", (id) => {
+    expect(KiloRequestIdentity.userAgent(id, app)).toBe(clientAgent)
   })
 
-  // A user names a custom provider. IDs that look like object members or like another provider in a different
-  // case are ordinary providers.
-  test.each([
-    "",
-    " ",
-    "__proto__",
-    "constructor",
-    "toString",
-    "hasOwnProperty",
-    "Kilo",
-    "OpenAI",
-    "Anthropic",
-    " openai",
-  ])("the provider ID %j is an ordinary provider", (id) => {
-    expect(KiloRequestIdentity.headers(id, app)).toEqual(product)
+  test.each(ordinary)("the provider %j gets the product user agent", (id) => {
+    expect(KiloRequestIdentity.userAgent(id, app)).toBe(productAgent)
+  })
+
+  test.each(untouched)("%s keeps its user agent", (id) => {
+    expect(KiloRequestIdentity.userAgent(id, app)).toBeUndefined()
   })
 
   test("a missing or empty build value becomes unknown", () => {
-    expect(KiloRequestIdentity.headers("anthropic", {})).toEqual({ "User-Agent": "kilo/unknown/unknown/unknown" })
-    expect(KiloRequestIdentity.headers("anthropic", { name: "", version: "", channel: "" })).toEqual({
-      "User-Agent": "kilo/unknown/unknown/unknown",
-    })
-    expect(KiloRequestIdentity.headers("openrouter", {})).toEqual({ ...product, "User-Agent": "Kilo-Code/unknown" })
+    expect(KiloRequestIdentity.userAgent("anthropic", {})).toBe("kilo/unknown/unknown/unknown")
+    expect(KiloRequestIdentity.userAgent("anthropic", { name: "", version: "", channel: "" })).toBe(
+      "kilo/unknown/unknown/unknown",
+    )
+    expect(KiloRequestIdentity.userAgent("openrouter", {})).toBe("Kilo-Code/unknown")
   })
 
   test("a client name cannot add a segment, a line or a second header", () => {
-    const value = KiloRequestIdentity.headers("anthropic", {
-      name: "vs code/../x\r\nX-Injected: 1",
-      version: "7.1.0-beta.3+abc",
-      channel: "latest\n",
-    })
-    expect(value).toEqual({ "User-Agent": "kilo/latest/7.1.0-beta.3+abc/vscode..xX-Injected1" })
+    expect(
+      KiloRequestIdentity.userAgent("anthropic", {
+        name: "vs code/../x\r\nX-Injected: 1",
+        version: "7.1.0-beta.3+abc",
+        channel: "latest\n",
+      }),
+    ).toBe("kilo/latest/7.1.0-beta.3+abc/vscode..xX-Injected1")
   })
 })
 
-describe("KiloRequestIdentity.apply", () => {
-  test("replaces a header that is present in another case instead of adding a second one", () => {
-    const headers: Record<string, string> = {
-      "user-agent": "first",
-      "USER-AGENT": "second",
-      "http-referer": "https://opencode.ai/",
-      "x-title": "opencode",
-      "x-opencode-client": "vscode",
-    }
-    KiloRequestIdentity.apply(headers, product)
-    expect(headers).toEqual({ "x-opencode-client": "vscode", ...product })
-    expect(Object.keys(headers).filter((name) => name.toLowerCase() === "user-agent")).toEqual(["User-Agent"])
+describe("KiloRequestIdentity.referer", () => {
+  test.each(ordinary)("the provider %j gets the Kilo referer and title when it has none", (id) => {
+    expect(KiloRequestIdentity.referer(id)).toEqual(kilo)
+    expect(KiloRequestIdentity.referer(id, { "X-Other": "kept" })).toEqual({ "X-Other": "kept", ...kilo })
   })
 
-  test("leaves the referer and title of a request that only gets the client user agent", () => {
-    const headers: Record<string, string> = { "User-Agent": "opencode/latest/7.1.0/vscode", "X-Title": "other" }
-    KiloRequestIdentity.apply(headers, client)
-    expect(headers).toEqual({ "User-Agent": "kilo/latest/7.1.0/vscode", "X-Title": "other" })
+  test("the upstream default is replaced, in any header case", () => {
+    expect(KiloRequestIdentity.referer("openrouter", upstream)).toEqual(kilo)
+    expect(
+      KiloRequestIdentity.referer("openrouter", { "http-referer": "https://opencode.ai/", "x-title": "opencode" }),
+    ).toEqual(kilo)
+  })
+
+  test("a configured referer or title is kept, each on its own and in any header case", () => {
+    expect(
+      KiloRequestIdentity.referer("my-proxy", {
+        "HTTP-Referer": "https://configured.example",
+        "X-Title": "Configured",
+      }),
+    ).toBeUndefined()
+    expect(KiloRequestIdentity.referer("my-proxy", { "http-referer": "https://configured.example" })).toEqual({
+      "http-referer": "https://configured.example",
+      "X-Title": "Kilo Code",
+    })
+    expect(
+      KiloRequestIdentity.referer("openrouter", { "HTTP-Referer": "https://opencode.ai/", "x-title": "Configured" }),
+    ).toEqual({ "x-title": "Configured", "HTTP-Referer": "https://kilocode.ai" })
+    // A record that names the title twice keeps both when one of them is configured.
+    expect(KiloRequestIdentity.referer("openrouter", { ...upstream, "x-title": "Configured" })).toEqual({
+      "X-Title": "opencode",
+      "x-title": "Configured",
+      "HTTP-Referer": "https://kilocode.ai",
+    })
+    // Also when the configured value is an empty string.
+    expect(KiloRequestIdentity.referer("my-proxy", { "HTTP-Referer": "", "X-Title": "" })).toBeUndefined()
+  })
+
+  test("writing the defaults a second time changes nothing", () => {
+    expect(
+      KiloRequestIdentity.referer("openrouter", KiloRequestIdentity.referer("openrouter", upstream)),
+    ).toBeUndefined()
+  })
+
+  test.each([...clients, ...untouched])("%s gets no referer or title", (id) => {
+    expect(KiloRequestIdentity.referer(id)).toBeUndefined()
+    expect(KiloRequestIdentity.referer(id, upstream)).toBeUndefined()
   })
 })
 
@@ -123,17 +154,16 @@ const host = Effect.fn(function* () {
 })
 
 describe("KiloRequestIdentity.Plugin", () => {
-  it.effect("names Kilo per provider and keeps every other header of the request", () =>
+  it.effect("replaces the user agent per provider and keeps every other header of the request", () =>
     Effect.gen(function* () {
       yield* KiloRequestIdentity.Plugin.effect(yield* host())
       const hooks = yield* PluginHooks.Service
-      const base = built("ses_fixture")
-      for (const id of ["anthropic", "opencode", "opencode-go"])
-        expect((yield* hooks.trigger("session", "model.request", request(id))).headers).toEqual({ ...base, ...client })
+      const base = { ...built("ses_fixture"), "X-Title": "from an earlier hook" }
+      const send = (id: string) => hooks.trigger("session", "model.request", request(id, { ...base }))
+      for (const id of clients) expect((yield* send(id)).headers).toEqual({ ...base, "User-Agent": clientAgent })
       for (const id of ["openrouter", "azure", "my-proxy"])
-        expect((yield* hooks.trigger("session", "model.request", request(id))).headers).toEqual({ ...base, ...product })
-      for (const id of untouched)
-        expect((yield* hooks.trigger("session", "model.request", request(id))).headers).toEqual(base)
+        expect((yield* send(id)).headers).toEqual({ ...base, "User-Agent": productAgent })
+      for (const id of untouched) expect((yield* send(id)).headers).toEqual(base)
     }),
   )
 
@@ -143,19 +173,18 @@ describe("KiloRequestIdentity.Plugin", () => {
       yield* plugin.session.hook("model.request", (event) =>
         Effect.sync(() => {
           event.headers["user-agent"] = "earlier"
-          event.headers["Http-Referer"] = "https://earlier.example"
+          event.headers["USER-AGENT"] = "earlier still"
         }),
       )
       yield* KiloRequestIdentity.Plugin.effect(plugin)
       const hooks = yield* PluginHooks.Service
       const headers = (yield* hooks.trigger("session", "model.request", request("openrouter"))).headers
-      expect(headers).toEqual({ ...built("ses_fixture"), ...product })
-      expect(new Headers(headers).get("user-agent")).toBe("Kilo-Code/7.1.0")
-      expect(new Headers(headers).get("http-referer")).toBe("https://kilocode.ai")
+      expect(headers).toEqual({ ...built("ses_fixture"), "User-Agent": productAgent })
+      expect(new Headers(headers).get("user-agent")).toBe(productAgent)
     }),
   )
 
-  it.effect("a plugin that registers later can still replace the identity", () =>
+  it.effect("a plugin that registers later can still replace the user agent", () =>
     Effect.gen(function* () {
       const plugin = yield* host()
       yield* KiloRequestIdentity.Plugin.effect(plugin)
@@ -167,22 +196,22 @@ describe("KiloRequestIdentity.Plugin", () => {
       const hooks = yield* PluginHooks.Service
       expect((yield* hooks.trigger("session", "model.request", request("openrouter"))).headers).toEqual({
         ...built("ses_fixture"),
-        ...product,
         "User-Agent": "user-plugin/1",
       })
     }),
   )
 
-  test("registers before the Gateway and before the config plugins", () => {
+  test("registers before the Gateway and the config plugins, and the referer default after the config plugins", () => {
     const ids = KiloPlugins.map((plugin) => plugin.id)
     expect(ids).toContain(KiloRequestIdentity.Plugin.id)
     expect(ids.indexOf(KiloRequestIdentity.Plugin.id)).toBeLessThan(ids.indexOf(KiloGatewayPlugin.id))
+    expect(KiloPostPlugins.map((plugin) => plugin.id)).toContain(KiloRequestIdentity.Referer.id)
   })
 
-  // The Gateway request keeps the Gateway's own headers in either registration order: this plugin does not write a
-  // `kilo` request at all.
+  // The Gateway request keeps the Gateway's own headers in either registration order: neither part writes a `kilo`
+  // request or the `kilo` provider.
   for (const order of ["identity first", "gateway first"] as const)
-    it.live(`the Gateway user agent wins with ${order}`, () =>
+    it.live(`the Gateway identity wins with ${order}`, () =>
       Effect.acquireUseRelease(
         Effect.sync(() => fixture()),
         (backend) =>
@@ -212,8 +241,12 @@ describe("KiloRequestIdentity.Plugin", () => {
                 const plugin = yield* host()
                 yield* KiloPlugin.effect(plugin)
                 const gateway = KiloGatewayPlugin.effect(plugin).pipe(Effect.provide(Global.layerWith({})))
+                const identity = Effect.gen(function* () {
+                  yield* KiloRequestIdentity.Plugin.effect(plugin)
+                  yield* KiloRequestIdentity.Referer.effect(plugin)
+                })
                 if (order === "gateway first") yield* gateway
-                yield* KiloRequestIdentity.Plugin.effect(plugin)
+                yield* identity
                 if (order === "identity first") yield* gateway
                 const hooks = yield* PluginHooks.Service
                 const session = yield* plugin.session.create({ title: "gateway" })
@@ -229,10 +262,62 @@ describe("KiloRequestIdentity.Plugin", () => {
                 // The same pipeline still names Kilo on another provider.
                 expect(
                   (yield* hooks.trigger("session", "model.request", request("openrouter"))).headers["User-Agent"],
-                ).toBe("Kilo-Code/7.1.0")
+                ).toBe(productAgent)
               }),
           ),
         (backend) => Effect.sync(() => backend[Symbol.dispose]()),
       ),
     )
+})
+
+describe("KiloRequestIdentity.Referer", () => {
+  const id = (value: string) => Provider.ID.make(value)
+  const echo = Model.ID.make("echo")
+
+  it.effect("sets the default on the provider record, and a header configured on the provider or a model wins", () =>
+    Effect.gen(function* () {
+      const providers = yield* Provider.Service
+      const models = yield* Model.Service
+      // The state a post plugin sees: the upstream defaults and the config are already applied.
+      yield* providers.transform((editor) => {
+        const add = (provider: string, headers?: Record<string, string>, model?: Record<string, string>) => {
+          editor.update(id(provider), (draft) => {
+            draft.package = "@opencode/ai/providers/openai-compatible"
+            draft.headers = headers
+          })
+          editor.models.update(id(provider), echo, (draft) => {
+            draft.headers = model
+          })
+        }
+        add("plain")
+        add("openrouter", upstream)
+        add("configured", { "http-referer": "https://configured.example", "X-Other": "kept" })
+        add("model", undefined, { "x-title": "Configured on the model" })
+        add("anthropic")
+        add("opencode", upstream)
+        for (const provider of untouched) add(provider, upstream)
+      })
+      yield* KiloRequestIdentity.Referer.effect(yield* host())
+
+      expect((yield* providers.get(id("plain")))?.headers).toEqual(kilo)
+      expect((yield* providers.get(id("openrouter")))?.headers).toEqual(kilo)
+      expect((yield* providers.get(id("configured")))?.headers).toEqual({
+        "http-referer": "https://configured.example",
+        "X-Other": "kept",
+        "X-Title": "Kilo Code",
+      })
+      expect((yield* providers.get(id("anthropic")))?.headers).toBeUndefined()
+      expect((yield* providers.get(id("opencode")))?.headers).toEqual(upstream)
+      for (const provider of untouched) expect((yield* providers.get(id(provider)))?.headers).toEqual(upstream)
+
+      // What a request of the model carries: the provider headers under the model's own.
+      const sent = (provider: string) =>
+        models.get(id(provider), echo).pipe(Effect.map((model) => new Headers(model?.headers)))
+      expect((yield* sent("plain")).get("x-title")).toBe("Kilo Code")
+      expect((yield* sent("model")).get("x-title")).toBe("Configured on the model")
+      expect((yield* sent("model")).get("http-referer")).toBe("https://kilocode.ai")
+      expect((yield* sent("configured")).get("http-referer")).toBe("https://configured.example")
+      expect([...(yield* sent("anthropic")).keys()]).toEqual([])
+    }),
+  )
 })

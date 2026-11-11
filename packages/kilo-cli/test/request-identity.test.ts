@@ -14,27 +14,31 @@ import { KiloHost } from "../src/host"
 
 // The identity headers that leave the process on a model request, per provider, with and without the Kilo host.
 // Only the HTTP peer is a stand-in: one loopback server takes the place of every provider and of the Kilo API. The
-// server graph, the plugins, the hook pipeline and the provider protocols are real.
+// server graph, the plugins, the hook pipeline, the provider catalog and the provider protocols are real. The run is
+// signed out, so nothing but the peer is contacted.
 const repo = path.resolve(import.meta.dir, "../../..")
 const upstream = App.useragent(App.make({ ...KiloApp, product: undefined }))
 const clientAgent = `kilo/${OPENCODE_CHANNEL}/${OPENCODE_VERSION}/${KiloApp.name}`
 const productAgent = `Kilo-Code/${OPENCODE_VERSION}`
 const kiloReferer = { referer: "https://kilocode.ai", title: "Kilo Code" }
 const none = { referer: null, title: null }
+const configured = { referer: "https://configured.example", title: "Configured" }
 const gatewayModel = "kilo-auto/frontier"
 
 const hosted = {
   // The client user agent, and no referer.
   anthropic: { userAgent: clientAgent, ...none },
   opencode: { userAgent: clientAgent, ...none },
-  // The product user agent with the Kilo referer and title, also where the catalog or config names another one.
+  // The product user agent with the Kilo referer and title, also where the catalog names upstream's.
   byok: { userAgent: productAgent, ...kiloReferer },
   openrouter: { userAgent: productAgent, ...kiloReferer },
   azure: { userAgent: productAgent, ...kiloReferer },
-  configured: { userAgent: productAgent, ...kiloReferer },
+  // The product user agent, and the referer and title that config sets on the provider and on the model.
+  configured: { userAgent: productAgent, ...configured },
   // Left as the server and the provider's own plugin build them.
   openai: { userAgent: upstream, ...none },
   "github-copilot": { userAgent: upstream, ...none },
+  xai: { userAgent: upstream, ...none },
   // The Gateway plugin's own identity.
   kilo: { userAgent: `Kilo-Code/v2/${OPENCODE_VERSION}`, ...kiloReferer },
 }
@@ -46,12 +50,13 @@ const unhosted = {
   byok: { userAgent: unhostedAgent, ...none },
   openrouter: { userAgent: unhostedAgent, referer: "https://opencode.ai/", title: "opencode" },
   azure: { userAgent: unhostedAgent, ...none },
-  configured: { userAgent: unhostedAgent, referer: "https://configured.example", title: "Configured" },
+  configured: { userAgent: unhostedAgent, ...configured },
   openai: { userAgent: unhostedAgent, ...none },
   "github-copilot": { userAgent: unhostedAgent, ...none },
+  xai: { userAgent: unhostedAgent, ...none },
 }
 
-test("with the Kilo host, each provider gets its identity and the Gateway, OpenAI and Copilot keep theirs", async () => {
+test("with the Kilo host, each provider gets its identity, config keeps its own referer and title, and the Gateway, OpenAI, Copilot and xAI keep theirs", async () => {
   using backend = peer()
   await boot(backend.url, KiloHost.overrides, async (client, directory) => {
     // A real client waits for the Gateway catalog the same way before it prompts a Kilo model.
@@ -105,7 +110,7 @@ test.each([
     child.exited,
   ])
   expect({ code, stderr }).toEqual({ code: 0, stderr: "" })
-  expect(JSON.parse(stdout)).toEqual({ "User-Agent": `kilo/${OPENCODE_CHANNEL}/${OPENCODE_VERSION}/${name}` })
+  expect(stdout.trim()).toBe(`kilo/${OPENCODE_CHANNEL}/${OPENCODE_VERSION}/${name}`)
 })
 
 type Captured = { provider: string; headers: Headers }
@@ -171,7 +176,7 @@ function peer() {
               max_completion_tokens: 32000,
               supported_parameters: ["tools"],
               pricing: { prompt: "0.00001", completion: "0.00002" },
-              isFree: false,
+              isFree: true,
               opencode: { ai_sdk_provider: "openrouter" },
             },
           ],
@@ -209,10 +214,11 @@ async function boot(
   const root = await mkdtemp(path.join(os.tmpdir(), "kilo-request-identity-"))
   const directory = path.join(root, "repo")
   await Bun.write(path.join(directory, ".keep"), "")
-  // Keep the developer's Kilo account and client environment out of the Gateway request.
+  // Keep the developer's Kilo account and client environment out of the run. Signed out, the host starts no session
+  // sync and the Gateway serves its free model to the anonymous account.
   const variables = {
     KILO_API_URL: url,
-    KILO_API_KEY: "fixture-token",
+    KILO_API_KEY: undefined,
     KILOCODE_TOKEN: undefined,
     KILO_AUTH_CONTENT: undefined,
     KILO_ORG_ID: undefined,
@@ -243,10 +249,9 @@ async function boot(
                     provider: {
                       // Built-in providers keep their own protocol and plugin; only the endpoint is the peer.
                       ...Object.fromEntries(
-                        ["anthropic", "opencode", "openrouter", "azure", "openai", "github-copilot"].map((id) => [
-                          id,
-                          { options: loopback(id), models: { echo: { name: "Echo" } } },
-                        ]),
+                        ["anthropic", "opencode", "openrouter", "azure", "openai", "github-copilot", "xai"].map(
+                          (id) => [id, { options: loopback(id), models: { echo: { name: "Echo" } } }],
+                        ),
                       ),
                       // A bring-your-own-key provider, and one whose config names its own referer (on the
                       // provider) and title (on the model).

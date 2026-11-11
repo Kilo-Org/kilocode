@@ -68,8 +68,8 @@ export const KiloPlugins = [
   // The plan_exit tool and the post-plan handoff question.
   KiloPlanPlugin,
   KiloGoal.Plugin,
-  // Names Kilo on model requests to other providers. Before the Gateway, whose request headers are its own, and
-  // before the config plugins, so a user plugin can still replace these headers.
+  // The Kilo user agent on model requests to other providers. Before the Gateway, whose request headers are its
+  // own, and before the config plugins, so a user plugin can still replace it.
   KiloRequestIdentity.Plugin,
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
@@ -119,6 +119,8 @@ export const KiloPostPlugins = [
   KiloAgentPlugin.Ceiling,
   GatewayOptions.Plugin,
   OpencodeFreeTier.Plugin,
+  // The default Kilo referer and title of the other providers, where config did not set its own.
+  KiloRequestIdentity.Referer,
   // The sandbox wraps every tool, so it registers after the config plugins and their tools.
   KiloSandbox.Plugin,
   // Leads the system prompt with the Kilo persona, after every plugin that replaces the first system part.

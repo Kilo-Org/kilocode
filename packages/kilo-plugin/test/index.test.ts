@@ -43,6 +43,7 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilo.agent.ceiling",
     "kilocode.gateway.options",
     "kilocode.gateway.opencode-free-tier",
+    "kilocode.request-identity.referer",
     "kilocode.sandbox",
     "kilocode.soul",
   ])
