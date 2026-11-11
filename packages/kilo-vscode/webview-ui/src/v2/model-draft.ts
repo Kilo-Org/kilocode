@@ -12,32 +12,61 @@ const DEFAULT = "default"
  */
 export function createModelDrafts() {
   const [drafts, setDrafts] = createSignal<Record<string, ModelRef | undefined>>({})
-  // A pick is kept even when it matches the stored model: that model lags a commit in flight, so clearing against it
-  // would drop a later pick the moment the older echo lands. The echo of the model that was committed clears instead.
+  // The model a started commit will produce. The stored model still reports the model before it until the echo, so a
+  // pick that matches the stored model is a real change back and must not be cleared while this is pending.
+  const pending = new Map<string, string>()
   return {
     get(sessionID: string) {
       return drafts()[sessionID]
     },
-    set(sessionID: string, next: ModelRef) {
-      setDrafts((all) => ({ ...all, [sessionID]: next }))
+    /**
+     * Records a pick. A pick equal to the session's own model leaves no draft, so the composer follows the session
+     * again, unless a commit is in flight: then that is a change back to the model the commit is replacing.
+     */
+    set(sessionID: string, next: ModelRef, current: ModelRef | undefined) {
+      if (pending.has(sessionID) || !sameModel(next, current)) return write(setDrafts, sessionID, next)
+      clear(setDrafts, sessionID)
+    },
+    /** Marks the commit a prompt started, so an equal pick made while it runs is kept. */
+    commit(sessionID: string, next: ModelRef) {
+      pending.set(sessionID, key(next))
+    },
+    /** A commit that failed never produces an echo, so it must not keep blocking an equal pick. */
+    failed(sessionID: string, next: ModelRef) {
+      if (pending.get(sessionID) === key(next)) pending.delete(sessionID)
     },
     /** Drops the draft once the session reports the same model, for example the echo of its commit. */
     settle(sessionID: string, current: ModelRef | undefined) {
-      if (!sameModel(drafts()[sessionID], current)) return
-      setDrafts((all) => remove(all, sessionID))
+      if (!current) return
+      if (pending.get(sessionID) === key(current)) pending.delete(sessionID)
+      if (sameModel(drafts()[sessionID], current)) clear(setDrafts, sessionID)
     },
     /** Drops the draft of a deleted session, so the record stays bounded by live sessions. */
     drop(sessionID: string) {
-      setDrafts((all) => remove(all, sessionID))
+      pending.delete(sessionID)
+      clear(setDrafts, sessionID)
     },
   }
 }
 
-function remove(all: Record<string, ModelRef | undefined>, sessionID: string) {
-  if (!(sessionID in all)) return all
-  const rest = { ...all }
-  delete rest[sessionID]
-  return rest
+type Drafts = Record<string, ModelRef | undefined>
+type SetDrafts = (update: (all: Drafts) => Drafts) => void
+
+function write(setDrafts: SetDrafts, sessionID: string, next: ModelRef) {
+  setDrafts((all) => ({ ...all, [sessionID]: next }))
+}
+
+function clear(setDrafts: SetDrafts, sessionID: string) {
+  setDrafts((all) => {
+    if (!(sessionID in all)) return all
+    const rest = { ...all }
+    delete rest[sessionID]
+    return rest
+  })
+}
+
+function key(model: ModelRef) {
+  return `${model.providerID}/${model.id}/${model.variant ?? DEFAULT}`
 }
 
 function sameModel(a: ModelRef | undefined, b: ModelRef | undefined) {

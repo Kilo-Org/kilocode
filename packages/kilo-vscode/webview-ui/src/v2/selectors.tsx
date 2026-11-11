@@ -135,7 +135,7 @@ export function createSelection(
   const setModel = (next: ModelRef) => {
     const id = session()
     if (!id) return void setDraftModel(next)
-    drafts.set(id, next)
+    drafts.set(id, next, info()?.model)
   }
 
   const remember = (ref: { providerID: string; id: string }, variant: string | undefined) => {
@@ -229,7 +229,15 @@ export function createSelection(
      * returns the pending switch so the prompt waits for it and fails with it.
      */
     commit(id: string, next: ModelRef | undefined) {
-      if (next) chain(id, () => v2.api.session.switchModel({ sessionID: id, model: next }))
+      if (next)
+        chain(id, () => {
+          // Marked before the request: the stored model still reports the previous one until the echo.
+          drafts.commit(id, next)
+          return v2.api.session.switchModel({ sessionID: id, model: next }).catch((error: unknown) => {
+            drafts.failed(id, next)
+            throw error
+          })
+        })
       return Promise.resolve(commits.get(id))
     },
     /** The model and effort the composer shows for a session: its draft, else the session's own model. */

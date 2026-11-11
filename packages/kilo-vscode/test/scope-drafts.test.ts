@@ -60,7 +60,7 @@ describe("scope model drafts", () => {
   test("the echo of the committed model drops the draft, another model keeps it", () => {
     const setup = makeScope()
     try {
-      setup.scope.drafts.set("ses_one", model("high"))
+      setup.scope.drafts.set("ses_one", model("high"), model("low"))
       setup.event.emit(selected("medium"))
       expect(setup.scope.drafts.get("ses_one")).toEqual(model("high"))
       setup.event.emit(selected("high"))
@@ -73,7 +73,7 @@ describe("scope model drafts", () => {
   test("a deleted session drops its draft", () => {
     const setup = makeScope()
     try {
-      setup.scope.drafts.set("ses_one", model("high"))
+      setup.scope.drafts.set("ses_one", model("high"), model("low"))
       setup.event.emit(deleted())
       expect(setup.scope.drafts.get("ses_one")).toBeUndefined()
     } finally {

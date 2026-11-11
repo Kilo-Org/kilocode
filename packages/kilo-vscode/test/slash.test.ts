@@ -258,7 +258,7 @@ describe("slash dispatch", () => {
     // Shift+Tab moved the composer to high; the session reports low until a send commits the draft.
     const low: ModelRef = { providerID: "kilo", id: "claude", variant: "low" }
     const drafts = createModelDrafts()
-    drafts.set("ses_1", high)
+    drafts.set("ses_1", high, low)
     const run = deps()
     run.value.selected = (id) => drafts.get(id) ?? low
     await dispatchSlash({ entry: entry("init"), args: "" }, run.value)
