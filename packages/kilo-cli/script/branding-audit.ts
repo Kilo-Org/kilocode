@@ -2,12 +2,17 @@
 
 // Branding coverage audit. Runs the rule engine over the user-facing CLI/TUI/OAuth
 // surface and hard-fails when it finds user-visible OpenCode text that would ship
-// un-rebranded. Two failure modes:
+// un-rebranded. Three failure modes:
 //
 //   - missing interception: a file the rules WOULD brand that is not in the loader's
 //     `files` list, so its OpenCode text ships raw;
 //   - rule gap: an intercepted file where, after the rules run, a user-visible
-//     OpenCode/opencode token still remains.
+//     OpenCode/opencode token still remains;
+//   - namespace leak: a core module that, after the full transform, still puts a
+//     built-in tool under the `opencode` namespace or tells the model to call
+//     `tools.opencode.*`. The rule engine leaves dotted IDs alone and the
+//     structural counts only guard known anchors, so a new upstream tool or a new
+//     `tools.opencode.<name>` reference would otherwise ship un-rebranded.
 //
 // It reads the committed working tree, not the pinned upstream tree, so it sees what
 // actually ships: a shared file Kilo patches (for example mcp/add.ts, which uses
@@ -31,6 +36,11 @@ const INCLUDE = [
   /^packages\/tui\/src\/.*\.tsx?$/,
   /^packages\/core\/src\/oauth\/.*\.ts$/,
 ]
+// The built-in tool namespace is defined and referenced across core, so the
+// namespace check covers every core module, not only the user-facing surface.
+const NAMESPACE_PATHSPECS = ["packages/core/src"]
+const NAMESPACE_INCLUDE = [/^packages\/core\/src\/.*\.tsx?$/]
+const NAMESPACE = /namespace: "opencode"|tools\.opencode\./g
 const EXCLUDE = [
   /\.test\.tsx?$/,
   /\.d\.ts$/,
@@ -55,7 +65,7 @@ export interface Finding {
   file: string
   line: number
   column: number
-  kind: "missing-interception" | "rule-gap"
+  kind: "missing-interception" | "rule-gap" | "namespace-leak"
   snippet: string
 }
 
@@ -86,6 +96,21 @@ export function auditFile(key: string, source: string): Finding[] {
   })
 }
 
+/** Flag every `opencode` tool-namespace reference that survives the full branding transform of a core module. */
+export function auditNamespace(key: string, source: string): Finding[] {
+  const branded = KiloBranding.transform(path.join(repo, "packages", key), source)
+  return [...branded.matchAll(NAMESPACE)].map((match) => {
+    const { line, column } = position(branded, match.index)
+    return {
+      file: key,
+      line,
+      column,
+      kind: "namespace-leak" as const,
+      snippet: branded.slice(match.index).split("\n")[0]!.slice(0, 80),
+    }
+  })
+}
+
 export interface AuditResult {
   scoped: number
   findings: Finding[]
@@ -96,21 +121,25 @@ export interface AuditResult {
 
 /** Scan the committed working-tree surface and classify findings against the allowlist. */
 export async function run(): Promise<AuditResult> {
-  const tracked = (await $`git ls-files -z -- ${PATHSPECS}`.cwd(repo).quiet().text()).split("\0").filter(Boolean)
-  const scoped = tracked.filter((file) => INCLUDE.some((re) => re.test(file)) && !EXCLUDE.some((re) => re.test(file)))
+  const scoped = await scope(PATHSPECS, INCLUDE)
+  const namespaced = await scope(NAMESPACE_PATHSPECS, NAMESPACE_INCLUDE)
 
   const findings: Finding[] = []
   const unparseable: { file: string; error: string }[] = []
-  for (const file of scoped) {
-    const key = file.slice("packages/".length)
-    const source = await Bun.file(path.join(repo, file)).text()
-    const result = safeAudit(key, source)
-    if (Array.isArray(result)) findings.push(...result)
-    else unparseable.push({ file: key, error: result.error })
-  }
+  for (const [files, audit] of [
+    [scoped, auditFile],
+    [namespaced, auditNamespace],
+  ] as const)
+    for (const file of files) {
+      const key = file.slice("packages/".length)
+      const source = await Bun.file(path.join(repo, file)).text()
+      const result = safeAudit(() => audit(key, source))
+      if (Array.isArray(result)) findings.push(...result)
+      else unparseable.push({ file: key, error: result.error })
+    }
 
   return {
-    scoped: scoped.length,
+    scoped: new Set([...scoped, ...namespaced]).size,
     findings,
     unexpected: findings.filter((f) => !allow.has(f.file)),
     unparseable,
@@ -121,12 +150,17 @@ export async function run(): Promise<AuditResult> {
 // A parse failure is not skipped silently: a user-facing file the audit cannot
 // read leaves its branding unchecked, which is the regression the audit exists
 // to prevent. The error is surfaced and fails the run.
-function safeAudit(key: string, source: string): Finding[] | { error: string } {
+function safeAudit(audit: () => Finding[]): Finding[] | { error: string } {
   try {
-    return auditFile(key, source)
+    return audit()
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) }
   }
+}
+
+async function scope(pathspecs: string[], include: RegExp[]) {
+  const tracked = (await $`git ls-files -z -- ${pathspecs}`.cwd(repo).quiet().text()).split("\0").filter(Boolean)
+  return tracked.filter((file) => include.some((re) => re.test(file)) && !EXCLUDE.some((re) => re.test(file)))
 }
 
 async function main() {
@@ -146,7 +180,8 @@ async function main() {
       console.error(`  [${f.kind}] packages/${f.file}:${f.line}:${f.column}  ${JSON.stringify(f.snippet)}`)
     console.error(
       `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules (rules.ts) or the` +
-        ` protected contexts (isProtected in engine.ts) for a rule-gap, or add a reviewed entry to` +
+        ` protected contexts (isProtected in engine.ts) for a rule-gap, add a namespace transform to structural.ts` +
+        ` (and the file to KiloBranding.files) for a namespace-leak, or add a reviewed entry to` +
         ` branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
     )
   }

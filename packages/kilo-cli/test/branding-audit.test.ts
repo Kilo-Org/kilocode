@@ -36,6 +36,29 @@ test("does not flag an intercepted file whose OpenCode text the rules fully bran
   expect(findings).toEqual([])
 })
 
+test("flags a new tools.opencode reference in an intercepted tool module", async () => {
+  // The structural count for `tools.opencode.session_move` stays 1, so only the
+  // audit notices a newly added model-facing reference.
+  const key = "core/src/tool/plugin/opencode.ts"
+  const source = await Bun.file(new URL(`../../${key}`, import.meta.url)).text()
+  expect(KiloBrandingAudit.auditNamespace(key, source)).toEqual([])
+  const drifted = source.replace(
+    "`tools.opencode.session_move`",
+    "`tools.opencode.session_move`, then `tools.opencode.session_rename`",
+  )
+  const findings = KiloBrandingAudit.auditNamespace(key, drifted)
+  expect(findings.map((f) => f.kind)).toEqual(["namespace-leak"])
+  expect(findings[0]!.snippet).toContain("tools.opencode.session_rename")
+})
+
+test("flags a new built-in tool module that is not intercepted", () => {
+  const findings = KiloBrandingAudit.auditNamespace(
+    "core/src/tool/plugin/new.ts",
+    'export const tool = { options: { namespace: "opencode", codemode: true } }',
+  )
+  expect(findings.map((f) => f.kind)).toEqual(["namespace-leak"])
+})
+
 test("baseline is clean: no unexpected unbranded OpenCode on the audited surface", async () => {
   const { unexpected, stale, unparseable } = await KiloBrandingAudit.run()
   expect(unexpected.map((f) => `${f.file}:${f.line} ${f.snippet}`)).toEqual([])
