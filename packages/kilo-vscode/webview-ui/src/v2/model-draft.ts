@@ -31,6 +31,13 @@ export function createModelDrafts() {
     commit(sessionID: string, next: ModelRef) {
       pending.set(sessionID, key(next))
     },
+    /**
+     * Ends the wait once the commit settled and the session already reports its model. A switch to the model the
+     * session runs on is a no-op on the server, so it emits no echo and only this ends it.
+     */
+    committed(sessionID: string, current: ModelRef | undefined) {
+      if (current && pending.get(sessionID) === key(current)) pending.delete(sessionID)
+    },
     /** A commit that failed never produces an echo, so it must not keep blocking an equal pick. */
     failed(sessionID: string, next: ModelRef) {
       if (pending.get(sessionID) === key(next)) pending.delete(sessionID)

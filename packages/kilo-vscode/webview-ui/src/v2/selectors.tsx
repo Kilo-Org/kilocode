@@ -233,10 +233,13 @@ export function createSelection(
         chain(id, () => {
           // Marked before the request: the stored model still reports the previous one until the echo.
           drafts.commit(id, next)
-          return v2.api.session.switchModel({ sessionID: id, model: next }).catch((error: unknown) => {
-            drafts.failed(id, next)
-            throw error
-          })
+          return v2.api.session.switchModel({ sessionID: id, model: next }).then(
+            () => drafts.committed(id, v2.data.session.get(id)?.model),
+            (error: unknown) => {
+              drafts.failed(id, next)
+              throw error
+            },
+          )
         })
       return Promise.resolve(commits.get(id))
     },

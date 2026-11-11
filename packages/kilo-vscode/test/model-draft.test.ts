@@ -65,6 +65,28 @@ describe("model drafts", () => {
     expect(drafts.get("ses_one")).toBeUndefined()
   })
 
+  test("a commit the server ignores ends once the session already reports its model", () => {
+    // The session already runs on high, so switchModel is a no-op and emits no echo.
+    const drafts = createModelDrafts()
+    drafts.set("ses_one", model("high"), model("low"))
+    drafts.commit("ses_one", model("high"))
+    drafts.committed("ses_one", model("high"))
+
+    drafts.set("ses_one", model("high"), model("high"))
+    expect(drafts.get("ses_one")).toBeUndefined()
+  })
+
+  test("a commit whose echo has not arrived keeps the wait", () => {
+    const drafts = createModelDrafts()
+    drafts.set("ses_one", model("high"), model("low"))
+    drafts.commit("ses_one", model("high"))
+    // The store still reports the model before the commit, so the echo is still coming.
+    drafts.committed("ses_one", model("low"))
+
+    drafts.set("ses_one", model("low"), model("low"))
+    expect(drafts.get("ses_one")).toEqual(model("low"))
+  })
+
   test("a deleted session drops its draft", () => {
     const drafts = createModelDrafts()
     drafts.set("ses_one", model("high"), model("low"))
