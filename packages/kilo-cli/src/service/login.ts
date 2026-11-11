@@ -12,6 +12,7 @@ import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
 import { Effect, FileSystem } from "effect"
 import { ChildProcess } from "effect/process"
+import { existsSync, statSync } from "node:fs"
 import path from "node:path"
 import { KiloBinary } from "../binary"
 
@@ -90,7 +91,15 @@ export function unit(target: Target): Unit | undefined {
  */
 export function resolveCommand(input: { readonly executable?: string; readonly self: () => ReadonlyArray<string> }) {
   if (input.executable !== undefined) {
-    const found = Bun.which(input.executable)
+    const candidate = input.executable
+    // A path is checked as a file; a bare name is resolved on PATH. Bun.which also accepts paths, but on Windows it
+    // rejects an absolute path without an executable extension, which a `--command` path may be.
+    const isPath = candidate.includes("/") || candidate.includes("\\") || path.isAbsolute(candidate)
+    const found = isPath
+      ? executableFile(candidate)
+        ? path.resolve(candidate)
+        : null
+      : Bun.which(candidate)
     if (found === null) throw new LoginServiceError(`--command ${input.executable} is not an executable file.`)
     return [found, "serve", "--service"]
   }
@@ -109,6 +118,12 @@ export function developmentRunner(command: ReadonlyArray<string>) {
   return runtime === "bun" || runtime === "bun.exe" || command.slice(1).some((arg) => /\.tsx?$/i.test(arg))
 }
 
+function executableFile(file: string) {
+  if (!existsSync(file) || !statSync(file).isFile()) return false
+  // Windows has no executable bit; the file existence check is the strongest portable signal there.
+  return process.platform === "win32" || (statSync(file).mode & 0o111) !== 0
+}
+
 export function plist(input: {
   readonly label: string
   readonly command: ReadonlyArray<string>
@@ -117,7 +132,8 @@ export function plist(input: {
   readonly log: string
 }) {
   const string = (value: string) => `<string>${escapeXml(value)}</string>`
-  const output = path.join(input.log, `${input.label}.log`)
+  // A launchd plist is macOS text: keep POSIX separators even when the value is built on another host for tests.
+  const output = `${input.log.replaceAll("\\", "/").replace(/\/+$/, "")}/${input.label}.log`
   return [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">`,
