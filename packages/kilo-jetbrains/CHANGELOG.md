@@ -683,68 +683,27 @@
 ## [7.2.1-rc.4] - 2026-11-11
 
 ### Added
-- feat(jetbrains): label transcript messages for accessibility by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15597
-- feat(cli): publish an OpenShell variant of the Docker image by @DenisDupeyron in https://github.com/Kilo-Org/kilocode/pull/15640
-- feat(vscode): add "Show Open Tabs" command by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/14782
-- feat(e2e): add IDE-neutral contracts and coordinator by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15712
-- feat(agent-manager): continue local worktrees in Cloud by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/15703
-- feat(jetbrains): organize worktrees in a shared active tree by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15510
-- feat(agent-manager): add Agent Manager splash by @jeremy0dell in https://github.com/Kilo-Org/kilocode/pull/15776
-- feat(jetbrains): prove local and Cloud session open in e2e driver by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15838
-- feat(jetbrains): add Update from Base worktree action by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15820
-- feat(metrics): report marketplace installs and removals from the CLI for every client by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15905
-- feat(jetbrains): highlight worktree row buttons on hover by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15886
-- feat(cli): expose hosted workspace profiles and empty creates by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15929
-- feat(jetbrains): add questions to prompt navigator by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15883
-- feat(jetbrains): add Cloud workspace management by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15599
-- feat(jetbrains): add transcript find by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16021
+
+- Cloud workspace management: create, switch, and delete Cloud (hosted) workspaces, remember the profile per repository, and apply organization profile defaults.
+- Cloud sessions now share the worktree editor UI, with session titles and activity kept in sync and a running indicator for Cloud turns like local ones.
+- Transcript find: search the session transcript with match highlighting and next/previous navigation that keeps working while a response is streaming.
+- Worktrees are organized in a shared active tree, with an **Update from Base** action and row buttons that highlight on hover.
+- Questions appear in the prompt navigator so pending agent questions are easier to find.
+- Transcript messages are labeled for screen readers.
 
 ### Fixed
-- fix(nix): restore Kilo overlay and evaluate it on main by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/15571
-- fix(nix): replace Node 20 and patch shared Brotli by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/15569
-- fix(vscode): update Playwright runtime to 1.64.1 by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15739
-- fix(vscode): images not shown on kilo by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15741
-- fix(security): submit bun.lock and Gradle graphs so Dependabot alerts on them by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15793
-- fix(metrics): count every marketplace install and align item keys across IDEs by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15904
-- fix(cli): skip plugin tools whose args cannot convert to JSON Schema by @zfralish in https://github.com/Kilo-Org/kilocode/pull/15921
-- fix(release): download raw bun.lock in JetBrains pin bump by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15946
-- fix(cli): exchange credentials for cloud agent control tokens by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/15988
-- fix(cli): keep questions open when background results arrive by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/15987
-- fix(jetbrains): use public hover key instead of internal RenderingUtil call by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16076
+
+- The plugin now uses public platform APIs for tree hover painting, so Marketplace publishing passes plugin verification again.
+- Cloud workspace delete confirmation is simplified, and **Set as default** is removed from the Cloud workspace dialog.
+- Local MCP issues are hidden in Cloud sessions.
+- Plugin tools whose arguments cannot be converted to JSON Schema no longer break tool loading.
+- Questions stay open when background results arrive.
+- Cloud agent control tokens are exchanged correctly from stored credentials.
 
 ### Changed
-- release(jetbrains): v7.2.1-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15567
-- docs(kilo-docs): update Kilo Desktop docs for 0.1.15 by @MihaelaStoica in https://github.com/Kilo-Org/kilocode/pull/15638
-- docs: auto-sync cloud-web with merged PRs (through 2026-10-27) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14655
-- docs(kilo-docs): replace dead Windsurf rules directory link by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15663
-- chore(jetbrains): bump gradle-wrapper from 9.8.1 to 9.8.2 in /packages/kilo-jetbrains in the jetbrains-minor-patch group across 1 directory by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15549
-- chore(jetbrains): bump the okhttp-minor-patch group in /packages/kilo-jetbrains with 3 updates by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15614
-- chore(jetbrains): bump the markdown-minor-patch group in /packages/kilo-jetbrains with 4 updates by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15615
-- chore(deps): bump glob from 13.0.5 to 14.0.2 in /packages/core by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15678
-- chore(deps): bump minimatch from 10.2.6 to 11.0.1 in /packages/opencode by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15677
-- chore(deps): glob updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15762
-- chore(deps): axios updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15801
-- chore(deps): xmldom updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15802
-- chore(deps): undici updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15805
-- chore(deps): fast-xml-parser and fast-uri updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15803
-- chore(deps): seroval updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15811
-- chore(deps): proxy-addr and shell-quote updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15816
-- chore(deps): hono updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15819
-- chore(deps): resolve remaining high audit advisories by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15821
-- chore(deps): resolve remaining moderate and low audit advisories by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15830
-- test(jetbrains): add split-mode UI e2e adapter by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15822
-- chore(deps): JetBrains build dependencies updated due dependabot alerts by @WebReflection in https://github.com/Kilo-Org/kilocode/pull/15842
-- docs: note that main is not accepting new features by @gil-kilo in https://github.com/Kilo-Org/kilocode/pull/15824
-- test(jetbrains): add headless local/cloud e2e runner by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15873
-- chore(test): raise default test timeout for client and httpapi-codegen by @gil-kilo in https://github.com/Kilo-Org/kilocode/pull/15879
-- test(jetbrains): prove prompt streaming in both lanes by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15877
-- test(vscode): wait for RTL splash cards before measuring by @jeremy0dell in https://github.com/Kilo-Org/kilocode/pull/15887
-- chore(jetbrains): bump org.kodein.di:kodein-di-jvm from 7.26.1 to 7.33.0 in /packages/kilo-jetbrains in the jetbrains-minor-patch group across 1 directory by @dependabot[bot] in https://github.com/Kilo-Org/kilocode/pull/15851
-- chore(jetbrains): bump CLI pin to v7.8.28 by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15945
-- chore(jetbrains): ignore Kotlin minor bumps until RPC plugin supports 2.4 by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/16002
-- release(jetbrains): v7.2.1-rc.2 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16066
-- test(jetbrains): remove flaky timing from worktree tests by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16084
 
+- Bundled Kilo Core CLI updated to 7.8.28.
+- JetBrains and build dependencies updated (OkHttp, Markdown, Kodein DI, Gradle wrapper) with security floors for transitive build dependencies.
 
 ## [7.2.1-rc.2] - 2026-11-11
 
