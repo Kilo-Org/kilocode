@@ -41,11 +41,14 @@ describe("limitEdit", () => {
   test("sets a fractional limit as a fractional buffer", () => {
     expect(limitEdit("80.5")).toEqual({ type: "set", value: "19.5%" })
     expect(limitEdit("0.5")).toEqual({ type: "set", value: "99.5%" })
+    expect(limitEdit("0.001")).toEqual({ type: "set", value: "99.999%" })
   })
 
   test("ignores a limit outside the buffer percentage range", () => {
     expect(limitEdit("0")).toBeUndefined()
     expect(limitEdit("101")).toBeUndefined()
+    // Below the field minimum the buffer would round up to 100%, which the schema rejects.
+    expect(limitEdit("0.0001")).toBeUndefined()
     // A buffer percentage cannot go below 1%, so a limit just under 100 has no percentage form.
     expect(limitEdit("99.5")).toBeUndefined()
     expect(limitEdit("80%")).toBeUndefined()

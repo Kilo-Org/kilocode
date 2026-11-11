@@ -29,15 +29,16 @@ export function limitFromBuffer(value: unknown): string {
 export type LimitEdit = { type: "unset" } | { type: "set"; value: number | string }
 
 /**
- * Maps a limit field value to a `compaction.buffer` edit. Blank clears the key, a percentage above 0 up to 99 sets the
- * complement as the buffer, and 100 keeps nothing free. Other text is ignored.
+ * Maps a limit field value to a `compaction.buffer` edit. Blank clears the key, a percentage from 0.001 up to 99 sets
+ * the complement as the buffer, and 100 keeps nothing free. Other text is ignored.
  */
 export function limitEdit(input: string): LimitEdit | undefined {
   const raw = input.trim()
   if (!raw) return { type: "unset" }
   if (!/^\d+(?:\.\d+)?$/.test(raw)) return undefined
   const percent = Number(raw)
-  if (!Number.isFinite(percent) || percent <= 0 || percent > 100) return undefined
+  // The field shows three decimals, so a smaller limit cannot be entered and its buffer would round up to 100%.
+  if (!Number.isFinite(percent) || percent < 0.001 || percent > 100) return undefined
   if (percent === 100) return { type: "set", value: 0 }
   // A buffer percentage cannot go below 1%, so a limit between 99 and 100 has no percentage form.
   if (percent > 99) return undefined
