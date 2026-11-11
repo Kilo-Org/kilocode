@@ -162,6 +162,7 @@ async function seed() {
     stack.adopt(
       Bun.spawn([process.execPath, "-e", "setTimeout(() => {}, 120_000)"], {
         cwd: root,
+        env: { ...process.env, BUN_OPTIONS: "" },
         stdout: "ignore",
         stderr: "ignore",
       }),
@@ -255,6 +256,8 @@ function environment(root: string) {
     NO_COLOR: "1",
     OPENCODE_DISABLE_AUTOUPDATE: "1",
     BUN_RUNTIME_TRANSPILER_CACHE_PATH: transpiled,
+    // Flags an outer shell exports (a preload, an export condition) would change how the host loads its modules.
+    BUN_OPTIONS: "",
   }
 }
 
