@@ -14,6 +14,7 @@ import {
   permissionRows,
   permissionSummary,
   removeAgentConfig,
+  removableScopes,
 } from "../webview-ui/src/components/settings/agent-behaviour/agent-list"
 import { buildExport, parseImport } from "../webview-ui/src/components/settings/agent-behaviour/mode-io"
 
@@ -308,5 +309,30 @@ describe("parseImport", () => {
 describe("buildExport", () => {
   test("prefixes the config with the name", () => {
     expect(buildExport("reviewer", { mode: "primary" })).toEqual({ name: "reviewer", mode: "primary" })
+  })
+})
+
+describe("removableScopes", () => {
+  test("reports every scope whose markdown file defines the agent", () => {
+    expect(removableScopes("demo", [{ name: "demo", scope: "project" }])).toEqual(["project"])
+    expect(
+      removableScopes("demo", [
+        { name: "demo", scope: "project" },
+        { name: "demo", scope: "global" },
+      ]),
+    ).toEqual(["project", "global"])
+    expect(removableScopes("other", [{ name: "demo", scope: "project" }])).toEqual([])
+  })
+
+  test("never offers a built-in agent, whose file only overrides the base definition", () => {
+    expect(removableScopes("plan", [{ name: "plan", scope: "project" }])).toEqual([])
+    expect(removableScopes("code", [{ name: "code", scope: "global" }])).toEqual([])
+  })
+
+  test("a config entry that also has a markdown file keeps both removal paths", () => {
+    // The subtab deletes the file through the RPC and then the config entry; either alone leaves the row in place.
+    const row = agentRows([agent("demo")], [], () => ({}), (id) => id === "demo").find((item) => item.id === "demo")
+    expect(row).toMatchObject({ defined: true, removable: true })
+    expect(row && removableScopes(row.id, [{ name: "demo", scope: "project" }])).toEqual(["project"])
   })
 })

@@ -12,9 +12,9 @@ import type {
   AgentManagerSendInitialMessage,
   AgentManagerSessionAddedMessage,
   AgentManagerSessionForkedMessage,
-  AgentManagerStateMessage,
   AgentManagerWorktreeSetupMessage,
   ManagedSessionState,
+  SessionInfo,
 } from "../src/types/messages/agent-manager"
 import type { SetupState } from "./project/progress"
 import { clearMultiVersionBusy, markMultiVersionBusy, updateSetup } from "./project/progress"
@@ -62,8 +62,8 @@ export function applySetupMessage(
   if (!deps.isActivePayload(msg.projectId)) return
   if (msg.status === "ready" && msg.sessionId) {
     deps.selectSession(msg.sessionId)
-    const managed = deps.managedSessions().find((session) => session.id === msg.sessionId)
-    if (managed?.worktreeId) deps.setSelection(managed.worktreeId)
+    const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    if (worktree) deps.setSelection(worktree)
     deps.evictLocal(msg.sessionId)
     deps.requestChatFocus(true)
     return
@@ -103,9 +103,11 @@ export function applySessionForked(msg: AgentManagerSessionForkedMessage, deps: 
   setSelection: (id: string) => void
   evictLocal: (id: string) => void
   selectSession: (id: string) => void
+  remember: (session: SessionInfo) => void
   requestChatFocus: (force?: boolean) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
+  deps.remember(msg.session)
   deps.insertAfter(msg.worktreeId, msg.forkedFromId, msg.sessionId)
   if (!msg.worktreeId) {
     deps.setLocal((prev) => {

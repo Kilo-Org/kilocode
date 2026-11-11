@@ -27,7 +27,7 @@ describe("KiloHeaders.request, KiloProject, and KiloMachine", () => {
       "X-KILOCODE-FEATURE": "cli",
       "X-KILOCODE-ORGANIZATIONID": "org-123",
       "X-KILOCODE-TESTER": "SUPPRESS",
-      "User-Agent": "opencode-kilo-provider/2.0.27",
+      "User-Agent": "Kilo-Code/v2/2.0.27",
       "X-KILOCODE-TASKID": "ses_1",
       "X-KILOCODE-PARENT-TASKID": "ses_0",
       "X-KILOCODE-PROJECTID": "kilocode",

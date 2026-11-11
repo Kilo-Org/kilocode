@@ -1319,6 +1319,11 @@ export const dict = {
   "settings.display.mcpTool.description": "MCPおよび汎用ツールブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
+  "settings.display.codeMode.title": "Code Mode ブロック",
+  "settings.display.codeMode.description":
+    "Code Mode ブロックを、ツール呼び出しを一覧表示した状態で開始するか 1 行で開始するかを選択します。スクリプトは開くまで常に非表示です。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "折りたたみ",
 
   "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
   "settings.display.shortcutHints.description":
@@ -1407,6 +1412,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
+  "task.backgroundAgents.promoteFailed": "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.clearFinished": "完了済みを消去",
@@ -1493,6 +1499,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "システムブラウザー",
   "settings.experimental.browserLinks.integrated": "統合ブラウザー",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "chat.reply.toolbar": "選択したテキスト",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "返信で引用する",
+  "chat.reply.commentHint": "この箇所にコメント",
+  "chat.reply.copy": "コピー",
+  "chat.reply.sendHint": "このコメントを今すぐ Kilo に送信",
+  "chat.reply.commentLater": "次のメッセージ用に保存",
+  "chat.reply.count": "返信 ({{count}})",
+  "chat.reply.sendAll": "すべて送信",
+  "chat.reply.showInChat": "チャットで表示",
   "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
   "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }

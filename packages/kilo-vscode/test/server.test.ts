@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, manager, parse, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, indexingEnvironment, manager, parse, serverPlans, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -68,11 +68,33 @@ describe("command", () => {
   })
 })
 
+describe("serverPlans", () => {
+  test("is the profile data plan directory for the isolated dev server", () => {
+    const cmd = { cmd: "bun", args: [], env: { KILO_V2_PROFILE: path.join(tmpdir(), "profile") } }
+    expect(serverPlans(cmd, {})).toBe(path.join(tmpdir(), "profile", "data", "kilo2", "plans"))
+  })
+
+  test("is the Kilo data plan directory for the bundled server", () => {
+    expect(serverPlans({ cmd: "kilo2", args: [], env: {} }, { XDG_DATA_HOME: "/d" })).toBe(
+      path.join("/d", "kilo2", "plans"),
+    )
+  })
+})
+
 test("environment drops v1-only variables and sets the client", () => {
-  const env = environment({ KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" }, { OPENCODE_PASSWORD: "x" })
+  const env = environment(
+    { KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" },
+    { OPENCODE_PASSWORD: "x" },
+  )
   expect(env.KILO_PARENT_PID).toBeUndefined()
   expect(env.KILO_TELEMETRY_LEVEL).toBeUndefined()
-  expect(env).toMatchObject({ PATH: "/bin", KILO_CLIENT: "vscode", OPENCODE_PASSWORD: "x", NODE_USE_SYSTEM_CA: "1" })
+  expect(env).toMatchObject({
+    PATH: "/bin",
+    KILO_CLIENT: "vscode",
+    KILO_PLATFORM: "vscode",
+    OPENCODE_PASSWORD: "x",
+    NODE_USE_SYSTEM_CA: "1",
+  })
 })
 
 test("environment drops inherited server passwords", () => {
@@ -82,25 +104,45 @@ test("environment drops inherited server passwords", () => {
   expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
 })
 
+
+describe("indexingEnvironment", () => {
+  test("disables indexing when no workspace folder is open", () => {
+    expect(indexingEnvironment(undefined)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+    expect(indexingEnvironment(0)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+  })
+
+  test("leaves indexing on when a workspace folder is open", () => {
+    expect(indexingEnvironment(1)).toEqual({})
+  })
+})
+
 describe("settingsEnvironment", () => {
-  test("disables Claude Code loading by default", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "" })).toEqual({
+  const editor = "Visual Studio Code 1.114.0"
+
+  test("reports the editor to the Gateway and disables Claude Code loading by default", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: false, extraCaCerts: "", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
       KILO_DISABLE_CLAUDE_CODE: "true",
     })
   })
 
   test("leaves Claude Code loading on when compatibility is enabled", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "" })).toEqual({})
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+    })
   })
 
   test("sets the extra CA certificates path, trimmed", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem " })).toEqual({
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "/certs/ca.pem ", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
       NODE_EXTRA_CA_CERTS: "/certs/ca.pem",
     })
   })
 
   test("ignores a blank CA certificates value", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   " })).toEqual({})
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "   ", editor })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+    })
   })
 })
 
@@ -202,7 +244,9 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
     env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
   })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
-  const info = await api.rpc(KiloHandshakeRpc.Definition).get({}, { location: { directory: path.join(root, "workspace") } })
+  const info = await api
+    .rpc(KiloHandshakeRpc.Definition)
+    .get({}, { location: { directory: path.join(root, "workspace") } })
   expect(info.product).toBe("kilo")
   // Without a location, the server creates the session in its own working directory.
   const session = await api.session.create({})

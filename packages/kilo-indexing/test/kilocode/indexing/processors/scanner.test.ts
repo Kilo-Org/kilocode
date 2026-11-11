@@ -1,0 +1,514 @@
+import { createHash } from "crypto"
+import { mkdir, mkdtemp, rm } from "fs/promises"
+import ignore from "ignore"
+import { tmpdir } from "os"
+import { join } from "path"
+import { describe, expect, test } from "bun:test"
+import { CacheManager } from "../../../../src/indexing/cache-manager"
+import type {
+  CodeBlock,
+  ICodeParser,
+  IEmbedder,
+  IndexingTelemetryEvent,
+  IVectorStore,
+  PointStruct,
+  VectorStoreSearchResult,
+} from "../../../../src/indexing/interfaces"
+import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
+import { DirectoryScanner } from "../../../../src/indexing/processors/scanner"
+
+class Emb implements IEmbedder {
+  public async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    return {
+      embeddings: texts.map(() => [0.1]),
+    }
+  }
+
+  public async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
+    return { valid: true }
+  }
+
+  public get embedderInfo() {
+    return { name: "openai" as const }
+  }
+}
+
+class Parser implements ICodeParser {
+  public async parseFile(
+    filePath: string,
+    options?: {
+      minBlockLines?: number
+      maxBlockLines?: number
+      content?: string
+      fileHash?: string
+    },
+  ): Promise<CodeBlock[]> {
+    return [
+      {
+        file_path: filePath,
+        identifier: null,
+        type: "definition.function",
+        start_line: 1,
+        end_line: 1,
+        content: "export const x = 1",
+        fileHash: options?.fileHash ?? "",
+        segmentHash: `${filePath}:1:1`,
+      },
+    ]
+  }
+}
+
+class ManyParser implements ICodeParser {
+  public async parseFile(
+    filePath: string,
+    options?: {
+      minBlockLines?: number
+      maxBlockLines?: number
+      content?: string
+      fileHash?: string
+    },
+  ): Promise<CodeBlock[]> {
+    return [
+      {
+        file_path: filePath,
+        identifier: null,
+        type: "definition.function",
+        start_line: 1,
+        end_line: 1,
+        content: "export const a = 1",
+        fileHash: options?.fileHash ?? "",
+        segmentHash: `${filePath}:1:1`,
+      },
+      {
+        file_path: filePath,
+        identifier: null,
+        type: "definition.function",
+        start_line: 2,
+        end_line: 2,
+        content: "export const b = 2",
+        fileHash: options?.fileHash ?? "",
+        segmentHash: `${filePath}:2:2`,
+      },
+      {
+        file_path: filePath,
+        identifier: null,
+        type: "definition.function",
+        start_line: 3,
+        end_line: 3,
+        content: "export const c = 3",
+        fileHash: options?.fileHash ?? "",
+        segmentHash: `${filePath}:3:3`,
+      },
+    ]
+  }
+}
+
+class Store implements IVectorStore {
+  public multi: string[][] = []
+  public points = 0
+
+  public async initialize(): Promise<boolean> {
+    return false
+  }
+
+  public async upsertPoints(points: PointStruct[]): Promise<void> {
+    this.points += points.length
+  }
+
+  public async search(
+    _queryVector: number[],
+    _directoryPrefix?: string,
+    _minScore?: number,
+    _maxResults?: number,
+  ): Promise<VectorStoreSearchResult[]> {
+    return []
+  }
+
+  public async deletePointsByFilePath(_filePath: string): Promise<void> {}
+
+  public async deletePointsByMultipleFilePaths(filePaths: string[]): Promise<void> {
+    this.multi.push(filePaths)
+  }
+
+  public async clearCollection(): Promise<void> {}
+
+  public async deleteCollection(): Promise<void> {}
+
+  public async collectionExists(): Promise<boolean> {
+    return true
+  }
+
+  public async hasIndexedData(): Promise<boolean> {
+    return false
+  }
+
+  public async markIndexingComplete(): Promise<void> {}
+
+  public async markIndexingIncomplete(): Promise<void> {}
+}
+
+class FailStore extends Store {
+  private calls = 0
+
+  public override async upsertPoints(points: PointStruct[]): Promise<void> {
+    this.calls++
+    if (this.calls === 2) {
+      throw new Error("upsert failed")
+    }
+    await super.upsertPoints(points)
+  }
+}
+
+class RetryStore extends Store {
+  private calls = 0
+
+  public override async upsertPoints(points: PointStruct[]): Promise<void> {
+    this.calls += 1
+    if (this.calls === 1) {
+      throw new Error("temporary upsert failure for /tmp/retry/path.ts")
+    }
+    await super.upsertPoints(points)
+  }
+}
+
+describe("DirectoryScanner", () => {
+  test("uses seeded baseline hashes to index only worktree changes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const same = join(root, "same.ts")
+    const changed = join(root, "changed.ts")
+    const added = join(root, "added.ts")
+    const deleted = join(root, "deleted.ts")
+    const sameContent = "export const same = 1\n"
+    const changedContent = "export const changed = 2\n"
+
+    await Bun.write(same, sameContent)
+    await Bun.write(changed, changedContent)
+    await Bun.write(added, "export const added = 1\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.seedHashes({
+      [same]: createHash("sha256").update(sameContent).digest("hex"),
+      [changed]: "baseline-changed",
+      [deleted]: "baseline-deleted",
+    })
+
+    const store = new Store()
+    const scan = new DirectoryScanner(new Emb(), store, new Parser(), cache, ignore(), 1, 1)
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats.processed).toBe(2)
+    expect(store.points).toBe(2)
+    expect(cache.getHash(same)).toBe(createHash("sha256").update(sameContent).digest("hex"))
+    expect(cache.getHash(changed)).toBe(createHash("sha256").update(changedContent).digest("hex"))
+    expect(cache.getHash(added)).toBeDefined()
+    expect(cache.getHash(deleted)).toBeUndefined()
+  })
+
+  test("keeps file metadata when threshold flush is triggered by that file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    const content = "export const value = 2\n"
+    await Bun.write(file, content)
+
+    const hash = createHash("sha256").update(content).digest("hex")
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(file, "old-hash")
+
+    const emb = new Emb()
+    const parser = new Parser()
+    const store = new Store()
+    const scan = new DirectoryScanner(emb, store, parser, cache, ignore(), 1, 1)
+
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats.processed).toBe(1)
+    expect(store.points).toBe(1)
+    expect(store.multi).toEqual([[file]])
+    expect(cache.getHash(file)).toBe(hash)
+  })
+
+  test("does not mark hash current when a later batch fails for the same file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    const content = "export const value = 2\n"
+    await Bun.write(file, content)
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(file, "old-hash")
+
+    const emb = new Emb()
+    const parser = new ManyParser()
+    const store = new FailStore()
+    const scan = new DirectoryScanner(emb, store, parser, cache, ignore(), 2, 1)
+
+    await scan.scanDirectory(root)
+
+    expect(cache.getHash(file)).toBe("old-hash")
+  })
+
+  test("emits candidate counts for scan telemetry", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    await Bun.write(file, "export const value = 2\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+
+    const events: IndexingTelemetryEvent[] = []
+    const scan = new DirectoryScanner(
+      new Emb(),
+      new Store(),
+      new Parser(),
+      cache,
+      ignore(),
+      1,
+      1,
+      (event) => events.push(event),
+      {
+        provider: "openai",
+        vectorStore: "lancedb",
+        modelId: "text-embedding-3-small",
+      },
+    )
+
+    await scan.scanDirectory(root, undefined, undefined, undefined, "full")
+
+    const count = events.find((event) => event.type === "file_count")
+    expect(count).toBeDefined()
+    expect(count?.type).toBe("file_count")
+    expect(count?.mode).toBe("full")
+    expect(count?.source).toBe("scan")
+    expect(count?.candidate).toBe(1)
+  })
+
+  test("skips files matched by .kilocodeignore during full scans", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const blocked = join(root, "blocked.ts")
+    const open = join(root, "open.ts")
+
+    await Bun.write(join(root, ".kilocodeignore"), "blocked.ts\n")
+    await Bun.write(blocked, "export const blocked = 1\n")
+    await Bun.write(open, "export const open = 1\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+
+    const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, await loadIgnore(root), 1, 1)
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats.processed).toBe(1)
+    expect(cache.getHash(blocked)).toBeUndefined()
+    expect(cache.getHash(open)).toBeDefined()
+  })
+
+  test("uses a configured extension allowlist and removes excluded cached files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const custom = join(root, "main.custom")
+    const excluded = join(root, "main.ts")
+    await Bun.write(custom, "custom source content\n")
+    await Bun.write(excluded, "export const excluded = 1\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(excluded, "old-hash")
+    const scan = new DirectoryScanner(
+      new Emb(),
+      new Store(),
+      new Parser(),
+      cache,
+      ignore(),
+      1,
+      1,
+      undefined,
+      undefined,
+      [".custom"],
+    )
+
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats.processed).toBe(1)
+    expect(cache.getHash(custom)).toBeDefined()
+    expect(cache.getHash(excluded)).toBeUndefined()
+  })
+
+  test("skips binary files admitted by a custom extension", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "data.custom")
+    await Bun.write(file, new Uint8Array([0, 1, 2, 3]))
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    const scan = new DirectoryScanner(
+      new Emb(),
+      new Store(),
+      new Parser(),
+      cache,
+      ignore(),
+      1,
+      1,
+      undefined,
+      undefined,
+      [".custom"],
+    )
+
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats).toEqual({ processed: 0, skipped: 1 })
+    expect(cache.getHash(file)).toBeUndefined()
+  })
+
+  test("skips files matched by nested .kilocodeignore during full scans", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const dir = join(root, "pkg")
+      const blocked = join(dir, "blocked.ts")
+      const open = join(dir, "open.ts")
+
+      await mkdir(dir, { recursive: true })
+      await Bun.write(join(dir, ".kilocodeignore"), "blocked.ts\n")
+      await Bun.write(blocked, "export const blocked = 1\n")
+      await Bun.write(open, "export const open = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, await loadIgnore(root), 1, 1)
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(1)
+      expect(cache.getHash(blocked)).toBeUndefined()
+      expect(cache.getHash(open)).toBeDefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test("emits retry telemetry for transient batch failures", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    await Bun.write(file, "export const value = 2\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+
+    const events: IndexingTelemetryEvent[] = []
+    const scan = new DirectoryScanner(
+      new Emb(),
+      new RetryStore(),
+      new Parser(),
+      cache,
+      ignore(),
+      1,
+      2,
+      (event) => events.push(event),
+      {
+        provider: "openai",
+        vectorStore: "lancedb",
+        modelId: "text-embedding-3-small",
+      },
+    )
+
+    await scan.scanDirectory(root, undefined, undefined, undefined, "full")
+
+    const retry = events.find((event) => event.type === "batch_retry")
+    expect(retry).toBeDefined()
+    expect(retry?.type).toBe("batch_retry")
+    expect(retry?.source).toBe("scan")
+    expect(retry?.attempt).toBe(1)
+    expect(retry?.maxRetries).toBe(2)
+    expect(retry?.error).toContain("[REDACTED_PATH]")
+  })
+
+  test("keeps a capitalized source folder on every filesystem", async () => {
+    // The parents differ, so this layout exists also on case-insensitive volumes. There the glob default is
+    // nocase, and only the scanner's `nocase: false` keeps src/Build from the **/build/** ignore glob.
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const kept = join(root, "src", "Build", "Main.ts")
+      const pruned = join(root, "lib", "build", "gen.ts")
+      await mkdir(join(root, "src", "Build"), { recursive: true })
+      await mkdir(join(root, "lib", "build"), { recursive: true })
+      await Bun.write(kept, "export const kept = 1\n")
+      await Bun.write(pruned, "export const pruned = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, ignore(), 1, 1)
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(1)
+      expect(cache.getHash(kept)).toBeDefined()
+      expect(cache.getHash(pruned)).toBeUndefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps capitalized source folders that only differ in case from ignored dirs", async () => {
+    // The anchored ignore globs (e.g. **/build/**) must match case-sensitively
+    // like FileIgnore.match() does: on glob platforms with a nocase default, this
+    // would prune valid sources such as src/Build/Main.ts. Windows is
+    // case-insensitive at the filesystem level, so Build and build cannot
+    // coexist there and the OS reports a single entry; the same holds for the
+    // default case-insensitive APFS volume on macOS runners, where creating
+    // both dirs silently merges them. Detect that at runtime instead of by
+    // platform so the test is meaningful wherever case-sensitive dirs exist.
+    if (process.platform === "win32") return
+    const probe = await mkdtemp(join(tmpdir(), "scanner-case-probe-"))
+    try {
+      await mkdir(join(probe, "Build"), { recursive: true })
+      await mkdir(join(probe, "build"), { recursive: true })
+      const { readdirSync } = await import("fs")
+      if (readdirSync(probe).length < 2) return
+    } finally {
+      await rm(probe, { recursive: true, force: true })
+    }
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const kept = join(root, "src", "Build", "Main.ts")
+      const keptTarget = join(root, "src", "Target", "Main.ts")
+      const keptDesktop = join(root, "Desktop", "App.ts")
+      const pruned = join(root, "src", "build", "gen.ts")
+
+      await mkdir(join(root, "src", "Build"), { recursive: true })
+      await mkdir(join(root, "src", "Target"), { recursive: true })
+      await mkdir(join(root, "Desktop"), { recursive: true })
+      await mkdir(join(root, "src", "build"), { recursive: true })
+      await Bun.write(kept, "export const kept = 1\n")
+      await Bun.write(keptTarget, "export const keptTarget = 1\n")
+      await Bun.write(keptDesktop, "export const keptDesktop = 1\n")
+      await Bun.write(pruned, "export const pruned = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, ignore(), 1, 1)
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(3)
+      expect(cache.getHash(kept)).toBeDefined()
+      expect(cache.getHash(keptTarget)).toBeDefined()
+      expect(cache.getHash(keptDesktop)).toBeDefined()
+      expect(cache.getHash(pruned)).toBeUndefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+})

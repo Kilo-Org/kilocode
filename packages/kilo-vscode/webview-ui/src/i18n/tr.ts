@@ -1285,6 +1285,11 @@ export const dict = {
     "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
+  "settings.display.codeMode.title": "Code Mode Blokları",
+  "settings.display.codeMode.description":
+    "Code Mode bloklarının araç çağrıları listelenmiş halde mi yoksa tek satır olarak mı başlayacağını seçin. Betik, siz açana kadar her zaman gizli kalır.",
+  "settings.display.codeMode.expanded": "Genişletilmiş",
+  "settings.display.codeMode.collapsed": "Daraltılmış",
 
   "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
   "settings.display.shortcutHints.description":
@@ -1385,6 +1390,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
+  "task.backgroundAgents.promoteFailed": "Bu ajan arka planda devam edemedi. Zaten bitmiş olabilir.",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
@@ -1517,6 +1523,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
   "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "chat.reply.toolbar": "Seçili metin",
+  "chat.reply.quote": "Alıntıla",
+  "chat.reply.quoteHint": "Yanıtında alıntıla",
+  "chat.reply.commentHint": "Bu bölümü yorumla",
+  "chat.reply.copy": "Kopyala",
+  "chat.reply.sendHint": "Bu yorumu şimdi Kilo'ya gönder",
+  "chat.reply.commentLater": "Sonraki mesajın için kaydet",
+  "chat.reply.count": "Yanıtlar ({{count}})",
+  "chat.reply.sendAll": "Tümünü gönder",
+  "chat.reply.showInChat": "Sohbette göster",
   "browserTab.noSession":
     "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
   "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",

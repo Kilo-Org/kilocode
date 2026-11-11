@@ -8,7 +8,6 @@ import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Permission } from "@opencode/core/permission"
 import { AgentPlugin } from "@opencode/core/plugin/agent"
-import { PlanPlugin } from "@opencode/core/plugin/plan"
 import { Session } from "@opencode/core/session"
 import { SessionEvent } from "@opencode/core/session/event"
 import { SessionInbox } from "@opencode/core/session/inbox"
@@ -57,7 +56,6 @@ const setup = Effect.fnUntraced(function* () {
     },
   })
   yield* AgentPlugin.Plugin.effect(context)
-  yield* PlanPlugin.Plugin.effect(context)
   yield* KiloAgentPlugin.Plugin.effect(context)
   return { agents, context, events, persisted }
 })
@@ -91,14 +89,6 @@ const selected = (agent: string, previous?: string): SessionEvent.AgentSelected 
     ...(previous === undefined ? {} : { previous: Agent.ID.make(previous) }),
   },
 })
-
-const settle = (persisted: ReadonlyArray<string>, expected: number, remaining = 1000): Effect.Effect<void, Error> =>
-  Effect.gen(function* () {
-    if (persisted.length >= expected) return
-    if (remaining === 0) return yield* Effect.fail(new Error(`saw ${persisted.length} of ${expected} reminders`))
-    yield* Effect.promise(() => Bun.sleep(1))
-    return yield* settle(persisted, expected, remaining - 1)
-  })
 
 /** Waits until the plugin persisted the expected number of agent-switch reminders. */
 const switches = (
@@ -165,6 +155,10 @@ describe("KiloAgentPlugin", () => {
       expect(effect("edit", "src/index.ts")).toBe("deny")
       expect(effect("subagent", "general")).toBe("deny")
       expect(effect("unknown_plugin_tool", "*")).toBe("deny")
+      // A notebook MCP server emits `notebook_*`, so the read-only modes deny all three actions.
+      expect(effect("notebook_read", "book.ipynb")).toBe("deny")
+      expect(effect("notebook_edit", "book.ipynb")).toBe("deny")
+      expect(effect("notebook_execute", "book.ipynb")).toBe("deny")
       expect(effect("shell", "git log -5")).toBe("allow")
       expect(effect("shell", "gh pr view 1")).toBe("allow")
       expect(effect("shell", "gh pr merge 1")).toBe("ask")
@@ -354,16 +348,28 @@ describe("KiloAgentPlugin", () => {
     }),
   )
 
-  it.effect("limits Plan to read-only tools and the native Plan directory", () =>
+  it.effect("limits Plan to read-only tools and the Kilo plan directories", () =>
     Effect.gen(function* () {
-      yield* setup()
+      const { agents } = yield* setup()
       const global = yield* Global.Service
-      const directory = path.join(global.home, ".opencode", "plan")
+      const directory = path.join(global.data, "plans")
       const rules = yield* permissions("plan")
       const effect = (action: string, resource: string) => Permission.evaluate(action, resource, rules).effect
+      const plan = yield* agents.get(Agent.ID.make("plan"))
+      expect(plan?.name).toBe(Agent.Name.make("Plan"))
+      expect(plan?.mode).toBe("primary")
       expect(effect("edit", "src/index.ts")).toBe("deny")
+      expect(effect("edit", ".kilo2/plans/1000-cache-plan.md")).toBe("allow")
+      expect(effect("edit", "plans/cache.md")).toBe("allow")
+      expect(effect("edit", ".kilo2/plans/notes.txt")).toBe("deny")
       expect(effect("edit", path.join(directory, "cache.md"))).toBe("allow")
       expect(effect("external_directory", path.join(directory, "*"))).toBe("allow")
+      expect(effect("edit", path.join(global.home, ".opencode", "plan", "cache.md"))).toBe("deny")
+      expect(effect("kilo.plan_exit", "*")).toBe("allow")
+      expect(effect("kilo.open_plan", "*")).toBe("allow")
+      const code = yield* permissions("code")
+      expect(Permission.evaluate("kilo.plan_exit", "*", code).effect).toBe("deny")
+      expect(Permission.evaluate("kilo.open_plan", "*", code).effect).toBe("deny")
       expect(effect("shell", "git diff")).toBe("allow")
       expect(effect("shell", "npm install")).toBe("deny")
       expect(effect("subagent", "explore")).toBe("allow")
@@ -422,7 +428,7 @@ describe("KiloAgentPlugin", () => {
       }
       expect(yield* effect("ask", "shell", "cargo search serde")).toBe("deny")
       expect(yield* effect("plan", "shell", "cargo search serde")).toBe("allow")
-      expect(yield* effect("plan", "edit", path.join(global.home, ".opencode", "plan", "cache.md"))).toBe("allow")
+      expect(yield* effect("plan", "edit", path.join(global.data, "plans", "cache.md"))).toBe("allow")
       expect(yield* effect("orchestrator", "shell", "ls")).toBe("deny")
       expect(yield* effect("code", "shell", "rm -rf src")).toBe("allow")
       // A rule a later post plugin appends to every agent stays in place after the ceiling.
@@ -457,10 +463,9 @@ describe("KiloAgentPlugin", () => {
         ),
       ])
       expect(found[2]).toContain("This agent cannot modify files")
-      // The native Plan plugin adds its own enter reminder on the same switch, as v1 sent both.
-      yield* settle(persisted, 6)
+      // The native Plan plugin is off, so it adds no reminder of its own.
       expect(persisted.filter((text) => text.includes("changed from Code to Plan"))).toHaveLength(1)
-      expect(persisted.filter((text) => text.includes("You are in Plan mode"))).toHaveLength(1)
+      expect(persisted.filter((text) => text.includes("You are in Plan mode"))).toHaveLength(0)
     }),
   )
 })

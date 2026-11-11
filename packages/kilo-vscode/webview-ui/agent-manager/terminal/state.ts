@@ -21,7 +21,7 @@ import type {
   ScriptTerminalKind,
   ScriptTerminalView,
 } from "../../src/types/messages/agent-manager"
-import type { TerminalDestination, TerminalFont, TerminalPlacement } from "../../src/types/messages/agent-manager"
+import type { TerminalFont, TerminalPlacement } from "../../src/types/messages/agent-manager"
 
 export type { TerminalFont }
 
@@ -947,8 +947,6 @@ export interface TerminalMessageHandlerDeps {
   onSideClosed?: (contextKey: string, terminalId: string) => void
   /** A newly hydrated running script terminal belongs to the selected context. */
   onScriptRunning?: (contextKey: string, terminalId: string) => void
-  /** The destination setting changed (live settings sync). */
-  onDestinationChanged?: (destination: TerminalDestination) => void
 }
 
 type CreatedMessage = Extract<ExtensionMessage, { type: "agentManager.terminal.created" }>
@@ -1029,18 +1027,6 @@ export function createTerminalMessageHandler(deps: TerminalMessageHandlerDeps) {
       if (request) deps.onSideError?.(request.contextKey)
       deps.showError(msg.message)
       return true
-    }
-    if (msg.type === "agentManager.terminal.destinationChanged") {
-      deps.onDestinationChanged?.(msg.destination)
-      return true
-    }
-    // The initial destination rides along on the state message. Claimed
-    // here so the main webview handler stays free of terminal settings,
-    // but reported as unhandled because the rest of that payload belongs
-    // to the other subscribers.
-    if (msg.type === "agentManager.state" && msg.terminalDestination) {
-      deps.onDestinationChanged?.(msg.terminalDestination)
-      return false
     }
     return false
   }

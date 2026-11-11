@@ -38,6 +38,8 @@ export function reportFailure(msg: Failure, deps: FailureToastDeps): "stale" | u
     return undefined
   }
   if (msg.type !== "error" || typeof msg.message !== "string" || !msg.message) return undefined
+  // A request error carries its request id and is answered by the caller; an "aborted" one is a normal cancel.
+  if (typeof (msg as { id?: unknown }).id === "number") return undefined
   // SessionProvider, which this webview also mounts, shows a failed revert or redo translated; the
   // host's raw message would be a second toast for the same failure.
   if (msg.code === REVERT_ERROR_CODE) return undefined

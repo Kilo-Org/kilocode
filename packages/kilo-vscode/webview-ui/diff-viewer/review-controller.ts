@@ -360,6 +360,8 @@ export interface ReviewViewProps {
   markdownRender?: boolean
   onRequestDiff?: (file: string) => void
   onOpenFile?: (file: string, line?: number) => void
+  /** Opens a Markdown file in the Documents panel instead of the editor. */
+  onOpenDocument?: (file: string) => void
   canComment?: boolean
   commentForm?: CommentFormMount
   commentsGithub?: CommentsGithub

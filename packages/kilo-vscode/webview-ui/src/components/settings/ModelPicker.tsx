@@ -4,7 +4,6 @@ import { Component, Show, createMemo } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../context/language"
 import { useV2 } from "../../v2/client"
-import { failureMessage } from "../../v2/kilo-catalog"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 
@@ -49,19 +48,24 @@ const ModelPicker: Component<ModelPickerProps> = (props) => {
         <ModelSelectorBase
           models={models()}
           providers={providers()}
+          gateway={v2.kiloModels().entries}
+          placement="bottom-start"
           value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
           blocked={props.blocked}
           includeAutoSmall={props.includeAutoSmall}
           placeholder={props.clearLabel}
+          // As v1, a clearable setting lists its "Not set" row first in the picker.
+          allowClear={props.clearable}
+          clearLabel={props.clearLabel}
           label={props.modelLabel}
-          failure={failureMessage(language.t, v2.kiloFailure())}
-          onSelect={(providerID, modelID) =>
+          onSelect={(providerID, modelID) => {
+            if (!providerID || !modelID) return props.onChange(undefined)
             props.onChange(
               props.preserveVariantOnReselect && props.value?.providerID === providerID && props.value.modelID === modelID
                 ? props.value
                 : { providerID, modelID },
             )
-          }
+          }}
         />
       </div>
       <Show

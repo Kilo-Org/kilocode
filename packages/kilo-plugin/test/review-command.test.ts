@@ -40,7 +40,7 @@ describe("review command registration", () => {
   it.effect("replaces the built-in review and prompts the invoking session with the Kilo prompt", () =>
     Effect.gen(function* () {
       const command = yield* Command.Service
-      const prompts: { sessionID: string; text: string; delivery?: string }[] = []
+      const prompts: { sessionID: string; text: string; delivery?: string; metadata?: Record<string, unknown> }[] = []
       const context = host({
         command: {
           list: () => Effect.die("unused command.list"),
@@ -50,7 +50,12 @@ describe("review command registration", () => {
         session: {
           prompt: (input) =>
             Effect.sync(() => {
-              prompts.push({ sessionID: input.sessionID, text: input.text, delivery: input.delivery })
+              prompts.push({
+                sessionID: input.sessionID,
+                text: input.text,
+                delivery: input.delivery,
+                metadata: input.metadata,
+              })
               return SessionInbox.User.make({
                 id: SessionMessage.ID.make("msg_review_test"),
                 sessionID: input.sessionID,
@@ -84,9 +89,20 @@ describe("review command registration", () => {
           sessionID,
           text: PROMPT.replaceAll("$ARGUMENTS", () => "staged focus on auth $& $$"),
           delivery: "steer",
+          metadata: { kilo: { injected: { title: "/review staged focus on auth $& $$" } } },
         },
-        { sessionID, text: PROMPT.replaceAll("$ARGUMENTS", ""), delivery: "steer" },
-        { sessionID, text: PROMPT.replaceAll("$ARGUMENTS", "quick"), delivery: "steer" },
+        {
+          sessionID,
+          text: PROMPT.replaceAll("$ARGUMENTS", ""),
+          delivery: "steer",
+          metadata: { kilo: { injected: { title: "/review" } } },
+        },
+        {
+          sessionID,
+          text: PROMPT.replaceAll("$ARGUMENTS", "quick"),
+          delivery: "steer",
+          metadata: { kilo: { injected: { title: "/review quick" } } },
+        },
       ])
       expect(prompts[0].text).toContain("## User Input\n\nstaged focus on auth $& $$\n")
       expect(prompts[0].text).not.toContain("$ARGUMENTS")

@@ -147,7 +147,12 @@ export async function merge(ref: string, message: string): Promise<{ success: bo
   // has the common ancestor for structural heuristics and any remaining manual
   // resolution is dramatically easier. `postinstall` (script/setup-git.ts) sets
   // The `-c` override keeps this independent of local config.
-  const result = await $`git -c merge.conflictStyle=zdiff3 merge --no-ff --no-commit -m ${message} ${ref}`.nothrow()
+  // Directory rename detection is off: upstream folders that Kilo removed (skipFiles) look renamed into
+  // Kilo-owned copies, for example packages/session-ui into packages/kilo-ui-base. Git would then move new
+  // upstream files into the Kilo copy, where the skipFiles cleanup does not remove them. Keep in sync with
+  // analyzeSync in report.ts.
+  const result =
+    await $`git -c merge.conflictStyle=zdiff3 -c merge.directoryRenames=false merge --no-ff --no-commit -m ${message} ${ref}`.nothrow()
 
   if (result.exitCode === 0) {
     return { success: true, conflicts: [] }

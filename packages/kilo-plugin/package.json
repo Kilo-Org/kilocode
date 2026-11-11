@@ -6,7 +6,9 @@
   "description": "The Kilo plugins on the public OpenCode plugin API. The Kilo host (packages/kilo-cli) registers them through SdkPlugins.register.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./read": "./src/read/index.ts",
+    "./plugin/git-source": "./src/plugin/git-source.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -14,20 +16,27 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@effect/platform-node": "catalog:",
     "@kilocode/gateway-core": "workspace:*",
+    "@kilocode/kilo-i18n": "workspace:*",
+    "@kilocode/kilo-indexing": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
+    "@opencode/ai": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/plugin": "workspace:*",
     "@opencode/schema": "workspace:*",
     "@opencode/util": "workspace:*",
     "effect": "catalog:",
-    "jsonc-parser": "3.3.1"
+    "jsonc-parser": "3.3.1",
+    "mammoth": "1.12.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
-    "@opencode/ai": "workspace:*",
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native": "catalog:"
+    "@typescript/native": "catalog:",
+    "@zip.js/zip.js": "2.7.62"
   }
 }

@@ -15,6 +15,44 @@ test("the exact top-level hide_prompt_training_models setting accepts only boole
   expect(ConfigNormalize.normalize({ hide_prompt_training_models: true }).diagnostics).toEqual([])
 })
 
+test("session_sync is an optional boolean Kilo setting preserved by config parsing", () => {
+  const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
+  for (const value of [true, false]) {
+    const input = { session_sync: value, shell: "valid" }
+    expect(Option.isSome(decode(input))).toBe(true)
+    const normalized = ConfigNormalize.normalize(input)
+    if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+    expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject(input)
+  }
+  expect(KiloConfigPolicy.parse({}, {})?.session_sync).toBeUndefined()
+  expect(Option.isNone(decode({ session_sync: "false" }))).toBe(true)
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse({ session_sync: "false", shell: "valid" }, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.shell).toBe("valid")
+  expect(parsed?.session_sync).toBeUndefined()
+  expect(diagnostics).toEqual([{ kind: "invalid", path: ["session_sync"], message: expect.stringContaining("expected a boolean") }])
+})
+
+test("remote_control is an optional boolean preserved beside canonical config", () => {
+  const decode = Schema.decodeUnknownOption(KiloConfigPolicy.Info)
+  for (const value of [true, false]) {
+    const input = { remote_control: value, shell: "valid" }
+    expect(Option.isSome(decode(input))).toBe(true)
+    const normalized = ConfigNormalize.normalize(input)
+    if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+    expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject(input)
+  }
+  expect(KiloConfigPolicy.parse({}, {})?.remote_control).toBeUndefined()
+})
+
+test.each(["true", 1, null, {}])("invalid remote_control %p is reported without discarding canonical settings", (value) => {
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse({ remote_control: value, shell: "valid" }, { shell: "valid" }, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.shell).toBe("valid")
+  expect(parsed?.remote_control).toBeUndefined()
+  expect(diagnostics).toEqual([{ kind: "invalid", path: ["remote_control"], message: expect.stringContaining("expected a boolean") }])
+})
+
 test.each(["true", null, 0])("invalid Kilo flag %p preserves canonical settings and managed policies", (value) => {
   const input = {
     hide_prompt_training_models: value,
@@ -129,6 +167,7 @@ test("the display layouts are Kilo settings, and an invalid layout is ignored", 
     terminal_command_display: "collapsed",
     code_edit_display: "expanded",
     mcp_tool_display: "collapsed",
+    code_mode_display: "expanded",
     shell: "valid",
   }
   const normalized = ConfigNormalize.normalize(valid)
@@ -137,6 +176,7 @@ test("the display layouts are Kilo settings, and an invalid layout is ignored", 
     terminal_command_display: "collapsed",
     code_edit_display: "expanded",
     mcp_tool_display: "collapsed",
+    code_mode_display: "expanded",
   })
 
   const invalid = { terminal_command_display: "hidden", code_edit_display: "expanded", shell: "valid" }

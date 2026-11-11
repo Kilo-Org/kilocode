@@ -2,10 +2,11 @@ import { expect } from "bun:test"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { Rpc } from "@opencode/core/rpc"
+import { ConfigAgent } from "@opencode/schema/config/agent"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { Global } from "@opencode/util/global"
-import { Effect, Schema } from "effect"
+import { Effect, Option, Schema } from "effect"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -40,7 +41,15 @@ const fixture = Effect.fn(function* (companion = false, skills = true) {
         Bun.YAML.stringify({
           items: url.pathname.endsWith("/skills")
             ? [{ id: "guide", content: new URL("/guide.tar", request.url).href }]
-            : [
+            : url.pathname.endsWith("/agents")
+              ? [
+                  {
+                    id: "reviewer",
+                    name: "Reviewer",
+                    content: { mode: "subagent", description: "Reviews changes", prompt: "Review the diff." },
+                  },
+                ]
+              : [
                 {
                   id: "demo",
                   content: '{"url":"https://new.example.com/mcp"}',
@@ -58,7 +67,7 @@ const fixture = Effect.fn(function* (companion = false, skills = true) {
   })
   yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
   const plugin = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugin)
+  const host = yield* PluginHost.make(plugin, "test")
   const rpc = yield* Rpc.Service
   return {
     directory,
@@ -319,6 +328,30 @@ for (const fault of ["installed scan", "installation read"] as const) {
     }),
   )
 }
+it.live("keeps a record that carries a resource this build does not understand", () =>
+  Effect.gen(function* () {
+    const test = yield* fixture()
+    yield* test.start()
+    const skill = { ...input, scope: "project", kind: "skill", id: "guide" } as const
+    const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", skill))
+    const key = `installed:kilo:skill:guide:project:${test.directory}`
+    // A newer build wrote an unknown resource member next to the skill the record owns.
+    yield* test.host.storage.set(
+      key,
+      JSON.stringify({ ...installed, resources: [...(installed.resources ?? []), { widget: "future" }] }),
+    )
+    // The unknown member is dropped; the skill the record owns stays listed and removable.
+    const listed = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {})).find(
+      (record) => record.id === "guide",
+    )
+    expect(listed).toMatchObject({ kind: "skill", status: "ready", resources: [{ id: "guide" }] })
+    yield* test.rpc.call("kilocode.marketplace", "uninstall", skill)
+    expect(
+      yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).exists()),
+    ).toBe(false)
+  }),
+)
+
 it.live("skips an invalid stored record instead of failing, leaving files untouched", () =>
   Effect.gen(function* () {
     const test = yield* fixture()
@@ -341,43 +374,55 @@ it.live("skips an invalid stored record instead of failing, leaving files untouc
     })
   }),
 )
-for (const resource of ["skill", "mcp"] as const) {
+for (const resource of ["skill", "mcp", "agent"] as const) {
   it.live(`repairs missing ${resource} without losing ownership`, () =>
     Effect.gen(function* () {
       const test = yield* fixture()
       yield* test.start()
-      yield* test.rpc.call("kilocode.marketplace", "install", input)
+      const request =
+        resource === "agent" ? ({ ...input, kind: "agent", id: "reviewer" } as const) : input
+      yield* test.rpc.call("kilocode.marketplace", "install", request)
       yield* Effect.promise(() =>
         fs.rm(
-          resource === "skill" ? path.join(test.directory, "skills", "guide") : path.join(test.directory, "kilo2.json"),
-          { recursive: true },
+          resource === "skill"
+            ? path.join(test.directory, "skills", "guide")
+            : resource === "agent"
+              ? path.join(test.directory, "agents", "reviewer.md")
+              : path.join(test.directory, "kilo2.json"),
+          { recursive: true, force: true },
         ),
       )
       expect(decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))).toMatchObject([
-        { id: "demo", status: "missing" },
+        { id: resource === "agent" ? "reviewer" : "demo", status: "missing" },
       ])
-      expect(decode(yield* test.rpc.call("kilocode.marketplace", "install", input)).status).toBe("ready")
+      expect(decode(yield* test.rpc.call("kilocode.marketplace", "install", request)).status).toBe("ready")
     }),
   )
   it.live(`refuses destructive replacement or removal of modified ${resource}`, () =>
     Effect.gen(function* () {
       const test = yield* fixture()
       yield* test.start()
-      yield* test.rpc.call("kilocode.marketplace", "install", input)
+      const request =
+        resource === "agent" ? ({ ...input, kind: "agent", id: "reviewer" } as const) : input
+      yield* test.rpc.call("kilocode.marketplace", "install", request)
       const file =
         resource === "skill"
           ? path.join(test.directory, "skills", "guide", "SKILL.md")
-          : path.join(test.directory, "kilo2.json")
+          : resource === "agent"
+            ? path.join(test.directory, "agents", "reviewer.md")
+            : path.join(test.directory, "kilo2.json")
       const modified =
         resource === "skill"
           ? "user edited guide"
-          : JSON.stringify({ mcp: { servers: { demo: { type: "remote", url: "https://user.example.com" } } } })
+          : resource === "agent"
+            ? "user edited agent"
+            : JSON.stringify({ mcp: { servers: { demo: { type: "remote", url: "https://user.example.com" } } } })
       yield* Effect.promise(() => Bun.write(file, modified))
       const listed = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))
       expect(listed).toMatchObject([{ status: "modified" }])
       expect(listed[0].warnings?.join(" ")).toContain("modified")
       for (const method of ["install", "uninstall"] as const) {
-        expect(yield* test.rpc.call("kilocode.marketplace", method, input).pipe(Effect.flip)).toMatchObject({
+        expect(yield* test.rpc.call("kilocode.marketplace", method, request).pipe(Effect.flip)).toMatchObject({
           type: "conflict",
         })
         expect(yield* Effect.promise(() => Bun.file(file).text())).toBe(modified)
@@ -390,10 +435,83 @@ for (const resource of ["skill", "mcp"] as const) {
         expect(
           yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).exists()),
         ).toBe(false)
-      expect(yield* test.host.storage.get(key)).toBeDefined()
+      expect(yield* test.host.storage.get(resource === "agent" ? "installed:kilo:agent:reviewer:global:" : key)).toBeDefined()
     }),
   )
 }
+it.live("installs an agent as a native document the agent loader accepts, owned by its id", () =>
+  Effect.gen(function* () {
+    const test = yield* fixture()
+    yield* test.start()
+    const request = { ...input, kind: "agent", id: "reviewer" } as const
+    const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
+    expect(installed).toMatchObject({ kind: "agent", id: "reviewer", status: "ready" })
+    // The stored record names the agent id and its fingerprints, never an absolute path.
+    const stored = JSON.parse(String(yield* test.host.storage.get("installed:kilo:agent:reviewer:global:")))
+    expect(stored).toMatchObject({ version: 1, resources: [{ agent: "reviewer" }] })
+    expect(stored.resources[0].fingerprints).toHaveLength(1)
+    expect(JSON.stringify(stored)).not.toContain(test.directory)
+    expect(stored.config).toBeUndefined()
+
+    // The written document loads through the same decoder the config agent plugin uses.
+    const file = path.join(test.directory, "agents", "reviewer.md")
+    const document = yield* Effect.promise(() => Bun.file(file).text())
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(document)!
+    const loaded = yield* Effect.promise(async () =>
+      Schema.decodeUnknownOption(ConfigAgent.Info)({
+        ...(Bun.YAML.parse(frontmatter[1]) as object),
+        system: document.slice(frontmatter[0].length).trim(),
+      }),
+    )
+    expect(Option.getOrThrow(loaded)).toMatchObject({
+      mode: "subagent",
+      description: "Reviews changes",
+      system: "Review the diff.",
+    })
+
+    expect(yield* test.rpc.call("kilocode.marketplace", "installed", {})).toMatchObject([
+      { id: "reviewer", kind: "agent", status: "ready" },
+    ])
+    yield* test.rpc.call("kilocode.marketplace", "uninstall", request)
+    expect(yield* Effect.promise(() => Bun.file(file).exists())).toBe(false)
+    expect(yield* test.host.storage.get("installed:kilo:agent:reviewer:global:")).toBeUndefined()
+  }),
+)
+;(process.platform === "win32" ? it.live.skip : it.live)(
+  "an agent install does not depend on a usable MCP config in the same project",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* fixture(false, false)
+      const project = path.join(test.directory, "project")
+      yield* Effect.promise(() => fs.mkdir(project))
+      yield* test.start({
+        ...test.host,
+        location: {
+          ...test.host.location,
+          directory: AbsolutePath.make(project),
+          project: { ...test.host.location.project, directory: AbsolutePath.make(project) },
+        },
+      })
+      // An agent never reads an MCP config, so a config that would refuse an MCP install must not block it. The
+      // first write candidate is the one an MCP install would resolve and reject.
+      const outside = path.join(test.directory, "outside.json")
+      const first = path.join(project, ".kilo2", "kilo2.jsonc")
+      yield* Effect.promise(async () => {
+        await fs.mkdir(path.dirname(first), { recursive: true })
+        await Bun.write(outside, "{}")
+        await fs.symlink(outside, first)
+      })
+      const installed = decode(
+        yield* test.rpc.call("kilocode.marketplace", "install", {
+          ...input,
+          kind: "agent",
+          id: "reviewer",
+          scope: "project",
+        }),
+      )
+      expect(installed).toMatchObject({ kind: "agent", id: "reviewer", scope: "project", status: "ready" })
+    }),
+)
 it.live("retains the database record after removal defects and retries cleanup", () =>
   Effect.gen(function* () {
     const test = yield* fixture()

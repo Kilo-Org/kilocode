@@ -20,7 +20,11 @@ import { initContextState, reconcileProject } from "./project/init"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { Semaphore } from "./semaphore"
 import { BranchNamingController } from "./branch-naming"
-import { createWorktreeOnDisk, type CreateWorktreeOnDiskOptions, type CreateWorktreeOnDiskResult } from "./worktree-create"
+import {
+  createWorktreeOnDisk,
+  type CreateWorktreeOnDiskOptions,
+  type CreateWorktreeOnDiskResult,
+} from "./worktree-create"
 import {
   addSessionToLifecycleWorktree,
   closeLifecycleSession,
@@ -40,13 +44,15 @@ import { createWorktreeActivity } from "./worktree-activity"
 import { handleSessionLifecycle } from "./session-lifecycle"
 import { runningFromEvent } from "../session-status"
 import { WorktreeImporter } from "./worktree-importer"
-import { SessionTerminalManager } from "./SessionTerminalManager"
-import { createTerminalHost } from "./terminal-host"
+import { shouldOpenLinkInIntegratedBrowser } from "../browser-links"
+import { createBrowserLifecycle } from "./browser-lifecycle"
+import { routableProject } from "./browser-message"
+import { editorTabOwns } from "../browser-tab/sidebar-session"
+import type { BrowserBroker } from "../services/browser-automation"
 import { TerminalRouter } from "./terminal-routing"
 import { acquirePtyCleanup } from "./pty-cleanup"
 import { PtyRelay } from "./pty-relay"
 import { KiloAgentManagerRpc } from "@opencode/schema/kilocode/agent-manager"
-import { executeVscodeTask } from "./task-runner"
 import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import type { RunController } from "./run/controller"
 import { createOrchestrationBridge } from "./orchestration-setup"
@@ -57,9 +63,9 @@ import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
-import { DestinationState, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
-import { resolveWorktreeFile, sessionDirectory } from "./worktree-file-path"
+import { documentExists, readDocument } from "../documents/document-reader"
+import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -84,6 +90,7 @@ import {
 import {
   createFromSidebar,
   continueFromSidebar,
+  continueInActiveProject,
   diagnose,
   focusPanel,
   getSessionDirectories,
@@ -113,12 +120,13 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly projects: ProjectMessageDeps
   public readonly projectScope = new ProjectScope()
   public readonly importer: WorktreeImporter
-  public readonly terminalManager: SessionTerminalManager
   public readonly terminalRouter: TerminalRouter
   public readonly relay: PtyRelay
   public readonly scripts: ReturnType<typeof createScriptTerminalRuntime>
   public readonly run: RunController
   public stateReady: Promise<void> | undefined
+  public readonly browser: ReturnType<typeof createBrowserLifecycle>
+  public onBrowserDebug?: (...args: unknown[]) => void
   public readonly statsPoller: GitStatsPoller
   public readonly projectPollers: ProjectPollers
   public readonly prBridge: ReturnType<typeof createPollers>["pr"]
@@ -134,7 +142,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public readonly activity: ReturnType<typeof createWorktreeActivity>
   public readonly unsubFont: () => void
   public readonly unsubProjects: () => void
-  public readonly unsubDestination: () => void
   public readonly unsubEvents: () => void
   public readonly autoApprove: ReturnType<typeof createHostAutoApprove>
   public readonly unsubAutoApprove: () => void
@@ -143,7 +150,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await this.reconcileAndPush(ctx)
     if (this.contexts.active()?.id === ctx.id) this.pushState(ctx)
   })
-  public destination = new DestinationState()
   public closing: Promise<void> | undefined
   public onVisibilityChange: ((visible: boolean) => void) | undefined
   public readonly panelSessions = new Set<string>()
@@ -158,12 +164,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     public readonly connection: AgentManagerConnection,
     public readonly panelHost: ReturnType<typeof createPanel>,
     binary: GitExecutable | string = "git",
+    browser?: BrowserBroker,
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
-    this.terminalManager = new SessionTerminalManager(
-      (message) => this.outputChannel.appendLine(`[SessionTerminal] ${message}`),
-      createTerminalHost(),
-    )
     this.terminalRouter = new TerminalRouter({
       connection: this.connection,
       getRoot: () => this.getRoot(),
@@ -189,10 +192,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
       void this.scripts.manager.snapshot()
-    })
-    this.unsubDestination = watchTerminalDestination((destination) => {
-      this.destination.sync(destination)
-      this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
     this.run = createRunController({
       manager: this.scripts.manager,
@@ -231,11 +230,24 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       push: () => this.pushProjects(),
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
-      removed: () => undefined,
+      removed: (id) => this.browser.closeProject(id),
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
       post: (message) => this.postToWebview(message),
     })
     this.contexts = wiring.contexts
+    // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.
+    this.browser = createBrowserLifecycle({
+      browser,
+      host,
+      contexts: () => this.contexts,
+      post: (message) => this.postToWebview(message),
+      openPanel: () => this.openPanel(true),
+      editorTab: editorTabOwns,
+      log: (...args) => {
+        this.log(...args)
+        this.onBrowserDebug?.(...args)
+      },
+    })
     this.settings = wiring.settings
     this.projects = wiring.messages
     this.unsubProjects = () => wiring.dispose()
@@ -317,7 +329,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       located(() =>
         [...this.contexts.values()].flatMap((ctx) => [
           ctx.root,
-          ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+          ...(ctx
+            .peekState()
+            ?.getWorktrees()
+            .map((wt) => wt.path) ?? []),
         ]),
       ),
     )
@@ -329,7 +344,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           ...(workspace ? [workspace] : []),
           ...[...this.contexts.values()].flatMap((ctx) => [
             ctx.root,
-            ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+            ...(ctx
+              .peekState()
+              ?.getWorktrees()
+              .map((wt) => wt.path) ?? []),
           ]),
         ]
       },
@@ -351,7 +369,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.caffeination = new CaffeinationService(this.connection, () =>
       [...this.contexts.values()].flatMap((ctx) => [
         ctx.root,
-        ...(ctx.peekState()?.getWorktrees().map((wt) => wt.path) ?? []),
+        ...(ctx
+          .peekState()
+          ?.getWorktrees()
+          .map((wt) => wt.path) ?? []),
       ]),
     )
     this.caffeination.onChange((state) => this.postToWebview({ type: "agentManager.caffeination", ...state }))
@@ -382,6 +403,16 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public log(...args: unknown[]) {
     this.outputChannel.appendLine(`${new Date().toISOString()} ${formatLog(args)}`)
+  }
+
+  public browserAutomation(): boolean {
+    return this.host.browserAutomation()
+  }
+
+  /** The Integrated Browser setting changed: close its pages when disabled and republish availability. */
+  public browserAutomationChanged(): void {
+    if (!this.host.browserAutomation()) void this.browser.closeAll().catch((error) => this.log(error))
+    if (this.context) this.pushState(this.context)
   }
 
   public openPanel(preserveFocus?: boolean): void {
@@ -419,6 +450,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     // Sockets of the previous webview instance cannot be reached by this one.
     this.relay.reset()
     this.panel = panel
+    this.browser.attach(panel)
     void this.statsPoller
     for (const poller of [this.statsPoller, this.projectPollers]) poller.setVisible(panel.visible)
     void this.diffs.setVisible(panel.visible)
@@ -513,9 +545,29 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public async handlePanelMessage(message: { type: string } & Record<string, unknown>): Promise<void> {
+    if (message.type === "agentManager.openWebLink" && typeof message.url === "string") {
+      this.openWebLink(message.url, message.external === true)
+      return
+    }
+    if (this.browser.handle(message as unknown as AgentManagerInMessage)) return
     if (this.prBridge.handleMessage(message)) return
     if (this.relay.handle(message as unknown as AgentManagerInMessage)) return
     await handleMessage(message as unknown as AgentManagerInMessage, this.messageHost)
+  }
+
+  /**
+   * Chat links open in the Integrated Browser for the visible session when it is enabled and a project can route that
+   * session, else externally. Shift-click (`external`) always opens the system browser.
+   */
+  private openWebLink(url: string, external: boolean): void {
+    const session = this.visibleSession
+    const preferred = this.projectScope.current()?.id ?? this.contexts.active()?.id
+    const project = session ? routableProject(this.contexts, session, preferred) : undefined
+    if (!external && session && project && shouldOpenLinkInIntegratedBrowser(url)) {
+      void this.browser.handle({ type: "agentManager.browser.open", sessionId: session, projectId: project, url })
+      return
+    }
+    this.host.openExternal(url)
   }
 
   public hostSource(): ProviderHostsSource {
@@ -543,8 +595,6 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.visibleSession = id
     if (id) {
       this.panelSessions.add(id)
-      // Follow the session with its integrated terminal while the terminal panel is open.
-      this.terminalManager.syncOnSessionSwitch(id)
     }
     // The poller follows the visible session so its fast poll and immediate fetch target the
     // worktree the user is reading. The PR poller belongs to the active project, so a session
@@ -573,6 +623,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async setCaffeination(enabled: boolean): Promise<void> {
     await this.caffeination.setEnabled(enabled)
     this.postCaffeination()
+  }
+
+  public async toggleCaffeination(): Promise<void> {
+    const state = this.caffeination.getState()
+    await this.setCaffeination(!(state.enabled || state.active))
   }
 
   public postCaffeination(): void {
@@ -607,23 +662,27 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     agent?: string,
     boot?: CreationBoot,
   ): Promise<SessionInfo | null> {
-    return createSessionInWorktree(this as unknown as ProviderSessionHost, worktreePath, branch, worktreeId, timing, model, agent, boot)
+    return createSessionInWorktree(
+      this as unknown as ProviderSessionHost,
+      worktreePath,
+      branch,
+      worktreeId,
+      timing,
+      model,
+      agent,
+      boot,
+    )
   }
 
   public async acquirePtyCleanup(directory: string): Promise<() => void> {
     return acquirePtyCleanup(directory, {
       terminals: this.terminalRouter,
-      integrated: this.terminalManager,
       scripts: this.scripts.manager,
       connection: this.connection,
     })
   }
 
-  public notifyWorktreeReady(
-    sessionId: string,
-    result: CreateWorktreeResult,
-    worktreeId?: string,
-  ): void {
+  public notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
@@ -753,10 +812,9 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       },
       removeSnapshot: async (root, target) => {
         const client = await this.connection.client()
-        const result = await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot(
-          { worktree: target },
-          { location: { directory: root } },
-        )
+        const result = await client
+          .rpc(KiloAgentManagerRpc.Definition)
+          .removeSnapshot({ worktree: target }, { location: { directory: root } })
         return result.removed
       },
       withProgress: (title, task) => this.host.withProgress(title, task),
@@ -794,6 +852,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
             sessionId: session.id,
             forkedFromId: from,
             worktreeId: worktree,
+            session,
           }),
         log: (...args) => this.log(...args),
       },
@@ -806,6 +865,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async onCloseSession(sessionId: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
+    this.browser.close(sessionId, ctx.id)
     return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
 
@@ -838,8 +898,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
 
   public async runSetupScriptForWorktree(
     worktreePath: string,
-    branch?: string,
-    worktreeId?: string,
+    branch: string | undefined,
+    worktreeId: string,
     early?: () => Promise<void>,
   ): Promise<void> {
     const root = this.getRoot()
@@ -847,13 +907,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     await runLifecycleSetup(
       {
         service: this.getSetupScriptService(),
-        destination: this.destination.value(),
         projectId: this.context?.id,
         worktreeId,
         branch,
         trusted: () => this.host.isTrusted(),
         manager: this.scripts.manager,
-        vscode: executeVscodeTask,
         log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
         post: (message) => this.postToWebview(message),
       },
@@ -971,6 +1029,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public onWorkspaceChanged(): void {
+    // A workspace switch drops every page the old workspace could still show.
+    void this.browser.closeAll().catch((error) => this.log(error))
     onWorkspaceChanged(this.stateHost())
   }
 
@@ -993,6 +1053,23 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
     const target = resolveWorktreeFile(this.getStateManager(), id, filePath, this.getRoot())
     if (target) this.host.openFile(target, line, column)
+  }
+
+  public async validateFiles(id: string, sessionId: string, paths: string[]): Promise<void> {
+    // Session roots come from the recovered worktree state, so wait for it as the other session lookups do.
+    await this.waitForStateReady("validateFiles")
+    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    // An unresolved session is not "every path missing": let the client timeout treat it as unknown.
+    if (!root) return
+    const existing = paths.filter((file) => documentExists(root, file))
+    this.postToWebview({ type: "agentManager.validateFilesResult", id, existing })
+  }
+
+  public async readDocument(sessionId: string, file: string, contextKey?: string): Promise<void> {
+    await this.waitForStateReady("readDocument")
+    const root = resolveWorktreeRoot(this.getStateManager(), sessionId, this.getRoot())
+    const result = root ? readDocument(root, file) : { error: "The document context is no longer available." }
+    this.postToWebview({ type: "agentManager.document", sessionId, file, requestedFile: file, contextKey, ...result })
   }
 
   public postToWebview(message: AgentManagerOutMessage): void {
@@ -1065,15 +1142,48 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ): Promise<void> {
-    return continueFromSidebar(this.api(), sessionId, progress)
+    return this.inWorkspaceProject(() => continueFromSidebar(this.api(), sessionId, progress))
+  }
+
+  /** Continues a session of the project the Agent Manager panel shows in a new worktree of that project. */
+  public continueInWorktree(
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ): Promise<void> {
+    return continueInActiveProject(this.api(), sessionId, progress)
   }
 
   public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
-    return createFromSidebar(this.api(), baseBranch, branchName)
+    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName))
   }
 
   public openAdvancedWorktree(): Promise<void> {
-    return openAdvancedWorktree(this.api())
+    return this.inWorkspaceProject(() => openAdvancedWorktree(this.api()))
+  }
+
+  /** The current branch of the workspace project, for the sidebar New Worktree menu. */
+  public workspaceBranch(): Promise<string | undefined> {
+    const manager = this.contexts.pinned()?.worktreeManager()
+    if (!manager) return Promise.resolve(undefined)
+    return manager
+      .currentBranch()
+      .then((branch) => branch || undefined)
+      .catch(() => undefined)
+  }
+
+  /**
+   * Runs a sidebar action on the workspace project, which the sidebar shows, and not on the project the panel shows.
+   * The panel switches to that project first, because the action opens it.
+   */
+  private inWorkspaceProject(action: () => Promise<void>): Promise<void> {
+    const context = this.contexts.pinned()
+    if (!context) return action()
+    if (this.contexts.active()?.id !== context.id) {
+      this.contexts.activate(context.id)
+      this.activateProject(context)
+      this.pushProjects()
+    }
+    return this.projectScope.run(context, action)
   }
 
   public diagnose(): Promise<void> {
@@ -1088,10 +1198,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return shutdown(this.api())
   }
 
-  public dispose(): Promise<void> {
+  public async dispose(): Promise<void> {
     this.unsubAutoApprove()
     this.relay.dispose()
-    return this.shutdown()
+    await Promise.all([this.browser.dispose(), this.shutdown()])
   }
 
   public syncWorktrees(): Promise<void> {
@@ -1112,5 +1222,4 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   public async setReviewMarkdownRender(value: boolean): Promise<void> {
     await setReviewMarkdownRender(value)
   }
-
 }

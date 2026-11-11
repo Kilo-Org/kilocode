@@ -31,6 +31,7 @@ export function ResizeHandle(props: ResizeHandleProps) {
   const handleMouseDown = (e: MouseEvent) => {
     if (e.detail > 1) return
     e.preventDefault()
+    const handle = e.currentTarget instanceof HTMLElement ? e.currentTarget : undefined
     const edge = local.edge ?? (local.direction === "vertical" ? "start" : "end")
     const start = local.direction === "horizontal" ? e.clientX : e.clientY
     const rtl =
@@ -53,6 +54,7 @@ export function ResizeHandle(props: ResizeHandleProps) {
     document.body.style.userSelect = "none"
     document.body.style.overflow = "hidden"
     document.body.style.cursor = cursor // kilocode_change
+    handle?.setAttribute("data-dragging", "")
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const pos = local.direction === "horizontal" ? moveEvent.clientX : moveEvent.clientY
@@ -77,6 +79,7 @@ export function ResizeHandle(props: ResizeHandleProps) {
       document.body.style.userSelect = ""
       document.body.style.overflow = ""
       document.body.style.cursor = "" // kilocode_change
+      handle?.removeAttribute("data-dragging")
       document.removeEventListener("mousemove", onMouseMove)
       document.removeEventListener("mouseup", onMouseUp)
 

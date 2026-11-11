@@ -30,7 +30,7 @@ export function createAppDirectories(opts: {
       ? opts.store(projectId).worktrees().find((worktree) => worktree.id === worktreeId)?.path
       : worktreePath(worktreeId)
 
-  /** Every directory whose sessions the active project shows: its root and every worktree. */
+  /** Every directory of the active project: its root and every worktree. */
   const sessionDirectories = () => {
     const id = opts.activeProjectId()
     const store = id ? opts.store(id) : undefined
@@ -39,13 +39,19 @@ export function createAppDirectories(opts: {
     return [...new Set([base, ...store.worktrees().map((worktree) => worktree.path)])]
   }
 
-  /** Stores that must stay alive: the pinned root, expanded project roots and open worktrees. */
+  /** Directories whose session list the panel shows: the project root and the selected worktree. */
+  const visibleDirectories = () => {
+    const base = root(opts.activeProjectId())
+    const selection = opts.selection()
+    const selected = selection && selection !== "local" ? worktreePath(selection) : undefined
+    return [...new Set([base, selected].filter((dir): dir is string => !!dir))]
+  }
+
+  /** Stores that must stay alive: expanded project roots, the selected worktree and open worktree tabs. */
   const retained = () => {
     const expanded = opts.projects()
       .filter((project) => project.expanded || project.active || project.pinned)
       .flatMap((project) => [project.root])
-    const active = opts.activeProjectId()
-    const store = active ? opts.store(active) : undefined
     const selection = opts.selection()
     const selected = selection && selection !== "local" ? worktreePath(selection) : undefined
     const open = opts.openTabs()
@@ -62,7 +68,7 @@ export function createAppDirectories(opts: {
     return root(opts.currentProjectId())
   }
 
-  return { root, worktreePath, worktreePathIn, sessionDirectories, retained, directoryOf }
+  return { root, worktreePath, worktreePathIn, sessionDirectories, visibleDirectories, retained, directoryOf }
 }
 
 export type AppDirectories = ReturnType<typeof createAppDirectories>

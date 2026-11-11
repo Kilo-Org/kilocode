@@ -17,7 +17,18 @@
     },
     "kilo-database-constructors": {
       "description": "Direct new Database() / new DatabaseSync() instantiations in Kilo-owned code. Target: all persistence routes through core Database.Service.",
-      "allowed": {}
+      "allowed": {
+        "packages/kilo-cli/src/database.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "One-time copy of an earlier build's database file before the server starts. It counts sessions in the candidate files read-only to pick the copy source; Database.Service does not exist yet and would run migrations on the old file. The copy itself opens the source through packages/kilo-cli/src/sqlite-readonly.ts. Remove with the legacy copy."
+        },
+        "packages/kilo-cli/src/sqlite-readonly.ts": {
+          "count": 2,
+          "owner": "kilo-cli",
+          "reason": "Read-only opens of a Kilo v1 store or an earlier kilo2 store before any server starts: the import v1 source, the copy of an earlier build, and the startup guard that refuses a v1 store. One open reads a store in use with locks; the other is an immutable open for a store at rest, which creates no file beside it. Database.Service would run migrations on these files, which must stay as they are."
+        }
+      }
     },
     "kilo-tool-process-env": {
       "description": "Direct process.env reads in Kilo-owned tools. Target: pass configuration explicitly via Tool.Context or Env.Service.",

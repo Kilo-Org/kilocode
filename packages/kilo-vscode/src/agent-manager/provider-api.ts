@@ -8,7 +8,6 @@ import type { Host, OutputHandle, PanelContext } from "./host"
 import type { GitOps } from "./GitOps"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { WorktreeManager } from "./WorktreeManager"
-import type { SessionTerminalManager } from "./SessionTerminalManager"
 import type { TerminalRouter } from "./terminal-routing"
 import type { WorktreeDiffController } from "./worktree-diff-controller"
 import type { DiffSourceCatalog } from "../diff/sources/catalog"
@@ -18,7 +17,7 @@ import type { AgentManagerOutMessage } from "./types"
 import type { CreateWorktreeOnDiskOptions, CreateWorktreeOnDiskResult } from "./worktree-create"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { revealManagedSession } from "./reveal-session"
-import { continueInWorktree } from "./continue-in-worktree"
+import { continueInWorktree, type ContinueContext } from "./continue-in-worktree"
 import { runDoctor } from "./worktree-doctor"
 import { reconcileProject } from "./project/init"
 import { samePath } from "./project/paths"
@@ -38,7 +37,6 @@ export interface ProviderApiHost {
   readonly naming: BranchNamingController
   readonly healthScheduler: { dispose(): void }
   readonly projectPollers: { dispose(): void }
-  readonly terminalManager: SessionTerminalManager
   readonly relay: { dispose(): void }
   readonly terminalRouter: TerminalRouter
   readonly scripts: { dispose(): Promise<void> }
@@ -50,7 +48,6 @@ export interface ProviderApiHost {
   readonly unsubEvents: () => void
   readonly unsubFont: () => void
   readonly unsubProjects: () => void
-  readonly unsubDestination: () => void
   panel: PanelContext | undefined
   closing: Promise<void> | undefined
   stateReady: Promise<void> | undefined
@@ -63,7 +60,7 @@ export interface ProviderApiHost {
   getStateManager(): WorktreeStateManager | undefined
   getWorktreeManager(): WorktreeManager | undefined
   createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null>
-  runSetupScriptForWorktree(path: string, branch?: string, id?: string): Promise<void>
+  runSetupScriptForWorktree(path: string, branch: string | undefined, id: string): Promise<void>
   onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null>
   onDeleteWorktree(id: string): Promise<null>
   registerWorktreeSession(sessionId: string, directory: string): void
@@ -135,33 +132,60 @@ export async function continueFromSidebar(
   }
   p.openPanel()
   await p.waitForStateReady("continueFromSidebar")
-  await continueInWorktree(
-    {
-      root,
-      binary: p.gitOps.path,
-      client: () => p.connection.client(),
-      createWorktreeOnDisk: (opts) => p.createWorktreeOnDisk(opts),
-      runSetupScript: (target, branch, id) => p.runSetupScriptForWorktree(target, branch, id),
-      cleanupWorktree: async (id) => {
-        await p.onDeleteWorktree(id)
-      },
-      notifyError: (error, result, id) => {
-        p.postToWebview({
-          type: "agentManager.worktreeSetup",
-          status: "error",
-          message: error,
-          branch: result.branch,
-          worktreeId: id,
-        })
-      },
-      getStateManager: () => p.getStateManager(),
-      registerWorktreeSession: (sid, dir) => p.registerWorktreeSession(sid, dir),
-      notifyReady: (sid, result, wid) => p.notifyWorktreeReady(sid, result, wid),
-      log: (...args) => p.log(...args),
+  await continueInWorktree(worktreeContext(p, root), sessionId, progress)
+}
+
+/**
+ * Continues a session in a new worktree of the project the request targets. The sidebar continues its own project;
+ * the Agent Manager panel continues a session of whichever project it shows.
+ */
+export async function continueInActiveProject(
+  p: ProviderApiHost,
+  sessionId: string,
+  progress: (status: string, detail?: string, error?: string) => void,
+): Promise<void> {
+  const root = p.getRoot()
+  if (!root) {
+    progress("error", undefined, "No workspace folder open")
+    return
+  }
+  await p.waitForStateReady("continueInWorktree")
+  await continueInWorktree(worktreeContext(p, root), sessionId, progress)
+}
+
+function worktreeContext(p: ProviderApiHost, root: string): ContinueContext {
+  return {
+    root,
+    binary: p.gitOps.path,
+    client: () => p.connection.client(),
+    createWorktreeOnDisk: (opts) => p.createWorktreeOnDisk(opts),
+    runSetupScript: (target, branch, id) => p.runSetupScriptForWorktree(target, branch, id),
+    cleanupWorktree: async (id) => {
+      await p.onDeleteWorktree(id)
     },
-    sessionId,
-    progress,
-  )
+    notifyError: (error, result, id) => {
+      p.postToWebview({
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: error,
+        branch: result.branch,
+        worktreeId: id,
+      })
+    },
+    getStateManager: () => p.getStateManager(),
+    registerWorktreeSession: (sid, dir) => p.registerWorktreeSession(sid, dir),
+    notifyReady: (sid, result, wid) => p.notifyWorktreeReady(sid, result, wid),
+    notifyForked: (session, from, wid) =>
+      p.postToWebview({
+        type: "agentManager.sessionForked",
+        projectId: p.context?.id,
+        sessionId: session.id,
+        forkedFromId: from,
+        worktreeId: wid,
+        session,
+      }),
+    log: (...args) => p.log(...args),
+  }
 }
 
 export async function createFromSidebar(p: ProviderApiHost, baseBranch?: string, branchName?: string): Promise<void> {
@@ -204,7 +228,6 @@ export async function disposeAsync(p: ProviderApiHost): Promise<void> {
   p.unsubEvents()
   p.unsubFont()
   p.unsubProjects()
-  p.unsubDestination()
   await p.scripts.dispose()
   await p.caffeination.dispose()
   p.orchestration.dispose()
@@ -217,7 +240,6 @@ export async function disposeAsync(p: ProviderApiHost): Promise<void> {
   p.gitOps.dispose()
   p.prBridge.poller.stop()
   p.run.dispose()
-  p.terminalManager.dispose()
   p.relay.dispose()
   await p.terminalRouter.dispose()
   const panel = p.panel

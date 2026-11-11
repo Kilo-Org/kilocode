@@ -56,6 +56,17 @@ jobs:
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
 
+      # Linux targets compile the bundled Bubblewrap sandbox helper with Zig.
+      - name: Setup Zig for Linux sandbox helpers
+        if: runner.os == 'Linux'
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+
       - name: Build the Kilo host
         working-directory: packages/kilo-cli
         run: bun run script/build.ts --single --skip-install
@@ -279,6 +290,10 @@ jobs:
               close_stale_prs
               exit 0
             fi
+            pr=$(bot_prs | head -n 1)
+            # The v2 ruleset does not dismiss stale approvals on push. Disarm auto-merge before the
+            # force-push so the new delta cannot land on an approval for the previous head.
+            if [ -n "$pr" ]; then gh pr merge "$pr" --disable-auto >/dev/null 2>&1 || true; fi
             git commit -m "chore(progress): regenerate the map for $base_sha"
             if ! git push --force-with-lease origin HEAD:refs/heads/progress-map-update; then
               # A changed branch or a transient GitHub error (HTTP 500) rejects the push. Wait before retrying.
@@ -291,19 +306,44 @@ jobs:
               echo
               bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
             } > body.md
-            pr=$(bot_prs | head -n 1)
             if [ -n "$pr" ]; then
               close_stale_prs "$pr"
               gh pr edit "$pr" --body-file body.md
             else
               close_stale_prs
-              if ! gh pr create --base v2 --head progress-map-update \
+              if created=$(gh pr create --base v2 --head progress-map-update \
                 --title "chore(progress): regenerate the map" \
-                --body-file body.md; then
+                --body-file body.md); then
+                pr="${created##*/}"
+              else
                 pr=$(bot_prs | head -n 1)
                 if [ -z "$pr" ]; then exit 1; fi
                 gh pr edit "$pr" --body-file body.md
               fi
+            fi
+            # Drop the approvals of the previous head, so auto-merge waits for a fresh review.
+            # Auto-merge is armed only when the stale approvals are gone, because the v2 ruleset
+            # does not dismiss them on push by itself.
+            clean=true
+            if ! reviews=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews" --paginate \
+              --jq '.[] | select(.state == "APPROVED") | .id' 2>&1); then
+              echo "::warning::could not read reviews on PR #$pr: $reviews"
+              clean=false
+            fi
+            for review in $reviews; do
+              if ! error=$(gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$pr/reviews/$review/dismissals" \
+                -f message="The map was regenerated for a newer v2 commit; a fresh review is required." 2>&1 >/dev/null); then
+                echo "::warning::could not dismiss review $review on PR #$pr: $error"
+                clean=false
+              fi
+            done
+            # The map is generated, so it merges by itself once a maintainer approves the delta.
+            if [ "$clean" = true ]; then
+              if ! output=$(gh pr merge "$pr" --auto --merge 2>&1); then
+                echo "::warning::auto-merge not enabled for PR #$pr: $output"
+              fi
+            else
+              echo "::warning::auto-merge not armed for PR #$pr because a stale approval could not be dismissed"
             fi
             exit 0
           done
@@ -311,8 +351,9 @@ jobs:
 
   progress-comment:
     name: migration progress comment
-    # Same-repository pull requests only: a fork PR gets a read-only token and cannot comment.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Same-repository feature pull requests only: a fork PR gets a read-only token and cannot comment,
+    # and the map bot PR's own body already carries the delta.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'progress-map-update'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -337,9 +378,10 @@ jobs:
         env:
           REPO: ${{ github.repository }}
         run: |
-          # Both maps are generated here, because PRs do not commit the map and a base branch can carry a stale one.
+          # Both maps are generated with the PR's script so counting-rule changes compare like with like,
+          # while each checkout supplies its own features.json, dispositions.json and tracked files.
           git worktree add --detach ../base HEAD^1
-          bun ../base/script/upstream/progress.ts
+          bun script/upstream/progress.ts --root ../base
           cp ../base/migration-tracking/progress/progress.json base.json
           bun script/upstream/progress.ts
           git diff -U0 --no-color HEAD^1 HEAD > pr.diff
@@ -409,8 +451,39 @@ jobs:
 
       # Turborepo runs only the package tests that turbo.json lists. The Kilo packages run here instead, so
       # adding one needs no shared upstream patch. `@kilocode/gateway-core` stays in turbo.json.
+      # The Linux sandbox tests need Bubblewrap and unprivileged user namespaces, which Ubuntu 24.04 restricts with
+      # AppArmor by default. Build the same static Bubblewrap the release ships and point the sandbox at it.
+      - name: Setup Zig for the Linux sandbox helper
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+
+      - name: Build Bubblewrap and allow user namespaces
+        run: |
+          bun packages/kilo-cli/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
+          echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
+          echo "KILO_REQUIRE_LINUX_SANDBOX=1" >> "$GITHUB_ENV"
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Test the Kilo sandbox engine
+        working-directory: packages/kilo-sandbox
+        run: bun test
+
+      # The RPC test covers the publish path, which needs an available backend; Bubblewrap is installed above.
+      - name: Test the sandbox RPC with Bubblewrap
+        working-directory: packages/kilo-cli
+        run: bun test test/sandbox.test.ts
+
       - name: Test the Kilo plugin
         working-directory: packages/kilo-plugin
+        run: bun test
+
+      - name: Test the Kilo Flows plugin
+        working-directory: packages/kilo-flows-plugin
         run: bun test
 
       # The Kilo host suite is the slowest one in CI. `check-test` shards it on Linux and Windows through its

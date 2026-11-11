@@ -17,8 +17,6 @@ import { LOCAL } from "./navigate"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import type { DiffScope } from "./diff-scope-state"
-import { TerminalDestinationButton } from "./terminal/TerminalDestinationButton"
-import type { TerminalDestination } from "../src/types/messages/agent-manager"
 
 /** Everything the tab bar reads from the app. */
 export interface TabBarProps {
@@ -63,11 +61,9 @@ export interface TabBarProps {
   subagentsAvailable: () => boolean
   subagentsOpen: () => boolean
   onToggleSubagents: () => void
-  terminalDestination: () => TerminalDestination
-  terminalDestinationActive: () => boolean
+  terminalOpen: () => boolean
   terminalKeybind: () => string
-  onTerminalDestinationOpen: () => void
-  onTerminalDestinationChoose: (destination: TerminalDestination) => void
+  onTerminalOpen: () => void
 }
 
 /** Tab bar with sortable session/terminal/review tabs and the run/diff/apply actions. */
@@ -271,7 +267,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                   </Tooltip>
                 </Show>
                 {/* Run and Terminal form the fixed tail: a run sends its output
-                     to the terminal destination, so cause and effect stay adjacent. */}
+                     to the panel terminal, so cause and effect stay adjacent. */}
                 <Show when={sel()}>
                   {(() => {
                     const rid = () => (sel() === LOCAL ? LOCAL : (sel() as string))
@@ -325,17 +321,24 @@ export const TabBar: Component<TabBarProps> = (props) => (
               </>
             )
           })()}
-          {/* Terminal destination split button: the primary action
-               follows the user's setting (VS Code integrated terminal
-               or the embedded side panel), the dropdown picks which.
+          {/* The terminal button toggles the embedded side panel terminal.
                Cmd+Shift+T creates a central terminal from center focus. Cmd+T creates a session in the center or a terminal in the right sidebar. */}
-          <TerminalDestinationButton
-            destination={props.terminalDestination}
-            active={props.terminalDestinationActive}
-            keybind={props.terminalKeybind}
-            onOpen={props.onTerminalDestinationOpen}
-            onChoose={props.onTerminalDestinationChoose}
-          />
+          <TooltipKeybind
+            title={props.t("agentManager.tab.terminal")}
+            keybind={props.terminalKeybind()}
+            placement="bottom"
+            openDelay={0}
+          >
+            <IconButton
+              icon="console"
+              size="small"
+              variant="ghost"
+              aria-label={props.t("agentManager.tab.terminal")}
+              aria-pressed={props.terminalOpen()}
+              data-active={props.terminalOpen() ? "" : undefined}
+              onClick={props.onTerminalOpen}
+            />
+          </TooltipKeybind>
         </div>
       </div>
       <DragOverlay>

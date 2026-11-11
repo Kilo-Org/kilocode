@@ -1,0 +1,84 @@
+export * as KiloSessionSync from "./session-sync"
+
+import { define } from "@opencode/plugin/effect/plugin"
+import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync"
+import { Context, Effect, type Scope } from "effect"
+
+interface EnableInput {
+  directory: string
+  organizationID: string | null
+  assets?: readonly string[]
+}
+
+export interface LiveContext {
+  destination: string
+  identity: string
+  organizationID: string | null
+  tenant: { type: "user" | "organization"; id: string }
+  userID: string
+  sessions: readonly { sessionID: string; directory: string; sourceID: string; position: number }[]
+}
+
+interface Interface {
+  readonly live: (directory?: string, sessionIDs?: readonly string[]) => Effect.Effect<LiveContext | undefined, KiloSessionSyncRpc.Failure>
+  readonly liveTicket: (sessionID?: string) => Effect.Effect<{
+    ticket: string
+    expiresAt: string
+  }, KiloSessionSyncRpc.Failure>
+  readonly livePosition: (sessionID: string) => Effect.Effect<{ sourceID: string; position: number } | undefined>
+  /** Undefined suspends enrollment/transport until the Gateway has resolved its effective tenant. */
+  readonly organization: (input: { directory: string; organizationID: string | null | undefined }) => Effect.Effect<void>
+  readonly enable: (input: EnableInput) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
+  readonly disable: (input: {
+    directory: string
+  }) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
+  readonly status: (input: {
+    directory: string
+  }) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
+  readonly flush: (input: { directory: string }) => Effect.Effect<KiloSessionSyncRpc.Status, KiloSessionSyncRpc.Failure>
+}
+
+export class Service extends Context.Service<Service, Interface>()("@kilocode/SessionSync") {}
+
+export const plugin = define<Service | Scope.Scope>({
+  id: "kilocode.session-sync",
+  effect: Effect.fn(function* (ctx) {
+    const sync = yield* Service
+    yield* ctx.rpc
+      .register(KiloSessionSyncRpc.Definition, {
+        enable: (input, context) =>
+          sync
+            .enable(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+        disable: (input, context) =>
+          sync
+            .disable(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+        status: (input, context) =>
+          sync
+            .status(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+        flush: (input, context) =>
+          sync
+            .flush(input)
+            .pipe(
+              Effect.mapError((error) =>
+                context.error("failed", error.message, { code: error.code, message: error.message }),
+              ),
+            ),
+      })
+      .pipe(Effect.orDie)
+  }),
+})

@@ -5,6 +5,8 @@ import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 const commands = ["opencode ", "kilo2 "] as const
 const product = ['"OpenCode"', '"Kilo"'] as const
 const title = ["`OC | ", "`Kilo | "] as const
+// The built-in tool namespace is a product name the model and the user read (`tools.kilo.session_move`).
+const namespace = ['namespace: "opencode"', 'namespace: "kilo"'] as const
 
 export const replacements = {
   "cli/src/commands/commands.ts": [
@@ -91,7 +93,7 @@ export const replacements = {
     product,
     title,
     ["Update OpenCode", "Kilo update instructions"],
-    ["https://opencode.ai/v2/docs", "https://kilo.ai/docs"],
+    ["https://opencode.ai/docs", "https://kilo.ai/docs"],
   ],
   "tui/src/mini/runtime.lifecycle.ts": [product, title],
   "tui/src/routes/session/permission.tsx": [
@@ -140,6 +142,21 @@ export const replacements = {
     ["You are OpenCode, a coding agent", "You are Kilo, a coding agent"],
     ["# Tool Use - OpenCode Specifics", "# Tool Use - Kilo Specifics"],
   ],
+  "core/src/tool/plugin/opencode.ts": [
+    namespace,
+    ['name: "opencode"', 'name: "kilo"'],
+    ["Tools for managing OpenCode itself", "Tools for managing Kilo itself"],
+    ["tools.opencode.session_move", "tools.kilo.session_move"],
+  ],
+  "core/src/tool/plugin/artifact.ts": [namespace],
+  "core/src/tool/plugin/schedule.ts": [namespace],
+  "core/src/tool/plugin/mcp-resource.ts": [
+    namespace,
+    ["opencode_list_mcp_resources", "kilo_list_mcp_resources"],
+    ["opencode_read_mcp_resource", "kilo_read_mcp_resource"],
+  ],
+  // Code Mode paths of the tools a schedule check may not call.
+  "core/src/schedule/check.ts": [['"opencode.', '"kilo.']],
   "core/src/oauth/page.ts": [
     ["OpenCode is now", "Kilo is now"],
     ["OpenCode couldn't", "Kilo couldn't"],

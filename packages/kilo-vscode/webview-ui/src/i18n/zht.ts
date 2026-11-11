@@ -1214,6 +1214,11 @@ export const dict = {
   "settings.display.mcpTool.description": "選擇 MCP 與通用工具區塊的初始狀態：展開或收合。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "收合",
+  "settings.display.codeMode.title": "Code Mode 區塊",
+  "settings.display.codeMode.description":
+    "選擇 Code Mode 區塊的初始狀態：列出工具呼叫或顯示為一行。指令碼在您開啟之前始終保持隱藏。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "收合",
 
   "settings.display.shortcutHints.title": "顯示快捷鍵提示",
   "settings.display.shortcutHints.description":
@@ -1340,6 +1345,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "開啟所有背景 Agent",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在背景繼續",
+  "task.backgroundAgents.promoteFailed": "此代理無法在背景繼續。它可能已經完成。",
   "task.backgroundAgents.waiting": "背景 Agent 需要你的輸入",
   "task.backgroundAgents.needsInput": "需要輸入",
   "task.backgroundAgents.clearFinished": "清除已完成",
@@ -1421,6 +1427,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "系統瀏覽器",
   "settings.experimental.browserLinks.integrated": "整合瀏覽器",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "chat.reply.toolbar": "選取的文字",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "在回覆中引用",
+  "chat.reply.commentHint": "對此段落留言",
+  "chat.reply.copy": "複製",
+  "chat.reply.sendHint": "立即將此留言傳送給 Kilo",
+  "chat.reply.commentLater": "儲存至下一則訊息",
+  "chat.reply.count": "回覆 ({{count}})",
+  "chat.reply.sendAll": "全部傳送",
+  "chat.reply.showInChat": "在聊天中顯示",
   "browserTab.noSession": "從工作階段開啟瀏覽器以預覽本機應用程式或公開 HTTPS 頁面。",
   "browserTab.disabled": "整合瀏覽器已停用。請在 Kilo 設定 > 實驗性中啟用。",
 } satisfies Partial<Record<Keys, string>>

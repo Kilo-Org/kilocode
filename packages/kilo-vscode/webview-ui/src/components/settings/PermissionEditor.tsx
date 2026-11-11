@@ -1,23 +1,26 @@
 import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
-import { Select } from "@kilocode/kilo-ui/select"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
+import { ActionSelect, SimpleToolRow } from "./PermissionToolRow"
 import type { PermissionLevel, PermissionRuleset } from "./permission-utils"
 import {
   DEFAULT_RULES,
   addExceptionLevel,
   clearGroupedLevel,
+  clearRowLevel,
   clearSimpleLevel,
   clearWildcardLevel,
   effectiveConfigLevel,
   inheritedTool,
+  keepsExceptions,
   mostRestrictive,
   removeExceptionLevel,
   setExceptionLevel,
   setGroupedLevel,
+  setRowLevel,
   setSimpleLevel,
   setWildcardLevel,
   toolExceptions,
@@ -28,21 +31,6 @@ export type PermissionTarget = { kind: "root" } | { kind: "agent"; name: string 
 export interface PermissionEditorProps {
   target: PermissionTarget
 }
-
-type LevelValue = PermissionLevel | "inherit"
-
-interface LevelOption {
-  value: LevelValue
-  labelKey: string
-}
-
-const LEVEL_OPTIONS: LevelOption[] = [
-  { value: "allow", labelKey: "settings.autoApprove.level.allow" },
-  { value: "ask", labelKey: "settings.autoApprove.level.ask" },
-  { value: "deny", labelKey: "settings.autoApprove.level.deny" },
-]
-
-const INHERIT_OPTION: LevelOption = { value: "inherit", labelKey: "common.default" }
 
 interface GranularConfig {
   wildcardKey: string
@@ -128,11 +116,12 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
   },
 ]
 
-// There is no browser_open or doom_loop action. These rows have no exception editor, so changing a level replaces
-// every rule for the action, including any per-resource rules the user added elsewhere.
+// There is no doom_loop action. These rows have no exception editor, so a level change replaces every rule for the
+// action. browser_open keeps its per-origin navigate rules and lists them below its level.
 const TRAILING_TOOLS: ToolDef[] = [
   { action: "websearch", title: "Websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { action: "webfetch", title: "Webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
+  { action: "browser_open", title: "Integrated Browser", descriptionKey: "settings.autoApprove.tool.browser_open" },
 ]
 
 /** Controlled editor over a ruleset. The v2 config layer is in the default export below. */
@@ -232,57 +221,12 @@ export const PermissionRulesEditor: Component<{
             level={levelFor(tool.action)}
             inherited={ruleInherited(tool.action)}
             showDefaultLevel={props.showDefaultLevel}
-            onChange={(level) => setSimple(tool.action, level)}
-            onInherit={() => clearSimple(tool.action)}
+            exceptions={keepsExceptions(tool.action) ? toolExceptions(props.rules, tool.action) : undefined}
+            onChange={(level) => props.onChange(setRowLevel(props.rules, tool.action, level))}
+            onInherit={() => props.onChange(clearRowLevel(props.rules, tool.action))}
           />
         )}
       </For>
-    </div>
-  )
-}
-
-const SimpleToolRow: Component<{
-  title: string
-  descriptionKey: string
-  level: PermissionLevel
-  inherited?: boolean
-  showDefaultLevel?: boolean
-  onChange: (level: PermissionLevel) => void
-  onInherit?: () => void
-}> = (props) => {
-  const language = useLanguage()
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: "24px",
-        "align-items": "flex-start",
-        "justify-content": "space-between",
-        padding: "12px 0",
-        "border-bottom": "1px solid var(--border-weak-base)",
-      }}
-    >
-      <div style={{ flex: 1, "min-width": 0 }}>
-        <div style={{ "font-size": "var(--kilo-font-size-13)", color: "var(--text-base, var(--vscode-foreground))" }}>
-          {props.title}
-        </div>
-        <div
-          style={{
-            "font-size": "var(--kilo-font-size-12)",
-            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-            "margin-top": "6px",
-          }}
-        >
-          {language.t(props.descriptionKey)}
-        </div>
-      </div>
-      <ActionSelect
-        level={props.level}
-        inherited={props.inherited}
-        showDefaultLevel={props.showDefaultLevel}
-        onChange={props.onChange}
-        onInherit={props.onInherit}
-      />
     </div>
   )
 }
@@ -503,41 +447,6 @@ const GranularToolRow: Component<{
         </div>
       </Show>
     </div>
-  )
-}
-
-const ActionSelect: Component<{
-  level: PermissionLevel
-  inherited?: boolean
-  showDefaultLevel?: boolean
-  onChange: (level: PermissionLevel) => void
-  onInherit?: () => void
-}> = (props) => {
-  const language = useLanguage()
-  const opts = createMemo(() => (props.onInherit ? [INHERIT_OPTION, ...LEVEL_OPTIONS] : LEVEL_OPTIONS))
-  const label = (option: LevelOption) => {
-    if (option.value !== "inherit" || !props.showDefaultLevel) return language.t(option.labelKey)
-    const level = LEVEL_OPTIONS.find((item) => item.value === props.level)!
-    return `${language.t(option.labelKey)} (${language.t(level.labelKey)})`
-  }
-  return (
-    <Select
-      options={opts()}
-      current={props.inherited ? INHERIT_OPTION : LEVEL_OPTIONS.find((option) => option.value === props.level)}
-      value={(option) => option.value}
-      label={label}
-      onSelect={(option) => {
-        if (!option) return
-        if (option.value === "inherit") {
-          props.onInherit?.()
-          return
-        }
-        props.onChange(option.value)
-      }}
-      variant="secondary"
-      size="small"
-      triggerVariant="settings"
-    />
   )
 }
 

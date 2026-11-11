@@ -111,6 +111,10 @@ export function buildModelPickerOptions(input: ModelPickerInput) {
     )
     .map((item) => item.option)
 
+  // Without a connected integration there are no sections, so favorites move to the top of the list instead.
+  const starred = (option: { value: Ref }) =>
+    input.favorites.some((item) => item.providerID === option.value.providerID && item.modelID === option.value.modelID)
+  if (!needle && !input.connected) return list.toSorted((a, b) => Number(starred(b)) - Number(starred(a)))
   if (!needle) return [...favorites, ...recents, ...list]
   return [
     ...rank(needle, favorites),

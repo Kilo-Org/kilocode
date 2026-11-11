@@ -2,7 +2,7 @@
 
 // Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo2` executable for internal releases.
 //
-// Mirror of packages/cli/script/build.ts (v2.2.5). That script compiles the upstream entry as `opencode` and takes
+// Mirror of packages/cli/script/build.ts (v2.2.6). That script compiles the upstream entry as `opencode` and takes
 // no entry option, and changing it would put a Kilo edit into an upstream file. This one keeps the same plugins,
 // defines and checks and differs only where marked "Kilo:". Everything that does not depend on the entry (the web
 // UI archive, the embedded PTY binary, the artifact scan, the architecture check) is imported from upstream's
@@ -33,6 +33,11 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { hostMirrorsPlugin } from "../src/mirrors"
 import { KiloBinary } from "../src/binary"
 import { createPluginRuntimePlugin } from "./plugin-runtime"
+import { copyTreeSitterWasms } from "./tree-sitter"
+// Kilo: the sandbox mutation worker, network relay and seccomp helper ship next to the executable.
+import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
+import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
+import { stageBubblewrap } from "./kilocode/bubblewrap" // kilo_port(sandbox:7d95c6cc13bc)
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -56,6 +61,11 @@ const solidPlugin = createSolidTransformPlugin()
 const highlights = Script.preview ? undefined : embed(process.env.OPENCODE_RELEASE_NOTES)
 const releaseAssets = new Map<string, Promise<Map<string, string>>>()
 const modelsSnapshot = modelsSnapshotPlugin(await bundledModelsSnapshot())
+// Kilo: the sandbox helpers are bundled once and copied into every target. kilo_port(sandbox:fb2d03fdb710)
+const [kiloSandboxWorker, kiloSandboxNetwork] = await Promise.all([
+  KiloSandboxWorker.bundle(),
+  KiloSandboxNetwork.bundle(),
+])
 
 const allTargets: {
   os: string
@@ -92,7 +102,7 @@ if (!targets.length) throw new Error(`Unknown build target: ${requestedTarget}`)
 if (!skipInstall)
   await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode/pty@${cliPackage.dependencies["@opencode/pty"]}`
 const appArchive = path.join(dir, ".cache", "bun-app-archive.bin")
-await Bun.write(appArchive, await buildAppArchive(Script.channel, { skipBuild: skipWebUi }))
+await Bun.write(appArchive, await buildAppArchive(Script.channel, Script.version, { skipBuild: skipWebUi }))
 const appAssetsPlugin: BunPlugin = {
   name: "opencode-app-assets",
   setup(build) {
@@ -110,6 +120,18 @@ export default () => readFileSync(archive)`,
   },
 }
 const pluginRuntimePlugin = createPluginRuntimePlugin()
+// Bun drops `export * from "ws"` in this sideEffects-free module, leaving NodeWS.WebSocketServer undefined and
+// failing every WebSocket upgrade in the compiled binary. Bun's built-in ws has no PerMessageDeflate.
+const wsReexportPlugin: BunPlugin = {
+  name: "ws-named-reexports",
+  setup(build) {
+    build.onLoad({ filter: /platform-node-shared[/\\]dist[/\\]NodeWS\.js$/ }, () => ({
+      contents:
+        'export { createWebSocketStream, extension, Receiver, Sender, subprotocol, WebSocket, WebSocketServer } from "ws"',
+      loader: "js",
+    }))
+  },
+}
 
 for (const item of targets) {
   const opencodePty = await resolveOpencodePty({
@@ -153,10 +175,18 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   const name = target.replace(upstreamBinary, "cli")
   const executablePath = await compileExecutable(item)
   console.log(`building ${name}`)
+  // Kilo: Linux targets ship a static Bubblewrap next to the executable, for systems without /usr/bin/bwrap. The
+  // build checks its digest at run time. KILO_SKIP_BUNDLED_BWRAP=1 skips it (the system Bubblewrap is still used).
+  const bwrap =
+    item.os === "linux" && process.env.KILO_SKIP_BUNDLED_BWRAP !== "1"
+      ? await stageBubblewrap(item.arch as "arm64" | "x64", path.join(outdir, name, "bin")) // kilo_port(sandbox:ea078ae48b40)
+      : undefined
   const result = await Bun.build({
     // Kilo: the host entry instead of the upstream CLI entry. It imports the upstream commands and handlers.
     // Upstream's second entrypoint lands next to index.js, where Image.Photon resolves "./photon-worker.js".
-    entrypoints: ["./src/index.ts", "./src/photon-worker.ts"],
+    // Kilo: the codebase indexing worker is the third, resolved the same way as "./indexing-worker.js".
+    // kilo_port(indexing:d76a31906cd4)
+    entrypoints: ["./src/index.ts", "./src/photon-worker.ts", "./src/indexing-worker.ts"],
     tsconfig: "./tsconfig.json",
     plugins: [
       hostMirrorsPlugin,
@@ -166,6 +196,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       parcelWatcherPlugin,
       opencodePtyPlugin,
       pluginRuntimePlugin,
+      wsReexportPlugin,
       simulationGraphPlugin,
       modelsSnapshot,
     ],
@@ -195,6 +226,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     },
     define: {
       KILO_BRANDING_COMPILED: "true",
+      // Kilo: the build channel, which names the session database (src/database.ts).
+      KILO2_CHANNEL: `'${Script.channel}'`,
       OPENCODE_VERSION: `'${Script.version}'`,
       // Kilo: the command name that help and usage text show.
       OPENCODE_CLI_NAME: `'${binary}'`,
@@ -209,6 +242,11 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       // FFF_LIBC selects the fff native lib variant: "musl" or "gnu".
       FFF_LIBC: item.os === "linux" ? `'${item.abi ?? "gnu"}'` : "undefined",
       ...(item.os === "linux" ? { "process.env.OPENTUI_LIBC": JSON.stringify(item.abi ?? "glibc") } : {}),
+      // Kilo: sandbox helper paths, relative to the executable. kilo_port(sandbox:00aa0cba90d1)
+      KILO_SANDBOX_MUTATION_WORKER_PATH: JSON.stringify(KiloSandboxWorker.filename),
+      KILO_SANDBOX_NETWORK_RELAY_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.relay) : "undefined",
+      KILO_SANDBOX_SECCOMP_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.seccomp) : "undefined",
+      KILO_BWRAP_SHA256: bwrap ? `'${bwrap}'` : "undefined",
     },
   })
 
@@ -217,7 +255,27 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     process.exit(1)
   }
   verifySimulationGraph(simulationInputs)
+  // Kilo: copy the sandbox helpers and check that the packaged mutation worker runs.
+  const bin = path.join(outdir, name, "bin")
+  await KiloSandboxWorker.copy(kiloSandboxWorker, bin)
+  if (item.os === "linux") await KiloSandboxNetwork.copy(kiloSandboxNetwork, bin, item.arch as "arm64" | "x64")
+  if (item.os === process.platform && item.arch === process.arch && !item.abi && item.avx2 !== false)
+    await KiloSandboxWorker.smoke(path.join(bin, binary)) // kilo_port(sandbox:980b9e91078b)
+  // Kilo: the tree-sitter grammars for codebase indexing, next to the executable where the engine looks for them.
+  await copyTreeSitterWasms(bin)
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
+
+  // Kilo: a Linux package ships the sandbox runtime helper and Bubblewrap, so its LICENSE carries their notices.
+  if (item.os === "linux") {
+    const content = await Promise.all([
+      Bun.file(path.resolve(import.meta.dirname, "../../../LICENSE")).text(),
+      Bun.file(path.join(bin, "licenses/sandbox-runtime/LICENSE")).text(),
+      ...(bwrap
+        ? ["NOTICE", "COPYING", "MUSL-COPYRIGHT"].map((file) => Bun.file(path.join(bin, "licenses/bubblewrap", file)).text())
+        : []),
+    ])
+    await Bun.write(path.join(outdir, name, "LICENSE"), content.join("\n\n---\n\n"))
+  }
 
   // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
   // dist-tag, so v1's `latest` and `rc` tags do not change.
@@ -227,7 +285,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       {
         name: `@kilocode/${name}`,
         version: Script.version,
-        license: "MIT",
+        license: item.os === "linux" ? "SEE LICENSE IN LICENSE" : "MIT",
         repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" },
         os: [item.os],
         cpu: [item.arch],

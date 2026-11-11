@@ -56,6 +56,9 @@ export function createMcp() {
     return id ? v2.data.location.integration.list()?.find((item) => item.id === id) : undefined
   }
 
+  const canSignIn = (name: string) =>
+    integration(name)?.methods.some((method) => method.type === "oauth") ?? false
+
   async function connect(name: string) {
     mark(setBusy, name, true)
     try {
@@ -162,6 +165,8 @@ export function createMcp() {
   return {
     servers,
     status: (name: string) => server(name)?.status,
+    canSignIn,
+    sync,
     busy,
     removing,
     resetting,

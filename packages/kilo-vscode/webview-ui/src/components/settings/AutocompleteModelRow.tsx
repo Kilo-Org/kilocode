@@ -10,17 +10,20 @@ import { ModelSelectorBase } from "../shared/ModelSelector"
 import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 import SettingsRow from "./SettingsRow"
 
-// SAFETY: ModelSelectorBase reads only id, providerID, name, cost, enabled and status of a model, and id and name of
-// a provider; the autocomplete catalog has no other chat model fields.
-// oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
-const MODELS = AUTOCOMPLETE_SELECTOR_MODELS.map((model) => ({
+// The fixed autocomplete list as catalog rows, with empty values for the chat model fields it does not have.
+const MODELS: ModelInfo[] = AUTOCOMPLETE_SELECTOR_MODELS.map((model) => ({
   id: model.id,
+  modelID: model.id,
   providerID: model.providerID,
   name: model.name,
+  capabilities: { tools: false, input: [], output: [] },
+  variants: [],
+  time: { released: 0 },
   cost: [],
-  enabled: true,
   status: "active",
-})) as unknown as ModelInfo[]
+  enabled: true,
+  limit: { context: 0, output: 0 },
+}))
 // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
 const PROVIDERS = [...new Map(AUTOCOMPLETE_SELECTOR_MODELS.map((model) => [model.providerID, model.providerName]))].map(
   ([id, name]) => ({ id, name }),
@@ -49,6 +52,8 @@ const AutocompleteModelRow: Component = () => {
           models={MODELS}
           providers={PROVIDERS}
           value={value()}
+          favorites={false}
+          placement="bottom-start"
           placeholder={language.t("settings.providers.notSet")}
           label={language.t("settings.autocomplete.model.title")}
           onSelect={(providerID, modelID) => select(providerID, modelID)}

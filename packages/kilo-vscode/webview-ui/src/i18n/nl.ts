@@ -1297,6 +1297,11 @@ export const dict = {
     "Kies of blokken met MCP- en algemene tools standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
+  "settings.display.codeMode.title": "Code Mode-blokken",
+  "settings.display.codeMode.description":
+    "Kies of Code Mode-blokken beginnen met hun tool-aanroepen in een lijst of als één regel. Het script blijft altijd verborgen tot je het opent.",
+  "settings.display.codeMode.expanded": "Uitgeklapt",
+  "settings.display.codeMode.collapsed": "Ingeklapt",
 
   "settings.display.shortcutHints.title": "Sneltoetstips tonen",
   "settings.display.shortcutHints.description":
@@ -1398,6 +1403,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
+  "task.backgroundAgents.promoteFailed": "Deze agent kon niet op de achtergrond doorgaan. Mogelijk is hij al klaar.",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
   "task.backgroundAgents.clearFinished": "Voltooide wissen",
@@ -1529,6 +1535,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systeembrowser",
   "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "chat.reply.toolbar": "Geselecteerde tekst",
+  "chat.reply.quote": "Citeren",
+  "chat.reply.quoteHint": "Citeer in je antwoord",
+  "chat.reply.commentHint": "Deze passage becommentariëren",
+  "chat.reply.copy": "Kopiëren",
+  "chat.reply.sendHint": "Dit commentaar nu naar Kilo sturen",
+  "chat.reply.commentLater": "Bewaren voor je volgende bericht",
+  "chat.reply.count": "Antwoorden ({{count}})",
+  "chat.reply.sendAll": "Alles sturen",
+  "chat.reply.showInChat": "In chat tonen",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
   "browserTab.disabled":

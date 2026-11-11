@@ -24,7 +24,10 @@ export function forkText(input: Pick<ForkHandoffInput, "directory">): string {
 }
 
 export async function recordForkHandoff(input: ForkHandoffInput): Promise<void> {
-  await input.client.session.synthetic(
-    { sessionID: input.sessionId, text: forkText(input) },
-  )
+  // Admit the note without resuming: it reaches the model with the next instruction and must not start a reply.
+  await input.client.session.synthetic({
+    sessionID: input.sessionId,
+    text: forkText(input),
+    resume: false,
+  })
 }

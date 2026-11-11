@@ -128,7 +128,6 @@ export const dict = {
   "agentManager.tab.unpin": "Frigør",
   "agentManager.tab.pinned": "Fastgjort",
   "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Åbn Terminal",
   "agentManager.tab.newOptions": "Flere nye faneindstillinger",
 
   "agentManager.sidebarSearch.label": "Søg i Worktrees og sessioner",
@@ -148,9 +147,6 @@ export const dict = {
   "agentManager.terminal.add": "Ny terminal",
   "agentManager.terminal.empty": "Ingen terminal her endnu",
   "agentManager.terminal.start": "Start terminal",
-  "agentManager.terminal.destination": "Vælg, hvad terminalknappen åbner",
-  "agentManager.terminal.openInVscode": "VS Code-terminal",
-  "agentManager.terminal.openInPanel": "Agent Manager-panel",
   "agentManager.terminal.errorTitle": "Terminalfejl",
   "agentManager.setup.failed": "Opsætning af worktree mislykkedes",
   "agentManager.setup.settingUp": "Opsætter worktree",

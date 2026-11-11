@@ -1,6 +1,7 @@
 // What a session is doing, as the Agent Manager sidebar, tabs and terminals show it. Computed from the v2 store of the
 // session's directory: execution status, pending permissions and forms, a scheduled retry, the last outcome and
 // whether its idle transition was viewed.
+import type { SessionInfo } from "@opencode/client"
 import type { Data } from "@opencode/client/solid"
 
 export type Activity = "waiting" | "error" | "retry" | "busy" | "done" | "scheduled" | "idle"
@@ -65,6 +66,11 @@ function liveActivity(data: Data, sessionID: string, connected: boolean): Activi
 function ownOutcome(data: Data, sessionID: string): Activity {
   const info = data.session.get(sessionID)
   if (!info || data.session.status(sessionID) === "running") return "idle"
+  return activityOf(info)
+}
+
+/** The finished state a session record keeps: used when its store has not loaded the session yet. */
+export function activityOf(info: Pick<SessionInfo, "outcome" | "time">): Activity {
   if (info.outcome === "failed") return "error"
   const idle = info.time.idle
   if (info.outcome === "succeeded" && idle !== undefined && (info.time.viewed ?? 0) < idle) return "done"

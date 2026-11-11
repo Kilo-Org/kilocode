@@ -1,10 +1,15 @@
 // main's sidebar empty state (components/chat/WelcomeEmptyState.tsx) on v2 sessions.
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createSignal, For, Show, type JSX } from "solid-js"
 import { AnimatedKiloLogo, reduced } from "../components/brand/AnimatedKiloLogo"
 import { useLanguage } from "../context/language"
+import { useWorkStyleOptional } from "../context/work-style"
+import { WorkStylePicker } from "../components/shared/WorkStylePicker"
 import { formatRelativeDate } from "../utils/date"
 import { useV2 } from "./client"
+import { FeedbackDialog } from "./feedback"
 
 const RECENT = 3
 
@@ -52,32 +57,66 @@ export function Welcome(props: {
 }) {
   const v2 = useV2()
   const language = useLanguage()
-  const recent = () => v2.data.session.list().filter((item) => !item.parentID).slice(0, RECENT)
+  const dialog = useDialog()
+  const work = useWorkStyleOptional()
+  const loading = () => work?.loading() ?? false
+  const onboarding = () => work?.shouldShowOnboarding() ?? false
+  const recent = () =>
+    v2.data.session
+      .list()
+      .filter((item) => !item.parentID)
+      .slice(0, RECENT)
 
   return (
-    <div class="message-list-empty">
+    <div class="message-list-empty" classList={{ "work-style-empty": onboarding() }}>
       <KiloLogo />
-      <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
-      <Show when={recent().length > 0}>
-        <div class="recent-sessions">
-          <span class="recent-sessions-label">{language.t("session.recent")}</span>
-          <For each={recent()}>
-            {(item) => (
-              <button class="recent-session-item" onClick={() => props.onSelectSession(item.id)}>
-                <span class="recent-session-title" dir="auto">
-                  {item.title || language.t("session.untitled")}
-                </span>
-                <span class="recent-session-date">{formatRelativeDate(new Date(item.time.updated).toISOString())}</span>
+      <Show
+        when={!loading()}
+        fallback={
+          <div class="message-list-loading" role="status">
+            <Spinner />
+            <span>{language.t("session.messages.initializing")}</span>
+          </div>
+        }
+      >
+        <Show
+          when={onboarding()}
+          fallback={
+            <>
+              <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
+              <Show when={recent().length > 0}>
+                <div class="recent-sessions">
+                  <span class="recent-sessions-label">{language.t("session.recent")}</span>
+                  <For each={recent()}>
+                    {(item) => (
+                      <button class="recent-session-item" onClick={() => props.onSelectSession(item.id)}>
+                        <span class="recent-session-title" dir="auto">
+                          {item.title || language.t("session.untitled")}
+                        </span>
+                        <span class="recent-session-date">
+                          {formatRelativeDate(new Date(item.time.updated).toISOString())}
+                        </span>
+                      </button>
+                    )}
+                  </For>
+                  <button class="show-history-btn" onClick={() => props.onShowHistory()}>
+                    <Icon name="history" size="small" />
+                    {language.t("session.showHistory")}
+                  </button>
+                </div>
+              </Show>
+              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+                <Icon name="bubble-5" size="small" />
+                {language.t("feedback.button")}
               </button>
-            )}
-          </For>
-          <button class="show-history-btn" onClick={() => props.onShowHistory()}>
-            <Icon name="history" size="small" />
-            {language.t("session.showHistory")}
-          </button>
-        </div>
+              {props.footer}
+            </>
+          }
+        >
+          <h1 class="work-style-welcome">{language.t("workStyle.onboarding.welcome")}</h1>
+          <WorkStylePicker />
+        </Show>
       </Show>
-      {props.footer}
     </div>
   )
 }

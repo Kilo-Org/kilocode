@@ -238,6 +238,7 @@ describe("workflow model discovery", () => {
         const bus = yield* Bus.Service
         const models: { providerID: string; id: string; variant?: string }[] = []
         const prompts: string[] = []
+        const labels: unknown[] = []
         yield* ConfigCommandPlugin.Plugin.effect(
           host({
             command: {
@@ -254,6 +255,7 @@ describe("workflow model discovery", () => {
               prompt: (input) =>
                 Effect.sync(() => {
                   prompts.push(input.text)
+                  labels.push(input.metadata)
                   return SessionInbox.User.make({
                     id: SessionMessage.ID.make("msg_test"),
                     sessionID: input.sessionID,
@@ -280,6 +282,8 @@ describe("workflow model discovery", () => {
         yield* execute
         expect(models).toEqual([{ providerID: "test", id: "global", variant: "high" }])
         expect(prompts).toEqual(["Project changes"])
+        // The transcript shows `/review changes` instead of the expanded template.
+        expect(labels).toEqual([{ kilo: { injected: { title: "/review changes" } } }])
 
         yield* Effect.promise(() =>
           fs.writeFile(projectConfigFile, JSON.stringify({ commands: { review: { model: "test/project#medium" } } })),
