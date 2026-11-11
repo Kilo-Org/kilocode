@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { project, stream, type Projection } from "../../kilo-ui-base/src/components/markdown-stream"
+import { canReusePendingBlock, project, stream, type Projection } from "../../kilo-ui-base/src/components/markdown-stream"
 
 // A code-heavy answer with the constructs a streaming render must keep: code
 // fences, tables, lists, links, nested markdown and an unterminated fence.
@@ -73,5 +73,14 @@ describe("project", () => {
     const code = settled.blocks.find((block) => block.mode === "code" && block.raw.startsWith("~~~"))
     expect(code?.complete).toBe(true)
     expect(code?.src).toBe("unclosed fence line one\nline two")
+  })
+})
+
+describe("canReusePendingBlock", () => {
+  it("keeps the rendered live tail while it grows", () => {
+    const current = { mode: "live" as const, raw: "Growing para" }
+    expect(canReusePendingBlock(current, { mode: "live", raw: "Growing paragraph", src: "Growing paragraph" })).toBe(true)
+    expect(canReusePendingBlock(current, { mode: "live", raw: "Other", src: "Other" })).toBe(false)
+    expect(canReusePendingBlock(current, { mode: "full", raw: "Growing para", src: "Growing para" })).toBe(false)
   })
 })

@@ -32,9 +32,12 @@ import { KiloWriteToolPlugin } from "./tool-write"
 import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
 import { KiloQuestionPlugin } from "./question"
+import { KiloWakeupPlugin } from "./wakeup"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
+import { KiloSessionDrain } from "./session-drain"
+import { KiloSubagentBackgroundPlugin } from "./subagent-background"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloSandbox } from "./sandbox"
@@ -86,12 +89,18 @@ export const KiloPlugins = [
   KiloAgentManagerPlugin,
   // Per-job list, stop and continue-in-background for the subagents of one session.
   KiloBackgroundJobs.Plugin,
+  // Waits until a session and the work it started have gone quiet. kilo_port(goals:b983b6af7e4b)
+  KiloSessionDrain.Plugin,
+  // Runs subagents in the background unless the call passes `background: false`.
+  KiloSubagentBackgroundPlugin,
   KiloRecallPlugin,
   // v1 enabled codebase indexing through a built-in plugin entry. kilo_port(indexing:2e5dfe2574c6)
   KiloIndexingPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
   KiloQuestionPlugin.Plugin,
+  // Wakeups and cron tasks, and the pending state clients show as scheduled.
+  KiloWakeupPlugin,
   // Kilo Swarm: the shared board of a main session and its subagents.
   KiloBoard.Plugin,
 ] as const

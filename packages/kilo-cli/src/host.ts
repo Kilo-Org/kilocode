@@ -60,6 +60,7 @@ const plugins = makeGlobalNode({
         Bus.Service,
         FSUtil.Service,
         Global.Service,
+        Npm.Service,
         Schedule.Service,
         KiloSessionSync.Service,
         KiloRemote.Service,
@@ -69,6 +70,7 @@ const plugins = makeGlobalNode({
           | Bus.Service
           | FSUtil.Service
           | Global.Service
+          | Npm.Service
           | Schedule.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
@@ -80,6 +82,7 @@ const plugins = makeGlobalNode({
           | Bus.Service
           | FSUtil.Service
           | Global.Service
+          | Npm.Service
           | Schedule.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
@@ -106,7 +109,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
+  deps: [Bus.node, FSUtil.node, Global.node, Npm.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
 })
 
 /**
@@ -137,9 +140,15 @@ export const overrides: LayerNode.Replacements = [
           return {
             ...source,
             operations: () =>
-              source
-                .operations()
-                .pipe(Effect.map((operations) => [{ type: "remove" as const, target: "opencode.plan" }, ...operations])),
+              source.operations().pipe(
+                Effect.map((operations) => [
+                  { type: "remove" as const, target: "opencode.plan" },
+                  // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native schedule
+                  // tools (and their /schedule command) would only duplicate the prompt and the model's choice.
+                  { type: "remove" as const, target: "opencode.tool.schedule" },
+                  ...operations,
+                ]),
+              ),
           }
         }),
       ).pipe(Layer.provide(layer)),

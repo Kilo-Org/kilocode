@@ -75,7 +75,7 @@ export function createSessions(input: {
     activityFor(sessionID: string, info?: Outcome): Activity {
       const item = scope(sessionID)
       if (!item) return info ? activityOf(info) : "idle"
-      const live = sessionActivity(item.data, sessionID, connected())
+      const live = sessionActivity(item.data, sessionID, connected(), item.scheduled(sessionID))
       // Without a loaded session record the store only knows live events; the host catalog keeps the finished state.
       // A loaded record already decided the outcome, including a staged revert that the catalog may not know yet.
       return live === "idle" && info && !item.data.session.get(sessionID) ? activityOf(info) : live

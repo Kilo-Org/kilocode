@@ -138,6 +138,7 @@ export type ToHost =
   | Indexing
   | SidebarWorktree
   | AgentManagerCaffeination
+  | Mention
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
@@ -155,21 +156,21 @@ export type BrowserTab =
   | { type: "browserTab.openExternal"; url: string }
   | { type: "browserTab.reference"; sessionId: string; reference: BrowserReference }
   | BrowserScopeMessage<"browserTab.state">
-  | BrowserScopeMessage<"browserTab.open"> & { url: string }
+  | (BrowserScopeMessage<"browserTab.open"> & { url: string })
   | BrowserScopeMessage<"browserTab.refresh">
   | BrowserScopeMessage<"browserTab.back">
   | BrowserScopeMessage<"browserTab.forward">
   | BrowserScopeMessage<"browserTab.close">
-  | BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" }
-  | BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean }
-  | BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string }
-  | BrowserScopeMessage<"browserTab.viewport"> & {
+  | (BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" })
+  | (BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean })
+  | (BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string })
+  | (BrowserScopeMessage<"browserTab.viewport"> & {
       browserId: string
       navigation: number
       viewport: BrowserViewport
-    }
-  | BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction }
-  | BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number }
+    })
+  | (BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction })
+  | (BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number })
 
 export type BrowserScopeMessage<Type extends string> = {
   type: Type
@@ -222,6 +223,41 @@ export type BrowserInspectionPayload = BrowserScopeMessage<"browserTab.inspectio
 export type BrowserFramePayload = BrowserScopeMessage<"browserTab.frame"> & BrowserFrame
 export type BrowserCursorPayload = BrowserScopeMessage<"browserTab.cursor"> & BrowserCursor
 export type BrowserDevtoolsPayload = BrowserScopeMessage<"browserTab.devtools"> & { browserId: string; url: string }
+/**
+ * The host side of the composer's `@` mentions. `directory` is the directory of the session the composer belongs to,
+ * so an Agent Manager worktree searches its own tree. `sessionID` is left out of the past-chat results.
+ */
+export type Mention =
+  | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string; directory?: string }
+  | { type: "requestSessionSearch"; requestId: string; sessionID?: string; directory?: string }
+  | { type: "requestFilePicker"; requestId: string }
+  /** `agentManagerContext` names the Agent Manager worktree or `local`; the panel has no VS Code terminal of its own. */
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string; agentManagerContext?: string }
+  /** `base` diffs an Agent Manager worktree against its base branch; without it the host resolves the target. */
+  | { type: "requestGitChangesContext"; requestId: string; directory?: string; base?: string }
+
+/** A file search result of the `@` menu. */
+export type FileSearchItem = {
+  path: string
+  type: "file" | "folder" | "opened-file"
+  /** Owning workspace folder name, set only when the workspace has more than one folder. */
+  root?: string
+  /**
+   * Path within the owning folder, set only when `path` is absolute. The webview ranks the whole `@` menu again, and
+   * scoring an absolute path there would let the filesystem prefix match on every entry under that folder.
+   */
+  relative?: string
+}
+
+/** A past chat the `@` menu can reference. */
+export type SessionSearchItem = {
+  id: string
+  title: string
+  updated: number
+  /** Name of the worktree the session runs in, when listed across the worktree family. */
+  worktreeName?: string
+}
+
 /** Codebase indexing consent and project list. The consent itself is machine-local in globalState. */
 export type Indexing =
   | { type: "requestIndexingSettings"; projectId?: string }
@@ -311,7 +347,7 @@ export type ModelPreferenceMessage =
 
 /** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
 export type BrowserOut =
-  | BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean }
+  | (BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean })
   | BrowserStatePayload
   | BrowserFramePayload
   | BrowserCursorPayload
@@ -484,6 +520,15 @@ export type ToWebview =
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
   | { type: "gitChangesStats"; stats?: GitChangesStats }
+  /** Replies to the `@` mention requests, matched by `requestId`. */
+  | { type: "fileSearchResult"; requestId: string; paths: string[]; items?: FileSearchItem[]; dir: string }
+  | { type: "sessionSearchResult"; requestId: string; sessions: SessionSearchItem[] }
+  /** `path` is empty when the dialog was cancelled. */
+  | { type: "filePickerResult"; requestId: string; path: string }
+  | { type: "terminalContextResult"; requestId: string; content: string; truncated: boolean }
+  | { type: "terminalContextError"; requestId: string; error: string }
+  | { type: "gitChangesContextResult"; requestId: string; content: string; truncated: boolean }
+  | { type: "gitChangesContextError"; requestId: string; error: string }
   /** The current branch of the workspace, for the sidebar New Worktree menu. Absent outside a git repository. */
   | { type: "agentManager.repoInfo"; branch?: string }
   /** Progress of a sidebar conversation moving into a worktree. */

@@ -1,5 +1,5 @@
 import type { SessionMessageUser } from "@opencode/client"
-import { UserMessageDisplay, type UserMessagePending } from "@kilocode/kilo-ui/message-part"
+import { UserMessageDisplay, type ToolActions, type UserMessagePending } from "@kilocode/kilo-ui/message-part"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createMemo, createSignal, Show } from "solid-js"
@@ -24,6 +24,8 @@ export function UserMessage(props: {
   /** Whether the current transcript search match is in this row. */
   searchActive?: boolean
   pending?: UserMessagePending
+  /** Opens the files and past chats the message's `@` mentions name. */
+  actions?: ToolActions
 }) {
   const language = useLanguage()
   const vscode = useVSCode()
@@ -122,6 +124,12 @@ export function UserMessage(props: {
           revertDisabled={props.revertDisabled}
           pending={props.pending}
           onOpenImage={openImage}
+          onOpenFile={
+            props.actions?.openFile
+              ? (path) => props.actions?.openFile?.(path, undefined, undefined, props.sessionID)
+              : undefined
+          }
+          onOpenSession={props.actions?.openSession}
         />
       </div>
     </div>

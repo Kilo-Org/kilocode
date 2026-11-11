@@ -1,4 +1,4 @@
-/* Startup Error Banner */
+/* Failure banner: the chat's alert above the composer, with its technical text behind Details */
 .startup-error-banner {
   margin: 8px 12px;
   border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
@@ -9,31 +9,47 @@
 
 .startup-error-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   padding: 8px 10px;
-  cursor: pointer;
-  user-select: none;
   min-width: 0;
 }
 
-.startup-error-title {
+/* The message is the disclosure trigger: the whole sentence reads as the alert, and the technical text
+   stays hidden until asked for. A failure without details keeps the sentence inert. */
+.startup-error-toggle {
+  display: flex;
   flex: 1;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  align-items: flex-start;
+  gap: 6px;
   min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.startup-error-firstline {
-  font-weight: 400;
+.startup-error-toggle:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+.startup-error-message {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--font-weight-medium, 500);
+  line-height: var(--line-height-large);
+  overflow-wrap: anywhere;
 }
 
 .startup-error-chevron {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  margin-top: 2px;
   transition: transform 150ms;
 }
 
@@ -41,7 +57,13 @@
   transform: rotate(90deg);
 }
 
-.startup-error-retry {
+@media (prefers-reduced-motion: reduce) {
+  .startup-error-chevron {
+    transition: none;
+  }
+}
+
+.startup-error-dismiss {
   background: none;
   border: none;
   color: var(--vscode-textLink-foreground);
@@ -51,7 +73,7 @@
   flex-shrink: 0;
 }
 
-.startup-error-retry:hover {
+.startup-error-dismiss:hover {
   text-decoration: underline;
 }
 

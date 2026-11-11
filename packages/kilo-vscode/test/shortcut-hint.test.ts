@@ -17,7 +17,7 @@ const bindings = {
 
 const idle: HintContext = {
   bindings,
-  queue: "⌥↵",
+  alternate: { binding: "⌥↵", label: "queue" },
   focused: true,
   away: false,
   draft: false,
@@ -54,6 +54,11 @@ describe("shortcut hint recommendation", () => {
 
     it("agent runs while the user waits in the prompt: queue the follow-up", () => {
       expect(recommend({ ...idle, busy: true })).toEqual({ binding: "⌥↵", label: "queue" })
+    })
+
+    it("agent runs and Enter queues: suggest steering instead", () => {
+      const alternate = { binding: "⌥↵", label: "steer" } as const
+      expect(recommend({ ...idle, alternate, busy: true })).toEqual(alternate)
     })
 
     it("another session tab is open: show how to switch session tabs", () => {

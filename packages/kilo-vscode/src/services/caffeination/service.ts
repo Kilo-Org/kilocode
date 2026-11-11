@@ -4,6 +4,7 @@ import {
   type CaffeinationDriver,
   type CaffeinationState,
 } from "@kilocode/caffeination"
+import { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import type { AgentManagerConnection } from "../../agent-manager/connection"
 import { feed } from "./feed"
 
@@ -34,12 +35,27 @@ export class CaffeinationService {
       watching: () => this.watching(),
       load: async (dir) => {
         const client = await connection.client()
-        const [sessions, active] = await Promise.all([
+        const [sessions, active, pending] = await Promise.all([
           client.session.list({ directory: dir, parentID: null }),
           client.session.active(),
+          // A server without the wakeup plugin is not an error: the machine simply has no scheduled work here.
+          client
+            .rpc(KiloWakeupRpc.Definition)
+            .pending({ directory: dir }, { location: { directory: dir } })
+            .catch(() => undefined),
         ])
         const ids = new Set((sessions.data ?? []).map((session) => session.id))
-        return new Set(Object.keys(active).filter((id) => ids.has(id)))
+        return {
+          running: new Set(Object.keys(active).filter((id) => ids.has(id))),
+          wake:
+            pending === undefined
+              ? undefined
+              : new Set(
+                  pending.sessions
+                    .filter((item) => item.pending > 0 && ids.has(item.sessionID))
+                    .map((item) => item.sessionID),
+                ),
+        }
       },
       post: (busy) => {
         if (this.busy === busy) return

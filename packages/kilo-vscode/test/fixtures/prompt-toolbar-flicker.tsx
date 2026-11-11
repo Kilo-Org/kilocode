@@ -115,10 +115,13 @@ const workspace = (directory: string) =>
     bindings: () => ({}),
     selection: () => false,
     api: { generate: { text: async () => ({ text: "" }) }, rpc: () => sandbox },
+    // The composer's `@` model reference picker reads the location's model catalog.
+    kiloModels: () => ({ entries: new Map() }),
     data: {
       listen: () => () => undefined,
       on: () => () => undefined,
       session: { get: () => undefined, message: { list: () => [] } },
+      location: { model: { list: () => [] }, provider: { list: () => [] } },
     },
   }) as never
 

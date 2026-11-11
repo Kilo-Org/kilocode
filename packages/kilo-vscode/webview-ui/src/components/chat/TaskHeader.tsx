@@ -47,6 +47,8 @@ interface TaskHeaderProps {
   readonly?: boolean
   /** Whether the Command Palette search toggle reaches this header. A nested view turns it off. */
   searchCommand?: boolean
+  /** Compacts the session on the composer's selection. */
+  onCompact: () => void
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -406,7 +408,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 size="small"
                 variant="ghost"
                 disabled={!canCompact()}
-                onClick={() => void v2.data.session.compact({ sessionID: props.sessionID }).catch(v2.report)}
+                onClick={() => props.onCompact()}
                 aria-label={language.t("command.session.compact")}
               />
             </Tooltip>

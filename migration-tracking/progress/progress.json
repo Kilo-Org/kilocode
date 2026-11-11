@@ -4,47 +4,48 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1927,
-    "total": 9756,
-    "percent": 19.8,
-    "dropped": 98,
+    "done": 1972,
+    "total": 5351,
+    "percent": 36.9,
+    "dropped": 89,
     "kinds": [
       {
         "kind": "module",
-        "done": 1415,
-        "total": 3513
+        "done": 1470,
+        "total": 3272
       },
       {
         "kind": "api",
-        "done": 12,
+        "done": 18,
         "total": 36
       },
       {
         "kind": "patch",
-        "done": 111,
-        "total": 3440
+        "done": 60,
+        "total": 319
       },
       {
         "kind": "test",
-        "done": 389,
-        "total": 2767
+        "done": 424,
+        "total": 1724
       }
     ],
     "landed": {
-      "plugin": 74,
-      "host": 15,
-      "seam": 3,
-      "patch": 6
+      "plugin": 46,
+      "host": 12,
+      "seam": 4,
+      "patch": 2
     },
-    "coreImports": 52,
+    "coreImports": 59,
     "sharedPatches": {
-      "seam": 61,
-      "patch": 46
+      "seam": 74,
+      "patch": 50
     }
   },
   "notCounted": {
     "marker": 561,
-    "branding": 1428
+    "branding": 1428,
+    "unattributed": 4163
   },
   "attribution": {
     "tag": 0,
@@ -64,6 +65,8 @@
     "@opencode/core/credential",
     "@opencode/core/database/database",
     "@opencode/core/database/path",
+    "@opencode/core/database/v1-migration",
+    "@opencode/core/effect/app-node-builder",
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/environment",
     "@opencode/core/file-access",
@@ -73,9 +76,12 @@
     "@opencode/core/job",
     "@opencode/core/location",
     "@opencode/core/location-service-map",
+    "@opencode/core/mcp",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
+    "@opencode/core/plugin",
+    "@opencode/core/plugin/module",
     "@opencode/core/plugin/provider/openai",
     "@opencode/core/plugin/sdk",
     "@opencode/core/plugin/system-prompt/anthropic.txt",
@@ -83,6 +89,7 @@
     "@opencode/core/plugin/system-prompt/gpt.txt",
     "@opencode/core/plugin/system-prompt/kimi.txt",
     "@opencode/core/plugin/system-prompt/trinity.txt",
+    "@opencode/core/project",
     "@opencode/core/provider",
     "@opencode/core/rpc",
     "@opencode/core/schedule",
@@ -101,6 +108,7 @@
     "@opencode/core/tool-output",
     "@opencode/core/tool/plugin/file-diff",
     "@opencode/core/tool/plugin/question",
+    "@opencode/core/tool/plugin/subagent",
     "@opencode/core/tool/plugin/todo",
     "@opencode/core/tool/read-filesystem",
     "@opencode/core/util/wildcard",
@@ -265,7 +273,7 @@
     },
     {
       "feature": "background-jobs",
-      "done": 0,
+      "done": 3,
       "total": 3,
       "dropped": 0,
       "kinds": {
@@ -274,7 +282,7 @@
           "total": 0
         },
         "api": {
-          "done": 0,
+          "done": 3,
           "total": 3
         },
         "patch": {
@@ -313,13 +321,13 @@
     },
     {
       "feature": "board",
-      "done": 0,
-      "total": 14,
-      "dropped": 0,
+      "done": 11,
+      "total": 12,
+      "dropped": 2,
       "kinds": {
         "module": {
-          "done": 0,
-          "total": 6
+          "done": 5,
+          "total": 5
         },
         "api": {
           "done": 0,
@@ -330,8 +338,8 @@
           "total": 0
         },
         "test": {
-          "done": 0,
-          "total": 8
+          "done": 6,
+          "total": 7
         }
       }
     },
@@ -609,7 +617,8 @@
           "done": 0,
           "total": 9
         }
-      }
+      },
+      "excluded": "Deprecated browser UI served at /console (packages/kilo-console, src/kilocode/console). Out of scope: the v2 CLI embeds no web UI (plan.md)."
     },
     {
       "feature": "core-watcher",
@@ -685,12 +694,12 @@
     },
     {
       "feature": "db-preflight",
-      "done": 0,
+      "done": 3,
       "total": 3,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "api": {
@@ -698,11 +707,11 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 1
         }
       }
@@ -986,12 +995,12 @@
     },
     {
       "feature": "goals",
-      "done": 0,
+      "done": 11,
       "total": 21,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 2,
           "total": 9
         },
         "api": {
@@ -999,13 +1008,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 5,
           "total": 6
         },
         "test": {
-          "done": 0,
+          "done": 4,
           "total": 6
         }
+      },
+      "landed": {
+        "plugin": 7,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -1184,13 +1199,13 @@
     },
     {
       "feature": "marketplace",
-      "done": 9,
-      "total": 11,
-      "dropped": 9,
+      "done": 14,
+      "total": 14,
+      "dropped": 6,
       "kinds": {
         "module": {
-          "done": 4,
-          "total": 6
+          "done": 8,
+          "total": 8
         },
         "api": {
           "done": 3,
@@ -1201,8 +1216,8 @@
           "total": 0
         },
         "test": {
-          "done": 2,
-          "total": 2
+          "done": 3,
+          "total": 3
         }
       }
     },
@@ -1484,12 +1499,12 @@
     },
     {
       "feature": "plugin",
-      "done": 9,
+      "done": 12,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 8,
+          "done": 9,
           "total": 26
         },
         "api": {
@@ -1497,13 +1512,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 2
         },
         "test": {
-          "done": 1,
+          "done": 2,
           "total": 6
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 1,
+        "patch": 0
       }
     },
     {
@@ -1580,12 +1601,12 @@
     },
     {
       "feature": "provider",
-      "done": 0,
+      "done": 1,
       "total": 68,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 16
         },
         "api": {
@@ -1916,7 +1937,7 @@
     },
     {
       "feature": "session",
-      "done": 4,
+      "done": 7,
       "total": 113,
       "dropped": 2,
       "kinds": {
@@ -1925,7 +1946,7 @@
           "total": 23
         },
         "api": {
-          "done": 0,
+          "done": 3,
           "total": 4
         },
         "patch": {
@@ -1940,12 +1961,12 @@
     },
     {
       "feature": "session-export",
-      "done": 0,
+      "done": 2,
       "total": 53,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 27
         },
         "api": {
@@ -1957,7 +1978,7 @@
           "total": 1
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 25
         }
       }
@@ -2330,12 +2351,12 @@
     },
     {
       "feature": "tool",
-      "done": 21,
+      "done": 22,
       "total": 109,
       "dropped": 2,
       "kinds": {
         "module": {
-          "done": 12,
+          "done": 13,
           "total": 61
         },
         "api": {
@@ -2438,12 +2459,12 @@
     },
     {
       "feature": "ui",
-      "done": 146,
+      "done": 151,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 145,
+          "done": 149,
           "total": 248
         },
         "api": {
@@ -2455,3644 +2476,8 @@
           "total": 1
         },
         "test": {
-          "done": 1,
+          "done": 2,
           "total": 18
-        }
-      }
-    },
-    {
-      "feature": "unattributed:acp",
-      "done": 0,
-      "total": 19,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 19
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:agent",
-      "done": 21,
-      "total": 23,
-      "dropped": 11,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 21,
-          "total": 23
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 7,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:auth",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:bus",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:cli",
-      "done": 0,
-      "total": 216,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 216
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:client/generated-effect",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:client/index",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:client/pkg",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:client/test",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 4
-        }
-      }
-    },
-    {
-      "feature": "unattributed:codemode/pkg",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:command",
-      "done": 0,
-      "total": 13,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 13
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:config",
-      "done": 3,
-      "total": 130,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 3,
-          "total": 130
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 1,
-        "host": 2,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:containers/pkg",
-      "done": 0,
-      "total": 9,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 9
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:containers/script",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:control-plane",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/aisdk",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/background-job",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/config",
-      "done": 0,
-      "total": 10,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 10
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/control-plane",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/credential",
-      "done": 0,
-      "total": 14,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 14
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/cross-spawn-spawner",
-      "done": 0,
-      "total": 8,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 8
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/database",
-      "done": 1,
-      "total": 5,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 1,
-          "total": 5
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 0,
-        "host": 1,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:core/effect",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/event",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/filesystem",
-      "done": 0,
-      "total": 18,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 18
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/flag",
-      "done": 0,
-      "total": 11,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 11
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/fs-util",
-      "done": 0,
-      "total": 5,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 5
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/global",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/image",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/installation",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/integration",
-      "done": 0,
-      "total": 9,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 9
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/location-services",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/models-dev",
-      "done": 0,
-      "total": 12,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 12
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/pkg",
-      "done": 0,
-      "total": 20,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 20
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/plugin",
-      "done": 0,
-      "total": 20,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 20
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/provider",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/pty",
-      "done": 0,
-      "total": 22,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 22
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/reference",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/repository-cache",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/ripgrep",
-      "done": 0,
-      "total": 20,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 20
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/schema",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/script",
-      "done": 0,
-      "total": 5,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 5
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/session",
-      "done": 0,
-      "total": 51,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 51
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/state",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/test",
-      "done": 0,
-      "total": 118,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 118
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/tool",
-      "done": 0,
-      "total": 54,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 54
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/util",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:core/v1",
-      "done": 7,
-      "total": 50,
-      "dropped": 1,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 7,
-          "total": 50
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 5,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:effect",
-      "done": 0,
-      "total": 33,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 33
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:effect-drizzle-sqlite/pkg",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:effect-drizzle-sqlite/sqlite-core",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:effect-drizzle-sqlite/test",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 1
-        }
-      }
-    },
-    {
-      "feature": "unattributed:effect-sqlite-node/pkg",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:event-v2-bridge",
-      "done": 0,
-      "total": 9,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 9
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:format",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:http-recorder/pkg",
-      "done": 0,
-      "total": 9,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 9
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:http-recorder/test",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 3
-        }
-      }
-    },
-    {
-      "feature": "unattributed:http-recorder/websocket",
-      "done": 0,
-      "total": 7,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 7
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:httpapi-codegen/index",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:httpapi-codegen/pkg",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:httpapi-codegen/test",
-      "done": 0,
-      "total": 6,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 6
-        }
-      }
-    },
-    {
-      "feature": "unattributed:id",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ide",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:image",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:index",
-      "done": 0,
-      "total": 6,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 6
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:installation",
-      "done": 0,
-      "total": 25,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 25
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/pkg",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/protocols",
-      "done": 0,
-      "total": 16,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 16
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/provider-error",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/providers",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/schema",
-      "done": 0,
-      "total": 5,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 5
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/script",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:llm/test",
-      "done": 0,
-      "total": 13,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 13
-        }
-      }
-    },
-    {
-      "feature": "unattributed:lsp",
-      "done": 0,
-      "total": 12,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 12
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:mcp",
-      "done": 0,
-      "total": 82,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 82
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:opencode/pkg",
-      "done": 0,
-      "total": 72,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 72
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:permission",
-      "done": 0,
-      "total": 36,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 36
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:plugin",
-      "done": 0,
-      "total": 51,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 51
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:plugin/index",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:plugin/pkg",
-      "done": 0,
-      "total": 6,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 6
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:plugin/script",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:plugin/tui",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:project",
-      "done": 0,
-      "total": 22,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 22
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:protocol/api",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:protocol/groups",
-      "done": 0,
-      "total": 10,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 10
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:protocol/pkg",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:provider",
-      "done": 0,
-      "total": 88,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 88
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:question",
-      "done": 0,
-      "total": 8,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 8
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/command",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/durable-event-manifest",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/event-manifest",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/file-diff",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/llm",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/mcp-event",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/pkg",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/pty",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/revert",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/server-event",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/session-event",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/session-status-event",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:schema/v1",
-      "done": 1,
-      "total": 11,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 1,
-          "total": 11
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 1,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:schema/worktree-event",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:script",
-      "done": 0,
-      "total": 54,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 54
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:script/index",
-      "done": 0,
-      "total": 5,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 5
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:script/pkg",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:sdk-next/pkg",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:sdk-next/test",
-      "done": 0,
-      "total": 8,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 8
-        }
-      }
-    },
-    {
-      "feature": "unattributed:sdk/pkg",
-      "done": 0,
-      "total": 21,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 21
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:server",
-      "done": 0,
-      "total": 173,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 173
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:server/cors",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:server/handlers",
-      "done": 0,
-      "total": 7,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 7
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:server/location",
-      "done": 0,
-      "total": 5,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 5
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:server/pkg",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:server/routes",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:session",
-      "done": 4,
-      "total": 449,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 4,
-          "total": 449
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 4,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:session-ui/components",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:session-ui/pkg",
-      "done": 0,
-      "total": 6,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 6
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:session-ui/v2",
-      "done": 0,
-      "total": 18,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 17
-        },
-        "test": {
-          "done": 0,
-          "total": 1
-        }
-      }
-    },
-    {
-      "feature": "unattributed:share",
-      "done": 0,
-      "total": 6,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 6
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:skill",
-      "done": 0,
-      "total": 39,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 39
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:snapshot",
-      "done": 0,
-      "total": 67,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 67
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:storage",
-      "done": 0,
-      "total": 13,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 13
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:storybook/pkg",
-      "done": 0,
-      "total": 2,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 2
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:test",
-      "done": 0,
-      "total": 821,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 821
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tool",
-      "done": 3,
-      "total": 237,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 3,
-          "total": 237
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 3,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:tui/app",
-      "done": 0,
-      "total": 24,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 24
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/component",
-      "done": 13,
-      "total": 141,
-      "dropped": 1,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 13,
-          "total": 141
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 13,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:tui/config",
-      "done": 0,
-      "total": 11,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 11
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/context",
-      "done": 0,
-      "total": 101,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 101
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/feature-plugins",
-      "done": 0,
-      "total": 16,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 16
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/pkg",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/plugin",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/prompt",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/routes",
-      "done": 1,
-      "total": 97,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 1,
-          "total": 97
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 1,
-        "host": 0,
-        "seam": 0,
-        "patch": 0
-      }
-    },
-    {
-      "feature": "unattributed:tui/runtime",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/test",
-      "done": 0,
-      "total": 55,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 0
-        },
-        "test": {
-          "done": 0,
-          "total": 55
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/theme",
-      "done": 0,
-      "total": 4,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 4
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:tui/ui",
-      "done": 4,
-      "total": 19,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 4,
-          "total": 19
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      },
-      "landed": {
-        "plugin": 0,
-        "host": 0,
-        "seam": 0,
-        "patch": 4
-      }
-    },
-    {
-      "feature": "unattributed:tui/util",
-      "done": 0,
-      "total": 3,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 3
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/assets",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/components",
-      "done": 0,
-      "total": 88,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 88
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/context",
-      "done": 0,
-      "total": 11,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 11
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/i18n",
-      "done": 0,
-      "total": 78,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 78
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/pkg",
-      "done": 0,
-      "total": 16,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 16
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/styles",
-      "done": 0,
-      "total": 7,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 7
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/theme",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:ui/v2",
-      "done": 0,
-      "total": 1,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 1
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:util",
-      "done": 0,
-      "total": 15,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 15
-        },
-        "test": {
-          "done": 0,
-          "total": 0
-        }
-      }
-    },
-    {
-      "feature": "unattributed:worktree",
-      "done": 0,
-      "total": 7,
-      "dropped": 0,
-      "kinds": {
-        "module": {
-          "done": 0,
-          "total": 0
-        },
-        "api": {
-          "done": 0,
-          "total": 0
-        },
-        "patch": {
-          "done": 0,
-          "total": 7
-        },
-        "test": {
-          "done": 0,
-          "total": 0
         }
       }
     },
@@ -6146,13 +2531,13 @@
     },
     {
       "feature": "vscode",
-      "done": 1258,
-      "total": 2022,
-      "dropped": 35,
+      "done": 1313,
+      "total": 2017,
+      "dropped": 40,
       "kinds": {
         "module": {
-          "done": 1012,
-          "total": 1419
+          "done": 1047,
+          "total": 1418
         },
         "api": {
           "done": 0,
@@ -6163,8 +2548,8 @@
           "total": 0
         },
         "test": {
-          "done": 246,
-          "total": 603
+          "done": 266,
+          "total": 599
         }
       }
     },
@@ -6214,7 +2599,8 @@
           "done": 0,
           "total": 0
         }
-      }
+      },
+      "excluded": "Component library of the deprecated browser UI (packages/kilo-web-ui, imported only by packages/kilo-console). Out of scope: the v2 CLI embeds no web UI (plan.md)."
     },
     {
       "feature": "worktree",
@@ -6247,116 +2633,27 @@
       }
     }
   ],
-  "landed": {
-    "patch:agent-manager:648a508ad347": "plugin",
-    "patch:agent:2e5632e7bfc6": "plugin",
-    "patch:cli:66a6b3781917": "patch",
-    "patch:cli:fd8272d869ad": "plugin",
-    "patch:components:06ac8868d98e": "patch",
-    "patch:gateway:0278ba0eb6aa": "plugin",
-    "patch:gateway:17e39e074eaf": "plugin",
-    "patch:gateway:1995b11b5cdd": "plugin",
-    "patch:gateway:50352226b43c": "plugin",
-    "patch:gateway:5187eb3f1516": "plugin",
-    "patch:gateway:59f57027c538": "plugin",
-    "patch:gateway:73ba28ce78a5": "plugin",
-    "patch:gateway:742c02b40457": "plugin",
-    "patch:gateway:d29cb22ad5f6": "plugin",
-    "patch:gateway:e19fc2acea57": "plugin",
-    "patch:gateway:e8673ed1650b": "plugin",
-    "patch:gateway:f983d8f993c8": "plugin",
-    "patch:global:0e189a57d108": "host",
-    "patch:global:2886e1a24503": "host",
-    "patch:global:9f5a3867e9ba": "host",
-    "patch:global:b9f635c56864": "host",
-    "patch:indexing:2e5dfe2574c6": "plugin",
-    "patch:indexing:854fbb30ce6c": "plugin",
-    "patch:indexing:987c9e6c9e85": "plugin",
-    "patch:indexing:9e6d17f27b30": "plugin",
-    "patch:indexing:d76a31906cd4": "host",
-    "patch:indexing:fe813c19ebaf": "plugin",
-    "patch:notebook:91a426486dc8": "plugin",
-    "patch:oauth:3ad23f430831": "seam",
-    "patch:oauth:513c5db12e0f": "seam",
-    "patch:oauth:62e32555f6d9": "host",
-    "patch:oauth:ee5e067b8d7b": "seam",
-    "patch:provider-usage:b0945f511fb3": "plugin",
-    "patch:provider-usage:ce8e021f1ef6": "plugin",
-    "patch:review:efc710228c1f": "plugin",
-    "patch:sandbox:00aa0cba90d1": "host",
-    "patch:sandbox:37cf5fea540a": "plugin",
-    "patch:sandbox:41a5c4f8070a": "plugin",
-    "patch:sandbox:4918d15ae745": "plugin",
-    "patch:sandbox:7d95c6cc13bc": "host",
-    "patch:sandbox:859933ff55db": "plugin",
-    "patch:sandbox:980b9e91078b": "host",
-    "patch:sandbox:b09868b61af4": "host",
-    "patch:sandbox:b534aff3ebec": "plugin",
-    "patch:sandbox:d1999e0669a5": "plugin",
-    "patch:sandbox:ea078ae48b40": "host",
-    "patch:sandbox:fb2d03fdb710": "host",
-    "patch:sandbox:fd6329a01ac1": "plugin",
-    "patch:server:5e0f8563b425": "plugin",
-    "patch:snapshot:80d332891272": "plugin",
-    "patch:snapshot:8579451b046f": "plugin",
-    "patch:tool:fabed9da976a": "plugin",
-    "patch:tui:c29e2d297ca2": "plugin",
-    "patch:unattributed:agent:161afe543464": "plugin",
-    "patch:unattributed:agent:55cce67688d4": "plugin",
-    "patch:unattributed:agent:655072363498": "plugin",
-    "patch:unattributed:agent:6f9571fe6129": "plugin",
-    "patch:unattributed:agent:80e846e9fd1c": "plugin",
-    "patch:unattributed:agent:a91ca8efa1b6": "plugin",
-    "patch:unattributed:agent:b6727a425792": "plugin",
-    "patch:unattributed:config:546539fc1643": "host",
-    "patch:unattributed:config:73db79553730": "plugin",
-    "patch:unattributed:config:8cdbdec70393": "host",
-    "patch:unattributed:core/database:a155cf41e765": "host",
-    "patch:unattributed:core/v1:159079a2d8a3": "plugin",
-    "patch:unattributed:core/v1:2e351a955982": "plugin",
-    "patch:unattributed:core/v1:a177a3c0a84c": "plugin",
-    "patch:unattributed:core/v1:a4a32558d64b": "plugin",
-    "patch:unattributed:core/v1:fb80dc4c3dd4": "plugin",
-    "patch:unattributed:schema/v1:04e56db46d79": "plugin",
-    "patch:unattributed:session:13cc4c3e6a51": "plugin",
-    "patch:unattributed:session:142910b3fc8c": "plugin",
-    "patch:unattributed:session:5dd7101d7cc6": "plugin",
-    "patch:unattributed:tool:0bc16fea6c47": "plugin",
-    "patch:unattributed:tool:9e6deaf29658": "plugin",
-    "patch:unattributed:tool:d6a5d2974993": "plugin",
-    "patch:unattributed:tui/component:013e56c6e70d": "plugin",
-    "patch:unattributed:tui/component:361708efa0db": "plugin",
-    "patch:unattributed:tui/component:3bd2c832bb54": "plugin",
-    "patch:unattributed:tui/component:442c6f2a6ad9": "plugin",
-    "patch:unattributed:tui/component:5c55d556d8ae": "plugin",
-    "patch:unattributed:tui/component:7fb2970f1e39": "plugin",
-    "patch:unattributed:tui/component:8356b283bea4": "plugin",
-    "patch:unattributed:tui/component:85b11084275d": "plugin",
-    "patch:unattributed:tui/component:9a58930c75d8": "plugin",
-    "patch:unattributed:tui/component:9e2836eb85dc": "plugin",
-    "patch:unattributed:tui/component:a277acf3a84b": "plugin",
-    "patch:unattributed:tui/component:c8cf17d43819": "plugin",
-    "patch:unattributed:tui/component:d10b36aa74a5": "plugin",
-    "patch:unattributed:tui/routes:667ed16d042a": "plugin",
-    "patch:unattributed:tui/ui:858635f51958": "patch",
-    "patch:unattributed:tui/ui:aac5db9863ac": "patch",
-    "patch:unattributed:tui/ui:acda41f897d2": "patch",
-    "patch:worktree:34f2839b6fa6": "plugin"
-  },
   "done": [
     "api:GET /kilocode/agent-manager",
+    "api:GET /kilocode/background-jobs",
     "api:GET /kilocode/marketplace",
     "api:GET /kilocode/provider-usage",
+    "api:GET /kilocode/session/{sessionID}/board",
     "api:POST /kilocode/agent-manager/{requestID}/reject",
     "api:POST /kilocode/agent-manager/{requestID}/reply",
     "api:POST /kilocode/agent/remove",
+    "api:POST /kilocode/background-jobs/{jobID}/cancel",
+    "api:POST /kilocode/background-jobs/{jobID}/promote",
     "api:POST /kilocode/marketplace/install",
     "api:POST /kilocode/marketplace/remove",
     "api:POST /kilocode/provider-usage/refresh",
+    "api:POST /kilocode/session/{sessionID}/board/reset",
+    "api:POST /kilocode/session/{sessionID}/drain",
     "api:POST /kilocode/skill/remove",
     "api:POST /kilocode/snapshot/remove",
     "api:POST /kilocode/worktree/teardown",
     "module:packages/core/src/kilocode/caffeination.ts",
+    "module:packages/core/src/kilocode/db-preflight.ts",
     "module:packages/core/src/kilocode/global.ts",
     "module:packages/core/src/kilocode/oauth/page.ts",
     "module:packages/core/src/kilocode/provider-usage.ts",
@@ -6365,6 +2662,8 @@
     "module:packages/core/src/kilocode/provider-usage/minimax/native.ts",
     "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts",
     "module:packages/core/src/kilocode/spotlight.ts",
+    "module:packages/core/test/kilocode/config-shared-agent-board.test.ts",
+    "module:packages/core/test/kilocode/db-preflight.test.ts",
     "module:packages/core/test/kilocode/global.test.ts",
     "module:packages/core/test/kilocode/linux-sandbox.test.ts",
     "module:packages/kilo-gateway/src/api/constants.ts",
@@ -6584,6 +2883,7 @@
     "module:packages/kilo-ui/src/components/basic-tool.css",
     "module:packages/kilo-ui/src/components/basic-tool.tsx",
     "module:packages/kilo-ui/src/components/board-message.css",
+    "module:packages/kilo-ui/src/components/board-message.tsx",
     "module:packages/kilo-ui/src/components/button.css",
     "module:packages/kilo-ui/src/components/button.tsx",
     "module:packages/kilo-ui/src/components/card.css",
@@ -6607,6 +2907,7 @@
     "module:packages/kilo-ui/src/components/dropdown-menu.css",
     "module:packages/kilo-ui/src/components/dropdown-menu.tsx",
     "module:packages/kilo-ui/src/components/error-details.css",
+    "module:packages/kilo-ui/src/components/error-details.tsx",
     "module:packages/kilo-ui/src/components/file-icon.tsx",
     "module:packages/kilo-ui/src/components/file.tsx",
     "module:packages/kilo-ui/src/components/hover-card.tsx",
@@ -6623,6 +2924,8 @@
     "module:packages/kilo-ui/src/components/list.tsx",
     "module:packages/kilo-ui/src/components/markdown.css",
     "module:packages/kilo-ui/src/components/markdown.tsx",
+    "module:packages/kilo-ui/src/components/message-highlight.test.ts",
+    "module:packages/kilo-ui/src/components/message-highlight.ts",
     "module:packages/kilo-ui/src/components/message-part.css",
     "module:packages/kilo-ui/src/components/message-part.tsx",
     "module:packages/kilo-ui/src/components/message-row.css",
@@ -6667,6 +2970,7 @@
     "module:packages/kilo-ui/src/components/tool-utils.ts",
     "module:packages/kilo-ui/src/components/tooltip.css",
     "module:packages/kilo-ui/src/components/tooltip.tsx",
+    "module:packages/kilo-ui/src/context/board-navigation.tsx",
     "module:packages/kilo-ui/src/context/clipboard.tsx",
     "module:packages/kilo-ui/src/context/code.tsx",
     "module:packages/kilo-ui/src/context/dialog.tsx",
@@ -6736,6 +3040,7 @@
     "module:packages/kilo-vscode/src/DiffVirtualProvider.ts",
     "module:packages/kilo-vscode/src/DocumentViewerProvider.ts",
     "module:packages/kilo-vscode/src/MarketplacePanelProvider.ts",
+    "module:packages/kilo-vscode/src/SubAgentViewerProvider.ts",
     "module:packages/kilo-vscode/src/agent-manager/AgentManagerProvider.ts",
     "module:packages/kilo-vscode/src/agent-manager/GitOps.ts",
     "module:packages/kilo-vscode/src/agent-manager/GitStatsPoller.ts",
@@ -6851,6 +3156,7 @@
     "module:packages/kilo-vscode/src/agent-manager/tool-project.ts",
     "module:packages/kilo-vscode/src/agent-manager/tool-start.ts",
     "module:packages/kilo-vscode/src/agent-manager/types.ts",
+    "module:packages/kilo-vscode/src/agent-manager/user-keybindings.ts",
     "module:packages/kilo-vscode/src/agent-manager/vscode-host.ts",
     "module:packages/kilo-vscode/src/agent-manager/worktree-activity.ts",
     "module:packages/kilo-vscode/src/agent-manager/worktree-create.ts",
@@ -6895,8 +3201,15 @@
     "module:packages/kilo-vscode/src/indexing-consent.ts",
     "module:packages/kilo-vscode/src/kilo-provider/auto-approve.ts",
     "module:packages/kilo-vscode/src/kilo-provider/config-file.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/file-picker.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/file-search-items.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/file-search-results.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/file-search.ts",
     "module:packages/kilo-vscode/src/kilo-provider/font-size.ts",
     "module:packages/kilo-vscode/src/kilo-provider/fork-session.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/git-changes-context.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/git-changes-request.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/git-changes-target.ts",
     "module:packages/kilo-vscode/src/kilo-provider/git-status.ts",
     "module:packages/kilo-vscode/src/kilo-provider/indexing-settings.ts",
     "module:packages/kilo-vscode/src/kilo-provider/mcp-oauth.ts",
@@ -6906,7 +3219,10 @@
     "module:packages/kilo-vscode/src/kilo-provider/push-fixes-settings.ts",
     "module:packages/kilo-vscode/src/kilo-provider/remove-config-item.ts",
     "module:packages/kilo-vscode/src/kilo-provider/save-image.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/session-board.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/session-search.ts",
     "module:packages/kilo-vscode/src/kilo-provider/shortcut-context.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/shortcut-hints-settings.ts",
     "module:packages/kilo-vscode/src/kilo-provider/work-style-apply-handler.ts",
     "module:packages/kilo-vscode/src/kilo-provider/work-style-apply.ts",
     "module:packages/kilo-vscode/src/kilo-provider/work-style.ts",
@@ -7243,6 +3559,7 @@
     "module:packages/kilo-vscode/src/shared/custom-provider.ts",
     "module:packages/kilo-vscode/src/shared/fetch-models.ts",
     "module:packages/kilo-vscode/src/shared/image-data-url.ts",
+    "module:packages/kilo-vscode/src/shared/injected-prompt.ts",
     "module:packages/kilo-vscode/src/shared/pr-comment-actions.ts",
     "module:packages/kilo-vscode/src/shared/pr-comment-preview.ts",
     "module:packages/kilo-vscode/src/shared/pr-patch.ts",
@@ -7268,6 +3585,7 @@
     "module:packages/kilo-vscode/tests/fixtures/marketplace-install-modal.tsx",
     "module:packages/kilo-vscode/tests/fixtures/node.ts",
     "module:packages/kilo-vscode/tests/fixtures/worktree-references.ts",
+    "module:packages/kilo-vscode/tests/prompt-rail.spec.ts",
     "module:packages/kilo-vscode/tests/setup/vscode-mock.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-ambient-setup.test.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-diff-scope-state.test.ts",
@@ -7342,6 +3660,7 @@
     "module:packages/kilo-vscode/tests/unit/autocomplete-settings-message.test.ts",
     "module:packages/kilo-vscode/tests/unit/autocomplete-statusbar-utils.test.ts",
     "module:packages/kilo-vscode/tests/unit/autocomplete-telemetry-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/background-agents.test.ts",
     "module:packages/kilo-vscode/tests/unit/base-branch.test.ts",
     "module:packages/kilo-vscode/tests/unit/branch-naming.test.ts",
     "module:packages/kilo-vscode/tests/unit/browser-automation-chrome-setting.test.ts",
@@ -7365,6 +3684,7 @@
     "module:packages/kilo-vscode/tests/unit/code-context.test.ts",
     "module:packages/kilo-vscode/tests/unit/config-scope.test.ts",
     "module:packages/kilo-vscode/tests/unit/config-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/context-requests.test.ts",
     "module:packages/kilo-vscode/tests/unit/continue-in-worktree.test.ts",
     "module:packages/kilo-vscode/tests/unit/custom-provider-dialog-validate.test.ts",
     "module:packages/kilo-vscode/tests/unit/custom-provider.test.ts",
@@ -7380,7 +3700,13 @@
     "module:packages/kilo-vscode/tests/unit/edit-preview.test.ts",
     "module:packages/kilo-vscode/tests/unit/env-copy.test.ts",
     "module:packages/kilo-vscode/tests/unit/escape-regexp.test.ts",
+    "module:packages/kilo-vscode/tests/unit/file-mention-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/file-search-items.test.ts",
+    "module:packages/kilo-vscode/tests/unit/file-search-results.test.ts",
+    "module:packages/kilo-vscode/tests/unit/file-search.test.ts",
     "module:packages/kilo-vscode/tests/unit/fork-session.test.ts",
+    "module:packages/kilo-vscode/tests/unit/format-keybinding.test.ts",
+    "module:packages/kilo-vscode/tests/unit/git-context.test.ts",
     "module:packages/kilo-vscode/tests/unit/git-executable.test.ts",
     "module:packages/kilo-vscode/tests/unit/git-import.test.ts",
     "module:packages/kilo-vscode/tests/unit/git-ops.test.ts",
@@ -7392,6 +3718,7 @@
     "module:packages/kilo-vscode/tests/unit/indexing-settings-message.test.ts",
     "module:packages/kilo-vscode/tests/unit/indexing-tab-state.test.ts",
     "module:packages/kilo-vscode/tests/unit/indexing-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/injected-prompt.test.ts",
     "module:packages/kilo-vscode/tests/unit/kilo-provider-notifications.test.ts",
     "module:packages/kilo-vscode/tests/unit/local-diff.test.ts",
     "module:packages/kilo-vscode/tests/unit/local-tabs.test.ts",
@@ -7412,6 +3739,7 @@
     "module:packages/kilo-vscode/tests/unit/notebook-core.test.ts",
     "module:packages/kilo-vscode/tests/unit/open-config.test.ts",
     "module:packages/kilo-vscode/tests/unit/open-plan.test.ts",
+    "module:packages/kilo-vscode/tests/unit/path-mentions.test.ts",
     "module:packages/kilo-vscode/tests/unit/permission-editor.test.ts",
     "module:packages/kilo-vscode/tests/unit/pr-actions.test.ts",
     "module:packages/kilo-vscode/tests/unit/pr-check-feedback.test.ts",
@@ -7425,7 +3753,10 @@
     "module:packages/kilo-vscode/tests/unit/project-avatar.test.ts",
     "module:packages/kilo-vscode/tests/unit/prompt-history-storage.test.ts",
     "module:packages/kilo-vscode/tests/unit/prompt-history.test.ts",
+    "module:packages/kilo-vscode/tests/unit/prompt-input-bidirectional.test.ts",
     "module:packages/kilo-vscode/tests/unit/prompt-input-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/prompt-mention-drop.test.ts",
+    "module:packages/kilo-vscode/tests/unit/prompt-rail.test.ts",
     "module:packages/kilo-vscode/tests/unit/provider-usage.test.ts",
     "module:packages/kilo-vscode/tests/unit/provider-visibility.test.ts",
     "module:packages/kilo-vscode/tests/unit/pty-cleanup.test.ts",
@@ -7447,22 +3778,28 @@
     "module:packages/kilo-vscode/tests/unit/script-terminal-manager.test.ts",
     "module:packages/kilo-vscode/tests/unit/search-match.test.ts",
     "module:packages/kilo-vscode/tests/unit/session-preview-playback.test.ts",
+    "module:packages/kilo-vscode/tests/unit/session-search.test.ts",
     "module:packages/kilo-vscode/tests/unit/settings-io.test.ts",
     "module:packages/kilo-vscode/tests/unit/setup-script-task.test.ts",
+    "module:packages/kilo-vscode/tests/unit/shortcut-hint.test.ts",
     "module:packages/kilo-vscode/tests/unit/source-controller.test.ts",
     "module:packages/kilo-vscode/tests/unit/speech-to-text-capture.test.ts",
     "module:packages/kilo-vscode/tests/unit/speech-to-text-catalog.test.ts",
     "module:packages/kilo-vscode/tests/unit/subagent-tabs.test.ts",
     "module:packages/kilo-vscode/tests/unit/support-prompt.test.ts",
     "module:packages/kilo-vscode/tests/unit/tab-navigation.test.ts",
+    "module:packages/kilo-vscode/tests/unit/terminal-context-utils.test.ts",
+    "module:packages/kilo-vscode/tests/unit/terminal-truncate.test.ts",
     "module:packages/kilo-vscode/tests/unit/todo-dock.test.ts",
     "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts",
     "module:packages/kilo-vscode/tests/unit/tool-default-open.test.ts",
     "module:packages/kilo-vscode/tests/unit/transcript-parts.test.ts",
     "module:packages/kilo-vscode/tests/unit/transcript-search-text.test.ts",
+    "module:packages/kilo-vscode/tests/unit/use-file-mention.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-paste-collapse.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts",
     "module:packages/kilo-vscode/tests/unit/use-speech-to-text.test.ts",
+    "module:packages/kilo-vscode/tests/unit/user-keybindings.test.ts",
     "module:packages/kilo-vscode/tests/unit/work-style-presets.test.ts",
     "module:packages/kilo-vscode/tests/unit/work-style-state.test.ts",
     "module:packages/kilo-vscode/tests/unit/working-indicator.test.ts",
@@ -7737,26 +4074,37 @@
     "module:packages/kilo-vscode/webview-ui/src/App.tsx",
     "module:packages/kilo-vscode/webview-ui/src/assets.d.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/brand/AnimatedKiloLogo.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/AgentStack.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/CodeContextChips.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/ContextProgress.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/KiloNotifications.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PermissionCommand.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptHint.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptRail.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptSelectors.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptShowMore.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/ReviewComments.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionMentionPicker.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionTab.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionTabMenu.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionTabStrip.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionTabSwitcher.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/SwarmBoard.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TabDnd.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskHeader.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskTimeline.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskUsage.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TranscriptSearch.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/WorktreeMentionPicker.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/background-agents.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/background-jobs.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/index.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/open-subagent.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-fold.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-input-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-rail.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/todo/TodoChip.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/todo/todo-dock.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/tool-default-open.ts",
@@ -7885,9 +4233,17 @@
     "module:packages/kilo-vscode/webview-ui/src/context/work-style-state.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/work-style.tsx",
     "module:packages/kilo-vscode/webview-ui/src/font-size.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/context-mention-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/context-requests.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/file-mention-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/git-changes-context-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/terminal-context-utils.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/useFileMention.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/useGitChangesContext.ts",
     "module:packages/kilo-vscode/webview-ui/src/hooks/useImageAttachments.ts",
     "module:packages/kilo-vscode/webview-ui/src/hooks/usePasteCollapse.ts",
     "module:packages/kilo-vscode/webview-ui/src/hooks/usePromptHistory.ts",
+    "module:packages/kilo-vscode/webview-ui/src/hooks/useTerminalContext.ts",
     "module:packages/kilo-vscode/webview-ui/src/i18n/ar.ts",
     "module:packages/kilo-vscode/webview-ui/src/i18n/br.ts",
     "module:packages/kilo-vscode/webview-ui/src/i18n/bs.ts",
@@ -7941,6 +4297,7 @@
     "module:packages/kilo-vscode/webview-ui/src/styles/welcome.css",
     "module:packages/kilo-vscode/webview-ui/src/types/marketplace.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/agent-manager.ts",
+    "module:packages/kilo-vscode/webview-ui/src/types/messages/board.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/config.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/connection.ts",
     "module:packages/kilo-vscode/webview-ui/src/types/messages/index.ts",
@@ -7959,12 +4316,14 @@
     "module:packages/kilo-vscode/webview-ui/src/utils/message-time.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/open-plan.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/path-mentions.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/plan-path.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/pr-review.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/prompt-mention-drop.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/qrcode.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/reasoning-display.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/review-comment-markdown.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/search-match.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/shortcut-hint.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/tab-close.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/tab-navigation.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/tab-order.ts",
@@ -7984,6 +4343,10 @@
     "module:packages/opencode/src/kilocode/agent-manager/service.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/board/context.ts",
+    "module:packages/opencode/src/kilocode/board/enabled.ts",
+    "module:packages/opencode/src/kilocode/board/notice.ts",
+    "module:packages/opencode/src/kilocode/board/store.ts",
     "module:packages/opencode/src/kilocode/branch-name.ts",
     "module:packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-about.tsx",
     "module:packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx",
@@ -8005,6 +4368,7 @@
     "module:packages/opencode/src/kilocode/config/excess.ts",
     "module:packages/opencode/src/kilocode/config/overlay.ts",
     "module:packages/opencode/src/kilocode/config/writer.ts",
+    "module:packages/opencode/src/kilocode/const.ts",
     "module:packages/opencode/src/kilocode/indexing-auth.ts",
     "module:packages/opencode/src/kilocode/indexing-event.ts",
     "module:packages/opencode/src/kilocode/indexing-label.ts",
@@ -8018,7 +4382,11 @@
     "module:packages/opencode/src/kilocode/lancedb.ts",
     "module:packages/opencode/src/kilocode/marketplace/api.ts",
     "module:packages/opencode/src/kilocode/marketplace/companions.ts",
+    "module:packages/opencode/src/kilocode/marketplace/installer.ts",
     "module:packages/opencode/src/kilocode/marketplace/paths.ts",
+    "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts",
+    "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts",
+    "module:packages/opencode/src/kilocode/marketplace/schema.ts",
     "module:packages/opencode/src/kilocode/marketplace/skill-archive.ts",
     "module:packages/opencode/src/kilocode/notebook/protocol.ts",
     "module:packages/opencode/src/kilocode/notebook/service.ts",
@@ -8026,6 +4394,7 @@
     "module:packages/opencode/src/kilocode/pii.ts",
     "module:packages/opencode/src/kilocode/plan-file.ts",
     "module:packages/opencode/src/kilocode/plan-followup.ts",
+    "module:packages/opencode/src/kilocode/plugin/git-source.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
     "module:packages/opencode/src/kilocode/plugins/permissions.ts",
@@ -8051,12 +4420,15 @@
     "module:packages/opencode/src/kilocode/server/httpapi/groups/indexing.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/indexing.ts",
+    "module:packages/opencode/src/kilocode/session/drain.ts",
     "module:packages/opencode/src/kilocode/session/native-plan-prompt.txt",
     "module:packages/opencode/src/kilocode/session/recall-search.ts",
+    "module:packages/opencode/src/kilocode/session/transcript.ts",
     "module:packages/opencode/src/kilocode/skill-remove.ts",
     "module:packages/opencode/src/kilocode/skills/builtin.ts",
     "module:packages/opencode/src/kilocode/skills/kilo-config.md",
     "module:packages/opencode/src/kilocode/snapshot/cleanup.ts",
+    "module:packages/opencode/src/kilocode/tool/board.ts",
     "module:packages/opencode/src/kilocode/tool/browser-open.ts",
     "module:packages/opencode/src/kilocode/tool/browser-open.txt",
     "module:packages/opencode/src/kilocode/tool/notebook.ts",
@@ -8081,6 +4453,10 @@
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
     "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
     "module:packages/opencode/test/kilocode/bin-tree-sitter-env.test.ts",
+    "module:packages/opencode/test/kilocode/board-context.test.ts",
+    "module:packages/opencode/test/kilocode/board-enabled.test.ts",
+    "module:packages/opencode/test/kilocode/board-tools.test.ts",
+    "module:packages/opencode/test/kilocode/board/store.test.ts",
     "module:packages/opencode/test/kilocode/branch-name.test.ts",
     "module:packages/opencode/test/kilocode/builtin-skills.test.ts",
     "module:packages/opencode/test/kilocode/commit-message-windows.test.ts",
@@ -8090,6 +4466,7 @@
     "module:packages/opencode/test/kilocode/enhance-prompt.test.ts",
     "module:packages/opencode/test/kilocode/ensure-plan-dir.test.ts",
     "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
+    "module:packages/opencode/test/kilocode/headless-session-drain.test.ts",
     "module:packages/opencode/test/kilocode/indexing-auth.test.ts",
     "module:packages/opencode/test/kilocode/indexing-dialog-state.test.ts",
     "module:packages/opencode/test/kilocode/indexing-label.test.ts",
@@ -8103,6 +4480,7 @@
     "module:packages/opencode/test/kilocode/legacy-sse-event.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-companions.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-installer.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
     "module:packages/opencode/test/kilocode/news.test.ts",
@@ -8114,6 +4492,7 @@
     "module:packages/opencode/test/kilocode/plan-file.test.ts",
     "module:packages/opencode/test/kilocode/plan-followup.test.ts",
     "module:packages/opencode/test/kilocode/plan-mode-ruleset-stacking.test.ts",
+    "module:packages/opencode/test/kilocode/plugin-git-source.test.ts",
     "module:packages/opencode/test/kilocode/primary-worktree.test.ts",
     "module:packages/opencode/test/kilocode/question-option-schema.test.ts",
     "module:packages/opencode/test/kilocode/read-docx.test.ts",
@@ -8136,6 +4515,8 @@
     "module:packages/opencode/test/kilocode/semantic-search.test.ts",
     "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts",
     "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts",
+    "module:packages/opencode/test/kilocode/session-drain.test.ts",
+    "module:packages/opencode/test/kilocode/session/transcript.test.ts",
     "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
     "module:packages/opencode/test/kilocode/skill-remove.test.ts",
     "module:packages/opencode/test/kilocode/snapshot-repository-cleanup.test.ts",
@@ -8152,13 +4533,17 @@
     "module:packages/opencode/test/kilocode/worktree-project-skills.test.ts",
     "module:packages/opencode/test/kilocode/worktree-remove-lock.test.ts",
     "module:packages/schema/src/kilocode/provider-usage.ts",
+    "module:packages/schema/src/kilocode/session-drain.ts",
+    "module:packages/tui/src/kilocode/board-tool.tsx",
     "module:packages/tui/src/kilocode/model-picker.ts",
+    "module:packages/tui/test/kilocode/board-tool.test.tsx",
     "module:packages/tui/test/kilocode/model-picker.test.ts",
     "patch:agent-manager:648a508ad347",
     "patch:agent:2e5632e7bfc6",
     "patch:cli:66a6b3781917",
     "patch:cli:fd8272d869ad",
     "patch:components:06ac8868d98e",
+    "patch:db-preflight:7186ff6558e9",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",
     "patch:gateway:17e39e074eaf",
@@ -8178,6 +4563,13 @@
     "patch:global:2886e1a24503",
     "patch:global:9f5a3867e9ba",
     "patch:global:b9f635c56864",
+    "patch:goals:32d5a987d3b1",
+    "patch:goals:76a03ae19282",
+    "patch:goals:b983b6af7e4b",
+    "patch:goals:ce1b66acd237",
+    "patch:goals:eb79ff7a4e15",
+    "patch:goals:eb79ff7a4e15",
+    "patch:goals:eb79ff7a4e15",
     "patch:indexing:2e5dfe2574c6",
     "patch:indexing:2e5dfe2574c6",
     "patch:indexing:854fbb30ce6c",
@@ -8190,6 +4582,7 @@
     "patch:oauth:513c5db12e0f",
     "patch:oauth:62e32555f6d9",
     "patch:oauth:ee5e067b8d7b",
+    "patch:plugin:25cfde80052f",
     "patch:provider-usage:b0945f511fb3",
     "patch:provider-usage:ce8e021f1ef6",
     "patch:review:efc710228c1f",
@@ -8212,72 +4605,16 @@
     "patch:snapshot:8579451b046f",
     "patch:tool:fabed9da976a",
     "patch:tui:c29e2d297ca2",
-    "patch:unattributed:agent:0a0c97da2c48",
-    "patch:unattributed:agent:161afe543464",
-    "patch:unattributed:agent:19ff1297ae1a",
-    "patch:unattributed:agent:1c5cb886bb38",
-    "patch:unattributed:agent:21c84cad48b3",
-    "patch:unattributed:agent:407e5d080313",
-    "patch:unattributed:agent:55cce67688d4",
-    "patch:unattributed:agent:655072363498",
-    "patch:unattributed:agent:6f9571fe6129",
-    "patch:unattributed:agent:6fd86cbf07a5",
-    "patch:unattributed:agent:80e846e9fd1c",
-    "patch:unattributed:agent:8558c7e71c33",
-    "patch:unattributed:agent:860878fa7bab",
-    "patch:unattributed:agent:8a47a5bd2127",
-    "patch:unattributed:agent:a46eaa33223b",
-    "patch:unattributed:agent:a91ca8efa1b6",
-    "patch:unattributed:agent:b6727a425792",
-    "patch:unattributed:agent:e4427a3d9c64",
-    "patch:unattributed:agent:e4427a3d9c64",
-    "patch:unattributed:agent:e4427a3d9c64",
-    "patch:unattributed:agent:fbbd4a8ba315",
-    "patch:unattributed:config:546539fc1643",
-    "patch:unattributed:config:73db79553730",
-    "patch:unattributed:config:8cdbdec70393",
-    "patch:unattributed:core/database:a155cf41e765",
-    "patch:unattributed:core/v1:159079a2d8a3",
-    "patch:unattributed:core/v1:2e351a955982",
-    "patch:unattributed:core/v1:a177a3c0a84c",
-    "patch:unattributed:core/v1:a4a32558d64b",
-    "patch:unattributed:core/v1:eef8153da721",
-    "patch:unattributed:core/v1:efe2b3136dab",
-    "patch:unattributed:core/v1:fb80dc4c3dd4",
-    "patch:unattributed:schema/v1:04e56db46d79",
-    "patch:unattributed:session:13cc4c3e6a51",
-    "patch:unattributed:session:142910b3fc8c",
-    "patch:unattributed:session:5dd7101d7cc6",
-    "patch:unattributed:session:5dd7101d7cc6",
-    "patch:unattributed:tool:0bc16fea6c47",
-    "patch:unattributed:tool:9e6deaf29658",
-    "patch:unattributed:tool:d6a5d2974993",
-    "patch:unattributed:tui/component:013e56c6e70d",
-    "patch:unattributed:tui/component:361708efa0db",
-    "patch:unattributed:tui/component:3bd2c832bb54",
-    "patch:unattributed:tui/component:442c6f2a6ad9",
-    "patch:unattributed:tui/component:5c55d556d8ae",
-    "patch:unattributed:tui/component:7fb2970f1e39",
-    "patch:unattributed:tui/component:8356b283bea4",
-    "patch:unattributed:tui/component:85b11084275d",
-    "patch:unattributed:tui/component:9a58930c75d8",
-    "patch:unattributed:tui/component:9e2836eb85dc",
-    "patch:unattributed:tui/component:a277acf3a84b",
-    "patch:unattributed:tui/component:c8cf17d43819",
-    "patch:unattributed:tui/component:d10b36aa74a5",
-    "patch:unattributed:tui/routes:667ed16d042a",
-    "patch:unattributed:tui/ui:858635f51958",
-    "patch:unattributed:tui/ui:aac5db9863ac",
-    "patch:unattributed:tui/ui:aac5db9863ac",
-    "patch:unattributed:tui/ui:acda41f897d2",
     "patch:worktree:34f2839b6fa6"
   ],
   "dropped": [
     "api:GET /kilocode/notebook",
     "api:POST /kilocode/notebook/{requestID}/reject",
     "api:POST /kilocode/notebook/{requestID}/reply",
+    "module:packages/core/src/kilocode/board/sql.ts",
     "module:packages/core/src/kilocode/session/recall-message-index.ts",
     "module:packages/core/src/kilocode/session/recall-part-index.ts",
+    "module:packages/core/test/kilocode/board/migration.test.ts",
     "module:packages/kilo-gateway/src/auth/device-auth.ts",
     "module:packages/kilo-gateway/src/auth/legacy-migration.ts",
     "module:packages/kilo-gateway/src/loader.ts",
@@ -8304,11 +4641,13 @@
     "module:packages/kilo-vscode/src/agent-manager/task-runner.ts",
     "module:packages/kilo-vscode/src/agent-manager/terminal-destination.ts",
     "module:packages/kilo-vscode/src/kilo-provider/config-bindings.ts",
+    "module:packages/kilo-vscode/src/kilo-provider/message-files.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts",
     "module:packages/kilo-vscode/src/services/marketplace/bundles.ts",
     "module:packages/kilo-vscode/src/services/marketplace/notifier.ts",
     "module:packages/kilo-vscode/src/services/marketplace/notify.ts",
     "module:packages/kilo-vscode/src/services/marketplace/relevance.ts",
+    "module:packages/kilo-vscode/tests/helpers/prompt-input.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-memory-commands.test.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-telemetry.test.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-terminal-destination.test.ts",
@@ -8320,8 +4659,11 @@
     "module:packages/kilo-vscode/tests/unit/marketplace-relevance.test.ts",
     "module:packages/kilo-vscode/tests/unit/mcp-auth-service.test.ts",
     "module:packages/kilo-vscode/tests/unit/mcp-auth-status.test.ts",
+    "module:packages/kilo-vscode/tests/unit/message-files.test.ts",
     "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts",
+    "module:packages/kilo-vscode/tests/unit/prompt-input-connection-guard.test.ts",
     "module:packages/kilo-vscode/tests/unit/run-terminal-destination.test.ts",
+    "module:packages/kilo-vscode/tests/unit/session-board.test.ts",
     "module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/telemetry.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx",
@@ -8330,8 +4672,6 @@
     "module:packages/opencode/src/kilocode/agent/scout.txt",
     "module:packages/opencode/src/kilocode/indexing-feature.ts",
     "module:packages/opencode/src/kilocode/marketplace/detection.ts",
-    "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts",
-    "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts",
     "module:packages/opencode/src/kilocode/marketplace/relevance.ts",
     "module:packages/opencode/src/kilocode/presence/context.ts",
     "module:packages/opencode/src/kilocode/presence/policy.ts",
@@ -8341,7 +4681,6 @@
     "module:packages/opencode/test/kilocode/indexing-feature.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-api.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts",
-    "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-relevance.test.ts",
     "module:packages/opencode/test/kilocode/presence/policy.test.ts",
     "module:packages/opencode/test/kilocode/presence/service-presence.test.ts",
@@ -8357,19 +4696,68 @@
     "patch:marketplace:5fc326e8ea39",
     "patch:notebook:752d64cdd86b",
     "patch:notebook:c524c93fe185",
-    "patch:presence:391f36cf44c5",
-    "patch:unattributed:agent:09375914c157",
-    "patch:unattributed:agent:0faa6c731275",
-    "patch:unattributed:agent:1b8fe669272e",
-    "patch:unattributed:agent:2e2369fd59e1",
-    "patch:unattributed:agent:461dc96586d3",
-    "patch:unattributed:agent:51a770bdc581",
-    "patch:unattributed:agent:6cdbea643f7d",
-    "patch:unattributed:agent:7c1daa44f22c",
-    "patch:unattributed:agent:8c603298aa6d",
-    "patch:unattributed:agent:92890c7740e7",
-    "patch:unattributed:agent:d88711e4e0f0",
-    "patch:unattributed:core/v1:803d6139aabf",
-    "patch:unattributed:tui/component:902bf97fd9cb"
-  ]
+    "patch:presence:391f36cf44c5"
+  ],
+  "landed": {
+    "patch:agent-manager:648a508ad347": "plugin",
+    "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:cli:66a6b3781917": "patch",
+    "patch:cli:fd8272d869ad": "plugin",
+    "patch:components:06ac8868d98e": "patch",
+    "patch:gateway:0278ba0eb6aa": "plugin",
+    "patch:gateway:17e39e074eaf": "plugin",
+    "patch:gateway:1995b11b5cdd": "plugin",
+    "patch:gateway:50352226b43c": "plugin",
+    "patch:gateway:5187eb3f1516": "plugin",
+    "patch:gateway:59f57027c538": "plugin",
+    "patch:gateway:73ba28ce78a5": "plugin",
+    "patch:gateway:742c02b40457": "plugin",
+    "patch:gateway:d29cb22ad5f6": "plugin",
+    "patch:gateway:e19fc2acea57": "plugin",
+    "patch:gateway:e8673ed1650b": "plugin",
+    "patch:gateway:f983d8f993c8": "plugin",
+    "patch:global:0e189a57d108": "host",
+    "patch:global:2886e1a24503": "host",
+    "patch:global:9f5a3867e9ba": "host",
+    "patch:global:b9f635c56864": "host",
+    "patch:goals:32d5a987d3b1": "plugin",
+    "patch:goals:76a03ae19282": "plugin",
+    "patch:goals:b983b6af7e4b": "plugin",
+    "patch:goals:ce1b66acd237": "plugin",
+    "patch:goals:eb79ff7a4e15": "plugin",
+    "patch:indexing:2e5dfe2574c6": "plugin",
+    "patch:indexing:854fbb30ce6c": "plugin",
+    "patch:indexing:987c9e6c9e85": "plugin",
+    "patch:indexing:9e6d17f27b30": "plugin",
+    "patch:indexing:d76a31906cd4": "host",
+    "patch:indexing:fe813c19ebaf": "plugin",
+    "patch:notebook:91a426486dc8": "plugin",
+    "patch:oauth:3ad23f430831": "seam",
+    "patch:oauth:513c5db12e0f": "seam",
+    "patch:oauth:62e32555f6d9": "host",
+    "patch:oauth:ee5e067b8d7b": "seam",
+    "patch:plugin:25cfde80052f": "seam",
+    "patch:provider-usage:b0945f511fb3": "plugin",
+    "patch:provider-usage:ce8e021f1ef6": "plugin",
+    "patch:review:efc710228c1f": "plugin",
+    "patch:sandbox:00aa0cba90d1": "host",
+    "patch:sandbox:37cf5fea540a": "plugin",
+    "patch:sandbox:41a5c4f8070a": "plugin",
+    "patch:sandbox:4918d15ae745": "plugin",
+    "patch:sandbox:7d95c6cc13bc": "host",
+    "patch:sandbox:859933ff55db": "plugin",
+    "patch:sandbox:980b9e91078b": "host",
+    "patch:sandbox:b09868b61af4": "host",
+    "patch:sandbox:b534aff3ebec": "plugin",
+    "patch:sandbox:d1999e0669a5": "plugin",
+    "patch:sandbox:ea078ae48b40": "host",
+    "patch:sandbox:fb2d03fdb710": "host",
+    "patch:sandbox:fd6329a01ac1": "plugin",
+    "patch:server:5e0f8563b425": "plugin",
+    "patch:snapshot:80d332891272": "plugin",
+    "patch:snapshot:8579451b046f": "plugin",
+    "patch:tool:fabed9da976a": "plugin",
+    "patch:tui:c29e2d297ca2": "plugin",
+    "patch:worktree:34f2839b6fa6": "plugin"
+  }
 }

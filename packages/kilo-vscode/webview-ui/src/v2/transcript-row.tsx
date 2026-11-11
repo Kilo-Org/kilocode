@@ -39,6 +39,8 @@ export function TranscriptRowView(props: {
             <UserMessage
               message={row().message}
               rowKey={row().key}
+              sessionID={props.session}
+              actions={props.actions}
               searchActive={props.searchActive}
               pending={props.pending?.(row().message.id)}
               onSelectSession={props.onSelectSession}
