@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test"
-import { pendingActions, pendingEditable, pendingRequest, promptInterrupt, sendMode, steerInterrupts } from "../webview-ui/src/v2/pending-actions"
+import {
+  pendingActions,
+  pendingEditable,
+  pendingRequest,
+  promptInterrupt,
+  sendMode,
+  sendShortcuts,
+  steerInterrupts,
+} from "../webview-ui/src/v2/pending-actions"
 
 const key = (input: { alt?: boolean; ctrl?: boolean; meta?: boolean } = {}) => ({
   altKey: !!input.alt,
@@ -9,21 +17,33 @@ const key = (input: { alt?: boolean; ctrl?: boolean; meta?: boolean } = {}) => (
 
 describe("sendMode", () => {
   test("an idle session always sends normally", () => {
-    expect(sendMode(key({ alt: true }), false, true)).toBe("steer")
-    expect(sendMode(key({ meta: true }), false, true)).toBe("steer")
-    expect(sendMode(key({ ctrl: true }), false, false)).toBe("steer")
+    expect(sendMode(key({ alt: true }), false, "steer", true)).toBe("steer")
+    expect(sendMode(key({ meta: true }), false, "steer", true)).toBe("steer")
+    expect(sendMode(key({ ctrl: true }), false, "steer", false)).toBe("steer")
   })
 
   test("a running session steers, queues with Alt and sends now with the platform modifier", () => {
-    expect(sendMode(key(), true, true)).toBe("steer")
-    expect(sendMode(key({ alt: true }), true, true)).toBe("queue")
-    expect(sendMode(key({ meta: true }), true, true)).toBe("now")
-    expect(sendMode(key({ ctrl: true }), true, false)).toBe("now")
+    expect(sendMode(key(), true, "steer", true)).toBe("steer")
+    expect(sendMode(key({ alt: true }), true, "steer", true)).toBe("queue")
+    expect(sendMode(key({ meta: true }), true, "steer", true)).toBe("now")
+    expect(sendMode(key({ ctrl: true }), true, "steer", false)).toBe("now")
+  })
+
+  test("with queue preferred, Enter queues and Alt steers", () => {
+    expect(sendMode(key(), true, "queue", true)).toBe("queue")
+    expect(sendMode(key({ alt: true }), true, "queue", true)).toBe("steer")
+    expect(sendMode(key({ meta: true }), true, "queue", true)).toBe("now")
+    expect(sendMode(key({ alt: true }), false, "queue", true)).toBe("steer")
+  })
+
+  test("the shortcuts follow the preferred delivery", () => {
+    expect(sendShortcuts("steer", true)).toEqual({ steer: "↵", queue: "⌥↵", now: "⌘↵" })
+    expect(sendShortcuts("queue", false)).toEqual({ steer: "Alt+Enter", queue: "Enter", now: "Ctrl+Enter" })
   })
 
   test("the other platform's modifier does not send now", () => {
-    expect(sendMode(key({ ctrl: true }), true, true)).toBe("steer")
-    expect(sendMode(key({ meta: true }), true, false)).toBe("steer")
+    expect(sendMode(key({ ctrl: true }), true, "steer", true)).toBe("steer")
+    expect(sendMode(key({ meta: true }), true, "steer", false)).toBe("steer")
   })
 })
 
@@ -51,7 +71,11 @@ describe("steerInterrupts", () => {
   const tool = (status: string) => ({ type: "tool", state: { status } })
   const none = new Set<string>()
   const user = { id: "u1", type: "user" }
-  const step = (...content: { type: string; state?: { status: string } }[]) => ({ id: "a1", type: "assistant", content })
+  const step = (...content: { type: string; state?: { status: string } }[]) => ({
+    id: "a1",
+    type: "assistant",
+    content,
+  })
 
   test("a thinking or writing model is stopped so the steer reaches it now", () => {
     expect(steerInterrupts([], none)).toBe(true)
@@ -78,7 +102,8 @@ describe("steerInterrupts", () => {
   })
 })
 
-describe("pendingEditable", () => {  test("plain text can go back to the composer", () => {
+describe("pendingEditable", () => {
+  test("plain text can go back to the composer", () => {
     expect(pendingEditable({})).toBe(true)
   })
 

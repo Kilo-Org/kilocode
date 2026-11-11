@@ -163,7 +163,7 @@ Kilo adds these top-level keys to `kilo2.json`:
 
 `retention`, `web_search`, `subagent_model`, `subagent_variant`, `subagent_variant_overrides` and `memory_model` are accepted but not applied yet in this version; say so rather than promising an effect.
 
-Some tools exist only in the VS Code extension: `browser_open`, the notebook tools and `agent_manager`. `subagent` accepts `background: true` to run a subagent as a background job. `kilo_local_recall` searches earlier sessions of the project. The marketplace (VS Code, `/marketplace`) installs skills, agents and MCP servers into the global or project config.
+Some tools exist only in the VS Code extension: `browser_open`, the notebook tools and `agent_manager`. `subagent` runs child sessions in the background by default; pass `background: false` to wait for the result inline. `kilo_local_recall` searches earlier sessions of the project. The marketplace (VS Code, `/marketplace`) installs skills, agents and MCP servers into the global or project config.
 
 ## Environment variables
 

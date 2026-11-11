@@ -3,6 +3,8 @@
 import type { DataPendingStatus } from "@opencode/client/solid"
 
 export type SendMode = "steer" | "queue" | "now"
+/** What a plain Enter does while the agent runs (`kilo-code.v2.chat.sendWhileRunning`). Alt+Enter does the other. */
+export type Delivery = "steer" | "queue"
 export type PendingAction = "now" | "steer" | "queue" | "edit" | "delete"
 
 /**
@@ -41,16 +43,26 @@ type Message = {
   content?: readonly { type: string; state?: { status: string } }[]
 }
 
-/** The delivery a composer keystroke asks for. The modifiers only change a send while the session runs. */
-export function sendMode(event: Key, running: boolean, mac = isMac()): SendMode {
+/**
+ * The delivery a composer keystroke asks for. The modifiers only change a send while the session runs: Enter uses the
+ * preferred delivery, Alt+Enter the other one, and the platform modifier stops the run and sends now.
+ */
+export function sendMode(event: Key, running: boolean, preferred: Delivery = "steer", mac = isMac()): SendMode {
   if (!running) return "steer"
   if (mac ? event.metaKey : event.ctrlKey) return "now"
-  if (event.altKey) return "queue"
-  return "steer"
+  if (event.altKey) return other(preferred)
+  return preferred
 }
 
-export function sendShortcuts(mac = isMac()) {
-  return mac ? { steer: "↵", queue: "⌥↵", now: "⌘↵" } : { steer: "Enter", queue: "Alt+Enter", now: "Ctrl+Enter" }
+/** The key of each send action while the session runs. */
+export function sendShortcuts(preferred: Delivery = "steer", mac = isMac()) {
+  const keys = mac ? { plain: "↵", alt: "⌥↵", now: "⌘↵" } : { plain: "Enter", alt: "Alt+Enter", now: "Ctrl+Enter" }
+  if (preferred === "queue") return { steer: keys.alt, queue: keys.plain, now: keys.now }
+  return { steer: keys.plain, queue: keys.alt, now: keys.now }
+}
+
+export function other(delivery: Delivery): Delivery {
+  return delivery === "steer" ? "queue" : "steer"
 }
 
 /**
@@ -82,6 +94,6 @@ export function pendingActions(status: DataPendingStatus, editable: boolean): Pe
   return ["now", "queue", ...edit, "delete"]
 }
 
-function isMac(): boolean {
+export function isMac(): boolean {
   return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 }

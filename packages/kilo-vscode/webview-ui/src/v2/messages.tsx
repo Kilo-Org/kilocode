@@ -1,7 +1,7 @@
 // The v2 transcript: a virtualized, turn-based list with load-earlier, the last
 // live turn as a direct tail, queued prompts outside the virtual window and
 // scroll-to-bottom.
-import type { SessionInboxUser } from "@opencode/client"
+import type { FormInfo, SessionInboxUser } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions, UserMessagePending } from "@kilocode/kilo-ui/message-part"
@@ -16,6 +16,7 @@ import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/h
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { instructionFilesByRead } from "./instruction-files"
+import { QuestionDock } from "./question"
 import type { Selection } from "./selectors"
 import { sessionStarting } from "./session-loading"
 import {
@@ -46,6 +47,10 @@ import { buildSearchPattern, searchMatches } from "./transcript-search-match"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
 import { PromptRail } from "./prompt-rail"
+import { TranscriptReply } from "./transcript-reply"
+import type { ReplyHandler } from "./append-ready"
+import { partFeedback } from "../../../src/shared/browser-feedback"
+import { isChatReference } from "../../../src/shared/review-comments"
 import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail-data"
 
 /**
@@ -94,6 +99,10 @@ export function MessageList(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** The delivery state and controls of a user message the server has not handed to the model yet. */
   pending?: (messageID: string) => UserMessagePending | undefined
+  /** Quotes and comments on selected answer text through the composer. Missing where there is no composer. */
+  reply?: ReplyHandler
+  /** The question awaiting an answer, appended to the transcript so it scrolls with it as in v1. */
+  question?: () => FormInfo | undefined
 }) {
   const v2 = useV2()
   const vscode = useVSCode()
@@ -125,6 +134,13 @@ export function MessageList(props: {
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
   const instructionFiles = createMemo(() => instructionFilesByRead(messages(), v2.directory))
+  const sentReferences = createMemo(() =>
+    messages().flatMap((message) =>
+      message.type === "user"
+        ? (partFeedback(message.metadata, message.text)?.review?.comments.filter(isChatReference) ?? [])
+        : [],
+    ),
+  )
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const loadingOlder = () => !!props.session && v2.data.session.message.loading(props.session)
   // The server always returns a next cursor, so a page shorter than the limit is what proves the start is loaded.
@@ -817,7 +833,11 @@ export function MessageList(props: {
         <div
           ref={autoScroll.contentRef}
           data-slot="message-list-content"
-          class={empty() && !starting() ? "message-list-content-empty" : "message-list-content"}
+          // A pending question keeps the transcript lane: the empty layout centers its children in a row, which
+          // would put the dock beside the welcome screen and drop its max-width and centering.
+          class={
+            empty() && !starting() && !props.question?.() ? "message-list-content-empty" : "message-list-content"
+          }
         >
           <Show when={starting()}>
             <div class="message-list-loading" role="status">
@@ -907,6 +927,8 @@ export function MessageList(props: {
                     <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
                       <UserMessage
                         message={{ ...row.item.payload, id: row.item.id, type: "user", time: row.item.time }}
+                        sessionID={props.session}
+                        actions={props.actions}
                         onSelectSession={props.onSelectSession}
                         pending={props.pending?.(row.item.id)}
                       />
@@ -915,6 +937,11 @@ export function MessageList(props: {
                 </For>
               </>
             )}
+          </Show>
+          {/* Outside the loaded-transcript gate: a pending question must stay answerable while the first page
+              loads, and the server only asks one once the session has messages. */}
+          <Show when={props.question?.()} keyed>
+            {(form) => <QuestionDock form={form} />}
           </Show>
         </div>
       </div>
@@ -942,6 +969,9 @@ export function MessageList(props: {
         prepending={() => prepending().value}
         seeking={() => Boolean(seek())}
       />
+      <Show when={props.reply}>
+        {(reply) => <TranscriptReply root={scrollEl} reply={reply()} sent={sentReferences} />}
+      </Show>
       <Show when={!empty() && autoScroll.userScrolled()}>
         <IconButton
           icon="arrow-down-to-line"

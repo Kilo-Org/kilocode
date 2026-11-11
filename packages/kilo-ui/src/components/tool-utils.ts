@@ -1,5 +1,5 @@
 import type { SessionMessageAssistantTool } from "@opencode/client"
-import { createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js"
 import { useReducedMotion } from "../hooks/use-reduced-motion"
 import {
   animate,
@@ -13,7 +13,6 @@ import {
 } from "./motion"
 
 export const TEXT_RENDER_THROTTLE_MS = 100
-export const STREAMING_TEXT_RENDER_THROTTLE_MS = 16
 
 export function createThrottledValue(
   getValue: () => string,
@@ -72,6 +71,87 @@ export function createThrottledValue(
   })
 
   return value
+}
+
+/**
+ * Reveals streamed text a few characters per frame instead of in the bursts it arrives in. The server batches
+ * deltas (about every 100 ms), so a fast model would otherwise jump by whole paragraphs ten times a second. Each
+ * burst is spread over the measured gap between bursts, which keeps the reveal continuous and never more than
+ * about one burst behind. Text that is not streaming, or that does not extend what is shown, shows at once.
+ */
+export function createSmoothText(getValue: () => string, streaming: () => boolean) {
+  const [value, setValue] = createSignal(getValue())
+  const state = { target: value(), speed: 0, last: 0, arrived: 0, gap: SMOOTH_TEXT_GAP_MS, frame: 0, cost: 0 }
+
+  const stop = () => {
+    if (state.frame) cancelAnimationFrame(state.frame)
+    state.frame = 0
+  }
+
+  const tick = (now: number) => {
+    // A frame whose render took longer than the frame itself (a huge live block, many streams at once) would drop
+    // frames on every reveal. Skipping frames until the last render's cost has passed keeps half the main thread
+    // free; the next reveal then covers the skipped time, so the pace does not change.
+    if (now - state.last < state.cost) {
+      state.frame = requestAnimationFrame(tick)
+      return
+    }
+    state.frame = 0
+    const shown = value()
+    const end = revealEnd(state.target, shown.length + Math.max(1, Math.round(state.speed * (now - state.last))))
+    state.last = now
+    const start = performance.now()
+    setValue(state.target.slice(0, end))
+    // A timer runs after the frame has laid out and painted, so this measures the whole render of the reveal.
+    setTimeout(() => {
+      state.cost = state.cost * 0.5 + (performance.now() - start) * 0.5
+    })
+    if (end < state.target.length) state.frame = requestAnimationFrame(tick)
+  }
+
+  createEffect(() => {
+    const next = getValue()
+    const live = streaming()
+    if (live && next === state.target) return
+    const shown = untrack(value)
+    if (document.hidden || next.length <= shown.length || !next.startsWith(shown)) {
+      stop()
+      state.target = next
+      state.arrived = 0
+      setValue(next)
+      return
+    }
+    const now = performance.now()
+    const backlog = next.length - shown.length
+    state.target = next
+    // A finished stream drains what is left quickly instead of jumping to the end.
+    if (!live) {
+      state.arrived = 0
+      state.speed = Math.max(state.speed, backlog / SMOOTH_TEXT_DRAIN_MS)
+    }
+    if (live) {
+      if (state.arrived) state.gap = Math.min(250, Math.max(16, state.gap * 0.7 + (now - state.arrived) * 0.3))
+      state.arrived = now
+      state.speed = backlog / state.gap
+    }
+    if (state.frame) return
+    state.last = now
+    state.frame = requestAnimationFrame(tick)
+  })
+
+  onCleanup(stop)
+
+  return value
+}
+
+const SMOOTH_TEXT_GAP_MS = 100
+const SMOOTH_TEXT_DRAIN_MS = 80
+
+// Never split a surrogate pair, so an emoji does not render as a replacement character for a frame.
+function revealEnd(text: string, end: number) {
+  if (end >= text.length) return text.length
+  const code = text.charCodeAt(end - 1)
+  return code >= 0xd800 && code <= 0xdbff ? end + 1 : end
 }
 
 export function busy(status: string | undefined) {

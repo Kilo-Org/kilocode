@@ -3,6 +3,14 @@ export function fileName(path: string): string {
   return normalized.split("/").pop() ?? normalized
 }
 
+/** The parent directory of a path for a menu row, shortened to its last two folders when long. */
+export function dirName(path: string): string {
+  const parts = path.replaceAll("\\", "/").replace(/\/+$/, "").split("/")
+  if (parts.length <= 1) return ""
+  const dir = parts.slice(0, -1).join("/")
+  return dir.length > 30 ? `…/${parts.slice(-3, -1).join("/")}` : dir
+}
+
 /** A collapsed paste: the full text lives here, the input only carries the placeholder. */
 export type PasteRange = {
   id: number
@@ -13,9 +21,52 @@ export type PasteRange = {
 
 export type PromptSegment = {
   text: string
-  kind: "plain" | "paste"
+  kind: "plain" | "mention" | "paste"
   /** Paste id for a collapsed block, so a click can find its backing text. */
   paste?: number
+}
+
+/** Split `val` around every `@path` token, so the overlay can highlight the mentions. */
+export function buildHighlightSegments(val: string, paths: Set<string>): { text: string; highlight: boolean }[] {
+  if (paths.size === 0) return [{ text: val, highlight: false }]
+
+  const segments: { text: string; highlight: boolean }[] = []
+  let remaining = val
+
+  while (remaining.length > 0) {
+    let earliest = -1
+    let earliestPath = ""
+
+    for (const path of paths) {
+      const token = `@${path}`
+      const idx = remaining.indexOf(token)
+      if (idx !== -1 && (earliest === -1 || idx < earliest)) {
+        earliest = idx
+        earliestPath = path
+      }
+    }
+
+    if (earliest === -1) {
+      segments.push({ text: remaining, highlight: false })
+      break
+    }
+
+    if (earliest > 0) {
+      segments.push({ text: remaining.substring(0, earliest), highlight: false })
+    }
+
+    const token = `@${earliestPath}`
+    segments.push({ text: token, highlight: true })
+    remaining = remaining.substring(earliest + token.length)
+  }
+
+  return segments
+}
+
+/** Whether a highlighted mention names a path, as opposed to the terminal or the git changes. */
+export function isPathMention(text: string): boolean {
+  const path = text.replace(/^@/, "")
+  return path !== "terminal" && path !== "git-changes"
 }
 
 /** Number of lines a pasted block occupies, matching the CLI's newline count plus one. */
@@ -200,17 +251,26 @@ export function expandPastes(text: string, pastes: readonly PasteRange[]): strin
   return result
 }
 
-/** Split prompt text into plain runs and collapsed paste chips. */
-export function buildPromptSegments(text: string, pastes: readonly PasteRange[]): PromptSegment[] {
+/** Split prompt text into plain runs, `@` mentions and collapsed paste chips. */
+export function buildPromptSegments(
+  text: string,
+  pastes: readonly PasteRange[],
+  paths: Set<string> = new Set(),
+): PromptSegment[] {
   const segments: PromptSegment[] = []
+  const plain = (value: string) => {
+    for (const part of buildHighlightSegments(value, paths)) {
+      segments.push({ text: part.text, kind: part.highlight ? "mention" : "plain" })
+    }
+  }
   const ordered = [...pastes].filter(validPaste.bind(null, text)).sort((a, b) => a.start - b.start)
   let cursor = 0
   for (const paste of ordered) {
     if (paste.start < cursor) continue
-    if (paste.start > cursor) segments.push({ text: text.slice(cursor, paste.start), kind: "plain" })
+    if (paste.start > cursor) plain(text.slice(cursor, paste.start))
     segments.push({ text: text.slice(paste.start, paste.end), kind: "paste", paste: paste.id })
     cursor = paste.end
   }
-  if (cursor < text.length) segments.push({ text: text.slice(cursor), kind: "plain" })
+  if (cursor < text.length) plain(text.slice(cursor))
   return segments
 }
