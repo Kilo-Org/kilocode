@@ -2,10 +2,11 @@
 // extension tests can load it.
 import type { OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
-import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
+import { createModelDrafts } from "./model-draft"
 
 type Connection = ReturnType<typeof createClientConnection>
 type Events = ReturnType<typeof events>
@@ -67,6 +68,11 @@ export function createV2Scope(input: {
     models: () => data.location.model.list(),
     cache: metadata.kiloModelsCache,
   })
+  // The composer's model drafts live with the directory, not the chat view, so an effort change survives the history
+  // view and an Agent Manager worktree switch, as the TUI keeps them app-wide. The echo of a commit, or any client
+  // switching the session to the same model, makes a draft redundant.
+  const drafts = createModelDrafts()
+  onCleanup(input.event.on("session.model.selected", (event) => drafts.settle(event.data.sessionID, event.data.model)))
   const visible = input.visible ?? (() => true)
   const state = { listed: false }
   createEffect(
@@ -110,6 +116,8 @@ export function createV2Scope(input: {
     kiloFailure: metadata.kiloFailure,
     /** The Kilo Gateway model metadata and the account team, for the model pickers. */
     kiloModels,
+    /** The composer's uncommitted model and effort per session; the next prompt commits it. */
+    drafts,
     setError,
     report: (err: unknown) => setError(message(err)),
     open: input.open,
