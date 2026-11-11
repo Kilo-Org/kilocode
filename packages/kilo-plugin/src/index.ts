@@ -32,6 +32,7 @@ import { KiloWriteToolPlugin } from "./tool-write"
 import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
 import { KiloQuestionPlugin } from "./question"
+import { KiloWakeupPlugin } from "./wakeup"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
@@ -98,6 +99,8 @@ export const KiloPlugins = [
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
   KiloQuestionPlugin.Plugin,
+  // Wakeups and cron tasks, and the pending state clients show as scheduled.
+  KiloWakeupPlugin,
   // Kilo Swarm: the shared board of a main session and its subagents.
   KiloBoard.Plugin,
 ] as const

@@ -6,6 +6,7 @@ import { createClientConnection } from "@opencode/client/solid"
 import { createRoot, createSignal, onCleanup } from "solid-js"
 import { createV2Scope, type V2 } from "../../src/v2/scope"
 import { createConnectionMetadata, type ConnectionMetadata } from "../../src/v2/connection-metadata"
+import { createWakeups } from "../../src/v2/wakeups"
 import { catalogEvent } from "../../src/v2/kilo-catalog"
 import { events } from "../../src/v2/events"
 import { transport } from "../../src/v2/transport"
@@ -31,7 +32,12 @@ export function targets(event: OpenCodeEvent, keys: Iterable<string>) {
   return [...keys].filter((item) => item === target)
 }
 
-export function createPanelData(input: { post: (message: ToHost) => void; api?: OpenCodeClient }) {
+export function createPanelData(input: {
+  post: (message: ToHost) => void
+  api?: OpenCodeClient
+  /** Every directory whose sessions the panel draws, for the scheduled state. Defaults to the open stores. */
+  directories?: () => readonly string[]
+}) {
   const bridge = transport(input.post)
   const api = input.api ?? OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const stores = new Map<string, Entry>()
@@ -45,6 +51,13 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
     targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
   }
   const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
+  // One pending-wakeup store for every directory the panel draws: a worktree row is scheduled even while another
+  // worktree, or no worktree, is selected.
+  const wakeups = createWakeups({
+    api,
+    directories: input.directories ?? (() => [...stores.keys()]),
+    connected: () => connection.status() === "connected",
+  })
   metadata = createConnectionMetadata({
     api,
     connection,
@@ -81,6 +94,7 @@ export function createPanelData(input: { post: (message: ToHost) => void; api?: 
         selection,
         onCommand,
         open,
+        scheduled: wakeups.scheduled,
       })
       return { scope, emit: event.emit, dispose, show: () => setVisible(true) }
     })

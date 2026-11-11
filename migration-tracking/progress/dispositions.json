@@ -2436,6 +2436,126 @@
     "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
     "by": "plugin-git-sources"
   },
+  "module:packages/opencode/src/kilocode/wakeup/index.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/index.ts",
+    "note": "The service is ported as the `kilocode.wakeup` plugin. Each task is a native schedule with a hook action (created with `{ requireEnabled: false }`), so the native loop owns timers, persistence, restart recovery and the cross-process leader. The plugin keeps the service semantics: per-session 10-pending and 10-cron caps, the 10-second minimum and 7-day horizon, the 7-day cron expiry, idempotent cancel, session-delete cleanup, and a per-directory pending snapshot with a `changed` event. A session that goes away, or a goal that finishes, pauses or is cleared, takes its scheduled tasks with it (the goal contract's `changed` event). Goal suspension while a goal waits on a scheduled wakeup lands with the goals port, whose Wait model already carries wakeup and cron kinds.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/schema.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/schema.ts",
+    "note": "Ported: `resolveTime`, `parseWhen`, `parseDelay`, `clampNotice`, `MIN_DELAY_MS`, `MAX_HORIZON_MS`, `MAX_PER_SESSION`, `MAX_CRON_PER_SESSION`, `CRON_TTL_MS`, and the persisted record shape with schema decoding. The v1 `Info`/`CronInfo` service records are not carried; the public view is `KiloWakeupRpc.Wakeup`, and the ids keep the `wku_` prefix with `Identifier.ascending()`.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/resume.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/service.ts",
+    "note": "The fire path is ported as `fire` in the wakeup service: `ctx.session.synthetic` admits the v1 text `[scheduled wakeup] ...` / `[scheduled cron task] ...` with `metadata.wakeup`, replacing `SessionPrompt` with the synthetic-prompt API. Goal suspension while awaiting a scheduled wakeup (and the resume on fire) lands with the goals port, whose Wait model already carries wakeup and cron kinds; this PR keeps the fire path itself.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/wakeup.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/wakeup.test.ts",
+    "note": "The service assertions are ported to a fake native schedule service: schedule/list, cancel and its idempotence, clamps, the per-session cap, the pending snapshot, and the fire text. The file-backed adopt and multi-process claim tests do not apply because native schedules persist in the schedule table and the native leader owns adoption and single-fire.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/wakeup-cron.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/wakeup.test.ts",
+    "note": "The recurring assertions are ported: a cron task is created with a hook action and a 7-day `ends.at`, fires as `[scheduled cron task]`, and keeps its next slot. The v1 re-arm ordering is native: the schedule row advances in the native fire path whose hook the plugin claims.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/wakeup-resume.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/wakeup.test.ts",
+    "note": "The resume assertions are ported as the `fire` tests: the session receives the scheduled text through `ctx.session.synthetic` with the wakeup metadata, and a one-shot record is retired. The v1 paused-session refusal and in-place bootstrap resume do not apply on v2: a synthetic prompt wakes the execution, and the native loop never fires during a bootstrap it awaits.",
+    "by": "candy-cough"
+  },
+  "module:packages/schema/src/kilocode/wakeup-event.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/wakeup.ts",
+    "note": "The `session.wakeup` event ({ sessionID, pending }) is ported as the `kilocode.wakeup` RPC `changed` event with `{ sessionID, directory, pending, dueAt }`, plus `list` and `pending` methods. Clients seed from `pending` and follow `changed`; the due time lets them show `scheduled` without polling.",
+    "by": "candy-cough"
+  },
+  "api:GET /kilocode/wakeups": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/wakeup.ts",
+    "note": "The `GET /kilocode/wakeups` operation is ported as the `kilocode.wakeup` RPC `pending({ directory })` method, served by the generic `rpc.call` route. The response is `{ sessions: [{ sessionID, directory, pending, dueAt }] }` and the handler lives in `packages/kilo-plugin/src/wakeup/index.ts`.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/wakeup-format.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/schema.ts",
+    "note": "`relative` and `excerpt` are ported in the wakeup schema module and used by the tool results and lists.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/schedule-wakeup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/tools.ts",
+    "note": "Ported as the `schedule_wakeup` tool added by the `kilocode.wakeup` plugin, with the same input schema, validation, clamps, 10-pending cap, idempotent result text and `{ id, dueAt, prompt }` metadata. It creates a native hook-action schedule through the service and reports the `wku_` id. The long policy moved to the `scheduling` skill; the description is a pointer.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/schedule-wakeup.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/schedule-wakeup.txt",
+    "note": "Ported as a short tool description plus the action-time reminder in each successful result (reschedule/stop, self-contained prompt). The v1 long-form policy, including the goal paragraphs and cache-pacing prose, is not carried in the always-on prompt; the essential time rules, clamps and caps remain in the descriptions/annotations. The goal-wait rules land with the goals port.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cancel-wakeup.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/tools.ts",
+    "note": "Ported as the `cancel_wakeup` tool with the v1 `action` list/cancel input and idempotent cancel result. Cancel removes the record and the backing native schedule.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cancel-wakeup.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cancel-wakeup.txt",
+    "note": "Ported with the same list/cancel guidance. The goal-wait paragraph is not carried because the goals port owns goal suspension.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/tools.ts",
+    "note": "`cron_create`, `cron_list` and `cron_delete` are all ported as separate tools with the v1 inputs, 10-task cap, 7-day expiry, one-shot clamping, idempotent delete and result text. Recurring timing and the next slot are native (`Effect` Cron through the schedule service).",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-create.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cron-create.txt",
+    "note": "Ported with the schedule guidance, one-shot clamps and the 7-day expiry. The goal-wait paragraph is not carried because the goals port owns goal suspension; the fire-time jitter sentence is dropped because native schedules do not jitter.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-list.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cron-list.txt",
+    "note": "Ported as the `cron_list` tool with the v1 list guidance; the tool lists only cron tasks. The long-form policy is in the `/schedule` command body.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/tool/cron-delete.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/wakeup/cron-delete.txt",
+    "note": "Ported as the `cron_delete` tool with the v1 idempotent delete guidance; it refuses a wakeup id and points at `cancel_wakeup` for those.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/src/kilocode/wakeup/cron.ts": {
+    "state": "native",
+    "v2": "packages/core/src/schedule.ts",
+    "note": "The hand-written 5-field engine is native: schedule times use Effect Cron (`Cron.parse`/`Cron.next`) in the schedule's zone. The wakeup plugin uses `Cron.parse`/`Cron.next` only to decide whether a fired recurring task has another slot before its 7-day expiry, so its record is retired on the last fire. v1's per-id deterministic jitter is not carried because the native loop polls a due-indexed row and does not jitter.",
+    "by": "candy-cough"
+  },
+  "module:packages/opencode/test/kilocode/wakeup/cron.test.ts": {
+    "state": "native",
+    "v2": "packages/core/test/schedule.test.ts",
+    "note": "Cron parsing, next-slot and DST assertions are upstream's schedule tests (`Cron.parse`, `Cron.next`, the repeated and skipped hour). The plugin's retirement decision is covered in packages/kilo-plugin/test/wakeup.test.ts.",
+    "by": "candy-cough"
+  },
+  "patch:wakeup:9d6803e786ab": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/commands/session-list.ts",
+    "note": "`session list` is a Kilo-owned mirror of the upstream handler (`packages/kilo-cli/src/commands/session-list.ts`, registered in `main.ts`). It reads the `kilocode.wakeup` pending state once per directory in the page and adds a `scheduled <time>` status field (and `scheduledAt` in JSON) for a session with a future wakeup. v2 has no stored status map, so it reads the plugin instead.",
+    "by": "candy-cough"
+  },
   "module:packages/opencode/src/kilocode/session/drain.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/session-drain/drain.ts",

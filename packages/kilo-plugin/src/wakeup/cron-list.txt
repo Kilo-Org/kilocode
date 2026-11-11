@@ -1,0 +1,1 @@
+List this session's scheduled cron tasks with their id, schedule, next fire time and prompt. Use cron_delete to remove one. Do not poll with this tool: the harness resumes the session when a task fires.

@@ -1,6 +1,6 @@
 // What a session is doing, as the Agent Manager sidebar, tabs and terminals show it. Computed from the v2 store of the
-// session's directory: execution status, pending permissions and forms, a scheduled retry, the last outcome and
-// whether its idle transition was viewed.
+// session's directory: execution status, pending permissions and forms, a scheduled retry, the last outcome,
+// whether its idle transition was viewed, and a future wakeup.
 import type { SessionInfo } from "@opencode/client"
 import type { Data } from "@opencode/client/solid"
 
@@ -46,10 +46,13 @@ export function description(state: Activity) {
  * The activity of one session and its subagents. A subagent that waits or runs lifts its root; a finished subagent
  * does not. `connected` false turns a running or waiting session into an error, because its state is unknown.
  */
-export function sessionActivity(data: Data, sessionID: string, connected: boolean): Activity {
+export function sessionActivity(data: Data, sessionID: string, connected: boolean, scheduled = false): Activity {
   const family = [sessionID, ...data.session.family(sessionID).filter((id) => id !== sessionID)]
   const live = family.map((id) => liveActivity(data, id, connected))
-  return strongest([...live, ownOutcome(data, sessionID)])
+  const result = strongest([...live, ownOutcome(data, sessionID)])
+  // A session asleep on a future wakeup is not running: it reads as scheduled only when nothing stronger applies.
+  if (result === "idle" && scheduled) return "scheduled"
+  return result
 }
 
 function liveActivity(data: Data, sessionID: string, connected: boolean): Activity {
