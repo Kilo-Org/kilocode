@@ -1,5 +1,6 @@
 // The Settings, Profile and Marketplace editor panels: the shared webview providers and the v2 data layer, without the
-// chat transcript, its rich content, its notifications or its session list.
+// chat transcript, its rich content up front, its notifications or its session list. The Display tab adds the
+// rich-content providers for its transcript preview when that tab opens.
 import { Match, Switch } from "solid-js"
 import { MarketplaceView } from "../components/marketplace"
 import ProfileView from "../components/profile/ProfileView"

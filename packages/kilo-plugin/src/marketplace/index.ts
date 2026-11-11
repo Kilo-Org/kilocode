@@ -4,12 +4,17 @@ import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { ProjectID } from "@opencode/schema/project-id"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Global } from "@opencode/util/global"
+import { Npm } from "@opencode/util/npm"
 import path from "node:path"
 import { Effect, Exit, Option, Result, Schema, Scope } from "effect"
 import { KiloMarketplaceRegistry } from "./kilo"
 import { Agent, AgentError } from "./agent"
+import { MarketplaceConfig } from "./config"
 import { Installer } from "./installer"
 import { MarketplaceMcp, McpError, configFile } from "./mcp"
+import { PluginConfig } from "./plugin-config"
+import { PluginPackageError, resolve as resolvePlugin } from "./plugin-package"
+import { pluginIdentity } from "./plugin-spec"
 import { catalogKey, type Entry } from "./registry"
 import { SkillError, safe } from "./skill"
 
@@ -17,6 +22,9 @@ const CATALOG_TTL = 10 * 60 * 1000
 
 // Resources are decoded one at a time: a resource kind this build does not know (an agent written by a newer
 // build, say) is dropped instead of failing the record and orphaning the files it names.
+// The stored record keeps `kind` as the closed `Kind` literal on purpose, so a record written by a build with a
+// newer kind is skipped instead of being guessed at with this build's resource rules (the config entry stays
+// active and `/plugins` can disable it); only `resources` and `pending` are decoded tolerantly.
 const Stored = Schema.Struct({
   ...KiloMarketplaceRpc.Installed.fields,
   resources: Schema.optional(Schema.Array(Schema.Unknown)),
@@ -37,10 +45,11 @@ const decodeSnapshot = Schema.decodeUnknownOption(
   ),
 )
 
-export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
+export const KiloMarketplacePlugin = define<Global.Service | Npm.Service | Scope.Scope>({
   id: "kilocode.marketplace",
   effect: Effect.fn(function* (ctx) {
     const global = yield* Global.Service
+    const npm = yield* Npm.Service
     const registry = KiloMarketplaceRegistry.make()
     const catalog = new Map<KiloMarketplaceRpc.Kind, { at: number; entries: readonly Entry[] }>()
     // An unversioned directory belongs to the global project; install into the actual opened directory then.
@@ -84,22 +93,28 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
     const store = (resource: Installer.Resource): KiloMarketplaceRpc.Resource =>
       "agent" in resource
         ? { agent: resource.agent, fingerprints: resource.fingerprints }
-        : "path" in resource
-          ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
-          : { server: resource.server, fingerprints: resource.fingerprints }
+        : "plugin" in resource
+          ? { plugin: resource.plugin, fingerprints: resource.fingerprints }
+          : "path" in resource
+            ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
+            : { server: resource.server, fingerprints: resource.fingerprints }
 
     const configs = (scope: KiloMarketplaceRpc.Scope) =>
       KiloConfigFiles.writeCandidates(directory(scope), scope === "global")
 
-    // An MCP entry lives in the first native config that holds its server. A missing one is placed where a
-    // new install would write it, so repair and cleanup agree on a single resource.
-    const locate = async (scope: KiloMarketplaceRpc.Scope, server: string) => {
-      // An unreadable candidate is not "entry absent": the entry may be in it, so it is returned and the
-      // caller fails on the real read error instead of silently dropping owned content.
+    // Repository-controlled symlinks cannot authorize a project config outside its native locations.
+    const outside = async (scope: KiloMarketplaceRpc.Scope, target: string) =>
+      scope === "project" && !(await MarketplaceConfig.nativeTarget(directory(scope), target))
+
+    // An owned entry lives in the first native config that holds it. A missing one is placed where a new install
+    // would write it, so repair and cleanup agree on a single resource.
+    const locate = async (scope: KiloMarketplaceRpc.Scope, present: (candidate: string) => Promise<boolean>) => {
+      // An unreadable candidate is not "entry absent": the entry may be in it, so it is returned and the caller
+      // fails on the real read error instead of silently dropping owned content.
       let unreadable: string | undefined
       for (const candidate of configs(scope)) {
-        const found = await MarketplaceMcp.fingerprint(candidate, server).then(
-          (fingerprint) => fingerprint !== undefined,
+        const found = await present(candidate).then(
+          (present) => present,
           () => {
             unreadable ??= candidate
             return false
@@ -124,22 +139,41 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
             path: Agent.target(path.join(roots(record.scope), "agents"), resource.agent),
             fingerprints: resource.fingerprints,
           }
+        if ("plugin" in resource) {
+          const hinted =
+            preferred &&
+            (await PluginConfig.fingerprint(preferred, resource.plugin).catch(() => undefined)) !== undefined
+          const config = hinted
+            ? preferred
+            : await locate(
+                record.scope,
+                async (candidate) => (await PluginConfig.fingerprint(candidate, resource.plugin)) !== undefined,
+              )
+          const target = await MarketplaceConfig.resolveFile(config).catch(() => undefined)
+          if (target && (await outside(record.scope, target)))
+            throw new McpError("conflict", `Project config resolves outside its native config locations: ${config}`)
+          return {
+            config,
+            plugin: resource.plugin,
+            ...(target ? { target } : {}),
+            fingerprints: resource.fingerprints,
+          }
+        }
         const hinted =
           preferred &&
           (await MarketplaceMcp.fingerprint(preferred, resource.server).catch(() => undefined)) !== undefined
-        const config = hinted ? preferred : await locate(record.scope, resource.server)
+        const config = hinted
+          ? preferred
+          : await locate(
+              record.scope,
+              async (candidate) => (await MarketplaceMcp.fingerprint(candidate, resource.server)) !== undefined,
+            )
         // The canonical file is derived here, never stored, so aliases of one file stay one resource.
-        const target = await MarketplaceMcp.resolveFile(config).catch(() => undefined)
+        const target = await MarketplaceConfig.resolveFile(config).catch(() => undefined)
         // Every operation restores through here, so a project config that now resolves outside the native
         // candidates (a committed symlink) is refused for uninstall and cleanup as it is for install.
-        if (
-          record.scope === "project" &&
-          target &&
-          !KiloConfigFiles.writeCandidates(await MarketplaceMcp.resolveFile(directory(record.scope)), false).includes(
-            target,
-          )
-        )
-          throw new McpError("conflict", `Project MCP config resolves outside its native config locations: ${config}`)
+        if (target && (await outside(record.scope, target)))
+          throw new McpError("conflict", `Project config resolves outside its native config locations: ${config}`)
         return { config, server: resource.server, ...(target ? { target } : {}), fingerprints: resource.fingerprints }
       }
       const recorded = record.config ? path.join(directory(record.scope), record.config) : undefined
@@ -363,6 +397,42 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
               const previous = stored
                 ? yield* Effect.tryPromise({ try: () => restore(stored), catch: (error) => error })
                 : undefined
+              // Only skills, MCPs and plugins read this, and resolving it can reject an unrelated MCP config.
+              const config =
+                input.kind === "skill"
+                  ? path.join(directory(input.scope), KiloConfigFiles.newFile)
+                  : input.kind === "mcp" || input.kind === "plugin"
+                    ? yield* Effect.tryPromise({
+                        try: () => configFile(directory(input.scope), input.scope === "global"),
+                        catch: (error) => error,
+                      })
+                    : ""
+              // A plugin is resolved and installed before its config entry exists, so a target the loader could not
+              // activate never becomes an installation.
+              if (input.kind === "plugin") {
+                const spec = entry.item.plugin?.spec.trim()
+                if (!spec)
+                  return yield* Effect.fail(new PluginPackageError("invalid_params", `Plugin ${input.id} has no spec`))
+                const identity = yield* Effect.promise(() => pluginIdentity(spec))
+                if (!identity)
+                  return yield* Effect.fail(
+                    new PluginPackageError("invalid_params", `Plugin ${input.id} has an unreadable package spec`),
+                  )
+                const owned = (previous?.resources ?? []).flatMap((resource) =>
+                  "plugin" in resource && resource.plugin === identity ? (resource.fingerprints ?? []) : [],
+                )
+                // A modified or unowned entry fails before the network fetch.
+                yield* Effect.tryPromise({
+                  try: () =>
+                    PluginConfig.preflight({
+                      file: config,
+                      identity,
+                      fingerprints: [...owned, PluginConfig.entryFingerprint(spec)],
+                    }),
+                  catch: (error) => error,
+                })
+                yield* resolvePlugin({ spec, npm })
+              }
               const recordOf = (written: Installer.Written, recovering = false): KiloMarketplaceRpc.Installed => ({
                 version: 1,
                 registry: input.registry,
@@ -385,13 +455,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                     skills: path.join(roots(input.scope), "skills"),
                     // The config agent plugin discovers `{agent,agents}/**/*.md` under each config directory.
                     agents: path.join(roots(input.scope), "agents"),
-                    // Only skills and MCPs read this, and resolving it can reject an unrelated MCP config.
-                    config:
-                      input.kind === "skill"
-                        ? path.join(directory(input.scope), KiloConfigFiles.newFile)
-                        : input.kind === "mcp"
-                          ? await configFile(directory(input.scope), input.scope === "global")
-                          : "",
+                    config,
                     option: input.option,
                     params: input.params,
                     previous,
@@ -474,6 +538,9 @@ function reason(cause: unknown): readonly [keyof typeof KiloMarketplaceRpc.Defin
   if (cause instanceof AgentError)
     return [cause.reason === "conflict" ? "conflict" : "invalid_params", cause.message] as const
   if (cause instanceof McpError) return [cause.reason, cause.message] as const
+  if (cause instanceof MarketplaceConfig.ConfigError) return [cause.reason, cause.message] as const
+  if (cause instanceof PluginConfig.PluginConfigError) return [cause.reason, cause.message] as const
+  if (cause instanceof PluginPackageError) return [cause.reason, cause.message] as const
   if (cause instanceof Installer.FetchError) return ["fetch_failed", cause.message] as const
   return ["write_failed", cause instanceof Error ? cause.message : String(cause)] as const
 }

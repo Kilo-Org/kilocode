@@ -24,6 +24,7 @@ export function label(category: string) {
 export function kindLabel(t: (key: string) => string, kind: MarketplaceKind) {
   if (kind === "mcp") return t("marketplace.badge.mcpServer")
   if (kind === "agent") return t("marketplace.remove.type.agent")
+  if (kind === "plugin") return t("marketplace.remove.type.plugin")
   return t("marketplace.remove.type.skill")
 }
 

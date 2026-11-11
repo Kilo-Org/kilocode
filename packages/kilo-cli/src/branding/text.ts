@@ -127,6 +127,21 @@ export const replacements = {
   ],
   "tui/src/feature-plugins/sidebar/footer.tsx": [["OpenCode includes free models", "Kilo includes free models"]],
   "tui/src/config/index.tsx": [["after OpenCode updates", "after Kilo updates"]],
+  "core/src/session/runner/prompt/system.txt": [
+    ["running in OpenCode, a coding agent harness", "running in Kilo, a coding agent harness"],
+  ],
+  "core/src/plugin/system-prompt/gpt.txt": [
+    ["running in OpenCode, a coding agent harness", "running in Kilo, a coding agent harness"],
+  ],
+  "core/src/plugin/system-prompt/gpt-astra.txt": [
+    ["running in OpenCode, a coding agent harness", "running in Kilo, a coding agent harness"],
+  ],
+  "core/src/plugin/system-prompt/kimi.txt": [["You are OpenCode, an interactive", "You are Kilo, an interactive"]],
+  "core/src/plugin/system-prompt/trinity.txt": [["You are opencode, an interactive", "You are Kilo, an interactive"]],
+  "core/src/plugin/system-prompt/meta.txt": [
+    ["You are OpenCode, a coding agent", "You are Kilo, a coding agent"],
+    ["# Tool Use - OpenCode Specifics", "# Tool Use - Kilo Specifics"],
+  ],
   "core/src/tool/plugin/opencode.ts": [
     namespace,
     ['name: "opencode"', 'name: "kilo"'],
@@ -142,6 +157,15 @@ export const replacements = {
   ],
   // Code Mode paths of the tools a schedule check may not call.
   "core/src/schedule/check.ts": [['"opencode.', '"kilo.']],
+  "core/src/plugin/command/initialize.txt": [
+    ["future OpenCode sessions", "future Kilo sessions"],
+    [
+      "repo-local OpenCode config such as `opencode.json`",
+      `repo-local Kilo config such as \`${KiloConfigFiles.newFile}\``,
+    ],
+    ["`opencode.json` `instructions`", `\`${KiloConfigFiles.newFile}\` \`instructions\``],
+  ],
+  "core/src/plugin/command/schedule.txt": [["the `opencode` namespace", "the `kilo` namespace"]],
   "core/src/oauth/page.ts": [
     ["OpenCode is now", "Kilo is now"],
     ["OpenCode couldn't", "Kilo couldn't"],

@@ -432,7 +432,7 @@ describe("MCP files", () => {
       await fs.symlink(changed, config)
       await expect(Installer.cleanup(resource)).rejects.toMatchObject({
         reason: "conflict",
-        message: `MCP config target changed since installation: ${config}`,
+        message: `Config target changed since installation: ${config}`,
       })
       expect(await fs.readFile(original, "utf8")).toBe(content)
       expect(await fs.readFile(changed, "utf8")).toBe(content)

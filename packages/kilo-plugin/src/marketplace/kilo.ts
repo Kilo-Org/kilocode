@@ -5,7 +5,7 @@ import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { Option, Schema } from "effect"
 import type { Entry, Registry } from "./registry"
 
-const paths = { skill: "skills", mcp: "mcps", agent: "agents" } as const
+const paths = { skill: "skills", mcp: "mcps", agent: "agents", plugin: "plugins" } as const
 
 const RawParameter = Schema.Struct({
   key: Schema.String,
@@ -88,6 +88,9 @@ function normalize(kind: KiloMarketplaceRpc.Kind, raw: typeof RawItem.Type): Ent
   const agent = kind === "agent" ? agentContent(raw.content) : undefined
   // An agent we cannot write completely is skipped, not listed and half-installed.
   if (kind === "agent" && !agent) return undefined
+  const plugin = kind === "plugin" ? pluginContent(raw.content) : undefined
+  // A plugin entry without a package spec has nothing to install, so it is skipped like a missing agent body.
+  if (kind === "plugin" && !plugin) return undefined
   return {
     item: {
       registry: "kilo",
@@ -108,11 +111,18 @@ function normalize(kind: KiloMarketplaceRpc.Kind, raw: typeof RawItem.Type): Ent
         parameters: (option.parameters ?? []).map(parameter),
       })),
       agent,
+      plugin,
     },
     archive: kind === "skill" && typeof raw.content === "string" ? raw.content : undefined,
     payloads: options.map((option) => option.content),
     companions: kind === "mcp" ? raw.skills?.map((skill) => ({ id: skill.id, archive: skill.content })) : undefined,
   }
+}
+
+function pluginContent(content: unknown): KiloMarketplaceRpc.PluginContent | undefined {
+  if (typeof content !== "string") return undefined
+  const spec = content.trim()
+  return spec ? { spec } : undefined
 }
 
 /**

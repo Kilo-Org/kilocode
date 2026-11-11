@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Completo (según el modelo)",
+  "session.goal.complete": "Completo",
   "session.goal.blocked": "Bloqueado",
   "session.goal.restart": "Reiniciar objetivo",
   ...anacondaDesktopDict,
@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gestionar reglas de aprobación automática",
   "ui.permission.noChanges": "Sin cambios.",
   "ui.permission.reject": "Rechazar",
+  "ui.permission.allowAllSites": "Permitir todos los sitios",
   "ui.permission.feedbackPlaceholder": "Dile a Kilo qué debe hacer de otra forma",
   "ui.permission.feedbackHint": "Enter para rechazar, Esc para cancelar",
   "ui.permission.doomLoop.prompt": "Se detectó un posible bucle en la herramienta {{tool}}. ¿Continuar ejecutando?",

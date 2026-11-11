@@ -32,11 +32,12 @@ export function tracksElapsed(
 
 /**
  * Whether the session dock shows the working indicator. A retry counts as working: its countdown and Cancel action
- * belong in the dock. This is the dock's single decision point.
+ * belong in the dock. An active goal keeps working between its runs, for example while it waits on background work.
+ * This is the dock's single decision point.
  */
-export function showsWorking(status: DataSessionStatus, submitting: boolean, blocked: boolean): boolean {
+export function showsWorking(status: DataSessionStatus, submitting: boolean, blocked: boolean, goal = false): boolean {
   if (blocked) return false
-  return submitting || status !== "idle"
+  return submitting || status !== "idle" || goal
 }
 
 type T = (key: string) => string

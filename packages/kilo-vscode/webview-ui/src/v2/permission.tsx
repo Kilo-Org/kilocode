@@ -7,6 +7,7 @@ import { PermissionCommand } from "../components/chat/PermissionCommand"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { PermissionDiff } from "./permission-diff"
+import { allowBroader, displayResource, widerRule } from "./permission-rules"
 
 /** v2 permission actions whose existing label key has another name. */
 const LABELS: Record<string, string> = {
@@ -52,11 +53,28 @@ export function PermissionDock(props: {
     return value === key ? props.request.action : value
   }
 
-  const submit = (decision: "once" | "always" | "reject") => {
+  const wider = () => widerRule(props.request)
+
+  const answer = (decision: "once" | "always" | "reject", broader?: string) => {
+    const request = props.request
+    if (!broader)
+      return v2.data.session.permission.reply({ sessionID: request.sessionID, requestID: request.id, decision })
+    return allowBroader(
+      {
+        reply: (input) => v2.data.session.permission.reply(input),
+        project: (sessionID) => v2.data.session.get(sessionID)?.projectID,
+        session: v2.api.session,
+        saved: v2.api.permission.saved,
+      },
+      request,
+      broader,
+    )
+  }
+
+  const submit = (decision: "once" | "always" | "reject", broader?: string) => {
     if (sending()) return
     setSending(true)
-    void v2.data.session.permission
-      .reply({ sessionID: props.request.sessionID, requestID: props.request.id, decision })
+    void answer(decision, broader)
       .then(() => window.dispatchEvent(new Event("focusPrompt")))
       .catch(v2.report)
       .finally(() => setSending(false))
@@ -106,7 +124,9 @@ export function PermissionDock(props: {
             <div data-slot="permission-patterns">
               <span data-slot="permission-patterns-title">{action()}</span>
               <For each={props.request.resources}>
-                {(resource) => <code data-slot="permission-pattern">{resource}</code>}
+                {(resource) => (
+                  <code data-slot="permission-pattern">{displayResource(props.request.action, resource)}</code>
+                )}
               </For>
             </div>
             <Show when={files().length > 0}>
@@ -121,6 +141,13 @@ export function PermissionDock(props: {
           <Button variant="secondary" size="small" onClick={() => submit("always")} disabled={sending()}>
             {language.t("ui.permission.allowAlways")}
           </Button>
+          <Show when={wider()}>
+            {(rule) => (
+              <Button variant="secondary" size="small" onClick={() => submit("always", rule())} disabled={sending()}>
+                {language.t("ui.permission.allowAllSites")}
+              </Button>
+            )}
+          </Show>
           <Button variant="ghost" size="small" onClick={() => submit("reject")} disabled={sending()}>
             {language.t("ui.permission.reject")}
           </Button>

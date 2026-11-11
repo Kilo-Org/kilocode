@@ -21,7 +21,10 @@ export function createAppSession(opts: {
   /** Root of the applied project, whose store holds the catalogs. */
   rootDirectory: Accessor<string | undefined>
 }) {
-  const panel = createPanelData({ post: (message) => opts.vscode.postMessage(message) })
+  const panel = createPanelData({
+    post: (message) => opts.vscode.postMessage(message),
+    directories: opts.directories.sessionDirectories,
+  })
   onCleanup(
     opts.vscode.onMessage((message) =>
       panel.receive(message as unknown as Parameters<typeof panel.receive>[0]),

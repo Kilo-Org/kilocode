@@ -9,9 +9,9 @@
  * out of flow while a turn runs, takes a line that has room for it in the idle actions row, and keeps the row alive on
  * its own until the agents finish when the surface has no actions.
  *
- * The todo chip trails the spinner: left of the spinner is who works (background agents), right of it is progress.
- * When idle, the chip sits next to the session actions. Its title collapses before the count, so the ring always stays
- * in view.
+ * The todo chip trails the spinner, before the goal badge: left of the spinner is who works (background agents), right
+ * of it is progress (todos, then the goal). The dock plans that trailing group as one, so it collapses in a fixed order
+ * instead of each badge shrinking on its own. When idle, the chip sits next to the Goal control in the actions row.
  *
  * The board button follows the stack: what the agents say sits next to who works. The board belongs to the session,
  * so the button stays in the same place when the agents are cleared or the view reloads.
@@ -21,11 +21,13 @@ import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { showsWorking } from "../shared/working-indicator-utils"
 import { useTodoSource } from "../../v2/todo"
 import type { BackgroundJobs } from "../../v2/background-jobs"
+import type { GoalSource } from "../../v2/goal"
 import { AgentStack, useAgentStack } from "./AgentStack"
 import { SwarmBoardButton, useSwarmBoard } from "./SwarmBoard"
 import { stackFit, stackPlace, stackWidth } from "./background-agents"
 import { TodoChip, useTodoDock } from "./todo/TodoChip"
 import { TODO_TITLE_MAX, todoFit, type TodoFit } from "./todo/todo-dock"
+import { useGoalDock } from "./goal/useGoalDock"
 
 type SessionDockProps = ComponentProps<typeof WorkingIndicator> & {
   /** The open session. The todo chip reads its messages. */
@@ -40,6 +42,10 @@ type SessionDockProps = ComponentProps<typeof WorkingIndicator> & {
   hasActions?: boolean
   /** True while a permission or question owns the row. */
   blocked: boolean
+  /** The `/goal` of the open session: its badge trails the spinner and its menu joins the actions. */
+  goal: GoalSource
+  /** Whether the Goal menu can send a control now. */
+  connected: boolean
 }
 
 export const SessionDock: Component<SessionDockProps> = (props) => {
@@ -55,7 +61,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   })
   const board = useSwarmBoard({ session, open: (id, title) => props.onOpenSession?.(id, title) })
   const todo = useTodoDock(useTodoSource(session))
-  const working = () => showsWorking(props.status, props.submitting, props.blocked)
+  const working = () => showsWorking(props.status, props.submitting, props.blocked, props.goal.active())
   const actions = () => !working() && !props.blocked && (props.hasActions ?? false)
   const visible = () => stack.shown()
   // The stack, the board button, or both lead the spinner.
@@ -63,6 +69,13 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   const agents = () => !working() && !actions() && !props.blocked && (front() || todo.shown())
   const active = () => working() || actions() || agents()
   const [fit, setFit] = createSignal<TodoFit>({ title: TODO_TITLE_MAX, count: true, compact: false })
+  const goal = useGoalDock({
+    source: props.goal,
+    working,
+    actions,
+    connected: () => props.connected,
+    compact: () => (todo.shown() ? fit().compact : undefined),
+  })
 
   // The stack leads the centered spinner out of flow. The lane reserves the stack width on both sides, so the
   // spinner stays centered and the label truncates before the stack leaves the row. The avatar count depends only on
@@ -129,6 +142,7 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           chip: ring + edge,
           count,
           title,
+          goal: badge(box),
           gap: Number.parseFloat(getComputedStyle(box).columnGap) || 0,
         }),
       )
@@ -259,10 +273,14 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
 
   return (
     <div class="session-dock" ref={setDock} data-component="session-dock" data-active={active() ? "" : undefined}>
-      <div class="session-dock-state" data-active={working() ? "" : undefined} aria-hidden={!working()}>
+      <div class="session-dock-state" ref={goal.row} data-active={working() ? "" : undefined} aria-hidden={!working()}>
         <div
           class="session-working"
-          ref={setLane}
+          ref={(el) => {
+            goal.lane(el)
+            setLane(el)
+          }}
+          data-goal={goal.running() ? "" : undefined}
           data-agents={front() ? "" : undefined}
           data-todos={todo.shown() ? "" : undefined}
         >
@@ -285,11 +303,18 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
           />
           <div class="session-working-trail" ref={setTrail}>
             {chip(true)}
+            {goal.status()}
           </div>
         </div>
       </div>
       <div class="session-dock-state" ref={setIdle} data-active={actions() ? "" : undefined} aria-hidden={!actions()}>
-        {props.actions?.(chip(false), idleStack)}
+        {props.actions?.(
+          <>
+            {chip(false)}
+            {goal.control()}
+          </>,
+          idleStack,
+        )}
       </div>
       <div class="session-dock-state" data-active={agents() ? "" : undefined} aria-hidden={!agents()}>
         <div class="session-agents">
@@ -350,6 +375,18 @@ function core(lane: HTMLElement | undefined) {
     inner.gap * Math.max(0, shown.length - 1) +
     extra
   )
+}
+
+/** Natural widths of the goal badge, full and icon only. */
+function badge(box: HTMLElement) {
+  const el = box.querySelector<HTMLElement>(".session-goal-status-content")
+  if (!el) return undefined
+  const css = getComputedStyle(el)
+  const edge = Number.parseFloat(css.paddingLeft) + Number.parseFloat(css.paddingRight)
+  const gap = Number.parseFloat(css.getPropertyValue("--goal-label-gap")) || 0
+  const icon = el.querySelector('[data-component="icon"]')?.getBoundingClientRect().width ?? 0
+  const label = el.querySelector<HTMLElement>(".session-goal-status-label")?.scrollWidth ?? 0
+  return { compact: icon + edge, full: icon + edge + gap + label }
 }
 
 /**
