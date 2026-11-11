@@ -75,6 +75,25 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertTrue(clock.timer.isRunning())
     }
 
+    fun `test setup failure shows the safe failed command detail`() {
+        val error = HostedSystemEventDto("hosted:cloud:one:ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed",
+            detail = "Setup command 6: fatal: '' is not a valid branch name")
+
+        panel.setPreparation(null, error)
+
+        assertTrue(panel.labelText().contains("Setup command 6: fatal: '' is not a valid branch name"))
+        assertFalse(panel.labelText().contains("provider"))
+    }
+
+    fun `test setup failure is recognized from the failed step without a safe code`() {
+        panel.setPreparation(null, HostedSystemEventDto("hosted:cloud:one:ses", "preparing",
+            action = "failed", step = "setup_commands", detail = "Setup command 6 failed"))
+
+        assertTrue(panel.labelText().startsWith(KiloBundle.message("hosted.workspace.preparation.setupFailed")))
+        assertTrue(panel.labelText().contains("Setup command 6 failed"))
+    }
+
     fun `test persistent setup failure churn retains nodes and releases timer`() {
         val clock = FakeClock()
         replace(clock)

@@ -8,22 +8,38 @@ import ai.kilocode.backend.rpc.KiloSessionRpcApiImpl
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HostedStreamLifecycleTest {
@@ -101,6 +117,27 @@ class HostedStreamLifecycleTest {
     }
 
     @Test
+    fun `hosted turn lifecycle drives busy and idle when no session status is emitted`() = runBlocking(Dispatchers.Default) {
+        mock.sessionStatuses = """{"ses_cloud":{"type":"idle"}}"""
+        ready()
+        open()
+        fence()
+        next { it is ChatEventDto.Resnapshot && it.phase == "complete" }
+        assertEquals("idle", app.hosted.statuses.value[session]?.type)
+
+        // Cloud streams the turn but not session.status; the running indicator must still light up
+        // through the shared statuses map, exactly like a local session's busy status.
+        mock.pushFeed(path, """{"type":"session.turn.open","properties":{"sessionID":"ses_cloud"}}""")
+        next { it is ChatEventDto.TurnOpen && it.sessionID == session }
+        withTimeout(TIMEOUT) { app.hosted.statuses.first { it[session]?.type == "busy" } }
+
+        mock.pushFeed(path, """{"type":"session.turn.close","properties":{"sessionID":"ses_cloud","reason":"completed"}}""")
+        next { it is ChatEventDto.TurnClose && it.sessionID == session }
+        withTimeout(TIMEOUT) { app.hosted.statuses.first { it[session]?.type == "idle" } }
+        Unit
+    }
+
+    @Test
     fun `completed fence waits for authoritative status before buffered live events`() = runBlocking(Dispatchers.Default) {
         mock.sessionStatuses = """{"ses_cloud":{"type":"idle"}}"""
         ready()
@@ -168,6 +205,446 @@ class HostedStreamLifecycleTest {
     }
 
     @Test
+    fun `passive discovery does not starve new native and preparation failure streams`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val jobs = mutableListOf<Job>()
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        try {
+            repeat(8) { index ->
+                val native = "ses_watch_$index"
+                val id = "wrk_att_$index"
+                val ref = HostedWorkspaceRefDto("cloud", "wrk_watch_$index")
+                mock.hostedAttachments["/kilocode/session-host/session/cloud/$native/attach"] =
+                    """{"attachmentID":"$id","session":{"providerID":"cloud","sessionID":"$native"},"expiresAt":1}"""
+                jobs += scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    app.hosted.systemEvents(ref, native, null).collect {}
+                }
+                assertTrue(
+                    mock.awaitFeed("/cloud-agent/event?workspace=$id"),
+                    "passive stream $index was queued behind existing long-lived streams",
+                )
+            }
+            jobs += scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                app.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", null)
+                    .collect { received.send(it) }
+            }
+            open()
+            mock.pushFeed(system, COMMAND)
+            val failure = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals(session, failure.sessionID)
+            assertEquals("failed", failure.action)
+            assertEquals(
+                "Setup command 1 failed (exit code 1)\nbash: line 1: cd: cloud-agent: No such file or directory\n",
+                failure.detail,
+            )
+            assertEquals(1, mock.requestCount("/event"))
+        } finally {
+            jobs.forEach { it.cancel() }
+            jobs.forEach { it.join() }
+        }
+    }
+
+    @Test
+    fun `initial passive replay survives a collector delayed until after the feed starts`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val gate = CountDownLatch(1)
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        mock.responseGate = CountDownLatch(1)
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher().use { dispatcher ->
+            dispatcher.executor.execute { gate.await() }
+            // Start collection synchronously, then hold its ensure() continuation while the
+            // independently owned system feed receives the provider's complete initial replay.
+            val job = scope.launch(dispatcher, start = CoroutineStart.UNDISPATCHED) {
+                app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+            }
+            try {
+                assertTrue(mock.awaitRequestCount(attach, 1))
+                mock.responseGate!!.countDown()
+                assertTrue(mock.awaitFeed(system))
+                val rows = snapshots()
+                rows.forEach { mock.pushFeed(system, it) }
+                withTimeout(TIMEOUT) {
+                    app.hosted.systemEvents(ref, "ses_cloud", null).first { it.stepID == "phase:setup_commands" }
+                }
+                gate.countDown()
+                val replay = withTimeout(TIMEOUT) { List(rows.size) { received.receive() } }
+                assertEquals("attempt_failed", replay.first().action)
+                assertEquals("workspace_setup_failed", replay.first().failure)
+                assertEquals("setup_command:0", replay.getOrNull(replay.lastIndex - 1)?.stepID)
+                assertEquals("phase:setup_commands", replay.last().stepID)
+                mock.pushFeed(system, """{"type":"cloud.status","properties":{"cloudStatus":{"type":"error","message":"Private server error"}}}""")
+                assertEquals("error", withTimeout(TIMEOUT) { received.receive() }.cloudStatus)
+                assertEquals(0, mock.requestCount("/event"))
+                assertEquals(0, mock.requestCount("/session/ses_cloud/message"))
+            } finally {
+                gate.countDown()
+                mock.responseGate?.countDown()
+                job.cancel()
+                job.join()
+            }
+        }
+    }
+
+    @Test
+    fun `late passive collectors replay every session step after interleaved sessions and continue live`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val jobs = mutableListOf<Job>()
+        jobs += scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system))
+            val rows = snapshots()
+            rows.forEach { mock.pushFeed(system, it) }
+            val initial = withTimeout(TIMEOUT) { List(rows.size) { received.receive() } }
+            val other = HostedWorkspaceRefDto("cloud", "wrk_2")
+            val feed = "/cloud-agent/event?workspace=wrk_att_other"
+            val interleaved = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+            mock.hostedAttach = """{"attachmentID":"wrk_att_other","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+            jobs += scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                app.hosted.systemEvents(other, "ses_cloud", null).collect { interleaved.send(it) }
+            }
+            assertTrue(mock.awaitFeed(feed))
+            repeat(16) {
+                mock.pushFeed(feed, """{"type":"cloud.sandbox.status","properties":{"sessionID":"ses_cloud","sandbox":{"status":"unavailable","observedAt":${it + 1}}}}""")
+            }
+            withTimeout(TIMEOUT) {
+                repeat(16) { assertEquals(HostedIDs.session("cloud", "wrk_2", "ses_cloud"), interleaved.receive().sessionID) }
+            }
+
+            val late = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+            jobs += scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                app.hosted.systemEvents(ref, "ses_cloud", null).collect { late.send(it) }
+            }
+            assertEquals(initial, withTimeout(TIMEOUT) { List(rows.size) { late.receive() } })
+            mock.pushFeed(system, """{"type":"cloud.status","properties":{"cloudStatus":{"type":"ready"}}}""")
+            val live = withTimeout(TIMEOUT) { late.receive() }
+            assertEquals(session, live.sessionID)
+            assertEquals("ready", live.cloudStatus)
+            assertEquals(2, mock.requestCount("/cloud-agent/event"), "late collection reopened an existing passive feed")
+            assertEquals(0, mock.requestCount("/event"))
+        } finally {
+            jobs.forEach { it.cancel() }
+            jobs.forEach { it.join() }
+        }
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_other", 1))
+    }
+
+    @Test
+    fun `slow passive collector loses no live events and does not block another collector`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val gate = CompletableDeferred<Unit>()
+        val blocked = CompletableDeferred<Unit>()
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect {
+                if (blocked.complete(Unit)) gate.await()
+                received.send(it)
+            }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system))
+            mock.pushFeed(system, ATTEMPT)
+            withTimeout(TIMEOUT) { blocked.await() }
+            val observer = scope.async(start = CoroutineStart.UNDISPATCHED) {
+                app.hosted.systemEvents(ref, "ses_cloud", null).first { it.observedAt == 96.0 }
+            }
+            try {
+                repeat(96) {
+                    mock.pushFeed(system, """{"type":"cloud.sandbox.status","properties":{"sandbox":{"status":"unavailable","observedAt":${it + 1}}}}""")
+                }
+                withTimeout(TIMEOUT) { observer.await() }
+                gate.complete(Unit)
+                assertEquals("attempt_failed", withTimeout(TIMEOUT) { received.receive() }.action)
+                val observed = withTimeout(TIMEOUT) { List(96) { received.receive().observedAt } }
+                assertEquals((1..96).map(Int::toDouble), observed)
+            } finally {
+                observer.cancel()
+                observer.join()
+            }
+        } finally {
+            gate.complete(Unit)
+            job.cancel()
+            job.join()
+        }
+    }
+
+    @Test
+    fun `final passive subscriber discards its replay before the session is observed again`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val first = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system))
+            mock.pushFeed(system, ATTEMPT)
+            assertEquals("attempt_failed", withTimeout(TIMEOUT) { received.receive() }.action)
+        } finally {
+            first.cancel()
+            first.join()
+        }
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+        val second = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system, 2))
+            mock.pushFeed(system, """{"type":"cloud.status","properties":{"cloudStatus":{"type":"ready"}}}""")
+            assertEquals("ready", withTimeout(TIMEOUT) { received.receive() }.cloudStatus)
+            assertEquals(2, mock.requestCount(attach))
+            assertEquals(0, mock.requestCount("/event"))
+        } finally {
+            second.cancel()
+            second.join()
+        }
+    }
+
+    @Test
+    fun `live creation failure includes full multiline command output and retains it for late collectors`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system))
+            mock.pushFeed(system, preparing(1) {
+                put("action", "step_started")
+                put("stepId", "phase:setup_commands")
+                put("kind", "phase")
+                put("label", "setup commands")
+            })
+            assertEquals("phase", withTimeout(TIMEOUT) { received.receive() }.stepKind)
+            mock.pushFeed(system, preparing(2) {
+                put("action", "step_started")
+                put("kind", "setup_command")
+                put("label", "Setup command 1")
+            })
+            assertEquals("setup_command", withTimeout(TIMEOUT) { received.receive() }.stepKind)
+            val first = "First line\n  ${"command detail ".repeat(40)}\n"
+            val last = "bash: line 1: cd: cloud-agent: No such file or directory\n"
+            val chunk = preparing(3) {
+                put("action", "step_output")
+                put("output", first)
+            }
+            mock.pushFeed(system, chunk)
+            assertEquals(first, withTimeout(TIMEOUT) { received.receive() }.output)
+            mock.pushFeed(system, preparing(4) {
+                put("action", "step_output")
+                put("stepId", "phase:setup_commands")
+                put("output", "Independent phase log\n")
+            })
+            assertEquals("Independent phase log\n", withTimeout(TIMEOUT) { received.receive() }.output)
+            mock.pushFeed(system, chunk)
+            mock.pushFeed(system, preparing(5) {
+                put("action", "step_output")
+                put("output", last)
+            })
+            val output = first + last
+            assertEquals(output, withTimeout(TIMEOUT) { received.receive() }.output)
+            mock.pushFeed(system, preparing(6) {
+                put("action", "step_failed")
+                put("safeError", "Setup command 1 failed")
+                put("exitCode", 1)
+            })
+            val failed = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals("setup_command", failed.stepKind)
+            assertEquals("setup_command:0", failed.stepID)
+            assertEquals("Setup command 1 failed (exit code 1)\n$output", failed.detail)
+            assertEquals(output, failed.output)
+            assertFalse(failed.outputTruncated)
+            mock.pushFeed(system, preparing(7) {
+                put("action", "step_failed")
+                put("stepId", "phase:setup_commands")
+                put("safeError", "workspace_setup_failed")
+            })
+            val phase = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals("phase", phase.stepKind)
+            assertEquals("Independent phase log\n", phase.output)
+            mock.pushFeed(system, preparing(8) {
+                put("action", "step_progress")
+                put("detail", "Generic progress after failure")
+            })
+            mock.pushFeed(system, """{"type":"cloud.status","properties":{"cloudStatus":{"type":"error","safeError":"Private error","message":"Private server error"}}}""")
+            val status = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals("error", status.cloudStatus)
+            assertNull(status.message)
+            assertNull(status.detail)
+            assertNull(status.output)
+            mock.pushFeed(system, preparing(9) {
+                put("action", "attempt_failed")
+                put("stepId", JsonNull)
+                put("safeError", "workspace_setup_failed")
+            })
+            assertEquals("attempt_failed", withTimeout(TIMEOUT) { received.receive() }.action)
+
+            val replay = withTimeout(TIMEOUT) {
+                app.hosted.systemEvents(ref, "ses_cloud", null).first { it.stepID == "setup_command:0" }
+            }
+            assertEquals(failed, replay)
+            assertEquals(1, mock.requestCount("/cloud-agent/event"))
+            assertEquals(0, mock.requestCount("/event"))
+            assertEquals(0, mock.requestCount("/session/ses_cloud/message"))
+        } finally {
+            job.cancel()
+            job.join()
+        }
+    }
+
+    @Test
+    fun `live output retains at most 65536 UTF8 bytes without splitting characters or duplicating snapshot tails`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system))
+            mock.pushFeed(system, preparing(1) {
+                put("action", "step_started")
+                put("kind", "setup_command")
+                put("label", "Setup command 1")
+            })
+            withTimeout(TIMEOUT) { received.receive() }
+            mock.pushFeed(system, preparing(2) {
+                put("action", "step_output")
+                put("output", "\u20ac".repeat(22_000))
+            })
+            val first = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals("\u20ac".repeat(21_845), first.output)
+            assertEquals(65_535, assertNotNull(first.output).toByteArray(Charsets.UTF_8).size)
+            assertTrue(first.outputTruncated)
+            mock.pushFeed(system, preparing(3) {
+                put("action", "step_output")
+                put("output", "AB")
+            })
+            val tail = "\u20ac".repeat(21_844) + "AB"
+            val output = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals(tail, output.output)
+            assertEquals(65_534, assertNotNull(output.output).toByteArray(Charsets.UTF_8).size)
+            assertTrue(output.outputTruncated)
+            assertFalse(assertNotNull(output.output).contains('\uFFFD'))
+            mock.pushFeed(system, preparing(4) {
+                put("action", "step_failed")
+                put("safeError", "Setup command 1 failed")
+                put("exitCode", 1)
+            })
+            val failed = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals("Setup command 1 failed (exit code 1)\n$tail", failed.detail)
+            assertTrue(failed.outputTruncated)
+            mock.pushFeed(system, preparing(4) {
+                put("action", "step_snapshot")
+                putJsonObject("stepSnapshot") {
+                    put("id", "setup_command:0")
+                    put("key", "setup_commands")
+                    put("kind", "setup_command")
+                    put("label", "Setup command 1")
+                    put("status", "failed")
+                    put("safeError", "Setup command 1 failed")
+                    put("exitCode", 1)
+                    put("outputTail", tail)
+                    put("outputTruncated", true)
+                }
+            })
+            val snapshot = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals(failed.detail, snapshot.detail)
+            assertEquals(tail, snapshot.output)
+            assertTrue(snapshot.outputTruncated)
+            mock.pushFeed(system, preparing(5) {
+                put("action", "step_snapshot")
+                putJsonObject("stepSnapshot") {
+                    put("id", "setup_command:0")
+                    put("key", "setup_commands")
+                    put("kind", "setup_command")
+                    put("label", "Setup command 1")
+                    put("status", "failed")
+                    put("safeError", "Setup command 1 failed")
+                    put("exitCode", 1)
+                }
+            })
+            val retained = withTimeout(TIMEOUT) { received.receive() }
+            assertEquals(failed.detail, retained.detail)
+            assertEquals(tail, retained.output)
+            assertTrue(retained.outputTruncated)
+            assertEquals(retained, withTimeout(TIMEOUT) {
+                app.hosted.systemEvents(ref, "ses_cloud", null).first { it.stepID == "setup_command:0" }
+            })
+        } finally {
+            job.cancel()
+            job.join()
+        }
+    }
+
+    @Test
+    fun `output and replay stay isolated across attempts and evict old preparation history`() = runBlocking(Dispatchers.Default) {
+        ready()
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        val job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(ref, "ses_cloud", null).collect { received.send(it) }
+        }
+        try {
+            assertTrue(mock.awaitFeed(system))
+            for (index in 1..4) {
+                val attempt = "attempt_$index"
+                val revision = index * 10
+                mock.pushFeed(system, preparing(revision + 1, attempt) {
+                    put("action", "step_started")
+                    put("kind", "setup_command")
+                    put("label", "Setup command 1")
+                })
+                assertNull(withTimeout(TIMEOUT) { received.receive() }.output)
+                mock.pushFeed(system, preparing(revision + 2, attempt) {
+                    put("action", "step_output")
+                    put("output", "Attempt $index\n")
+                })
+                assertEquals("Attempt $index\n", withTimeout(TIMEOUT) { received.receive() }.output)
+                mock.pushFeed(system, preparing(revision + 3, attempt) {
+                    put("action", "step_failed")
+                    put("safeError", "Setup command 1 failed")
+                    put("exitCode", 1)
+                })
+                assertEquals("Setup command 1 failed (exit code 1)\nAttempt $index\n", withTimeout(TIMEOUT) { received.receive() }.detail)
+                mock.pushFeed(system, preparing(revision + 4, attempt) {
+                    put("action", "attempt_failed")
+                    put("stepId", JsonNull)
+                    put("safeError", "workspace_setup_failed")
+                })
+                assertEquals(attempt, withTimeout(TIMEOUT) { received.receive() }.attemptID)
+            }
+            mock.pushFeed(system, preparing(1, "attempt_1") {
+                put("action", "step_snapshot")
+                putJsonObject("stepSnapshot") {
+                    put("id", "setup_command:0")
+                    put("status", "failed")
+                    put("outputTail", "Evicted attempt output\n")
+                }
+            })
+            mock.pushFeed(system, """{"type":"cloud.status","properties":{"cloudStatus":{"type":"ready"}}}""")
+            assertEquals("ready", withTimeout(TIMEOUT) { received.receive() }.cloudStatus)
+            val replay = withTimeout(TIMEOUT) {
+                app.hosted.systemEvents(ref, "ses_cloud", null).take(5).toList()
+            }
+            assertEquals(setOf("attempt_3", "attempt_4"), replay.mapNotNull { it.attemptID }.toSet())
+            assertEquals(listOf("Attempt 3\n", "Attempt 4\n"), replay.filter { it.stepID == "setup_command:0" }.map { it.output })
+            assertEquals("ready", replay.last().cloudStatus)
+            assertEquals(1, mock.requestCount("/cloud-agent/event"))
+        } finally {
+            job.cancel()
+            job.join()
+        }
+    }
+
+    @Test
     fun `abort reads authoritative busy status instead of forcing idle`() = runBlocking(Dispatchers.Default) {
         mock.sessionStatuses = """{"ses_cloud":{"type":"busy"}}"""
         ready()
@@ -225,6 +702,17 @@ class HostedStreamLifecycleTest {
         val question = assertFailsWith<RuntimeException> { app.hosted.pendingQuestions(directory, null) }
         assertTrue(permission.message.orEmpty().contains("HTTP 500"))
         assertTrue(question.message.orEmpty().contains("HTTP 500"))
+        assertEquals(1, mock.requestCount(attach))
+    }
+
+    @Test
+    fun `unavailable hosted history is an error rather than an empty transcript`() = runBlocking(Dispatchers.Default) {
+        ready()
+        open()
+        mock.hostedMessageStatuses.add(503)
+        val failure = assertFailsWith<RuntimeException> { app.hosted.messages(session, null) }
+        assertTrue(failure.message.orEmpty().contains("HTTP 503"))
+        assertTrue(app.hosted.messages(session, null).isEmpty(), "a successful empty history remains authoritative")
         assertEquals(1, mock.requestCount(attach))
     }
 
@@ -452,8 +940,34 @@ class HostedStreamLifecycleTest {
         }
     }
 
+    private fun preparing(revision: Int, attempt: String = "attempt_live", body: JsonObjectBuilder.() -> Unit): String =
+        buildJsonObject {
+            put("type", "preparing")
+            putJsonObject("properties") {
+                put("sessionID", "ses_cloud")
+                putJsonObject("preparation") {
+                    put("version", 2)
+                    put("attemptId", attempt)
+                    put("triggerMessageId", "msg_live")
+                    put("revision", revision)
+                    put("timestamp", revision)
+                    put("step", "setup_commands")
+                    put("stepId", "setup_command:0")
+                    put("message", "Preparing workspace")
+                    body()
+                }
+            }
+        }.toString()
+
+    private fun snapshots(): List<String> = listOf(ATTEMPT) + (1..16).map {
+        """{"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59","triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":$it,"timestamp":$it,"step":"cloning","message":"Preparation snapshot","action":"step_snapshot","stepId":"clone:$it","stepSnapshot":{"id":"clone:$it","key":"cloning","kind":"phase","label":"Clone step $it","status":"completed","revision":$it}}}}"""
+    } + listOf(COMMAND, PHASE)
+
     private companion object {
         const val TIMEOUT = 10_000L
+        const val ATTEMPT = """{"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59","triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":21,"timestamp":1793812765086,"step":"workspace_setup","message":"Preparation snapshot","action":"attempt_snapshot","attempt":{"id":"e718c48d-eae1-451a-a773-c84ddff94d59","status":"failed","revision":21,"completedAt":1793812765086,"safeError":"workspace_setup_failed"}}}}"""
+        const val COMMAND = """{"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59","triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":19,"timestamp":1793812765084,"step":"setup_commands","message":"Preparation snapshot","action":"step_snapshot","stepId":"setup_command:0","stepSnapshot":{"id":"setup_command:0","key":"setup_commands","kind":"setup_command","label":"Setup command 1","status":"failed","revision":19,"commandIndex":0,"commandCount":1,"parentStepId":"phase:setup_commands","outputTail":"bash: line 1: cd: cloud-agent: No such file or directory\n","outputTruncated":false,"safeError":"Setup command 1 failed","exitCode":1}}}}"""
+        const val PHASE = """{"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"e718c48d-eae1-451a-a773-c84ddff94d59","triggerMessageId":"msg_01a1a792125boXEU3GPUHuh0eH","revision":20,"timestamp":1793812765085,"step":"setup_commands","message":"Preparation snapshot","action":"step_snapshot","stepId":"phase:setup_commands","stepSnapshot":{"id":"phase:setup_commands","key":"setup_commands","kind":"phase","label":"setup commands","status":"failed","revision":20,"safeError":"workspace_setup_failed"}}}}"""
         const val PERMISSION = """{"id":"per_1","sessionID":"ses_cloud","permission":"bash","patterns":["pwd"],"always":[],"metadata":{}}"""
         const val QUESTION = """{"id":"que_1","sessionID":"ses_cloud","questions":[{"question":"Continue?","header":"Confirm","options":[{"label":"Yes","description":"Continue"}]}]}"""
     }

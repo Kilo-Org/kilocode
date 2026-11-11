@@ -65,6 +65,8 @@ class SessionModel {
 
     private val entries = LinkedHashMap<String, Message>()
     private val terminals = mutableMapOf<String, ChatEventDto.MessageTerminal>()
+    private val optimistic = mutableSetOf<String>()
+    private val optimisticText = HashMap<String, MutableMap<String, String>>()
     private val turnEntries = LinkedHashMap<String, Turn>()
     private val hiddenText = mutableSetOf<Pair<String, String>>()
     private val childRefs = HashMap<String, ChildRef>()
@@ -89,6 +91,8 @@ class SessionModel {
         private set
 
     var session: SessionDto? = null
+        private set
+    var hostedTitle: String? = null
         private set
 
     private var revert: SessionRevertDto? = null
@@ -128,6 +132,39 @@ class SessionModel {
 
     @RequiresEdt
     fun message(id: String): Message? = entries[id]
+
+    /** True while [id] is a client-side placeholder awaiting the authoritative user message. */
+    @RequiresEdt
+    fun isOptimistic(id: String): Boolean = id in optimistic
+
+    /**
+     * Insert the user's prompt before the backend echoes it, so the first send is visible immediately.
+     * The message ID is the one sent with the prompt; the authoritative update replaces this message
+     * in place, and the matching text part is replaced rather than rendered twice.
+     */
+    @RequiresEdt
+    fun addOptimisticUser(dto: MessageDto, parts: List<PartDto>) {
+        optimistic.add(dto.id)
+        val msg = Message(dto, terminal(dto))
+        entries[dto.id] = msg
+        fire(SessionModelEvent.MessageAdded(msg))
+        parts.forEach {
+            val text = it.text
+            if (it.type == "text" && text != null) {
+                optimisticText.getOrPut(dto.id) { HashMap() }[it.id] = text
+            }
+            updateContent(dto.id, it)
+        }
+        regroup()
+        updateHeader()
+    }
+
+    /** Drop a prompt that never reached the backend. Real messages are left untouched. */
+    @RequiresEdt
+    fun removeOptimistic(id: String) {
+        if (!optimistic.remove(id)) return
+        removeMessage(id)
+    }
 
     @RequiresEdt
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
@@ -184,6 +221,7 @@ class SessionModel {
     fun upsertMessage(dto: MessageDto): Boolean {
         val existing = entries[dto.id]
         if (existing != null) {
+            optimistic.remove(dto.id)
             val updated = Message(dto, terminal(dto)).also { it.parts.putAll(existing.parts) }
             entries[dto.id] = updated
             fire(SessionModelEvent.MessageUpdated(updated))
@@ -213,6 +251,8 @@ class SessionModel {
     @RequiresEdt
     fun removeMessage(id: String) {
         terminals.remove(id)
+        optimistic.remove(id)
+        optimisticText.remove(id)
         val msg = entries.remove(id) ?: return
         for (part in msg.parts.values) untrackChild(part)
         hiddenText.removeAll { it.first == id }
@@ -245,6 +285,8 @@ class SessionModel {
             return
         }
         hiddenText.remove(key)
+        dropMatchingOptimistic(messageId, msg, dto)
+        replaceOptimisticText(messageId, dto)
         val existing = msg.parts[dto.id]
         if (empty(dto)) {
             if (existing is Text) removeContent(messageId, dto.id)
@@ -328,6 +370,17 @@ class SessionModel {
         this.session = session
         fire(SessionModelEvent.SessionUpdated(session))
         setRevert(session.revert)
+        updateHeader()
+    }
+
+    @RequiresEdt
+    fun title(): String? = (hostedTitle ?: session?.title)?.takeIf { it.isNotBlank() }
+
+    @RequiresEdt
+    fun setHostedTitle(title: String?) {
+        val next = title?.takeIf { it.isNotBlank() }
+        if (hostedTitle == next) return
+        hostedTitle = next
         updateHeader()
     }
 
@@ -426,6 +479,8 @@ class SessionModel {
             info == null || info.role != "user" || info.sessionID != event.sessionID
         }
         entries.clear()
+        optimistic.clear()
+        optimisticText.clear()
         childRefs.clear()
         childTools.clear()
         childRemoved.clear()
@@ -464,6 +519,8 @@ class SessionModel {
     fun clear() {
         terminals.clear()
         entries.clear()
+        optimistic.clear()
+        optimisticText.clear()
         turnEntries.clear()
         childRefs.clear()
         childTools.clear()
@@ -637,6 +694,24 @@ class SessionModel {
 
     private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
+    private fun dropMatchingOptimistic(messageId: String, msg: Message, dto: PartDto) {
+        if (messageId in optimistic || msg.info.role != "user" || dto.type != "text") return
+        val text = dto.text ?: return
+        val match = optimistic.firstOrNull { id ->
+            entries[id]?.parts?.values?.filterIsInstance<Text>()?.any { it.content.toString() == text } == true
+        } ?: return
+        removeOptimistic(match)
+    }
+
+    private fun replaceOptimisticText(messageId: String, dto: PartDto) {
+        if (dto.type != "text") return
+        val text = dto.text ?: return
+        val parts = optimisticText[messageId] ?: return
+        val match = parts.entries.firstOrNull { it.key != dto.id && it.value == text } ?: return
+        parts.remove(match.key)
+        removeContent(messageId, match.key)
+    }
+
     private fun hiddenSynthetic(msg: Message, dto: PartDto) =
         msg.info.role == "user" && dto.type == "text" && dto.synthetic == true && notice(dto) == null
 
@@ -758,7 +833,7 @@ class SessionModel {
         val done = todos.count { it.status == "completed" }
         return SessionHeaderSnapshot(
             visible = items.isNotEmpty(),
-            title = session?.title?.takeIf { it.isNotBlank() } ?: "New Session",
+            title = (hostedTitle ?: session?.title)?.takeIf { it.isNotBlank() } ?: "New Session",
             cost = cost,
             context = context,
             tokens = tokens,

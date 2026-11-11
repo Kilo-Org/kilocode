@@ -6,11 +6,15 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 
 /** Projects the provider's structured system feed onto the attached hosted identity. */
 internal object HostedSystemEventParser {
+    private val failureCode = Regex("[a-z][a-z0-9_]{0,63}")
+
     fun parse(session: String, native: String, type: String?, data: String): HostedSystemEventDto? {
         val obj = runCatching { Json.parseToJsonElement(data) as? JsonObject }.getOrNull() ?: return null
         val payload = if ("payload" in obj) obj["payload"] as? JsonObject ?: return null else obj
@@ -36,6 +40,12 @@ internal object HostedSystemEventParser {
             "failed" -> "attempt_failed"
             else -> step?.string("status") ?: preparation?.string("action")
         }
+        val errors = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
+            step?.string("safeError")).filterNotNull().toList()
+        val human = errors.firstOrNull { !it.matches(failureCode) }?.take(300)
+        val label = step?.takeIf { it.string("status") == "failed" }?.let {
+            it.string("label") ?: it.string("key")
+        }
         return HostedSystemEventDto(
             sessionID = session,
             kind = kind,
@@ -58,12 +68,35 @@ internal object HostedSystemEventParser {
             attemptID = preparation?.string("attemptId") ?: attempt?.string("id"),
             revision = ((preparation?.get("revision") ?: step?.get("revision") ?: attempt?.get("revision"))
                 as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 },
-            failure = sequenceOf(preparation?.string("safeError"), attempt?.string("safeError"),
-                step?.string("safeError"))
-                .filterNotNull().firstOrNull { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) },
+            failure = errors.firstOrNull { it.matches(failureCode) },
+            detail = missingStepDetail(step, preparation) ?: human ?: label?.let { "$it failed" }?.take(300),
             triggerMessageID = (preparation?.string("triggerMessageId") ?: attempt?.string("triggerMessageId"))
                 ?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,128}")) },
+            stepID = preparation?.string("stepId") ?: step?.string("id"),
+            stepKind = step?.string("kind") ?: preparation?.string("kind"),
+            output = if (kind == "preparing") {
+                val value = if (preparation?.string("action") == "step_output") preparation["output"] else step?.get("outputTail")
+                (value as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            } else null,
+            outputTruncated = kind == "preparing" &&
+                (step?.get("outputTruncated") as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull == true,
         )
+    }
+
+    private fun missingStepDetail(step: JsonObject?, preparation: JsonObject?): String? {
+        val failed = step?.takeIf { it.string("status") == "failed" }
+            ?: preparation?.takeIf { it.string("action") == "step_failed" }
+            ?: return null
+        val label = failed.string("label") ?: failed.string("key")
+        val output = (failed["outputTail"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            ?.takeIf { it.isNotEmpty() }
+        val code = (failed["exitCode"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
+        if (output == null && code == null) return null
+        val header = label?.let { "$it failed" }
+            ?: failed.string("safeError")?.takeUnless { it.matches(failureCode) }?.take(300)
+            ?: "Preparation step failed"
+        val detail = header + (code?.let { " (exit code $it)" } ?: "")
+        return if (output == null) detail else "$detail\n$output"
     }
 
     private fun JsonObject.string(name: String): String? =

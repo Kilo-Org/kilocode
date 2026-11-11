@@ -11,6 +11,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.search.TranscriptSearchBody
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.Disposable
@@ -148,6 +149,10 @@ class TurnView(
 
     /** Ordered message ids currently displayed — stable for test assertions. */
     fun messageIds(): List<String> = messages.keys.toList()
+
+    @RequiresEdt
+    internal fun searchBodies(): List<TranscriptSearchBody> =
+        if (!isVisible) emptyList() else messages.values.flatMap { it.searchBodies() }
 
     /** Compact dump for test assertions. */
     fun dump(): String = messages.entries.joinToString(", ") { (id, mv) -> "${mv.role}#$id" }
