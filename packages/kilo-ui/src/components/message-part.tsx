@@ -51,7 +51,7 @@ import { ToolApprovalProvider, resolveToolApproval } from "./tool-approval"
 import { useToolChildSession } from "./tool-child-session"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { inputChanges, streamedTool, streamInterval, type ChangeCount } from "./tool-stream"
-import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
+import { busy, createSmoothText, createThrottledValue } from "./tool-utils"
 import { Tooltip } from "./tooltip"
 
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
@@ -310,9 +310,9 @@ function TextContent(props: {
       () => flush(),
     ),
   )
-  const text = createThrottledValue(
+  const text = createSmoothText(
     () => props.text.trim(),
-    () => (props.streaming ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS),
+    () => !!props.streaming,
   )
   const copy = async () => {
     await clipboard.write(props.text.trim())
