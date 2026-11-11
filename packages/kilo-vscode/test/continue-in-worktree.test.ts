@@ -31,6 +31,7 @@ function ctx(overrides: Partial<ContinueContext> = {}): ContinueContext {
     getStateManager: () => undefined,
     registerWorktreeSession: noop,
     notifyReady: noop,
+    notifyForked: noop,
     log,
     ...overrides,
   }
@@ -63,19 +64,24 @@ describe("continue-in-worktree steps", () => {
     if (!forked.ok) expect(forked.error).toBe("Not connected to CLI backend")
   })
 
-  it("forks, moves into the worktree directory, and records the handoff", async () => {
-    const fork = mock(async () => session("forked"))
-    const move = mock(async () => undefined)
-    const synthetic = mock(async () => undefined)
+  it("forks, moves into the worktree directory, and records the handoff after the move settles", async () => {
+    const calls: string[] = []
+    const fork = mock(async () => ({ id: "forked", location: { directory: "/tmp/test" } }))
+    const move = mock(async () => void calls.push("move"))
+    const get = mock(async () => ({ id: "forked", location: { directory: "/tmp/wt" } }))
+    const active = mock(async () => ({}))
+    const synthetic = mock(async () => void calls.push("handoff"))
     const forked = await forkSession(
       ctx({
-        client: async () => ({ session: { fork, move, synthetic } }) as never,
+        client: async () => ({ session: { fork, move, get, active, synthetic } }) as never,
       }),
       "session-1",
       "/tmp/wt",
     )
 
     expect(forked.ok).toBe(true)
+    if (forked.ok) expect(forked.value.location.directory).toBe("/tmp/wt")
+    expect(calls).toEqual(["move", "handoff"])
     expect(fork).toHaveBeenCalledWith({ sessionID: "session-1" })
     expect(move).toHaveBeenCalledWith({ sessionID: "forked", directory: "/tmp/wt" })
     expect(synthetic).toHaveBeenCalledWith(
@@ -98,15 +104,17 @@ describe("continue-in-worktree steps", () => {
     expect(forked).toEqual({ ok: false, error: "Failed to fork session: fork failed" })
   })
 
-  it("registers the forked session in state and notifies readiness", () => {
+  it("registers the forked session in state and hands it to the panel", () => {
     const addSession = mock(() => undefined)
     const register = mock(() => undefined)
     const ready = mock(() => undefined)
+    const forked = mock(() => undefined)
     registerSession(
       ctx({
         getStateManager: () => ({ addSession }) as never,
         registerWorktreeSession: register,
         notifyReady: ready,
+        notifyForked: forked,
       }),
       session("forked"),
       result("/tmp/wt"),
@@ -116,5 +124,6 @@ describe("continue-in-worktree steps", () => {
     expect(addSession).toHaveBeenCalledWith("forked", "wt-1")
     expect(register).toHaveBeenCalledWith("forked", "/tmp/wt")
     expect(ready).toHaveBeenCalledWith("forked", expect.objectContaining({ path: "/tmp/wt" }), "wt-1")
+    expect(forked).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "session-1", "wt-1")
   })
 })
