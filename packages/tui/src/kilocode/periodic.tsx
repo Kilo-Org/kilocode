@@ -339,7 +339,9 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
   function loadRuns(flow: KiloFlowRpc.Info) {
     if (flow.reference.type !== "managed") return
     const flowID = flow.reference.flowID
-    // A response that arrives after the user left or opened another Flow must not replace that Flow's history.
+    // A call for a Flow that is no longer open must not abort or supersede the request of the Flow that is, and a
+    // response that arrives after the user left or opened another Flow must not replace that Flow's history.
+    if (detailKey() !== flowID) return
     const stale = (signal: AbortSignal) => signal.aborted || detailKey() !== flowID
     history?.abort()
     const request = new AbortController()
