@@ -123,6 +123,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +139,7 @@ import java.awt.Component
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
+import java.awt.event.HierarchyEvent
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
@@ -228,10 +230,23 @@ class AgentManagerPanel(
     private var observed = emptySet<String>()
     private var hovered: String? = null
     private var orphanBanner: OrphanBanner? = null
+    private val branchPoll = UiTimers.timer(BRANCH_POLL) { if (isShowing) controller.refreshBranches() }
 
     init {
         Disposer.register(parent, this)
         Disposer.register(this, popup)
+        Disposer.register(this) { branchPoll.stop() }
+        addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
+            if (isShowing) {
+                // A branch switched while this tab was hidden has no other observer: the tab-switch
+                // listener only fires on the way in, and no poll runs while the panel is not showing.
+                controller.refreshBranches()
+                branchPoll.start()
+            } else {
+                branchPoll.stop()
+            }
+        }
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         tree.onScroll = { dismissTransient() }
@@ -343,6 +358,13 @@ class AgentManagerPanel(
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
         controller.onActivityChanged = {
             sync()
+            project?.service<WorktreeStatusService>()?.refreshStats()
+        }
+        // A checkout that moved to another branch invalidates the PR resolved against the old one.
+        // Drop that badge at once and reload; waiting for the scheduled poll would leave the previous
+        // branch's pull request sitting beside the new branch name.
+        controller.onBranchChanged = { paths ->
+            project?.service<WorktreeStatusService>()?.branchChanged(paths)
             project?.service<WorktreeStatusService>()?.refreshStats()
         }
         bindStatus()
@@ -1074,6 +1096,7 @@ val local = (0 until controller.model.size).map {
         controller.onMoveFailure = null
         controller.onRemoveSuccess = null
         controller.onActivityChanged = null
+        controller.onBranchChanged = null
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -1139,6 +1162,8 @@ val local = (0 until controller.model.size).map {
         // so a narrow window gets a narrow popup rather than one re-pointed above the list.
         const val POPUP_WIDTH = 1840
         const val POPUP_HEIGHT = 320
+        /** How often a visible Agent Manager checks for a branch switched outside this list. */
+        const val BRANCH_POLL = 10_000
     }
 
     private inner class LocalWorktreesRow : ActiveItem {

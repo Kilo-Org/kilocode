@@ -74,6 +74,62 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("/repo", controller.current?.path)
     }
 
+    fun `test branch tracker reloads a checkout switched outside the list`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val feature = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += main
+        rpc.listed += feature
+        val controller = controller()
+        controller.reload()
+        flush()
+        val changes = mutableSetOf<String>()
+        controller.onBranchChanged = { changes += it }
+
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        rpc.listed[1] = feature.copy(branch = "feature/z")
+        controller.refreshBranches()
+        flush()
+
+        assertEquals("feature/y", controller.current?.branch)
+        assertEquals("feature/z", controller.model.getElementAt(0).branch)
+        assertEquals(setOf("/repo", "/repo/.kilo/worktrees/feature-x"), changes)
+    }
+
+    fun `test branch tracker leaves unchanged rows and selection alone`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val controller = controller()
+        controller.reload()
+        flush()
+        val before = controller.model.getElementAt(0)
+        var reloads = 0
+        val changes = mutableSetOf<String>()
+        controller.onReload = { reloads++ }
+        controller.onBranchChanged = { changes += it }
+
+        controller.refreshBranches()
+        flush()
+
+        assertSame(before, controller.model.getElementAt(0))
+        assertEquals(0, reloads)
+        assertTrue(changes.isEmpty())
+    }
+
+    fun `test branch tracker keeps the previous rows when the listing comes back empty`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        rpc.listed.clear()
+        controller.refreshBranches()
+        flush()
+
+        assertEquals("main", controller.current?.branch)
+        assertEquals(1, controller.model.size)
+    }
+
     fun `test service open routes the directory to the backend rpc`() {
         var result: Boolean? = null
         coroutines.scope.launch { result = service.open("/repo/.kilo/worktrees/feature-x") }
