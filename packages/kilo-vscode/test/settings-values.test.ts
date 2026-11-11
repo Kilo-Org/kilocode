@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { keepRecord, webSearchEnabled, webSearchSelection } from "../webview-ui/src/components/settings/settings-values"
+import {
+  imageGenerationEnabled,
+  imageGenerationModel,
+  imageGenerationSwitch,
+  keepRecord,
+  webSearchEnabled,
+  webSearchSelection,
+} from "../webview-ui/src/components/settings/settings-values"
 
 describe("webSearchSelection", () => {
   test("maps on to the random pseudo-provider and off to false", () => {
@@ -31,5 +38,48 @@ describe("keepRecord", () => {
 
   test("writes false when it turns off", () => {
     expect(keepRecord({ eslint: {} }, false)).toBe(false)
+  })
+})
+
+describe("imageGenerationEnabled", () => {
+  test("is on for an unset, true or model value and off only for false", () => {
+    expect(imageGenerationEnabled(undefined)).toBe(true)
+    expect(imageGenerationEnabled(true)).toBe(true)
+    expect(imageGenerationEnabled({ model: { providerID: "openai", model: "gpt-image-2" } })).toBe(true)
+    expect(imageGenerationEnabled(false)).toBe(false)
+  })
+})
+
+describe("imageGenerationSwitch", () => {
+  test("writes false when it turns off", () => {
+    expect(imageGenerationSwitch({ model: { providerID: "openai", model: "gpt-image-2" } }, false)).toBe(false)
+  })
+
+  test("keeps a configured model when it turns on", () => {
+    const value = { model: { providerID: "openai", model: "gpt-image-2" } }
+    expect(imageGenerationSwitch(value, true)).toBe(value)
+  })
+
+  test("writes true when it turns on without a configured model", () => {
+    expect(imageGenerationSwitch(undefined, true)).toBe(true)
+    expect(imageGenerationSwitch(true, true)).toBe(true)
+    expect(imageGenerationSwitch(false, true)).toBe(true)
+  })
+})
+
+describe("imageGenerationModel", () => {
+  test("writes the picked model and keeps the tool on", () => {
+    expect(imageGenerationModel(true, { providerID: "openai", model: "gpt-image-2", variant: "hd" })).toEqual({
+      model: { providerID: "openai", model: "gpt-image-2", variant: "hd" },
+    })
+  })
+
+  test("drops the model on clear but keeps the tool on", () => {
+    expect(imageGenerationModel({ model: { providerID: "openai", model: "gpt-image-2" } }, undefined)).toEqual({})
+  })
+
+  test("keeps the other keys of the setting", () => {
+    const value = { model: { providerID: "openai", model: "gpt-image-2" }, future: true }
+    expect(imageGenerationModel(value, undefined)).toEqual({ future: true })
   })
 })

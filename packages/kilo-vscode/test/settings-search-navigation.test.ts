@@ -62,6 +62,18 @@ describe("settings search targets", () => {
     expect(result).toMatchObject({ tab: "experimental", tabOnly: false })
   })
 
+  test("finds the image generation row", () => {
+    const result = searchSettings("image generation", translate).find(
+      (item) => item.titleKey === "settings.experimental.imageGeneration.title",
+    )
+    expect(result).toMatchObject({ tab: "experimental", tabOnly: false })
+  })
+
+  test("does not index the image model row that only shows while the feature is on", () => {
+    const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
+    expect(keys).not.toContain("settings.experimental.imageGenerationModel.title")
+  })
+
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
     const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
     expect(keys).not.toContain("settings.agentBehaviour.removeMcp.title")
