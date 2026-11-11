@@ -695,6 +695,24 @@ html[data-theme="kilo-vscode"]
   display: none;
 }
 
+/* A streaming preview anchors its content to the bottom instead of scrolling; new lines glide in with a
+   compositor transform (see reasoning-content.tsx). */
+html[data-theme="kilo-vscode"]
+  [data-component="reasoning-part"][data-auto-collapse][data-follow]:not([data-manual])
+  [data-slot="reasoning-content"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+html[data-theme="kilo-vscode"]
+  [data-component="reasoning-part"][data-auto-collapse][data-follow]:not([data-manual])
+  [data-slot="reasoning-body"] {
+  flex: none;
+  will-change: transform;
+}
+
 html[data-theme="kilo-vscode"] [data-component="text-part"] {
   margin-top: 0;
 }

@@ -350,6 +350,11 @@ export function Markdown(
   const owner = createUniqueId()
   const activeCodeKeys = new Set<string>()
   const completedCode = new Map<string, Extract<RenderedBlock, { mode: "code" }>>()
+  // kilocode_change start
+  const renderedBlocks = new Map<string, RenderedBlock>()
+  const painted: RenderedBlock[] = []
+  const passes = { streaming: false, copy: "" }
+  // kilocode_change end
   const projection = createMemo((previous: Projection | undefined) =>
     project(previous, local.text, local.streaming ?? false),
   )
@@ -380,7 +385,33 @@ export function Markdown(
 
       const base = src.key ?? checksum(src.text)
       return Promise.all(
-        src.projection.blocks.map(async (block, index) => {
+        src.projection.blocks.map((block, index) => {
+          // kilocode_change start: a settled block of this instance is returned as the same object without a parse
+          // or an async step, so a streamed update only costs its changed tail and the DOM pass can skip the rest.
+          const own = renderedBlocks.get(markdownBlockKey(owner, src.key, index, block.mode))
+          if (own?.raw === block.raw) return own
+          return render(block, index)
+          // kilocode_change end
+        }),
+      )
+        .then((blocks) => ({ text: src.text, blocks }) satisfies RenderResult)
+        .catch(
+          () =>
+            ({
+              text: src.text,
+              blocks: [
+                {
+                  key: base ?? "fallback",
+                  mode: "full" as const,
+                  raw: src.text,
+                  hash: checksum(src.text) ?? "",
+                  html: fallback(src.text),
+                },
+              ],
+            }) satisfies RenderResult,
+        )
+
+      async function render(block: Block, index: number): Promise<RenderedBlock> {
           const key = base ? `${base}:${index}:${block.mode}` : undefined
           const blockKey = markdownBlockKey(owner, src.key, index, block.mode)
 
@@ -426,36 +457,27 @@ export function Markdown(
             return rendered
           }
 
+          // kilocode_change start: settled blocks of this instance never re-parse. The shared cache holds 200
+          // blocks, so a long streamed message evicted its own blocks in order and parsed every one of them again
+          // on each update.
           if (key) {
             const cached = cache.get(key)
             if (cached?.raw === block.raw) {
               touch(key, cached)
-              return { key: blockKey, mode: block.mode, ...cached }
+              const rendered = { key: blockKey, mode: block.mode, ...cached }
+              if (block.mode === "full") renderedBlocks.set(blockKey, rendered)
+              return rendered
             }
           }
 
           const hash = checksum(block.raw)
           const safe = sanitize(await Promise.resolve(marked.parse(block.src)))
           if (key && hash) touch(key, { raw: block.raw, hash, html: safe })
-          return { key: blockKey, mode: block.mode, raw: block.raw, hash: hash ?? "", html: safe }
-        }),
-      )
-        .then((blocks) => ({ text: src.text, blocks }) satisfies RenderResult)
-        .catch(
-          () =>
-            ({
-              text: src.text,
-              blocks: [
-                {
-                  key: base ?? "fallback",
-                  mode: "full" as const,
-                  raw: src.text,
-                  hash: checksum(src.text) ?? "",
-                  html: fallback(src.text),
-                },
-              ],
-            }) satisfies RenderResult,
-        )
+          const rendered = { key: blockKey, mode: block.mode, raw: block.raw, hash: hash ?? "", html: safe }
+          if (block.mode === "full" && hash) renderedBlocks.set(blockKey, rendered)
+          return rendered
+          // kilocode_change end
+      }
     },
     {
       initialValue: initialResult(local.text, local.cacheKey, projection(), owner),
@@ -481,6 +503,7 @@ export function Markdown(
     if (isServer) return
     if (content.length === 0) {
       container.innerHTML = ""
+      painted.length = 0 // kilocode_change
       // kilocode_change start: Mermaid diagram rendering
       mermaidState.signal.aborted = true
       mermaidState.gen++
@@ -498,8 +521,29 @@ export function Markdown(
     })
     activeCodeKeys.clear()
     nextCodeKeys.forEach((key) => activeCodeKeys.add(key))
-    content.forEach((block, index) => updateBlock(container, index, block, labels, local.streaming ?? false)) // kilocode_change
+    // kilocode_change start: a block object that is already painted at its position needs no DOM work. When only
+    // the streamed text tail changed, the passes over the whole container below are skipped too: they only
+    // matter for new code blocks, a settled stream or new labels.
+    const streaming = local.streaming ?? false
+    const touched = content.filter((block, index) => {
+      if (painted[index] === block && container.children[index]) return false
+      painted[index] = block
+      updateBlock(container, index, block, labels, streaming)
+      return true
+    })
+    painted.length = content.length
+    const trimmed = container.children.length > content.length
     while (container.children.length > content.length) container.lastElementChild?.remove()
+    const quiet =
+      !trimmed &&
+      copyCleanup !== undefined &&
+      passes.streaming === streaming &&
+      passes.copy === labels.copy &&
+      touched.every((block) => block.mode === "live")
+    passes.streaming = streaming
+    passes.copy = labels.copy
+    if (quiet) return
+    // kilocode_change end
     container
       .querySelectorAll<HTMLButtonElement>('[data-slot="markdown-copy-button"]')
       .forEach((button) => setCopyState(button, labels, button.dataset.copied === "true"))
@@ -590,6 +634,7 @@ export function Markdown(
     if (copyCleanup) copyCleanup()
     activeCodeKeys.forEach(disposeCode)
     completedCode.clear()
+    renderedBlocks.clear() // kilocode_change
   })
 
   return (
