@@ -649,6 +649,51 @@ test("runs, disables, enables, and deletes a managed Flow from its details", asy
   }
 })
 
+// A run started from one Flow's details can resolve after the user opened another Flow. Its history reload must neither
+// abort nor replace the request of the Flow that is open now.
+test("a late run result leaves the history of the Flow opened since", async () => {
+  const commands: KeymapCommand[] = []
+  const alpha = flow({ id: "flw_alpha", name: "Alpha", status: "paused", managed: true })
+  const beta = flow({ id: "flw_beta", name: "Beta", status: "paused", managed: true })
+  const started = Promise.withResolvers<KiloFlowRpc.Run>()
+  const betaRuns = Promise.withResolvers<KiloFlowRpc.RunsOutput>()
+  const fake = context({
+    commands,
+    handlers: {
+      list: () => Promise.resolve(output([alpha, beta])),
+      run: () => started.promise,
+      runs: (input) =>
+        input.flowID === "flw_beta"
+          ? betaRuns.promise
+          : Promise.resolve({ runs: [run("flw_alpha", "succeeded", "flr_alpha", "ses_alpha")], warnings: [] }),
+    },
+  })
+  const app = await testRender(() => <FlowsDialog context={fake.context} />, { width: 88, height: 30 })
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Alpha") && frame.includes("Beta"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Alpha") && frame.includes("Succeeded"))
+    command(commands, "r").run()
+    command(commands, "escape").run()
+    await app.waitForFrame((frame) => !frame.includes("Periodic / Alpha"))
+    command(commands, "down,j").run()
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("Periodic / Beta"))
+
+    started.resolve(run("flw_alpha"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    betaRuns.resolve({ runs: [run("flw_beta", "running", "flr_beta", "ses_beta")], warnings: [] })
+    await app.waitForFrame((frame) => frame.includes("Periodic / Beta") && frame.includes("Running"))
+    // The late reload for Alpha sent no request, so it could not abort Beta's.
+    expect(
+      fake.calls.filter((call) => call.method === "runs").map((call) => (call.input as KiloFlowRpc.ControlInput).flowID),
+    ).toEqual(["flw_alpha", "flw_beta"])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
 test("deletes a Flow together with the worktrees its runs left behind", async () => {
   const commands: KeymapCommand[] = []
   const active = flow({ id: "flw_clean", name: "Clean", status: "active", managed: true, worktree: "new" })
