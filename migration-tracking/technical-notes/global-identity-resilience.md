@@ -1,8 +1,10 @@
 # Plan: global identity-resilience port (epic #15298, U-E1-01)
 
-Status: proposed, for review. Closes the open `global` cells by porting v1's
+Status: implemented (PR #15794). Closes the open `global` cells by porting v1's
 state/directory resilience and macOS Spotlight exclusion into v2 as host
-composition, leaving `packages/util/src/global.ts` pristine.
+composition, adding one generic knob (`OPENCODE_HOME_DIR`, see below) to `packages/util/src/global.ts`.
+
+As built, two details differ from the plan below. All the wiring of step 1 except the `TEST_HOME` name (`cleanEnv`, the state-directory selection) runs in `packages/kilo-cli/src/global-boot.ts`, the boot step of step 2, not in `env.ts`. The module and test cells are closed by `ported` dispositions and the patch cells by `kilo_port(global:…)` proofs.
 
 ## Cells this closes
 
@@ -15,7 +17,7 @@ The app-dir-name part of those hunks is already done (`OPENCODE_APP_DIR_NAME="ki
 
 ## Key constraint (why placement is forced)
 
-`packages/util/src/global.ts` computes `Path` (`data/config/state/tmp`) **at module load** from `roots(app)` (`global-roots.ts` reads `XDG_*`/`HOME` at load), and `Flock.setGlobal({ state })` runs at load. Per the existing identity seam's own note (`shared-patches.json:217`), those statics are read directly by logging, server tmp and the TUI, and some host-started processes compile their own `Global` node from the defaults. Consequence:
+`packages/util/src/global.ts` computes `Path` (`data/config/state/tmp`) **at module load** from `roots(app)` (`global-roots.ts` reads `XDG_*`/`HOME` at load), and `Flock.setGlobal({ state })` runs at load. Per the existing identity seam's own note (`script/upstream/shared-patches.json`, entry `packages/util/src/global.ts`), those statics are read directly by logging, server tmp and the TUI, and some host-started processes compile their own `Global` node from the defaults. Consequence:
 
 - Anything that changes the **paths** (newline sanitize, state-dir selection, test home) must mutate `process.env` **before** `util/global` loads — the same mechanism the app-dir seam uses. A `Global.node.replace` (service layer) is **insufficient** because the statics bypass the service.
 - Directory **creation** happens later in the Effect `acquire` layer as idempotent `mkdir -p`; junction-repair and Spotlight marking only need to run before first use, so an early boot step can own them without touching `acquire`.
@@ -72,4 +74,4 @@ Recommendation: **port all five** behaviors. v1 history shows none are v1-specif
 
 - DB-preflight actionable "not writable" error / self-heal — separate `db-preflight` feature.
 - Any v1-Kilo → v2 user-data migration — deferred release-migration slices (U-E3-03/U-E8-02).
-- The `installation` cells — tracked separately (deferred / uninstall gap #15324).
+- The `installation` cells: v1's Kilo distribution identity (the npm, brew, choco and scoop names, the installer URL, the npm-registry `latest` fallback) and its use by upgrade and uninstall. On v2 the host provides a disabled updater on purpose (`packages/kilo-cli/src/updater.ts`; `kilo2 upgrade` fails with the manual-update message), so the five cells stay open and move with the Kilo updater to #15311 (M2). Only the isolated `kilo2 uninstall` test (`TODO(rebrand, #15324)` in `updater.ts`) stays with #15324.
