@@ -7,7 +7,7 @@ import path from "node:path"
 // Solid's JSX compiler is the dominant cost of the webview build, and its output only depends on the file content and
 // the transform toolchain. Cache it under this worktree's node_modules so an unchanged file costs one read instead of a
 // Babel parse, without sharing state between worktrees. Babel is imported eagerly on purpose: a dynamic import inside
-// the esbuild callback can stall the build when several webview tests compile at once.
+// the esbuild callback can stall the build (the webview tests hit this in CI), and the transform is synchronous anyway.
 
 // The cache key must change whenever the transform output can change: this module holds the options, and the presets
 // hold the compiler. Versions only, because resolved package paths are install-layout detail.

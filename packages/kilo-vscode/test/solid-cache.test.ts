@@ -57,4 +57,27 @@ describe("solid transform cache", () => {
       await rm(cacheDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
     }
   })
+
+  test("compiles two entries concurrently through separate plugin instances", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "kilo-solid-root-"))
+    const cacheDir = await mkdtemp(path.join(os.tmpdir(), "kilo-solid-cache-"))
+    try {
+      const first = path.join(root, "first.tsx")
+      const second = path.join(root, "second.tsx")
+      await writeFile(first, `export const First = () => <div class="first">alpha</div>\n`)
+      await writeFile(second, `export const Second = () => <div class="second">beta</div>\n`)
+
+      const [one, two] = await Promise.all([compile(root, cacheDir, first), compile(root, cacheDir, second)])
+
+      expect(one).toContain("alpha")
+      expect(two).toContain("beta")
+      expect(one).not.toContain("beta")
+      expect(two).not.toContain("alpha")
+      const entries = (await readdir(cacheDir)).filter((file) => file.endsWith(".js"))
+      expect(entries).toHaveLength(2)
+    } finally {
+      await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+      await rm(cacheDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
+    }
+  })
 })
