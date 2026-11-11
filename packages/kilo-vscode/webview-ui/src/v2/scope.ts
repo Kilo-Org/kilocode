@@ -7,6 +7,7 @@ import { createConnectionMetadata, type ConnectionMetadata } from "./connection-
 import { toFailure, type Failure } from "./error"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
+import { createWakeups } from "./wakeups"
 
 type Connection = ReturnType<typeof createClientConnection>
 type Events = ReturnType<typeof events>
@@ -36,6 +37,11 @@ export function createV2Scope(input: {
   /** Opens an external URL through the host. */
   /** Opens a web link. `external` (shift-click) asks for the system browser instead of the Integrated Browser. */
   open: (url: string, external?: boolean) => void
+  /**
+   * Whether a Session holds a future wakeup. A panel with several directories supplies one store for all of them; a
+   * single-directory scope reads its own directory instead.
+   */
+  scheduled?: (sessionID: string) => boolean
 }) {
   const api = input.api
   const directory = input.directory
@@ -69,6 +75,15 @@ export function createV2Scope(input: {
     cache: metadata.kiloModelsCache,
   })
   const visible = input.visible ?? (() => true)
+  // Settings scopes draw no sessions, so only a chat scope that was not given a shared store reads its own directory.
+  const wakeups =
+    input.scheduled || !chat
+      ? undefined
+      : createWakeups({
+          api,
+          directories: () => [directory],
+          connected: () => connection.status() === "connected",
+        })
   const state = { listed: false }
   createEffect(
     on(connection.status, (status) => {
@@ -112,6 +127,8 @@ export function createV2Scope(input: {
     kiloFailure: metadata.kiloFailure,
     /** The Kilo Gateway model metadata and the account team, for the model pickers. */
     kiloModels,
+    /** Whether a Session holds a future wakeup, shown as `scheduled` instead of idle. */
+    scheduled: input.scheduled ?? wakeups?.scheduled ?? (() => false),
     clearError: () => setFailure(undefined),
     report: (err: unknown) => setFailure(toFailure(err)),
     open: input.open,
