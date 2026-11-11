@@ -4,7 +4,7 @@ Kilo's own UI copy, one dictionary per locale. `packages/kilo-vscode/webview-ui/
 
 ## Every key, every locale
 
-- `en.ts` is the source of truth, and every key in it also exists in the other 19 files in `src/`: ar, br, bs, da, de, es, fr, it, ja, ko, nl, no, pl, ru, th, tr, uk, zh, zht. Persian has no Kilo layer yet and inherits English; adding one is a separate localization task, not part of a copy change.
+- `en.ts` is the source of truth, and every key in it must also exist in the other 19 files in `src/`: ar, br, bs, da, de, es, fr, it, ja, ko, nl, no, pl, ru, th, tr, uk, zh, zht. This is the requirement, not the current state: 21 marketplace keys added by the v2 port exist in `en.ts` only and still need backfilling. Persian has no `src/fa.ts` yet; its app and Agent Manager layers exist and it inherits English for keys in this package, and adding that layer is a separate localization task, not part of a copy change.
 - A change that adds or edits English copy adds or updates the same key in every one of those files in the same change. A key left English-only, half translated, stale after an English copy change, or present in a locale but absent from `en.ts` is an incomplete change.
 - Keep the `en.ts` section comments and key order in each locale so the dictionaries stay diffable side by side.
 - Count-sensitive copy renders through `plural(key, count, params)`, which resolves `<key>.<category>` and falls back to `<key>.other`. Give every locale the CLDR categories that locale uses (for example `.one` and `.other` in English, `.one`, `.few`, `.many` and `.other` in Russian and Polish), not English's set.
