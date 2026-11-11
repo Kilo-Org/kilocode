@@ -1305,6 +1305,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
   "settings.display.shiftTabCycle.description":
     "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
+  "settings.display.limitContentWidth.title": "チャット内容の幅を制限",
+  "settings.display.limitContentWidth.description":
+    "チャット内容と入力欄を中央寄せの読みやすい幅の列に保ちます。オフにすると、サイドバー、エディタタブ、Agent Manager でパネル全幅を使用します。",
   "settings.display.terminalCommand.title": "ターミナルコマンドブロック",
   "settings.display.terminalCommand.description":
     "ターミナルコマンドブロックを最初から展開するか折りたたむかを選択します。",

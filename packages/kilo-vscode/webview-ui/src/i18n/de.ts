@@ -1340,6 +1340,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Reasoning-Aufwand mit Shift+Tab durchlaufen",
   "settings.display.shiftTabCycle.description":
     "Drücken Sie Shift+Tab in einem Prompt-Eingabefeld, um zur nächsten Stufe des Reasoning-Aufwands zu wechseln. Deaktivieren Sie dies, um Shift+Tab für die Tastaturfokusnavigation beizubehalten.",
+  "settings.display.limitContentWidth.title": "Chat-Inhaltsbreite begrenzen",
+  "settings.display.limitContentWidth.description":
+    "Hält Chat-Inhalt und Eingabe in einer zentrierten, lesbaren Spalte. Deaktivieren, um in der Seitenleiste, in Editor-Tabs und im Agent Manager die volle Panelbreite zu nutzen.",
   "settings.display.terminalCommand.title": "Terminalbefehlsblöcke",
   "settings.display.terminalCommand.description":
     "Wählen Sie, ob Terminalbefehlsblöcke anfangs aus- oder eingeklappt sind.",

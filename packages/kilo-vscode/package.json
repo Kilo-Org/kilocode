@@ -129,6 +129,11 @@
           "default": true,
           "markdownDescription": "Whether Shift+Tab cycles the reasoning variant while the prompt input has focus."
         },
+        "kilo-code.v2.chat.limitContentWidth": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Limit chat content to a centered, readable-width column on wide panels. Disable to use the full panel width in the sidebar, editor tabs, and Agent Manager."
+        },
         "kilo-code.v2.showTokenThroughput": {
           "type": "boolean",
           "default": true,

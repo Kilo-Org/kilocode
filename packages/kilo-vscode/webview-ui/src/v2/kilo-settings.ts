@@ -48,6 +48,11 @@ export function shiftTabCyclesVariant(): boolean {
   return kiloSettings()["chat.shiftTabCyclesVariant"] !== false
 }
 
+/** `kilo-code.v2.chat.limitContentWidth`, on by default. */
+export function limitChatContentWidth(): boolean {
+  return kiloSettings()["chat.limitContentWidth"] !== false
+}
+
 /** `kilo-code.v2.showTokenThroughput`, on by default. */
 export function tokenThroughputVisible(): boolean {
   return kiloSettings()["showTokenThroughput"] !== false

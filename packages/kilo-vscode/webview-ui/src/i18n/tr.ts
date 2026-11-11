@@ -1270,6 +1270,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
   "settings.display.shiftTabCycle.description":
     "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
+  "settings.display.limitContentWidth.title": "Sohbet içerik genişliğini sınırla",
+  "settings.display.limitContentWidth.description":
+    "Sohbet içeriğini ve istemi ortalanmış, okunabilir genişlikte bir sütunda tutar. Kenar çubuğu, düzenleyici sekmeleri ve Agent Manager'da tam panel genişliğini kullanmak için kapatın.",
   "settings.display.terminalCommand.title": "Terminal Komut Blokları",
   "settings.display.terminalCommand.description":
     "Terminal komut bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
