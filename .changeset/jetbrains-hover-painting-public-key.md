@@ -1,5 +1,5 @@
 ---
-"kilo-code": patch
+"@kilocode/kilo-jetbrains": patch
 ---
 
-Stop invoking a JetBrains internal API so the published plugin passes Marketplace plugin verification.
+Fix the JetBrains plugin so Marketplace publishing passes plugin verification again.
