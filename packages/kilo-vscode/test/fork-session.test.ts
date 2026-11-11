@@ -55,6 +55,8 @@ describe("agent manager fork session", () => {
 
   it("moves the fork into the selected worktree and reports its new location", async () => {
     const move = mock(async () => undefined)
+    const get = mock(async () => session("forked", "/repo/.kilo/worktrees/feature"))
+    const active = mock(async () => ({}))
     const synthetic = mock(async () => undefined)
     const register = mock(() => undefined)
     const addSession = mock(() => undefined)
@@ -63,7 +65,7 @@ describe("agent manager fork session", () => {
 
     await forkSession(
       ctx(
-        { session: { fork: mock(async () => session("forked")), move, synthetic } },
+        { session: { fork: mock(async () => session("forked")), move, get, active, synthetic } },
         { state: state as never, directory: "/repo", registerWorktreeSession: register, notifyForked: notify },
       ),
       "source",

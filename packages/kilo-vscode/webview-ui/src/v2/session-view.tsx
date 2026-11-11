@@ -3,8 +3,11 @@
 import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import type { MentionFile } from "../hooks/context-mention-utils"
+import type { GitChangesTarget } from "../hooks/useGitChangesContext"
+import type { WorktreeReference } from "../utils/prompt-mention-drop"
 import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
 import { focusPrompt } from "../utils/tab-navigation"
@@ -17,15 +20,15 @@ import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
-import { toPromptFiles } from "./prompt-attachments"
+import { promptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
+import { ErrorBanner } from "./error-banner"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
-import { QuestionDock } from "./question"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
@@ -89,10 +92,24 @@ export function SessionView(props: {
   onMissing?: (sessionID: string) => void
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** Agent Manager worktrees the composer's `@` menu can reference. */
+  worktrees?: Accessor<WorktreeReference[]>
+  /** Whether the composer's `@` menu offers Git changes. */
+  git?: () => boolean
+  /** What `@git-changes` diffs in this view. */
+  gitTarget?: () => GitChangesTarget | undefined
+  /** The Agent Manager worktree, or `local`, whose terminal `@terminal` reads. */
+  terminalContext?: () => string | undefined
+  /** Reads the focused Agent Manager terminal for `@terminal`. */
+  resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
   /** Another session tab is open, so the prompt suggests switching tabs. */
   tabs?: boolean
   /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
   manager?: () => ManagerContext | undefined
+  /** Whether a composer mounted for a switched draft takes focus, as v1's draft-change effect did. */
+  focusOnDraftChange?: () => boolean
+  /** Receives each focus and blur of the composer, so the Agent Manager restores the prompt on return. */
+  onFocusChange?: (focused: boolean) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -274,9 +291,10 @@ export function SessionView(props: {
     const seed = session() ? undefined : await sandbox.metadata()
     const id = session() ?? selection.create(seed)
     const gate = selection.gate(id)
-    // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
-    // Without one the selection is current, and it must be read before onSession changes the session identity.
-    const model = gate ? undefined : selection.model()
+    // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
+    // Read both before onSession changes the session identity.
+    const model = selection.model()
+    const draft = selection.draft(id)
     // A pending question is dismissed when the user sends instead.
     const questions = forms()
     props.onSession(id, key)
@@ -297,7 +315,7 @@ export function SessionView(props: {
       running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
     if (interrupt)
       await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
-    return { id, gate, model }
+    return { id, gate, model, draft }
   }
 
   // The prompt is admitted on the server; the Most used group counts sent prompts per model, as v1.
@@ -310,19 +328,23 @@ export function SessionView(props: {
   const send = async (
     text: string,
     mode: SendMode = "steer",
-    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
   ) => {
-    const { id, gate, model } = await begin(mode)
+    const { id, gate, model, draft } = await begin(mode)
+    const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
         sessionID: id,
         text,
+        // A pending switch, such as an agent change, fails the prompt instead of running under another agent.
         gate,
+        // The draft commits after earlier prompts are admitted, as the TUI; a failed switch fails the prompt.
+        prepare: () => selection.commit(id, draft),
         metadata: input?.metadata,
-        files: input?.items?.length ? toPromptFiles(input.items) : undefined,
+        files,
         delivery: mode === "queue" ? "queue" : "steer",
       })
-      .then(() => prompted(id, text, gate ? selection.attributed(id) : model))
+      .then(() => prompted(id, text, model))
       .catch((err: unknown) => {
         v2.report(err)
         return false
@@ -344,6 +366,9 @@ export function SessionView(props: {
   )
   // The selectors listen for these events, so a slash action opens the same picker as a click.
   const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
+  // Compaction runs on the composer's selection, as the TUI: an uncommitted draft switches the session first.
+  const compact = (id: string) =>
+    void v2.data.session.compact({ sessionID: id, model: selection.draft(id) }).catch(v2.report)
   const handlers = (): SlashHandlers => {
     const id = session()
     const start = props.onNewSession
@@ -359,7 +384,7 @@ export function SessionView(props: {
       models: picker("openModelPicker"),
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
-      compact: id ? () => void v2.data.session.compact({ sessionID: id }).catch(v2.report) : undefined,
+      compact: id ? () => compact(id) : undefined,
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
@@ -378,8 +403,14 @@ export function SessionView(props: {
     }),
   )
 
-  const runSlash = async (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => {
-    const { id, gate } = await begin(mode)
+  const runSlash = async (
+    entry: SlashEntry,
+    args: string,
+    mode: SendMode,
+    items: PromptAttachment[],
+    mentions: MentionFile[] = [],
+  ) => {
+    const { id, gate, model } = await begin(mode)
     const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     // A command with its own model runs on that model, which the server switches the session to.
     const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
@@ -387,7 +418,7 @@ export function SessionView(props: {
       {
         entry,
         args,
-        files: items.length ? toPromptFiles(items) : undefined,
+        files: promptFiles(items, mentions),
         delivery: mode === "queue" ? "queue" : "steer",
       },
       {
@@ -396,13 +427,13 @@ export function SessionView(props: {
           await gate
           return id
         },
-        selected: (sessionID) => selection.attributed(sessionID),
+        selected: (sessionID) => selection.selected(sessionID),
         switchModel: (input) => v2.api.session.switchModel(input),
         command: (input) => v2.api.session.command(input),
         prompt: (input) => v2.data.session.prompt(input),
       },
     )
-      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : selection.attributed(id)))
+      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : model))
       .catch((err: unknown) => {
         v2.report(err)
         return false
@@ -434,7 +465,14 @@ export function SessionView(props: {
       <div class="chat-view">
         {props.tabStrip}
         <Show when={session()} keyed>
-          {(id) => <TaskHeader sessionID={id} readonly={props.readOnly} searchCommand={props.searchCommand} />}
+          {(id) => (
+            <TaskHeader
+              sessionID={id}
+              readonly={props.readOnly}
+              searchCommand={props.searchCommand}
+              onCompact={() => compact(id)}
+            />
+          )}
         </Show>
         <div class="chat-messages-wrapper">
           <ToolChildSessionProvider value={childSessions}>
@@ -451,25 +489,20 @@ export function SessionView(props: {
                 onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                 onViewTurnChanges={props.onViewTurnChanges}
                 pending={pending}
+                question={() => (props.readOnly ? undefined : forms()[0])}
               />
             </div>
           </ToolChildSessionProvider>
         </div>
         <Show when={!props.readOnly}>
           <div class="chat-input">
-            <Show when={v2.handshake() || v2.error()}>
-              <div class="error-card" role="alert" data-component="v2-error">
-                <span>{v2.handshake() || v2.error()}</span>
-                <button class="error-card-dismiss" onClick={() => v2.setError("")}>
-                  x
-                </button>
-              </div>
+            <Show when={v2.handshake() ?? v2.failure()}>
+              {(failure) => (
+                <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />
+              )}
             </Show>
             <Show when={permissions()[0]} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
-            </Show>
-            <Show when={forms()[0]} keyed>
-              {(form) => <QuestionDock form={form} />}
             </Show>
             <SessionDock
               session={session()}
@@ -509,9 +542,17 @@ export function SessionView(props: {
                   slash={{ entries: slashEntries, run: runSlash }}
                   tabs={props.tabs}
                   manager={props.manager}
+                  focusOnDraftChange={props.focusOnDraftChange}
+                  onFocusChange={props.onFocusChange}
                   selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
                   autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
                   sandbox={sandboxControl}
+                  worktrees={props.worktrees}
+                  git={props.git}
+                  gitTarget={props.gitTarget}
+                  terminalContext={props.terminalContext}
+                  resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  onOpenFile={(path) => props.actions.openFile?.(path, undefined, undefined, session())}
                 />
               )}
             </Show>

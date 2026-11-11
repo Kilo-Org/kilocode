@@ -60,7 +60,7 @@ Valid types are `feat`, `fix`, `docs`, `chore`, `refactor`, and `test`. Scopes a
 
 Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributing guide`, `chore(sdk): regenerate types`.
 
-For user-facing `feat`, `fix` and `perf` PRs, add a small looping animated SVG of the change under `### Visual` in the PR body (a `svg` code block, 240×72, for example a dock growing out of the composer or spinners turning in step). Draw with `currentColor` and opacity so it works in light and dark, make the unanimated state a good still (it is shown under reduced motion), animate with CSS or SMIL only, and keep it under 8 KB with no scripts or external references. The desktop beta's "What's new" dialog shows it.
+For behavior changes, add the proof to the PR body (`## Proof`, the sections the template calls "How did you verify your code works?" and "Screenshots / recordings"): embed screenshots or a recording with Markdown image syntax (`![label](url)`) and host them outside the repository, never commit them; with no UI or no way to capture one, paste concrete output from a real `bun dev` run (CLI/TUI transcript, captured RPC/HTTP response, or the resulting config diff). <!-- kilocode_change - agents-md: replace upstream desktop beta SVG rule with real PR proof -->
 
 ## Style Guide
 

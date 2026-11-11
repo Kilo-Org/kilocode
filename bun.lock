@@ -517,6 +517,7 @@
         "jsonc-parser": "3.3.1",
         "lru-cache": "11.5.2",
         "marked": "catalog:",
+        "minimatch": "10.2.6",
         "playwright-core": "1.57.0",
         "quick-lru": "7.3.0",
         "simple-git": "4.0.2",

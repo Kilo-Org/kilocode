@@ -2,10 +2,12 @@
 // extension tests can load it.
 import type { OpenCodeClient } from "@opencode/client"
 import { createClientConnection, createData } from "@opencode/client/solid"
-import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
 import { createConnectionMetadata, type ConnectionMetadata } from "./connection-metadata"
+import { toFailure, type Failure } from "./error"
 import type { events } from "./events"
 import { createKiloModels } from "./kilo-models"
+import { createModelDrafts } from "./model-draft"
 
 type Connection = ReturnType<typeof createClientConnection>
 type Events = ReturnType<typeof events>
@@ -43,14 +45,14 @@ export function createV2Scope(input: {
   // The host inlines the extension version; the server handshake reports the server version separately.
   const extensionVersion =
     typeof window === "undefined" ? "" : ((window as unknown as { KILO_EXTENSION_VERSION?: string }).KILO_EXTENSION_VERSION ?? "")
-  const [error, setError] = createSignal("")
+  const [failure, setFailure] = createSignal<Failure>()
   const [loading, setLoading] = createSignal(true)
   const data = createData({
     api: () => api,
     directory,
     connection,
     event: input.event,
-    onError: (err) => setError(message(err)),
+    onError: (err) => setFailure(toFailure(err)),
   })
   const metadata =
     input.shared ??
@@ -67,6 +69,12 @@ export function createV2Scope(input: {
     models: () => data.location.model.list(),
     cache: metadata.kiloModelsCache,
   })
+  // The composer's model drafts live with the directory, not the chat view, so an effort change survives the history
+  // view and an Agent Manager worktree switch, as the TUI keeps them app-wide. The echo of a commit, or any client
+  // switching the session to the same model, makes a draft redundant.
+  const drafts = createModelDrafts()
+  onCleanup(input.event.on("session.model.selected", (event) => drafts.settle(event.data.sessionID, event.data.model)))
+  onCleanup(input.event.on("session.deleted", (event) => drafts.drop(event.data.sessionID)))
   const visible = input.visible ?? (() => true)
   const state = { listed: false }
   createEffect(
@@ -88,7 +96,7 @@ export function createV2Scope(input: {
         void api.session
           .list({ directory, parentID: null, order: "desc", limit: 50 })
           .then((response) => response.data.forEach(data.session.remember))
-          .catch((err: unknown) => setError(message(err)))
+          .catch((err: unknown) => setFailure(toFailure(err)))
           .finally(() => setLoading(false))
       },
     ),
@@ -105,13 +113,16 @@ export function createV2Scope(input: {
     version: metadata.version,
     extensionVersion,
     handshake: metadata.handshake,
-    error,
+    /** The last failure this window reported; undefined once it is dismissed. */
+    failure,
     /** Why the Kilo Gateway catalog failed to load; undefined while it is usable or loading. */
     kiloFailure: metadata.kiloFailure,
     /** The Kilo Gateway model metadata and the account team, for the model pickers. */
     kiloModels,
-    setError,
-    report: (err: unknown) => setError(message(err)),
+    /** The composer's uncommitted model and effort per session; the next prompt commits it. */
+    drafts,
+    clearError: () => setFailure(undefined),
+    report: (err: unknown) => setFailure(toFailure(err)),
     open: input.open,
     onCommand: input.onCommand,
   }
@@ -124,8 +135,4 @@ export function sessionMissing(error: unknown) {
   return error instanceof Error && error.name === "SessionNotFoundError"
 }
 
-export function message(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
-  return String(error)
-}
+export { message } from "./error"

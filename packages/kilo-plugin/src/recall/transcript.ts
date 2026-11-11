@@ -6,10 +6,14 @@ import type { SessionMessage } from "@opencode/schema/session-message"
 const DEFAULT_MAX_CHARS = 100_000
 
 export namespace SessionTranscript {
+  /**
+   * Render a session as a Markdown transcript. Synthetic messages (reminders, injected instructions) are kept by
+   * default for the recall tool; an `@` mention leaves them out so the transcript reads like the conversation.
+   */
   export function format(
     session: Session.Info,
     messages: ReadonlyArray<SessionMessage.MediaInfo>,
-    opts: { max?: number } = {},
+    opts: { max?: number; synthetic?: boolean } = {},
   ) {
     const lines = [
       `# Session: ${session.title ?? session.id}`,
@@ -33,7 +37,7 @@ export namespace SessionTranscript {
         lines.push("")
         continue
       }
-      if (message.type === "synthetic") {
+      if (message.type === "synthetic" && opts.synthetic !== false) {
         lines.push("## Synthetic", message.text, "")
       }
     }
