@@ -1025,6 +1025,11 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
+  "settings.agentBehaviour.sendWhileRunning.title": "Enter While the Agent Works",
+  "settings.agentBehaviour.sendWhileRunning.description":
+    "Steer sends your message to the agent after its current step. Queue waits until the agent is done. Alt+Enter does the other, and Cmd+Enter (Ctrl+Enter) stops the agent and sends.",
+  "settings.agentBehaviour.sendWhileRunning.steer": "Steer",
+  "settings.agentBehaviour.sendWhileRunning.queue": "Queue",
   "settings.agentBehaviour.availableAgents": "Available Agents",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
@@ -1326,11 +1331,6 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
-  "settings.display.sendWhileRunning.title": "Enter While the Agent Works",
-  "settings.display.sendWhileRunning.description":
-    "Steer sends your message to the agent after its current step. Queue waits until the agent is done. Alt+Enter does the other, and Cmd+Enter (Ctrl+Enter) stops the agent and sends.",
-  "settings.display.sendWhileRunning.steer": "Steer",
-  "settings.display.sendWhileRunning.queue": "Queue",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

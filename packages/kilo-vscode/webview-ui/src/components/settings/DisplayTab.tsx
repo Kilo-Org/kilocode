@@ -9,7 +9,6 @@ import { useLanguage } from "../../context/language"
 import { useDisplaySettings } from "../../v2/display-settings"
 import { applyFontSize, clampFontSize, fallbackFontSize } from "../../v2/kilo-settings"
 import { resolveReasoningDisplay } from "../../v2/reasoning-display"
-import type { Delivery } from "../../v2/pending-actions"
 import { useSettingsConfig, type SettingsScope } from "../../v2/settings-config"
 import SessionPreview from "./SessionPreview"
 import SettingsRow from "./SettingsRow"
@@ -35,8 +34,6 @@ const REASONING_OPTIONS: { value: ReasoningDisplay; labelKey: string }[] = [
   { value: "headline", labelKey: "headline" },
 ]
 
-const DELIVERY_OPTIONS: Delivery[] = ["steer", "queue"]
-
 const DisplayTab: Component = () => {
   const config = useSettingsConfig()
   const display = useDisplaySettings()
@@ -45,7 +42,6 @@ const DisplayTab: Component = () => {
   const [draft, setDraft] = createSignal<string>()
 
   const fontSize = () => clampFontSize(config.setting("fontSize")) ?? fallbackFontSize()
-  const delivery = (): Delivery => (config.setting("chat.sendWhileRunning") === "queue" ? "queue" : "steer")
 
   // The display keys are Kilo-only, so the config API drops them. Read them from the raw target files, as the
   // Commit Message tab reads its prompt, and write them back through the same file edit.
@@ -161,25 +157,6 @@ const DisplayTab: Component = () => {
             />
             <span>{fontSize()}px</span>
           </div>
-        </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.display.sendWhileRunning.title")}
-          description={language.t("settings.display.sendWhileRunning.description")}
-        >
-          <Select
-            options={DELIVERY_OPTIONS}
-            current={delivery()}
-            value={(option) => option}
-            label={(option) => language.t(`settings.display.sendWhileRunning.${option}`)}
-            onSelect={(option) => {
-              if (!option || option === delivery()) return
-              config.setSetting("chat.sendWhileRunning", option)
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
         </SettingsRow>
 
         <SettingsRow
