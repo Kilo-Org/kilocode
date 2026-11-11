@@ -23,6 +23,14 @@ export const Plugin = define({
         drain: (input, context) =>
           drain.wait(input.sessionID).pipe(
             Effect.catchTag("Session.NotFoundError", () => Effect.fail(context.error("not_found", "Unknown session"))),
+            Effect.catchTag("DeliveryTimeoutError", () =>
+              Effect.fail(
+                context.error(
+                  "delivery_timeout",
+                  "Background job completion notice was not delivered within 30 seconds",
+                ),
+              ),
+            ),
             Effect.andThen(() => {
               const token = input.token
               if (token === undefined) return Effect.void

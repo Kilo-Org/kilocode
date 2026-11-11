@@ -32,7 +32,10 @@ const boot = (body: (env: Env) => Promise<void>) => async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-drain-"))
   await Bun.write(
     path.join(directory, "kilo2.json"),
-    JSON.stringify({ permissions: [{ action: "*", resource: "*", effect: "allow" }] }),
+    JSON.stringify({
+      agents: { reviewer: { mode: "subagent", system: "DRAIN_CHILD" } },
+      permissions: [{ action: "*", resource: "*", effect: "allow" }],
+    }),
   )
   const variables = { ...signedOut, KILO_API_URL: backend.url }
   const previous = Object.fromEntries(Object.keys(variables).map((key) => [key, process.env[key]]))
@@ -135,17 +138,29 @@ const state = (promise: Promise<unknown>) =>
     Bun.sleep(100).then(() => "pending"),
   ])
 
+const backgroundCommand = `node -e "const timer = setInterval(() => { if (require('node:fs').existsSync('release')) clearInterval(timer) }, 50)"`
+
 test(
   "drains a session through the generated client and publishes the token event",
   boot(async (env) => {
     const created = await session(env)
     const rpc = env.client.rpc(KiloSessionDrainRpc.Definition)
     const controller = new AbortController()
-    const events = rpc.events.subscribe("drained", { signal: controller.signal })[Symbol.asyncIterator]()
-    const received = events.next()
-    expect(await rpc.drain({ sessionID: created.id, token: "round-trip" }, { location: env.location })).toBe(true)
-    expect((await received).value?.data).toEqual({ sessionID: created.id, token: "round-trip" })
-    controller.abort()
+    const events = env.client.event.subscribe({ signal: controller.signal })[Symbol.asyncIterator]()
+    try {
+      expect((await events.next()).value?.type).toBe("server.connected")
+      const received = (async () => {
+        for await (const event of { [Symbol.asyncIterator]: () => events }) {
+          if (event.type === "rpc.kilocode.session-drain.drained") return event.data
+        }
+        throw new Error("Event stream disconnected before the token event")
+      })()
+      expect(await rpc.drain({ sessionID: created.id, token: "round-trip" }, { location: env.location })).toBe(true)
+      expect(await received).toEqual({ sessionID: created.id, token: "round-trip" })
+    } finally {
+      controller.abort()
+      await events.return?.(undefined)
+    }
     expect(await rpc.drain({ sessionID: created.id }, { location: env.location })).toBe(true)
     await expect(rpc.drain({ sessionID: "ses_missing" }, { location: env.location })).rejects.toMatchObject({
       type: "not_found",
@@ -230,7 +245,7 @@ test(
     await env.run(
       env.llm.push(
         TestLLM.toolCall("call_shell", "shell", {
-          command: `while [ ! -f "${gate}" ]; do sleep 0.05; done`,
+          command: backgroundCommand,
           background: true,
         }),
         TestLLM.text("started", "started"),
@@ -241,6 +256,9 @@ test(
     await env.client.session.prompt({ sessionID: created.id, text: "Start the shell" })
     await env.run(env.llm.wait(2))
     await env.client.experimental.session.wait({ sessionID: created.id })
+    expect(await env.client.experimental.job.list({ sessionID: created.id, descendants: true })).toMatchObject([
+      { kind: "shell", status: "running" },
+    ])
     const code = process.exitCode
     const run = KiloRunDrain.prompt({
       client: env.client,
@@ -271,6 +289,67 @@ test(
   30_000,
 )
 
+test.each(["shell", "subagent"] as const)(
+  "aborting an idle session's drain stops its older background %s and leaves unrelated work running",
+  (kind) =>
+    boot(async (env) => {
+      const created = await session(env)
+      const other = await session(env)
+      await env.run(
+        env.llm.serve((request) => {
+          const text = JSON.stringify(request)
+          if (text.includes("DRAIN_CHILD") || text.includes("Unrelated work")) return Stream.never
+          if (text.includes("<shell") || text.includes("<subagent")) return Stream.never
+          if (text.includes("call_background")) return TestLLM.text("started", "started")
+          return TestLLM.toolCall(
+            "call_background",
+            kind,
+            kind === "shell"
+              ? { command: backgroundCommand, background: true }
+              : { agent: "reviewer", description: "Review", prompt: "Wait for cancellation", background: true },
+          )
+        }),
+      )
+      await env.client.session.prompt({ sessionID: other.id, text: "Unrelated work" })
+      await env.run(env.llm.wait(1))
+      await env.client.session.prompt({ sessionID: created.id, text: "Start background work" })
+      await env.run(env.llm.wait(kind === "shell" ? 3 : 4))
+      await env.client.experimental.session.wait({ sessionID: created.id })
+      const jobs = await env.client.experimental.job.list({ sessionID: created.id, descendants: true })
+      expect(jobs).toMatchObject([{ kind, status: "running" }])
+      const controller = new AbortController()
+      const waiting = KiloRunDrain.wait({
+        client: env.client,
+        sessionID: created.id,
+        location: env.location,
+        signal: controller.signal,
+      })
+      try {
+        expect(await state(waiting)).toBe("pending")
+        controller.abort()
+        await expect(waiting).rejects.toBeDefined()
+        expect(await env.client.experimental.job.list({ sessionID: created.id, descendants: true })).not.toContainEqual(
+          expect.objectContaining({ status: "running" }),
+        )
+        const active = Object.keys(await env.client.session.active())
+        expect(active).not.toContain(created.id)
+        expect(active).toContain(other.id)
+        for (const job of jobs) {
+          if (job.kind === "subagent") expect(active).not.toContain(job.childSessionID)
+          if (job.kind === "shell")
+            expect((await env.client.shell.list({ location: env.location })).data).not.toContainEqual(
+              expect.objectContaining({ id: job.shellID }),
+            )
+        }
+      } finally {
+        controller.abort()
+        await Bun.write(path.join(env.location.directory, "release"), "")
+        await env.client.session.interrupt({ sessionID: other.id })
+      }
+    })(),
+  30_000,
+)
+
 test("the host loads the Kilo run mirror in place of the upstream run module", async () => {
   const entry = path.resolve(import.meta.dir, "../../cli/src/run/run.ts")
   const build = (plugins: Bun.BunPlugin[]) =>
@@ -280,4 +359,41 @@ test("the host loads the Kilo run mirror in place of the upstream run module", a
     })
   expect(await build([hostMirrorsPlugin])).toContain("rpc.kilocode.session-drain.drained")
   expect(await build([])).not.toContain("rpc.kilocode.session-drain.drained")
+})
+
+test("run mirror differs from upstream only at host integration points", async () => {
+  const upstream = (await Bun.file(new URL("../../cli/src/run/run.ts", import.meta.url)).text()).replaceAll(
+    "\r\n",
+    "\n",
+  )
+  const mirror = (await Bun.file(new URL("../src/cli-run.ts", import.meta.url)).text()).replaceAll("\r\n", "\n")
+  const replace = (source: string, from: string, to: string) => {
+    expect(source.split(from)).toHaveLength(2)
+    return source.replace(from, to)
+  }
+  const imports = [
+    ["../util/io", "@opencode/cli/util/io"],
+    ["../services/server-connection", "@opencode/cli/services/server-connection"],
+    ["../session-target", "@opencode/cli/session-target"],
+    ["./noninteractive", "./run-drain"],
+    ["./ui", "@opencode/cli/run/ui"],
+    ["../env", "@opencode/cli/env"],
+    ["../util/error", "@opencode/cli/util/error"],
+  ] as const
+  const normalized = imports.reduce((source, [from, to]) => replace(source, `from "${from}"`, `from "${to}"`), upstream)
+  const prompt = replace(
+    normalized,
+    'import { runNonInteractivePrompt } from "./run-drain"',
+    'import { KiloRunDrain } from "./run-drain" // Kilo: the prompt step with the session drain',
+  )
+  expect(mirror).toBe(
+    "// Mirror of packages/cli/src/run/run.ts (v2.2.6), loaded in its place by ./mirrors. The only difference: after the\n" +
+      "// reply, the run drains the session (./run-drain) before it exits. Keep it in step with the upstream file; the\n" +
+      '// differences are marked "Kilo:".\n' +
+      replace(
+        prompt,
+        "  await runNonInteractivePrompt({",
+        "  // Kilo: the prompt step drains the session after the reply.\n  await KiloRunDrain.prompt({",
+      ),
+  )
 })

@@ -28,12 +28,12 @@ export const Definition = Rpc.define({
      * and no background job of the session or a descendant, nor its result delivery. It never starts or resumes work,
      * and cancelling the call cancels no work. Quiet is not success and does not rule out later work; tracking is
      * process-local and does not survive a restart. With a token, the `drained` event is published before the call
-     * returns.
+     * returns. A finished job whose notice stays pending for 30 seconds fails with `delivery_timeout`.
      */
     drain: {
       input: portable(Schema.Struct({ sessionID: SessionID, token: optional(Token) })),
       output: portable(Schema.Boolean),
-      errors: { not_found: portable(Schema.Undefined) },
+      errors: { not_found: portable(Schema.Undefined), delivery_timeout: portable(Schema.Undefined) },
     },
   },
   events: {

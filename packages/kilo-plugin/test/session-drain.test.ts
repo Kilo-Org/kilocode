@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Deferred, Effect, Exit, Fiber, Layer, Option, Stream } from "effect"
+import { TestClock } from "effect/testing"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
 import { TestLLM } from "@opencode/ai/testing"
@@ -360,6 +361,35 @@ describe("kilocode.session-drain", () => {
       expect(yield* finish(waiting)).toBe(true)
       const messages = yield* env.sessions.messages({ sessionID: env.root.id, order: "asc" })
       expect(JSON.stringify(messages)).toContain("parent saw the result")
+    }),
+  )
+
+  it.effect("bounds a stalled notice without limiting running jobs or poisoning later drains", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const jobs = yield* Job.Service
+      const done = yield* Deferred.make<void>()
+      yield* jobs.start({
+        id: "job_stalled_notice",
+        type: "shell",
+        recovery: { kind: "shell", sessionID: env.root.id, shellID: "sh_stalled", command: "held" },
+        run: Deferred.await(done).pipe(Effect.as("finished")),
+      })
+      yield* jobs.background("job_stalled_notice")
+      const waiting = yield* drain(env.rpc, env.root.id, "stalled")
+      yield* TestClock.adjust("1 minute")
+      expect(waiting.pollUnsafe()).toBeUndefined()
+      yield* Deferred.succeed(done, undefined)
+      const settled = yield* jobs.wait({ id: "job_stalled_notice" })
+      yield* TestClock.adjust("29 seconds")
+      expect(waiting.pollUnsafe()).toBeUndefined()
+      yield* TestClock.adjust("1 second")
+      const result = yield* Fiber.await(waiting)
+      expect(Exit.isFailure(result) && JSON.stringify(result.cause)).toContain("delivery_timeout")
+      const notification = settled.info?.notificationID
+      if (notification === undefined) throw new Error("background job has no notification")
+      yield* jobs.completeBackground(notification)
+      expect(yield* env.rpc.drain({ sessionID: env.root.id })).toBe(true)
     }),
   )
 
