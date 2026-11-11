@@ -130,7 +130,7 @@ function relativeOf(file: string) {
  * The index keeps paths and names under separate prefixes. A v1 file in its feature root has a relative
  * path equal to its basename, so a shared key space would let the name of a nested file close it.
  */
-export function twinOf(file: string, feature: string, index: Map<string, string>) {
+function twinOf(file: string, feature: string, index: Map<string, string>) {
   const same = index.get(`path|${feature}|${relativeOf(file)}`)
   if (same || !isTestPath(file)) return same
   return index.get(`name|${feature}|${path.basename(file)}`)
