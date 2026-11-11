@@ -1,46 +1,76 @@
 import { describe, expect, test } from "bun:test"
-import type { PermissionRequest, PermissionSavedInfo } from "@opencode/client"
-import { displayResource, widenSaved, widerRule } from "../webview-ui/src/v2/permission-rules"
+import type { PermissionRequest, PermissionSavedInfo, SessionInfo } from "@opencode/client"
+import { allowBroader, displayResource, widenSaved, widerRule } from "../webview-ui/src/v2/permission-rules"
 
-const request = (input: Partial<PermissionRequest>): PermissionRequest => ({
+const ORIGIN = "navigate:http://localhost:3000"
+
+const request = (input: Partial<PermissionRequest> = {}): PermissionRequest => ({
   id: "per_browser",
   sessionID: "ses_browser",
   action: "browser_open",
-  resources: ["navigate:http://localhost:3000"],
-  save: ["navigate:http://localhost:3000"],
-  metadata: { rules: ["navigate:http://localhost:3000", "navigate:*"] },
+  resources: [ORIGIN],
+  save: [ORIGIN],
+  metadata: { rules: [ORIGIN, "navigate:*"] },
   ...input,
 })
 
-/** An in-memory saved-permission table with the server's unique (project, action, resource) rule. */
-function table(rows: Array<Pick<PermissionSavedInfo, "action" | "resource">>, projectID = "prj_a") {
-  const saved = rows.map(
-    (row, index) =>
-      ({
-        id: `psv_${index}`,
-        projectID,
-        ...row,
-        time: { created: 0, updated: 0 },
-      }) as PermissionSavedInfo,
-  )
+type Row = Pick<PermissionSavedInfo, "projectID" | "action" | "resource">
+
+/**
+ * An in-memory saved-permission table that behaves like `PermissionSaved`: an update keeps the fields it omits, and
+ * (project, action, resource) is unique. `calls` records every request in order.
+ */
+function server(rows: Row[] = []) {
+  const calls: unknown[][] = []
+  const saved: PermissionSavedInfo[] = []
+  const insert = (row: Row) =>
+    saved.push({ id: `psv_${saved.length}`, ...row, time: { created: 0, updated: 0 } } as PermissionSavedInfo)
+  rows.forEach(insert)
   return {
-    saved,
-    async list(input?: { projectID?: string }) {
-      return saved.filter((row) => !input?.projectID || row.projectID === input.projectID)
+    calls,
+    rows: () => saved.map((row) => `${row.projectID} ${row.action} ${row.resource}`),
+    // Like the server, "always" saves the request's `save` rules for the session's project.
+    reply(projectID: string) {
+      return async (input: { sessionID: string; requestID: string; decision: "always" }) => {
+        calls.push(["reply", input])
+        insert({ projectID, action: "browser_open", resource: ORIGIN })
+      }
     },
-    async update(input: { id: string; resource?: string }) {
-      const row = saved.find((item) => item.id === input.id)!
-      if (saved.some((item) => item !== row && item.action === row.action && item.resource === input.resource))
-        throw new Error("conflict")
-      Object.assign(row, { resource: input.resource })
-      return row
+    session: {
+      async get(input: { sessionID: string }) {
+        calls.push(["session.get", input])
+        return { projectID: "prj_a" } as SessionInfo
+      },
+    },
+    saved: {
+      async list(input?: { projectID?: string }) {
+        calls.push(["list", input])
+        return saved.filter((row) => !input?.projectID || row.projectID === input.projectID)
+      },
+      async update(input: { id: string; action?: string; resource?: string }) {
+        calls.push(["update", input])
+        const row = saved.find((item) => item.id === input.id)!
+        const next = { action: input.action ?? row.action, resource: input.resource ?? row.resource }
+        if (
+          saved.some(
+            (item) =>
+              item !== row &&
+              item.projectID === row.projectID &&
+              item.action === next.action &&
+              item.resource === next.resource,
+          )
+        )
+          throw new Error("conflict")
+        Object.assign(row, next)
+        return row
+      },
     },
   }
 }
 
 describe("browser_open permission display", () => {
   test("hides the navigate: prefix", () => {
-    expect(displayResource("browser_open", "navigate:http://localhost:3000")).toBe("http://localhost:3000")
+    expect(displayResource("browser_open", ORIGIN)).toBe("http://localhost:3000")
     expect(displayResource("browser_open", "navigate:*")).toBe("*")
   })
 
@@ -52,37 +82,82 @@ describe("browser_open permission display", () => {
 
 describe("browser_open broader rule", () => {
   test("offers the rule metadata lists beyond the saved origin", () => {
-    expect(widerRule(request({}))).toBe("navigate:*")
+    expect(widerRule(request())).toBe("navigate:*")
   })
 
-  test("offers nothing without metadata rules or for another tool", () => {
+  test("offers nothing without metadata rules, for another tool, or without exactly one saved origin", () => {
     expect(widerRule(request({ metadata: undefined }))).toBeUndefined()
     expect(widerRule(request({ action: "webfetch" }))).toBeUndefined()
-    expect(widerRule(request({ metadata: { rules: ["navigate:http://localhost:3000"] } }))).toBeUndefined()
+    expect(widerRule(request({ metadata: { rules: [ORIGIN] } }))).toBeUndefined()
+    expect(widerRule(request({ save: undefined }))).toBeUndefined()
+    expect(widerRule(request({ save: [ORIGIN, "navigate:https://kilo.ai"] }))).toBeUndefined()
   })
 })
 
 describe("widening a saved origin approval", () => {
-  const input = { projectID: "prj_a", action: "browser_open", from: "navigate:http://localhost:3000", to: "navigate:*" }
+  const input = { projectID: "prj_a", action: "browser_open", from: ORIGIN, to: "navigate:*" }
 
-  test("rewrites the saved origin rule to every site", async () => {
-    const saved = table([{ action: "browser_open", resource: input.from }])
-    await widenSaved(saved, input)
-    expect(saved.saved.map((row) => row.resource)).toEqual(["navigate:*"])
+  test("rewrites only the resource of the saved origin rule", async () => {
+    const api = server([{ projectID: "prj_a", action: "browser_open", resource: ORIGIN }])
+    await widenSaved(api.saved, input)
+    expect(api.calls.at(-1)).toEqual(["update", { id: "psv_0", resource: "navigate:*" }])
+    expect(api.rows()).toEqual(["prj_a browser_open navigate:*"])
   })
 
   test("leaves the project alone when it already allows every site", async () => {
-    const saved = table([
-      { action: "browser_open", resource: "navigate:*" },
-      { action: "browser_open", resource: input.from },
+    const api = server([
+      { projectID: "prj_a", action: "browser_open", resource: "navigate:*" },
+      { projectID: "prj_a", action: "browser_open", resource: ORIGIN },
     ])
-    await widenSaved(saved, input)
-    expect(saved.saved.map((row) => row.resource)).toEqual(["navigate:*", input.from])
+    await widenSaved(api.saved, input)
+    expect(api.rows()).toEqual(["prj_a browser_open navigate:*", `prj_a browser_open ${ORIGIN}`])
   })
 
   test("does not touch another project's approval", async () => {
-    const saved = table([{ action: "browser_open", resource: input.from }], "prj_b")
-    await widenSaved(saved, input)
-    expect(saved.saved.map((row) => row.resource)).toEqual([input.from])
+    const api = server([{ projectID: "prj_b", action: "browser_open", resource: ORIGIN }])
+    await widenSaved(api.saved, input)
+    expect(api.rows()).toEqual([`prj_b browser_open ${ORIGIN}`])
+  })
+})
+
+describe("Allow all sites", () => {
+  test("replies always before it widens the rule the reply saved", async () => {
+    const api = server()
+    await allowBroader(
+      { reply: api.reply("prj_a"), project: () => "prj_a", session: api.session, saved: api.saved },
+      request(),
+      "navigate:*",
+    )
+    expect(api.calls).toEqual([
+      ["reply", { sessionID: "ses_browser", requestID: "per_browser", decision: "always" }],
+      ["list", { projectID: "prj_a" }],
+      ["update", { id: "psv_0", resource: "navigate:*" }],
+    ])
+    expect(api.rows()).toEqual(["prj_a browser_open navigate:*"])
+  })
+
+  test("reads the project from the server when the session is not loaded", async () => {
+    const api = server()
+    await allowBroader(
+      { reply: api.reply("prj_a"), project: () => undefined, session: api.session, saved: api.saved },
+      request(),
+      "navigate:*",
+    )
+    expect(api.calls[1]).toEqual(["session.get", { sessionID: "ses_browser" }])
+    expect(api.rows()).toEqual(["prj_a browser_open navigate:*"])
+  })
+
+  test("saves nothing broader when the reply fails", async () => {
+    const api = server()
+    const reply = async () => {
+      throw new Error("offline")
+    }
+    const answer = allowBroader(
+      { reply, project: () => "prj_a", session: api.session, saved: api.saved },
+      request(),
+      "navigate:*",
+    )
+    await expect(answer).rejects.toThrow("offline")
+    expect(api.calls).toEqual([])
   })
 })

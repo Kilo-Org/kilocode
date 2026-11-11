@@ -13,7 +13,7 @@ import { Session } from "@opencode/core/session"
 import { SessionTable } from "@opencode/core/session/sql"
 import { SessionStore } from "@opencode/core/session/store"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect"
 import { location } from "../../core/test/fixture/location"
 import { testEffect } from "../../core/test/lib/effect"
 import { KiloBrowserToolPlugin } from "../src/browser"
@@ -103,12 +103,14 @@ describe("browser_open permission request", () => {
         },
       }
       yield* KiloBrowserToolPlugin.effect(context as never)
-      yield* tools[0]
+      const exit = yield* tools[0]
         .execute(
           { url: "http://0.0.0.0:3000/app" },
           { sessionID: session, agent: "test", messageID: "msg", id: "call" },
         )
         .pipe(Effect.exit)
+      // The declined ask ends the call. A tool that went on would reach the broker instead of failing with it.
+      expect(exit).toStrictEqual(Exit.fail("declined"))
       expect(asked).toEqual([
         {
           action: "browser_open",

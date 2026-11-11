@@ -7,7 +7,7 @@ import { PermissionCommand } from "../components/chat/PermissionCommand"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { PermissionDiff } from "./permission-diff"
-import { displayResource, widenSaved, widerRule } from "./permission-rules"
+import { allowBroader, displayResource, widerRule } from "./permission-rules"
 
 /** v2 permission actions whose existing label key has another name. */
 const LABELS: Record<string, string> = {
@@ -53,24 +53,28 @@ export function PermissionDock(props: {
     return value === key ? props.request.action : value
   }
 
-  const save = () => props.request.save ?? []
   const wider = () => widerRule(props.request)
+
+  const answer = (decision: "once" | "always" | "reject", broader?: string) => {
+    const request = props.request
+    if (!broader)
+      return v2.data.session.permission.reply({ sessionID: request.sessionID, requestID: request.id, decision })
+    return allowBroader(
+      {
+        reply: (input) => v2.data.session.permission.reply(input),
+        project: (sessionID) => v2.data.session.get(sessionID)?.projectID,
+        session: v2.api.session,
+        saved: v2.api.permission.saved,
+      },
+      request,
+      broader,
+    )
+  }
 
   const submit = (decision: "once" | "always" | "reject", broader?: string) => {
     if (sending()) return
     setSending(true)
-    // The reply removes the request from the store, so keep the one being answered.
-    const request = props.request
-    const origin = request.save?.[0]
-    void v2.data.session.permission
-      .reply({ sessionID: request.sessionID, requestID: request.id, decision })
-      .then(async () => {
-        if (!broader || !origin) return
-        const projectID =
-          v2.data.session.get(request.sessionID)?.projectID ??
-          (await v2.api.session.get({ sessionID: request.sessionID })).projectID
-        await widenSaved(v2.api.permission.saved, { projectID, action: request.action, from: origin, to: broader })
-      })
+    void answer(decision, broader)
       .then(() => window.dispatchEvent(new Event("focusPrompt")))
       .catch(v2.report)
       .finally(() => setSending(false))
@@ -137,7 +141,7 @@ export function PermissionDock(props: {
           <Button variant="secondary" size="small" onClick={() => submit("always")} disabled={sending()}>
             {language.t("ui.permission.allowAlways")}
           </Button>
-          <Show when={save().length === 1 && wider()}>
+          <Show when={wider()}>
             {(rule) => (
               <Button variant="secondary" size="small" onClick={() => submit("always", rule())} disabled={sending()}>
                 {language.t("ui.permission.allowAllSites")}
