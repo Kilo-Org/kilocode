@@ -157,6 +157,15 @@ export const replacements = {
   ],
   // Code Mode paths of the tools a schedule check may not call.
   "core/src/schedule/check.ts": [['"opencode.', '"kilo.']],
+  "core/src/plugin/command/initialize.txt": [
+    ["future OpenCode sessions", "future Kilo sessions"],
+    [
+      "repo-local OpenCode config such as `opencode.json`",
+      `repo-local Kilo config such as \`${KiloConfigFiles.newFile}\``,
+    ],
+    ["`opencode.json` `instructions`", `\`${KiloConfigFiles.newFile}\` \`instructions\``],
+  ],
+  "core/src/plugin/command/schedule.txt": [["the `opencode` namespace", "the `kilo` namespace"]],
   "core/src/oauth/page.ts": [
     ["OpenCode is now", "Kilo is now"],
     ["OpenCode couldn't", "Kilo couldn't"],

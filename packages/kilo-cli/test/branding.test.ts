@@ -51,20 +51,17 @@ test("does not rewrite the upstream theme registry", async () => {
   expect(KiloBranding.transform(filename, original)).toBe(original)
 })
 
-test("rebrands the agent self-identity in every prompt template", async () => {
-  for (const file of [
-    "core/src/session/runner/prompt/system.txt",
-    "core/src/plugin/system-prompt/gpt.txt",
-    "core/src/plugin/system-prompt/gpt-astra.txt",
-    "core/src/plugin/system-prompt/kimi.txt",
-    "core/src/plugin/system-prompt/trinity.txt",
-    "core/src/plugin/system-prompt/meta.txt",
-  ]) {
+test("no core prompt template names OpenCode", async () => {
+  const files = Array.from(new Bun.Glob("core/src/**/*.txt").scanSync(path.join(repo, "packages"))).filter(
+    // The models.dev snapshot is provider data, not a prompt.
+    (file) => !file.replaceAll("\\", "/").endsWith("models-dev/snapshot.txt"),
+  )
+  expect(files.length).toBeGreaterThan(0)
+  for (const file of files) {
     const filename = path.join(repo, "packages", file)
     const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
     // The ${OPENCODE_TOOL_GUIDANCE} token is replaced by SessionSystemPrompt.render, not prose.
-    expect(branded.replaceAll("${OPENCODE_TOOL_GUIDANCE}", "")).not.toMatch(/opencode/i)
-    expect(branded).toContain("Kilo")
+    expect(branded.replaceAll("${OPENCODE_TOOL_GUIDANCE}", ""), file).not.toMatch(/opencode/i)
   }
 })
 
@@ -213,7 +210,11 @@ function checkPages(output: string, hosted: boolean) {
     modelError: string
     update: string
     updateSession: string
+    prompt: string
   }
+  // Proves the .txt loader branch runs in the source and compiled paths, not only KiloBranding.transform.
+  expect(pages.prompt).toContain(`running in ${hosted ? "Kilo" : "OpenCode"}, a coding agent harness`)
+  expect(pages.prompt).not.toContain(`running in ${hosted ? "OpenCode" : "Kilo"}`)
   for (const output of [pages.update, pages.updateSession]) {
     const text = Bun.stripANSI(output)
     expect(text).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)
