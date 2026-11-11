@@ -10,6 +10,10 @@ import SOUL from "./soul.txt"
  * model-specific templates that replace `system[0]` (the upstream prompt optimizer and the Gateway prompt) keep it as
  * long as this plugin runs after them; the host registers it after the config plugins for that reason.
  *
+ * `generate` requests (the goal reviewer, cache warming, the `session.generate` API) replay the agent's own system
+ * prompt and history, so they get the persona too: without it their first part differs from the agent steps and the
+ * provider's prompt cache misses from the first token.
+ *
  * The text holds identity and personality only. Working rules (how to plan, when to ask the user, how to edit code)
  * belong to the model templates, the agent prompts and the tool descriptions, which differ per model and agent.
  *
@@ -25,5 +29,6 @@ export const KiloSoulPlugin = define({
       })
     yield* ctx.session.hook("context", hook)
     yield* ctx.session.hook("compaction", hook)
+    yield* ctx.session.hook("generate", hook)
   }),
 })

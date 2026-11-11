@@ -74,7 +74,7 @@ function gateway<A, E, R>(body: Effect.Effect<A, E, R>) {
 }
 
 describe("Kilo persona", () => {
-  it.live("leads agent and compaction requests, ahead of the Gateway model template", () =>
+  it.live("leads agent, compaction and generate requests, ahead of the Gateway model template", () =>
     gateway(
       Effect.gen(function* () {
         const host = yield* start()
@@ -90,7 +90,8 @@ describe("Kilo persona", () => {
           options: {},
           tools: {},
         }
-        for (const name of ["context", "compaction"] as const) {
+        // A generate request replays the agent's prompt, so it carries the same parts as an agent step.
+        for (const name of ["context", "compaction", "generate"] as const) {
           const request = yield* hooks.trigger("session", name, structuredClone(input))
           expect(request.system[0]).toEqual(soul)
           // The Gateway replaced the template part, not the persona.
