@@ -62,8 +62,8 @@ export function applySetupMessage(
   if (!deps.isActivePayload(msg.projectId)) return
   if (msg.status === "ready" && msg.sessionId) {
     deps.selectSession(msg.sessionId)
-    const managed = deps.managedSessions().find((session) => session.id === msg.sessionId)
-    if (managed?.worktreeId) deps.setSelection(managed.worktreeId)
+    const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    if (worktree) deps.setSelection(worktree)
     deps.evictLocal(msg.sessionId)
     deps.requestChatFocus(true)
     return
