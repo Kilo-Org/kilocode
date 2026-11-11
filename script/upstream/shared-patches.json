@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 125,
-    "markedLines": 2122,
+    "markedLines": 2181,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -167,15 +167,15 @@
     },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
-      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+      "seam": "Generic MCP embedding hooks (`fetch`, OAuth client identity, client document, loopback callback, registration redirect and credential binding, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
-      "seam": "Apply the optional host `fetch` wrapper per transport attempt and the host `localCommand` rewrite to a local server command. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport or the spawn command; the host sets both through `Mcp.configured`. Omitting the hooks preserves upstream behavior."
+      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. Omitting the hook preserves upstream behavior."
     },
     "packages/core/src/mcp/connection.ts": {
       "rung": 3,
-      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` and `localCommand` hooks also reach connections the connection service and the pool open rather than only a direct client connect, and let the host `authFailure` predicate reclassify a remote connection failure as `needs_auth` while the server may sign in. No plugin hook reaches the MCP transport, spawn command or connection status; with `host` unset nothing changes. The exact 15-line growth raises only the markedLines budget from 2118 to 2133; file, unmarked-line and deletion budgets are unchanged."
+      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` hook also reaches connections the connection service and the pool open rather than only a direct client connect, and let the host `authFailure` predicate reclassify a remote connection failure as `needs_auth` while the server may sign in. No plugin hook reaches the MCP transport or connection status; with `host` unset nothing changes. The exact 15-line growth raises only the markedLines budget from 2118 to 2133; file, unmarked-line and deletion budgets are unchanged."
     },
     "packages/core/src/mcp/pool.ts": {
       "rung": 3,
@@ -183,11 +183,11 @@
     },
     "packages/core/src/mcp/index.ts": {
       "rung": 3,
-      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, command or OAuth identity; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
+      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, OAuth identity or auth-failure classification; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
     },
     "packages/core/src/mcp/oauth.ts": {
       "rung": 3,
-      "seam": "Use the optional host OAuth client identity for `client_name`, `client_uri` and the initialize challenge, and let the host name the CIMD document URL. No plugin hook reaches OAuth registration; the host supplies the values through `Mcp.configured`. Defaults stay `opencode` and the upstream document."
+      "seam": "Use the optional host OAuth policy: `client_name`, `client_uri` and the initialize challenge, the client ID metadata document and the loopback callback it lists, the redirect a non-interactive registration must record, and the client-information binding that keeps a configured client's secret with the authorization server that issued it. No plugin hook reaches OAuth registration; the host supplies the policy through `Mcp.configured({ host })`. With `host` unset, defaults stay upstream's own document, callback, redirect and static client."
     },
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
