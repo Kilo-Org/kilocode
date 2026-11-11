@@ -5,6 +5,7 @@ import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
+import { BrowserProfileTool } from "./browser-profile"
 import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
 import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
@@ -103,6 +104,7 @@ export namespace KiloToolRegistry {
       const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
       const browser = Flag.KILO_CLIENT === "vscode" ? yield* BrowserOpenTool : undefined
+      const profile = Flag.KILO_CLIENT === "vscode" ? yield* BrowserProfileTool : undefined
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
       // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
@@ -134,6 +136,7 @@ export namespace KiloToolRegistry {
           manager,
           process,
           browser,
+          profile,
           chart,
           image,
           notify,
@@ -160,6 +163,7 @@ export namespace KiloToolRegistry {
         manager,
         process,
         browser,
+        profile,
         chart,
         image,
         notify,
@@ -188,6 +192,7 @@ export namespace KiloToolRegistry {
       manager: Tool.Info
       process: Tool.Info
       browser?: Tool.Info
+      profile?: Tool.Info
       chart: Tool.Info
       image: Tool.Info
       notify: Tool.Info
@@ -237,6 +242,7 @@ export namespace KiloToolRegistry {
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
           : {}
       const browser = tools.browser ? yield* Tool.init(tools.browser) : undefined
+      const profile = tools.profile ? yield* Tool.init(tools.profile) : undefined
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
           ? yield* Effect.all({
@@ -252,6 +258,7 @@ export namespace KiloToolRegistry {
         ...report,
         ...goal,
         browser,
+        profile,
         ...notebooks,
         semantic,
         openPlan,
@@ -320,6 +327,7 @@ export namespace KiloToolRegistry {
       manager: Tool.Def
       process: Tool.Def
       browser?: Tool.Def
+      profile?: Tool.Def
       chart: Tool.Def
       image: Tool.Def
       notify: Tool.Def
@@ -368,6 +376,7 @@ export namespace KiloToolRegistry {
       tools.managerModels,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
+      ...(Flag.KILO_CLIENT === "vscode" && tools.profile ? [tools.profile] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&
       tools.notebookRead &&
@@ -432,6 +441,15 @@ export namespace KiloToolRegistry {
           return yield* Network.available(new URL(base), token)
         })
       : false
+    // The Playwright browser belongs to a workspace folder, so the tool is offered only where it exists.
+    const profile = tools.some((tool) => tool.id === "browser_profile")
+      ? yield* Effect.gen(function* () {
+          const base = process.env.KILO_BROWSER_BROKER_URL
+          const token = process.env.KILO_BROWSER_BROKER_TOKEN
+          if (!base || !token || !URL.canParse(base)) return false
+          return yield* Network.automation(new URL(base), token, ctx.directory)
+        })
+      : false
     const semantic =
       process.env["KILO_PLATFORM"] === "vscode" && tools.some((tool) => tool.id === "semantic_search")
         ? yield* consented(ctx.directory)
@@ -439,6 +457,7 @@ export namespace KiloToolRegistry {
     return tools.flatMap((tool) => {
       if (tool.id.startsWith("kilo_memory_")) return memoryEnabled ? [tool] : []
       if (tool.id === "browser_open") return browser ? [tool] : []
+      if (tool.id === "browser_profile") return profile ? [tool] : []
       if (semantic) return [tool]
       if (tool.id === "semantic_search") return []
       if (tool.id !== "glob" && tool.id !== "grep") return [tool]

@@ -15,8 +15,20 @@ describe("Playwright MCP lifecycle", () => {
   let enabled: boolean
   let connected: boolean
   let failed: boolean
+  // Fail only the next MCP start.
+  let once: boolean
   let pending: Promise<void> | undefined
   let additions: string[]
+  let commands: string[][]
+  let allowed: string[] | undefined
+  let installed: boolean
+
+  // Start a browser the way an agent does. No server runs before that.
+  async function start(...dirs: string[]) {
+    for (const directory of dirs.length ? dirs : ["/repo"]) {
+      await service.handle("/playwright/profile", { sessionID: "starter", directory, browser: "chrome" })
+    }
+  }
   let removals: string[]
   let active: Set<string>
   let down: Set<string>
@@ -33,8 +45,12 @@ describe("Playwright MCP lifecycle", () => {
     enabled = true
     connected = true
     failed = false
+    once = false
     pending = undefined
     additions = []
+    commands = []
+    allowed = undefined
+    installed = true
     removals = []
     active = new Set()
     down = new Set()
@@ -43,7 +59,8 @@ describe("Playwright MCP lifecycle", () => {
     Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
     vscode.workspace.getConfiguration = (() => ({
       get: (key: string, fallback: unknown) => (key === "enabled" ? enabled : fallback),
-    })) as typeof vscode.workspace.getConfiguration
+      inspect: (key: string) => (key === "browsers" ? { globalValue: allowed } : undefined),
+    })) as unknown as typeof vscode.workspace.getConfiguration
     Object.defineProperty(vscode.workspace, "onDidChangeWorkspaceFolders", {
       configurable: true,
       value: (listener: () => Promise<void>) => {
@@ -60,11 +77,15 @@ describe("Playwright MCP lifecycle", () => {
               ? { "kilo-playwright": { status: "failed", error: "MCP startup failed" } }
               : {},
         }),
-        add: async ({ name, directory }: { name: string; directory: string }) => {
+        add: async (input: { name: string; directory: string; config: { command: string[] } }) => {
+          const name = input.name
+          const directory = input.directory
           additions.push(directory)
+          commands.push(input.config.command)
           started.resolve()
           await pending
-          if (failed) {
+          if (failed || once) {
+            once = false
             down.add(directory)
             return { data: { [name]: { status: "failed", error: "MCP startup failed" } } }
           }
@@ -89,7 +110,7 @@ describe("Playwright MCP lifecycle", () => {
         return client
       },
     } as KiloConnectionService
-    service = new BrowserAutomationService(connection)
+    service = new BrowserAutomationService(connection, undefined, async () => (installed ? "installed" : "missing"))
   })
 
   afterEach(() => {
@@ -103,7 +124,7 @@ describe("Playwright MCP lifecycle", () => {
   })
 
   test("re-registers the same directory after a backend restart", async () => {
-    await service.syncWithSettings()
+    await start()
     active.clear()
     await service.reregisterIfEnabled()
     expect(additions).toEqual(["/repo", "/repo"])
@@ -113,7 +134,7 @@ describe("Playwright MCP lifecycle", () => {
   test("prompt readiness waits for in-flight MCP startup without restarting it", async () => {
     const gate = Promise.withResolvers<void>()
     pending = gate.promise
-    const registration = service.syncWithSettings()
+    const registration = start()
     await started.promise
     let sent = false
     const prompt = service.ready("/repo").then(() => {
@@ -131,8 +152,8 @@ describe("Playwright MCP lifecycle", () => {
     const gate = Promise.withResolvers<void>()
     pending = gate.promise
     service.dispose()
-    service = new BrowserAutomationService(connection, 5)
-    const registration = service.syncWithSettings()
+    service = new BrowserAutomationService(connection, 5, async () => "installed")
+    const registration = start()
     await started.promise
     await service.ready("/repo")
     expect(active.size).toBe(0)
@@ -142,7 +163,7 @@ describe("Playwright MCP lifecycle", () => {
   })
 
   test("prompt readiness repairs lost registration before the disposal event arrives", async () => {
-    await service.syncWithSettings()
+    await start()
     active.clear()
     await service.ready("/repo")
     expect(additions).toEqual(["/repo", "/repo"])
@@ -150,24 +171,30 @@ describe("Playwright MCP lifecycle", () => {
   })
 
   test("prompt readiness surfaces startup failures rather than submitting without tools", async () => {
+    await start()
+    active.clear()
     failed = true
     await expect(service.ready("/repo")).rejects.toThrow("Playwright browser automation could not connect")
     expect(active.size).toBe(0)
   })
 
   test("a failed server is not respawned on every prompt", async () => {
+    await start()
+    active.clear()
     failed = true
     await expect(service.ready("/repo")).rejects.toThrow("could not connect")
     await expect(service.ready("/repo")).rejects.toThrow("MCP startup failed")
-    expect(additions).toEqual(["/repo"])
-    failed = false
-    await service.syncWithSettings()
-    await service.ready("/repo")
     expect(additions).toEqual(["/repo", "/repo"])
+    failed = false
+    await service.reregisterIfEnabled()
+    await service.ready("/repo")
+    expect(additions).toEqual(["/repo", "/repo", "/repo"])
     expect(active.has("/repo")).toBe(true)
   })
 
-  test("disabled Playwright and unrelated worktrees do not block prompts", async () => {
+  test("folders without a browser, disabled Playwright, and unrelated worktrees do not block prompts", async () => {
+    await service.syncWithSettings()
+    await service.ready("/repo")
     await service.ready("/worktree")
     enabled = false
     await service.ready("/repo")
@@ -191,7 +218,7 @@ describe("Playwright MCP lifecycle", () => {
 
   test("restores registrations after config disposal without an SSE reconnect", async () => {
     folders(["/repo", "/second"])
-    await service.syncWithSettings()
+    await start("/repo", "/second")
     await invalidate("/repo")
     expect(additions).toEqual(["/repo", "/second", "/repo"])
     expect(active.has("/repo")).toBe(true)
@@ -202,7 +229,7 @@ describe("Playwright MCP lifecycle", () => {
   })
 
   test("ignores disposal for unrelated Agent Manager directories", async () => {
-    await service.syncWithSettings()
+    await start()
     expect(events.size).toBe(1)
     await invalidate("/worktree")
     expect(additions).toEqual(["/repo"])
@@ -212,13 +239,13 @@ describe("Playwright MCP lifecycle", () => {
   test("matches canonical disposal paths to workspace aliases", async () => {
     const dir = tmpdir()
     folders([dir])
-    await service.syncWithSettings()
+    await start(dir)
     await invalidate(realpathSync(dir))
     expect(additions).toEqual([dir, dir])
   })
 
   test("does not restore after disposal of the service", async () => {
-    await service.syncWithSettings()
+    await start()
     service.dispose()
     await invalidate("/repo")
     expect(events.size).toBe(0)
@@ -226,7 +253,7 @@ describe("Playwright MCP lifecycle", () => {
   })
 
   test("does not restore a disposed registration when disabled", async () => {
-    await service.syncWithSettings()
+    await start()
     enabled = false
     expect(events.size).toBe(1)
     await invalidate("/repo")
@@ -242,7 +269,7 @@ describe("Playwright MCP lifecycle", () => {
   test("queues disposal behind an in-flight registration", async () => {
     const gate = Promise.withResolvers<void>()
     pending = gate.promise
-    const registration = service.syncWithSettings()
+    const registration = start()
     await started.promise
     const reset = invalidate("/repo")
     gate.resolve()
@@ -254,7 +281,7 @@ describe("Playwright MCP lifecycle", () => {
   test("a queued disable wins over in-flight registration and reconnect", async () => {
     const gate = Promise.withResolvers<void>()
     pending = gate.promise
-    const registration = service.syncWithSettings()
+    const registration = start()
     await started.promise
     const reconnect = service.reregisterIfEnabled()
     enabled = false
@@ -267,7 +294,7 @@ describe("Playwright MCP lifecycle", () => {
   })
 
   test("retries a disable on reconnect without losing its directory", async () => {
-    await service.syncWithSettings()
+    await start()
     connected = false
     enabled = false
     await service.syncWithSettings()
@@ -280,21 +307,213 @@ describe("Playwright MCP lifecycle", () => {
 
   test("reconciles added and removed folders without restarting retained registrations", async () => {
     folders(["/repo", "/old"])
-    await service.syncWithSettings()
+    await start("/repo", "/old")
     folders(["/repo", "/new"])
     await Promise.all([...listeners].map((listener) => listener()))
-    expect(additions).toEqual(["/repo", "/old", "/new"])
+    // The new folder gets a server only when an agent picks a browser there.
+    expect(additions).toEqual(["/repo", "/old"])
     expect(removals).toEqual(["/old"])
-    expect([...active]).toEqual(["/repo", "/new"])
+    expect([...active]).toEqual(["/repo"])
 
     enabled = false
     await service.syncWithSettings()
     folders(["/repo", "/disabled"])
     await Promise.all([...listeners].map((listener) => listener()))
-    expect(additions).toEqual(["/repo", "/old", "/new"])
+    expect(additions).toEqual(["/repo", "/old"])
     expect(active.size).toBe(0)
     service.dispose()
     expect(listeners.size).toBe(0)
     expect(events.size).toBe(0)
+  })
+
+  describe("agent-selected browser profile", () => {
+    type Event = Parameters<Parameters<KiloConnectionService["onEvent"]>[0]>[0]
+    const emit = (event: unknown, directory?: string) => {
+      for (const listener of events) listener(event as Event, directory)
+    }
+    const select = (sessionID: string, body: Record<string, unknown> = {}, directory = "/repo") =>
+      service.handle("/playwright/profile", { sessionID, directory, ...body }) as Promise<{
+        browser: string
+        device?: string
+        viewport?: string
+        headless?: boolean
+        allowed: string[]
+        changed: boolean
+      }>
+    const flags = () => commands.at(-1)?.slice(2, -2)
+
+    test("runs no browser until an agent picks one", async () => {
+      allowed = ["webkit", "chromium"]
+      await service.syncWithSettings()
+      await service.reregisterIfEnabled()
+      expect(await select("a")).toEqual({ allowed: ["chromium", "webkit"], changed: false })
+      await expect(select("a", { device: "iPhone 15" })).rejects.toThrow("No browser is running yet")
+      expect(additions).toEqual([])
+
+      expect(await select("a", { browser: "chromium" })).toEqual({
+        browser: "chromium",
+        device: undefined,
+        viewport: undefined,
+        headless: false,
+        allowed: ["chromium", "webkit"],
+        changed: true,
+      })
+      expect(flags()).toEqual(["--browser", "chromium"])
+      expect(await select("a")).toMatchObject({ browser: "chromium", changed: false })
+      expect(additions).toEqual(["/repo"])
+    })
+
+    test("shows the window unless headless is requested", async () => {
+      allowed = ["chrome"]
+      expect(await select("a", { browser: "chrome", headless: true })).toMatchObject({ headless: true, changed: true })
+      expect(flags()).toEqual(["--headless", "--browser", "chrome"])
+      // Headless is not kept when it is not passed again.
+      expect(await select("a", { browser: "chrome" })).toMatchObject({ headless: false, changed: true })
+      expect(flags()).toEqual(["--browser", "chrome"])
+      expect(await select("a", { browser: "chrome", headless: false })).toMatchObject({ changed: false })
+    })
+
+    test("refuses a browser that is not installed", async () => {
+      allowed = ["chrome", "firefox"]
+      installed = false
+      await expect(select("a", { browser: "firefox" })).rejects.toThrow("firefox is not installed")
+      expect(additions).toEqual([])
+      installed = true
+      expect(await select("b", { browser: "firefox" })).toMatchObject({ changed: true })
+    })
+
+    test("restarts the server with the requested browser, device, and viewport", async () => {
+      allowed = ["chrome", "webkit"]
+      await service.syncWithSettings()
+      expect(await select("a", { browser: "webkit", device: "iPhone 15", viewport: "390x844" })).toMatchObject({
+        browser: "webkit",
+        device: "iPhone 15",
+        viewport: "390x844",
+        changed: true,
+      })
+      expect(flags()).toEqual(["--browser", "webkit", "--device", "iPhone 15", "--viewport-size", "390x844"])
+
+      // A repeated request keeps the running browser.
+      expect(await select("a", { browser: "webkit", device: "iPhone 15", viewport: "390x844" })).toMatchObject({
+        changed: false,
+      })
+      // Options that are not passed again reset, and the browser stays the same.
+      expect(await select("a", { viewport: "1280x720" })).toMatchObject({ browser: "webkit", changed: true })
+      expect(flags()).toEqual(["--browser", "webkit", "--viewport-size", "1280x720"])
+      expect(additions).toHaveLength(2)
+
+      // Later registrations keep the selected profile.
+      active.clear()
+      await service.reregisterIfEnabled()
+      expect(flags()).toEqual(["--browser", "webkit", "--viewport-size", "1280x720"])
+    })
+
+    test("rejects browsers the user did not allow and invalid profiles", async () => {
+      allowed = ["chrome", "firefox"]
+      await service.syncWithSettings()
+      await expect(select("a", { browser: "webkit" })).rejects.toThrow("not allowed")
+      await expect(select("a", { browser: "netscape" })).rejects.toThrow("not allowed")
+      await expect(select("a", { browser: "firefox", device: "Pixel 7" })).rejects.toThrow("mobile device")
+      await expect(select("a", { browser: "chrome", viewport: "wide" })).rejects.toThrow("WIDTHxHEIGHT")
+      await expect(select("a", { browser: "firefox" }, "/repo/.kilo/worktrees/one")).rejects.toThrow("not available")
+      expect(additions).toEqual([])
+    })
+
+    test("refuses another session until the turn of the owner ends", async () => {
+      allowed = ["chrome", "firefox", "webkit"]
+      await service.syncWithSettings()
+      await select("a", { browser: "firefox" })
+      await expect(select("b", { browser: "webkit" })).rejects.toThrow("Another chat session")
+      expect(await select("b")).toMatchObject({ browser: "firefox" })
+      emit({ type: "session.status", properties: { sessionID: "a", status: { type: "busy" } } })
+      await expect(select("b", { browser: "webkit" })).rejects.toThrow("Another chat session")
+      emit({ type: "session.status", properties: { sessionID: "a", status: { type: "idle" } } })
+      expect(await select("b", { browser: "webkit" })).toMatchObject({ browser: "webkit", changed: true })
+    })
+
+    test("a session that uses the browser tools owns the browser", async () => {
+      allowed = ["chrome", "webkit"]
+      await service.syncWithSettings()
+      const part = (sessionID: string, tool: string) => ({
+        type: "message.part.updated",
+        properties: { part: { type: "tool", tool, sessionID } },
+      })
+      emit(part("a", "read"), "/repo")
+      emit(part("a", "kilo-playwright_browser_navigate"), "/elsewhere")
+      expect(await select("b", { browser: "webkit" })).toMatchObject({ changed: true })
+      emit({ type: "session.status", properties: { sessionID: "b", status: { type: "idle" } } })
+
+      emit(part("a", "kilo-playwright_browser_navigate"), "/repo")
+      await expect(select("b", { browser: "chrome" })).rejects.toThrow("Another chat session")
+      expect(await select("a", { browser: "chrome" })).toMatchObject({ changed: true })
+    })
+
+    test("a deleted session gives up the browser", async () => {
+      allowed = ["chrome", "webkit"]
+      await select("a", { browser: "chrome" })
+      await expect(select("b", { browser: "webkit" })).rejects.toThrow("Another chat session")
+      emit({ type: "session.deleted", properties: { info: { id: "a" } } })
+      expect(await select("b", { browser: "webkit" })).toMatchObject({ changed: true })
+    })
+
+    test("a removed folder takes its browser and owner with it", async () => {
+      allowed = ["chrome", "webkit"]
+      folders(["/repo", "/old"])
+      await select("a", { browser: "chrome" }, "/old")
+      folders(["/repo"])
+      await Promise.all([...listeners].map((listener) => listener()))
+      folders(["/repo", "/old"])
+      await Promise.all([...listeners].map((listener) => listener()))
+      expect(await select("b", { browser: "webkit" }, "/old")).toMatchObject({ changed: true })
+    })
+
+    test("does not claim a restore that did not start", async () => {
+      allowed = ["chrome", "webkit"]
+      await select("a", { browser: "chrome" })
+      failed = true
+      await expect(select("a", { browser: "webkit" })).rejects.toThrow("the previous profile could not start again")
+      failed = false
+      expect(await select("a")).toEqual({ allowed: ["chrome", "webkit"], changed: false })
+    })
+
+    test("restores the previous profile when the new one cannot start", async () => {
+      allowed = ["chrome", "webkit"]
+      await select("a", { browser: "chrome" })
+      once = true
+      await expect(select("a", { browser: "webkit" })).rejects.toThrow("previous profile was restored")
+      expect(commands.map((command) => command.at(3))).toEqual(["chrome", "webkit", "chrome"])
+      expect(active.has("/repo")).toBe(true)
+      expect(await select("a")).toMatchObject({ browser: "chrome" })
+    })
+
+    test("stays without a browser when the first one cannot start", async () => {
+      allowed = ["chrome", "webkit"]
+      failed = true
+      await expect(select("a", { browser: "webkit" })).rejects.toThrow("could not start")
+      expect(additions).toEqual(["/repo"])
+      failed = false
+      expect(await select("a")).toEqual({ allowed: ["chrome", "webkit"], changed: false })
+    })
+
+    test("a settings change stops the browser and frees it", async () => {
+      allowed = ["chrome", "webkit"]
+      await select("a", { browser: "webkit" })
+      allowed = ["chrome"]
+      await service.syncWithSettings()
+      expect(removals).toEqual(["/repo"])
+      expect(active.size).toBe(0)
+      expect(await select("b")).toEqual({ allowed: ["chrome"], changed: false })
+      expect(await select("b", { browser: "chrome" })).toMatchObject({ changed: true })
+    })
+
+    test("reports availability only for enabled workspace folders", async () => {
+      const status = (directory: string) => service.handle("/playwright/status", { sessionID: "", directory })
+      expect(await status("/repo")).toEqual({ enabled: true })
+      expect(await status("/repo/.kilo/worktrees/one")).toEqual({ enabled: false })
+      enabled = false
+      expect(await status("/repo")).toEqual({ enabled: false })
+      await expect(select("a", { browser: "chrome" })).rejects.toThrow("disabled")
+      expect(service.handle("/browser/unknown", {})).toBeUndefined()
+    })
   })
 })
