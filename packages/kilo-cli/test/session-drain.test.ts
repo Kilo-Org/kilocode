@@ -97,7 +97,8 @@ const boot = (body: (env: Env) => Promise<void>) => async () => {
     )
   } finally {
     apply(previous)
-    await rm(directory, { recursive: true, force: true })
+    // Shell removal precedes scoped process teardown, which can briefly retain Windows directory handles.
+    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 }
 
