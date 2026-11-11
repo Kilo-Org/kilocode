@@ -33,6 +33,7 @@
     "kilocode.plan": 10,
     "kilocode.read": 10,
     "kilocode.question": 10,
+    "kilocode.wakeup": 10,
     "kilocode.board": 10,
     "kilocode.gateway.policy": 15,
     "kilo.agent": 50,
