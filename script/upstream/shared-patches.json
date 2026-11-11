@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 124,
-    "markedLines": 2105,
+    "files": 125,
+    "markedLines": 2112,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -192,6 +192,10 @@
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
       "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool/runtime.ts": {
+      "rung": 4,
+      "seam": "Defect fix: Zod 4.6+ (pinned 4.6.7) emits the non-standard JSON Schema formats `starts_with`, `ends_with` and `includes` next to the equivalent `pattern`, and strict providers reject tool schemas that carry them. The marked block passes the Kilo-owned Zod `override` (`core/src/kilocode/tool/zod-format.ts`) to both Zod conversions in `standardJsonSchema`: Standard JSON Schema `libraryOptions` (Zod vendor only) and the `toJSONSchema` fallback (zod/mini). `pattern` and standard formats stay; Effect Schema and raw JSON Schema tools are untouched. No lower rung: the conversion runs inside the tool runtime when definitions are derived, after every tool editor transform, so a plugin cannot reach every Zod tool (including third-party plugin tools registered later), and request-body hooks would be per-protocol and miss WebSocket transports. Upstream `dev` has the same defect; the block goes away when upstream fixes it. Raises files 124 to 125 and markedLines 2105 to 2112 (7 lines: import plus the 6-line block)."
     },
     "packages/core/src/tool/plugin/patch.ts": {
       "rung": 4,
