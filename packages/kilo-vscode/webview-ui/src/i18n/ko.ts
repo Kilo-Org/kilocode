@@ -58,7 +58,7 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
-  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.complete": "완료",
   "session.goal.blocked": "차단됨",
   "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.noChanges": "변경 사항이 없습니다.",
   "ui.permission.reject": "거부",
+  "ui.permission.allowAllSites": "모든 사이트 허용",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
   "ui.permission.feedbackHint": "Enter로 거부, Esc로 취소",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",

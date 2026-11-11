@@ -57,7 +57,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Fullført (rapportert av modellen)",
+  "session.goal.complete": "Fullført",
   "session.goal.blocked": "Blokkert",
   "session.goal.restart": "Start mål på nytt",
   ...anacondaDesktopDict,
@@ -317,6 +317,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.noChanges": "Ingen endringer.",
   "ui.permission.reject": "Avvis",
+  "ui.permission.allowAllSites": "Tillat alle nettsteder",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
   "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",

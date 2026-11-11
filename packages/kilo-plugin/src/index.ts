@@ -2,6 +2,8 @@ import { KiloAgentPlugin } from "./agent"
 import { KiloAgentRemovePlugin } from "./agent/plugin"
 // The plan file, the plan_exit tool and the post-plan follow-up question live in one plugin.
 import { KiloPlanPlugin } from "./plan"
+// The native `/goal` plus v1's agent-started goals; the host removes the native goal plugin.
+import { KiloGoal } from "./goal"
 import { KiloBranchNamePlugin } from "./branch-name"
 import { KiloCommitMessagePlugin } from "./commit-message"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
@@ -32,6 +34,7 @@ import { KiloWriteToolPlugin } from "./tool-write"
 import { KiloNotebookPlugin } from "./notebook"
 import { KiloReview } from "./review"
 import { KiloQuestionPlugin } from "./question"
+import { KiloWakeupPlugin } from "./wakeup"
 // kilo_port(agent-manager:648a508ad347) the protection guard now lives in the Agent Manager plugin.
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
@@ -62,6 +65,7 @@ export const KiloPlugins = [
   KiloAgentPlugin.Plugin,
   // The plan_exit tool and the post-plan handoff question.
   KiloPlanPlugin,
+  KiloGoal.Plugin,
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
@@ -98,6 +102,8 @@ export const KiloPlugins = [
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
   KiloQuestionPlugin.Plugin,
+  // Wakeups and cron tasks, and the pending state clients show as scheduled.
+  KiloWakeupPlugin,
   // Kilo Swarm: the shared board of a main session and its subagents.
   KiloBoard.Plugin,
 ] as const

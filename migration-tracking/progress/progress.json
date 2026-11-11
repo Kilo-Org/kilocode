@@ -4,34 +4,34 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1952,
-    "total": 5348,
-    "percent": 36.5,
-    "dropped": 92,
+    "done": 1972,
+    "total": 5351,
+    "percent": 36.9,
+    "dropped": 89,
     "kinds": [
       {
         "kind": "module",
-        "done": 1463,
-        "total": 3270
+        "done": 1470,
+        "total": 3272
       },
       {
         "kind": "api",
-        "done": 17,
+        "done": 18,
         "total": 36
       },
       {
         "kind": "patch",
-        "done": 54,
+        "done": 60,
         "total": 319
       },
       {
         "kind": "test",
-        "done": 418,
-        "total": 1723
+        "done": 424,
+        "total": 1724
       }
     ],
     "landed": {
-      "plugin": 39,
+      "plugin": 46,
       "host": 12,
       "seam": 4,
       "patch": 2
@@ -694,12 +694,12 @@
     },
     {
       "feature": "db-preflight",
-      "done": 0,
+      "done": 3,
       "total": 3,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "api": {
@@ -707,11 +707,11 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 1
         }
       }
@@ -995,12 +995,12 @@
     },
     {
       "feature": "goals",
-      "done": 0,
+      "done": 11,
       "total": 21,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 2,
           "total": 9
         },
         "api": {
@@ -1008,13 +1008,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 5,
           "total": 6
         },
         "test": {
-          "done": 0,
+          "done": 4,
           "total": 6
         }
+      },
+      "landed": {
+        "plugin": 7,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -1193,13 +1199,13 @@
     },
     {
       "feature": "marketplace",
-      "done": 9,
-      "total": 11,
-      "dropped": 9,
+      "done": 14,
+      "total": 14,
+      "dropped": 6,
       "kinds": {
         "module": {
-          "done": 4,
-          "total": 6
+          "done": 8,
+          "total": 8
         },
         "api": {
           "done": 3,
@@ -1210,8 +1216,8 @@
           "total": 0
         },
         "test": {
-          "done": 2,
-          "total": 2
+          "done": 3,
+          "total": 3
         }
       }
     },
@@ -1931,7 +1937,7 @@
     },
     {
       "feature": "session",
-      "done": 6,
+      "done": 7,
       "total": 113,
       "dropped": 2,
       "kinds": {
@@ -1940,7 +1946,7 @@
           "total": 23
         },
         "api": {
-          "done": 2,
+          "done": 3,
           "total": 4
         },
         "patch": {
@@ -2642,10 +2648,12 @@
     "api:POST /kilocode/marketplace/remove",
     "api:POST /kilocode/provider-usage/refresh",
     "api:POST /kilocode/session/{sessionID}/board/reset",
+    "api:POST /kilocode/session/{sessionID}/drain",
     "api:POST /kilocode/skill/remove",
     "api:POST /kilocode/snapshot/remove",
     "api:POST /kilocode/worktree/teardown",
     "module:packages/core/src/kilocode/caffeination.ts",
+    "module:packages/core/src/kilocode/db-preflight.ts",
     "module:packages/core/src/kilocode/global.ts",
     "module:packages/core/src/kilocode/oauth/page.ts",
     "module:packages/core/src/kilocode/provider-usage.ts",
@@ -2655,6 +2663,7 @@
     "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts",
     "module:packages/core/src/kilocode/spotlight.ts",
     "module:packages/core/test/kilocode/config-shared-agent-board.test.ts",
+    "module:packages/core/test/kilocode/db-preflight.test.ts",
     "module:packages/core/test/kilocode/global.test.ts",
     "module:packages/core/test/kilocode/linux-sandbox.test.ts",
     "module:packages/kilo-gateway/src/api/constants.ts",
@@ -4373,7 +4382,11 @@
     "module:packages/opencode/src/kilocode/lancedb.ts",
     "module:packages/opencode/src/kilocode/marketplace/api.ts",
     "module:packages/opencode/src/kilocode/marketplace/companions.ts",
+    "module:packages/opencode/src/kilocode/marketplace/installer.ts",
     "module:packages/opencode/src/kilocode/marketplace/paths.ts",
+    "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts",
+    "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts",
+    "module:packages/opencode/src/kilocode/marketplace/schema.ts",
     "module:packages/opencode/src/kilocode/marketplace/skill-archive.ts",
     "module:packages/opencode/src/kilocode/notebook/protocol.ts",
     "module:packages/opencode/src/kilocode/notebook/service.ts",
@@ -4407,6 +4420,7 @@
     "module:packages/opencode/src/kilocode/server/httpapi/groups/indexing.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/indexing.ts",
+    "module:packages/opencode/src/kilocode/session/drain.ts",
     "module:packages/opencode/src/kilocode/session/native-plan-prompt.txt",
     "module:packages/opencode/src/kilocode/session/recall-search.ts",
     "module:packages/opencode/src/kilocode/session/transcript.ts",
@@ -4452,6 +4466,7 @@
     "module:packages/opencode/test/kilocode/enhance-prompt.test.ts",
     "module:packages/opencode/test/kilocode/ensure-plan-dir.test.ts",
     "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
+    "module:packages/opencode/test/kilocode/headless-session-drain.test.ts",
     "module:packages/opencode/test/kilocode/indexing-auth.test.ts",
     "module:packages/opencode/test/kilocode/indexing-dialog-state.test.ts",
     "module:packages/opencode/test/kilocode/indexing-label.test.ts",
@@ -4465,6 +4480,7 @@
     "module:packages/opencode/test/kilocode/legacy-sse-event.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-companions.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-installer.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
     "module:packages/opencode/test/kilocode/news.test.ts",
@@ -4499,6 +4515,7 @@
     "module:packages/opencode/test/kilocode/semantic-search.test.ts",
     "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts",
     "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts",
+    "module:packages/opencode/test/kilocode/session-drain.test.ts",
     "module:packages/opencode/test/kilocode/session/transcript.test.ts",
     "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
     "module:packages/opencode/test/kilocode/skill-remove.test.ts",
@@ -4516,6 +4533,7 @@
     "module:packages/opencode/test/kilocode/worktree-project-skills.test.ts",
     "module:packages/opencode/test/kilocode/worktree-remove-lock.test.ts",
     "module:packages/schema/src/kilocode/provider-usage.ts",
+    "module:packages/schema/src/kilocode/session-drain.ts",
     "module:packages/tui/src/kilocode/board-tool.tsx",
     "module:packages/tui/src/kilocode/model-picker.ts",
     "module:packages/tui/test/kilocode/board-tool.test.tsx",
@@ -4525,6 +4543,7 @@
     "patch:cli:66a6b3781917",
     "patch:cli:fd8272d869ad",
     "patch:components:06ac8868d98e",
+    "patch:db-preflight:7186ff6558e9",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",
     "patch:gateway:17e39e074eaf",
@@ -4544,6 +4563,13 @@
     "patch:global:2886e1a24503",
     "patch:global:9f5a3867e9ba",
     "patch:global:b9f635c56864",
+    "patch:goals:32d5a987d3b1",
+    "patch:goals:76a03ae19282",
+    "patch:goals:b983b6af7e4b",
+    "patch:goals:ce1b66acd237",
+    "patch:goals:eb79ff7a4e15",
+    "patch:goals:eb79ff7a4e15",
+    "patch:goals:eb79ff7a4e15",
     "patch:indexing:2e5dfe2574c6",
     "patch:indexing:2e5dfe2574c6",
     "patch:indexing:854fbb30ce6c",
@@ -4646,8 +4672,6 @@
     "module:packages/opencode/src/kilocode/agent/scout.txt",
     "module:packages/opencode/src/kilocode/indexing-feature.ts",
     "module:packages/opencode/src/kilocode/marketplace/detection.ts",
-    "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts",
-    "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts",
     "module:packages/opencode/src/kilocode/marketplace/relevance.ts",
     "module:packages/opencode/src/kilocode/presence/context.ts",
     "module:packages/opencode/src/kilocode/presence/policy.ts",
@@ -4657,7 +4681,6 @@
     "module:packages/opencode/test/kilocode/indexing-feature.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-api.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts",
-    "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-relevance.test.ts",
     "module:packages/opencode/test/kilocode/presence/policy.test.ts",
     "module:packages/opencode/test/kilocode/presence/service-presence.test.ts",
@@ -4697,6 +4720,11 @@
     "patch:global:2886e1a24503": "host",
     "patch:global:9f5a3867e9ba": "host",
     "patch:global:b9f635c56864": "host",
+    "patch:goals:32d5a987d3b1": "plugin",
+    "patch:goals:76a03ae19282": "plugin",
+    "patch:goals:b983b6af7e4b": "plugin",
+    "patch:goals:ce1b66acd237": "plugin",
+    "patch:goals:eb79ff7a4e15": "plugin",
     "patch:indexing:2e5dfe2574c6": "plugin",
     "patch:indexing:854fbb30ce6c": "plugin",
     "patch:indexing:987c9e6c9e85": "plugin",
