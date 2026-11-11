@@ -41,3 +41,9 @@ test("the question dock renders in the transcript only", () => {
   expect(sessionView).toContain("question={() => (props.readOnly ? undefined : forms()[0])}")
   expect(messages).toContain("<QuestionDock form={form} />")
 })
+
+// The empty transcript layout centers its children in a row, so the dock would
+// land beside the welcome screen without the readable lane.
+test("a pending question keeps the transcript lane while the transcript is empty", () => {
+  expect(messages).toContain('!props.question?.() ? "message-list-content-empty" : "message-list-content"')
+})
