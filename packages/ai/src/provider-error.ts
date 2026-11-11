@@ -21,6 +21,7 @@ const patterns = [
   // Cloudflare Workers AI reports this as HTTP 413.
   /exceeded this model context window limit/i,
   /exceeds the context window/i,
+  /exceeds the context limit/i, // kilocode_change(overflow) - BytePlus Ark: "Input exceeds the context limit (N tokens)"
   /exceeds (?:the )?(?:model'?s )?maximum context length(?: of [\d,]+ tokens?|\s*\([\d,]+\))/i,
   /input token count.*exceeds the maximum/i,
   // Amazon Nova on Bedrock reports this as a mid-stream validationException.

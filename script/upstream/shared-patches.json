@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 124,
-    "markedLines": 2105,
+    "files": 125,
+    "markedLines": 2106,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -517,6 +517,10 @@
     "packages/core/src/plugin/module.ts": {
       "rung": 3,
       "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `PluginModule.Options.pluginSource` lets an embedding host map a configured target to the directory the loader should read, before the existing local-path/npm split, name the `plugin.use` resources the resolution stands for (so a deny-list cannot be bypassed by another spelling), and report `pending` when the source needs the installing pass instead of the fast pass, and let the loader evaluate those resources on the read pass first so a denied plugin is blocked before the resolver reaches the network. The hook returns `undefined` for every upstream target, so npm packages and local directories behave exactly as before. Rungs 1 and 2 cannot reach the loader: the split runs inside `PluginModule.load`, after the plugin registry, and a host cannot supply the Npm or source loading steps from outside it. Kilo supplies `git:` clone resolution here."
+    },
+    "packages/ai/src/provider-error.ts": {
+      "rung": 4,
+      "seam": "One overflow pattern (feature `overflow`, #15481): BytePlus Ark rejects an over-long prompt with `Input exceeds the context limit (N tokens)`, which no upstream pattern matched, so overflow compaction never started for that provider. A defect fix inside upstream's provider-failure classifier: every protocol calls `classifyProviderFailure` directly, and no plugin hook or host layer can reclassify an `AIError` before the session runner reads `classification` (`session.retry` only decides retries). One marked line, no default changed; a candidate to send upstream, after which the patch goes away."
     }
   }
 }
