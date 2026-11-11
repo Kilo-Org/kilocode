@@ -185,9 +185,9 @@ const linked = Effect.fn("ShellToolTest.linked")(function* () {
     await fs.writeFile(path.join(project, "local.txt"), "inside-ok")
     await fs.symlink(path.join("..", "outside", "canary.txt"), path.join(project, "link.txt"), kind)
     await fs.symlink(
-      path.join("..", "outside"),
+      process.platform === "win32" ? outside : path.join("..", "outside"),
       path.join(project, "linkdir"),
-      process.platform === "win32" ? "dir" : undefined,
+      process.platform === "win32" ? "junction" : undefined,
     )
     await fs.symlink("local.txt", path.join(project, "local-link.txt"), kind)
   })
@@ -1001,6 +1001,46 @@ describe("tool.shell permissions", () => {
           expect(requests.find((req) => req.permission === "external_directory")).toBeUndefined()
           expect(result.metadata.exit).toBe(0)
           expect(result.output).toContain("inside-ok")
+        }),
+      )
+    }),
+  )
+
+  each("asks for external_directory when parent segments cross a directory symlink", (item) =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const command = show(item.label, "linkdir/../outside/canary.txt")
+          const result = yield* run({ command }, capture(requests))
+          const found = requests.find((req) => req.permission === "external_directory")
+          expect(found?.patterns).toContain(dir.want)
+          expect(found?.always).toContain(dir.want)
+          expect(found?.metadata?.["directories"]).toEqual([path.dirname(dir.want)])
+          if (item.label === "cmd" || PS.has(item.label)) return
+          expect(result.metadata.exit).toBe(0)
+          expect(result.output).toContain("canary-secret")
+        }),
+      )
+    }),
+  )
+
+  each("asks for external_directory when the working directory symlink points outside", () =>
+    Effect.gen(function* () {
+      const dir = yield* linked()
+      yield* runIn(
+        dir.project,
+        Effect.gen(function* () {
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+          const result = yield* run({ command: "echo ok", workdir: "linkdir" }, capture(requests))
+          const found = requests.find((req) => req.permission === "external_directory")
+          expect(found?.patterns).toContain(dir.want)
+          expect(found?.always).toContain(dir.want)
+          expect(found?.metadata?.["directories"]).toEqual([path.dirname(dir.want)])
+          expect(result.metadata.exit).toBe(0)
+          expect(result.output).toContain("ok")
         }),
       )
     }),

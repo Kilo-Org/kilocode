@@ -358,24 +358,66 @@ export const ShellPermission = Effect.gen(function* () {
   })
 
   // A path inside the project can still point outside through a symlink that already exists.
+  // Apply `..` to the symlink target so `linkdir/../outside/file` stays on the real path.
   // Commands that create the link and read it in the same invocation are not visible yet.
   const normalize = (file: string) => (process.platform === "win32" ? FSUtil.normalizePath(file) : file)
-  const physical = Effect.fn("ShellTool.physical")(function* (file: string) {
-    const hit = yield* fs.realPath(file).pipe(Effect.option)
-    if (hit._tag === "Some") return normalize(hit.value)
-    const tail: string[] = []
-    let current = file
-    while (true) {
-      const parent = path.dirname(current)
-      if (parent === current) return normalize(file)
-      tail.unshift(path.basename(current))
-      const base = yield* fs.realPath(parent).pipe(Effect.option)
-      if (base._tag === "Some") return normalize(path.join(base.value, ...tail))
-      current = parent
+  const drive = (text: string) => process.platform === "win32" && /^[A-Za-z]:(?![\\/])/.test(text)
+  const absolute = (root: string, text: string) => {
+    if (path.isAbsolute(text)) return text
+    if (process.platform === "win32" && /^[A-Za-z]:/.test(text)) return text
+    if (root.endsWith("/") || root.endsWith("\\")) return root + text
+    return root + (root.includes("\\") ? "\\" : "/") + text
+  }
+  const segments = (file: string) => {
+    if (process.platform === "win32") {
+      const text = file.replaceAll("/", "\\")
+      if (text.startsWith("\\\\")) {
+        const bits = text.split("\\").filter((part) => part.length > 0)
+        const base = bits.length >= 2 ? `\\\\${bits[0]}\\${bits[1]}` : text
+        return { base, parts: bits.slice(2) }
+      }
+      const matched = /^([A-Za-z]:)(.*)$/.exec(text)
+      if (matched) {
+        const rest = matched[2].replace(/^\\/, "")
+        return { base: `${matched[1]}\\`, parts: rest.length === 0 ? [] : rest.split("\\") }
+      }
     }
+    return { base: "/", parts: file.split("/") }
+  }
+  // Node's realpath folds `..` before it reads symlinks, so walk one segment at a time.
+  const physical = Effect.fn("ShellTool.physical")(function* (file: string) {
+    const parsed = segments(file)
+    let current = parsed.base
+    const pending: string[] = []
+    for (const part of parsed.parts) {
+      if (part.length === 0 || part === ".") continue
+      if (part === "..") {
+        if (pending.length > 0) {
+          pending.pop()
+          continue
+        }
+        const parent = path.dirname(current)
+        if (parent !== current) current = parent
+        continue
+      }
+      if (pending.length > 0) {
+        pending.push(part)
+        continue
+      }
+      const next = path.join(current, part)
+      const hit = yield* fs.realPath(next).pipe(Effect.option)
+      if (hit._tag === "None") {
+        pending.push(part)
+        continue
+      }
+      current = normalize(hit.value)
+    }
+    if (pending.length === 0) return normalize(current)
+    return normalize(path.join(current, ...pending))
   })
   const external = Effect.fn("ShellTool.external")(function* (file: string, instance: InstanceContext) {
-    if (!containsPath(file, instance)) return file
+    const up = file.split(/[\\/]/).includes("..")
+    if (!up && !containsPath(file, instance)) return file
     const real = yield* physical(file)
     if (containsPath(real, instance)) return undefined
     return real
@@ -387,7 +429,19 @@ export const ShellPermission = Effect.gen(function* () {
     if (!file || dynamic(file, ps)) return
     const next = ps ? provider(file) : file
     if (!next) return
-    return yield* resolve(next, cwd, shell)
+    const parts = next.split(/[\\/]/)
+    if (!parts.includes("..") || drive(next)) return yield* resolve(next, cwd, shell)
+    if (
+      process.platform === "win32" &&
+      Shell.posix(shell) &&
+      next.startsWith("/") &&
+      FSUtil.windowsPath(next) === next
+    ) {
+      const converted = yield* cygpath(shell, next)
+      if (converted) return converted
+    }
+    const raw = process.platform === "win32" ? FSUtil.windowsPath(next) : next
+    return absolute(cwd, raw)
   })
 
   const collect = Effect.fn("ShellTool.collect")(function* (
