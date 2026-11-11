@@ -1,10 +1,12 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
-import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
+import { mediaHashFromUri, type FileDiffInfo, type JsonValue, type ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { REVERT_ERROR_CODE } from "../../../src/shared/revert-error"
 import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
 import { useLanguage } from "../context/language"
 import { focusPrompt } from "../utils/tab-navigation"
@@ -24,8 +26,9 @@ import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
-import { PromptInput } from "./prompt"
+import { PromptInput, setPromptDraft } from "./prompt"
 import { QuestionDock } from "./question"
+import { createRevertQueue, EMPTY_DRAFT, nextRedoMessageID, restoredDraft, type ComposerDraft } from "./revert"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
@@ -251,6 +254,86 @@ export function SessionView(props: {
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
+  let composerHandle: ComposerHandle | undefined
+  // The sidebar and the Agent Manager reuse this view across tabs, so revert state is kept per session: a prompt,
+  // command or compaction waits for the latest revert of its own session, as v1 waited for its checkpoint chain.
+  const reverts = createRevertQueue()
+  const applyDraft = (key: string, next: ComposerDraft) => {
+    setPromptDraft(key, next)
+    if (draftKey() === key) composerHandle?.set?.(next)
+  }
+  const reportRevertError = () =>
+    showToast({
+      variant: "error",
+      title: language.t("common.requestFailed"),
+      description: language.t(REVERT_ERROR_CODE),
+    })
+  // Revert and redo stay out of the way of live work: a running or admitted turn, a pending permission or question,
+  // and a background subagent that can still write files would all race the workspace restore.
+  const revertBlocked = () => {
+    const id = session()
+    return (
+      running() ||
+      reverts.busy(id) ||
+      working.submitting() ||
+      dockBlocked() ||
+      jobs.active() ||
+      (!!id && v2.data.session.pending.list(id).length > 0)
+    )
+  }
+  // The restored prompt goes to the reverted session's own draft, which is keyed by its ID, so switching tabs while
+  // the revert runs keeps it for that tab instead of dropping it.
+  const mutateRevert = (sessionID: string, run: () => Promise<ComposerDraft | undefined>) => {
+    if (props.readOnly || revertBlocked()) return
+    void reverts
+      .run(
+        sessionID,
+        () =>
+          run().then((draft) => {
+            getVSCodeAPI().postMessage({ type: "requestGitChangesStats" } satisfies ToHost as never)
+            return draft
+          }),
+        (draft) => {
+          if (draft) applyDraft(sessionID, draft)
+        },
+      )
+      ?.catch(reportRevertError)
+  }
+  const revertMessage = (sessionID: string, messageID: string) =>
+    mutateRevert(sessionID, async () => {
+      const target = v2.data.session.message
+        .list(sessionID)
+        .find((item) => item.type === "user" && item.id === messageID)
+      const draft =
+        target?.type === "user"
+          ? await restoredDraft(target, (uri) => {
+              const hash = mediaHashFromUri(uri)
+              if (!hash) return Promise.resolve(undefined)
+              return v2.api.experimental.media.get({ hash }).catch(() => undefined)
+            })
+          : undefined
+      const staged = await v2.api.session.revert.stage({ sessionID, messageID })
+      const current = v2.data.session.get(sessionID)
+      if (current) v2.data.session.remember({ ...current, revert: staged })
+      return draft
+    })
+  const redoAll = () => {
+    const id = session()
+    if (!id) return
+    mutateRevert(id, async () => {
+      await v2.api.session.revert.clear({ sessionID: id })
+      const current = v2.data.session.get(id)
+      if (current) v2.data.session.remember({ ...current, revert: undefined })
+      return EMPTY_DRAFT
+    })
+  }
+  const redo = () => {
+    const id = session()
+    if (!id) return
+    const next = nextRedoMessageID(v2.data.session.message.list(id), v2.data.session.get(id)?.revert)
+    if (!next) return redoAll()
+    revertMessage(id, next)
+  }
   const pending = createPending({
     session,
     readOnly: () => !!props.readOnly,
@@ -267,6 +350,8 @@ export function SessionView(props: {
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
   const begin = async (mode: SendMode) => {
+    reverts.sent(session())
+    await reverts.settled(session())
     const key = draftKey()
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
@@ -359,7 +444,13 @@ export function SessionView(props: {
       models: picker("openModelPicker"),
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
-      compact: id ? () => void v2.data.session.compact({ sessionID: id }).catch(v2.report) : undefined,
+      compact: id
+        ? () =>
+            void reverts
+              .settled(id)
+              .then(() => v2.data.session.compact({ sessionID: id }))
+              .catch(v2.report)
+        : undefined,
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
@@ -447,6 +538,10 @@ export function SessionView(props: {
                 onSelectSession={(id) => props.actions.openSession?.(id)}
                 onShowHistory={props.onShowHistory}
                 onForkMessage={running() ? undefined : props.onForkMessage}
+                onRevertMessage={props.readOnly ? undefined : revertMessage}
+                revertDisabled={revertBlocked()}
+                onRedo={redo}
+                onRedoAll={redoAll}
                 empty={props.empty}
                 onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                 onViewTurnChanges={props.onViewTurnChanges}
@@ -505,7 +600,10 @@ export function SessionView(props: {
                   }}
                   onReviewAppendReady={props.onReviewAppendReady}
                   onReferenceReady={props.onReferenceReady}
-                  onComposerReady={props.onComposerReady}
+                  onComposerReady={(handle) => {
+                    composerHandle = handle
+                    props.onComposerReady?.(handle)
+                  }}
                   slash={{ entries: slashEntries, run: runSlash }}
                   tabs={props.tabs}
                   manager={props.manager}

@@ -21,6 +21,7 @@ interface TranscriptRowBase {
 export interface TranscriptUserRow extends TranscriptRowBase {
   type: "user"
   message: SessionMessageUser
+  answered: boolean
 }
 
 export interface TranscriptAssistantRow extends TranscriptRowBase {
@@ -132,7 +133,14 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
     if (range) turn = range.turn
 
     if (message.type === "user" && range) {
-      rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, userTurn: range.userTurn, message })
+      rows.push({
+        type: "user",
+        key: `${message.id}:user`,
+        turn: range.turn,
+        userTurn: range.userTurn,
+        message,
+        answered: isAnswered(messages, index, range, rangeIndex < ranges.length - 1),
+      })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
@@ -220,6 +228,19 @@ function stepFailed(message: SessionMessageInfo | undefined) {
   return message?.type === "assistant" && !!message.error
 }
 
+function isAnswered(
+  messages: readonly SessionMessageInfo[],
+  index: number,
+  range: MessageTurnRange,
+  followed: boolean,
+) {
+  if (followed || messages[range.end]?.type === "idle") return true
+  for (let i = index + 1; i < range.end; i++) {
+    if (messages[i]?.type === "assistant") return true
+  }
+  return false
+}
+
 function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
   if (!previous?.length) return rows
   const prior = new Map(previous.map((row) => [row.key, row]))
@@ -231,7 +252,9 @@ function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
 
 function sameRow(left: TranscriptRow, right: TranscriptRow) {
   if (left.type !== right.type || left.turn !== right.turn || left.userTurn !== right.userTurn) return false
-  if (left.type === "user" && right.type === "user") return left.message === right.message
+  if (left.type === "user" && right.type === "user") {
+    return left.message === right.message && left.answered === right.answered
+  }
   if (left.type === "assistant" && right.type === "assistant") {
     return (
       left.message === right.message &&

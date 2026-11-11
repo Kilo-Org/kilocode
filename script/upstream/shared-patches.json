@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 123,
-    "markedLines": 2103,
-    "unmarkedLines": 326,
+    "files": 124,
+    "markedLines": 2109,
+    "unmarkedLines": 328,
     "deletedFiles": 0
   },
   "files": {
@@ -100,7 +100,7 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
@@ -160,6 +160,10 @@
     "packages/schema/src/file-diff.ts": {
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
+    },
+    "packages/schema/src/session-revert.ts": {
+      "rung": 4,
+      "seam": "Optional `workspace` restoration outcome (`restored`, `snapshots-disabled`, `unavailable`, `not-a-git-repo`) on `Session.Revert` and `Session.RevertV1`, carried across `PersistedRevert`. `Session.Info.revert`, `SessionEvent.RevertEvent.Staged` and the `session` table encoder all validate against this struct, so no plugin or host override can attach the outcome without the schema stripping it. Upstream producers omit it, leaving upstream behavior and defaults unchanged."
     },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
@@ -423,7 +427,7 @@
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
-      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream. A `session.revert.committed` event also cuts the cached transcript at the boundary message's position when it is loaded, instead of at the first message whose ID sorts at or after it: a queued prompt keeps its admission ID and is delivered after later steps, so the ID cut removed steps the server keeps (the projector deletes by sequence). It falls back to the ID cut when the boundary is not loaded. No lower rung: the event reducer is internal to the store and the VS Code and TUI transcripts both read this cache."
     },
     "packages/client/test/solid-eviction.test.ts": {
       "rung": 4,

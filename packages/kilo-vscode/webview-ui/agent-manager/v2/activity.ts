@@ -69,8 +69,15 @@ function ownOutcome(data: Data, sessionID: string): Activity {
   return activityOf(info)
 }
 
-/** The finished state a session record keeps: used when its store has not loaded the session yet. */
-export function activityOf(info: Pick<SessionInfo, "outcome" | "time">): Activity {
+/** The parts of a session record that decide its finished state. */
+export type Outcome = Pick<SessionInfo, "outcome" | "time"> & Partial<Pick<SessionInfo, "revert">>
+
+/**
+ * The finished state a session record keeps: used when its store has not loaded the session yet. The outcome belongs
+ * to the last turn, which a staged revert always hides, so a reverted session shows no outcome.
+ */
+export function activityOf(info: Outcome): Activity {
+  if (info.revert) return "idle"
   if (info.outcome === "failed") return "error"
   const idle = info.time.idle
   if (info.outcome === "succeeded" && idle !== undefined && (info.time.viewed ?? 0) < idle) return "done"

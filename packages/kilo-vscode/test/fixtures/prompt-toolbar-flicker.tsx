@@ -118,7 +118,7 @@ const workspace = (directory: string) =>
     data: {
       listen: () => () => undefined,
       on: () => () => undefined,
-      session: { message: { list: () => [] } },
+      session: { get: () => undefined, message: { list: () => [] } },
     },
   }) as never
 

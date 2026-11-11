@@ -1002,12 +1002,12 @@
   },
   "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts": {
     "state": "ported",
-    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids.",
+    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids. The boundary is located by transcript position when loaded (a queued prompt keeps its admission ID and can sort before steps delivered ahead of it), with ID order as the fallback; webview-ui/src/v2/todo.ts pages older history again for each new revert boundary.",
     "by": "composer-todos"
   },
   "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts.",
+    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts. It also covers a reverted queued prompt delivered after later steps and the newer list returning when the revert clears.",
     "by": "composer-todos"
   },
   "module:packages/opencode/test/kilocode/todowrite-description.test.ts": {
@@ -2359,5 +2359,33 @@
     "v2": "packages/kilo-plugin/test/plugin-git-source.test.ts",
     "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
     "by": "plugin-git-sources"
+  },
+  "module:packages/opencode/src/kilocode/session/revert.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/session-revert.ts",
+    "note": "KiloSessionRevert in packages/kilo-cli/src/session-revert.ts wraps Session.Service.revert.stage and clear via KiloHost.overrides (Session.node.replace): plans target checkpoint trees from SessionStore, reports workspace outcomes (`restored`, `snapshots-disabled`, `unavailable`, `not-a-git-repo`), stages conversation-only reverts when snapshots are disabled or outside Git, requires a pre-revert workspace snapshot before touching files, and rolls back affected files with KiloSessionRevert.apply/restore on failure. It also wraps Session.fork: a whole-session fork of a session with a staged revert forks before the revert boundary, so tab forks, Agent Manager forks and Continue in worktree copy only the visible conversation (v1 copied the hidden turns too). Deliberate v2 difference: SessionRevert.commit deletes whole messages from the boundary onward (partial partID message revert is not carried on v2, see v1-v2-client-breaking-changes.md).",
+    "by": "session-revert"
+  },
+  "module:packages/opencode/test/kilocode/session/revert.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/session-revert.test.ts",
+    "note": "packages/kilo-cli/test/session-revert.test.ts carries the workspace outcome cases (`snapshots-disabled`, `unavailable`, `not-a-git-repo`, `restored`), multi-message step-forward redo and clear, atomic rollback on read-only target failures for stage, clear and replacing a prior revert, worktree-subdirectory deleted file unrevert, pre-revert capture failure guard, combined rollback error causes, moved-file restore and redo (v1 8db7b685837), and a new prompt after a revert dropping the reverted turns while keeping the restored files (v1 #12274). A whole-session fork of a reverted session stops at the boundary. Index-lock contention is superseded natively by temporary snapshot indexes and KeyedMutex in packages/core/src/git.ts; partial assistant partID revert is not carried on v2.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/tests/unit/revert-checkpoints.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/session-revert.test.ts",
+    "note": "packages/kilo-vscode/test/session-revert.test.ts and test/fixtures/revert-banner-render.tsx verify the rendered behavior instead of regex-matching source text: answered user messages keep their revert action while already reverted, busy state sets data-revert-disabled and the agentBusy tooltip without removing the control, RevertBanner renders explicit workspace notices (`snapshots-disabled` with the Checkpoints settings button, `not-a-git-repo`, `unavailable`) plus the legacy fallback, and prompt/attachment/comment/browser restoration and session diff boundary clamping (by transcript order, so a reverted queued prompt keeps the earlier turns) work end to end. SessionView carries v1's per-session checkpoint chain (createRevertQueue in webview-ui/src/v2/revert.ts, keyed by session ID because the sidebar and Agent Manager reuse one view across tabs): revert and redo run one at a time per session, the restored prompt goes to the reverted session's own draft even after a tab switch, prompts, slash commands and /compact wait for the latest settle, a draft restored after the user already sent is dropped, and revert stays disabled while a turn runs or is admitted, a permission or question is pending, inbox items wait, or a background subagent still runs. Subagents started only by reverted turns leave the background-agent dock. As v1 derived the header family from visible turns, session-usage.ts revertedMembers drops child sessions that only reverted turns started (with their own subagents) from the task header cost, tokens and breakdown, and subtracts the hidden steps from the reverted session's totals; ContextProgress and the header context read only visible messages. Agent Manager tab, card and sidebar tab activity show no outcome while a revert is staged, since the outcome belongs to the hidden last turn, so a reverted failed turn no longer shows as an error.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/tests/unit/revert-toast-owner.test.ts": {
+    "state": "dropped",
+    "note": "Tested deduplication of broadcast `{ type: \"error\", code: REVERT_ERROR_CODE }` host messages across nested v1 SessionProvider instances. v2 has no host session broker or nested SessionProvider: SessionView calls `v2.api.session.revert.stage` and `clear` directly through `@opencode/client` and toasts `REVERT_ERROR_CODE` only in the view that initiated the mutation, while read-only subagent views expose no revert actions.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/tests/fixtures/revert-toast-owner.tsx": {
+    "state": "dropped",
+    "note": "DOM fixture for the dropped nested v1 SessionProvider revert-toast-owner test; v2 revert mutations reject directly in the initiating SessionView without broadcast host error messages.",
+    "by": "session-revert"
   }
 }

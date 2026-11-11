@@ -110,6 +110,19 @@ export function transcriptChildren(messages: readonly SessionMessageInfo[]): str
 }
 
 /**
+ * The child sessions that only the turns hidden by a staged revert started. A child that a kept turn started, and a
+ * reverted turn resumed, stays.
+ */
+export function revertedChildren(
+  messages: readonly SessionMessageInfo[],
+  visible: readonly SessionMessageInfo[],
+): string[] {
+  const shown = new Set(visible)
+  const kept = new Set(transcriptChildren(visible))
+  return transcriptChildren(messages.filter((message) => !shown.has(message))).filter((id) => !kept.has(id))
+}
+
+/**
  * Running background agents read from the transcript. The latest part of a child decides, so a child resumed in the
  * foreground no longer counts as a background agent.
  */

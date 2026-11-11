@@ -9,6 +9,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import {
   jobAgents,
   mergeListed,
+  revertedChildren,
   runChildren,
   showBackgroundAgent,
   transcriptAgents,
@@ -19,6 +20,7 @@ import {
 } from "../components/chat/background-agents"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
+import { visibleMessages } from "./revert"
 
 const EMPTY: readonly SessionMessageInfo[] = []
 
@@ -39,10 +41,17 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
   let touched = new Set<string>()
   let unsupported = false
 
-  const messages = () => {
+  const all = () => {
     const id = input.session()
     return id ? v2.data.session.message.list(id) : EMPTY
   }
+  const revert = () => {
+    const id = input.session()
+    return id ? v2.data.session.get(id)?.revert : undefined
+  }
+  // A staged revert hides the turns it would remove, so their subagents leave the run and the transcript fallback.
+  const messages = createMemo(() => visibleMessages(all(), revert()))
+  const reverted = createMemo(() => (revert() ? revertedChildren(all(), messages()) : []))
 
   const list = (sessionID: string) => {
     if (unsupported) return
@@ -105,7 +114,7 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
     if (!id) return []
     const list = jobs()
     if (!list) return transcriptAgents(messages(), running, waiting)
-    const hide = hidden()[id] ?? new Set<string>()
+    const hide = new Set([...(hidden()[id] ?? []), ...reverted()])
     return jobAgents(list, id, waiting).filter((agent) => showBackgroundAgent(agent, hide))
   })
   // Each event and list answer builds new agent objects. Reconciling by ID keeps each agent the same object while it
@@ -121,6 +130,8 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
   return {
     /** The background agents of the open session that the user did not clear. */
     agents: () => store.list,
+    /** A background agent of the open session still runs, so it can still change the workspace. */
+    active: () => store.list.some((agent) => agent.status === "running"),
     /** Every job of the open session, foreground ones included. */
     jobs: () => jobs() ?? [],
     job: (sessionID: string) => jobs()?.find((job) => job.sessionID === sessionID),

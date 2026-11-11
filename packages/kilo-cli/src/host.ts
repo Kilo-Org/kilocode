@@ -18,6 +18,7 @@ import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { Plugin } from "@opencode/core/plugin"
+import { Session } from "@opencode/core/session"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionStore } from "@opencode/core/session/store"
@@ -34,6 +35,7 @@ import { KiloApp } from "./app"
 import { KiloGatewayErrors } from "./gateway-errors"
 import { KiloPluginNpm } from "./plugin-npm"
 import { KiloGatewayModel } from "./gateway-model"
+import { KiloSessionRevert } from "./session-revert"
 import { KiloSmallModel } from "./small-model"
 import { SessionSync } from "./session-sync"
 import { SessionSyncOutput } from "./session-sync/tool-output"
@@ -164,6 +166,7 @@ export const overrides: LayerNode.Replacements = [
   ),
   ModelResolver.node.replace(KiloGatewayModel.resolverNode),
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
+  Session.node.replace(KiloSessionRevert.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
   // A sandboxed tool call spawns, writes and sends HTTP requests inside its sandbox profile.
