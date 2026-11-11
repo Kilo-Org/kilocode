@@ -344,7 +344,7 @@ test("compare and history count only non-excluded feature boxes and ignore legac
       { feature: "docs", done: 0, total: 500, dropped: 0, kinds: kinds(0, 500), excluded: "Docs site" },
     ],
     done: ["module:gateway/a.ts", "module:gateway/b.ts"],
-    dropped: [],
+    dropped: ["patch:gateway:0123456789ab", "patch:unattributed:session:ffffffffffff"],
   }
 
   expect(countedFeatures(legacyBase, { console: "Out of scope" }).map((f) => f.feature)).toEqual(["gateway"])
@@ -356,6 +356,8 @@ test("compare and history count only non-excluded feature boxes and ignore legac
   expect(delta).toContain("| gateway | 10/20 | 15/20 | +5 modules done |")
   expect(delta).not.toContain("unattributed:")
   expect(delta).not.toContain("cells reopened")
+  expect(delta).toContain("1 cells dropped")
+  expect(delta).toContain("`patch:gateway:0123456789ab`")
 
   const points = await history(
     JSON.stringify(head) + "\n",
@@ -368,4 +370,18 @@ test("compare and history count only non-excluded feature boxes and ignore legac
     { console: "Out of scope" },
   )
   expect(points).toEqual([{ date: "2026-11-01", done: 10, total: 20, percent: 50 }])
+})
+
+test("a feature excluded between two snapshots does not look like reopened cells", () => {
+  const kinds = () => ({ module: { done: 1, total: 2 }, api: { done: 0, total: 0 }, patch: { done: 0, total: 0 }, test: { done: 0, total: 0 } })
+  const base = { features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds() }], done: ["module:packages/kilo-console/src/App.tsx"], dropped: [] }
+  const head = {
+    features: [{ feature: "console", done: 1, total: 2, dropped: 0, kinds: kinds(), excluded: "Out of scope" }],
+    // render keeps the cell lists complete, so the excluded cell is still recorded on the head
+    done: ["module:packages/kilo-console/src/App.tsx"],
+    dropped: [],
+  }
+  const delta = compare(base, head)
+  expect(delta).not.toContain("cells reopened")
+  expect(delta).toContain("| console | 1/2 | excluded | -1 module done, -2 modules total |")
 })

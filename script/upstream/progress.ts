@@ -777,9 +777,11 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     done: counted.reduce((s, b) => s + b.kinds[k].done, 0),
     total: counted.reduce((s, b) => s + b.kinds[k].total, 0),
   }))
-  const droppedCells = data.cells.filter((c) => isCounted(c) && c.state === "dropped").sort((a, b) => byName(a.id, b.id))
+  // The cell lists stay complete: exclusion only changes the counted view above, so a newly excluded
+  // feature does not look like a set of reopened cells in the PR delta.
+  const droppedCells = data.cells.filter((c) => c.state === "dropped").sort((a, b) => byName(a.id, b.id))
   const doneIds = data.cells
-    .filter((c) => isCounted(c) && c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
+    .filter((c) => c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
     .map((c) => c.id)
     .sort()
   const landed = { plugin: 0, host: 0, seam: 0, patch: 0 }
@@ -802,7 +804,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
       excluded: b.excluded,
     })),
     landed: Object.fromEntries(
-      data.cells.flatMap((c) => (isCounted(c) && c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
+      data.cells.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
     ),
     done: doneIds,
     dropped: droppedCells.map((c) => c.id),
@@ -859,7 +861,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `## Dropped`,
     "",
-    ...(droppedCells.length ? droppedCells.map((c) => `- \`${c.id}\`: ${dispositions[c.id].note} (${dispositions[c.id].by})`) : ["None."]),
+    ...(droppedCells.filter(isCounted).length ? droppedCells.filter(isCounted).map((c) => `- \`${c.id}\`: ${dispositions[c.id].note} (${dispositions[c.id].by})`) : ["None."]),
     "",
     `## Counting rules`,
     "",
@@ -896,7 +898,12 @@ const OUTPUTS = ["progress.json", "README.md", "progress.svg", "history.svg", "b
 async function main() {
   const args = process.argv.slice(2)
   const rootIdx = args.indexOf("--root")
-  const root = rootIdx >= 0 ? path.resolve(args[rootIdx + 1]) : DEFAULT_ROOT
+  const rootValue = args[rootIdx + 1]
+  if (rootIdx >= 0 && (!rootValue || rootValue.startsWith("--"))) {
+    console.error("Missing value for --root")
+    process.exit(1)
+  }
+  const root = rootIdx >= 0 ? path.resolve(rootValue) : DEFAULT_ROOT
   const dir = path.join(root, "migration-tracking/progress")
   if (args.includes("--outputs")) {
     console.log(OUTPUTS.map((name) => path.relative(root, path.join(dir, name))).join(" "))
