@@ -1,9 +1,15 @@
 package ai.kilocode.rpc
 
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedDeleteResultDto
+import ai.kilocode.rpc.dto.HostedMutationResultDto
+import ai.kilocode.rpc.dto.HostedProfileDefaultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
+import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import com.intellij.platform.rpc.RemoteApiProviderService
@@ -37,6 +43,24 @@ interface KiloHostedRpcApi : RemoteApi<Unit> {
 
     /** Passive compute/billing status. Reads never wake compute. */
     suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto
+
+    /** Authorized, sanitized profile choices for workspace creation. */
+    suspend fun workspaceProfiles(organizationID: String?): HostedWorkspaceProfileListDto
+
+    /** Set the authenticated user's personal default workspace profile. */
+    suspend fun setPersonalDefaultProfile(profileID: String): HostedProfileDefaultDto
+
+    /** Create a workspace and its first root session. Retry with the same operation/message IDs. */
+    suspend fun createWorkspace(request: HostedCreateWorkspaceDto): HostedMutationResultDto
+
+    /** Add a root session to [ref]. The workspace supplies repository, profile, and compute. */
+    suspend fun startWorkspaceSession(
+        ref: HostedWorkspaceRefDto,
+        request: HostedStartSessionDto,
+    ): HostedMutationResultDto
+
+    /** Delete a whole workspace and invalidate only its local attachments. */
+    suspend fun deleteWorkspace(ref: HostedWorkspaceRefDto, organizationID: String?): HostedDeleteResultDto
 
     /**
      * Decoded preparation/cloud/sandbox status for one attached hosted session. [sessionID] is the

@@ -357,7 +357,7 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.empty.branch.link",
             "session.empty.worktree.unknown",
             "action.Kilo.NewSession.toolbar",
-            "action.Kilo.NewWorktree.toolbar",
+            "action.Kilo.AgentManager.Add.toolbar",
             "settings.agentBehavior.mcp.signIn.cancel",
             "settings.agentBehavior.mcp.resetAuth",
             "settings.agentBehavior.mcp.resetAuth.title",

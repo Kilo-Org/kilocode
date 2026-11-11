@@ -2,6 +2,7 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Notice
+import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
@@ -172,6 +173,44 @@ class MessageViewTest : BasePlatformTestCase() {
         val text = (view.part("p1") as NoticeView).text()
         assertEquals(KiloBundle.message("session.notice.unknown"), text)
         assertFalse(text.contains("some_future_notice_kind"))
+    }
+
+    fun `test search bodies include only conversation text`() {
+        val msg = Message(MessageDto("m1", "ses", "assistant", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val text = Text("p1").also { it.content.append("visible prose") }
+        val reasoning = Reasoning("r1").also { it.content.append("hidden reasoning") }
+        val tool = Tool("t1", "read", ToolKind.READ).also { it.output = "hidden tool output" }
+        msg.parts["p1"] = text
+        msg.parts["r1"] = reasoning
+        msg.parts["t1"] = tool
+        view.upsertPart(text)
+        view.upsertPart(reasoning)
+        view.upsertPart(tool)
+
+        assertEquals(listOf("m1/p1"), view.searchBodies().map { it.key })
+    }
+
+    fun `test collapsed injected prompt is searchable and reveal expands it`() {
+        val msg = Message(MessageDto("m1", "ses_user", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = { _, _ -> })
+
+        val text = Text("p1").also {
+            it.injectedTitle = "Update from main"
+            it.content.append("First paragraph.\n\nSecond paragraph.\n\nThird paragraph.")
+        }
+        msg.parts["p1"] = text
+        view.upsertPart(text)
+
+        val body = view.searchBodies().single()
+        assertTrue(body.collapsed())
+        assertNull("full prompt starts detached", view.part("p1")!!.parent)
+
+        body.reveal()
+
+        assertFalse(body.collapsed())
+        assertNotNull("revealing attaches the full prompt", view.part("p1")!!.parent)
     }
 
     private fun find(root: Component, predicate: (Component) -> Boolean): Component? {
