@@ -211,10 +211,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test creating a worktree opens the created worktree session editor`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
 
         edt { controller.create("feature/y", null) }
+        val pending = edt { controller.model.getElementAt(0).id }
+        gate.complete(Unit)
         flush()
 
         val list = edt { tree(panel) }
@@ -225,6 +229,23 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(created.path, file.path.params["path"])
         assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
         assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending))
+    }
+
+    fun `test failed creation forgets its pending layout key`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        rpc.createResult = { ai.kilocode.rpc.dto.CreateWorktreeResultDto(error = "creation failed") }
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        edt { controller.create("feature/failure", null) }
+        val pending = edt { controller.model.getElementAt(0).id }
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(0, rows(panel))
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending))
     }
 
     fun `test configure creates the worktree only after the dialog closes`() {
@@ -407,6 +428,37 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
         assertEquals(listOf(item.id, current.id), leaves(view).map { it.key })
         assertTrue(rpc.reorders.isEmpty())
+    }
+
+    fun `test usable local reload prunes missing worktrees but not undiscovered cloud placement`() {
+        val item = worktree("aardvark")
+        val cloud = HostedWorkspaceRefDto("cloud", "missing")
+        val props = PropertiesComponent.getInstance(project)
+        val items = listOf(main().id, item.id, cloud.key).map { key ->
+            object : ActiveItem { override val key = key; override val title = key }
+        }
+        val section = edt {
+            val state = AgentManagerLayout(props)
+            val section = state.create("Planning")
+            state.nodes(items)
+            state.move(ai.kilocode.client.ui.active.ActiveMove(item.id, 1, 0, listOf(item.id), parent = section.key))
+            state.move(ai.kilocode.client.ui.active.ActiveMove(cloud.key, 1, 1, listOf(item.id, cloud.key), parent = section.key))
+            section
+        }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        assertTrue(props.getValue("kilo.agentManager.layout")!!.contains(item.id))
+
+        rpc.listed += main()
+        edt { controller.reload() }
+        flush()
+
+        assertFalse(props.getValue("kilo.agentManager.layout")!!.contains(item.id))
+        val nodes = edt { AgentManagerLayout(props).nodes(items) }
+        assertEquals(listOf(cloud.key), nodes.single { it.item.key == section.key }.children!!.map { it.item.key })
+        assertEquals(listOf(main().id), leaves(tree(panel)).map { it.key })
     }
 
     fun `test worktree list paints tool window background`() {
@@ -847,6 +899,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(a.id, edt { view.selected()?.key })
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(a.path, file.path.params["path"])
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(c.id))
     }
 
     fun `test worktree row shows activity icon for matching directory`() {
@@ -2132,6 +2185,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         createGate.complete(Unit)
         waitUntil { rows(panel) == 2 && edt { selectedValue(view)?.key } == createdRef.key }
         waitUntil { calls.size == 2 }
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending.key))
 
         val removal = project.service<HostedWorkspaceRemoval>()
         edt { removal.delete(createdRef, project.basePath!!) }
@@ -2144,6 +2198,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // Successful deletion forgets the workspace entirely instead of leaving it in the
         // persisted exclusion set.
         assertFalse(project.service<HostedManagementService>().excluded(createdRef))
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(createdRef.key))
     }
 
     fun `test cloud create keeps its row through a stale discovery`() {
@@ -2475,6 +2530,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             waitUntil { calls.get() > count && !hosted.state.value.loading }
         }
         waitUntil { rows(panel) == 1 }
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(createdRef.key))
     }
 
     fun `test deleting a created workspace that discovery has not listed removes its row`() {

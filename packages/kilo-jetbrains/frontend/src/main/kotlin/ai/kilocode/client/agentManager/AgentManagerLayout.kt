@@ -44,6 +44,18 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     }
 
     @RequiresEdt
+    fun prune(keep: (String) -> Boolean) {
+        val removed = (order.values.flatten() + state.membership.keys).toSet()
+            .filterTo(HashSet()) { section(it) == null && !keep(it) }
+        if (removed.isEmpty()) return
+        order = order.mapValues { (_, keys) -> keys.filterNot(removed::contains) }
+        save(state.copy(
+            membership = state.membership - removed,
+            order = order,
+        ))
+    }
+
+    @RequiresEdt
     fun create(name: String): Section {
         val section = Section("kilo:agent-manager:section:${UUID.randomUUID()}", name)
         save(state.copy(sections = state.sections + section))

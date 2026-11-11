@@ -241,6 +241,46 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(section.key, current.key, cloud.key, local.key), keys(restored.nodes(items.reversed())))
     }
 
+    fun `test pruning removes root and grouped keys from memory and project properties`() = edtWait {
+        val section = layout.create("Section")
+        layout.nodes(items)
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key), parent = section.key))
+        layout.nodes(items)
+
+        layout.prune { it == current.key }
+
+        assertEquals(emptyList<String>(), layout.neighbors(local.key))
+        assertEquals(emptyList<String>(), layout.neighbors(cloud.key))
+        val props = PropertiesComponent.getInstance(project)
+        assertFalse(props.getValue(STORAGE)!!.contains("\"${local.key}\""))
+        assertFalse(props.getValue(STORAGE)!!.contains("\"${cloud.key}\""))
+        val restored = AgentManagerLayout(props)
+        assertEquals(section, restored.section(section.key))
+        assertEquals(listOf(current.key, section.key), keys(restored.nodes(listOf(current))))
+        assertEquals(emptyList<ActiveTreeNode>(), children(restored.nodes(listOf(current)), section))
+        assertEquals(listOf(current.key, section.key, cloud.key, local.key), keys(restored.nodes(items)))
+    }
+
+    fun `test pruning a pending row survives later moves and section deletion without losing missing cloud placement`() = edtWait {
+        val pending = Row("pending:branch:1")
+        val section = layout.create("Section")
+        layout.nodes(items)
+        layout.move(ActiveMove(cloud.key, 1, 0, listOf(cloud.key), parent = section.key))
+        layout.nodes(items + pending)
+        layout.nodes(listOf(current, local))
+
+        layout.prune { it != pending.key }
+        assertEquals(emptyList<String>(), layout.neighbors(pending.key))
+        layout.move(ActiveMove(section.key, 2, 0, listOf(section.key, current.key, local.key)))
+        layout.delete(section.key)
+
+        val props = PropertiesComponent.getInstance(project)
+        assertFalse(props.getValue(STORAGE)!!.contains(pending.key))
+        val restored = AgentManagerLayout(props)
+        assertEquals(listOf(cloud.key, current.key, local.key), keys(restored.nodes(items.reversed())))
+        assertEquals(listOf(current.key, local.key), restored.neighbors(cloud.key))
+    }
+
     private fun keys(nodes: List<ActiveTreeNode>) = nodes.map { it.item.key }
 
     private fun children(nodes: List<ActiveTreeNode>, section: AgentManagerLayout.Section) =

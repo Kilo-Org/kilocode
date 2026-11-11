@@ -343,6 +343,7 @@ class AgentManagerPanel(
                             createdHosted.remove(ref.key)
                             missedHosted.remove(ref.key)
                             removedHosted.add(ref.key)
+                            ordering.prune { it != ref.key }
                             sync()
                         }
                     }
@@ -365,7 +366,16 @@ class AgentManagerPanel(
             project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
-        controller.onReload = { sync(); orphanBanner?.refresh() }
+        controller.onReload = {
+            // Failed listings have no main checkout; only reconcile a usable local snapshot.
+            controller.current?.let { current ->
+                val keys = (0 until controller.model.size).mapTo(HashSet()) { controller.model.getElementAt(it).id }
+                keys.add(current.id)
+                ordering.prune { HostedIDs.isWorkspace(it) || it in keys || controller.progress(it) != null }
+            }
+            sync()
+            orphanBanner?.refresh()
+        }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, _ -> onRemoved(item) }
@@ -550,6 +560,7 @@ class AgentManagerPanel(
 
     @RequiresEdt
     private fun closeHostedPending(target: Project, pending: HostedWorkspaceDto) {
+        ordering.prune { it != pending.ref.key }
         service<HostedWorkspaceCache>().remove(pending.ref)
         target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(pending))
     }
@@ -557,6 +568,7 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun dismissHosted(item: HostedWorkspaceDto) {
         val target = project ?: return
+        ordering.prune { it != item.ref.key }
         target.service<HostedManagementService>().dismiss(item.ref)
         service<HostedWorkspaceCache>().remove(item.ref)
         target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
@@ -761,6 +773,7 @@ class AgentManagerPanel(
     @RequiresEdt
     private fun onRemoved(item: WorktreeDto) {
         if (currentEditorWorktree() == item.id) advance(ordering.neighbors(item.id).firstNotNullOfOrNull(this::item))
+        ordering.prune { it != item.id }
         close(item)
     }
 
@@ -862,6 +875,14 @@ class AgentManagerPanel(
 
     @RequiresEdt
     private fun sync() {
+        ordering.prune { key ->
+            when {
+                key.startsWith("pending:") -> controller.isPending(key)
+                HostedIDs.parseWorkspace(key)?.second?.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) == true ->
+                    key in pendingHosted
+                else -> true
+            }
+        }
         val current = controller.current?.let { item ->
             WorktreeRow(
                 item,
