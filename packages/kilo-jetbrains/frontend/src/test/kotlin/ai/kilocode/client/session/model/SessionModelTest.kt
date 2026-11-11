@@ -1300,6 +1300,46 @@ class SessionModelTest : BasePlatformTestCase() {
         assertNull(model.header.cost)
     }
 
+    fun `test optimistic user prompt is replaced without duplicating its text`() {
+        val dto = msg("u1", "user")
+        val optimistic = PartDto(
+            id = "prt_optimistic_u1_0",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "text",
+            text = "hello",
+        )
+        model.addOptimisticUser(dto, listOf(optimistic))
+
+        assertTrue(model.isOptimistic("u1"))
+        assertEquals("hello", (model.content("u1", "prt_optimistic_u1_0") as Text).content.toString())
+
+        model.upsertMessage(dto)
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        assertFalse(model.isOptimistic("u1"))
+        val texts = model.message("u1")!!.parts.values.filterIsInstance<Text>()
+        assertEquals(listOf("hello"), texts.map { it.content.toString() })
+        assertEquals(listOf("p1"), model.message("u1")!!.parts.keys.toList())
+    }
+
+    fun `test failed optimistic prompt can be removed`() {
+        model.addOptimisticUser(msg("u1", "user"), listOf(part("p1", "u1", "text", text = "hello")))
+
+        model.removeOptimistic("u1")
+
+        assertNull(model.message("u1"))
+    }
+
+    fun `test server-assigned message id replaces a matching optimistic prompt`() {
+        model.addOptimisticUser(msg("u1", "user"), listOf(part("p1", "u1", "text", text = "hello")))
+        model.upsertMessage(msg("u2", "user"))
+        model.updateContent("u2", part("p2", "u2", "text", text = "hello"))
+
+        assertNull(model.message("u1"))
+        assertEquals("hello", (model.content("u2", "p2") as Text).content.toString())
+    }
+
     private fun msg(id: String, role: String, cost: Double? = null, tokens: TokensDto? = null) = MessageDto(
         id = id,
         sessionID = "ses",

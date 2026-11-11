@@ -116,6 +116,103 @@ data class HostedWorkspaceStatusDto(
     val wakeBlockedReason: String? = null,
     val rateMicrodollarsPerHour: Long? = null,
     val billingBlocked: Boolean? = null,
+    val deletion: HostedDeletionDto? = null,
+)
+
+@Serializable
+data class HostedDeletionDto(
+    val started: Boolean = false,
+    val completed: Boolean = false,
+    val startedAt: Double? = null,
+    val phase: String = "not_started",
+    val sessionCount: Int = 0,
+    val runtimeLocationCount: Int = 0,
+    val completedRuntimeLocationCount: Int = 0,
+    val remainingRuntimeLocationCount: Int = 0,
+)
+
+@Serializable
+data class HostedWorkspaceProfileDto(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val ownerType: String? = null,
+    val isPersonalDefault: Boolean = false,
+    val isOrganizationDefault: Boolean = false,
+    val isDefault: Boolean = isPersonalDefault || isOrganizationDefault,
+)
+
+@Serializable
+data class HostedWorkspaceProfileListDto(
+    val items: List<HostedWorkspaceProfileDto> = emptyList(),
+    val error: HostedFailureDto? = null,
+    val personalDefaultProfileID: String? = null,
+    val organizationDefaultProfileID: String? = null,
+    val effectiveDefaultProfileID: String? = null,
+)
+
+@Serializable
+data class HostedProfileDefaultDto(
+    val success: Boolean = false,
+    val failure: HostedFailureDto? = null,
+)
+
+@Serializable
+data class HostedRepositoryDto(
+    val type: String,
+    val repo: String? = null,
+    val url: String? = null,
+    val branch: String? = null,
+)
+
+@Serializable
+data class HostedAgentDto(
+    val mode: String,
+    val model: String,
+    val variant: String? = null,
+)
+
+@Serializable
+data class HostedCreateWorkspaceDto(
+    val repository: HostedRepositoryDto,
+    val profileID: String? = null,
+    val prompt: String,
+    val agent: HostedAgentDto,
+    val operationKey: String,
+    val messageID: String,
+    val organizationID: String? = null,
+)
+
+@Serializable
+data class HostedStartSessionDto(
+    val prompt: String,
+    val agent: HostedAgentDto,
+    val operationKey: String,
+    val messageID: String,
+    val organizationID: String? = null,
+)
+
+@Serializable
+data class HostedFailureDto(
+    val code: String,
+    val message: String,
+    val retryable: Boolean = false,
+)
+
+@Serializable
+data class HostedMutationResultDto(
+    val workspace: HostedWorkspaceDto? = null,
+    val session: HostedWorkspaceSessionDto? = null,
+    val messageID: String? = null,
+    val replayed: Boolean = false,
+    val failure: HostedFailureDto? = null,
+)
+
+@Serializable
+data class HostedDeleteResultDto(
+    val ref: HostedWorkspaceRefDto,
+    val success: Boolean = false,
+    val failure: HostedFailureDto? = null,
 )
 
 /**
@@ -155,5 +252,12 @@ data class HostedSystemEventDto(
     val revision: Long? = null,
     /** Explicit provider safe-error code only; never a raw server error or progress detail. */
     val failure: String? = null,
+    /** Failed step label, full provider-retained output tail, or provider-safe error detail. */
+    val detail: String? = null,
     val triggerMessageID: String? = null,
+    val stepID: String? = null,
+    val stepKind: String? = null,
+    /** Provider-bounded preparation output tail; the backend accumulates live chunks before delivery. */
+    val output: String? = null,
+    val outputTruncated: Boolean = false,
 )

@@ -15,6 +15,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.app.HostedReadiness
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
@@ -155,8 +156,10 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
+        ready: Boolean = true,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log)
+        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log,
+            ready = ready)
     }
 
     protected fun controller(
@@ -180,6 +183,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
+        ready: Boolean = true,
     ): SessionController {
         val root = Root()
         val m = SessionController(
@@ -205,6 +209,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         )
         controllers.add(m)
         roots[m] = root
+        if (ref is SessionRef.Hosted && ready) edt { m.hostedPreparation(HostedReadiness.Ready) }
         return m
     }
 

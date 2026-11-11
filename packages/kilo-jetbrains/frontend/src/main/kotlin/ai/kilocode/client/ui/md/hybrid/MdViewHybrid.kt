@@ -17,9 +17,11 @@ import ai.kilocode.client.ui.diagram.ui.diagramPalette
 import ai.kilocode.client.ui.diagram.ui.diagramSpec
 import ai.kilocode.client.ui.diagram.ui.openDiagramWindow
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.md.MAX_SEARCH_HIGHLIGHTS
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCommon
+import ai.kilocode.client.ui.md.MdSearchView
 import ai.kilocode.client.ui.md.MdStyle
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.log.KiloLog
@@ -29,6 +31,7 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
@@ -36,6 +39,7 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.components.JBTextArea
@@ -45,6 +49,8 @@ import com.intellij.ui.components.JBHtmlPaneStyleConfiguration
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Component
 import java.awt.Cursor
@@ -53,7 +59,9 @@ import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Point
+import java.awt.Rectangle
 import java.awt.RenderingHints
+import java.awt.Shape
 import java.awt.event.HierarchyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -66,6 +74,10 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 import javax.swing.event.ChangeListener
 import javax.swing.event.HyperlinkEvent
+import javax.swing.text.Document
+import javax.swing.text.Element
+import javax.swing.text.Highlighter
+import javax.swing.text.JTextComponent
 import javax.swing.text.html.StyleSheet
 import kotlin.reflect.KProperty
 
@@ -89,6 +101,10 @@ internal open class MdViewHybrid(
     private var openFence: Fence? = null
     private var stale = false
     private val projector = MdProjector()
+    private var searchRev = 0L
+    private var nextSearchId = 1
+    private val searchTags = HashMap<Int, MutableList<Any>>()
+    private val searchListeners = mutableListOf<MdSearchView.SearchListener>()
 
     private val fontOverride = Override { opts().font }
     private val foregroundOverride = Override { opts().foreground }
@@ -214,6 +230,7 @@ internal open class MdViewHybrid(
         clearBlocks()
         root.revalidate()
         root.repaint()
+        searchChanged()
     }
 
     override fun addLinkListener(listener: MdView.LinkListener) {
@@ -223,6 +240,176 @@ internal open class MdViewHybrid(
 
     override fun removeLinkListener(listener: MdView.LinkListener) {
         listeners.remove(listener)
+    }
+
+    override fun searchRevision(): Long = searchRev
+
+    @Suppress("LoopWithTooManyJumpStatements")
+    override fun searchBlocks(): List<MdSearchView.SearchBlock> {
+        if (disposed) return emptyList()
+        val out = ArrayList<MdSearchView.SearchBlock>()
+        for (view in blocks) {
+            val pane = view.searchPane() ?: continue
+            val doc = pane.document
+            val text = doc.getText(0, doc.length)
+            if (text.isEmpty()) continue
+            out.add(Block(view.searchId, pane, text, excluded(doc), searchRev))
+        }
+        return out
+    }
+
+    override fun clearSearchHighlights() {
+        if (searchTags.isEmpty()) return
+        for (view in blocks) {
+            val pane = view.searchPane() ?: continue
+            clearTags(view.searchId, pane)
+        }
+        searchTags.clear()
+    }
+
+    private inner class Block(
+        override val id: Int,
+        override val component: JComponent,
+        override val text: String,
+        override val excluded: List<TextRange>,
+        override val revision: Long,
+    ) : MdSearchView.SearchBlock {
+        private val pane = component as? JTextComponent
+
+        override fun applyHighlights(ranges: List<TextRange>, current: TextRange?) {
+            if (disposed) return
+            val pane = pane ?: return
+            clearTags(id, pane)
+            val normal = painter(false)
+            val active = painter(true)
+            for (range in ranges.take(MAX_SEARCH_HIGHLIGHTS)) addTag(id, pane, range, normal)
+            current?.let { addTag(id, pane, it, active) }
+            pane.repaint()
+        }
+
+        override fun clearHighlights() {
+            pane?.let { clearTags(id, it) }
+        }
+
+        @Suppress("ReturnCount", "MaxLineLength")
+        override fun rect(range: TextRange): Rectangle? {
+            if (disposed) return null
+            val pane = pane ?: return null
+            if (!pane.isShowing) return null
+            val bounds = paneRect(pane, range) ?: return null
+            val point = runCatching { SwingUtilities.convertPoint(pane, bounds.x, bounds.y, root) }.getOrNull()
+                ?: return null
+            return Rectangle(point.x, point.y, bounds.width, bounds.height)
+        }
+
+        override fun scrollIntoView(range: TextRange) {
+            if (disposed) return
+            val pane = pane ?: return
+            paneRect(pane, range)?.let { pane.scrollRectToVisible(it) }
+        }
+    }
+
+    private fun paneRect(pane: JTextComponent, range: TextRange): Rectangle? {
+        val start = runCatching { pane.modelToView2D(range.startOffset)?.bounds }.getOrNull() ?: return null
+        val end = runCatching {
+            pane.modelToView2D((range.endOffset - 1).coerceAtLeast(range.startOffset))?.bounds
+        }.getOrNull() ?: start
+        return start.union(end)
+    }
+
+    override fun addSearchListener(listener: MdSearchView.SearchListener) {
+        if (searchListeners.contains(listener)) return
+        searchListeners.add(listener)
+    }
+
+    override fun removeSearchListener(listener: MdSearchView.SearchListener) {
+        searchListeners.remove(listener)
+    }
+
+    private fun addTag(id: Int, pane: JTextComponent, range: TextRange, painter: Highlighter.HighlightPainter) {
+        val doc = pane.document
+        val start = range.startOffset.coerceIn(0, doc.length)
+        val end = range.endOffset.coerceIn(start, doc.length)
+        if (end <= start) return
+        val tag = runCatching { pane.highlighter.addHighlight(start, end, painter) }.getOrNull() ?: return
+        searchTags.getOrPut(id) { mutableListOf() }.add(tag)
+    }
+
+    private fun clearTags(id: Int, pane: JTextComponent) {
+        val tags = searchTags.remove(id) ?: return
+        for (tag in tags) runCatching { pane.highlighter.removeHighlight(tag) }
+    }
+
+    private fun excluded(doc: Document): List<TextRange> {
+        val out = ArrayList<TextRange>()
+        collectPre(doc.defaultRootElement, out)
+        return out
+    }
+
+    private fun collectPre(element: Element?, out: MutableList<TextRange>) {
+        if (element == null) return
+        if (element.name.equals("pre", ignoreCase = true)) {
+            out.add(TextRange(element.startOffset, element.endOffset))
+            return
+        }
+        for (i in 0 until element.elementCount) collectPre(element.getElement(i), out)
+    }
+
+    private fun painter(current: Boolean): Highlighter.HighlightPainter {
+        val attrs = style.editorScheme.getAttributes(EditorColors.TEXT_SEARCH_RESULT_ATTRIBUTES)
+        val fill = attrs?.backgroundColor
+            ?: style.editorScheme.getColor(EditorColors.SELECTION_BACKGROUND_COLOR)
+            ?: UiStyle.Colors.editorBackground()
+        val caret = style.editorScheme.getColor(EditorColors.CARET_COLOR) ?: UIUtil.getLabelForeground()
+        return SearchPainter(fill, current, caret)
+    }
+
+    private fun searchChanged() {
+        if (disposed) return
+        searchRev++
+        for (listener in searchListeners.toList()) listener.onSearchChanged()
+    }
+
+    @Suppress("MagicNumber")
+    private inner class SearchPainter(
+        private val fill: Color,
+        private val current: Boolean,
+        private val outline: Color,
+    ) : Highlighter.HighlightPainter {
+        override fun paint(g: Graphics, p0: Int, p1: Int, bounds: Shape, c: JTextComponent) {
+            // HTML text views can report line-wide highlight bounds. Draw the actual glyph range so
+            // the rounded background wraps only the matched words.
+            val rect = rangeRect(c, p0, p1) ?: (bounds as? Rectangle) ?: bounds.bounds
+            if (rect.width <= 0 || rect.height <= 0) return
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val arc = JBUI.scale(3)
+                g2.color = fill
+                g2.fillRoundRect(rect.x, rect.y, rect.width, rect.height, arc, arc)
+                if (current) {
+                    g2.color = outline
+                    g2.stroke = BasicStroke(JBUI.scale(1).toFloat().coerceAtLeast(1f))
+                    val pad = JBUI.scale(1)
+                    g2.drawRoundRect(
+                        rect.x + pad,
+                        rect.y + pad,
+                        (rect.width - pad * 2).coerceAtLeast(1),
+                        (rect.height - pad * 2).coerceAtLeast(1),
+                        arc,
+                        arc,
+                    )
+                }
+            } finally {
+                g2.dispose()
+            }
+        }
+    }
+
+    private fun rangeRect(c: JTextComponent, p0: Int, p1: Int): Rectangle? {
+        val start = runCatching { c.modelToView2D(p0)?.bounds }.getOrNull() ?: return null
+        val end = runCatching { c.modelToView2D((p1 - 1).coerceAtLeast(p0))?.bounds }.getOrNull() ?: start
+        return start.union(end)
     }
 
     override fun markdown(): String = source.toString()
@@ -249,6 +436,8 @@ internal open class MdViewHybrid(
     override fun dispose() {
         disposed = true
         listeners.clear()
+        searchListeners.clear()
+        searchTags.clear()
         source.clear()
         rendered = ""
         htmlCache = null
@@ -265,6 +454,7 @@ internal open class MdViewHybrid(
         for (view in blocks) view.style(opts)
         root.revalidate()
         root.repaint()
+        searchChanged()
     }
 
     private fun syncBlocks() {
@@ -280,15 +470,20 @@ internal open class MdViewHybrid(
             clearBlocks()
             root.revalidate()
             root.repaint()
+            searchChanged()
             return
         }
         sync(next)
         root.revalidate()
         root.repaint()
+        searchChanged()
     }
 
     private fun clearBlocks() {
-        blocks.forEach { Disposer.dispose(it.disposable) }
+        blocks.forEach {
+            it.searchPane()?.let { pane -> clearTags(it.searchId, pane) }
+            Disposer.dispose(it.disposable)
+        }
         blocks.clear()
         root.removeAll()
     }
@@ -321,7 +516,10 @@ internal open class MdViewHybrid(
         while (root.componentCount > idx) root.remove(root.componentCount - 1)
         val stale = blocks.drop(start)
         repeat(blocks.size - start) { blocks.removeAt(blocks.lastIndex) }
-        stale.forEach { Disposer.dispose(it.disposable) }
+        stale.forEach {
+            it.searchPane()?.let { pane -> clearTags(it.searchId, pane) }
+            Disposer.dispose(it.disposable)
+        }
     }
 
     private fun addGap() {
@@ -913,14 +1111,18 @@ internal open class MdViewHybrid(
         val component: JComponent,
         val disposable: Disposable,
     ) {
+        val searchId: Int = nextSearchId++
         abstract fun compatible(desc: Desc): Boolean
         abstract fun update(desc: Desc)
         abstract fun style(opts: MdStyle)
         open fun grow(delta: String) = Unit
+        open fun searchPane(): JBHtmlPane? = null
     }
 
     private inner class HtmlView(desc: Desc.Html, private val pane: JBHtmlPane, disposable: Disposable) :
         View(desc, pane, disposable) {
+        override fun searchPane(): JBHtmlPane = pane
+
         override fun compatible(desc: Desc) = desc is Desc.Html
 
         override fun update(desc: Desc) {
@@ -940,6 +1142,8 @@ internal open class MdViewHybrid(
 
     private inner class TableView(desc: Desc.Table, private val pane: JBScrollPane, disposable: Disposable) :
         View(desc, pane, disposable) {
+        override fun searchPane(): JBHtmlPane? = pane.viewport.view as? JBHtmlPane
+
         override fun compatible(desc: Desc) = desc is Desc.Table
 
         override fun update(desc: Desc) {
