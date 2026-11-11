@@ -13,6 +13,7 @@ import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
@@ -165,6 +166,7 @@ export const overrides: LayerNode.Replacements = [
       host: {
         oauth: { name: "Kilo", uri: "https://kilo.ai" },
         fetch: (base, endpoint) => KiloSseProbe.probe(base, endpoint),
+        authFailure,
       },
     }),
   ),

@@ -29,4 +29,9 @@ export interface Host {
   readonly localCommand?: (command: LocalCommand) => LocalCommand
   /** Client identity used for MCP OAuth registration. */
   readonly oauth?: OAuthClientMetadata
+  /**
+   * Recognizes a remote connection failure that asks for authentication, so the server reports
+   * `needs_auth` with that message instead of `failed`. Only consulted for a server that may sign in.
+   */
+  readonly authFailure?: (message: string | undefined) => boolean
 }
