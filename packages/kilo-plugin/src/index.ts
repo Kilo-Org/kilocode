@@ -27,6 +27,7 @@ import { KiloSkillPlugin } from "./skill"
 import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
+import { KiloChartPlugin } from "./chart"
 import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
 import { KiloNotebookPlugin } from "./notebook"
@@ -82,6 +83,8 @@ export const KiloPlugins = [
   KiloWriteToolPlugin,
   KiloBrowserToolPlugin,
   KiloNotebookPlugin,
+  // The chart tool and its skill, for the VS Code chat that draws the chart. It registers nothing elsewhere.
+  KiloChartPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
   KiloSettingsPlugin,

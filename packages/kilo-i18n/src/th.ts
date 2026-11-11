@@ -133,4 +133,8 @@ export const dict = {
   "ui.message.feedback.helpful": "สิ่งนี้มีประโยชน์",
   "ui.message.feedback.notHelpful": "สิ่งนี้ไม่มีประโยชน์",
   "ui.message.feedback.clearRating": "ล้างการให้คะแนน",
+  // Chart tool card
+  "ui.tool.chart": "แผนภูมิ",
+  "ui.tool.chart.invalid": "การกำหนดค่าแผนภูมิไม่ถูกต้อง — ต้องมีชนิดและข้อมูล",
+  "ui.tool.chart.failed": "แสดงแผนภูมิไม่สำเร็จ",
 }
