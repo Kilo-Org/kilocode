@@ -1,6 +1,11 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFile
@@ -16,6 +21,7 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.components.BorderLayoutPanel
 import javax.swing.Icon
@@ -29,13 +35,16 @@ object HostedWorkspaceEditorKind : KiloEditorKind {
     const val ID = "hosted-workspace"
     const val PROVIDER = "provider"
     const val WORKSPACE = "workspace"
+    const val PENDING_PREFIX = "pending-"
 
     override val id: String = ID
 
     override fun title(params: Map<String, String>): String {
         val ref = HostedWorkspaceRefDto(params[PROVIDER].orEmpty(), params[WORKSPACE].orEmpty())
-        val dto = service<HostedWorkspaceCache>().get(ref)
-        return HostedWorkspaceTitle.text(dto?.name, dto?.branch, params[WORKSPACE].orEmpty())
+        val cache = service<HostedWorkspaceCache>()
+        val dto = cache.get(ref)
+        return cache.title(ref)
+            ?: HostedWorkspaceTitle.text(dto?.name, dto?.branch, params[WORKSPACE].orEmpty())
     }
 
     override fun icon(params: Map<String, String>): Icon = HostedWorkspaceIcons.cloud
@@ -53,6 +62,15 @@ object HostedWorkspaceEditorKind : KiloEditorKind {
         val provider = file.path.params[PROVIDER]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
         val workspace = file.path.params[WORKSPACE]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
         val ref = HostedWorkspaceRefDto(provider, workspace)
+        val hosted = project.service<KiloHostedService>()
+        if (!hosted.enabled() || project.service<HostedManagementService>().excluded(ref)) {
+            return BorderLayoutPanel()
+        }
+        if (workspace.startsWith(PENDING_PREFIX)) {
+            return BorderLayoutPanel().apply {
+                addToCenter(JBLabel(KiloBundle.message("hosted.workspace.progress.creating")).align(HAlign.CENTER, VAlign.CENTER))
+            }
+        }
         val dto = service<HostedWorkspaceCache>().get(ref)
         return HostedWorkspaceEditorPanel(
             parent = parent,
@@ -97,7 +115,7 @@ internal fun hostedWorkspaceParams(dto: HostedWorkspaceDto): Map<String, String>
 
 internal fun openHostedWorkspace(project: Project, dto: HostedWorkspaceDto, focus: Boolean = true) {
     ensureHostedWorkspaceEditorKind()
-    service<HostedWorkspaceCache>().put(dto)
+    service<HostedWorkspaceCache>().put(dto, HostedWorkspaceTitle.text(dto))
     project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
     project.service<KiloVfsManager>().open(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto), focus)
 }

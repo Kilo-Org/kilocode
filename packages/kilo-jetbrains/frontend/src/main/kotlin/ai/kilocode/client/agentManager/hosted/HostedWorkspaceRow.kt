@@ -10,11 +10,12 @@ import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import javax.swing.Icon
 
-/** A Cloud workspace row in the Agent Manager list, distinct from local worktrees. */
+/** A Cloud workspace row in the Agent Manager tree, distinct from local worktrees. */
 internal data class HostedWorkspaceRowData(
     val dto: HostedWorkspaceDto,
     val status: HostedWorkspaceStatusDto?,
     val kind: SessionActivityKind? = null,
+    val progress: String? = null,
 )
 
 internal class HostedWorkspaceRow(
@@ -26,21 +27,23 @@ internal class HostedWorkspaceRow(
     override val key: String get() = dto.ref.key
     override val identity: Any get() = "hosted:${dto.ref.key}"
     override val title: String
-        get() = HostedWorkspaceTitle.text(dto.name, dto.branch, dto.ref.workspaceID)
+        get() = HostedWorkspaceTitle.text(dto)
     override val description: String?
         get() = dto.branch?.takeIf { it.isNotBlank() }
     override val tooltip: String?
         get() = listOfNotNull(dto.repositoryUrl, dto.branch, dto.ref.key).joinToString("\n")
-    override val icon: Icon get() = data.kind?.let { WorktreeIcons.forRow(busy = false, kind = it) }
+    override val icon: Icon get() = data.kind?.let { WorktreeIcons.forRow(busy = data.progress != null, kind = it) }
+        ?: data.progress?.let { WorktreeIcons.forRow(busy = true, kind = null) }
         ?: HostedWorkspaceIcons.cloud
-    override val tinted: Boolean get() = data.kind == null
+    override val tinted: Boolean get() = data.kind == null && data.progress == null
     override val inlineBadges: Boolean get() = true
     override val section: String get() = KiloBundle.message("worktree.section.cloud")
     override val search: String
-        get() = listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID, dto.ref.workspaceID)
-            .joinToString(" ")
+        get() = (listOfNotNull(dto.name, dto.repositoryUrl, dto.branch, dto.ref.providerID, dto.ref.workspaceID) +
+            dto.sessions.mapNotNull { it.title }).joinToString(" ")
+    override val progress: String? get() = data.progress
     override val badges: List<ActiveBadge>
-        get() = listOf(HostedWorkspaceStatus.of(status).badge())
+        get() = if (data.progress == null) listOf(HostedWorkspaceStatus.of(status).badge()) else emptyList()
 
     override fun equals(other: Any?): Boolean {
         val row = other as? HostedWorkspaceRow ?: return false

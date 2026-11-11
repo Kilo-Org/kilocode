@@ -886,6 +886,102 @@ describe("session prompt queue", () => {
     })
   })
 
+  test("background notification still dismisses a pending suggestion", async () => {
+    // Background results skip question dismissal but must not wait behind an
+    // ignored suggestion, or the result stalls while the session looks idle.
+    const shown = Promise.withResolvers<void>()
+    await using tmp = await tmpdir({ git: true })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () =>
+        scoped(tmp.path, async (prompt) => {
+          const session = await sessions.create({ title: "Background suggestion regression" })
+          const off = Bus.subscribe(Suggestion.Event.Shown, (event) => {
+            if (event.properties.sessionID === session.id) shown.resolve()
+          })
+
+          try {
+            const base = Suggestion.show({
+              sessionID: session.id,
+              text: "Run a review?",
+              actions: [{ label: "Review", prompt: "/review" }],
+            }).catch((err) => {
+              if (err instanceof Suggestion.DismissedError) return "dismissed"
+              throw err
+            })
+
+            await shown.promise
+            await Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "background done", synthetic: true, metadata: { background: true } }],
+                noReply: true,
+              }),
+            )
+
+            expect(await base).toBe("dismissed")
+            expect(await Suggestion.list()).toEqual([])
+          } finally {
+            off()
+          }
+        }),
+    })
+  })
+
+  test("auto-dismisses a suggestion shown after a queued background notification", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const sessionID = SessionID.make("ses_auto_suggestion_background")
+        const started = Promise.withResolvers<void>()
+        const release = Promise.withResolvers<void>()
+        const reserved = Promise.withResolvers<void>()
+
+        const first = Effect.runPromise(
+          KiloSessionPromptQueue.enqueue(
+            sessionID,
+            MessageID.make("msg_auto_sug_bg_1"),
+            Effect.gen(function* () {
+              started.resolve()
+              yield* Effect.promise(() => release.promise)
+              return "first" as const
+            }),
+            Effect.succeed("first-cancelled" as const),
+          ),
+        )
+        await started.promise
+
+        const second = Effect.runPromise(
+          KiloSessionPromptQueue.enqueue(
+            sessionID,
+            MessageID.make("msg_auto_sug_bg_2"),
+            Effect.succeed("second" as const),
+            Effect.succeed("second-cancelled" as const),
+            Effect.sync(() => reserved.resolve()),
+            false,
+          ),
+        )
+        await reserved.promise
+
+        await expect(
+          Suggestion.show({
+            sessionID,
+            text: "Run a review?",
+            actions: [{ label: "Review", prompt: "/review" }],
+          }),
+        ).rejects.toBeInstanceOf(Suggestion.DismissedError)
+        expect(await Suggestion.list()).toEqual([])
+
+        release.resolve()
+        expect(await first).toBe("first")
+        expect(await second).toBe("second")
+      },
+    })
+  })
+
   test("auto-dismisses a suggestion shown after a queued prompt", async () => {
     // Reverse ordering of the "new prompt dismisses a pending suggestion" test:
     // queue the follow-up first, then open the blocker. Suggestion.show must see
