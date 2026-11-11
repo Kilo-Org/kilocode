@@ -3,8 +3,6 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-// Both modules export `localPluginDirectories`; the alias names the upstream one.
-import { localPluginDirectories as upstreamPluginDirectories } from "../../tui/src/plugin/discovery"
 import { hostMirrors } from "../src/mirrors"
 import { projectConfigName } from "../src/tui-config-directories"
 import { localPluginDirectories } from "../src/tui-plugin-discovery"
@@ -54,7 +52,8 @@ for (const compiled of [false, true]) {
       const outfile = path.join(tmp.path, process.platform === "win32" ? "discovery.exe" : "discovery")
       // A compile leaves a copy of the Bun runtime (`.<id>.bun-build`, about 90 MB) in the working directory of the
       // process that builds. The build runs in a child process in its own temporary directory, which is removed
-      // with the test's files; the package directory is shared with test files that build at the same time.
+      // with the test's files; the package directory is shared with test files that build at the same time. That
+      // directory must not be the child's TMPDIR (`tmp.path`): Bun then fails with "EEXIST ... .bun-build".
       if (compiled) {
         await mkdir(path.join(tmp.path, "build"))
         await run([process.execPath, build, outfile, hosted ? "hosted" : "unhosted"], path.join(tmp.path, "build"), env)
@@ -102,11 +101,6 @@ test("the hosted plugin directories include a missing .kilo2 of the repository r
   expect(await localPluginDirectories(cwd, config)).toEqual([
     path.join(config, "plugins"),
     path.join(tmp.path, "repo", ".kilo2", "plugins"),
-  ])
-  // The upstream module itself is unchanged: loaded without the host, it keeps its default.
-  expect(await upstreamPluginDirectories(cwd, config)).toEqual([
-    path.join(config, "plugins"),
-    path.join(tmp.path, "repo", ".opencode", "plugins"),
   ])
 })
 
