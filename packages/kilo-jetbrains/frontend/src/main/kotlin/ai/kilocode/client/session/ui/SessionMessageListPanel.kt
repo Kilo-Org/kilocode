@@ -16,6 +16,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.search.TranscriptSearchBody
 import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
@@ -111,6 +112,9 @@ class SessionMessageListPanel(
 
     /** Fired once when a chunked history rebuild finishes adding every turn. */
     var onRebuilt: (() -> Unit)? = null
+
+    /** Fired whenever searchable transcript structure or prose may have changed. */
+    var onSearchInvalidated: (() -> Unit)? = null
 
     /** True while a chunked history rebuild is still assembling turns. */
     val rebuilding: Boolean get() = rebuild.active
@@ -318,6 +322,16 @@ class SessionMessageListPanel(
     /** Find the rendered component for one part of a message, or null if neither has a view. */
     fun findPart(message: String, part: String): JComponent? = msgToView[message]?.part(part)
 
+    /** Width of the transcript's centered content lane, used by the Find bar. */
+    internal fun searchLaneWidth(): Int = SessionUiStyle.SessionLayout.readableWidth(this, style.transcriptFont)
+
+    /** Ordered conversation prose bodies suitable for transcript search. */
+    @RequiresEdt
+    internal fun searchBodies(): List<TranscriptSearchBody> {
+        if (dead || rebuild.active) return emptyList()
+        return turnViews.values.flatMap { it.searchBodies() }
+    }
+
     /**
      * Opens the collapsible card for one part before the navigator scrolls to it, so a question jump
      * lands on the answers instead of a collapsed header. Returns whether the card was expanded.
@@ -459,6 +473,7 @@ class SessionMessageListPanel(
         syncReverted()
         anchorFooter()
         refresh()
+        searchInvalidated()
     }
 
     private fun onTurnUpdated(turn: ai.kilocode.client.session.model.Turn) {
@@ -489,6 +504,7 @@ class SessionMessageListPanel(
         syncReverted()
 
         refresh()
+        searchInvalidated()
     }
 
     private fun onTurnRemoved(id: String) {
@@ -500,6 +516,7 @@ class SessionMessageListPanel(
         syncSettled()
         anchorFooter()
         refresh()
+        searchInvalidated()
     }
 
     /** Build and register the [TurnView] for [turn] without its messages or layout. */
@@ -547,6 +564,7 @@ class SessionMessageListPanel(
         syncReverted()
         anchorFooter()
         refresh()
+        searchInvalidated()
     }
 
     /** Rebuild finished: settle every turn, sync the visual state, and hand off to the open flow. */
@@ -569,6 +587,7 @@ class SessionMessageListPanel(
         scheduleReflow()
         refresh()
         onRebuilt?.invoke()
+        searchInvalidated()
     }
 
     private fun rebuild() {
@@ -682,6 +701,7 @@ class SessionMessageListPanel(
         anchorFooter()
         scheduleReflow()
         refresh()
+        searchInvalidated()
     }
 
     /**
@@ -806,6 +826,7 @@ class SessionMessageListPanel(
         if (displayChanged) {
             reflow()
             refresh()
+            searchInvalidated()
         }
         displayChanged = false
         pendingDisplay = null
@@ -825,6 +846,7 @@ class SessionMessageListPanel(
         syncReverting(state)
         anchorFooter()
         refresh()
+        searchInvalidated()
     }
 
     private fun syncSettled(state: SessionState = model.state) {
@@ -941,6 +963,11 @@ class SessionMessageListPanel(
         msgToTurn[messageId]?.syncCopyToolbars()
         forgetTurn(messageId)
         refresh()
+        searchInvalidated()
+    }
+
+    private fun searchInvalidated() {
+        onSearchInvalidated?.invoke()
     }
 
     /** Drop [SessionLayout]'s cached height for the turn holding [messageId] after its content changes. */
@@ -981,6 +1008,7 @@ class SessionMessageListPanel(
         progress.applyStyle(style)
         reflow()
         refresh()
+        searchInvalidated()
     }
 
     override fun dispose() {

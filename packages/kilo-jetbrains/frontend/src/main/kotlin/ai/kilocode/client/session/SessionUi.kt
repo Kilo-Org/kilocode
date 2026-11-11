@@ -70,6 +70,8 @@ import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.selection.SessionContextMenu
 import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.search.SessionSearch
+import ai.kilocode.client.session.ui.search.SessionSearchKeys
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.held
@@ -262,6 +264,7 @@ class SessionUi(
 
     private lateinit var prompt: PromptPanel
     private lateinit var completion: KiloPromptCompletionProvider
+    internal lateinit var search: SessionSearch
     private lateinit var load: LoadingPanel
     private lateinit var onboardingCard: OnboardingListCard
     private var empty: EmptySessionPanel? = null
@@ -314,6 +317,7 @@ class SessionUi(
     override fun addNotify() {
         if (disposed) return
         super.addNotify()
+        if (this::search.isInitialized) search.onShown()
         resumeOpen()
     }
 
@@ -441,6 +445,7 @@ class SessionUi(
     override fun uiDataSnapshot(sink: DataSink) {
         sink[PlatformDataKeys.COPY_PROVIDER] = provider
         sink[SessionActionsKeys.ACTIONS] = this
+        if (this::search.isInitialized) sink[SessionSearchKeys.SEARCH] = search
         // The prompt panel is a sibling of the transcript, so its own SendPromptContext only resolves
         // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
         // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
@@ -770,6 +775,14 @@ class SessionUi(
             hostedInEditorTab = manager?.hostedInEditorTab == true,
             files = !hosted,
         )
+        search = SessionSearch(
+            project = project,
+            owner = root,
+            panel = messageBody,
+            scroll = scroll,
+            scope = cs,
+            focusFallback = { if (!readonly && this::prompt.isInitialized) prompt else messageBody },
+        )
         connection = ConnectionPanel(this, controller)
         // The banner reports a broken session, so it owns the pointer where it sits: the transcript
         // under it must not stay hovered and keep a popup open behind it.
@@ -826,6 +839,7 @@ class SessionUi(
 
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
+        scroll.component.setColumnHeaderView(search.host)
         root.content.add(sessionContent, BorderLayout.CENTER)
         if (!readonly) {
             // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
@@ -1765,6 +1779,7 @@ class SessionUi(
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
+        if (this::search.isInitialized) search.applyStyle()
         promptRail.applyStyle(style)
         empty?.applyStyle(style)
         refresh()
@@ -1878,6 +1893,7 @@ class SessionUi(
         hide.stop()
         popup.hideAll()
         if (this::promptRail.isInitialized) promptRail.hideAll()
+        if (this::search.isInitialized) Disposer.dispose(search)
         modalFocus = null
         empty = null
         if (this::root.isInitialized) root.setModalContent(null)
