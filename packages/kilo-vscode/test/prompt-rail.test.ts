@@ -6,15 +6,10 @@ import type {
   SessionMessageInfo,
   SessionMessageUser,
 } from "@opencode/client"
-import {
-  capacity,
-  historyAction,
-  previewText,
-  promptItems,
-  railEntries,
-} from "../webview-ui/src/v2/prompt-rail-data"
+import { capacity, historyAction, previewText, promptItems, railEntries } from "../webview-ui/src/v2/prompt-rail-data"
 import type { TranscriptQueuedRow } from "../webview-ui/src/v2/transcript"
 import { transcriptRows } from "../webview-ui/src/v2/transcript"
+import { PUSH_INSTRUCTION } from "../src/shared/review-comments"
 
 const base = { time: { created: 1 } }
 
@@ -49,14 +44,18 @@ const tool: SessionMessageAssistant["content"][number] = {
 
 const rows = (messages: SessionMessageInfo[]) => transcriptRows(messages)
 
-const queued = (id: string, value: string): TranscriptQueuedRow => ({
+const queued = (
+  id: string,
+  value: string,
+  metadata?: SessionInboxUser["payload"]["metadata"],
+): TranscriptQueuedRow => ({
   key: `queued:${id}`,
   item: {
     id,
     sessionID: "session",
     time: { created: 1 },
     type: "user",
-    payload: { text: value },
+    payload: { text: value, metadata },
     delivery: "queue",
   } satisfies SessionInboxUser,
 })
@@ -176,6 +175,78 @@ describe("promptItems", () => {
       { key: "u1:user", queued: false, prompt: "Start" },
       { key: "queued:q1", queued: true, prompt: "Follow up" },
     ])
+  })
+
+  test("names a prompt Kilo composed instead of the template it expanded to", () => {
+    const [item] = promptItems(
+      rows([
+        user("u1", "Run the project checks for the current worktree.\n\nTarget: unit", {
+          metadata: { kilo: { injected: { title: "/check unit" } } },
+        }),
+      ]),
+    )
+
+    expect(item!.prompt).toBe("Sent by Kilo · /check unit")
+  })
+
+  test("keeps a prompt another session delivered and names its origin", () => {
+    const [item] = promptItems(
+      rows([user("u1", "Please review the diff in this worktree.\n\n<!-- kilo-agent-manager source=ses_1 -->")]),
+    )
+
+    expect(item!.prompt).toBe("Sent by Kilo from another session: Please review the diff in this worktree.")
+  })
+
+  test("names a queued prompt Kilo composed too", () => {
+    const metadata = { kilo: { injected: { title: "/review staged" } } }
+    const items = promptItems(rows([]), [queued("q1", "You are Kilo Code, an expert code reviewer.", metadata)])
+
+    expect(items[0]?.prompt).toBe("Sent by Kilo · /review staged")
+  })
+
+  test("resolves a review prompt from the body the transcript shows", () => {
+    const comments = {
+      version: 1,
+      comments: [
+        { id: "c1", file: "src/auth.ts", side: "additions", line: 3, comment: "Check the token", selectedText: "" },
+      ],
+    }
+    const metadata = { kilo: { review: comments } }
+    const stored = [
+      "## Review Comments",
+      "",
+      "**src/auth.ts** (line 3):",
+      "Check the token",
+      "",
+      PUSH_INSTRUCTION,
+      "",
+      "Also rename the helper.",
+    ].join("\n")
+
+    const [item] = promptItems(rows([user("u1", stored, { metadata })]))
+
+    expect(item!.prompt).toBe("Kilo added: push fixes to the pull request")
+  })
+
+  test("previews the user's own text for a review prompt without a push instruction", () => {
+    const comments = {
+      version: 1,
+      comments: [
+        { id: "c1", file: "src/auth.ts", side: "additions", line: 3, comment: "Check the token", selectedText: "" },
+      ],
+    }
+    const stored = [
+      "## Review Comments",
+      "",
+      "**src/auth.ts** (line 3):",
+      "Check the token",
+      "",
+      "Also rename the helper.",
+    ].join("\n")
+
+    const [item] = promptItems(rows([user("u1", stored, { metadata: { kilo: { review: comments } } })]))
+
+    expect(item!.prompt).toBe("Also rename the helper.")
   })
 })
 

@@ -1,6 +1,14 @@
-# Kilo Configuration
+# Kilo
 
-Kilo configures itself with `kilo2.json` and `kilo2.jsonc`. This guide covers the file names, the search order, the project directories that hold commands, agents and skills, and the settings an agent may edit. Use it for Kilo configuration questions, for finding a loaded setting, and for changing settings.
+Kilo configures itself with `kilo2.json` and `kilo2.jsonc`, and its command is `kilo2`. This guide covers the file names, the search order, the project directories that hold commands, agents and skills, the settings an agent may edit, the terminal settings, MCP servers, the background service, the API, Agent Manager and troubleshooting. Use it for any question about Kilo itself.
+
+## Documentation
+
+Product documentation is at <https://kilo.ai/docs>, with a machine-readable index at <https://kilo.ai/docs/llms.txt>. Fetch the relevant page before answering a question it covers. Those pages still show the v1 names (`kilo`, `kilo.json`, `~/.config/kilo/`, `.kilo/kilo.json`); translate them to the `kilo2` names in this guide.
+
+Kilo runs on the OpenCode V2 runtime. For the shared runtime only (plugin API, SDK and client, HTTP API, terminal settings reference and keybind IDs) the OpenCode V2 docs at <https://opencode.ai/docs/> apply, with `opencode` read as `kilo2`, `opencode.json` as `kilo2.json` and `~/.config/opencode/` as `~/.config/kilo2/`. Never use them for Kilo-specific features, file locations or providers.
+
+The loaded configuration and this guide win over any documentation page. If they disagree or the docs are silent, say so instead of guessing.
 
 ## Config files
 
@@ -21,24 +29,51 @@ Outside the managed system directory, Kilo does not read `kilo.json`, `kilo.json
 
 Do not guess a field name. Read the configuration file before editing it, preserve unrelated keys, and use the loaded configuration as the source of truth.
 
+Config changes apply without a restart. Kilo watches config files and reloads agents, commands, skills, MCP servers and plugins after a save; the TUI does the same for `cli.json`. `/reload` forces a full reload. Do not tell the user to restart Kilo after editing config.
+
+`kilo2 debug config` prints the loaded config sources, `kilo2 debug agents` the effective agents, and `kilo2 debug paths` every data, config, state, cache, log and database path. Prefer them to guessing what is loaded.
+
+Config text supports `{env:NAME}` and `{file:path}` substitution. Older v1 keys (`provider`, `permission`, `plugin`, `command`, `autoupdate`, `snapshot`, `small_model`, `disabled_providers`) are still read and migrated, but always write the v2 names below.
+
 ## Config directories
 
-Each project directory on the walk is a config directory. It loads its root files and a `.kilo2` child directory. The global directory loads its root files and its own command, agent and skill directories, but not a `.kilo2` child. Kilo scans these roots for:
+Each project directory on the walk is a config directory. It loads its root files and a `.kilo2` child directory. The global directory loads its root files and its own subdirectories, but not a `.kilo2` child. Kilo scans these roots for:
 
 | Content | Pattern |
 |---|---|
-| Commands | `{command,commands}/**/*.md` |
-| Agents and modes | `{agent,agents}/**/*.md`, `{mode,modes}/*.md` |
-| Skills | `{skill,skills}/<name>/SKILL.md`, or a flat `{skill,skills}/*.md` |
-| Instructions | `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, and paths from `instructions` |
+| Commands | `{command,commands}/**/*.md`; the path below that folder without `.md` is the name (`command/git/commit.md` is `/git/commit`) |
+| Agents | `{agent,agents}/**/*.md`; `{mode,modes}/*.md` are always primary agents |
+| Skills | `{skill,skills}/<name>/SKILL.md` (nested up to 6 levels) or a flat `{skill,skills}/*.md`; also `skills/` in `.claude` and `.agents` (project and home) |
+| Plugins | `{plugin,plugins}/*.{ts,js}` or a plugin package directory |
+| Instructions | `AGENTS.md` in the global directory and in each directory from the workspace up to the project root, plus `instructions` |
 
-A skill file has `name` and `description` in frontmatter. A user skill with the same ID as a built-in skill overrides the built-in skill.
+Only `AGENTS.md` is read as an instruction file. `CLAUDE.md` and `CONTEXT.md` are not loaded; add them to `instructions` if needed. `KILO_DISABLE_CLAUDE_CODE=1` or `KILO_DISABLE_CLAUDE_CODE_SKILLS=1` stops loading the `.claude` and `.agents` skills.
+
+To find where `/name` or an agent comes from, list the loaded set first (`kilo2 api get /api/command`, `kilo2 api get /api/agent`), then search the patterns above in `~/.config/kilo2/`, `$KILO2_CONFIG_DIR`, each `.kilo2/` from the workspace up to the worktree root, and the `commands` or `agents` keys of the config files. Never search `.kilo/`, `.kilocode/` or `~/.kilo*`: v2 does not read them. MCP prompts also appear as `/<server>:<prompt>` commands.
+
+## Commands
+
+A command file's body is its template. Frontmatter: `description`, `agent`, `model` and `subagent: true` to run it in a child session (`subtask` is a deprecated alias). Templates expand `$1`…`$N` (the highest one takes the rest), `$ARGUMENTS` (the whole input) and `` !`cmd` `` (shell output, run in the workspace; a failure fails the command). A template without a placeholder gets the input appended. `@file` is not expanded in v2.
+
+The same fields work inline: `"commands": { "test": { "template": "Run the tests in $ARGUMENTS" } }`. An entry with only `model` changes the model of an existing file command without replacing it. Built-in commands are `/init` and Kilo's `/review` (`uncommitted`, `staged`, `unpushed`, `branch`, `commit` or `pr`); a config command with the same name replaces a built-in.
+
+There is no `workflows/` directory in v2. A v1 workflow becomes a command: move it to `.kilo2/command/<name>.md`.
+
+## Agents
+
+An agent file's body is its system prompt. Frontmatter: `description`, `mode` (`primary`, `subagent` or `all`), `model`, `steps` (maximum iterations), `hidden`, `color` (`#RRGGBB` only), `disabled` (also removes a built-in agent), `permissions` and `request: { headers, body }`.
+
+Kilo's primary agents are `code` (the default), `ask`, `debug`, `orchestrator` and `plan`; `general` and `explore` are subagents, and `build` is a hidden alias of `code`. `ask`, `plan` and `orchestrator` keep read-only limits that broad global `permissions` cannot widen; a rule in that agent's own `permissions` can. `explore`'s shell cannot be widened, only restricted further with deny rules. The Plan agent may only edit plan files (`.kilo2/plans/*.md`, `plans/*.md`, `.plans/*.md`, and anything under `<data>/plans/`) and hands off with `plan_exit`.
+
+## Skills
+
+`name` and `description` are optional, and the ID comes from the folder (or file) name. Only a skill with a `description` is offered to the model; `disable-model-invocation: true` keeps it user-only. Deny one with `{ "action": "skill", "resource": "<id>", "effect": "deny" }`. `kilo-config` is the only built-in skill, and a user skill with that ID replaces it.
 
 ## Common fields
 
 ```jsonc
 {
-  "model": "anthropic/claude-sonnet", // provider/model, or the object form
+  "model": "anthropic/claude-sonnet", // provider/model, provider/model#variant, or { providerID, model, variant }
   "default_agent": "code",
   "permissions": [
     { "action": "shell", "resource": "rm *", "effect": "deny" },
@@ -49,29 +84,86 @@ A skill file has `name` and `description` in frontmatter. A user skill with the 
       "description": "Reviews changes",
       "mode": "subagent",
       "permissions": [{ "action": "edit", "resource": "*", "effect": "deny" }]
-    }
+    },
+    "title": { "model": "kilo/some-small-model" } // replaces v1 small_model
   },
   "commands": {
     "test": { "template": "Run the tests in $ARGUMENTS" }
   },
   "skills": ["./my-skills", "https://example.com/skills/"],
   "instructions": ["docs/*.md"],
-  "mcp": {
-    "servers": {
-      "local": { "type": "local", "command": ["node", "server.js"] },
-      "remote": { "type": "remote", "url": "https://mcp.example.com" }
-    }
-  },
-  "plugins": ["@acme/kilo-plugin"],
+  "plugins": ["@acme/kilo-plugin", { "package": "./local-plugin", "options": {} }],
   "worktree": { "directory": "worktrees" }
 }
 ```
 
-`permissions` is an ordered array of rules. The last matching rule wins. `effect` is `allow`, `ask` or `deny`. An agent has the same `permissions` array.
+`skills` holds paths or `https` URLs; relative paths resolve from the workspace and `~` from home. `instructions` holds paths, globs or URLs; a relative pattern is searched upward from the workspace to the project root.
 
-`mcp.servers` holds local and remote server definitions. A local server has `type`, `command` and optional `environment`. A remote server has `type`, `url` and optional `headers` and `oauth`.
+`plugins` holds package names or `{ package, options }`; a local plugin is a directory (`./`, `../` or `file://`), and `"-name"` removes an inherited entry. Prefer `kilo2 plugin add <package>`, `plugin remove`, `plugin list [--builtin]`, `plugin check` and `plugin update`. Packages install into the global cache, not the project.
 
-`skills` and `instructions` hold paths or URLs. Relative paths resolve from the current location directory. `~` expands from the home directory.
+Other upstream keys: `share` (`manual`, `auto`, `disabled`), `update` (`disable`, `notify`, `auto`; was `autoupdate`), `snapshots` (was `snapshot`), `compaction` (`auto`, `keep.tokens`, `buffer`; `prune` is gone), `websearch`, `references` (named local folders or git repositories as context), `formatter`, `lsp`, `watcher.ignore`, `tool_output`, `media.image`, `username`, `shell`, `experimental`.
+
+## Permissions
+
+`permissions` is an ordered array of `{ action, resource, effect }`; `effect` is `allow`, `ask` or `deny`, and the last matching rule wins, so put broad rules first. Unmatched actions ask. A `deny` on `resource: "*"` also hides the tool from the model. Top-level rules apply to every agent; an agent's own rules come after them and win.
+
+Actions are tool names: `read`, `edit` (covers write and patch), `shell`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `subagent`, `question`, `todowrite`, `external_directory`, `execute`, and Kilo's `semantic_search`, `browser_open`, `recall`, `board_read`, `board_post`, `agent_manager`, `sandbox_escalation`. MCP tools use `<server>_<tool>` (`github_*` matches a whole server). v1's `bash` is `shell`, `task` is `subagent`. When converting a v1 `permission` map, move the catch-all `"*"` rule first. `~` expands in `read`, `edit` and `external_directory` resources only.
+
+`policies` is a separate firewall that only allows or denies, and anything unmatched is allowed. Its actions are `provider.use`, `tool.use`, `mcp.use`, `skill.use`, `plugin.use`, `integration.connect`, `integration.use` and `websearch.use`. Managed policy outranks user and project. v1 `disabled_providers` and `enabled_providers` become `provider.use` rules:
+
+```jsonc
+{ "policies": [{ "action": "provider.use", "resource": "openai", "effect": "deny" }] }
+```
+
+## Providers and sign-in
+
+Configure providers under `providers.<id>` (not v1 `provider`). `settings` holds `apiKey`, `baseURL`, `timeout` and options passed to the provider package (v1 `options`); `env`, `headers`, `body` and `models` are also accepted. There is no `whitelist` or `blacklist`; hide a model with `providers.<id>.models.<model>.disabled: true`.
+
+The Kilo Gateway is the `kilo` provider. Sign in with `kilo2 auth login` and pick **Kilo Gateway (Device Authorization)**, or `/connect` in the TUI; free models work signed out. `kilo2 auth list`, `logout` and `switch` manage connected integrations, and `KILO_API_KEY` and `KILO_ORG_ID` supply a Gateway token and team. `kilo2 models` lists available models.
+
+## Terminal settings
+
+CLI and TUI preferences are not in `kilo2.json`. They live only in the global `~/.config/kilo2/cli.json` (JSONC; it moves with `KILO2_CONFIG_DIR`); there is no project-level CLI config. `OPENCODE_CLI_CONFIG_CONTENT` merges inline JSON over it. Keys include `theme` (`name`, `mode`), `keybinds`, `leader`, `attention` (notifications and sounds, off by default), `diffs`, `session` (`thinking`, `sidebar`, `scrollbar` and more), `tabs`, `prompt`, `terminal`, `mini`, `animations`, `mouse`, `cursor` and terminal `plugins`. Most can be changed with `Ctrl+P` → **Open settings**; keybindings only in the file.
+
+Keybindings go under `keybinds`. The leader defaults to `ctrl+x` (`keybinds.leader`, timeout `leader.timeout`, 2000 ms). A binding is a string, an array or an object with event options; `"none"` or `false` disables it. Never guess a command ID or default: fetch the keybind reference first.
+
+The default theme is `kilo`. Custom themes are JSON files in `~/.config/kilo2/themes/` and appear in `/themes`.
+
+Common slash commands: `/sessions`, `/new`, `/models`, `/agents`, `/variants` (`/thinking` opens it), `/mcps`, `/connect`, `/settings`, `/themes`, `/status`, `/reload`, `/compact`, `/undo`, `/redo`, `/fork`, `/rename`, `/timeline`, `/copy`, `/copy-session`, `/export`, `/skills`, `/worktrees`, `/terminal`, `/diff`, `/stats`, `/help`, `/exit`. Kilo adds `/review`, `/usage` (`/plans`, `/quota`), `/profile`, `/teams`, `/marketplace`, `/indexing`, `/sandbox`, `/privacy`, `/remote`, `/caffeinate` and `/about`. `/share`, `/timestamps` and `/summarize` no longer exist.
+
+## MCP servers
+
+Prefer the CLI, which keeps unrelated config intact. Add `--global` when the user wants the server for themselves rather than one project:
+
+```sh
+kilo2 mcp add <name> --global --url <remote-url>
+kilo2 mcp list
+```
+
+Servers live under `mcp.servers.<name>`. A local server has `type: "local"`, `command` (array) and optional `cwd` and `environment`; a remote server has `type: "remote"`, `url` and optional `headers` and `oauth` (snake_case `client_id`, `scope`, `redirect_uri`…, or `false`). Both accept `disabled`, `timeout` (`{ startup, catalog, execution }` in ms; a number sets all three) and `codemode`. To turn off an inherited server, re-declare it in the nearer config with `"disabled": true`; v1's `"enabled": false` is ignored.
+
+Remote servers use OAuth by default. When `mcp list` reports that a server needs authentication, tell the user to run `/mcps`, select the server and sign in. Do not run `kilo2 mcp auth` through the shell tool: its authorization link can be hidden in background output. Report the server as awaiting sign-in until its status shows it connected. Do not ask for an API key when OAuth works; when a header credential is unavoidable, use `{env:NAME}` instead of writing the secret into config.
+
+## Kilo settings
+
+Kilo adds these top-level keys to `kilo2.json`:
+
+| Key | Effect |
+|---|---|
+| `indexing` | Enables `semantic_search`: `enabled`, `provider` (`kilo`, `openai`, `ollama`, `openai-compatible`, `gemini`, `mistral`, `vercel-ai-gateway`, `bedrock`, `openrouter`, `voyage`), `model`, `vectorStore` (`lancedb`, or `qdrant` with `qdrant.url`; Intel Macs need `qdrant`), per-provider options and search tuning. `/indexing` shows status. |
+| `sandbox` | `{ enabled, network: "allow"\|"deny", writable_paths, allowed_hosts }` confines new sessions; network defaults to deny and `allowed_hosts` allows exact destinations. A project config can only enable or restrict, never widen. |
+| `session_sync` | Default on, global config only. Syncs signed-in sessions; `kilo2 sync status\|enable\|disable\|flush`. |
+| `remote_control` | Lets Kilo Cloud drive sessions; also `/remote`, `KILO_REMOTE=1` or `kilo2 remote`. |
+| `privacy_mode` | Blurs account email, balance and team in the TUI. Any `true` in any config turns it on. |
+| `hide_prompt_training_models` | Hides Gateway models that may train on prompts and denies provider data collection. |
+| `shared_agent_board` | Default on. Gives a session and its subagents `board_read` and `board_post`. |
+| `commit_message` | `{ "prompt": "..." }` replaces the commit-message prompt. |
+| `reasoning_display` | `expanded`, `preview` or `headline` (`auto_collapse_reasoning` is deprecated). |
+| `terminal_command_display`, `code_edit_display`, `mcp_tool_display`, `code_mode_display` | `expanded` or `collapsed`, for the VS Code chat. |
+
+`retention`, `web_search`, `subagent_model`, `subagent_variant`, `subagent_variant_overrides` and `memory_model` are accepted but not applied yet in this version; say so rather than promising an effect.
+
+Some tools exist only in the VS Code extension: `browser_open`, the notebook tools and `agent_manager`. `subagent` runs child sessions in the background by default; pass `background: false` to wait for the result inline. `kilo_local_recall` searches earlier sessions of the project. The marketplace (VS Code, `/marketplace`) installs skills, agents and MCP servers into the global or project config.
 
 ## Environment variables
 
@@ -79,10 +171,17 @@ A skill file has `name` and `description` in frontmatter. A user skill with the 
 |---|---|
 | `KILO2_CONFIG` | Path to an additional config file. |
 | `KILO2_CONFIG_DIR` | Global config directory, instead of `~/.config/kilo2/`. |
+| `KILO2_DB` | Session database file. |
 | `KILO_CONFIG_CONTENT` | Inline JSON config, after project directories. |
 | `KILO_DISABLE_PROJECT_CONFIG` | Skip project config files and directories. |
+| `KILO_DISABLE_AUTOUPDATE`, `KILO_DISABLE_MODELS_FETCH`, `KILO_MODELS_URL`, `KILO_MODELS_PATH`, `KILO_SERVER_PASSWORD`, `KILO_GIT_BASH_PATH` | Translated to the runtime's `OPENCODE_*` names. |
+| `OPENCODE_CLI_CONFIG_CONTENT`, `OPENCODE_LOG_LEVEL`, `OPENCODE_PRINT_LOGS` | Read under their `OPENCODE_` names; there is no `KILO_` form. |
 
 v1 `KILO_CONFIG`, `KILO_CONFIG_DIR` and `KILO_DB` have no effect on `kilo2`.
+
+## Coming from v1
+
+`kilo2 import v1 [--from <kilo.db or data dir>] [--since 14d]` copies v1 sessions into a new `kilo2` store. It only reads v1, and refuses when a `kilo2` database already exists, so run it before the first launch or point `KILO2_DB` at a new file. v1 config, TUI preferences and workflows are not imported; recreate them with the `kilo2` names above. `kilo2 upgrade` does not self-update; update through the install method.
 
 ## Agent Manager
 
@@ -95,23 +194,49 @@ Project setup and run scripts stay in the main checkout's `.kilo/` directory:
 | Setup | `.kilo/setup-script`, `.kilo/setup-script.sh` (`.ps1`, `.cmd`, `.bat` on Windows) |
 | Run | `.kilo/run-script`, `.kilo/run-script.sh` (`.ps1`, `.cmd`, `.bat` on Windows) |
 
-Setup runs once when a worktree is created, with `WORKTREE_PATH` and `REPO_PATH` set. Run runs from the selected context with the same variables. Setup has a 5 minute timeout.
+Setup runs once when a managed worktree is created, imported or promoted, before the agent session starts, from the worktree directory with the user's shell environment plus `WORKTREE_PATH` (the worktree) and `REPO_PATH` (the main checkout). Root-level `.env` and `.env.*` files are copied first without overwriting; nested env files and other local files need the setup script. Setup has a 5 minute timeout, and a failure leaves the worktree for inspection.
 
-## Related settings
+Run starts or stops the project for the selected context: the worktree, or the main checkout when `LOCAL` is selected, with the same variables. Without a valid run script, Run opens the script template instead. Derive ports, caches, Compose project names and databases from `WORKTREE_PATH` or the branch so worktrees do not collide.
 
-Kilo adds these top-level settings to the shared schema:
+To bring changes back, use Apply for selected changes, merge the worktree branch, or create or update a PR from the worktree. Resolve conflicts inside the worktree first: merge or rebase the base branch there, let the agent fix conflicts and run checks, then integrate. Never use `git stash` or autostash: stashes are shared across worktrees. For larger parallel efforts, stabilize shared contracts, schemas and file layout on the base branch before splitting work.
 
-- `session_sync`
-- `hide_prompt_training_models`
-- `privacy_mode`
-- `reasoning_display`
-- `shared_agent_board`
-- `subagent_model`, `subagent_variant`, `subagent_variant_overrides`
-- `memory_model`
-- `web_search`
-- `retention`
-- `commit_message`
-- `indexing`
-- `sandbox`
+Troubleshooting:
 
-Full product documentation is at <https://kilo.ai/docs>.
+- Run opens configuration: no valid run script for this platform. A script that is ignored usually has the wrong file name.
+- Port conflicts (`EADDRINUSE`, tests hitting another worktree): check the app's dev-server config as well as the run script, and ask before changing application code.
+- Missing commands: when VS Code was launched from the GUI, the shell environment may not load fully; check how VS Code was started.
+- Script output is in the Agent Manager script terminals, not the chat; ask the user for it when needed.
+- `agent-manager.json` is diagnostic and recovery state for lost sessions or stale worktrees. It can be large, so read it selectively. It holds no script contents, run status or terminal mappings.
+
+Full guides: <https://kilo.ai/docs/automate/agent-manager> and <https://kilo.ai/docs/automate/agent-manager-workflows>.
+
+## Service and API
+
+Kilo is client and server: the TUI and the editor extensions connect to a background service that owns sessions, configuration, plugins, permissions and tool execution. It starts automatically. Restart it only when it is stuck or unhealthy, never to apply config:
+
+```sh
+kilo2 service status
+kilo2 service restart
+```
+
+`kilo2 service start|stop|get|set|unset` manage it further (`kilo2 daemon` is an alias). `kilo2 run "message"` runs one prompt non-interactively, `kilo2 mini` opens the minimal interface, and `kilo2 session list|export|import|delete` manages sessions.
+
+In Code Mode, call the built-in `tools.opencode.*` namespace inside `execute` first; find its tools with `search({ namespace: "opencode" })`. For anything it does not cover, use `kilo2 api`, which discovers and authenticates against the same service as the TUI. It takes an HTTP method and path or an OpenAPI operation ID, `--data`/`-d` for a JSON body and `--header`/`-H` for headers:
+
+```sh
+kilo2 api get /api/info
+kilo2 api post /api/example --data '{"key":"value"}'
+```
+
+The running server serves its OpenAPI document at `/openapi.json`.
+
+## Troubleshooting
+
+First decide whether the problem is the client, the shared service or one project.
+
+- Check `kilo2 service status` and `kilo2 api get /api/info`.
+- Compare with `kilo2 --standalone`, which runs the TUI with a private server.
+- Read `~/.local/share/kilo2/log/opencode.log` (a build from source writes `opencode-local.log`). Filter `role=cli` for client startup and `role=server` for sessions, providers, plugins, permissions and tools. `--print-logs` mirrors logs to stderr.
+- Reproduce once with `OPENCODE_LOG_LEVEL=DEBUG` when normal logs are not enough.
+- Do not delete or edit the database (`kilo2.db`), service registration or service config while diagnosing. Back up persistent data before inspecting it.
+- Redact API keys, authorization headers, prompts and file contents before sharing diagnostics. Report bugs at <https://github.com/Kilo-Org/kilocode/issues>.

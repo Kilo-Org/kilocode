@@ -9,12 +9,16 @@ import type { ModelRef } from "@opencode/client"
 import type { AgentManagerSendInitialMessage } from "../src/types/messages/agent-manager"
 import type { V2 } from "../src/v2/scope"
 
-type InitialFile = { uri: string; name?: string }
+type InitialFile = { uri: string; name?: string; mention?: { start: number; end: number; text: string } }
 
-/** The host names files by mime and URL; the v2 prompt takes a URI and an optional display name. */
+/** The host names files by mime and URL; the v2 prompt takes a URI, and an `@` mention its name and span. */
 export function initialFiles(files: AgentManagerSendInitialMessage["files"]): InitialFile[] | undefined {
   if (!files?.length) return undefined
-  return files.map((file) => ({ uri: file.url }))
+  return files.map((file) => ({
+    uri: file.url,
+    ...(file.name ? { name: file.name } : {}),
+    ...(file.mention ? { mention: file.mention } : {}),
+  }))
 }
 
 /** The model a first prompt runs on, with the requested reasoning effort. */

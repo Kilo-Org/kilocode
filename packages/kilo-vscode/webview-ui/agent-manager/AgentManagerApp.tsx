@@ -166,6 +166,7 @@ import { ReviewCommentActionsContext, type ReviewCommentActions } from "../src/c
 import { openPRComment } from "../src/utils/pr-review"
 import type { ReviewAppendHandler } from "../src/v2/append-ready"
 import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
+import { injectedMetadata } from "../../src/shared/injected-prompt"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -521,6 +522,7 @@ const AgentManagerContent: Component = () => {
     restore: () => restoreSession(),
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
+  /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
   const focusOnDraftChange = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
@@ -813,16 +815,16 @@ const AgentManagerContent: Component = () => {
   })
   // Past-chat mentions use the loaded session lists plus the host catalog, so a worktree whose store is not shown yet
   // still offers its sessions.
-  const mentionSessions = createMemo(() => {
-    const known = new Map<string, { id: string; title: string; updated: number }>()
-    const add = (info: { id: string; title?: string; time: { updated: number } }) => {
-      if (info.title) known.set(info.id, { id: info.id, title: info.title, updated: info.time.updated })
-    }
-    for (const info of sessions.sessions()) add(info)
-    for (const info of projectSessionsLive()[currentProjectId() ?? ""] ?? []) add(info)
-    return [...known.values()].toSorted((a, b) => b.updated - a.updated)
-  })
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
+  // `@git-changes` in a worktree diffs against the branch the worktree was created from, on its remote when it has one.
+  const gitTarget = () => {
+    const id = selection()
+    if (!id || id === LOCAL) return undefined
+    const worktree = worktrees().find((item) => item.id === id)
+    if (!worktree) return undefined
+    const base = worktree.remote ? `${worktree.remote}/${worktree.parentBranch}` : worktree.parentBranch
+    return { directory: worktree.path, base }
+  }
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
     if (!pid) return undefined
@@ -1792,7 +1794,6 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
-            sessions={mentionSessions()}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
@@ -2126,7 +2127,12 @@ const AgentManagerContent: Component = () => {
         return
       }
       if (message.type !== "startPrompt") return
-      composerQueue.push({ type: "submit", text: message.text, items: message.items ?? [] })
+      composerQueue.push({
+        type: "submit",
+        text: message.text,
+        items: message.items ?? [],
+        metadata: message.injectedTitle ? injectedMetadata(message.injectedTitle) : undefined,
+      })
     })
 
     onCleanup(() => {
@@ -2324,6 +2330,8 @@ const AgentManagerContent: Component = () => {
                     onNewSession={handleNewTabForCurrentSelection}
                     worktree={!!selection() && selection() !== LOCAL}
                     manager={hints.manager}
+                    focusOnDraftChange={focusOnDraftChange}
+                    onFocusChange={focusCtl.prompt}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}
@@ -2333,6 +2341,11 @@ const AgentManagerContent: Component = () => {
                     onViewTurnChanges={openTurnChanges}
                     onForkMessage={handleForkSession}
                     onMissing={(id) => handleCloseTab(id)}
+                    worktrees={references}
+                    git={isGitRepo}
+                    gitTarget={gitTarget}
+                    terminalContext={() => selection() ?? undefined}
+                    resolveEmbeddedTerminal={resolveTerminal}
                     onPrompted={(sessionId, text, model) =>
                       to({
                         type: "agentManager.promptSent",

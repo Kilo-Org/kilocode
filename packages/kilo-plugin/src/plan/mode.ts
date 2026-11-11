@@ -17,6 +17,10 @@ export const leave = `<system-reminder>
 You are NO LONGER in Plan mode. The previous Plan mode instructions and plan file rules no longer apply. Any Plan mode instructions from earlier in this conversation are no longer active.
 </system-reminder>`
 
+// The v1 session/prompt/plan.txt rules are carried by this reminder: read-only except the plan file, no other
+// edits or mutating commands, and plan_exit when the plan is ready (prompt.txt and the Plan File lines below).
+// kilo_port(unattributed:session:e8df6758fc84)
+// kilo_port(unattributed:session:e81997ff89bf)
 /** The Plan mode reminder of one session: the Kilo planning instructions and where the plan file goes. */
 export function enter(input: { session: Pick<Session.Info, "time">; target: PlanFile.Target; data: string; document: boolean }) {
   const dir = PlanFile.directory(input.target, input.data)

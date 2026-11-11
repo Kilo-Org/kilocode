@@ -55,6 +55,17 @@ export type {
 
 export type { SessionInfo }
 
+/**
+ * A file the first prompt of a new worktree attaches. An `@` mention keeps its name and span, so the transcript
+ * highlights it.
+ */
+export type InitialFile = {
+  mime: string
+  url: string
+  name?: string
+  mention?: { start: number; end: number; text: string }
+}
+
 export interface ProjectSessionInfo extends SessionInfo {
   worktreeId: string | null
 }
@@ -757,7 +768,7 @@ export interface AgentManagerSendInitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 /** Host request for the focused element, so prompts can be routed to the panel. */
@@ -1173,7 +1184,7 @@ export interface CreateMultiVersionRequest {
   providerID?: string
   modelID?: string
   agent?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
   baseBranch?: string
   branchName?: string
   /** Per-version model allocations for multi-model comparison mode. */

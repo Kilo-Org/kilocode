@@ -1,11 +1,14 @@
 import { describe, expect, it } from "bun:test"
 import {
+  buildHighlightSegments,
   buildPromptSegments,
+  dirName,
   expandPastes,
   fileName,
   findPastePlaceholders,
   inputSpan,
   isCollapsiblePaste,
+  isPathMention,
   pasteInsertion,
   pastePlaceholder,
   promptLineCount,
@@ -345,11 +348,147 @@ describe("buildPromptSegments", () => {
     ])
   })
 
+  it("still highlights mentions around a paste", () => {
+    const text = "@foo.ts [Pasted ~5 lines]"
+    const segments = buildPromptSegments(text, [paste(1, 8, "body")], new Set(["foo.ts"]))
+    expect(segments).toEqual([
+      { text: "@foo.ts", kind: "mention" },
+      { text: " ", kind: "plain" },
+      { text: "[Pasted ~5 lines]", kind: "paste", paste: 1 },
+    ])
+  })
+
   it("renders a placeholder with no backing as plain text", () => {
     expect(buildPromptSegments("[Pasted ~5 lines]", [])).toEqual([{ text: "[Pasted ~5 lines]", kind: "plain" }])
   })
 
   it("returns an empty list for empty text", () => {
     expect(buildPromptSegments("", [])).toEqual([])
+  })
+})
+
+describe("dirName", () => {
+  it("returns empty string for a file with no directory", () => {
+    expect(dirName("README.md")).toBe("")
+  })
+
+  it("returns the directory for a simple path", () => {
+    expect(dirName("src/foo.ts")).toBe("src")
+  })
+
+  it("returns full directory for a short path", () => {
+    expect(dirName("src/components/foo.ts")).toBe("src/components")
+  })
+
+  it("truncates long directories to last two segments", () => {
+    const path = "packages/kilo-vscode/webview-ui/src/components/chat/foo.ts"
+    const result = dirName(path)
+    expect(result).toMatch(/^…\//)
+    expect(result).toContain("components/chat")
+  })
+
+  it("does not truncate directories at exactly 30 chars", () => {
+    const dir = "a".repeat(15) + "/" + "b".repeat(14)
+    const result = dirName(`${dir}/file.ts`)
+    expect(result).toBe(dir)
+  })
+
+  it("truncates directories longer than 30 chars", () => {
+    const dir = "a".repeat(16) + "/" + "b".repeat(15)
+    const result = dirName(`${dir}/file.ts`)
+    expect(result.startsWith("…/")).toBe(true)
+  })
+
+  it("normalizes Windows backslashes before measuring length", () => {
+    const result = dirName("src\\foo.ts")
+    expect(result).toBe("src")
+  })
+})
+
+describe("buildHighlightSegments", () => {
+  it("returns single non-highlighted segment when paths set is empty", () => {
+    const result = buildHighlightSegments("hello world", new Set())
+    expect(result).toEqual([{ text: "hello world", highlight: false }])
+  })
+
+  it("returns single non-highlighted segment when no mention present", () => {
+    const result = buildHighlightSegments("hello world", new Set(["foo.ts"]))
+    expect(result).toEqual([{ text: "hello world", highlight: false }])
+  })
+
+  it("highlights a single mention token", () => {
+    const result = buildHighlightSegments("@foo.ts", new Set(["foo.ts"]))
+    expect(result).toEqual([{ text: "@foo.ts", highlight: true }])
+  })
+
+  it("splits text before and highlight token", () => {
+    const result = buildHighlightSegments("see @foo.ts here", new Set(["foo.ts"]))
+    expect(result).toEqual([
+      { text: "see ", highlight: false },
+      { text: "@foo.ts", highlight: true },
+      { text: " here", highlight: false },
+    ])
+  })
+
+  it("highlights multiple mentions in order", () => {
+    const result = buildHighlightSegments("@a.ts and @b.ts done", new Set(["a.ts", "b.ts"]))
+    expect(result).toEqual([
+      { text: "@a.ts", highlight: true },
+      { text: " and ", highlight: false },
+      { text: "@b.ts", highlight: true },
+      { text: " done", highlight: false },
+    ])
+  })
+
+  it("picks the earliest mention when multiple paths could match", () => {
+    const result = buildHighlightSegments("@b.ts then @a.ts", new Set(["a.ts", "b.ts"]))
+    expect(result[0]).toEqual({ text: "@b.ts", highlight: true })
+    expect(result[2]).toEqual({ text: "@a.ts", highlight: true })
+  })
+
+  it("handles back-to-back mentions with no separator", () => {
+    const result = buildHighlightSegments("@a.ts@b.ts", new Set(["a.ts", "b.ts"]))
+    const highlighted = result.filter((s) => s.highlight)
+    expect(highlighted).toHaveLength(2)
+  })
+
+  it("returns empty array for empty string", () => {
+    const result = buildHighlightSegments("", new Set(["foo.ts"]))
+    expect(result).toEqual([])
+  })
+
+  it("does not partially match longer paths", () => {
+    const result = buildHighlightSegments("@foo.ts", new Set(["foo.tsx"]))
+    expect(result).toEqual([{ text: "@foo.ts", highlight: false }])
+  })
+})
+
+describe("isPathMention", () => {
+  it("returns true for a file path", () => {
+    expect(isPathMention("@src/foo.ts")).toBe(true)
+  })
+
+  it("returns true for a simple filename", () => {
+    expect(isPathMention("@README.md")).toBe(true)
+  })
+
+  it("returns true for a folder path with trailing slash", () => {
+    expect(isPathMention("@src/components/")).toBe(true)
+  })
+
+  it("returns true for a folder path without trailing slash", () => {
+    expect(isPathMention("@src/components")).toBe(true)
+  })
+
+  it("returns false for terminal mention", () => {
+    expect(isPathMention("@terminal")).toBe(false)
+  })
+
+  it("returns false for git-changes mention", () => {
+    expect(isPathMention("@git-changes")).toBe(false)
+  })
+
+  it("handles text without @ prefix", () => {
+    expect(isPathMention("src/foo.ts")).toBe(true)
   })
 })

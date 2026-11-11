@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 113,
-    "markedLines": 1880,
-    "unmarkedLines": 300,
+    "files": 124,
+    "markedLines": 2104,
+    "unmarkedLines": 326,
     "deletedFiles": 0
   },
   "files": {
@@ -52,9 +52,13 @@
       "rung": 3,
       "seam": "Oxlint loads one repository config and has no host-level rule composition, so the Kilo VS Code size and complexity overrides must live in the shared root config."
     },
+    ".github/pull_request_template.md": {
+      "rung": 4,
+      "seam": "Remove upstream's `### Visual` animated SVG section (`packages/desktop` beta dialog, skipped by Kilo in `script/upstream/utils/config.ts`), which GitHub renders as raw XML and which caused agents and contributors to paste unrendered wireframe SVGs into PR bodies. No seam: GitHub reads a single root `.github/pull_request_template.md`."
+    },
     "AGENTS.md": {
       "rung": 4,
-      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, direction of code movement, checks, read `migration-tracking/principles.md` first), pointing at the plan, the principles, issue #15297 and the skills. It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file, so the override sits next to them. The upstream text below the block stays untouched, so syncs conflict only when upstream edits the first lines."
+      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, direction of code movement, checks, read `migration-tracking/principles.md` first), pointing at the plan, the principles, issue #15297 and the skills, plus replacing the upstream desktop-beta `### Visual` animated SVG rule under Commits and PR Titles with Kilo `## Proof` verification (screenshots/recordings or real `bun dev` run output). It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file."
     },
     "CONTRIBUTING.md": {
       "rung": 4,
@@ -100,12 +104,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -138,8 +142,12 @@
       "seam": "Accept ripgrep's base64 `bytes` shape alongside `text` for the matched path, line and submatch. Ripgrep emits `bytes` as soon as one byte of a record is not valid UTF-8, and the text-only schema then rejected the record and failed the whole search with `Invalid ripgrep match output`. Bytes decode as lossy UTF-8 with the replacement character, and the line and submatch limits still apply after decoding. No plugin hook or host composition reaches this parser: it runs inside the core ripgrep service before any tool result exists, and no knob can express an alternate decoder for the fixed `rg --json` shape. Records that carry `text` behave exactly as before."
     },
     "packages/core/src/config/plugin/command.ts": {
-      "rung": 3,
-      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+      "rung": 4,
+      "seam": "Compose the ordered command documents through the optional host callback after file discovery, and pass the resulting template and model to command metadata; the seam itself is rung 3. Rung 4: each prompt an expanded config command admits carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. The command editor offers only `add`, a definition's `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches these two prompt calls. The label is UI metadata only: text, delivery, the subagent prefix and every upstream default are unchanged. The command editor cannot update a captured model, and the host cannot replace Config.node without losing server-specific options. The default callback is absent and native command behavior is unchanged."
+    },
+    "packages/core/src/plugin/command.ts": {
+      "rung": 4,
+      "seam": "Each prompt an expanded built-in command admits (`init`, `review`, an MCP prompt) carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/name args` instead of the template the model receives. Rungs 1 to 3 do not work: the built-in command definitions register through a command editor that offers only `add`, each definition builds its own prompt, and the invocation carries no metadata channel, so no plugin hook or pass-through parameter reaches the prompt call. The label is UI metadata only: prompt text, delivery and every upstream default are unchanged, and the plugin's upstream test observes the same prompt fields."
     },
     "packages/plugin/src/effect/command.ts": {
       "rung": 3,
@@ -192,6 +200,10 @@
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
       "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+    },
+    "packages/core/src/tool/plugin/schedule.ts": {
+      "rung": 4,
+      "seam": "The `/schedule` command's prompt carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/schedule <request>` instead of the expanded template the model receives. The command registers through an editor that offers only `add`, its `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches the prompt call. The label is UI metadata only: prompt text, delivery and every upstream default are unchanged."
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
@@ -317,7 +329,7 @@
     },
     "packages/core/src/session/compaction.ts": {
       "rung": 4,
-      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. The v2.1.4 resolution adds one marked line to retain upstream's background usage callback in the multiline billing call. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
+      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. The v2.1.4 resolution adds one marked line to retain upstream's background usage callback in the multiline billing call. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction. The steer guard reads the compaction's durability, so the automatic Started event now opens before the compaction resolves its model and `SessionCompaction.running` exposes that check to SessionExecution."
     },
     "packages/core/src/session/stats.ts": {
       "rung": 4,
@@ -444,17 +456,17 @@
     },
     "packages/client/src/effect/api/api.ts": {
       "rung": 3,
-      "seam": "Generated Effect client types for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "seam": "Generated Effect client types for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/client/src/effect/generated/client.ts": {
       "rung": 3,
-      "seam": "Generated Effect client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "seam": "Generated Effect client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/client/src/promise/generated/client.ts": {
       "rung": 3,
-      "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema.",
+      "seam": "Generated promise client operations for the optional PTY create size exposed by packages/schema/src/pty.ts. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/core/src/tool/read-filesystem.ts": {
@@ -473,6 +485,38 @@
     "packages/patchmark/test/slow-inputs.test.ts": {
       "rung": 4,
       "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
+    },
+    "packages/core/src/session.ts": {
+      "rung": 3,
+      "seam": "`Session.Interface.interrupt` accepts the optional `steer` flag and passes it to `SessionExecution`. A client that steers a running turn needs the server to tell 'stop this model call' apart from 'stop everything'; the interrupt options are the only input the execution layer reads, and no plugin hook reaches interruption. Upstream callers never set the flag, so their behavior does not change."
+    },
+    "packages/core/src/session/execution.ts": {
+      "rung": 3,
+      "seam": "`SessionExecution.interrupt` does not stop the execution when the interruption carries `steer` and a compaction is durably running, so a steered prompt can never cancel a checkpoint. The checkpoint is all-or-nothing and its summary may already be paid for; the admitted prompt is delivered at the boundary after the compaction. An interruption without the flag still cancels one. No plugin hook reaches interruption, and upstream never sets the flag. Rung 1 cannot do this: a Kilo RPC can read the Session context and then call interrupt, but that is check-then-act across awaits, and the gap is exactly when a steer is sent, right after a response ends and automatic compaction opens. No plugin hook runs before interruption; plugins only observe it afterwards, so only the interruption itself can decide atomically. A host mirror of SessionExecution would duplicate the coordinator, the write-ahead claim and restart recovery for this one row read."
+    },
+    "packages/core/src/session/session.ts": {
+      "rung": 3,
+      "seam": "Pass the optional `steer` flag from the Session handle to `SessionExecution.interrupt`. The handle is the only path to interruption, so no plugin seam exists. Omitted, the call is unchanged."
+    },
+    "packages/core/test/session-execution.test.ts": {
+      "rung": 3,
+      "seam": "Test for the steer guard: a steer-marked interruption returns false and leaves the running compaction row alone, while the same request without the flag still interrupts. The suite belongs to the upstream package, and the case only exists for Kilo's flag."
+    },
+    "packages/protocol/src/groups/session.ts": {
+      "rung": 3,
+      "seam": "Optional `steer` query parameter on `session.interrupt`, with descriptions for it and its response, so a client can mark an interruption issued to deliver a prompt. Omitted, the endpoint behaves as upstream."
+    },
+    "packages/server/src/handlers/session.ts": {
+      "rung": 3,
+      "seam": "Forward the `steer` query parameter to `Session.interrupt`. The handler owns the endpoint input and no plugin hook sees it; omitted, the call is unchanged."
+    },
+    "packages/core/src/plugin.ts": {
+      "rung": 3,
+      "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `Plugin.configured(options)` decorates the registry node with a loader-options service through `mapLayer`, so an embedding host can resolve its own plugin source syntax (Kilo's `git:` specs) without the shared loader knowing about it. The node still provides `Plugin.Service`, its service, layer and dependencies keep their single upstream declaration, and the extra service changes nothing when a host does not configure it. No plugin hook reaches the loader's local/npm split before a plugin is active. Rung 3 because rung 1 has no hook before activation and rung 2 cannot replace the registry without losing the server's configured options."
+    },
+    "packages/core/src/plugin/module.ts": {
+      "rung": 3,
+      "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `PluginModule.Options.pluginSource` lets an embedding host map a configured target to the directory the loader should read, before the existing local-path/npm split, name the `plugin.use` resources the resolution stands for (so a deny-list cannot be bypassed by another spelling), and report `pending` when the source needs the installing pass instead of the fast pass, and let the loader evaluate those resources on the read pass first so a denied plugin is blocked before the resolver reaches the network. The hook returns `undefined` for every upstream target, so npm packages and local directories behave exactly as before. Rungs 1 and 2 cannot reach the loader: the split runs inside `PluginModule.load`, after the plugin registry, and a host cannot supply the Npm or source loading steps from outside it. Kilo supplies `git:` clone resolution here."
     }
   }
 }

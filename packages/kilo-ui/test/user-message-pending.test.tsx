@@ -52,3 +52,14 @@ test("a delivered message keeps its fork and copy actions", () => {
   expect(view.host.querySelector('[aria-label="Fork to new session"]')).not.toBeNull()
   expect(view.host.querySelector('[aria-label="Copy message"]')).not.toBeNull()
 })
+
+test("a bubble header renders inside the bubble above the text", () => {
+  const view = mountRich(() => (
+    <UserMessageDisplay message={message} bubbleHeader={<span class="notice">Sent by Kilo</span>} />
+  ))
+  mounted.push(view)
+
+  const text = view.host.querySelector('[data-slot="user-message-text"]')
+  expect(text?.firstElementChild?.textContent).toBe("Sent by Kilo")
+  expect(text?.textContent).toContain("Check the tests")
+})

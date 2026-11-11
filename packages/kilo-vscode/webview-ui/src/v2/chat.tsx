@@ -14,6 +14,7 @@ import {
   Switch,
 } from "solid-js"
 import type { GitChangesStats, ToHost, ToWebview } from "../../../src/protocol"
+import { injectedMetadata } from "../../../src/shared/injected-prompt"
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
 import { useWorkStyle } from "../context/work-style"
@@ -175,7 +176,12 @@ export function Chat() {
       }
       if (item.type === "startPrompt") {
         setView("chat")
-        composerQueue.push({ type: "submit", text: item.text, items: item.items ?? [] })
+        composerQueue.push({
+          type: "submit",
+          text: item.text,
+          items: item.items ?? [],
+          metadata: item.injectedTitle ? injectedMetadata(item.injectedTitle) : undefined,
+        })
         return
       }
       if (item.type !== "appendReviewComments") return
@@ -335,6 +341,10 @@ export function Chat() {
           onReviewAppendReady={reviewQueue.ready}
           onComposerReady={composerQueue.ready}
           draftKey={tabs.active()}
+          // v1's sidebar focused the prompt whenever its draft key changed, so a switched session or a new tab type
+          // straight into the composer. The Agent Manager mounts the same composer per worktree and passes its own
+          // predicate, which also keeps a visible terminal in control.
+          focusOnDraftChange={() => true}
           onMissing={(id) => tabs.close(id)}
           tabs={showTabStrip(tabs.ids())}
           tabStrip={

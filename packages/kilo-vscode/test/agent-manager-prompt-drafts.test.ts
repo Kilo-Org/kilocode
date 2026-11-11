@@ -56,9 +56,9 @@ test("resets the draft agent and model when the draft key changes", () => {
 })
 
 test("a context action submit keeps the composer guards and falls back to the draft", () => {
-  const submit = prompt.slice(prompt.indexOf("const submit = (external"))
+  const submit = prompt.slice(prompt.indexOf("const submit = ("))
   expect(submit).toContain("if (!ready()")
   expect(submit).toContain("putInDraft(external.text, external.items)")
   expect(submit).toContain("if (external) return putInDraft(external.text, external.items)")
-  expect(prompt).toContain("submit: (value, items) => submit({ text: value, items })")
+  expect(prompt).toContain("submit: (value, items, metadata) => submit({ text: value, items, metadata })")
 })

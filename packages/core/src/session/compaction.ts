@@ -18,6 +18,7 @@ import type { StreamOptions } from "@opencode/ai/route"
 import type { SessionCompactionResult } from "@opencode/plugin/effect/session"
 import type { SessionError } from "@opencode/schema/session-error"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
+import { and, eq, sql } from "drizzle-orm" // kilocode_change - steer: running-compaction guard
 import { Clock, Context, DateTime, Effect, Exit, Fiber, Layer, Result, Scope, Stream } from "effect"
 import { Agent } from "../agent.js"
 import { Bus } from "../bus.js"
@@ -36,6 +37,7 @@ import { SessionRunnerModel } from "./runner/model.js"
 import { SessionRunnerRetry } from "./runner/retry.js"
 import { toLLMMessages } from "./runner/to-llm-message.js"
 import { SessionRecentText } from "./recent-text.js"
+import { SessionMessageTable } from "./sql.js" // kilocode_change - steer: running-compaction guard
 import { contentFilterError, toSessionError } from "./to-session-error.js"
 import { SessionUsage } from "./usage.js"
 
@@ -306,6 +308,14 @@ export const layer = Layer.effect(
         !due(context, calculateCeiling(context.model.limit, settings.buffer), trigger.estimate)
       )
         return { status: "skipped" }
+      // kilocode_change start - steer: open the compaction before any of its work, so a client reading the
+      // transcript never treats its summary request as a model call it may steer away.
+      // The runner opened the manual compaction's message when it delivered the `/compact` item. An automatic one
+      // opens here, before any other work, so the transcript shows a running compaction for its whole duration.
+      if (trigger.reason !== "manual")
+        yield* bus.publish(SessionEvent.Compaction.Started, { sessionID: context.session.id, reason: "auto" })
+      // kilocode_change end
+
       const held = precomputed.get(context.session.id)
       precomputed.delete(context.session.id)
       const native = context.model.compaction?.type === "native"
@@ -317,10 +327,6 @@ export const layer = Layer.effect(
           : model.cap
 
       const selected = model.context === context ? trigger : { ...trigger, context: model.context }
-      // The runner opened the manual compaction's message when it delivered the `/compact` item. An automatic one
-      // opens here, before any wait, so a background summary still being written shows as a running compaction.
-      if (trigger.reason !== "manual")
-        yield* bus.publish(SessionEvent.Compaction.Started, { sessionID: context.session.id, reason: "auto" })
       const swapped = held ? yield* usePrecomputed(selected, held, budget, settings) : undefined
       const compaction = swapped
         ? Effect.succeed(swapped)
@@ -997,6 +1003,32 @@ const cacheLifetime = (ttl: string | undefined) => {
   const match = ttl?.match(/^(\d+)(ms|s|m|h|d)$/)
   return match ? Number(match[1]) * DURATION_UNITS[match[2] as keyof typeof DURATION_UNITS] : CACHE_LIFETIME
 }
+
+// kilocode_change start - steer: the guard a steered interruption reads before it may stop an execution.
+/**
+ * Whether a compaction is durably running for the Session. A steer exists to reach the model now, so it may stop a
+ * model call but never this: the checkpoint is all-or-nothing and its summary may already be paid for.
+ */
+export const running = Effect.fn("SessionCompaction.running")(function* (
+  db: Database.Interface["db"],
+  sessionID: SessionContext.Loaded["session"]["id"],
+) {
+  const row = yield* db
+    .select({ id: SessionMessageTable.id })
+    .from(SessionMessageTable)
+    .where(
+      and(
+        eq(SessionMessageTable.session_id, sessionID),
+        eq(SessionMessageTable.type, "compaction"),
+        sql`json_extract(${SessionMessageTable.data}, '$.status') = 'running'`,
+      ),
+    )
+    .limit(1)
+    .get()
+    .pipe(Effect.orDie)
+  return row !== undefined
+})
+// kilocode_change end
 
 /** History loads from the latest completed compaction, so a previous one is always the first message. */
 const previousCompaction = (messages: ReadonlyArray<SessionMessage.Info>) => {
