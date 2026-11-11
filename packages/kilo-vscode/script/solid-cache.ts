@@ -1,3 +1,4 @@
+import { transformSync } from "@babel/core"
 import type { Plugin } from "esbuild"
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
@@ -5,8 +6,8 @@ import path from "node:path"
 
 // Solid's JSX compiler is the dominant cost of the webview build, and its output only depends on the file content and
 // the transform toolchain. Cache it under this worktree's node_modules so an unchanged file costs one read instead of a
-// Babel parse, without sharing state between worktrees.
-let babel: Promise<typeof import("@babel/core")> | undefined
+// Babel parse, without sharing state between worktrees. Babel is imported eagerly on purpose: a dynamic import inside
+// the esbuild callback can stall the build when several webview tests compile at once.
 
 // The cache key must change whenever the transform output can change: this module holds the options, and the presets
 // hold the compiler. Versions only, because resolved package paths are install-layout detail.
@@ -20,7 +21,7 @@ export function createSolidPlugin(options: { root: string; cacheDir?: string }):
   return {
     name: "solid",
     setup(build) {
-      build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
+      build.onLoad({ filter: /\.(t|j)sx$/ }, (args) => {
         const source = readFileSync(args.path, "utf8")
         const file = path.relative(options.root, args.path).split(path.sep).join("/")
         const key = hash(file, source, toolchain)
@@ -40,8 +41,6 @@ export function createSolidPlugin(options: { root: string; cacheDir?: string }):
           }
         }
 
-        babel ??= import("@babel/core")
-        const { transformSync } = await babel
         const result = transformSync(source, {
           filename: args.path,
           babelrc: false,
