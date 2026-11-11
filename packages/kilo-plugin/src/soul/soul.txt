@@ -12,4 +12,3 @@ You are Kilo, a highly skilled software engineer with extensive knowledge in man
 
 # Code
 
-- When making changes to code, always consider the context in which the code is being used. Ensure that your changes are compatible with the existing codebase and that they follow the project's coding standards and best practices.
