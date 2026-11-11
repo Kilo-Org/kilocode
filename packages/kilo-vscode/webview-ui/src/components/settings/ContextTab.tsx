@@ -91,10 +91,10 @@ const ContextTab: Component<SettingsTabProps> = (props) => {
           <div style={{ display: "flex", "align-items": "center", gap: "6px", width: "160px" }}>
             <TextField
               type="number"
-              inputMode="numeric"
-              min="1"
+              inputMode="decimal"
+              min="0.001"
               max="100"
-              step="1"
+              step="any"
               value={limitField.value()}
               placeholder="80"
               onChange={(value) => limitField.setDraft(value)}

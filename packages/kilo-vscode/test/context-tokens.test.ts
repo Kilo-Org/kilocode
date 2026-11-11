@@ -38,10 +38,16 @@ describe("limitEdit", () => {
     expect(limitEdit("100")).toEqual({ type: "set", value: 0 })
   })
 
-  test("ignores a value that is not a whole percentage from 1 to 100", () => {
+  test("sets a fractional limit as a fractional buffer", () => {
+    expect(limitEdit("80.5")).toEqual({ type: "set", value: "19.5%" })
+    expect(limitEdit("0.5")).toEqual({ type: "set", value: "99.5%" })
+  })
+
+  test("ignores a limit outside the buffer percentage range", () => {
     expect(limitEdit("0")).toBeUndefined()
     expect(limitEdit("101")).toBeUndefined()
-    expect(limitEdit("80.5")).toBeUndefined()
+    // A buffer percentage cannot go below 1%, so a limit just under 100 has no percentage form.
+    expect(limitEdit("99.5")).toBeUndefined()
     expect(limitEdit("80%")).toBeUndefined()
     expect(limitEdit("abc")).toBeUndefined()
   })
@@ -52,6 +58,11 @@ describe("limitFromBuffer", () => {
     expect(limitFromBuffer("20%")).toBe("80")
     expect(limitFromBuffer("1%")).toBe("99")
     expect(limitFromBuffer("99.5%")).toBe("0.5")
+    expect(limitFromBuffer("99.9%")).toBe("0.1")
+  })
+
+  test("reads a zero token buffer as a full limit", () => {
+    expect(limitFromBuffer(0)).toBe("100")
   })
 
   test("leaves the limit blank for a token buffer or no value", () => {

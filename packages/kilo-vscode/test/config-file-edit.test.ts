@@ -80,6 +80,18 @@ describe("applyConfigEdits", () => {
     expect(parsed.compaction.preserve_recent_tokens).toBeUndefined()
   })
 
+  test("removes the v1 compaction buffer aliases when the limit writes the buffer", () => {
+    const text = `{ "compaction": { "threshold_percent": 80, "reserved": 12000 } }`
+    const result = applyConfigEdits(text, [{ path: ["compaction", "buffer"], value: "20%" }])
+    expect(parse(result)).toEqual({ compaction: { buffer: "20%" } })
+  })
+
+  test("removes the v1 compaction buffer aliases when the limit clears the buffer", () => {
+    const text = `{ "compaction": { "threshold_percent": 80 } }`
+    const result = applyConfigEdits(text, [{ path: ["compaction", "buffer"] }])
+    expect(parse(result)).toEqual({ compaction: {} })
+  })
+
   test("clears small_model and the title agent aliases when the title model is written", () => {
     const text = `{ "small_model": "kilo/x", "agent": { "title": { "model": "a" } }, "mode": { "title": { "model": "b" } } }`
     const result = applyConfigEdits(text, [{ path: ["agents", "title", "model"], value: "c" }])
@@ -175,7 +187,10 @@ describe("aliasOf", () => {
     expect(aliasOf(["references"])).toEqual([["reference"]])
     expect(aliasOf(["mcp", "servers", "foo"])).toEqual([["mcp", "foo"]])
     expect(aliasOf(["compaction", "keep", "tokens"])).toEqual([["compaction", "preserve_recent_tokens"]])
-    expect(aliasOf(["compaction", "buffer"])).toEqual([["compaction", "reserved"]])
+    expect(aliasOf(["compaction", "buffer"])).toEqual([
+      ["compaction", "reserved"],
+      ["compaction", "threshold_percent"],
+    ])
     expect(aliasOf(["policies"])).toEqual([["enabled_providers"], ["disabled_providers"], ["experimental", "policies"]])
     expect(aliasOf(["model"])).toEqual([])
   })
