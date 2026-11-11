@@ -159,6 +159,110 @@ test("the server runs the Kilo agent ceiling after the config plugins", async ()
   }
 }, 30_000)
 
+// The MCP servers the host starts see the Kilo client identity rather than upstream's: the connect
+// handshake names `kilo`, and OAuth registration uses Kilo's product name and URI. Both come from the
+// `Mcp.node` override, so this fails if that override stops reaching the server graph.
+test("the server gives MCP servers the Kilo client identity", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-host-"))
+  const initializes: { name?: string }[] = []
+  const registrations: Record<string, unknown>[] = []
+  const remote = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const url = new URL(request.url)
+      if (url.pathname === "/.well-known/oauth-authorization-server")
+        return Response.json({
+          issuer: url.origin,
+          authorization_endpoint: `${url.origin}/authorize`,
+          token_endpoint: `${url.origin}/token`,
+          registration_endpoint: `${url.origin}/register`,
+          response_types_supported: ["code"],
+        })
+      if (request.method !== "POST") return new Response(null, { status: 404 })
+      const text = await request.text()
+      if (url.pathname === "/register") {
+        registrations.push(JSON.parse(text))
+        return Response.json({ client_id: "registered", redirect_uris: [] })
+      }
+      // Every initialize is recorded, including the OAuth challenge that asks the server for its metadata.
+      const message = JSON.parse(text)
+      if (message.method === "initialize") initializes.push(message.params?.clientInfo ?? {})
+      // A 401 sends the connect attempt to OAuth.
+      return new Response("Unauthorized", { status: 401 })
+    },
+  })
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const context = yield* Layer.build(
+            createRoutes(
+              {
+                password: "secret",
+                database: { path: ":memory:" },
+                models: { fetch: false },
+                fs: { filewatcher: false },
+                config: { directory, project: false },
+              },
+              () => [],
+              KiloHost.overrides,
+            ).pipe(Layer.provide(HttpServer.layerServices)),
+          )
+          const handler = Context.get(context, HttpRouter.HttpRouter)
+            .asHttpEffect()
+            .pipe(HttpEffect.toWebHandlerWith(context))
+          const call = (method: string, route: string, body?: unknown) =>
+            Effect.promise(async () => {
+              const url = new URL(route, "http://kilo.local")
+              url.searchParams.set("location[directory]", directory)
+              const response = await handler(
+                new Request(url, {
+                  method,
+                  headers: {
+                    authorization: `Basic ${btoa("opencode:secret")}`,
+                    ...(body === undefined ? {} : { "content-type": "application/json" }),
+                  },
+                  ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+                }),
+              )
+              return { status: response.status, body: response.status === 204 ? undefined : await response.json() }
+            })
+
+          yield* call("PUT", "/api/experimental/mcp/hosted", {
+            config: { type: "remote", url: remote.url.href },
+          })
+          yield* eventually(
+            Effect.sync(() => initializes.length),
+            (count) => count > 0,
+          )
+          expect(initializes.map((info) => info.name)).toContain("kilo")
+
+          // The MCP server is registered as an OAuth integration; starting a login registers a client.
+          const integrations = yield* eventually(
+            call("GET", "/api/integration"),
+            (result) => result.body.data?.some((item: { metadata?: { source?: string } }) => item.metadata?.source === "mcp"),
+          )
+          const integration = integrations.body.data.find(
+            (item: { metadata?: { source?: string } }) => item.metadata?.source === "mcp",
+          )
+          const method = integration.methods.find((item: { type: string }) => item.type === "oauth")
+          const attempt = yield* call("POST", `/api/integration/${integration.id}/connect/oauth`, {
+            methodID: method.id,
+          })
+          expect(attempt.status).toBe(200)
+          expect(attempt.body.data.url).toBeString()
+          expect(registrations).toHaveLength(1)
+          expect(registrations[0]).toMatchObject({ client_name: "Kilo", client_uri: "https://kilo.ai" })
+          expect(initializes.map((info) => info.name)).toContain("Kilo")
+        }),
+      ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
+    )
+  } finally {
+    remote.stop(true)
+    await rm(directory, { recursive: true, force: true })
+  }
+}, 30_000)
+
 // The server discovers only the isolated internal v2 names. The upstream server without the host overrides
 // keeps the upstream names (test/config in core).
 test("the server reads kilo2.json and .kilo2 and ignores v1 and opencode config", async () => {

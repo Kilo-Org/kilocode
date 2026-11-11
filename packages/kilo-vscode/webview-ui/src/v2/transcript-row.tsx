@@ -18,6 +18,8 @@ export function TranscriptRowView(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** Forks the session before the user message, when the surface can fork. */
   onForkMessage?: (sessionID: string, messageID: string) => void
+  /** Opens the session a prompt came from, for example another Agent Manager session. */
+  onSelectSession?: (id: string) => void
   /** The delivery state of a user message the server has not handed to the model yet. */
   pending?: (messageID: string) => UserMessagePending | undefined
 }) {
@@ -38,6 +40,7 @@ export function TranscriptRowView(props: {
               actions={props.actions}
               searchActive={props.searchActive}
               pending={props.pending?.(row().message.id)}
+              onSelectSession={props.onSelectSession}
               onFork={
                 props.onForkMessage
                   ? () => props.onForkMessage?.(props.session, row().message.id)

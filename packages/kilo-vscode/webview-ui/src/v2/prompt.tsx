@@ -741,7 +741,10 @@ export function PromptInput(props: {
     if (key) mentionDrafts.delete(key)
   }
 
-  const submit = (external?: { text: string; items: PromptAttachment[] }, mode: SendMode = "steer") => {
+  const submit = (
+    external?: { text: string; items: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+    mode: SendMode = "steer",
+  ) => {
     if (!ready() || (speech.active() && speech.state() !== "recording")) {
       if (external) putInDraft(external.text, external.items)
       return
@@ -778,7 +781,7 @@ export function PromptInput(props: {
     }
     // The review Markdown leads the text, so the transcript can strip it again with the comments in metadata.
     const review = external
-      ? { text: external.text, metadata: undefined }
+      ? { text: external.text, metadata: external.metadata }
       : composeReviewPrompt(pending, expandPastes(draft, pastes), pushFixes())
     // The mentions are located in the text that is sent, so the transcript can highlight each one in place. They are
     // read before the draft is cleared, while the composer still knows them.
@@ -840,7 +843,7 @@ export function PromptInput(props: {
       window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
     },
     // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
-    submit: (value, items) => submit({ text: value, items }),
+    submit: (value, items, metadata) => submit({ text: value, items, metadata }),
   })
 
   registerAppend(props.onAppendReady, (value, shouldSend) => {

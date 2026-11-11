@@ -936,7 +936,7 @@ export function make(options: ClientOptions) {
           {
             method: "POST",
             path: `/api/session/${encodeURIComponent(input.sessionID)}/interrupt`,
-            query: { resume: input["resume"] },
+            query: { resume: input["resume"], steer: input["steer"] },
             successStatus: 200,
             declaredStatuses: [400, 401, 404],
             empty: false,

@@ -22,13 +22,15 @@ function denied(exit: Exit.Exit<unknown, unknown>) {
 
 describe("sandbox tool network classification", () => {
   // kilo_port(sandbox:fd6329a01ac1)
-  test("treats a namespaced tool as MCP unless it is a built-in in the opencode namespace", () => {
+  test("treats a namespaced tool as MCP unless it is a built-in in a built-in namespace", () => {
     const tool = (name: string, namespace?: string) => ({ name, options: namespace ? { namespace } : undefined })
     expect(Network.isMcp(tool("session_move", "session"))).toBe(true)
     expect(Network.isMcp(tool("touch", "probe"))).toBe(true)
     expect(Network.isMcp(tool("custom", "opencode"))).toBe(true)
     expect(Network.isMcp(tool("artifact_create", "opencode"))).toBe(false)
     expect(Network.isMcp(tool("list_mcp_resources", "opencode"))).toBe(false)
+    expect(Network.isMcp(tool("custom", "kilo"))).toBe(true)
+    expect(Network.isMcp(tool("artifact_create", "kilo"))).toBe(false)
     expect(Network.isMcp(tool("session_move"))).toBe(false)
   })
 
@@ -45,6 +47,27 @@ describe("sandbox tool network classification", () => {
     expect(Network.isBuiltin("background_process")).toBe(true)
     expect(Network.isBuiltin("custom_network_tool")).toBe(false)
     expect(Network.isBuiltin("mcp__weather__current")).toBe(false)
+  })
+
+  test("hides Code Mode and the MCP resource tools of a network-restricted session whatever their namespace", () => {
+    const tools = (prefix: string) => [
+      { id: "execute", name: "execute" },
+      { id: `${prefix}_list_mcp_resources`, name: "list_mcp_resources" },
+      { id: `${prefix}_read_mcp_resource`, name: "read_mcp_resource" },
+      { id: `${prefix}_artifact_create`, name: "artifact_create" },
+      { id: "read", name: "read" },
+    ]
+    expect([...Network.hiddenTools(tools("kilo"))]).toEqual([
+      "execute",
+      "kilo_list_mcp_resources",
+      "kilo_read_mcp_resource",
+    ])
+    expect([...Network.hiddenTools(tools("opencode"))]).toEqual([
+      "execute",
+      "opencode_list_mcp_resources",
+      "opencode_read_mcp_resource",
+    ])
+    expect([...Network.hiddenTools([])]).toEqual(["execute"])
   })
 
   test("keeps classified non-network built-in tools available in deny mode", async () => {

@@ -18,6 +18,21 @@ export function pendingEditable(payload: {
   return !payload.files?.length && !payload.agents?.length && !payload.skills?.length
 }
 
+/**
+ * The interrupt a prompt-sending action issues before it sends. It may stop the current model call and its running
+ * tools, but never a running compaction: the checkpoint finishes first and the prompt follows it.
+ */
+export function promptInterrupt(sessionID: string) {
+  return { sessionID, resume: true, steer: true }
+}
+
+/** What one control of a pending prompt asks of the server. `now` stops the turn first; the others only move it. */
+export function pendingRequest(action: PendingAction) {
+  if (action === "now") return { type: "interrupt" } as const
+  if (action === "steer" || action === "queue") return { type: "delivery", delivery: action } as const
+  return { type: "cancel" } as const
+}
+
 type Key = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">
 type Message = {
   id: string
@@ -41,8 +56,9 @@ export function sendShortcuts(mac = isMac()) {
 /**
  * Whether a steer has to stop the current model call to reach the model now. That is the case while the model
  * thinks or writes: the next step boundary only comes after the whole response. A running tool or compaction is not
- * stopped; the steer is delivered when it finishes, which is the next step boundary. The message list also holds
- * input that is not delivered yet (`pending`), so the decision reads the newest delivered message.
+ * stopped; the steer is delivered when it finishes, which is the next step boundary. `pending` is input with no
+ * delivered message yet, so it cannot say what is running. The server enforces the compaction half of this too, so a
+ * stale transcript here can only cost a stop that was not needed, never a cancelled checkpoint.
  */
 export function steerInterrupts(messages: readonly Message[], pending: ReadonlySet<string>): boolean {
   // Scan back to the newest step. Queued and pending input, synthetic notifications and instruction updates can
