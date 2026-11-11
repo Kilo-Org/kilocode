@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { build } from "esbuild"
+import { build, type Plugin } from "esbuild"
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -58,23 +58,47 @@ describe("solid transform cache", () => {
     }
   })
 
-  test("compiles two entries concurrently through separate plugin instances", async () => {
+  // The webview tests stalled in CI while onLoad awaited a dynamic import("@babel/core"). The callback must answer
+  // esbuild synchronously on both a cache miss and a memory hit, so this records what it actually returns.
+  test("answers esbuild synchronously on a miss and on a hit", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "kilo-solid-root-"))
     const cacheDir = await mkdtemp(path.join(os.tmpdir(), "kilo-solid-cache-"))
     try {
-      const first = path.join(root, "first.tsx")
-      const second = path.join(root, "second.tsx")
-      await writeFile(first, `export const First = () => <div class="first">alpha</div>\n`)
-      await writeFile(second, `export const Second = () => <div class="second">beta</div>\n`)
+      const entry = path.join(root, "entry.tsx")
+      await writeFile(entry, `export const Card = () => <div class="card">alpha</div>\n`)
+      const solid = createSolidPlugin({ root, cacheDir })
+      const results: unknown[] = []
+      const recorder: Plugin = {
+        name: "solid-recorder",
+        setup(build) {
+          solid.setup({
+            ...build,
+            onLoad: (options, callback) =>
+              build.onLoad(options, (args) => {
+                const result = callback(args)
+                results.push(result)
+                return result
+              }),
+          })
+        },
+      }
+      const run = () =>
+        build({
+          entryPoints: [entry],
+          bundle: true,
+          write: false,
+          format: "esm",
+          platform: "browser",
+          external: ["solid-js/web"],
+          logLevel: "silent",
+          plugins: [recorder],
+        })
 
-      const [one, two] = await Promise.all([compile(root, cacheDir, first), compile(root, cacheDir, second)])
+      await run()
+      await run()
 
-      expect(one).toContain("alpha")
-      expect(two).toContain("beta")
-      expect(one).not.toContain("beta")
-      expect(two).not.toContain("alpha")
-      const entries = (await readdir(cacheDir)).filter((file) => file.endsWith(".js"))
-      expect(entries).toHaveLength(2)
+      expect(results).toHaveLength(2)
+      expect(results.some((result) => result instanceof Promise)).toBe(false)
     } finally {
       await rm(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
       await rm(cacheDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
