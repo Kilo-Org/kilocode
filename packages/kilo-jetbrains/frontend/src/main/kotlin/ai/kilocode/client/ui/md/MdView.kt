@@ -10,7 +10,7 @@ import java.awt.Point
 import javax.swing.JComponent
 
 /** Markdown rendering component. All public methods must be called on the EDT. */
-interface MdView : Disposable {
+interface MdView : Disposable, MdSearchView {
     val component: JComponent
 
     fun set(text: String)

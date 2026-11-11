@@ -2,13 +2,22 @@ package ai.kilocode.client.app
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloHostedRpcApi
+import ai.kilocode.rpc.dto.HostedCreateWorkspaceDto
+import ai.kilocode.rpc.dto.HostedDeleteResultDto
+import ai.kilocode.rpc.dto.HostedFailureDto
+import ai.kilocode.rpc.dto.HostedMutationResultDto
 import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedIDs
+import ai.kilocode.rpc.dto.HostedStartSessionDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
+import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.client.session.history.resolveGitRemoteUrl
@@ -37,6 +46,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+enum class HostedReadiness { Unknown, Preparing, Ready, Failed }
 
 /**
  * Project-level hosted Cloud workspace discovery.
@@ -69,6 +80,7 @@ class KiloHostedService internal constructor(
         private const val STATUS_CONCURRENCY = 8
         private const val INITIAL_BACKOFF_MS = 1_000L
         private const val MAX_BACKOFF_MS = 10_000L
+        private const val PROMPT_LIMIT = 16
     }
 
     data class HostedState(
@@ -92,6 +104,30 @@ class KiloHostedService internal constructor(
             it.cloudStatus == "error" || it.action == "attempt_failed" || it.failure != null
         }
 
+        fun readiness(session: String): HostedReadiness = when {
+            preparations[session] == null -> HostedReadiness.Unknown
+            failure(session) != null -> HostedReadiness.Failed
+            preparation(session) != null -> HostedReadiness.Preparing
+            else -> HostedReadiness.Ready
+        }
+
+        /**
+         * Readiness for a session whose workspace compute is still booting. Starting or setting up
+         * counts as Preparing so the editor keeps showing progress instead of surfacing a
+         * "not available" history error before the sandbox can answer.
+         */
+        fun readiness(ref: HostedWorkspaceRefDto, session: String): HostedReadiness {
+            val own = readiness(session)
+            if (own == HostedReadiness.Failed) return own
+            return when (presentation(ref)?.computeStatus) {
+                null, "starting", "setting_up", "loading" -> HostedReadiness.Preparing
+                // An active sandbox with no preparation record for this session is not preparing:
+                // treating it as Unknown would leave the "Preparing Cloud workspace" footer stuck on
+                // sessions that were created after the workspace came up.
+                else -> if (own == HostedReadiness.Unknown) HostedReadiness.Ready else own
+            }
+        }
+
         /** Preparation is presentation only; native idle never changes canonical compute state. */
         fun presentation(ref: HostedWorkspaceRefDto): HostedWorkspaceStatusDto? {
             val status = statuses[ref.key]
@@ -100,7 +136,18 @@ class KiloHostedService internal constructor(
                     id.first == ref.providerID && id.second == ref.workspaceID
                 } == true && preparation(it.sessionID) != null
             }
-            if (!starting) return status
+            if (!starting) {
+                val failed = preparations.values.any {
+                    HostedIDs.parseSession(it.sessionID)?.let { id ->
+                        id.first == ref.providerID && id.second == ref.workspaceID
+                    } == true && failure(it.sessionID) != null
+                }
+                if (failed && status == null) return HostedWorkspaceStatusDto(ref, "active", "failed", "", 0.0)
+                if (failed && status?.computeStatus in setOf("starting", "setting_up")) {
+                    return status?.copy(computeStatus = "failed")
+                }
+                return status
+            }
             if (status == null) return HostedWorkspaceStatusDto(ref, "active", "starting", "", 0.0)
             return when (status.computeStatus) {
                 "sleeping", "unknown", "stopped" -> status.copy(computeStatus = "starting")
@@ -119,8 +166,10 @@ class KiloHostedService internal constructor(
     val refreshes: StateFlow<Long> = _refreshes.asStateFlow()
 
     @Volatile private var generation = 0L
+    @Volatile private var epoch = 0L
     private val statusLimit = Semaphore(STATUS_CONCURRENCY)
-    private var requestedDir: String? = null
+    @Volatile private var requestedDir: String? = null
+    @Volatile private var queued: String? = null
     private val lock = Any()
     private class Watch(val ref: HostedWorkspaceRefDto, val session: String) {
         var owners = 0
@@ -134,21 +183,29 @@ class KiloHostedService internal constructor(
     }
     private val watches = mutableMapOf<String, Watch>()
     private val retired = mutableMapOf<String, Set<String>>()
+    private val prompts = object : java.util.LinkedHashMap<String, PromptDto>(PROMPT_LIMIT, 0.75f, false) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, PromptDto>?) = size > PROMPT_LIMIT
+    }
 
     init {
         if (app != null) {
             cs.launch {
                 var ready = false
+                var context: String? = null
                 app.state.collect { state ->
                     if (!gate() || state.progress?.profile == ProfileStatusDto.NOT_LOGGED_IN) {
                         ++generation
                         clear()
+                        ready = false
+                        context = null
                         _state.value = HostedState(enabled = gate(), signedOut = gate())
                     }
                     val now = state.status == KiloAppStatusDto.READY &&
                         state.progress?.profile != ProfileStatusDto.NOT_LOGGED_IN
-                    if (now && !ready) requestedDir?.let { refresh(it) }
-                    ready = now
+                    val identity = state.profile?.let { "${it.email}\u0000${it.currentOrgId}" }
+                    if (now && (!ready || identity != context)) requestedDir?.let { refresh(it) }
+                    if (now) ready = true
+                    context = identity
                 }
             }
         }
@@ -164,12 +221,17 @@ class KiloHostedService internal constructor(
     fun refresh(directory: String) {
         if (!gate()) {
             ++generation
+            queued = null
             clear()
             _state.value = HostedState(enabled = false)
             return
         }
-        if (requestedDir == directory && _state.value.loading) return
+        if (requestedDir == directory && _state.value.loading) {
+            queued = directory
+            return
+        }
         requestedDir = directory
+        queued = null
         val run = ++generation
         _refreshes.value = run
         _state.update { it.copy(enabled = true, loading = true, error = null) }
@@ -233,8 +295,21 @@ class KiloHostedService internal constructor(
                 if (run != generation) return@launch
                 log.warn("hosted workspace discovery failed message=${e.message}", e)
                 _state.update { it.copy(loading = false, error = e.message ?: "Cloud workspaces unavailable") }
+            } finally {
+                if (run == generation) drain()
             }
         }
+    }
+
+    /**
+     * Runs a refresh requested while another discovery was in flight. The in-flight run cannot
+     * observe the newer identity without this replay, and superseding it without starting a new run
+     * would leave [HostedState.loading] stuck.
+     */
+    private fun drain() {
+        val next = queued ?: return
+        queued = null
+        refresh(next)
     }
 
     /** Loads the next workspace page, if the provider returned one. */
@@ -264,6 +339,8 @@ class KiloHostedService internal constructor(
             } catch (e: Exception) {
                 if (run != generation) return@launch
                 _state.update { it.copy(loading = false, error = e.message ?: "Cloud workspaces unavailable") }
+            } finally {
+                if (run == generation) drain()
             }
         }
     }
@@ -274,8 +351,88 @@ class KiloHostedService internal constructor(
         Disposer.register(parent) { job.cancel() }
     }
 
-    suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto =
-        call { workspace(ref, null, null) }
+    /**
+     * Fetches one workspace and folds it back into the discovery list, so the tree row, the editor,
+     * and the tab title all read the same Cloud-generated session titles and branch without waiting
+     * for the next full discovery pass.
+     */
+    suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto {
+        val dto = call { workspace(ref, null, null) }
+        _state.update { current ->
+            if (current.items.none { it.ref == ref }) current
+            else current.copy(items = current.items.map { if (it.ref == ref) dto else it })
+        }
+        return dto
+    }
+
+    suspend fun profiles(): HostedWorkspaceProfileListDto = try {
+        call { workspaceProfiles(null) }.also {
+            log.info(
+                "hosted profiles loaded count=${it.items.size} personalDefault=${it.personalDefaultProfileID} " +
+                    "organizationDefault=${it.organizationDefaultProfileID} " +
+                    "effectiveDefault=${it.effectiveDefaultProfileID} failure=${it.error?.code}",
+            )
+            log.info(
+                "hosted profile owners " + it.items.joinToString { profile -> "${profile.id}=${profile.ownerType}" },
+            )
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("hosted profiles load failed", e)
+        HostedWorkspaceProfileListDto(error = failure(e, "Cloud profiles unavailable"))
+    }
+
+    suspend fun create(request: HostedCreateWorkspaceDto): HostedMutationResultDto {
+        val run = epoch
+        return try {
+            call { createWorkspace(request) }.also { seed(it, request.prompt, request.agent, request.messageID, run) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            HostedMutationResultDto(failure = failure(e, "Cloud workspace creation failed"))
+        }
+    }
+
+    suspend fun start(
+        ref: HostedWorkspaceRefDto,
+        request: HostedStartSessionDto,
+    ): HostedMutationResultDto {
+        val run = epoch
+        return try {
+            call { startWorkspaceSession(ref, request) }
+                .also { seed(it, request.prompt, request.agent, request.messageID, run) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            HostedMutationResultDto(failure = failure(e, "Cloud session start failed"))
+        }
+    }
+
+    /** The create API already submitted this prompt; seed the editor without sending it twice. */
+    fun takePrompt(session: String): PromptDto? = synchronized(lock) { prompts.remove(session) }
+
+    private fun seed(result: HostedMutationResultDto, text: String, agent: HostedAgentDto, message: String, run: Long) = synchronized(lock) {
+        if (text.isBlank()) return@synchronized
+        val session = result.session ?: return@synchronized
+        if (result.failure != null || run != epoch || !gate()) return@synchronized
+        prompts[session.id] = PromptDto(
+            parts = listOf(PromptPartDto(type = "text", text = text)),
+            messageID = result.messageID ?: message,
+            agent = agent.mode,
+            providerID = agent.model.substringBefore('/'),
+            modelID = agent.model.substringAfter('/'),
+            variant = agent.variant,
+        )
+    }
+
+    suspend fun delete(ref: HostedWorkspaceRefDto): HostedDeleteResultDto = try {
+        call { deleteWorkspace(ref, null) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        HostedDeleteResultDto(ref, failure = failure(e, "Cloud workspace deletion failed"))
+    }
 
     /** All root sessions in one workspace, optionally reusing an already fetched first page. */
     suspend fun sessions(
@@ -426,9 +583,11 @@ class KiloHostedService internal constructor(
     }
 
     private fun clear() = synchronized(lock) {
+        epoch++
         watches.values.forEach { it.job?.cancel() }
         watches.clear()
         retired.clear()
+        prompts.clear()
     }
 
     private fun fold(item: Watch, event: HostedSystemEventDto) {
@@ -443,8 +602,11 @@ class KiloHostedService internal constructor(
                 if (event.observedAt > 0 && (item.progress?.observedAt ?: 0.0) > event.observedAt) return
                 item.lifecycle = event.copy(observedAt = event.observedAt.takeIf { it > 0 }
                     ?: lifecycle?.observedAt ?: 0.0)
+                val terminalProgress = item.progress?.action in setOf("attempt_completed", "attempt_failed")
+                if (event.cloudStatus == "preparing" && terminalProgress &&
+                    !(event.observedAt > 0 && event.observedAt > (item.progress?.observedAt ?: 0.0))) return
                 if (event.cloudStatus == "preparing" &&
-                    (old?.cloudStatus == "error" || item.progress?.action in setOf("attempt_completed", "attempt_failed"))) {
+                    (old?.cloudStatus == "error" || terminalProgress)) {
                     item.progress?.attemptID?.let { item.retired += it }
                     item.progress = null
                     item.detail = null
@@ -461,10 +623,13 @@ class KiloHostedService internal constructor(
                     failed
                 } else {
                     item.closed = event.cloudStatus != "preparing" && item.progress != null
-                    old?.copy(cloudStatus = if (old.cloudStatus == "error") "error" else event.cloudStatus) ?: event
+                    old?.copy(
+                        cloudStatus = if (old.cloudStatus == "error") "error" else event.cloudStatus,
+                        message = event.message ?: old.message,
+                    ) ?: event
                 }
             }
-            "preparing" -> {
+            "preparing" -> run {
                 val progress = item.progress
                 val distinct = event.attemptID != null && event.attemptID != progress?.attemptID
                 val failed = event.action in setOf("attempt_failed", "step_failed", "failed") || event.failure != null || event.step == "failed"
@@ -475,8 +640,41 @@ class KiloHostedService internal constructor(
                 val revision = event.revision
                 val previous = progress?.revision
                 val finished = !distinct && progress?.action in setOf("attempt_completed", "attempt_failed")
+                if (finished && progress?.action == "attempt_failed" && failed &&
+                    (event.attemptID == progress.attemptID || progress.attemptID == null)) {
+                    // Cloud replays the terminal attempt before its independently versioned steps.
+                    // Older command snapshots can enrich the error, but cannot reopen the attempt.
+                    val detail = item.detail
+                    val version = detail?.revision
+                    val same = event.stepID?.let { it == detail?.stepID }
+                        ?: (event.step == detail?.step && event.stepKind == detail?.stepKind)
+                    val specific = event.stepKind == "setup_command" && detail?.stepKind != "setup_command"
+                    if (event.detail != null && (detail?.detail == null || specific ||
+                        (same && (revision == null || version == null || revision >= version)))) {
+                        item.detail = event
+                    }
+                    val newer = if (revision != null && previous != null) revision >= previous
+                        else event.observedAt >= progress.observedAt
+                    val latest = (if (newer) event else progress).copy(
+                        action = "attempt_failed",
+                        attemptID = progress.attemptID ?: event.attemptID,
+                        triggerMessageID = event.triggerMessageID ?: progress.triggerMessageID,
+                        failure = progress.failure ?: event.failure,
+                        observedAt = maxOf(event.observedAt, progress.observedAt),
+                        revision = if (revision != null && previous != null) maxOf(revision, previous)
+                            else revision ?: previous,
+                    )
+                    item.progress = latest
+                    val display = item.detail ?: old ?: latest
+                    return@run display.copy(
+                        action = "attempt_failed", cloudStatus = "error", failure = latest.failure,
+                        detail = display.detail ?: old?.detail ?: latest.detail,
+                        observedAt = latest.observedAt, revision = latest.revision,
+                        attemptID = latest.attemptID, triggerMessageID = latest.triggerMessageID,
+                    )
+                }
                 if (!distinct && progress != null) {
-                    if (finished && terminal && !(progress?.action == "attempt_failed" && failed &&
+                    if (finished && terminal && !(progress.action == "attempt_failed" && failed &&
                         progress.failure == null && event.failure != null && revision == previous)) return
                     if (revision != null && previous != null) {
                         if (revision < previous) return
@@ -542,7 +740,7 @@ class KiloHostedService internal constructor(
         }
         if (preparation?.cloudStatus == "error" && preparation != old) {
             val code = preparation.failure?.takeIf { it.matches(Regex("[a-z][a-z0-9_]{0,63}")) } ?: "unknown"
-            log.warn("hosted preparation failed code=$code")
+            log.warn("hosted preparation failed code=$code step=${preparation.step}")
         }
         retired[event.sessionID] = item.retired.toSet()
     }
@@ -551,6 +749,9 @@ class KiloHostedService internal constructor(
         val api = rpc
         return if (api != null) block(api) else durable { block(KiloHostedRpcApi.getInstance()) }
     }
+
+    private fun failure(e: Exception, message: String) =
+        HostedFailureDto("unavailable", e.message ?: message, retryable = true)
 
     private fun dedupe(items: List<HostedWorkspaceDto>): List<HostedWorkspaceDto> {
         val seen = LinkedHashMap<String, HostedWorkspaceDto>()

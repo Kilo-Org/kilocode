@@ -1,6 +1,7 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.frontend"/>
+        <module name="intellij.platform.lang.impl"/>
         <plugin id="org.jetbrains.plugins.terminal"/>
         <module name="intellij.terminal.frontend"/>
         <module name="kilo.jetbrains.shared"/>
@@ -280,8 +281,9 @@
         <action id="Kilo.NewSession"
                 class="ai.kilocode.client.actions.NewSessionAction"/>
 
-        <action id="Kilo.NewWorktree"
-                class="ai.kilocode.client.actions.NewWorktreeAction"/>
+        <group id="Kilo.AgentManager.Add"
+               class="ai.kilocode.client.actions.AgentManagerAddAction"
+               popup="true"/>
 
         <action id="Kilo.Chat.NewWorktree"
                 class="ai.kilocode.client.actions.ChatNewWorktreeAction"
@@ -295,14 +297,6 @@
 
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
-
-        <!-- Declarative toolbar group for the Kilo tool window title bar -->
-        <group id="Kilo.ToolWindowToolbar">
-            <reference ref="Kilo.NewSession"/>
-            <reference ref="Kilo.NewWorktree"/>
-            <reference ref="Kilo.History"/>
-            <reference ref="Kilo.Settings"/>
-        </group>
 
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
@@ -440,6 +434,15 @@
         <action id="Kilo.HostedWorkspace.Refresh"
                 class="ai.kilocode.client.actions.RefreshHostedWorkspaceAction"/>
 
+        <action id="Kilo.HostedWorkspace.OpenInBrowser"
+                class="ai.kilocode.client.actions.HostedOpenInBrowserAction"/>
+
+        <action id="Kilo.HostedWorkspace.Delete"
+                class="ai.kilocode.client.actions.HostedDeleteWorkspaceAction"/>
+
+        <action id="Kilo.HostedWorkspace.Dismiss"
+                class="ai.kilocode.client.actions.HostedDismissWorkspaceAction"/>
+
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -454,6 +457,10 @@
 
         <group id="Kilo.Worktree.RowMenu">
             <reference ref="Kilo.HostedWorkspace.Refresh"/>
+            <reference ref="Kilo.HostedWorkspace.OpenInBrowser"/>
+            <separator/>
+            <reference ref="Kilo.HostedWorkspace.Dismiss"/>
+            <separator/>
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
@@ -469,6 +476,7 @@
             <reference ref="Kilo.OpenSetupScript"/>
             <reference ref="Kilo.Worktree.RunSetupScript"/>
             <separator/>
+            <reference ref="Kilo.HostedWorkspace.Delete"/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>
 
@@ -496,6 +504,23 @@
 
         <action id="Kilo.Session.Board"
                 class="ai.kilocode.client.actions.ShowSessionBoardAction"/>
+
+        <!--
+          Transcript Find inherits the user's current IDE shortcuts. The actions are promoted over the
+          editor Find actions only when the data context resolves the active chat, so ordinary file
+          editors keep their native behavior.
+        -->
+        <action id="Kilo.Transcript.Find"
+                class="ai.kilocode.client.actions.TranscriptFindAction"
+                use-shortcut-of="Find"/>
+
+        <action id="Kilo.Transcript.FindNext"
+                class="ai.kilocode.client.actions.TranscriptFindNextAction"
+                use-shortcut-of="FindNext"/>
+
+        <action id="Kilo.Transcript.FindPrevious"
+                class="ai.kilocode.client.actions.TranscriptFindPreviousAction"
+                use-shortcut-of="FindPrevious"/>
 
         <action id="Kilo.Session.CompareToBase"
                 class="ai.kilocode.client.actions.CompareToBaseAction"/>
