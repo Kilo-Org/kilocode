@@ -175,6 +175,15 @@ function worktreeContext(p: ProviderApiHost, root: string): ContinueContext {
     getStateManager: () => p.getStateManager(),
     registerWorktreeSession: (sid, dir) => p.registerWorktreeSession(sid, dir),
     notifyReady: (sid, result, wid) => p.notifyWorktreeReady(sid, result, wid),
+    notifyForked: (session, from, wid) =>
+      p.postToWebview({
+        type: "agentManager.sessionForked",
+        projectId: p.context?.id,
+        sessionId: session.id,
+        forkedFromId: from,
+        worktreeId: wid,
+        session,
+      }),
     log: (...args) => p.log(...args),
   }
 }
