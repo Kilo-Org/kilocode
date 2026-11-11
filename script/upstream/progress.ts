@@ -1,10 +1,10 @@
 /**
  * Kilo v2 migration progress map.
  *
- * Measures Kilo's v1 delta (the pinned v1 target over its upstream base) as cells grouped into
+ * Measures Kilo's v1 feature delta (the pinned v1 target over its upstream base) as cells grouped into
  * feature boxes, and checks every cell against the v2 working tree. Everything is mechanical: paths,
  * imports, identifiers, markers and string equality. The only hand-written inputs are
- * `migration-tracking/progress/features.json` (pins, feature split, exclusions) and
+ * `migration-tracking/progress/features.json` (pins, feature split, client boxes, exclusions) and
  * `migration-tracking/progress/dispositions.json` (decisions per cell).
  *
  * Cell kinds and the rule that marks a cell done on v2:
@@ -12,11 +12,14 @@
  *   path, or the same feature and basename.
  * - api: a `/kilocode/*` operation in the v1 OpenAPI document. Done when the path literal appears in
  *   `packages/protocol`, `packages/server` or a Kilo-owned v2 file.
- * - patch: one Kilo hunk in a shared upstream file. Its ID is a hash of the added lines. Done when a
- *   v2 file carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in a shared upstream
- *   file, or `kilo_port(<feature>:<id>)` in a Kilo-owned file. The proof also records the rung where
- *   the cell landed. An unattributed patch uses its box as the feature: `kilo_port(unattributed:<area>:<id>)`.
- * - test: a module or patch in a test file, same rules.
+ * - patch: one feature-attributed Kilo hunk in a shared upstream file. Its ID is a hash of the added
+ *   lines. Done when a v2 file carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in
+ *   a shared upstream file, or `kilo_port(<feature>:<id>)` in a Kilo-owned file. The proof also records
+ *   the rung where the cell landed. Unattributed shared-file hunks are not counted in the progress
+ *   map (v2 ports behavior through plugins, host composition and generic seams rather than re-applying
+ *   v1 monolith patches), though existing `unattributed:<area>:<id>` proofs and dispositions stay valid
+ *   and `--list unattributed:<area>` still lists them for inspection.
+ * - test: a module or feature-attributed patch in a test file, same rules.
  * A disposition (`ported`, `native`, `facade`) also marks a cell done; `dropped` removes it from the
  * denominator and lists it.
  *
@@ -25,10 +28,11 @@
  *
  * Usage, from the repository root:
  *   bun script/upstream/progress.ts                 regenerate progress.json and README.md
+ *   bun script/upstream/progress.ts --root <dir>    regenerate for another checkout or worktree
  *   bun script/upstream/progress.ts --check         exit 1 when the committed output is stale; this is the map
  *     bot PR check and fails by design on a feature branch while a bot PR is pending
  *   bun script/upstream/progress.ts --outputs       print the generated file paths (CI updates them in a bot PR)
- *   bun script/upstream/progress.ts --list <feature>  print the open cells of one feature
+ *   bun script/upstream/progress.ts --list <feature>  print the open cells of one feature (or unattributed:<area>)
  *   bun script/upstream/progress.ts --compare <base.json> <head.json> [<pr.diff>]  markdown delta for a PR comment;
  *     with the PR diff (`git diff -U0`), also the placement line of the PR
  */
@@ -39,13 +43,14 @@ import { readBaseline } from "./utils/baseline"
 import { isGenerated, isKiloOwned } from "./utils/owned"
 import { coveredLines } from "./utils/shared"
 
-const ROOT = path.resolve(import.meta.dir, "../..")
-const DIR = path.join(ROOT, "migration-tracking/progress")
+const DEFAULT_ROOT = path.resolve(import.meta.dir, "../..")
 
 type Config = {
   pins: { v1Target: string; v1Base: string }
   /** `dir`, `dir/sub` or `kilo-<pkg>` -> feature. Checked longest key first. */
   split: Record<string, string>
+  /** Client features shown in the Clients treemap panel; all other counted features are Runtime & CLI. */
+  clients?: string[]
   /** feature -> reason. Excluded features are listed, not counted. */
   exclude: Record<string, string>
 }
@@ -261,19 +266,20 @@ export function scanImports(sources: [file: string, source: string][]) {
   return { modules: [...modules].sort(byName), violations: violations.sort(byName) }
 }
 
-async function git(args: string[]) {
-  return (await $`git ${args}`.cwd(ROOT).quiet().text()).trimEnd()
+function gitAt(root: string) {
+  return async (args: string[]) => (await $`git ${args}`.cwd(root).quiet().text()).trimEnd()
 }
 
-async function readJson<T>(file: string): Promise<T> {
-  return (await Bun.file(path.join(DIR, file)).json()) as T
+async function readJson<T>(dir: string, file: string): Promise<T> {
+  return (await Bun.file(path.join(dir, file)).json()) as T
 }
 
-async function collect(config: Config, dispositions: Record<string, Disposition>) {
+async function collect(config: Config, dispositions: Record<string, Disposition>, root = DEFAULT_ROOT) {
+  const git = gitAt(root)
   const { v1Target, v1Base } = config.pins
   const split = config.split
   for (const pin of [v1Target, v1Base]) {
-    const ok = await $`git cat-file -e ${pin}^{commit}`.cwd(ROOT).quiet().nothrow()
+    const ok = await $`git cat-file -e ${pin}^{commit}`.cwd(root).quiet().nothrow()
     if (ok.exitCode !== 0) throw new Error(`pinned commit ${pin} is not in this clone. Run: git fetch --filter=blob:none --no-tags origin main`)
   }
 
@@ -289,7 +295,7 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     v2Modules.set(`${feature}|${relativeOf(f)}`, f)
     v2Modules.set(`${feature}|${path.basename(f)}`, f)
   }
-  const baseline = await readBaseline(ROOT)
+  const baseline = await readBaseline(root)
   // Done-proofs of patch cells, from the working tree like the files above.
   const found = parseProofs(await git(["grep", "-n", "-o", "-E", `(kilocode_change|kilo_port)\\((${PROOF_FEATURE}):[0-9a-f]{12}\\)`, "--", "packages"]).catch(() => ""), baseline.files)
   const proofs = proofByCell(found)
@@ -297,7 +303,7 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
   // Ratchet: core-internal upstream modules imported by the non-test files of Kilo packages and adapters.
   const adapters = v2Files.filter((f) => /^packages\/(kilo-[^/]+|.+\/src\/kilocode)\//.test(f) && /\.[cm]?[jt]sx?$/.test(f) && !isTestPath(f))
   // A tracked file deleted from the working tree reads as empty, as `git grep` skips it.
-  const imports = scanImports(await Promise.all(adapters.map(async (f): Promise<[string, string]> => [f, await Bun.file(path.join(ROOT, f)).text().catch(() => "")])))
+  const imports = scanImports(await Promise.all(adapters.map(async (f): Promise<[string, string]> => [f, await Bun.file(path.join(root, f)).text().catch(() => "")])))
   if (imports.violations.length) throw new Error(`logic packages (packages/kilo-*-core) must import nothing from @opencode/*:\n  ${imports.violations.join("\n  ")}`)
   // Ratchet: shared patches by rung.
   const sharedPatches = { seam: 0, patch: 0 }
@@ -353,7 +359,7 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
   const hunks = parseHunks(diff)
   const bindings = new Map<string, Map<string, string>>()
   const batch = shared.length
-    ? await $`git cat-file --batch < ${new Response(shared.map((f) => `${v1Target}:${f}`).join("\n") + "\n")}`.cwd(ROOT).quiet().text()
+    ? await $`git cat-file --batch < ${new Response(shared.map((f) => `${v1Target}:${f}`).join("\n") + "\n")}`.cwd(root).quiet().text()
     : ""
   let cursor = 0
   for (const f of shared) {
@@ -513,20 +519,20 @@ const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const label = (x: number, y: number, text: string, size: number) =>
   `<text x="${n(x)}" y="${n(y)}" font-size="${size}">${esc(text)}</text>`
 
-function panel(title: string, items: Box[], left: number) {
+function panel(title: string, items: Box[], left: number, width = PANEL) {
   const shown = items.filter((b) => b.total + b.dropped > 0).sort((a, b) => b.total + b.dropped - (a.total + a.dropped) || byName(a.feature, b.feature))
   const done = shown.reduce((s, b) => s + b.done, 0)
   const total = shown.reduce((s, b) => s + b.total, 0)
   const parts = [label(left + 4, 21, `${title}: ${pct(done, total)}% (${done}/${total})`, 16)]
   if (!shown.length) return parts
-  const rects = squarify(shown.map((b) => b.total + b.dropped), left, HEADER, PANEL, MAP)
+  const rects = squarify(shown.map((b) => b.total + b.dropped), left, HEADER, width, MAP)
   shown.forEach((box, i) => {
     const [x, y, w, h] = rects[i]
     const all = box.total + box.dropped
     const cells = Math.min(all, CAP)
     const doneCells = Math.round((cells * box.done) / all)
     const droppedCells = Math.round((cells * box.dropped) / all)
-    const name = box.feature.replace(/^unattributed:/, "")
+    const name = box.feature
     parts.push(`<g><title>${esc(name)}: ${box.done}/${box.total} (${pct(box.done, box.total)}%)${box.dropped ? `, ${box.dropped} dropped` : ""}</title>`)
     grid(cells, x + 1, y + 1, w - 2, h - 2).forEach(([cx, cy, cw, ch], j) => {
       const cls = j < doneCells ? "d" : j >= cells - droppedCells ? "x" : "o"
@@ -540,21 +546,27 @@ function panel(title: string, items: Box[], left: number) {
   return parts
 }
 
-function svg(features: Box[], unattributed: Box[], landed: Rungs) {
+function svg(runtime: Box[], clients: Box[], landed: Rungs) {
   const width = 2 * PANEL + GAP
   const height = HEADER + MAP + LEGEND
   const y = HEADER + MAP + 6
+  const allDone = [...runtime, ...clients].reduce((s, b) => s + b.done, 0)
+  const allTotal = [...runtime, ...clients].reduce((s, b) => s + b.total, 0)
   const swatch = (x: number, cls: string, text: string) => `<rect class="${cls}" x="${x}" y="${y}" width="12" height="12"/>${label(x + 16, y + 11, text, 12)}`
+  const splitPanels = clients.some((b) => b.total + b.dropped > 0) && runtime.some((b) => b.total + b.dropped > 0)
+  const panels = splitPanels
+    ? [...panel("Runtime & CLI", runtime, 0), ...panel("Clients", clients, PANEL + GAP)]
+    : panel("Features", [...runtime, ...clients], 0, width)
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`,
     `<style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>`,
     `<rect x="0" y="0" width="${width}" height="${height}" fill="#0d1117" stroke="none"/>`,
-    ...panel("Features", features, 0),
-    ...panel("Unattributed patches by upstream area", unattributed, PANEL + GAP),
+    ...panels,
     swatch(4, "d", "done"),
     swatch(60, "o", "open"),
     swatch(112, "x", "dropped"),
     label(190, y + 11, `Landed by rung: ${rungText(landed, true)}`, 12),
+    `<text x="${width - 4}" y="${n(y + 11)}" font-size="12" text-anchor="end">Total: ${pct(allDone, allTotal)}% (${allDone}/${allTotal})</text>`,
     "</svg>",
     "",
   ].join("\n")
@@ -574,13 +586,36 @@ function badge(label: string, percent: number) {
   ].join("\n")
 }
 
-/** The committed progress.json shape that `--compare` reads. */
+export type SnapshotFeature = {
+  feature: string
+  done: number
+  total: number
+  dropped: number
+  kinds: Record<Kind, { done: number; total: number }>
+  excluded?: string
+}
+
+/** The committed progress.json shape that `--compare` and `history` read. */
 export type Snapshot = {
   summary?: { done: number; total: number; percent: number; dropped: number; coreImports?: number; sharedPatches?: { seam: number; patch: number } }
-  features?: { feature: string; done: number; total: number; dropped: number; kinds: Record<Kind, { done: number; total: number }> }[]
+  features?: SnapshotFeature[]
   coreImports?: string[]
   done?: string[]
   dropped?: string[]
+}
+
+/** Counted feature boxes of a snapshot, stripping excluded boxes and legacy `unattributed:*` entries. */
+export function countedFeatures(snap: Snapshot, exclude: Readonly<Record<string, string>> = {}) {
+  return (snap.features ?? []).filter((f) => !f.excluded && !exclude[f.feature] && !f.feature.startsWith("unattributed:"))
+}
+
+export function snapshotSummary(snap: Snapshot, exclude: Readonly<Record<string, string>> = {}) {
+  if (!snap.features) return snap.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
+  const counted = countedFeatures(snap, exclude)
+  const done = counted.reduce((s, f) => s + f.done, 0)
+  const total = counted.reduce((s, f) => s + f.total, 0)
+  const dropped = counted.reduce((s, f) => s + f.dropped, 0)
+  return { done, total, percent: pct(done, total), dropped }
 }
 
 export type Placement = { marked: Rungs; ports: number; owned: number }
@@ -613,11 +648,13 @@ export function placement(diff: string, contents: Map<string, string>, rungs: Sh
 
 /** Markdown delta between two progress.json files, for the PR comment. Deterministic and self-contained. */
 export function compare(base: Snapshot, head: Snapshot, place?: Placement) {
-  const b = base.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
-  const h = head.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
+  const b = snapshotSummary(base)
+  const h = snapshotSummary(head)
   const sign = (v: number) => (v > 0 ? `+${v}` : `${v}`)
-  const before = new Map((base.features ?? []).map((f) => [f.feature, f]))
-  const after = new Map((head.features ?? []).map((f) => [f.feature, f]))
+  const before = new Map(countedFeatures(base).map((f) => [f.feature, f]))
+  const after = new Map(countedFeatures(head).map((f) => [f.feature, f]))
+  const baseExcluded = new Set((base.features ?? []).filter((f) => f.excluded).map((f) => f.feature))
+  const headExcluded = new Set((head.features ?? []).filter((f) => f.excluded).map((f) => f.feature))
   const names = [...new Set([...before.keys(), ...after.keys()])].sort(byName)
   const kinds: Kind[] = ["module", "api", "patch", "test"]
   const plural = (k: string, v: number) => (Math.abs(v) === 1 ? k : k.endsWith("ch") ? `${k}es` : `${k}s`)
@@ -634,15 +671,16 @@ export function compare(base: Snapshot, head: Snapshot, place?: Placement) {
       .filter(Boolean)
     const dropped = (y?.dropped ?? 0) - (x?.dropped ?? 0)
     if (dropped) changes.push(`${sign(dropped)} dropped`)
-    const cell = (f?: { done: number; total: number }) => (f ? `${f.done}/${f.total}` : "")
-    return [`| ${name} | ${cell(x)} | ${cell(y)} | ${changes.join("; ") || "new box"} |`]
+    const cell = (f: SnapshotFeature | undefined, excluded: boolean) => (f ? `${f.done}/${f.total}` : excluded ? "excluded" : "")
+    return [`| ${name} | ${cell(x, baseExcluded.has(name))} | ${cell(y, headExcluded.has(name))} | ${changes.join("; ") || "new box"} |`]
   })
-  const baseDone = new Set(base.done ?? [])
-  const headDone = new Set(head.done ?? [])
+  const countedId = (id: string) => !id.startsWith("patch:unattributed:")
+  const baseDone = new Set((base.done ?? []).filter(countedId))
+  const headDone = new Set((head.done ?? []).filter(countedId))
   const closed = [...headDone].filter((id) => !baseDone.has(id)).sort(byName)
   const reopened = [...baseDone].filter((id) => !headDone.has(id)).sort(byName)
-  const baseDropped = new Set(base.dropped ?? [])
-  const dropped = (head.dropped ?? []).filter((id) => !baseDropped.has(id)).sort(byName)
+  const baseDropped = new Set((base.dropped ?? []).filter(countedId))
+  const dropped = (head.dropped ?? []).filter(countedId).filter((id) => !baseDropped.has(id)).sort(byName)
   const list = (title: string, ids: string[]) =>
     ids.length ? ["", `<details><summary>${ids.length} ${title}</summary>`, "", ...ids.slice(0, 100).map((id) => `- \`${id}\``), ...(ids.length > 100 ? [`- ... ${ids.length - 100} more`] : []), "", "</details>"] : []
   const icon = h.percent > b.percent ? "📈" : h.percent < b.percent ? "📉" : "➖"
@@ -685,7 +723,7 @@ type Point = { date: string; done: number; total: number; percent: number }
  * (the last commit of the day). A commit whose file equals the current output is skipped, so the result
  * is the same before and after the commit that stores it, which keeps `--check` stable.
  */
-export async function history(current: string, read = git, base = "origin/v2") {
+export async function history(current: string, read = gitAt(DEFAULT_ROOT), base = "origin/v2", exclude: Readonly<Record<string, string>> = {}) {
   // Kilo-owned checkout note: CI's origin/v2 is the integration line, but dedicated fork
   // checkouts can diverge their own origin/v2. The base ref is a plain parameter; main()
   // resolves the KILO_PROGRESS_BASE_V2 override so committed artifacts match what CI computes.
@@ -699,8 +737,8 @@ export async function history(current: string, read = git, base = "origin/v2") {
     const [sha, date] = line.split(" ")
     if (seen.has(date)) continue
     const text = await read(["show", `${sha}:migration-tracking/progress/progress.json`]).catch(() => "")
-    if (!text || text + "\n" === current) continue
-    const summary = (JSON.parse(text) as { summary: { done: number; total: number; percent: number } }).summary
+    if (!text || text.trimEnd() === current.trimEnd()) continue
+    const summary = snapshotSummary(JSON.parse(text) as Snapshot, exclude)
     seen.add(date)
     points.push({ date, done: summary.done, total: summary.total, percent: summary.percent })
   }
@@ -737,32 +775,40 @@ function chart(points: Point[]) {
 function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispositions: Record<string, Disposition>, past: Point[] = []) {
   const all = boxes(data.cells, config)
   const features = all.filter((b) => !b.excluded && !b.feature.startsWith("unattributed:"))
-  const unattributed = all.filter((b) => b.feature.startsWith("unattributed:")).sort((a, b) => b.total - a.total || byName(a.feature, b.feature))
+  const clientSet = new Set(config.clients ?? [])
+  const runtime = features.filter((b) => !clientSet.has(b.feature))
+  const clients = features.filter((b) => clientSet.has(b.feature))
   const excluded = all.filter((b) => b.excluded)
-  const counted = [...features, ...unattributed]
+  const counted = features
+  const isCounted = (c: Cell) => !config.exclude[c.feature] && !c.feature.startsWith("unattributed:")
   const total = counted.reduce((s, b) => s + b.total, 0)
   const done = counted.reduce((s, b) => s + b.done, 0)
-  const dropped = all.reduce((s, b) => s + b.dropped, 0)
+  const dropped = counted.reduce((s, b) => s + b.dropped, 0)
+  const runtimeDone = runtime.reduce((s, b) => s + b.done, 0)
+  const runtimeTotal = runtime.reduce((s, b) => s + b.total, 0)
+  const clientsDone = clients.reduce((s, b) => s + b.done, 0)
+  const clientsTotal = clients.reduce((s, b) => s + b.total, 0)
   const kinds = (["module", "api", "patch", "test"] as Kind[]).map((k) => ({
     kind: k,
     done: counted.reduce((s, b) => s + b.kinds[k].done, 0),
     total: counted.reduce((s, b) => s + b.kinds[k].total, 0),
   }))
-  const droppedCells = data.cells.filter((c) => c.state === "dropped").sort((a, b) => byName(a.id, b.id))
+  const droppedCells = data.cells.filter((c) => isCounted(c) && c.state === "dropped").sort((a, b) => byName(a.id, b.id))
   const doneIds = data.cells
-    .filter((c) => c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
+    .filter((c) => isCounted(c) && c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
     .map((c) => c.id)
     .sort()
   const landed = { plugin: 0, host: 0, seam: 0, patch: 0 }
   for (const b of counted) for (const r of Object.values(RUNG)) landed[r] += b.landed[r]
+  const notCounted = { ...data.notCounted, unattributed: data.attribution.unattributed }
 
   const json = {
     pins: config.pins,
     summary: { done, total, percent: pct(done, total), dropped, kinds, landed, coreImports: data.coreImports.length, sharedPatches: data.sharedPatches },
-    notCounted: data.notCounted,
+    notCounted,
     attribution: data.attribution,
     coreImports: data.coreImports,
-    features: all.map((b) => ({
+    features: [...features, ...excluded].sort((a, b) => byName(a.feature, b.feature)).map((b) => ({
       feature: b.feature,
       done: b.done,
       total: b.total,
@@ -772,7 +818,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
       excluded: b.excluded,
     })),
     landed: Object.fromEntries(
-      data.cells.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
+      data.cells.flatMap((c) => (isCounted(c) && c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
     ),
     done: doneIds,
     dropped: droppedCells.map((c) => c.id),
@@ -782,24 +828,28 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
   const row = (b: Box) =>
     `| ${b.feature} | ${ratio(b.kinds.module)} | ${ratio(b.kinds.api)} | ${ratio(b.kinds.patch)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% | \`${bar(b.done, b.total)}\` | ${rungText(b.landed)} |`
   const imports = data.coreImports.length ? ` (${data.coreImports.map((m) => `\`${m}\``).join(", ")})` : ""
+  const surfaces = clientsTotal
+    ? [`Runtime & CLI: **${runtimeDone} / ${runtimeTotal}** (${pct(runtimeDone, runtimeTotal)}%). Clients: **${clientsDone} / ${clientsTotal}** (${pct(clientsDone, clientsTotal)}%).`, ""]
+    : []
   const md = [
     "# Kilo v2 migration progress",
     "",
     `Generated by \`bun script/upstream/progress.ts\`. Do not edit; edit \`features.json\` or \`dispositions.json\` and regenerate. CI updates it in a bot PR on pushes to v2; other PRs do not commit it.`,
     "",
-    `Measures Kilo's v1 delta: Kilo \`main\` pinned at \`${config.pins.v1Target.slice(0, 12)}\` (the v1 target) compared with the upstream commit it was synced to, \`${config.pins.v1Base.slice(0, 12)}\` (pins in \`features.json\`). Every Kilo change becomes a cell; a cell is done when the tracked v2 working tree has it.`,
+    `Measures Kilo's v1 feature delta: Kilo \`main\` pinned at \`${config.pins.v1Target.slice(0, 12)}\` (the v1 target) compared with the upstream commit it was synced to, \`${config.pins.v1Base.slice(0, 12)}\` (pins in \`features.json\`). Every Kilo feature change becomes a cell; a cell is done when the tracked v2 working tree has it.`,
     "",
-    `![Progress map: one box per feature sized by its cells, green done, grey open, yellow dropped](progress.svg)`,
+    `![Progress map: Runtime & CLI and Clients sized by their cells, green done, grey open, yellow dropped](progress.svg)`,
     "",
     `## Summary`,
     "",
     `**${done} / ${total} cells done (${pct(done, total)}%)**, ${dropped} dropped. \`${bar(done, total)}\``,
     "",
+    ...surfaces,
     `| Kind | Done | Total | % |`,
     `|---|---:|---:|---:|`,
     ...kinds.map((k) => `| ${k.kind} | ${k.done} | ${k.total} | ${pct(k.done, k.total)}% |`),
     "",
-    `Not counted: ${data.notCounted.branding} branding-only hunks (rename script territory), ${data.notCounted.marker} marker-only hunks (block boundaries), generated files. Patch attribution: ${data.attribution.tag} by tag, ${data.attribution.import} by import, ${data.attribution.identifier} by identifier, ${data.attribution.unattributed} unattributed (see below).`,
+    `Not counted: ${notCounted.unattributed} unattributed shared-file hunks (no feature tag, Kilo import or Kilo identifier; v2 ports behavior through plugins, host composition and generic seams rather than re-applying v1 monolith patches), ${notCounted.branding} branding-only hunks (rename script territory), ${notCounted.marker} marker-only hunks (block boundaries), generated files. Counted patch attribution: ${data.attribution.tag} by tag, ${data.attribution.import} by import, ${data.attribution.identifier} by identifier.`,
     "",
     `Landed by rung, for patch cells closed by a done-proof: ${rungText(landed, true)}.`,
     "",
@@ -823,14 +873,6 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     `|---|---:|---:|---:|---:|---:|---:|---|---|`,
     ...features.map(row),
     "",
-    `## Unattributed patches`,
-    "",
-    `Hunks in shared upstream files with no \`kilocode_change(<feature>)\` tag, no Kilo import and no Kilo identifier, grouped by upstream area. They count in the total. Tag them on \`main\` to move them into a feature box, or give them a disposition.`,
-    "",
-    `| Area | Patches | Tests | Done | % |`,
-    `|---|---:|---:|---:|---:|`,
-    ...unattributed.map((b) => `| ${b.feature.slice("unattributed:".length)} | ${ratio(b.kinds.patch)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% |`),
-    "",
     `## Excluded`,
     "",
     ...(excluded.length ? excluded.map((b) => `- ${b.feature} (${b.total} cells): ${b.excluded}`) : ["None."]),
@@ -841,42 +883,43 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `## Counting rules`,
     "",
-    `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`.`,
+    `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`. \`clients\` in \`features.json\` separates the Clients treemap panel from Runtime & CLI.`,
     `- module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.`,
     `- api: a \`/kilocode/*\` operation in the v1 OpenAPI document. Done when the path literal appears in \`packages/protocol/src\`, \`packages/server/src\` or a Kilo-owned v2 file.`,
-    `- patch: one Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. For an unattributed patch, the feature is its box, \`unattributed:<area>\`. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
-    `- test: a module or patch in a test file, same rules.`,
+    `- patch: one feature-attributed Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base, attributed by \`kilocode_change(<feature>)\`, a Kilo import or a Kilo identifier). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
+    `- test: a module or feature-attributed patch in a test file, same rules.`,
     `- landed: the rung of the done-proof. \`kilo_port\` is rung 2 (host) in \`packages/kilo-cli\` and rung 1 (plugin) in other Kilo-owned files; a marker has the rung of its file in \`script/upstream/shared-patches.json\` (3 seam, 4 patch). A cell with more than one proof counts once, at the highest rung.`,
     `- Ratchets: core-internal imports count the distinct modules in \`packages/core/src\` outside \`kilocode/\` that non-test files in \`packages/kilo-*\` and \`packages/*/src/kilocode\` import, as \`@opencode/core/*\` or by relative path. A non-test file of a logic package (\`packages/kilo-*-core\`) that imports anything from \`@opencode/*\` fails the run. Shared patches by rung count the entries in \`shared-patches.json\`.`,
     `- A disposition in \`dispositions.json\` overrides: \`ported\`, \`native\` and \`facade\` count as done, \`dropped\` leaves the denominator and is listed above. Every disposition needs a note and an author. A module ported under another name needs \`ported\` with the v2 path.`,
     `- A proof or a disposition says that v2 has the behavior. Close a cell only after you compare the v1 code with v2; a cell with a known gap stays open. \`dropped\` is for behavior that is not carried (a shim, dead v1 code, or a decision the plan records), not for behavior that a later unit ports. Rules: \`.kilo/skills/v2-migration/SKILL.md\`, section "Progress map".`,
-    `- Hunks whose only change is a brand rename, and hunks that contain only markers, are not cells.`,
+    `- Unattributed shared-file hunks, hunks whose only change is a brand rename, and hunks that contain only markers are not counted.`,
     "",
     `## Terms`,
     "",
-    `- cell: one unit of Kilo's v1 delta (a file, an API operation or a hunk). open: not done and no disposition.`,
+    `- cell: one unit of Kilo's v1 feature delta (a file, an API operation or a feature-attributed hunk). open: not done and no disposition.`,
     `- feature box: the cells of one feature. The feature comes from the v1 path or from \`features.json\`; a tag is always a feature name.`,
-    `- area: for unattributed patches, the upstream directory of the shared file (\`session\`, \`tui/component\`); \`<pkg>/pkg\` means a file outside \`src\`, \`test\` and \`script\`, such as \`package.json\` or a Dockerfile.`,
     `- re-pin: moving \`pins.v1Target\` in \`features.json\` to a newer \`main\` commit, normally in an upstream sync PR. Cells and patch IDs follow the new target.`,
     `- rung: where Kilo code meets upstream (fork conventions): 1 plugin hook, 2 host composition, 3 seam, 4 patch.`,
     "",
     `## Working with the map`,
     "",
-    `- \`bun script/upstream/progress.ts --list <feature>\` prints the open cells of a feature with their IDs and v1 source lines.`,
-    `- To mark a patch ported, put its ID on the v2 code that replaces it: \`kilocode_change(<feature>:<id>)\` on a marked line in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. To record a decision instead, add the cell ID to \`dispositions.json\`.`,
-    `- To move an unattributed patch into a feature, tag its marker on \`main\` as \`kilocode_change(<feature>)\`; the next v1 re-pin picks it up.`,
+    `- \`bun script/upstream/progress.ts --list <feature>\` prints the open cells of a feature with their IDs and v1 source lines (\`--list unattributed:<area>\` inspects unattributed v1 hunks in an upstream area).`,
+    `- To mark a feature patch ported, put its ID on the v2 code that replaces it: \`kilocode_change(<feature>:<id>)\` on a marked line in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. To record a decision instead, add the cell ID to \`dispositions.json\`.`,
     "",
   ].join("\n")
 
-  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed, landed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
+  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(runtime, clients, landed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
 }
 
 const OUTPUTS = ["progress.json", "README.md", "progress.svg", "history.svg", "badge.svg"] as const
 
 async function main() {
   const args = process.argv.slice(2)
+  const rootIdx = args.indexOf("--root")
+  const root = rootIdx >= 0 ? path.resolve(args[rootIdx + 1]) : DEFAULT_ROOT
+  const dir = path.join(root, "migration-tracking/progress")
   if (args.includes("--outputs")) {
-    console.log(OUTPUTS.map((name) => path.relative(ROOT, path.join(DIR, name))).join(" "))
+    console.log(OUTPUTS.map((name) => path.relative(root, path.join(dir, name))).join(" "))
     return
   }
   const cmp = args.indexOf("--compare")
@@ -892,13 +935,13 @@ async function main() {
     // The placement line reads the shared files the PR touches from the working tree, which is the head of the PR.
     const diff = await Bun.file(args[cmp + 3]).text()
     const shared = [...new Set(parseHunks(diff).map((h) => h.file))].filter((f) => !isKiloOwned(f))
-    const contents = new Map(await Promise.all(shared.map(async (f): Promise<[string, string]> => [f, await Bun.file(path.join(ROOT, f)).text().catch(() => "")])))
-    console.log(compare(base, head, placement(diff, contents, (await readBaseline(ROOT)).files)))
+    const contents = new Map(await Promise.all(shared.map(async (f): Promise<[string, string]> => [f, await Bun.file(path.join(root, f)).text().catch(() => "")])))
+    console.log(compare(base, head, placement(diff, contents, (await readBaseline(root)).files)))
     return
   }
-  const config = await readJson<Config>("features.json")
-  const dispositions = await readJson<Record<string, Disposition>>("dispositions.json")
-  const data = await collect(config, dispositions)
+  const config = await readJson<Config>(dir, "features.json")
+  const dispositions = await readJson<Record<string, Disposition>>(dir, "dispositions.json")
+  const data = await collect(config, dispositions, root)
 
   const list = args.indexOf("--list")
   if (list >= 0) {
@@ -909,14 +952,14 @@ async function main() {
     return
   }
 
-  const past = await history(render(config, data, dispositions).json, git, historyBase(process.env))
+  const past = await history(render(config, data, dispositions).json, gitAt(root), historyBase(process.env), config.exclude)
   const out = render(config, data, dispositions, past)
   // Typed by OUTPUTS, so the files CI commits and the files written here cannot drift apart.
   const files: Record<(typeof OUTPUTS)[number], string> = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
   if (args.includes("--check")) {
     const stale = []
     for (const [name, content] of Object.entries(files)) {
-      const current = await Bun.file(path.join(DIR, name)).text().catch(() => "")
+      const current = await Bun.file(path.join(dir, name)).text().catch(() => "")
       if (current !== content) stale.push(name)
     }
     if (stale.length) {
@@ -926,7 +969,7 @@ async function main() {
     console.log("migration-tracking/progress is up to date")
     return
   }
-  for (const [name, content] of Object.entries(files)) await Bun.write(path.join(DIR, name), content)
+  for (const [name, content] of Object.entries(files)) await Bun.write(path.join(dir, name), content)
   const summary = JSON.parse(out.json).summary
   console.log(`${summary.done}/${summary.total} cells done (${summary.percent}%), ${summary.dropped} dropped -> migration-tracking/progress/`)
 }
