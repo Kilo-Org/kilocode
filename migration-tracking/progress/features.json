@@ -382,6 +382,8 @@
     "zero-id": "util"
   },
   "exclude": {
-    "docs": "Documentation site (packages/kilo-docs). Not part of the runtime port."
+    "console": "Deprecated browser UI served at /console (packages/kilo-console, src/kilocode/console). Out of scope: the v2 CLI embeds no web UI (plan.md).",
+    "docs": "Documentation site (packages/kilo-docs). Not part of the runtime port.",
+    "web-ui": "Component library of the deprecated browser UI (packages/kilo-web-ui, imported only by packages/kilo-console). Out of scope: the v2 CLI embeds no web UI (plan.md)."
   }
 }
