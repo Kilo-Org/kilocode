@@ -216,6 +216,8 @@ describe("MCP client ID metadata document", () => {
     expect(result.redirect.origin).toBe(`http://127.0.0.1:${port}`)
     expect(result.redirect.pathname).toBe("/callback")
     expect(registrations).toHaveLength(1)
+    // DCR must record the loopback the listener bound, not upstream's placeholder.
+    expect(registrations[0]?.redirect_uris).toEqual([result.redirect.origin + result.redirect.pathname])
   })
 
   test("lets an explicit document redirect own the listener even with a custom port", async () => {

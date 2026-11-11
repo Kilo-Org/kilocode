@@ -58,6 +58,13 @@ test("the server gets the Kilo plugins through SdkPlugins and serves the Kilo Ga
           expect(plugins.body.data).not.toContainEqual(
             expect.objectContaining({ id: "opencode.plan", state: { status: "active" } }),
           )
+          // The Kilo goal, with the agent's `goal` tool, replaces the native one.
+          expect(plugins.body.data).toContainEqual(
+            expect.objectContaining({ id: "kilocode.goal", source: { type: "sdk" }, state: { status: "active" } }),
+          )
+          expect(plugins.body.data).not.toContainEqual(
+            expect.objectContaining({ id: "opencode.goal", state: { status: "active" } }),
+          )
           // The host times each Kilo plugin activation for the startup ratchet.
           expect(KiloHost.activations.get("kilocode.gateway")).toBeNumber()
 

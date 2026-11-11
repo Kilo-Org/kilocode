@@ -13,7 +13,9 @@ import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
 import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
+import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
@@ -129,7 +131,8 @@ export const overrides: LayerNode.Replacements = [
   Plugin.node.replace(Plugin.configured({ pluginSource: PluginGitSource.pluginSource })),
   // The plugin update check and `plugin.update` see the same cache instead of asking npm about a `git:` spec.
   Npm.node.replace(KiloPluginNpm.node),
-  // Kilo Plan mode (kilocode.plan) replaces the native one: a remove operation runs before the config operations.
+  // Kilo Plan mode (kilocode.plan) and the Kilo goal (kilocode.goal, which adds the agent's `goal` tool) replace the
+  // native plugins: remove operations run before the config operations.
   ConfigPluginSource.node.replace(
     ConfigPluginSource.node.mapLayer((layer) =>
       Layer.effect(
@@ -139,20 +142,33 @@ export const overrides: LayerNode.Replacements = [
           return {
             ...source,
             operations: () =>
-              source
-                .operations()
-                .pipe(Effect.map((operations) => [{ type: "remove" as const, target: "opencode.plan" }, ...operations])),
+              source.operations().pipe(
+                Effect.map((operations) => [
+                  { type: "remove" as const, target: "opencode.plan" },
+                  { type: "remove" as const, target: "opencode.goal" },
+                  // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native schedule
+                  // tools (and their /schedule command) would only duplicate the prompt and the model's choice.
+                  { type: "remove" as const, target: "opencode.tool.schedule" },
+                  ...operations,
+                ]),
+              ),
           }
         }),
       ).pipe(Layer.provide(layer)),
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
-  // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding.
+  // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding, and a
+  // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop.
+  // kilo_port(mcp:18028d867142)
   Mcp.node.replace(
     Mcp.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
-      host: { oauth: McpClientMetadata.oauth },
+      host: {
+        oauth: McpClientMetadata.oauth,
+        fetch: (base, endpoint) => KiloSseProbe.probe(base, endpoint),
+        authFailure,
+      },
     }),
   ),
   Model.node.replace(

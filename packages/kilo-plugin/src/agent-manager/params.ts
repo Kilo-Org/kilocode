@@ -9,6 +9,12 @@ const Task = Schema.Struct({
   branchName: Schema.optional(
     Schema.NullOr(Schema.String).annotate({ description: "Git branch name seed for worktree mode" }),
   ),
+  baseBranch: Schema.optional(
+    Schema.NullOr(Schema.String).annotate({
+      description:
+        "Existing branch that the new worktree starts from, like the base branch in the New Worktree dialog. Use the branch name without a remote prefix, for example 'main' or 'release/1.0'. Worktree mode only. Omit to use the configured default base branch or the repository default branch.",
+    }),
+  ),
   agent: Schema.optional(
     Schema.NullOr(Schema.String).annotate({
       description:
@@ -168,11 +174,17 @@ export const Params = Schema.Union([
     tasks: Schema.Union([Start.fields.tasks, Schema.fromJsonString(Start.fields.tasks)]),
   }).check(
     Schema.makeFilter((params) => {
-      if (params.worktreeID == null) return undefined
+      const base = params.tasks.some((task) => task.baseBranch?.trim())
+      if (params.worktreeID == null) {
+        if (base && params.mode !== "worktree")
+          return "baseBranch requires mode worktree. Local sessions start in an existing directory and cannot choose a base branch."
+        return undefined
+      }
       if (params.mode !== "local")
         return `worktreeID ${JSON.stringify(params.worktreeID)} requires mode local. To start a new worktree, omit worktreeID or send JSON null`
       if (params.versions === true) return "worktreeID cannot be combined with versions true"
       if (params.tasks.some((task) => task.branchName != null)) return "worktreeID cannot be combined with branchName"
+      if (base) return "worktreeID cannot be combined with baseBranch"
       return undefined
     }),
   ),

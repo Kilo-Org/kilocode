@@ -48,10 +48,15 @@ export interface OAuth {
  * the MCP implementation.
  */
 export interface Host {
-  /** Wraps the remote transport fetch, for example to normalize an optional stream probe. */
-  readonly fetch?: (fetch: FetchLike) => FetchLike
+  /** Wraps the remote transport fetch for one attempt; `endpoint` is the URL that attempt dials. */
+  readonly fetch?: (fetch: FetchLike, endpoint: string) => FetchLike
   /** Rewrites a local server command before it is spawned, for example to add container flags. */
   readonly localCommand?: (command: LocalCommand) => LocalCommand
   /** Client identity, client document and credential binding used for MCP OAuth. */
   readonly oauth?: OAuth
+  /**
+   * Recognizes a remote connection failure that asks for authentication, so the server reports
+   * `needs_auth` with that message instead of `failed`. Only consulted for a server that may sign in.
+   */
+  readonly authFailure?: (message: string | undefined) => boolean
 }

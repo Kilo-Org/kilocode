@@ -53,7 +53,8 @@ const server = () => {
           code_challenge_methods_supported: ["S256"],
           token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
         })
-      if (url.pathname === "/register") return Response.json({ ...JSON.parse(body), client_id: "registered" })
+      if (url.pathname === "/register")
+        return Response.json({ ...JSON.parse(body), client_id: `registered-${url.port}` })
       if (url.pathname === "/token")
         return Response.json({
           access_token: "access",
@@ -189,6 +190,15 @@ describe("MCP OAuth issuer binding", () => {
         "static",
       ),
     ).toEqual({ client_id: "registered", client_secret: "registered", issuer: "https://one.example" })
+    // A registration may reuse the configured id; it must never become the configured binding.
+    const echoed = {
+      client_id: "static",
+      client_secret: "server-secret",
+      redirect_uris: ["http://127.0.0.1/callback"],
+      issuer: "https://two.example",
+    }
+    expect(McpOAuthIssuer.stored(echoed, "static")).toEqual(echoed)
+    expect(McpOAuthIssuer.configured(echoed, "static", "secret")).toEqual(echoed)
   })
 
   for (const item of cases)
@@ -210,8 +220,11 @@ describe("MCP OAuth issuer binding", () => {
         mcp.state.issuer = second.url
         const again = persist(store, (await login({ url: mcp.url, oauth: item.oauth, store })).credential)
         if (again.value.type !== "oauth") throw new Error("expected an oauth credential")
+        const registered = `registered-${new URL(second.url).port}`
         expect(again.value.metadata?.issuer).toContain(second.url)
-        expect(again.value.metadata?.client).toMatchObject({ client_id: "registered" })
+        expect(again.value.metadata?.client).toMatchObject({ client_id: registered })
+        // Exactly one registration at the new server proves the first issuer's client was not reused.
+        expect(second.requests.filter((request) => request.path === "/register")).toHaveLength(1)
 
         // Later sessions refresh against the server that issued the current tokens.
         const provider = await connect(mcp.url, item.oauth, store)
@@ -222,9 +235,7 @@ describe("MCP OAuth issuer binding", () => {
           "authorization_code",
           "refresh_token",
         ])
-        expect(tokens.every((request) => new URLSearchParams(request.body).get("client_id") === "registered")).toBe(
-          true,
-        )
+        expect(tokens.every((request) => new URLSearchParams(request.body).get("client_id") === registered)).toBe(true)
         expect(second.requests.some((request) => request.body.includes(old))).toBe(false)
         const secret = item.secret
         if (secret) expect(second.requests.some((request) => request.body.includes(secret))).toBe(false)
@@ -233,7 +244,7 @@ describe("MCP OAuth issuer binding", () => {
         const row = Array.from(store.rows.values()).at(-1)
         if (row?.value.type !== "oauth") throw new Error("expected an oauth credential")
         expect(row.value.metadata?.issuer).toContain(second.url)
-        expect(row.value.metadata?.client).toMatchObject({ client_id: "registered" })
+        expect(row.value.metadata?.client).toMatchObject({ client_id: registered })
         if (secret) expect(JSON.stringify(row.value)).not.toContain(secret)
       } finally {
         first.http.stop(true)
@@ -260,7 +271,7 @@ describe("MCP OAuth issuer binding", () => {
       expect(second.requests.filter((request) => request.path === "/register")).toHaveLength(1)
       expect(second.requests.some((request) => request.body.includes("configured-secret"))).toBe(false)
       expect(Array.from(store.rows.values()).at(-1)?.value.metadata?.client).toMatchObject({
-        client_id: "registered",
+        client_id: `registered-${new URL(second.url).port}`,
         issuer: second.url,
       })
     } finally {
@@ -325,7 +336,7 @@ describe("MCP OAuth issuer binding", () => {
       expect(JSON.parse(registration?.body ?? "{}").redirect_uris).toEqual([McpClientMetadata.callbackUrl])
 
       const again = await login({ url: mcp.url, store, clientMetadata: McpClientMetadata.oauth })
-      expect(again.url.searchParams.get("client_id")).toBe("registered")
+      expect(again.url.searchParams.get("client_id")).toBe(`registered-${new URL(second.url).port}`)
       expect(again.url.searchParams.get("redirect_uri")).toBe(McpClientMetadata.callbackUrl)
       expect(second.requests.filter((request) => request.path === "/register")).toHaveLength(1)
     } finally {

@@ -127,6 +127,16 @@ Later phases extend the same host interface; they do not rework the hook mechani
    - Normalize a 200 GET whose content type is not `text/event-stream` to 405; leave event-stream and
      4xx/5xx unchanged.
    - Tests: port `mcp-sse-probe.test.ts`; add the non-SSE 200 case that currently loops.
+   - **Status:** implemented in this worktree (PR branch `mcp-sse-probe`). Deltas from the text above:
+     v2 has one remote transport, so there is a single site; the hook is applied per transport
+     attempt and now receives the endpoint URL (the Code Mode query and the retry at the configured
+     URL both change the dialed URL, so the probe cannot be scoped from the connect-level URL); and
+     the probe keeps the endpoint plus `Accept` scoping even though the hook only wraps the transport
+     fetch, because `@modelcontextprotocol/client@2.3.1` serves the transport's own OAuth discovery,
+     refresh and step-up requests through that same fetch. Covered by the ported transport tests
+     (probe once, same-origin redirect, redirect chain, http to https upgrade on default ports, OAuth
+     discovery with an SSE `Accept`) and an end-to-end `McpClient.connect` test against a server that
+     answers the probe with `200` `text/html`.
 
 4. **Auth-failure surfacing**
    - Port `auth-failure.ts` to `packages/core/src/kilocode/mcp/`.
@@ -135,6 +145,27 @@ Later phases extend the same host interface; they do not rework the hook mechani
      text; otherwise keep `failed`.
    - Tests: port `mcp/auth-failure.test.ts` and `mcp/auth-classification.test.ts` (plain 403 ->
      `needs_auth`; `oauth: false` -> `failed`; 404/500 -> `failed`).
+
+   **Status:** implemented in this worktree.
+
+   - `packages/core/src/kilocode/mcp/auth-failure.ts` exports `authFailure(message)`, the v1 marker,
+     OAuth-word and 401/403-status predicate. `McpHost.Host.authFailure` is the new host hook, and
+     `packages/kilo-cli/src/host.ts` supplies the predicate next to the existing OAuth identity.
+   - The seam is in `packages/core/src/mcp/connection.ts`, in the failure branch of a connect
+     attempt: a remote server that may sign in (`oauth !== false`) whose failure message the host
+     classifies becomes `needs_auth` with that message. v2's equivalent of v1's `startServer` is
+     this branch, so per-Location connections, pooled shared connections and reconnects all classify
+     the same way. With `host` unset the emitted failure is upstream's, and
+     `packages/core/test/mcp.test.ts` and `test/mcp-oauth.test.ts` pass unchanged.
+   - `needs_client_registration` is not carried: v2 has no such status, so a dynamic-client-
+     registration failure reads `needs_auth` or `failed` with the original message. No client
+     change was needed; the TUI, CLI list and VS Code already render `needs_auth` as sign-in.
+   - The classification never downgrades an `oauth: false` failure: those already report `failed`,
+     so the core gate only adds the classification. v1's `finishAuth` "No pending OAuth flow"
+     assertion has no v2 mechanism and is replaced by the status assertions.
+   - Proof closes `module:.../kilocode/mcp/auth-failure.ts`, both test cells by path, and the
+     `patch:mcp:8821b728d322` import cell on the seam. The `index.ts:374`/`:378`/`:394` hunks
+     resolve as `unattributed:mcp` and stay untouched.
 
 ### Phase 2: `git:` plugin sources
 
@@ -297,7 +328,7 @@ Status: implemented (schema/registry/installer/RPC in one PR, clients in the nex
 | 2 | `mcp-oauth-issuer-cimd`: issuer binding, CIMD eligibility/document, tests | 1 |
 | 3 | `mcp-callback-handoff`: listener takeover, tests | 1, 2 |
 | 4 | `mcp-sse-probe`: probe helper and host hook, tests | 1 |
-| 5 | `mcp-auth-failure`: predicate and status classification, tests | 1 |
+| 5 | `mcp-auth-failure`: predicate and status classification, tests (implemented in this worktree, PR open) | 1 |
 | 6 | `plugin-git-sources`: resolver, loader seam, tests | none |
 | 7 | `marketplace-plugin-kind`: schema, installer, config, RPC tests | 6 |
 | 8 | `marketplace-plugin-ui`: TUI and VS Code | 7 |

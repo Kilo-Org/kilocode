@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Voltooid (gemeld door het model)",
+  "session.goal.complete": "Voltooid",
   "session.goal.blocked": "Geblokkeerd",
   "session.goal.restart": "Doel opnieuw starten",
   ...anacondaDesktopDict,
@@ -313,6 +313,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.noChanges": "Geen wijzigingen.",
   "ui.permission.reject": "Weigeren",
+  "ui.permission.allowAllSites": "Alle sites toestaan",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
   "ui.permission.feedbackHint": "Enter om te weigeren, Esc om te annuleren",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",

@@ -55,7 +55,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完成（模型回報）",
+  "session.goal.complete": "完成",
   "session.goal.blocked": "受阻",
   "session.goal.restart": "重新開始目標",
   ...anacondaDesktopDict,
@@ -293,6 +293,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.noChanges": "無變更。",
   "ui.permission.reject": "拒絕",
+  "ui.permission.allowAllSites": "允許所有網站",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒絕，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",

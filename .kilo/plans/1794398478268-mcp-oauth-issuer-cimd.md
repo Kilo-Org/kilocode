@@ -13,7 +13,9 @@ Two v1 behaviors return to the Kilo MCP OAuth client:
    there and the configured secret is never sent to it.
 2. Kilo's own Client ID Metadata Document is the CIMD `client_id`, and the loopback callback that document lists
    (`http://127.0.0.1:19876/mcp/oauth/callback`) is the one Kilo listens on. Configurations the document cannot
-   describe (a configured client, a secret, `callback_port`, a custom `redirect_uri`) register dynamically instead.
+   describe (a configured client, a secret, `callback_port`, a custom `redirect_uri`) never offer the document: a
+   configured client presents that client with no registration, and an attempt with no configured client registers
+   dynamically.
 
 Both behaviors are supplied by the Kilo host through the hook bag from #15986, so the upstream server with no host
 keeps its current behavior byte for byte.
@@ -23,8 +25,9 @@ Exit criteria:
 1. A stored credential never holds the configured secret, and no request to a second authorization server carries
    it; refresh after the change goes to the new server with the client registered there.
 2. An eligible attempt sends `client_id=https://kilo.ai/docs/oauth/kilo/client.json` and
-   `redirect_uri=http://127.0.0.1:19876/mcp/oauth/callback` and performs no registration; every ineligible attempt
-   performs exactly one registration and no document request.
+   `redirect_uri=http://127.0.0.1:19876/mcp/oauth/callback` and performs no registration. An ineligible attempt
+   never offers the document: a configured client registers nothing, and an attempt with no configured client
+   registers dynamically.
 3. `packages/core`: `bun test` and `bun typecheck` pass. Root `bun run check`, `bun run lint`,
    `bun script/check-shared-patches.ts --worktree` and `bun script/check-opencode-annotations.ts --worktree` pass.
    The upstream `packages/core/test/mcp-oauth.test.ts` suite still passes unmodified.
@@ -70,11 +73,12 @@ Exit criteria:
    DCR from the server's advertised capability. The shared code must therefore stop passing upstream's
    `CLIENT_METADATA_URL` whenever a host is present, or a Kilo user with `callback_port` would present opencode's
    document. The upstream path (`host` unset) keeps `cimd`/`CLIENT_METADATA_URL` unchanged.
-5. **Fixed loopback for CIMD, matching the hosted document.** Eligible attempts listen on `127.0.0.1:19876` with path
-   `/mcp/oauth/callback`. A configured `redirect_uri` owns port and path and wins over `callback_port` (v1 precedence,
-   `parseRedirectUri`); `callback_port` without a redirect keeps upstream's chain and therefore DCR. Consequence:
-   until PR 3 lands the callback takeover, a second concurrent attempt on 19876 fails with `EADDRINUSE` instead of
-   binding an ephemeral port. Acceptable: the user has one login window per server.
+5. **Fixed loopback for CIMD, matching the hosted document.** Only document-eligible attempts listen on
+   `127.0.0.1:19876` with path `/mcp/oauth/callback`; every other attempt keeps upstream's chain (ephemeral port and
+   `/callback`), or the port/path a configured `redirect_uri`/`callback_port` names. A configured `redirect_uri` owns
+   port and path and wins over `callback_port` (v1 precedence, `parseRedirectUri`). Consequence: until PR 3 lands the
+   callback takeover, a second concurrent document-eligible attempt fails with `EADDRINUSE` instead of binding an
+   ephemeral port. Acceptable: the user has one login window per server.
 6. **Drop `retain`.** v1 needed it because the pending provider committed what it had buffered. v2's `authorize`
    finalizes from the same in-memory store the provider wrote to, so `configured`/`stored` cover every case and a
    third helper has no caller.

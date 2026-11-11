@@ -218,12 +218,19 @@ export function make(input: Input): Connection {
       yield* Scope.close(scope, Exit.void)
       state.scope = undefined
       const error = Cause.squash(result.cause)
+      // kilocode_change start - seam: the host may classify a remote authentication failure
+      const message = error instanceof Error ? error.message : String(error)
+      const authFailure =
+        config.type === "remote" &&
+        config.oauth !== false &&
+        input.host?.authFailure?.(message) === true // kilocode_change(mcp:8821b728d322)
       yield* input.events.failed(
-        error instanceof McpClient.NeedsAuthError
-          ? { status: "needs_auth", error: error.message }
-          : { status: "failed", error: error instanceof Error ? error.message : String(error) },
+        error instanceof McpClient.NeedsAuthError || authFailure
+          ? { status: "needs_auth", error: message }
+          : { status: "failed", error: message },
         error instanceof McpClient.ConnectError && error.answered === true,
       )
+      // kilocode_change end
     }).pipe(
       Effect.ensuring(input.events.settled),
       Effect.annotateLogs({ server: input.name, directory: input.directory, connectionID: crypto.randomUUID() }),
