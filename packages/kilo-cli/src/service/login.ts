@@ -10,7 +10,7 @@ import { errorMessage } from "@opencode/cli/util/error"
 import { OPENCODE_CHANNEL } from "@opencode/cli/version"
 import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
-import { Effect, FileSystem } from "effect"
+import { Effect, FileSystem, Option } from "effect"
 import { ChildProcess } from "effect/process"
 import { existsSync, statSync } from "node:fs"
 import path from "node:path"
@@ -62,12 +62,16 @@ export interface Unit {
   readonly check: { readonly type: "file"; readonly path: string } | Exec
   readonly install: (input: Install) => ReadonlyArray<Step>
   readonly uninstall: ReadonlyArray<Step>
+  /** Stops the running unit without removing it, so its restart policy cannot undo `service stop`. */
+  readonly stop: ReadonlyArray<Step>
 }
 
 export interface State {
   readonly kind: Kind
   readonly name: string
   readonly installed: boolean
+  /** The unit exists but the executable it records is gone, so it fails at every login until it is installed again. */
+  readonly stale: boolean
 }
 
 export type Run = (
@@ -200,7 +204,15 @@ export function taskCommand(command: ReadonlyArray<string>) {
 export const install = Effect.fn("KiloLoginService.install")(function* (target: Target, input: Install, run: Run) {
   const found = yield* supported(target)
   yield* execute(found.install(input), run)
-  return { kind: found.kind, name: found.name, installed: true } satisfies State
+  return { kind: found.kind, name: found.name, installed: true, stale: false } satisfies State
+})
+
+/** Stops the running unit and leaves it installed for the next login. Nothing runs when it is not installed. */
+export const stop = Effect.fn("KiloLoginService.stop")(function* (target: Target, run: Run) {
+  const found = yield* supported(target)
+  if (found.stop.length === 0 || !(yield* exists(found, run))) return { stopped: false }
+  yield* execute(found.stop, run)
+  return { stopped: true, kind: found.kind, name: found.name }
 })
 
 /** Stops and removes the unit. Nothing runs when it is not installed. */
@@ -213,11 +225,17 @@ export const uninstall = Effect.fn("KiloLoginService.uninstall")(function* (targ
 
 export const status = Effect.fn("KiloLoginService.status")(function* (target: Target, run: Run) {
   const found = yield* supported(target)
-  return { kind: found.kind, name: found.name, installed: yield* exists(found, run) } satisfies State
+  const installed = yield* exists(found, run)
+  // Finishing an install elsewhere, or an upgrade that moved the executable, leaves a unit that cannot start.
+  const stale = installed ? yield* staleUnit(found) : false
+  return { kind: found.kind, name: found.name, installed, stale } satisfies State
 })
 
 export function describe(state: State) {
-  return state.installed ? `login: installed (${state.kind}, ${state.name})` : "login: not installed"
+  if (!state.installed) return "login: not installed"
+  if (state.stale)
+    return `login: stale (${state.kind}, ${state.name}), run \`${KiloBinary} service install\` again`
+  return `login: installed (${state.kind}, ${state.name})`
 }
 
 /** This process's target: the global home and log directory, the user, and the app directory and channel. */
@@ -248,6 +266,12 @@ export const processRunner = Effect.gen(function* () {
   return run
 })
 
+/** Prints the failure as `Error: <message>` without changing the exit code of a command that succeeded. */
+export const notice = (error: unknown) =>
+  Effect.sync(() => {
+    UI.error(errorMessage(error))
+  })
+
 /** Prints the failure as `Error: <message>` and sets a failing exit code. */
 export const report = (error: unknown) =>
   Effect.sync(() => {
@@ -275,6 +299,7 @@ function launchd(target: Target, label: string): Unit {
       { type: "run", command: "launchctl", args: ["bootstrap", domain, file] },
     ],
     uninstall: [bootout, { type: "remove", path: file }],
+    stop: [bootout],
   }
 }
 
@@ -294,6 +319,7 @@ function systemd(target: Target, name: string, description: string): Unit {
       { type: "remove", path: file },
       { type: "run", command: "systemctl", args: ["--user", "daemon-reload"], optional: true },
     ],
+    stop: [{ type: "run", command: "systemctl", args: ["--user", "stop", name], optional: true }],
   }
 }
 
@@ -310,6 +336,8 @@ function schtasks(name: string): Unit {
       },
     ],
     uninstall: [{ type: "run", command: "schtasks", args: ["/Delete", "/F", "/TN", name] }],
+    // The task only starts at logon and the server is an ordinary process, so there is nothing to unload.
+    stop: [],
   }
 }
 
@@ -326,6 +354,29 @@ const exists = Effect.fnUntraced(function* (found: Unit, run: Run) {
   return yield* fs.exists(found.check.path)
 })
 
+/** Whether the written unit names an executable that is gone. A Windows task stores its own definition, so it never is. */
+const staleUnit = Effect.fnUntraced(function* (found: Unit) {
+  if (found.check.type !== "file") return false
+  const fs = yield* FileSystem.FileSystem
+  const content = yield* fs.readFileString(found.check.path).pipe(Effect.option)
+  if (Option.isNone(content)) return false
+  const executable = recordedExecutable(found.kind, content.value)
+  return executable !== undefined && !existsSync(executable)
+})
+
+/** The executable a written unit starts: launchd's first ProgramArguments string, or systemd's first ExecStart word. */
+function recordedExecutable(kind: Kind, content: string) {
+  if (kind === "launchd") {
+    const match = /<key>ProgramArguments<\/key>\s*<array>\s*<string>([\s\S]*?)<\/string>/.exec(content)
+    return match?.[1] === undefined ? undefined : unescapeXml(match[1])
+  }
+  if (kind === "systemd") {
+    const match = /^ExecStart="((?:[^"\\]|\\.)*)"/m.exec(content)
+    return match?.[1] === undefined ? undefined : match[1].replace(/\\(.)/g, "$1")
+  }
+  return undefined
+}
+
 function execute(steps: ReadonlyArray<Step>, run: Run) {
   return Effect.forEach(steps, (step) => perform(step, run), { discard: true })
 }
@@ -335,7 +386,13 @@ const perform = Effect.fnUntraced(function* (step: Step, run: Run) {
   if (step.type === "directory") return yield* fs.makeDirectory(step.path, { recursive: true })
   if (step.type === "write") {
     yield* fs.makeDirectory(path.dirname(step.path), { recursive: true })
-    return yield* fs.writeFileString(step.path, step.content)
+    // An explicit mode keeps the unit from being world-writable under a permissive umask, which systemd refuses to
+    // load, and the rename makes an interrupted write leave the previous unit instead of a truncated one.
+    const temporary = `${step.path}.tmp`
+    return yield* fs.writeFileString(temporary, step.content, { mode: 0o644 }).pipe(
+      Effect.andThen(fs.rename(temporary, step.path)),
+      Effect.onError(() => fs.remove(temporary, { force: true }).pipe(Effect.ignore)),
+    )
   }
   if (step.type === "remove") return yield* fs.remove(step.path, { force: true })
   if (step.optional) return yield* Effect.ignore(run(step.command, step.args))
@@ -357,8 +414,23 @@ function escapeXml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
+function unescapeXml(value: string) {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+}
+
 // systemd unescapes C-style quoted strings and expands % specifiers in both settings; ExecStart also expands $NAME.
+// A newline ends the directive line, so a value such as PATH would otherwise add unit settings of its own; control
+// characters are escaped like any other unprintable text instead.
 function quoteSystemd(value: string, variables: boolean) {
-  const escaped = value.replace(/[\\"]/g, (char) => `\\${char}`).replace(/%/g, "%%")
+  const escaped = value
+    .replace(/[\\"]/g, (char) => `\\${char}`)
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/\t/g, "\\t")
+    .replace(/%/g, "%%")
   return `"${variables ? escaped.replace(/\$/g, () => "$$") : escaped}"`
 }

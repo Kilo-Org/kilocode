@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 126,
-    "markedLines": 2183,
+    "markedLines": 2186,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -123,7 +123,7 @@
     },
     "packages/core/src/schedule.ts": {
       "rung": 3,
-      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. The native experimental.schedules check runs first and is unchanged, so the seam adds no policy; a host that keeps scheduling on provides Flag.Overrides to the Schedule node (Kilo does, in packages/kilo-cli/src/host.ts). A hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows and wakeups use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
+      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. The native experimental.schedules check runs first and is unchanged, so the seam adds no policy; a host that keeps scheduling on provides Flag.Overrides to the Schedule node (Kilo does, in packages/kilo-cli/src/host.ts). A hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows and wakeups use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior. The Kilo `/periodic` wizard validates an `at` time before it asks for permission approval, so it reads the same instant parser through a Kilo-owned schema module (`@opencode/schema/kilocode/schedule`) instead of a second copy, and the local helper is replaced by that import."
     },
     "packages/schema/src/schedule.ts": {
       "rung": 3,

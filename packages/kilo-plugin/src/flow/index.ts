@@ -223,6 +223,7 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (input, context) =>
             ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) =>
                 update(ctx, schedules, { ...input, sessionID: context.sessionID }, session.projectID, runtime),
               ),
@@ -239,6 +240,7 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (input, context) =>
             ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) => remove(ctx, schedules, input, session.projectID, runtime)),
               Effect.map((output) => ({
                 output,
@@ -262,6 +264,7 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (input, context) =>
             ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) => run(ctx, input, session.projectID, runtime)),
               Effect.map((execution) => ({
                 output: execution,
@@ -279,6 +282,15 @@ export const KiloFlowPlugin = define({
       .pipe(Effect.orDie)
   }),
 })
+
+/**
+ * A Flow run Session has a deny-by-default allowlist and reads repository content unattended, so it must not manage the
+ * project's other Flows: rewriting a more privileged Flow's prompt and running it would escape its own allowlist.
+ */
+function refuseRunSession(session: Session.Info) {
+  if (Option.isNone(decodeMetadata(session.metadata?.[metadataKey]))) return Effect.void
+  return Effect.fail(new Error(`Session ${session.id} runs a Flow and cannot start, change, or delete Flows`))
+}
 
 function toolError(error: unknown) {
   return new Tool.Error({ message: error instanceof Error ? error.message : String(error), error })
@@ -667,29 +679,20 @@ function remove(
 }
 
 /**
- * The worktree roots a Flow's retained runs created. Runs record their root; for an older run only its nested
- * directory is known, so the containing worktree counts only when its name carries the Flow ID.
+ * The worktree roots a Flow created. Retained runs record their root, and every worktree a Flow creates is named after
+ * it, so the project listing also finds the roots whose run record retention already pruned.
  */
 function runWorktrees(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
   return Effect.gen(function* () {
     const stored = yield* runs(ctx, [record.id])
     const recorded = stored.runs.flatMap((run) => (run.worktreeDirectory ? [run.worktreeDirectory] : []))
-    const nested = stored.runs.flatMap((run) =>
-      !run.worktreeDirectory && run.worktree === "new" && run.directory ? [run.directory] : [],
-    )
     const projectID = record.context.projectID
-    if (nested.length === 0 || !projectID) return [...new Set(recorded)]
+    if (!projectID) return [...new Set(recorded)]
     const listed = yield* ctx.worktree.list({ projectID }).pipe(Effect.catchCause(() => Effect.succeed([])))
-    const roots = nested.flatMap((directory) => {
-      const root = listed
-        .filter(
-          (worktree) =>
-            FSUtil.contains(worktree.directory, directory) && path.basename(worktree.directory).startsWith(`${record.id}-`),
-        )
-        .toSorted((left, right) => right.directory.length - left.directory.length)[0]
-      return root ? [root.directory] : []
-    })
-    return [...new Set([...recorded, ...roots])]
+    const named = listed
+      .filter((worktree) => path.basename(worktree.directory).startsWith(`${record.id}-`))
+      .map((worktree) => worktree.directory)
+    return [...new Set([...recorded, ...named])]
   })
 }
 
@@ -806,7 +809,19 @@ function start(
       }
       yield* persistRun(ctx, initial)
       yield* ctx.storage.set(activeKey(record.id), initial.id)
-      if (!(yield* runtime.fs.isDir(directory))) return yield* failRun(ctx, initial, new Error(missingDirectory(directory)))
+      // A start that fails before its Session exists also drops the worktree it created, so a failed start leaves nothing
+      // behind. A refused removal (changes in the tree) keeps the root recorded for a retry to reuse.
+      const fail = (error: unknown) =>
+        Effect.gen(function* () {
+          const stored = Option.getOrUndefined(decodeRun(yield* ctx.storage.get(runKey(initial))))
+          const run = stored?.id === initial.id ? stored : initial
+          if (run.status !== "starting" || !run.worktreeDirectory) return yield* failRun(ctx, run, error)
+          const removed = yield* ctx.worktree
+            .remove({ projectID, directory: run.worktreeDirectory, force: false })
+            .pipe(Effect.as(true), Effect.catchCause(() => Effect.succeed(false)))
+          return yield* failRun(ctx, removed ? { ...run, worktreeDirectory: undefined } : run, error)
+        })
+      if (!(yield* runtime.fs.isDir(directory))) return yield* fail(new Error(missingDirectory(directory)))
 
       // A retried occurrence reuses the worktree an earlier attempt kept, so retries never pile up worktrees.
       const kept =
@@ -845,10 +860,10 @@ function start(
             })
           : Effect.succeed({ directory: canonicalDirectory })
       const targetResult = yield* target.pipe(
-        Effect.onInterrupt(() => failRun(ctx, initial, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
+        Effect.onInterrupt(() => fail(new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
         Effect.result,
       )
-      if (targetResult._tag === "Failure") return yield* failRun(ctx, initial, targetResult.failure)
+      if (targetResult._tag === "Failure") return yield* fail(targetResult.failure)
 
       const admitting: KiloFlowRpc.Run = {
         ...initial,
@@ -872,24 +887,10 @@ function start(
           ],
         })
         .pipe(
-          Effect.onInterrupt(() => failRun(ctx, admitting, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
+          Effect.onInterrupt(() => fail(new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
           Effect.result,
         )
-      if (sessionResult._tag === "Failure") {
-        // Nothing ran in the worktree yet. A manual run is never retried, so drop it; a refusal keeps it for reuse.
-        const root = admitting.worktreeDirectory
-        const removed = root
-          ? yield* ctx.worktree.remove({ projectID, directory: root, force: false }).pipe(
-              Effect.as(true),
-              Effect.catchCause(() => Effect.succeed(false)),
-            )
-          : false
-        return yield* failRun(
-          ctx,
-          removed ? { ...admitting, worktreeDirectory: undefined } : admitting,
-          sessionResult.failure,
-        )
-      }
+      if (sessionResult._tag === "Failure") return yield* fail(sessionResult.failure)
 
       const started = Date.now()
       const running: KiloFlowRpc.Run = {

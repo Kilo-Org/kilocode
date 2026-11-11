@@ -338,22 +338,25 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
 
   function loadRuns(flow: KiloFlowRpc.Info) {
     if (flow.reference.type !== "managed") return
+    const flowID = flow.reference.flowID
+    // A response that arrives after the user left or opened another Flow must not replace that Flow's history.
+    const stale = (signal: AbortSignal) => signal.aborted || detailKey() !== flowID
     history?.abort()
     const request = new AbortController()
     history = request
     const signal = AbortSignal.any([mounted.signal, request.signal])
     setRunsLoading(true)
     void rpc
-      .runs({ flowID: flow.reference.flowID }, { location, signal })
+      .runs({ flowID }, { location, signal })
       .then(
         (output) => {
-          if (signal.aborted) return
+          if (stale(signal)) return
           setRuns(output.runs)
           setRunWarnings(output.warnings)
           setRunsError("")
         },
         (cause: unknown) => {
-          if (!signal.aborted) setRunsError(errorMessage(cause))
+          if (!stale(signal)) setRunsError(errorMessage(cause))
         },
       )
       .finally(() => {

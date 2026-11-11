@@ -896,6 +896,22 @@ recording.live("lists, updates, and deletes Flows through the agent tools, appro
     expect(invalid.message).toContain("must name one concrete capability")
     expect(approvals).toHaveLength(2)
 
+    // A Flow run Session has a deny-by-default allowlist, so it must not manage the project's other Flows.
+    const run = yield* tool("flow_run").execute({ flowID }, call(source.id, "call_run"))
+    if (!run.output?.sessionID) return yield* Effect.die("Expected flow_run to return a Session ID")
+    const runSession = run.output.sessionID
+    const refusedUpdate = yield* tool("flow_update")
+      .execute({ flowID, name: "Renamed by a run" }, call(runSession, "call_run_update"))
+      .pipe(Effect.flip)
+    expect(refusedUpdate.message).toContain("runs a Flow and cannot")
+    const refusedDelete = yield* tool("flow_delete")
+      .execute({ flowID }, call(runSession, "call_run_delete"))
+      .pipe(Effect.flip)
+    expect(refusedDelete.message).toContain("runs a Flow and cannot")
+    const refusedRun = yield* tool("flow_run").execute({ flowID }, call(runSession, "call_run_run")).pipe(Effect.flip)
+    expect(refusedRun.message).toContain("runs a Flow and cannot")
+    expect(approvals).toHaveLength(2)
+
     const removed = yield* tool("flow_delete").execute({ flowID }, call(source.id, "call_delete"))
     expect(removed.output).toEqual({})
     expect(yield* context.storage.get(`flow:v1:${flowID}`)).toBeUndefined()

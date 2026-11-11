@@ -76,6 +76,16 @@ test("the launchd agent runs the server at login, restarts it only after a crash
   expect(plist).toContain("<key>WorkingDirectory</key>\n  <string>/Users/a&amp;b</string>")
   expect(plist).toContain("<key>StandardOutPath</key>\n  <string>/Users/a&amp;b/log/ai.kilo.kilo2.latest.log</string>")
   expect(plist).not.toContain("a&b")
+  // A plist is macOS text even when the value is built on another host for tests.
+  expect(
+    KiloLoginService.plist({
+      label: "ai.kilo.kilo2.latest",
+      command: ["C:\\Kilo\\kilo.exe", "serve", "--service"],
+      path: undefined,
+      home: "C:\\Users\\me",
+      log: "C:\\Kilo\\log\\",
+    }),
+  ).toContain("<string>C:/Kilo/log/ai.kilo.kilo2.latest.log</string>")
 })
 
 test("the systemd unit quotes its command and escapes specifiers", () => {
@@ -101,6 +111,17 @@ test("the systemd unit quotes its command and escapes specifiers", () => {
       "",
     ].join("\n"),
   )
+})
+
+test("the systemd unit escapes control characters so a value cannot add a directive", () => {
+  const unit = KiloLoginService.systemdUnit({
+    description: "Kilo background server (kilo2 latest)",
+    command: ["/home/me/kilo", "serve", "--service"],
+    path: "/usr/bin\nExecStartPre=/bin/sh -c 'touch /tmp/pwned'",
+  })
+  expect(unit).toContain('Environment="PATH=/usr/bin\\nExecStartPre=/bin/sh -c \'touch /tmp/pwned\'"')
+  expect(unit.split("\n").some((line) => line.startsWith("ExecStartPre="))).toBeFalse()
+  expect(unit.split("\n").filter((line) => line.startsWith("Environment="))).toHaveLength(1)
 })
 
 test("the Windows task quotes the executable and arguments with spaces", () => {
@@ -133,6 +154,34 @@ test("refuses a development runner unless --command names an executable", async 
   }
 })
 
+test.skipIf(process.platform === "win32")("a --command path without an executable bit is refused", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-login-mode-"))
+  try {
+    const plain = path.join(directory, "kilo")
+    await writeFile(plain, "#!/bin/sh\n", { mode: 0o644 })
+    expect(() =>
+      KiloLoginService.resolveCommand({ executable: plain, self: () => ["/opt/kilo/bin/kilo"] }),
+    ).toThrow("is not an executable file")
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("stops the installed launchd agent without removing it", async () => {
+  await withHome(async (target) => {
+    const { calls, run: runner } = recorder()
+    const file = path.join(target.home, "Library", "LaunchAgents", "ai.kilo.kilo2.latest.plist")
+    expect(await provided(KiloLoginService.stop(target, runner))).toEqual({ stopped: false })
+    expect(calls).toEqual([])
+
+    await provided(KiloLoginService.install(target, { command, path: undefined }, runner))
+    calls.length = 0
+    expect(await provided(KiloLoginService.stop(target, runner))).toMatchObject({ stopped: true })
+    expect(calls).toEqual([["launchctl", "bootout", "gui/501/ai.kilo.kilo2.latest"]])
+    expect(await exists(file)).toBeTrue()
+  }, "darwin")
+})
+
 test("installs, reports and uninstalls the launchd agent idempotently", async () => {
   await withHome(async (target) => {
     const { calls, run: runner } = recorder()
@@ -142,6 +191,7 @@ test("installs, reports and uninstalls the launchd agent idempotently", async ()
       kind: "launchd",
       name: "ai.kilo.kilo2.latest",
       installed: false,
+      stale: false,
     })
     expect(await provided(KiloLoginService.uninstall(target, runner))).toMatchObject({ removed: false })
     expect(calls).toEqual([])
@@ -163,6 +213,29 @@ test("installs, reports and uninstalls the launchd agent idempotently", async ()
     expect(KiloLoginService.describe(await provided(KiloLoginService.status(target, runner)))).toBe(
       "login: not installed",
     )
+  }, "darwin")
+})
+
+test("reports a stale unit once the executable it records is gone", async () => {
+  await withHome(async (target) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-login-stale-"))
+    try {
+      const executable = path.join(directory, "kilo")
+      await writeFile(executable, "#!/bin/sh\n", { mode: 0o755 })
+      const { run: runner } = recorder()
+      await provided(
+        KiloLoginService.install(target, { command: [executable, "serve", "--service"], path: undefined }, runner),
+      )
+      expect((await provided(KiloLoginService.status(target, runner))).stale).toBeFalse()
+
+      await rm(executable)
+      const state = await provided(KiloLoginService.status(target, runner))
+      expect(state).toMatchObject({ installed: true, stale: true })
+      expect(KiloLoginService.describe(state)).toContain("stale")
+      expect(KiloLoginService.describe(state)).toContain("service install")
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
   }, "darwin")
 })
 
@@ -188,6 +261,8 @@ test("installs and uninstalls the systemd user unit", async () => {
     const file = path.join(target.config, "systemd", "user", "kilo2-latest.service")
     await provided(KiloLoginService.install(target, { command, path: "/usr/bin" }, runner))
     expect(await readFile(file, "utf8")).toContain('ExecStart="/opt/kilo/bin/kilo" "serve" "--service"')
+    // An explicit mode, so a permissive umask cannot leave a world-writable unit that systemd refuses to load.
+    expect((await stat(file)).mode & 0o777).toBe(0o644)
     expect(calls).toEqual([
       ["systemctl", "--user", "daemon-reload"],
       ["systemctl", "--user", "enable", "--now", "kilo2-latest.service"],
@@ -200,6 +275,12 @@ test("installs and uninstalls the systemd user unit", async () => {
       ["systemctl", "--user", "daemon-reload"],
     ])
     expect(await exists(file)).toBeFalse()
+
+    await provided(KiloLoginService.install(target, { command, path: undefined }, runner))
+    calls.length = 0
+    expect(await provided(KiloLoginService.stop(target, runner))).toMatchObject({ stopped: true })
+    expect(calls).toEqual([["systemctl", "--user", "stop", "kilo2-latest.service"]])
+    expect(await exists(file)).toBeTrue()
   }, "linux")
 })
 
@@ -217,6 +298,7 @@ test("installs, finds and deletes the Windows logon task", async () => {
     await provided(
       KiloLoginService.install(target, { command: ["C:\\Kilo\\kilo.exe", "serve", "--service"], path: undefined }, runner),
     )
+    expect(await provided(KiloLoginService.stop(target, runner))).toEqual({ stopped: false })
     await provided(KiloLoginService.uninstall(target, runner))
     expect(calls).toEqual([
       [

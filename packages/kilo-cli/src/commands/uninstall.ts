@@ -11,21 +11,20 @@ import { KiloLoginService } from "../service/login"
 export default Runtime.handler(
   Commands.commands.uninstall,
   Effect.fn("kilo.uninstall")(function* (input) {
-    // Kilo: remove the login unit first. launchd and systemd would restart the background service that the upstream
-    // uninstall stops. A failure stops here, before the upstream uninstall changes anything.
-    const removed = yield* removeLogin(input).pipe(
+    const before = process.exitCode
+    // The upstream handler asks for confirmation and may still be cancelled, so the login unit is untouched until it
+    // has actually uninstalled. It reports a declined prompt as exit code 130 and a failed run as 1.
+    yield* uninstall(input)
+    if (process.exitCode !== before) return
+    yield* removeLogin(input).pipe(
       Effect.provide(LayerNode.compile(AppProcess.node)),
-      Effect.as(true),
-      Effect.catch((error) => KiloLoginService.report(error).pipe(Effect.as(false))),
+      Effect.catch(KiloLoginService.report),
     )
-    if (!removed) return
-    return yield* uninstall(input)
   }),
 )
 
-// A preview only reports the unit. The upstream refuses to run without --force and without a terminal, so that run
-// keeps it. The upstream asks for confirmation later, so a cancelled interactive uninstall leaves the unit removed;
-// `service install` restores it.
+// A preview only reports the unit. A non-interactive run without --force never reaches here: the upstream refuses it
+// and sets a non-zero exit code first, so the unit is kept.
 const removeLogin = Effect.fnUntraced(function* (input: Runtime.Input<typeof Commands.commands.uninstall>) {
   const target = yield* KiloLoginService.target
   if (KiloLoginService.unit(target) === undefined) return

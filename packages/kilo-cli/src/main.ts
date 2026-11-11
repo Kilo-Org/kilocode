@@ -126,7 +126,8 @@ const Handlers = Runtime.handlers(KiloCommands, {
     restart: () => import("@opencode/cli/commands/handlers/service/restart"),
     // Kilo: the wrapper adds the login unit state.
     status: () => import("./service/status"),
-    stop: () => import("@opencode/cli/commands/handlers/service/stop"),
+    // Kilo: the wrapper stops the login unit first, so its restart policy cannot start the server again.
+    stop: () => import("./service/stop"),
     get: () => import("@opencode/cli/commands/handlers/service/get"),
     set: () => import("@opencode/cli/commands/handlers/service/set"),
     unset: () => import("@opencode/cli/commands/handlers/service/unset"),

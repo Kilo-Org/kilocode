@@ -14,6 +14,7 @@ import {
   deriveName,
   editFlow,
   endsLabel,
+  fromFlow,
   parsePermissions,
   type PeriodicContext,
 } from "../../src/kilocode/periodic-wizard"
@@ -999,7 +1000,15 @@ test("maps Flow definitions to wizard drafts, changes and permissions", () => {
     ends: { times: 3 },
     permissions: [{ action: "shell", resource: "git status" }],
   })
-  expect(changes(wizardDraft(current), { ...wizardDraft(current), name: "Renamed" })).toEqual({ name: "Renamed" })
+  expect(fromFlow(current)).toEqual({
+    prompt: "Keep the tree tidy",
+    name: "Draft",
+    schedule: { type: "every", value: "1 hour", timezone: "UTC" },
+    worktree: "reuse",
+    end: { type: "times", value: "3" },
+    permissions: [{ action: "shell", resource: "git status" }],
+  })
+  expect(changes(fromFlow(current), { ...fromFlow(current), name: "Renamed" })).toEqual({ name: "Renamed" })
   expect(parsePermissions("shell: npm test, edit: reports/*\nshell: npm test")).toEqual({
     error: undefined,
     permissions: [
@@ -1013,20 +1022,3 @@ test("maps Flow definitions to wizard drafts, changes and permissions", () => {
   expect(endsLabel({ times: 1 })).toBe("After 1 run")
   expect(endsLabel({ times: 2, after: "30 days" })).toBe("After 2 runs or after 30 days")
 })
-
-function wizardDraft(info: KiloFlowRpc.Info) {
-  const trigger = info.trigger
-  if (trigger.type !== "time") throw new Error("Expected a time trigger")
-  return {
-    prompt: info.prompt,
-    name: info.name,
-    schedule: {
-      type: trigger.when.type,
-      value: trigger.when.type === "every" ? trigger.when.every : "",
-      timezone: trigger.timezone,
-    },
-    worktree: info.execution.mode === "fresh" ? info.execution.worktree : "reuse",
-    end: { type: "times" as const, value: "3" },
-    permissions: (info.permissions ?? []).filter((permission) => permission.resource !== "*"),
-  }
-}

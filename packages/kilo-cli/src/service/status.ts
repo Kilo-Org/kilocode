@@ -12,8 +12,9 @@ export default Runtime.handler(
   Commands.commands.service.commands.status,
   Effect.fn("kilo.service.status")(function* (input) {
     yield* status(input)
-    // Kilo: the login unit state follows on stderr, because scripts read the server URL from stdout.
-    yield* login.pipe(Effect.provide(LayerNode.compile(AppProcess.node)), Effect.catch(KiloLoginService.report))
+    // Kilo: the login unit state follows on stderr, because scripts read the server URL from stdout. A login-state
+    // failure only adds a note: the server status the command already printed decides its exit code.
+    yield* login.pipe(Effect.provide(LayerNode.compile(AppProcess.node)), Effect.catch(KiloLoginService.notice))
   }),
 )
 

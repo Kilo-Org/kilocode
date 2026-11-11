@@ -115,6 +115,15 @@ const plugins = makeGlobalNode({
 })
 
 /**
+ * The `OPENCODE_FLAGS` value the scheduler reads in Kilo. Scheduling is always on, except that a deliberate
+ * `-schedules` entry stays an escape hatch so a release can stop unattended schedules without a new build.
+ */
+export function schedulingOverrides(overrides: string | undefined) {
+  if (overrides?.split(",").some((flag) => flag.trim() === "-schedules")) return overrides
+  return [overrides, "schedules"].filter(Boolean).join(",")
+}
+
+/**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
  * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
  * `.kilo2`, worktree boundary).
@@ -160,7 +169,7 @@ export const overrides: LayerNode.Replacements = [
   ),
   App.node.replace(App.configured(KiloApp)),
   // Scheduling is always on: the wakeup and Flow plugins own Kilo's schedules, so the scheduler reads
-  // `experimental.schedules` as on whatever a config or OPENCODE_FLAGS says. Appended last, so it wins over `-schedules`.
+  // `experimental.schedules` as on whatever a config says. Appended last, so it also wins over an earlier `-schedules`.
   Schedule.node.replace(
     Schedule.node.mapLayer((layer) =>
       layer.pipe(
@@ -168,8 +177,7 @@ export const overrides: LayerNode.Replacements = [
           Layer.effect(
             Flag.Overrides,
             Effect.gen(function* () {
-              const overrides = yield* Flag.Overrides
-              return [overrides, "schedules"].filter(Boolean).join(",")
+              return schedulingOverrides(yield* Flag.Overrides)
             }),
           ),
         ),

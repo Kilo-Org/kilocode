@@ -3,6 +3,9 @@ export * as Schedule from "./schedule.js"
 import { randomUUID } from "node:crypto"
 import { and, asc, eq, gt, isNull, lte, min, or, sql } from "drizzle-orm"
 import { Cause, Clock, Context, Cron, DateTime, Effect, Latch, Layer, Option, Result, Schedule as EffectSchedule, Schema } from "effect"
+// kilocode_change start - flows seam: the /periodic wizard validates with the same instant parser
+import { parseAt } from "@opencode/schema/kilocode/schedule"
+// kilocode_change end
 import { Node, makeGlobalNode } from "@opencode/util/effect/app-node"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import {
@@ -121,15 +124,6 @@ const duration = (value: string) =>
 /** Stored durations were validated on create. */
 const millis = (value: string) =>
   Option.getOrThrowWith(durationMillis(value), () => new Error(`Invalid duration: ${value}`))
-
-const OFFSET = /\d(?:z|[+-]\d{2}:?\d{2})$/i
-
-/** Parses an instant with an offset, or a wall-clock time in `zone`. */
-const parseAt = (input: string, zone: DateTime.TimeZone) =>
-  Option.map(
-    OFFSET.test(input) ? DateTime.make(input) : DateTime.makeZoned(input, { timeZone: zone, adjustForTimeZone: true }),
-    DateTime.toEpochMillis,
-  )
 
 const cronNext = Option.liftThrowable(Cron.next)
 

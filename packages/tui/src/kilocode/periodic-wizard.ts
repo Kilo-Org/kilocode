@@ -5,6 +5,7 @@
 import type { Plugin } from "@opencode/plugin/tui"
 import type { DialogPromptOptions, DialogSelectOption } from "@opencode/plugin/tui/context"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
+import { KiloSchedule } from "@opencode/schema/kilocode/schedule"
 import { Project } from "@opencode/schema/project"
 import { Schedule } from "@opencode/schema/schedule"
 import { Cron, DateTime, Option, Result } from "effect"
@@ -51,7 +52,6 @@ type Step = {
 const headings: Record<Mode, string> = { create: "New Flow", edit: "Edit Flow", repair: "Repair Flow" }
 const baseline = ["read", "glob", "grep"]
 const MINUTE = 60_000
-const OFFSET = /\d(?:z|[+-]\d{2}:?\d{2})$/i
 
 const scheduleOptions: DialogSelectOption<ScheduleType>[] = [
   { title: "Every", value: "every", description: "Repeat at a fixed interval" },
@@ -78,7 +78,7 @@ const scheduleSteps: Record<ScheduleType, Step> = {
     description: "Date and time of the run in the Flow's time zone, such as 2026-12-31T09:00.",
     placeholder: "2026-12-31T09:00",
     check: (value, timezone) => {
-      const at = instant(value, timezone)
+      const at = Option.getOrUndefined(KiloSchedule.parseAt(value, timezone))
       if (at === undefined) return "Enter a date and time such as 2026-12-31T09:00."
       if (at <= Date.now()) return "Enter a time in the future."
     },
@@ -115,7 +115,9 @@ const endSteps: Record<Exclude<End["type"], "none">, Step> = {
     description: "Date and time after which the Flow no longer runs, such as 2026-12-31T18:00.",
     placeholder: "2026-12-31T18:00",
     check: (value, timezone) =>
-      instant(value, timezone) === undefined ? "Enter a date and time such as 2026-12-31T18:00." : undefined,
+      Option.isNone(KiloSchedule.parseAt(value, timezone))
+        ? "Enter a date and time such as 2026-12-31T18:00."
+        : undefined,
   },
   after: {
     title: "Duration",
@@ -392,6 +394,17 @@ async function collect(dialog: Dialog, mode: Mode, draft: Draft): Promise<Draft 
     (zone) => (Option.isSome(DateTime.zoneMakeNamed(zone)) ? undefined : `Unknown time zone: ${zone || "(empty)"}`),
   )
   if (timezone === undefined) return
+  // The value was checked in the prefilled zone; the final one decides how the server reads a wall-clock time, so a
+  // value that only the old zone accepted is asked for again.
+  const confirmed =
+    step.check(value, timezone) === undefined
+      ? value
+      : await ask(
+          dialog,
+          { title: title(step.title), description: step.description, placeholder: step.placeholder, value },
+          (text) => step.check(text, timezone),
+        )
+  if (confirmed === undefined) return
   const worktree = await dialog.select({ title: title("Worktree"), options: worktreeOptions, current: draft.worktree })
   if (worktree === undefined) return
   // A single run has nothing to stop.
@@ -409,7 +422,14 @@ async function collect(dialog: Dialog, mode: Mode, draft: Draft): Promise<Draft 
     (input) => parsePermissions(input).error,
   )
   if (text === undefined) return
-  return { prompt, name, schedule: { type, value, timezone }, worktree, end, permissions: parsePermissions(text).permissions }
+  return {
+    prompt,
+    name,
+    schedule: { type, value: confirmed, timezone },
+    worktree,
+    end,
+    permissions: parsePermissions(text).permissions,
+  }
 }
 
 async function askEnd(
@@ -586,11 +606,4 @@ function cron(value: string) {
   const parsed = Cron.parse(value)
   if (Result.isFailure(parsed)) return `Invalid cron expression: ${parsed.failure.message}`
   if (parsed.success.seconds.size !== 1) return "A cron Flow runs at most once a minute."
-}
-
-function instant(value: string, timezone: string) {
-  const parsed = OFFSET.test(value)
-    ? DateTime.make(value)
-    : DateTime.makeZoned(value, { timeZone: timezone, adjustForTimeZone: true })
-  return Option.getOrUndefined(Option.map(parsed, DateTime.toEpochMillis))
 }
