@@ -29,8 +29,7 @@ export function createSelection(
   const prefs = useModelPreferences()
   const [draftAgent, setDraftAgent] = createSignal<string>()
   const [draftModel, setDraftModel] = createSignal<ModelRef>()
-  // v1 `Pick(composer, agent)`: the model a pick gave the draft of that agent, so the next new session of this
-  // webview starts there too, as the next sidebar draft did. It lives in memory, as v1's session picks.
+  // Fallback per-agent picks when no ModelPreferencesProvider wraps the selector.
   const picks = new Map<string, ModelRef>()
   const fallback = createDefaultModel(v2)
   // The latest switch request per session, so a prompt waits for it. Prompts gate on session creation themselves.
@@ -92,7 +91,7 @@ export function createSelection(
   const configured = createMemo(() => configuredModel(v2.data.location.config.list()))
   const initial = () =>
     initialModel({
-      pick: picks.get(agent()?.id ?? ""),
+      pick: prefs ? prefs.pick(agent()?.id) : picks.get(agent()?.id ?? ""),
       agent: agent()?.model ?? undefined,
       configured: configured(),
       team: kiloTeam(v2.kiloModels()),
@@ -131,9 +130,7 @@ export function createSelection(
     })
   }
 
-  const setModel = (next: ModelRef) => {
-    const id = session()
-    if (!id) return void setDraftModel(next)
+  const commitModel = (id: string, next: ModelRef) => {
     attribution.request(id, next)
     // An explicit "default" clears a previous variant: a model without the field would keep it in createData.
     commit(id, () =>
@@ -145,6 +142,12 @@ export function createSelection(
         },
       ),
     )
+  }
+
+  const setModel = (next: ModelRef) => {
+    const id = session()
+    if (!id) return void setDraftModel(next)
+    commitModel(id, next)
   }
 
   const remember = (ref: { providerID: string; id: string }, variant: string | undefined) => {
@@ -187,11 +190,11 @@ export function createSelection(
       // Carry the effort to the new model when it has it or a nearby effort, as v1. Without an effort, the new model
       // keeps the effort the agent last chose for it.
       const variant = (current?.variant && preserveVariant(current.variant, variantsOf(next))) || remembered(next)
-      prefs?.pushRecent(providerID, modelID)
-      // A draft remembers the pick for the next new session of this agent, as v1 Pick(composer, agent).
       const draft = !session()
       const agentID = agent()?.id
-      if (draft && agentID) picks.set(agentID, next)
+      if (draft && prefs) prefs.rememberPick(agentID, providerID, modelID)
+      if (!draft || !prefs) prefs?.pushRecent(providerID, modelID)
+      if (draft && !prefs && agentID) picks.set(agentID, next)
       if (draft && variant) remember(next, variant)
       setModel({ ...next, ...(variant ? { variant } : {}) })
     },
@@ -220,6 +223,14 @@ export function createSelection(
       creates.set(created.id, request)
       void request.catch(() => undefined).finally(() => creates.delete(created.id))
       return created.id
+    },
+    /** Commits the displayed fallback model to a host-created session that started without a server model. */
+    ensure(id: string) {
+      if (commits.has(id) || creates.has(id)) return
+      const existing = v2.data.session.get(id)
+      if (!existing || existing.model) return
+      const current = model()
+      if (current) commitModel(id, current)
     },
     /** The pending create of a session, including its metadata write. */
     created(id: string) {

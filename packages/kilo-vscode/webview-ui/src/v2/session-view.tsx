@@ -271,8 +271,10 @@ export function SessionView(props: {
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
-    const seed = session() ? undefined : await sandbox.metadata()
-    const id = session() ?? selection.create(seed)
+    const existing = session()
+    const seed = existing ? undefined : await sandbox.metadata()
+    const id = existing ?? selection.create(seed)
+    if (existing) selection.ensure(id)
     const gate = selection.gate(id)
     // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
     // Without one the selection is current, and it must be read before onSession changes the session identity.

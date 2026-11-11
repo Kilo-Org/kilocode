@@ -39,24 +39,29 @@ describe("initialModel", () => {
     expect(initialModel({ ...base, configured: gone })).toEqual(free)
   })
 
-  test("a pick beats the team default, as v1 Pick(scope, agent)", () => {
+  test("a pick beats the team default", () => {
     const pick = { providerID: "x", id: "b" }
     expect(initialModel({ ...base, team: true, pick })).toEqual(pick)
   })
 
-  test("uses the most recent pick that is still in the catalog", () => {
+  test("uses the most recent pick that is still in the catalog, including on a team account", () => {
     const recents = [
       { providerID: "gone", modelID: "m" },
       { providerID: "x", modelID: "b" },
       { providerID: "kilo", modelID: "a" },
     ]
     expect(initialModel({ ...base, recents })).toEqual({ providerID: "x", id: "b" })
+    expect(initialModel({ ...base, team: true, serverDefault: { providerID: "kilo", id: "team" }, recents })).toEqual({
+      providerID: "x",
+      id: "b",
+    })
   })
 
-  test("a team account uses the team default instead of the recents", () => {
+  test("a team account uses the team default when no recent pick is in the catalog", () => {
     const serverDefault = { providerID: "kilo", id: "team" }
+    expect(initialModel({ ...base, team: true, serverDefault })).toEqual(serverDefault)
     expect(
-      initialModel({ ...base, team: true, serverDefault, recents: [{ providerID: "x", modelID: "b" }] }),
+      initialModel({ ...base, team: true, serverDefault, recents: [{ providerID: "gone", modelID: "m" }] }),
     ).toEqual(serverDefault)
   })
 
@@ -66,7 +71,7 @@ describe("initialModel", () => {
         ...base,
         team: true,
         serverDefault: { providerID: "kilo", id: "gone" },
-        recents: [{ providerID: "x", modelID: "b" }],
+        recents: [{ providerID: "gone", modelID: "m" }],
       }),
     ).toEqual({ providerID: "kilo", id: "auto" })
   })
@@ -94,13 +99,10 @@ describe("initialModel", () => {
     expect(initialModel({ ...base, team: undefined, serverDefault: free })).toEqual(free)
   })
 
-  test("a team account does not wait for the recents", () => {
-    expect(initialModel({ ...base, team: true, loaded: false, serverDefault: free })).toEqual(free)
-  })
-
-  test("waits for the recents before it falls back for a personal account", () => {
+  test("waits for the recents before it falls back for a known account", () => {
     expect(initialModel({ ...base, loaded: false })).toBeUndefined()
     expect(initialModel({ ...base, loaded: false, recents: [{ providerID: "x", modelID: "b" }] })).toBeUndefined()
+    expect(initialModel({ ...base, team: true, loaded: false, serverDefault: free })).toBeUndefined()
   })
 
   test("an agent or configured model still applies while the account is unknown, unless it is Kilo", () => {

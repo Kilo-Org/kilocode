@@ -14,10 +14,14 @@ export interface ModelPreferencesValue {
   usage: Accessor<ModelUsageMap>
   /** Whether the host answered; a default model must not skip the recents before they load. */
   loaded: Accessor<boolean>
+  /** The model a new-session draft or dialog in this webview last picked for that agent. */
+  pick: (agent: string | undefined) => { providerID: string; id: string } | undefined
   toggleFavorite: (providerID: string, modelID: string) => void
-  /** Records an explicit pick: first in the recents, at most 5 (v1 `pushRecent`). */
+  /** Records an explicit pick: first in the recents, at most 5. */
   pushRecent: (providerID: string, modelID: string) => void
-  /** Counts a sent prompt for the most used group (v1 `recordModelUsage`). */
+  /** Records a draft or dialog pick for that agent in this webview and pushes it to the shared recents. */
+  rememberPick: (agent: string | undefined, providerID: string, modelID: string) => void
+  /** Counts a sent prompt for the most used group. */
   recordUsage: (providerID: string, modelID: string) => void
   /** The remembered effort of an agent and model: undefined when none, "" for an explicit Default. */
   variant: (agent: string, providerID: string, modelID: string) => string | undefined
@@ -39,23 +43,34 @@ export const ModelPreferencesProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const [state, setState] = createSignal<ModelPreferences>({ favorites: [], recents: [], usage: {}, variants: {} })
   const [loaded, setLoaded] = createSignal(false)
+  const [picks, setPicks] = createSignal<Record<string, { providerID: string; id: string }>>({})
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "modelPreferencesLoaded") return
+      if (loaded() && message.value.recents.length === 0) setPicks({})
       setState(message.value)
       setLoaded(true)
     }),
   )
   vscode.postMessage({ type: "requestModelPreferences" })
 
+  const pushRecent = (providerID: string, modelID: string) => {
+    const recents = [
+      { providerID, modelID },
+      ...state().recents.filter((item) => item.providerID !== providerID || item.modelID !== modelID),
+    ].slice(0, RECENT_LIMIT)
+    setState((prev) => ({ ...prev, recents }))
+    vscode.postMessage({ type: "persistRecents", recents })
+  }
+
   const value: ModelPreferencesValue = {
     favorites: () => state().favorites,
     recents: () => state().recents,
     usage: () => state().usage,
     loaded,
+    pick: (agent) => (agent ? picks()[agent] : undefined),
     toggleFavorite(providerID, modelID) {
       const starred = state().favorites.some((item) => item.providerID === providerID && item.modelID === modelID)
-      // Optimistic, as v1: the star changes at once and the host broadcast confirms it.
       setState((prev) => ({
         ...prev,
         favorites: starred
@@ -64,13 +79,10 @@ export const ModelPreferencesProvider: ParentComponent = (props) => {
       }))
       vscode.postMessage({ type: "toggleFavorite", action: starred ? "remove" : "add", providerID, modelID })
     },
-    pushRecent(providerID, modelID) {
-      const recents = [
-        { providerID, modelID },
-        ...state().recents.filter((item) => item.providerID !== providerID || item.modelID !== modelID),
-      ].slice(0, RECENT_LIMIT)
-      setState((prev) => ({ ...prev, recents }))
-      vscode.postMessage({ type: "persistRecents", recents })
+    pushRecent,
+    rememberPick(agent, providerID, modelID) {
+      if (agent) setPicks((prev) => ({ ...prev, [agent]: { providerID, id: modelID } }))
+      pushRecent(providerID, modelID)
     },
     recordUsage(providerID, modelID) {
       vscode.postMessage({ type: "recordModelUsage", providerID, modelID })

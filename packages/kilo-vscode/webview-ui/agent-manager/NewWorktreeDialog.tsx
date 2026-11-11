@@ -185,12 +185,15 @@ export const NewWorktreeDialog: Component<{
   const initialAgent = restoreAgent(saved.agent, props.agents, props.agents[0]?.id ?? "")
   const serverDefault = createDefaultModel(props.store)
   const modelPreferences = useModelPreferences()
-  void props.store.data.location.config.sync().catch(() => undefined)
-  // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
-  // default, the most recent pick, Kilo Auto Free, then the server default. The server default stands in while the
-  // account is unknown, so the dialog can still submit then; a known personal account waits for the recents.
+  void Promise.all([props.store.data.location.model.sync(), props.store.data.location.config.sync()]).catch(
+    () => undefined,
+  )
+  // Shares the composer's precedence: pick for this agent, agent model, configured model, most recent pick, then the
+  // team or Kilo Auto Free fallback. The server default stands in while the account is unknown, and a known account
+  // waits for the preferences before falling back.
   const defaultFor = (agent: string) =>
     initialModel({
+      pick: modelPreferences?.pick(agent),
       agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
       configured: configuredModel(props.store.data.location.config.list()),
       team: kiloTeam(props.store.kiloModels()),
@@ -229,11 +232,10 @@ export const NewWorktreeDialog: Component<{
       props.models
         .find((model) => model.providerID === value.providerID && model.id === value.modelID)
         ?.variants.map((variant) => variant.id) ?? [],
-    // A pick in this dialog is the last pick of a new session: the next dialog and composer start there, as v1. An
-    // effort change only remembers the effort, as the sidebar's selectVariant, so it cannot rewrite the recents with
-    // a model the user never picked.
+    // Every pick here is remembered for the next dialog and composer of that agent, and pushed to the shared recents.
+    // An effort change only remembers the effort, so it cannot rewrite the recents with a model the user never picked.
     rememberPick: (agent, model, variant) => {
-      modelPreferences?.pushRecent(model.providerID, model.modelID)
+      modelPreferences?.rememberPick(agent, model.providerID, model.modelID)
       modelPreferences?.rememberVariant(agent, model.providerID, model.modelID, variant)
     },
     rememberEffort: (agent, model, variant) => {

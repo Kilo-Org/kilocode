@@ -53,6 +53,7 @@ export function createAppSession(opts: {
           store.data.location.model.sync(),
           store.data.location.provider.sync(),
           store.data.location.command.sync(),
+          store.data.location.config.sync(),
         ]).catch(store.report)
       },
     ),
