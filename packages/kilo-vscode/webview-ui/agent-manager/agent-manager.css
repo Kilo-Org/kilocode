@@ -6217,32 +6217,16 @@ body.vscode-high-contrast-light {
   background: transparent;
 }
 
-.am-subagent-header {
+/* The tab strip is the panel's only chrome row: the inspector strip sits where
+   a title header used to, so the transcript starts one row higher. The close
+   action stays on the far edge, away from the tab close buttons. */
+.am-subagent-close {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  height: 32px;
-  padding: 0 4px 0 8px;
+  align-self: center;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-weak-base);
-  background: var(--surface-base);
-}
-
-.am-subagent-heading {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-  color: var(--text-base);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-}
-
-.am-subagent-count {
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-10);
-  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  padding-left: 4px;
 }
 
 .am-subagent-chat {
