@@ -47,6 +47,26 @@ class ConfigSelectionTest : SessionControllerTestBase() {
         assertNull(sent.noReply)
     }
 
+    fun `test hosted retry replays the optimistic prompt with a new message id`() {
+        val hosted = controller("hosted:kilo-cloud:worktree_1:ses_one")
+        collect(hosted)
+        flush()
+        edt { hosted.prompt("retry me") }
+        flush()
+        val first = rpc.prompts.single().third
+        assertTrue(hosted.model.isOptimistic(first.messageID!!))
+        assertTrue(hosted.canRetryPreparation())
+
+        edt { hosted.retryPreparation() }
+        flush()
+
+        assertEquals(2, rpc.prompts.size)
+        val second = rpc.prompts[1].third
+        assertEquals("retry me", second.parts.single().text)
+        assertTrue(first.messageID != second.messageID)
+        assertNull(hosted.model.message(first.messageID!!))
+    }
+
     fun `test selectModel stays in its session`() {
         projectRpc.state.value = workspaceReady(
             providers = listOf(

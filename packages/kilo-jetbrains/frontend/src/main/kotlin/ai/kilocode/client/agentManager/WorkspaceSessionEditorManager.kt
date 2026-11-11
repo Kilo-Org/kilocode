@@ -42,6 +42,12 @@ abstract class WorkspaceSessionEditorManager(
     var onListChanged: (() -> Unit)? = null
     override val hostedInEditorTab: Boolean get() = true
 
+    /** A brand-new session row is waiting for its first prompt (local and hosted alike). */
+    open fun hasPendingNew(): Boolean = false
+
+    /** Session ids whose row should show delete progress instead of actions. */
+    open fun deleting(): Set<String> = emptySet()
+
     @RequiresEdt
     override fun present(ui: SessionUi?) {
         if (component.components.firstOrNull() === ui) return
@@ -50,5 +56,11 @@ abstract class WorkspaceSessionEditorManager(
         component.revalidate()
         component.repaint()
         onPresent?.invoke(currentKey())
+    }
+
+    /** New Session and blank-to-live creation both need the list to pick up the new state. */
+    @RequiresEdt
+    override fun onSessionsChanged() {
+        onListChanged?.invoke()
     }
 }

@@ -67,6 +67,19 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
         assertSame(row.icon, HostedWorkspaceFileType.getIcon())
     }
 
+    fun `test deleting progress replaces the status badge with a spinner`() {
+        val item = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_1"), name = "Cloud workspace")
+        val row = HostedWorkspaceRow(HostedWorkspaceRowData(
+            item,
+            HostedWorkspaceStatusDto(item.ref, "active", "active", "sandbox_ready", 100.0),
+            progress = "Deleting…",
+        ))
+
+        assertEquals("Deleting…", row.progress)
+        assertSame(WorktreeIcons.spinner, row.icon)
+        assertEmpty(row.badges)
+    }
+
     fun `test cloud icon has matching light and dark geometry with canonical palettes`() {
         val light = svg("cloud")
         val dark = svg("cloud_dark")
@@ -119,6 +132,7 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
         val cases = mapOf(
             "active" to "Active", "running" to "Active", "setting_up" to "Setting Up",
             "sleeping" to "Sleeping", "starting" to "Starting", "stopping" to "Stopping",
+            "failed" to "Failed",
             "stopped" to "Stopped", "error" to "Unavailable", "unreachable" to "Unavailable",
             "unknown" to "Unknown",
         )
