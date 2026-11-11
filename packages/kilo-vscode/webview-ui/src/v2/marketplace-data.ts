@@ -11,7 +11,7 @@ export type MarketplaceScope = KiloMarketplaceRpc.Scope
 export type MarketplaceParameter = KiloMarketplaceRpc.Parameter
 export type MarketplaceOption = KiloMarketplaceRpc.InstallOption
 
-export const KINDS: readonly MarketplaceKind[] = ["agent", "skill", "mcp"]
+export const KINDS: readonly MarketplaceKind[] = ["agent", "skill", "mcp", "plugin"]
 
 type Location = { directory: string }
 type CallOptions = { location: Location }

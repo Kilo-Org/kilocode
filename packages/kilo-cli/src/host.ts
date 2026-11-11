@@ -58,6 +58,7 @@ const plugins = makeGlobalNode({
         Bus.Service,
         FSUtil.Service,
         Global.Service,
+        Npm.Service,
         Schedule.Service,
         KiloSessionSync.Service,
         KiloRemote.Service,
@@ -67,6 +68,7 @@ const plugins = makeGlobalNode({
           | Bus.Service
           | FSUtil.Service
           | Global.Service
+          | Npm.Service
           | Schedule.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
@@ -78,6 +80,7 @@ const plugins = makeGlobalNode({
           | Bus.Service
           | FSUtil.Service
           | Global.Service
+          | Npm.Service
           | Schedule.Service
           | KiloSessionSync.Service
           | KiloRemote.Service
@@ -104,7 +107,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, FSUtil.node, Global.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
+  deps: [Bus.node, FSUtil.node, Global.node, Npm.node, Schedule.node, SessionSync.node, Remote.node, SessionStore.node],
 })
 
 /**
