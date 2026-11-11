@@ -1,5 +1,6 @@
 // The composer's model drafts live in the directory scope, so they outlive the chat view: the sidebar history view and
-// an Agent Manager worktree switch remount it. The scope drops a draft once the session reports the committed model.
+// an Agent Manager worktree switch remount it. The scope drops a draft once the session reports the committed model,
+// and when the session is deleted.
 import { describe, expect, test } from "bun:test"
 import type { ModelRef, OpenCodeClient, OpenCodeEvent } from "@opencode/client"
 import { createRoot, createSignal } from "solid-js"
@@ -15,6 +16,15 @@ const selected = (variant: string) =>
     type: "session.model.selected",
     durable: { aggregateID: "ses_one", seq: 1, version: 1 },
     data: { sessionID: "ses_one", model: model(variant), previous: model("low") },
+  }) as unknown as OpenCodeEvent
+
+const deleted = () =>
+  ({
+    id: "evt_deleted",
+    created: 2,
+    type: "session.deleted",
+    durable: { aggregateID: "ses_one", seq: 2, version: 1 },
+    data: { sessionID: "ses_one" },
   }) as unknown as OpenCodeEvent
 
 function makeScope() {
@@ -50,10 +60,21 @@ describe("scope model drafts", () => {
   test("the echo of the committed model drops the draft, another model keeps it", () => {
     const setup = makeScope()
     try {
-      setup.scope.drafts.set("ses_one", model("high"), model("low"))
+      setup.scope.drafts.set("ses_one", model("high"))
       setup.event.emit(selected("medium"))
       expect(setup.scope.drafts.get("ses_one")).toEqual(model("high"))
       setup.event.emit(selected("high"))
+      expect(setup.scope.drafts.get("ses_one")).toBeUndefined()
+    } finally {
+      setup.dispose()
+    }
+  })
+
+  test("a deleted session drops its draft", () => {
+    const setup = makeScope()
+    try {
+      setup.scope.drafts.set("ses_one", model("high"))
+      setup.event.emit(deleted())
       expect(setup.scope.drafts.get("ses_one")).toBeUndefined()
     } finally {
       setup.dispose()

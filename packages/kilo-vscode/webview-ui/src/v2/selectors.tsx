@@ -135,7 +135,7 @@ export function createSelection(
   const setModel = (next: ModelRef) => {
     const id = session()
     if (!id) return void setDraftModel(next)
-    drafts.set(id, next, info()?.model)
+    drafts.set(id, next)
   }
 
   const remember = (ref: { providerID: string; id: string }, variant: string | undefined) => {
@@ -226,15 +226,10 @@ export function createSelection(
     },
     /**
      * Commits a draft taken when the prompt was sent, after a pending agent switch, as the TUI's commitModel, and
-     * returns the pending switch. A session that already runs on the model emits no echo, so the store settles it.
+     * returns the pending switch so the prompt waits for it and fails with it.
      */
     commit(id: string, next: ModelRef | undefined) {
-      if (next)
-        chain(id, () =>
-          v2.api.session
-            .switchModel({ sessionID: id, model: next })
-            .then(() => drafts.settle(id, v2.data.session.get(id)?.model)),
-        )
+      if (next) chain(id, () => v2.api.session.switchModel({ sessionID: id, model: next }))
       return Promise.resolve(commits.get(id))
     },
     /** The model and effort the composer shows for a session: its draft, else the session's own model. */

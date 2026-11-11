@@ -314,11 +314,13 @@ export function SessionView(props: {
     mode: SendMode = "steer",
     input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
   ) => {
-    const { id, model, draft } = await begin(mode)
+    const { id, gate, model, draft } = await begin(mode)
     return v2.data.session
       .prompt({
         sessionID: id,
         text,
+        // A pending switch, such as an agent change, fails the prompt instead of running under another agent.
+        gate,
         // The draft commits after earlier prompts are admitted, as the TUI; a failed switch fails the prompt.
         prepare: () => selection.commit(id, draft),
         metadata: input?.metadata,

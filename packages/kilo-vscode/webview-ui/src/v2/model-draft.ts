@@ -12,22 +12,32 @@ const DEFAULT = "default"
  */
 export function createModelDrafts() {
   const [drafts, setDrafts] = createSignal<Record<string, ModelRef | undefined>>({})
-  // Replace the record instead of merging: a Default pick has no variant field and must not keep the previous one.
-  const write = (sessionID: string, value: ModelRef | undefined) =>
-    setDrafts((all) => ({ ...all, [sessionID]: value }))
+  // A pick is kept even when it matches the stored model: that model lags a commit in flight, so clearing against it
+  // would drop a later pick the moment the older echo lands. The echo of the model that was committed clears instead.
   return {
     get(sessionID: string) {
       return drafts()[sessionID]
     },
-    /** A choice equal to the session's own model leaves no draft, so the composer shows the session again. */
-    set(sessionID: string, next: ModelRef, current: ModelRef | undefined) {
-      write(sessionID, sameModel(next, current) ? undefined : next)
+    set(sessionID: string, next: ModelRef) {
+      setDrafts((all) => ({ ...all, [sessionID]: next }))
     },
     /** Drops the draft once the session reports the same model, for example the echo of its commit. */
     settle(sessionID: string, current: ModelRef | undefined) {
-      if (sameModel(drafts()[sessionID], current)) write(sessionID, undefined)
+      if (!sameModel(drafts()[sessionID], current)) return
+      setDrafts((all) => remove(all, sessionID))
+    },
+    /** Drops the draft of a deleted session, so the record stays bounded by live sessions. */
+    drop(sessionID: string) {
+      setDrafts((all) => remove(all, sessionID))
     },
   }
+}
+
+function remove(all: Record<string, ModelRef | undefined>, sessionID: string) {
+  if (!(sessionID in all)) return all
+  const rest = { ...all }
+  delete rest[sessionID]
+  return rest
 }
 
 function sameModel(a: ModelRef | undefined, b: ModelRef | undefined) {

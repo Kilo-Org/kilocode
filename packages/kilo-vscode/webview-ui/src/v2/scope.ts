@@ -74,6 +74,7 @@ export function createV2Scope(input: {
   // switching the session to the same model, makes a draft redundant.
   const drafts = createModelDrafts()
   onCleanup(input.event.on("session.model.selected", (event) => drafts.settle(event.data.sessionID, event.data.model)))
+  onCleanup(input.event.on("session.deleted", (event) => drafts.drop(event.data.sessionID)))
   const visible = input.visible ?? (() => true)
   const state = { listed: false }
   createEffect(

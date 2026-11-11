@@ -9,36 +9,31 @@ const model = (variant?: string): ModelRef => ({ providerID: "kilo", id: "claude
 describe("model drafts", () => {
   test("every press of a fast burst lands without waiting for the server", () => {
     const drafts = createModelDrafts()
-    const stored = model("low")
-    drafts.set("ses_one", model("medium"), stored)
-    drafts.set("ses_one", model("high"), stored)
-    drafts.set("ses_one", model(), stored)
+    drafts.set("ses_one", model("medium"))
+    drafts.set("ses_one", model("high"))
+    drafts.set("ses_one", model())
 
     expect(drafts.get("ses_one")).toEqual(model())
   })
 
-  test("a choice equal to the session's own model leaves no draft", () => {
+  test("a Default pick replaces an earlier effort instead of keeping it", () => {
     const drafts = createModelDrafts()
-    drafts.set("ses_one", model("high"), model("low"))
-    drafts.set("ses_one", model("low"), model("low"))
-    expect(drafts.get("ses_one")).toBeUndefined()
+    drafts.set("ses_one", model("high"))
+    drafts.set("ses_one", model())
 
-    // The server reports no explicit variant as "default".
-    drafts.set("ses_one", model(), model("default"))
-    expect(drafts.get("ses_one")).toBeUndefined()
+    expect(drafts.get("ses_one")).toEqual(model())
   })
 
-  test("a Default choice replaces an earlier effort instead of keeping it", () => {
+  test("a pick equal to the stored model is kept until the session reports it", () => {
     const drafts = createModelDrafts()
-    drafts.set("ses_one", model("high"), model("low"))
-    drafts.set("ses_one", model(), model("low"))
+    drafts.set("ses_one", model("low"))
 
-    expect(drafts.get("ses_one")?.variant).toBeUndefined()
+    expect(drafts.get("ses_one")).toEqual(model("low"))
   })
 
   test("the session reporting the committed model drops the draft", () => {
     const drafts = createModelDrafts()
-    drafts.set("ses_one", model("high"), model("low"))
+    drafts.set("ses_one", model("high"))
 
     drafts.settle("ses_one", model("low"))
     expect(drafts.get("ses_one")).toEqual(model("high"))
@@ -47,18 +42,36 @@ describe("model drafts", () => {
   })
 
   test("a choice made after a send survives the echo of that send", () => {
+    // The store reports low, the draft is high and its commit is in flight; the user cycles back to low.
     const drafts = createModelDrafts()
-    drafts.set("ses_one", model("high"), model("low"))
-    // The prompt committed high; the user moves on before its echo arrives.
-    drafts.set("ses_one", model(), model("low"))
+    drafts.set("ses_one", model("high"))
+    drafts.set("ses_one", model("low"))
 
     drafts.settle("ses_one", model("high"))
-    expect(drafts.get("ses_one")).toEqual(model())
+    expect(drafts.get("ses_one")).toEqual(model("low"))
+  })
+
+  test("an echo that matches the draft drops it after a change back to the stored model", () => {
+    const drafts = createModelDrafts()
+    drafts.set("ses_one", model("high"))
+    drafts.set("ses_one", model("low"))
+    drafts.settle("ses_one", model("high"))
+
+    drafts.settle("ses_one", model("low"))
+    expect(drafts.get("ses_one")).toBeUndefined()
+  })
+
+  test("a deleted session drops its draft", () => {
+    const drafts = createModelDrafts()
+    drafts.set("ses_one", model("high"))
+
+    drafts.drop("ses_one")
+    expect(drafts.get("ses_one")).toBeUndefined()
   })
 
   test("keeps each session's draft separate", () => {
     const drafts = createModelDrafts()
-    drafts.set("ses_one", model("high"), model("low"))
+    drafts.set("ses_one", model("high"))
 
     drafts.settle("ses_two", model("high"))
     expect(drafts.get("ses_one")).toEqual(model("high"))
