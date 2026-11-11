@@ -57,15 +57,7 @@ const openRouterModelSchema = z.object({
       family: z.string().optional(),
       prompt: z.enum(PROMPTS).optional().catch(undefined),
       variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
-      reasoning_options: z
-        .array(
-          z.discriminatedUnion("type", [
-            z.object({ type: z.literal("toggle") }),
-            z.object({ type: z.literal("effort"), values: z.array(z.unknown()) }),
-          ]),
-        )
-        .optional()
-        .catch(undefined),
+      reasoning_options: z.array(z.unknown()).optional().catch(undefined),
       ai_sdk_provider: z.enum(AI_SDK_PROVIDERS).optional().catch(undefined),
     })
     .optional(),
@@ -357,31 +349,42 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
   }
 }
 
+// Mirrors `ReasoningEffortSchema` and `VerbositySchema` in Kilo-Org/cloud `packages/db/src/schema-types.ts`.
 const REASONING_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 const VERBOSITIES = ["low", "medium", "high", "xhigh", "max"]
 
+const reasoningOptionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("toggle") }),
+  z.object({ type: z.literal("effort"), values: z.array(z.unknown()) }),
+])
+
 /**
- * Builds the OpenRouter-shaped variants from the gateway's `reasoning_options`, the same way the
- * gateway builds its legacy `variants`. `[]` (reasoning that is always on) keeps a single
- * `thinking` variant, a lone toggle becomes `instant`/`thinking`, and effort variants of Anthropic
- * models also get the matching `verbosity`, which the gateway maps to Anthropic's `effort`.
+ * Builds the OpenRouter-shaped variants from the gateway's `reasoning_options`, mirroring
+ * `toLegacyVariants` in Kilo-Org/cloud `packages/web-shared/src/lib/ai-gateway/providers/legacy-variants.ts`.
+ * `[]` (reasoning that is always on) keeps a single `thinking` variant, a lone toggle becomes
+ * `instant`/`thinking`, and effort variants of Anthropic models also get the matching `verbosity`,
+ * which the gateway maps to Anthropic's `effort`. Unknown entries (e.g. `budget_tokens`) are dropped
+ * one by one.
  */
 function legacyVariants(
-  options: NonNullable<NonNullable<OpenRouterModel["opencode"]>["reasoning_options"]>,
+  raw: readonly unknown[],
   aiSdkProvider: NonNullable<OpenRouterModel["opencode"]>["ai_sdk_provider"],
 ) {
+  const options = raw.flatMap((entry) => reasoningOptionSchema.safeParse(entry).data ?? [])
   const toggle = options.some((option) => option.type === "toggle")
   const efforts = [
     ...new Set(
       options.flatMap((option) =>
         option.type === "effort"
-          ? option.values.filter((value): value is string => typeof value === "string" && REASONING_EFFORTS.includes(value))
+          ? option.values.filter(
+              (value): value is string => typeof value === "string" && REASONING_EFFORTS.includes(value),
+            )
           : [],
       ),
     ),
   ]
   const entries =
-    options.length === 0
+    raw.length === 0
       ? [["thinking", "high"]]
       : efforts.length === 0
         ? toggle

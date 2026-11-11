@@ -547,9 +547,22 @@ test("derives variants from reasoning_options and keeps legacy variants only wit
               reasoning_options: [{ type: "toggle" }, { type: "effort", values: ["low", "high"] }],
             }),
             model("test/always-on", { variants: legacy, reasoning_options: [] }),
-            model("test/no-efforts", { variants: legacy, reasoning_options: [{ type: "effort", values: ["unknown"] }] }),
+            model("test/no-efforts", {
+              variants: legacy,
+              reasoning_options: [{ type: "effort", values: ["unknown"] }],
+            }),
             model("test/legacy", { variants: legacy }),
-            model("test/malformed", { variants: legacy, reasoning_options: [{ type: "effort" }] }),
+            model("test/mixed", {
+              variants: legacy,
+              reasoning_options: [
+                null,
+                { type: "budget_tokens", max: 1000 },
+                { type: "effort" },
+                { type: "effort", values: ["high"] },
+              ],
+            }),
+            model("test/unknown-only", { variants: legacy, reasoning_options: [{ type: "budget_tokens", max: 1000 }] }),
+            model("test/malformed", { variants: legacy, reasoning_options: "invalid" }),
           ],
         }),
         { status: 200, headers: { "content-type": "application/json" } },
@@ -579,5 +592,7 @@ test("derives variants from reasoning_options and keeps legacy variants only wit
   expect(variants("test/always-on")).toEqual({ thinking: { reasoning: { enabled: true, effort: "high" } } })
   expect(variants("test/no-efforts")).toBeUndefined()
   expect(variants("test/legacy")).toEqual(legacy)
+  expect(variants("test/mixed")).toEqual({ high: { reasoning: { enabled: true, effort: "high" } } })
+  expect(variants("test/unknown-only")).toBeUndefined()
   expect(variants("test/malformed")).toEqual(legacy)
 })
