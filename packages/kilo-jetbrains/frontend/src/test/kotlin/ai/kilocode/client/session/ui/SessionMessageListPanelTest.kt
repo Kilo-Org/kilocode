@@ -44,6 +44,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
@@ -56,6 +57,7 @@ import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
@@ -188,6 +190,124 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     // ------ failed turns ------
 
+    fun `test preparation failure overrides stale native states for the same prompt`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("u1", "user"))
+        val failure = HostedSystemEventDto("ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "u1", observedAt = 110.0)
+        val message = "Workspace setup failed\nSetup command 1 failed (exit code 1)\nbash: no such directory"
+        item.setPreparationFailure(failure, message)
+        val card = find<SessionOutcomeView>(item)!!
+        val area = text(card, message)!!
+
+        for (state in listOf(
+            SessionState.Busy("Preparing"),
+            SessionState.Retry("Native retry", 2, 0),
+            SessionState.Offline("Native offline", "request"),
+            SessionState.Error("HTTP 503"),
+            SessionState.TurnEnded(Outcome.FAILED),
+            SessionState.Idle,
+        )) {
+            model.setState(state)
+            assertTrue("Preparation must explain $state", card.isVisible)
+            assertSame(area, text(card, message))
+            assertSame(failure, item.preparationFailure())
+            assertFalse("Stale native progress must not contradict the preparation error", item.progress.isVisible)
+            assertNotNull(button(card, KiloBundle.message("session.outcome.retry")))
+            assertEquals("Presentation must not rewrite native state", state, model.state)
+        }
+    }
+
+    fun `test preparation failure yields immediately to a distinct newer prompt`() {
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("u1", "user").copy(time = MessageTimeDto(100.0)))
+        model.setState(SessionState.Busy("Native task"))
+        val failure = HostedSystemEventDto("ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "u1", observedAt = 110.0)
+        item.setPreparationFailure(failure, "Setup failed")
+        val card = find<SessionOutcomeView>(item)!!
+        assertTrue(card.isVisible)
+
+        model.upsertMessage(msg("u2", "user").copy(time = MessageTimeDto(200.0)))
+
+        assertFalse("A new message must supersede preparation even without a state event", card.isVisible)
+        assertTrue("Newer native progress remains available", item.progress.isVisible)
+        assertNull(item.preparationFailure())
+        assertEquals(SessionState.Busy("Native task"), model.state)
+        item.setPreparationFailure(failure.copy(triggerMessageID = null), "Setup failed")
+        assertFalse("A known older timestamp must also protect the newer turn", card.isVisible)
+        for (state in listOf(
+            SessionState.Error("Newer prompt failed"),
+            SessionState.TurnEnded(Outcome.FAILED),
+            SessionState.Idle,
+        )) {
+            model.setState(state)
+            assertNull("Terminal native states must not revive an older preparation", item.preparationFailure())
+            if (state is SessionState.Error) assertNotNull(text(card, "Newer prompt failed"))
+            if (state is SessionState.Idle) assertFalse(card.isVisible)
+            item.setPreparationFailure(failure.copy(triggerMessageID = "u2"), "Setup failed")
+            assertTrue("Explicit prompt identity takes precedence over the fallback clock", card.isVisible)
+            item.setPreparationFailure(failure.copy(triggerMessageID = null), "Setup failed")
+            assertNull(item.preparationFailure())
+        }
+    }
+
+    fun `test preparation failure never replaces question permission login or revert`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("u1", "user"))
+        val failure = HostedSystemEventDto("ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "u1")
+        item.setPreparationFailure(failure, "Setup failed")
+        val card = find<SessionOutcomeView>(item)!!
+
+        for (state in listOf(
+            SessionState.AwaitingQuestion(question()),
+            SessionState.AwaitingPermission(permission()),
+            SessionState.LoginRequired("Sign in required"),
+            SessionState.Reverting("Rolling back", SessionState.Reverting.Kind.ROLLBACK),
+        )) {
+            model.setState(state)
+            item.setPreparationFailure(failure.copy(revision = 2), "More setup detail")
+            assertFalse("Preparation must not replace $state", card.isVisible)
+            assertNull(item.preparationFailure())
+            assertEquals(state is SessionState.AwaitingQuestion, find<QuestionView>(item)!!.isVisible)
+            assertEquals(state is SessionState.AwaitingPermission, find<PermissionView>(item)!!.isVisible)
+            assertEquals(state is SessionState.LoginRequired, find<LoginRequiredView>(item)!!.isVisible)
+            assertEquals(state, model.state)
+        }
+    }
+
+    fun `test preparation failure churn retains the outcome tree and releases resources`() {
+        val baseline = EditorFactory.getInstance().allEditors.size
+        val item = panelWithRetry { true }
+        model.upsertMessage(msg("u1", "user"))
+        val failure = HostedSystemEventDto("ses", "preparing", action = "attempt_failed",
+            failure = "workspace_setup_failed", triggerMessageID = "u1")
+        item.setPreparationFailure(failure, "Setup failed")
+        val card = find<SessionOutcomeView>(item)!!
+        val areas = components(card).filterIsInstance<JBTextArea>()
+        val buttons = components(card).filterIsInstance<JButton>()
+        val scroll = components(card).filterIsInstance<JBScrollPane>().single()
+        val count = components(item).size
+        repeat(300) { index ->
+            item.setPreparationFailure(null)
+            model.setState(SessionState.Busy("Preparation $index"))
+            item.setPreparationFailure(failure.copy(revision = index.toLong()), "Setup failed $index")
+            assertTrue(card.isVisible)
+            assertSame(card, find<SessionOutcomeView>(item))
+            assertEquals(count, components(item).size)
+            assertEquals(areas, components(card).filterIsInstance<JBTextArea>())
+            assertEquals(buttons, components(card).filterIsInstance<JButton>())
+            assertSame(scroll, components(card).filterIsInstance<JBScrollPane>().single())
+            assertNotNull(text(card, "Setup failed $index"))
+        }
+        item.setPreparationFailure(null)
+        model.clear()
+        Disposer.dispose(parent)
+        assertEquals(baseline, EditorFactory.getInstance().allEditors.size)
+        assertEquals(0, item.componentCount)
+    }
+
     fun `test Cloud terminal failure renders on original prompt while newer turn stays busy`() {
         model.upsertMessage(msg("u1", "user"))
         model.upsertMessage(msg("u2", "user"))
@@ -318,6 +438,27 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(ov.isVisible)
         assertNotNull(text(ov, "Missing provider credentials"))
         assertNotNull(button(ov, KiloBundle.message("session.outcome.retry")))
+    }
+
+    fun `test retryable cloud history error offers retry without dismiss`() {
+        val item = panelWithRetry { true }
+        model.setState(SessionState.Error("The Cloud session is not available yet.", retryable = true, dismissible = false))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        assertTrue(ov.isVisible)
+        assertNotNull(text(ov, "The Cloud session is not available yet."))
+        assertNotNull(button(ov, KiloBundle.message("session.outcome.retry")))
+        assertNull(button(ov, KiloBundle.message("session.outcome.dismiss")))
+    }
+
+    fun `test permanent cloud history error offers dismiss without retry`() {
+        val item = panelWithRetry(dismiss = {}) { false }
+        model.setState(SessionState.Error("This Cloud session no longer exists.", dismissible = true))
+
+        val ov = find<SessionOutcomeView>(item)!!
+        assertTrue(ov.isVisible)
+        assertNull(button(ov, KiloBundle.message("session.outcome.retry")))
+        assertNotNull(button(ov, KiloBundle.message("session.outcome.dismiss")))
     }
 
     fun `test generic failed close drops its description when the card explains the turn`() {
@@ -2276,8 +2417,8 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     /** Panel whose footer can offer Retry, so the split between card text and footer action is testable. */
-    private fun panelWithRetry(retryable: () -> Boolean): SessionMessageListPanel {
-        val o = SessionOutcomeView(retry = {}, retryable = retryable)
+    private fun panelWithRetry(dismiss: (() -> Unit)? = null, retryable: () -> Boolean): SessionMessageListPanel {
+        val o = SessionOutcomeView(retry = {}, retryable = retryable, dismiss = dismiss)
         return SessionMessageListPanel(model, parent, openFile = openFile, schedule = { it() }).also { it.outcome = o }
     }
 

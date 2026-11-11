@@ -3,6 +3,10 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.agentManager.worktree.attention
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.SessionHost
+import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.session.history.HistorySection
+import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -10,19 +14,26 @@ import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListOptions
+import ai.kilocode.client.ui.list.ActiveSection
 import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.client.ui.active.ActiveSurface
 import ai.kilocode.client.ui.active.ActiveWeight
 import ai.kilocode.client.ui.active.activeToolWindowBackground
+import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
@@ -33,6 +44,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.event.HierarchyEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JSeparator
@@ -40,7 +52,7 @@ import javax.swing.ListSelectionModel
 import javax.swing.SwingConstants
 
 /** Retained editor chrome shared by local worktrees and hosted workspaces. */
-abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
+internal abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
     parent: Disposable,
 ) : BorderLayoutPanel(), Disposable {
     init {
@@ -59,6 +71,25 @@ abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
     private var save: (Boolean) -> Unit = {}
     private var count = 0
     private var kind: SessionActivityKind? = null
+
+    /** The backend this editor drives; subclasses build it in their own init. */
+    protected abstract fun host(): WorkspaceSessionEditorManager
+
+    /** Session rows only; [syncList] prepends the pending New Session row. */
+    protected abstract fun rows(): List<ActiveItem>
+
+    protected abstract fun sessionIds(): Set<String>
+
+    protected abstract fun openKey(key: String, focus: Boolean)
+
+    protected open fun onStart() {}
+
+    /** Every transition to showing, after [onStart] on the first one; refresh anything polled. */
+    protected open fun onShown() {}
+
+    protected open fun onHostChanged() {}
+
+    private var started = false
 
     override fun getBackground(): Color = activeToolWindowBackground()
 
@@ -188,6 +219,95 @@ abstract class WorkspaceSessionEditorPanel @RequiresEdt constructor(
         if (!changed) return
         splitter.revalidate()
         splitter.repaint()
+    }
+
+    @RequiresEdt
+    protected fun syncList(select: ActiveSelection? = null) {
+        val key = host().currentKey()
+        val pending = host().hasPendingNew()
+        val kinds = host().activity()
+        val deleting = host().deleting()
+        val rows = buildList {
+            if (pending || key == SessionHost.NEW) add(NewRow)
+            addAll(rows())
+        }
+        // The host owns which session is shown, so it also owns the selection: name the row and let
+        // the list hold that key until a refresh brings it in.
+        val shown = if (pending) SessionHost.NEW else key
+        list.update(rows, select ?: shown?.let { ActiveSelection.Key(it) } ?: ActiveSelection.Preserve)
+        syncToggle(sessionIds(), kinds, key, deleting)
+    }
+
+    @RequiresEdt
+    protected fun openRow(row: ActiveItem, focus: Boolean) {
+        if (row.key == SessionHost.NEW) {
+            host().newSession()
+            return
+        }
+        openKey(row.key, focus)
+    }
+
+    /**
+     * Wires selection and list-refresh callbacks to [host] and starts the panel the first time it is
+     * shown. Subclasses only implement [onStart] / [onHostChanged].
+     */
+    @RequiresEdt
+    protected fun bindHost() {
+        host().onPresent = { key -> key?.let { list.select(it) } }
+        host().onListChanged = { onHostChanged() }
+        addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
+            if (!isShowing) return@addHierarchyListener
+            start()
+            onShown()
+        }
+    }
+
+    @RequiresEdt
+    protected fun selectedKeys(): List<String> =
+        list.selectedKeys().filter { it != SessionHost.NEW && it !in host().deleting() }
+
+    @RequiresEdt
+    protected fun snapshot(sink: DataSink) {
+        sink[SessionManager.KEY] = host()
+    }
+
+    override fun dispose() {
+        host().onPresent = null
+        host().onListChanged = null
+    }
+
+    @RequiresEdt
+    protected fun ensureStarted() {
+        start()
+    }
+
+    @RequiresEdt
+    private fun start() {
+        if (started) return
+        started = true
+        onStart()
+    }
+
+    /** Adds the "New Session" row to the toolbar of either editor. */
+    protected inner class NewAction : DumbAwareAction(
+        KiloBundle.message("worktree.session.new.action"),
+        null,
+        AllIcons.General.Add,
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun actionPerformed(e: AnActionEvent) {
+            host().newSession()
+        }
+    }
+
+    protected object NewRow : ActiveSection {
+        override val key: String get() = SessionHost.NEW
+        override val title: String get() = KiloBundle.message("worktree.session.new")
+        // Group the pending session under Today so it appears inside the list right away instead of
+        // as a detached row pinned above the first section header.
+        override val section: String get() = HistoryTime.title(HistorySection.TODAY)
     }
 
     private companion object {
