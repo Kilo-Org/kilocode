@@ -309,6 +309,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.noChanges": "Değişiklik yok.",
   "ui.permission.reject": "Reddet",
+  "ui.permission.allowAllSites": "Tüm sitelere izin ver",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
   "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",

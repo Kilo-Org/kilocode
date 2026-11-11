@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.noChanges": "No changes.",
   "ui.permission.reject": "Reject",
+  "ui.permission.allowAllSites": "Allow all sites",
   "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
   "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",

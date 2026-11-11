@@ -1017,7 +1017,7 @@
   },
   "module:packages/opencode/src/kilocode/tool/browser-open.ts": {
     "state": "ported",
-    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text.",
+    "note": "packages/kilo-plugin/src/browser/index.ts KiloBrowserToolPlugin registers the browser_open tool on the ToolEditor when the extension host passes KILO_BROWSER_BROKER_URL and KILO_BROWSER_BROKER_TOKEN to the v2 server. The tool keeps the v1 URL policy (public HTTPS, loopback HTTP, 0.0.0.0 as localhost, no credentials), asks the browser_open permission with navigate:<origin> resources, saves only the origin on Always allow and lists navigate:* in metadata.rules for the broader choice, and POSTs to the host broker at /browser/open. packages/kilo-plugin/test/browser.test.ts covers the endpoint guard, destination policy, request shape and broker error text; packages/kilo-plugin/test/browser-permission.test.ts covers the permission request and the saved-origin evaluation.",
     "by": "am-browser"
   },
   "module:packages/opencode/src/kilocode/tool/browser-open.txt": {
@@ -1417,7 +1417,7 @@
   "module:packages/opencode/test/kilocode/sandbox/http-tools.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/test/sandbox/network.test.ts",
-    "note": "Webfetch classification and HTTP allow/deny/proxy through the decorated client are in network.test.ts and config-network.test.ts. Browser broker cases are not carried: v2 has no browser_open tool. Webfetch redirect/cancel internals were v1 tool plumbing.",
+    "note": "Webfetch classification and HTTP allow/deny/proxy through the decorated client are in network.test.ts and config-network.test.ts. The browser_open permission cases (navigate:<origin> save and the navigate:* broader rule) are in packages/kilo-plugin/test/browser-permission.test.ts. Webfetch redirect/cancel internals were v1 tool plumbing.",
     "by": "sandbox-port"
   },
   "module:packages/opencode/test/kilocode/sandbox/macos-confinement.test.ts": {

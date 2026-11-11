@@ -83,6 +83,51 @@ function setup(rules: Permission.Ruleset = [{ action: "*", resource: "*", effect
   })
 }
 
+describe("browser_open permission request", () => {
+  it.effect("saves the origin and offers every site as the broader rule", () =>
+    Effect.gen(function* () {
+      const asked: unknown[] = []
+      const tools: Array<{ execute: (params: { url: string }, context: unknown) => Effect.Effect<unknown, unknown> }> =
+        []
+      const context = {
+        location: { directory: "/project" },
+        permission: {
+          hook: () => Effect.void,
+          // Decline, so the test stops before the tool calls the broker.
+          assert: (input: unknown) =>
+            Effect.sync(() => asked.push(input)).pipe(Effect.andThen(Effect.fail("declined"))),
+        },
+        tool: {
+          transform: (edit: (editor: unknown) => void) =>
+            Effect.sync(() => edit({ add: (tool: never) => tools.push(tool) })),
+        },
+      }
+      yield* KiloBrowserToolPlugin.effect(context as never)
+      yield* tools[0]
+        .execute(
+          { url: "http://0.0.0.0:3000/app" },
+          { sessionID: session, agent: "test", messageID: "msg", id: "call" },
+        )
+        .pipe(Effect.exit)
+      expect(asked).toEqual([
+        {
+          action: "browser_open",
+          resources: ["navigate:http://localhost:3000"],
+          save: ["navigate:http://localhost:3000"],
+          sessionID: session,
+          agent: "test",
+          metadata: {
+            operation: "open",
+            url: "http://localhost:3000/app",
+            rules: ["navigate:http://localhost:3000", "navigate:*"],
+          },
+          source: { type: "tool", messageID: "msg", id: "call" },
+        },
+      ])
+    }),
+  )
+})
+
 describe("browser_open permission through the permission service", () => {
   it.effect("asks under the built-in allow-all policy", () =>
     Effect.gen(function* () {
