@@ -59,6 +59,15 @@ test("flags a new built-in tool module that is not intercepted", () => {
   expect(findings.map((f) => f.kind)).toEqual(["namespace-leak"])
 })
 
+test("flags a tools.opencode reference in a bundled text asset", () => {
+  // Prompts and skills are bundled as strings and never parsed, so the check reads them raw.
+  const findings = KiloBrandingAudit.auditNamespace(
+    "kilo-plugin/src/skill/new.txt",
+    'Call `tools.opencode.*`; find them with `search({ namespace: "opencode" })`.',
+  )
+  expect(findings.map((f) => f.kind)).toEqual(["namespace-leak", "namespace-leak"])
+})
+
 test("baseline is clean: no unexpected unbranded OpenCode on the audited surface", async () => {
   const { unexpected, stale, unparseable } = await KiloBrandingAudit.run()
   expect(unexpected.map((f) => `${f.file}:${f.line} ${f.snippet}`)).toEqual([])

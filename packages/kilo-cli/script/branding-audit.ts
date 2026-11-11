@@ -8,7 +8,8 @@
 //     `files` list, so its OpenCode text ships raw;
 //   - rule gap: an intercepted file where, after the rules run, a user-visible
 //     OpenCode/opencode token still remains;
-//   - namespace leak: a core module that, after the full transform, still puts a
+//   - namespace leak: a core or Kilo plugin source or bundled text asset (prompt,
+//     skill, command template) that, after the full transform, still puts a
 //     built-in tool under the `opencode` namespace or tells the model to call
 //     `tools.opencode.*`. The rule engine leaves dotted IDs alone and the
 //     structural counts only guard known anchors, so a new upstream tool or a new
@@ -36,10 +37,12 @@ const INCLUDE = [
   /^packages\/tui\/src\/.*\.tsx?$/,
   /^packages\/core\/src\/oauth\/.*\.ts$/,
 ]
-// The built-in tool namespace is defined and referenced across core, so the
-// namespace check covers every core module, not only the user-facing surface.
-const NAMESPACE_PATHSPECS = ["packages/core/src"]
-const NAMESPACE_INCLUDE = [/^packages\/core\/src\/.*\.tsx?$/]
+// The built-in tool namespace is defined in core and named in model-facing text
+// across core and the Kilo plugin, including text assets bundled as strings
+// (`.txt`/`.md` prompts and skills), so the namespace check covers all of them,
+// not only the user-facing surface.
+const NAMESPACE_PATHSPECS = ["packages/core/src", "packages/kilo-plugin/src"]
+const NAMESPACE_INCLUDE = [/^packages\/(core|kilo-plugin)\/src\/.*\.(tsx?|txt|md)$/]
 const NAMESPACE = /namespace: "opencode"|tools\.opencode\./g
 const EXCLUDE = [
   /\.test\.tsx?$/,
@@ -181,7 +184,7 @@ async function main() {
     console.error(
       `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules (rules.ts) or the` +
         ` protected contexts (isProtected in engine.ts) for a rule-gap, add a namespace transform to structural.ts` +
-        ` (and the file to KiloBranding.files) for a namespace-leak, or add a reviewed entry to` +
+        ` (and the file to KiloBranding.files) or correct the Kilo-owned text for a namespace-leak, or add a reviewed entry to` +
         ` branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
     )
   }

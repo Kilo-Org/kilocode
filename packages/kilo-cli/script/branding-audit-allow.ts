@@ -27,6 +27,10 @@ export const allow: ReadonlyMap<string, string> = new Map([
   ["tui/src/util/usage-limits.ts", "OpenCode Console SaaS URLs, not host branding."],
   ["tui/src/mini/demo.ts", "Canned demo transcript content (an example config), not product UI branding."],
   [
+    "core/src/plugin/skill/opencode.md",
+    "Upstream OpenCode guide skill; KiloSkillConfigPlugin (packages/kilo-plugin/src/skill/config.ts) removes it and registers kilo-config instead, so its tools.opencode.* guidance never reaches the model in Kilo.",
+  ],
+  [
     "tui/src/util/tool-display.ts",
     "OpenCode is a provider/tool identity here; renaming it would break provider identity (see branding.test 'does not rename provider identities').",
   ],
