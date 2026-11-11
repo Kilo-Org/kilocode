@@ -1426,6 +1426,16 @@ export const dict = {
   "migration.sessionFormat.unknownError": "Unknown error",
 
   "error.details.show": "Details",
+  "error.failure.message": "{{message}}",
+  "error.failure.unknown": "unknown error",
+  "error.failure.notKilo": "Not a Kilo v2 server.",
+  "error.failure.transport": "Couldn't reach the Kilo server. Check that it is running, then try again.",
+  "error.failure.timeout": "The Kilo server took too long to respond. Try again.",
+  "error.failure.busy": "The Kilo server is busy right now. Try again in a moment.",
+  "error.failure.trouble": "The Kilo server is having trouble right now. Try again in a moment.",
+  "error.failure.status": "The Kilo server returned an unexpected status ({{status}}).",
+  "error.failure.statusUnknown": "The Kilo server returned an unexpected status.",
+  "error.failure.unreadable": "The Kilo server sent a response this client couldn't read.",
 
   "task.todos.progress": "{{done}}/{{total}} to-dos done",
   "task.todos.allDone": "{{count}} to-dos done",

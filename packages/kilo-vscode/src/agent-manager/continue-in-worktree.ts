@@ -4,6 +4,7 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { capture as captureGitState, apply as applyGitState, type GitSnapshot } from "./git-transfer"
 import { getErrorMessage } from "./errors"
 import { recordForkHandoff } from "./fork-handoff"
+import { forkInto } from "./fork-session"
 
 export interface ContinueContext {
   root: string
@@ -19,6 +20,8 @@ export interface ContinueContext {
   getStateManager: () => WorktreeStateManager | undefined
   registerWorktreeSession: (sessionId: string, directory: string) => void
   notifyReady: (sessionId: string, result: CreateWorktreeResult, worktreeId: string) => void
+  /** Hands the fork to the panel, which opens its tab in the worktree without waiting for its session list. */
+  notifyForked: (session: SessionInfo, forkedFromId: string, worktreeId: string) => void
   log: (...args: unknown[]) => void
 }
 
@@ -104,8 +107,7 @@ export async function forkSession(
     return { ok: false, error: "Not connected to CLI backend" }
   }
   try {
-    const forked = await client.session.fork({ sessionID: sessionId })
-    await client.session.move({ sessionID: forked.id, directory: dir })
+    const forked = await forkInto(client, sessionId, dir, undefined)
     await recordForkHandoff({ client, sessionId: forked.id, directory: dir }).catch((err) => {
       ctx.log("Failed to record fork handoff:", getErrorMessage(err))
     })
@@ -128,6 +130,7 @@ export function registerSession(
   ctx.registerWorktreeSession(session.id, result.path)
   // Push state before the webview receives the initial message so it knows this is a worktree session.
   ctx.notifyReady(session.id, result, worktreeId)
+  ctx.notifyForked(session, sourceId, worktreeId)
   ctx.log(`Continued sidebar session ${sourceId} → worktree ${worktreeId} (session ${session.id})`)
 }
 
