@@ -37,6 +37,26 @@ test("zod tool schemas drop the non-standard string-check formats and keep patte
   expect(JSON.stringify(result)).not.toMatch(/"format":"(starts_with|ends_with|includes)"/)
 })
 
+test("zod tool schemas drop the formats inside $defs of a recursive schema", () => {
+  const node: z.ZodType<{ name: string; children: unknown[] }> = z.lazy(() =>
+    z.object({ name: z.string().endsWith("!"), children: z.array(node) }),
+  )
+  const tool: Info = {
+    name: "recursive",
+    description: "Recursive Zod tool",
+    input: z.object({ root: node }),
+    execute,
+  }
+
+  const result = definition(tool)
+
+  expect(result.inputSchema).toMatchObject({
+    properties: { root: { $ref: "#/$defs/__schema0" } },
+    $defs: { __schema0: { properties: { name: { type: "string", pattern: ".*!$" } } } },
+  })
+  expect(JSON.stringify(result)).not.toMatch(/"format":"(starts_with|ends_with|includes)"/)
+})
+
 test("zod/mini tool schemas, converted without Standard JSON Schema, drop the same formats", () => {
   const tool: Info = {
     name: "mini",
