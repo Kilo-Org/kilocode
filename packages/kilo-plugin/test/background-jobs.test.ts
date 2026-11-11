@@ -29,12 +29,18 @@ import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
 import { testEffect } from "../../core/test/lib/effect"
 import { executeTool, toolIdentity } from "../../core/test/lib/tool"
 import { KiloBackgroundJobs } from "../src/background-jobs"
+import { KiloSubagentBackgroundPlugin } from "../src/subagent-background"
 
 const llmLayer = TestLLM.testLayer({ fallback: TestLLM.text("Review complete", "review") })
 const plugins = makeGlobalNode({
   service: SdkPlugins.Service,
   layer: Layer.effectDiscard(
-    SdkPlugins.Service.use((sdk) => sdk.register(KiloBackgroundJobs.Plugin)),
+    SdkPlugins.Service.use((sdk) =>
+      Effect.gen(function* () {
+        yield* sdk.register(KiloBackgroundJobs.Plugin)
+        yield* sdk.register(KiloSubagentBackgroundPlugin)
+      }),
+    ),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
   deps: [Bus.node],
 })
@@ -110,7 +116,12 @@ describe("kilocode.background-jobs", () => {
       const llm = yield* TestLLM.Test
       const gate = yield* llm.gate()
       const call = yield* env
-        .run({ agent: "reviewer", description: "Review fixture", prompt: "Review the fixture" })
+        .run({
+          agent: "reviewer",
+          description: "Review fixture",
+          prompt: "Review the fixture",
+          background: false,
+        })
         .pipe(Effect.forkChild)
       yield* gate.started
       const running = yield* env.until((jobs) => jobs.length === 1)
@@ -139,28 +150,51 @@ describe("kilocode.background-jobs", () => {
   it.live("records a foreground subagent that finishes in its tool call", () =>
     Effect.gen(function* () {
       const env = yield* setup
-      const result = yield* env.run({ agent: "reviewer", description: "Quick review", prompt: "Review it" })
+      const result = yield* env.run({
+        agent: "reviewer",
+        description: "Quick review",
+        prompt: "Review it",
+        background: false,
+      })
       expect(result.status).toBe("completed")
       expect(yield* env.list).toMatchObject([{ title: "Quick review", status: "completed", background: false }])
     }),
   )
 
-  it.live("records a foreground subagent cancelled outside the RPC as cancelled", () =>
+  // Both modes cancel the child the same way; the tracker learns from the tool result when it waited, and from the
+  // Job registry when the call already returned.
+  for (const background of [true, false])
+    it.live(`records a subagent cancelled outside the RPC as cancelled (background: ${background})`, () =>
+      Effect.gen(function* () {
+        const env = yield* setup
+        const llm = yield* TestLLM.Test
+        const jobs = yield* Job.Service
+        const gate = yield* llm.gate()
+        const call = yield* env
+          .run({ agent: "reviewer", description: "Cancelled review", prompt: "Review it", background })
+          .pipe(Effect.forkChild)
+        yield* gate.started
+        const running = yield* env.until((list) => list[0]?.status === "running")
+        yield* jobs.cancel(running[0]!.id)
+        const result = yield* Fiber.join(call)
+        expect(background ? result.output?.status : result.status).toBe(background ? "running" : "error")
+        yield* env.until((list) => list[0]?.status === "cancelled")
+        yield* gate.release
+      }),
+    )
+
+  it.live("runs a subagent call that omits background in the background", () =>
     Effect.gen(function* () {
       const env = yield* setup
       const llm = yield* TestLLM.Test
-      const jobs = yield* Job.Service
       const gate = yield* llm.gate()
-      const call = yield* env
-        .run({ agent: "reviewer", description: "Cancelled review", prompt: "Review it" })
-        .pipe(Effect.forkChild)
+      const result = yield* env.run({ agent: "reviewer", description: "Defaulted review", prompt: "Review it" })
+      expect(result.output?.status).toBe("running")
       yield* gate.started
-      const running = yield* env.until((list) => list[0]?.status === "running")
-      yield* jobs.cancel(running[0]!.id)
-      const result = yield* Fiber.join(call)
-      expect(result.status).toBe("error")
-      expect(yield* env.list).toMatchObject([{ status: "cancelled", background: false }])
+      const running = yield* env.until((jobs) => jobs[0]?.status === "running")
+      expect(running[0]).toMatchObject({ title: "Defaulted review", background: true })
       yield* gate.release
+      yield* env.until((jobs) => jobs[0]?.status === "completed")
     }),
   )
 

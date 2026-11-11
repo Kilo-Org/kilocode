@@ -71,6 +71,16 @@ describe("dispatchInitialPrompt", () => {
     })
     expect(message?.files).toEqual([{ uri: "data:image/png;base64,aaa" }])
   })
+
+  it("keeps the name and span of an @ mention file", () => {
+    const mention = { text: "@Fix auth bug", start: 8, end: 21 }
+    const message = initialMessage({
+      ...base,
+      text: "Compare @Fix auth bug",
+      files: [{ mime: "text/plain", url: "session:ses_abc", name: "Fix-auth-bug.md", mention }],
+    })
+    expect(message?.files).toEqual([{ uri: "session:ses_abc", name: "Fix-auth-bug.md", mention }])
+  })
 })
 
 describe("Agent Manager initial command", () => {
