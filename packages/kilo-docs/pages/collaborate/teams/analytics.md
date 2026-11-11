@@ -102,6 +102,10 @@ To set the project identifier to `my-project`, create a `.kilo/config.json` file
 }
 ```
 
+### Compute usage
+
+Cloud Agent compute usage appears in its own section of the dashboard, separate from model inference, so you can track container usage and its cost over the selected period. Compute is billed per second while a container is awake; see [Cloud Agent cost](/docs/code-with-ai/platforms/cloud-agent#cost) for the rates. Compute also counts toward [spend alerts](/docs/collaborate/teams/billing#spend-alerts).
+
 ## Understanding the Data
 
 ### Model Information

@@ -59,6 +59,9 @@ Each entry can be:
 | `"package-name@1.2.3"` | Pinned version from npm |
 | `["package-name", { options }]` | npm package with options passed to the plugin function |
 | `"./path/plugin.ts"` / `"file:///..."` | Local file (relative to the config file or absolute `file:` URL) |
+| `"git:github.com/owner/repo@v1"` | Public git repository cloned into the cache (see [Publish your plugin to the Marketplace](#publish-your-plugin-to-the-marketplace)) |
+
+Git entries use the same `git:<repo>[@ref][#subpath]` grammar as Marketplace git plugins. Kilo clones the repository into the cache and loads it directly; it installs no npm dependencies, so git plugins must be self-contained.
 
 Config files live in the same locations as the rest of your CLI configuration — see the [CLI configuration reference](/docs/code-with-ai/platforms/cli#configuration).
 
@@ -102,6 +105,7 @@ The command resolves the package, reads its `package.json` for plugin entrypoint
 - **npm plugins** are installed automatically at startup using Bun. Packages and their dependencies are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/opencode/packages/` by default, or `$XDG_CACHE_HOME/opencode/packages/` when `XDG_CACHE_HOME` is set).
 - **Pinned npm versions** like `my-plugin@1.2.3` install that exact version and do not check for newer registry versions. Bare package names resolve to `latest` and can refresh when the cached copy becomes stale.
 - **Install scripts are disabled** for npm plugins. Kilo installs packages with lifecycle scripts such as `install` and `postinstall` blocked.
+- **Git plugins** are cloned under `packages/git/` in the same CLI cache directory and loaded from the clone. A pinned commit SHA is loaded as-is; a branch, tag, or default ref is re-checked about once an hour. Git plugins must be self-contained because Kilo installs no npm dependencies for them.
 - **Local plugins** are loaded directly from the plugin directory. If your plugin imports external packages, add a `package.json` to your config directory (see [Dependencies](#dependencies)) — Kilo runs `bun install` on startup so imports resolve.
 
 ### Load order

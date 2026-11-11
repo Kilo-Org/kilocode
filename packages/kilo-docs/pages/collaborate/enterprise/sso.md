@@ -68,7 +68,7 @@ Alongside SSO, Kilo Enterprise supports directory sync (SCIM) through WorkOS. Wh
 
 Creating, updating, reactivating, or deactivating a user in your IdP, and changing group membership, are applied automatically. As with SSO, the Kilo team configures Directory Sync in WorkOS for your organization. See [Sub-organizations](/docs/collaborate/enterprise/sub-organizations) for how provisioned sub-organizations are managed.
 
-Before Kilo provisions or binds an account for a directory user, the user's email domain must match your organization's SSO policy domain. A directory user whose address uses a different domain is refused: Kilo neither creates an account nor takes over a pre-existing one, so Directory Sync only provisions people on your validated domain.
+Before Kilo provisions or binds an account for a directory user, Kilo accepts the user's email domain when it matches your organization's SSO policy domain or is a domain your WorkOS organization reports as verified. Kilo requires DNS verification: a domain verified manually in the WorkOS dashboard is not accepted, because a manual tick does not prove your organization controls the domain, and binding can take over an account someone already holds. A directory user whose address uses any other domain is refused — Kilo neither creates an account nor takes over a pre-existing one. Because only one domain can be the SSO policy domain, the verified-domain check lets a single directory provision people across every mail domain your organization routes through it.
 
 ## Signing in with SSO
 

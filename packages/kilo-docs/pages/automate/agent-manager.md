@@ -46,7 +46,7 @@ A `task` subagent is a non-interactive delegate. Non-interactive means that the 
 - **Resume:** If Kilo returns a `task_id` after a failed or interrupted child, pass it back to `task` to continue that child, subject to the current session and permission rules.
 - **Nesting:** A child can delegate again only when its agent permissions and the configured subagent depth allow it.
 
-In the VS Code extension, the background-agent strip shows running, completed, cancelled, and failed children. Open a child transcript from its task card or background-agent row. A running foreground child can also be moved to the background with **Continue in background**.
+In the VS Code extension, the agent stack in the session dock shows running, completed, cancelled, and failed children. Open a child transcript from its task card or agent row. A running foreground child can also be moved to the background with **Continue in background**.
 
 ### Kilo Swarm communication
 

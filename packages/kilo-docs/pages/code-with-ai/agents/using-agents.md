@@ -155,6 +155,25 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 {% /tab %}
 {% /tabs %}
 
+## Plan mode and implementation handoff
+
+When you use the **plan** agent, it inspects the code and asks one question at a time, each with a recommended answer. It writes the finished plan to a file so the plan survives the chat and can be reviewed or handed to implementation later.
+
+- In a version-controlled project, the plan file is created under `.kilo/plans/` as `<created>-<slug>.md`.
+- In a directory without version control, plans are written to the plans folder in the Kilo data directory instead of a random project folder.
+
+When the plan is ready, the plan agent opens the plan in the Documents viewer in VS Code. The chat also shows a **Plan is ready** card with a link to the plan file that you can use to reopen it.
+
+The plan agent then asks **Ready to implement?** with these choices:
+
+| Choice | What happens |
+|---|---|
+| **Start new session** | Opens a new Code session with the plan file as the source of truth, a handover summary of discoveries from planning, and the plan's todo list. |
+| **Continue here** | Switches the current session to Code and starts implementing the plan above. |
+| **Keep refining** | Stays in Plan mode. When the refined plan is ready, the question returns with the updated plan. |
+
+You can also type a free-text answer instead of choosing an option. The handoff question is available in VS Code, JetBrains, and the CLI.
+
 ## Custom Agents
 
 Create your own specialized assistants by defining tool access, file permissions, and behavior instructions. Custom agents help enforce team standards or create purpose-specific assistants. See [Custom Modes documentation](/docs/customize/custom-modes) for setup instructions.

@@ -49,12 +49,14 @@ The History search is a fuzzy title search over the sessions currently loaded in
 
 ### Search the open chat session
 
-Open a session and select the magnifying-glass button in its header. Chat search supports:
+Open a session and select the magnifying-glass button in its header. You can also run **Kilo Code: Toggle Chat Search** from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`); there is no default keybinding. Chat search supports:
 
 - Previous and next match navigation
 - Match case
 - Whole word
 - Regular expressions
+
+Chat search matches text in user prompts and assistant replies. An invalid regular expression shows an error instead of **No results**.
 
 Kilo loads older messages while the search is active so the search covers the full local chat session, not only the messages initially visible.
 

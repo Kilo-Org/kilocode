@@ -58,13 +58,24 @@ A prompt navigator runs along the right edge of the transcript. Hover it to list
 
 Answered `question` cards appear as their own entries, titled with the question header and previewing your answers. Selecting one expands the card and scrolls to it.
 
+## Finding text in the transcript
+
+Press the IDE's **Find** shortcut (`Ctrl+F` / `Cmd+F`, or whatever your keymap assigns to Find) anywhere in a chat to search the conversation. The plugin opens the native Find bar over the transcript, so the field, **Match case**, whole-word, and regex toggles, the match count, the arrows, and the close behavior match the ones you use in a file editor. **Find Next** and **Find Previous** act on the transcript while a chat is active, and ordinary file editors keep their own Find behavior.
+
+Search covers the conversation's user and assistant prose, including inline code and tables. It skips fenced code blocks, tool output, reasoning, diffs, and notices. Every match is highlighted and the current match is distinguished; selecting a hidden match inside a collapsed injected prompt expands it. Results refresh while a response streams without moving the selected match.
+
 ## Cloud sessions
 
 When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in a **Cloud** section beside local worktrees. Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it.
 
-Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only.
+Use the tool window's **Add** menu to create work. **Local Worktree Task** opens the local worktree dialog, and **Cloud Task** opens the New Cloud Workspace dialog, which uses this repository and lets you set an optional branch or ref, an optional Cloud profile, and an initial prompt. An empty prompt creates an empty workspace that you add sessions to later. Creating a Cloud workspace requires signing in to Kilo.
+
+Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only. Use the workspace's **New Cloud Session** row to start another root session without repeating the repository or profile setup.
 
 - **Refresh Cloud** in the **Core** menu reloads Cloud workspaces and sessions without restarting Core. Refresh a single workspace from its row menu.
+- **Open in Browser** opens a workspace in your browser, in the workspace's organization.
+- Use **Close** on a session to hide it from the workspace and **Reopen** to bring it back. When every session is closed, the workspace shows an empty state instead of a new-session editor.
+- **Delete Cloud Workspace** permanently removes the workspace, its sessions, and its Cloud files after you confirm. The row keeps its place and shows deletion progress, and offers **Retry** if deletion fails. To remove only your local reference to a workspace that was already deleted elsewhere, use **Dismiss Unavailable Workspace**, which does not change anything in Cloud.
 - Cloud prompts are text-only: file attachments and file mentions are not supported yet, and Kilo does not send your editor context or selections with a hosted prompt.
 - Local-only actions, such as worktree, pull request, sharing, and Git actions, are disabled for Cloud sessions.
 

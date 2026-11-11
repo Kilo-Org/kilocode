@@ -196,6 +196,36 @@ Group worktrees into folders in the sidebar. Folders are private to you, not sha
 - Use the folder menu to rename it, change its color, move it up or down, or delete it. Deleting a folder returns its worktrees to **Ungrouped** without deleting them.
 - Click a folder's header to collapse or expand it.
 
+### Stacked workspaces
+
+A stacked workspace is a worktree layered on another worktree's branch, so you can build a pull request stack one layer at a time. Each layer has its own branch and sandbox. A new layer starts from the parent's pushed commit, and chats opened in the layer keep the same stack and base.
+
+To create a stacked workspace:
+
+1. Open an existing worktree in the Cloud Agent sidebar.
+2. Choose the stack action from the worktree's sidebar menu or its chat header.
+3. Confirm the parent branch. Kilo locks the repository to the parent's repository; remove the stack target if you want to start a normal workspace instead.
+
+Kilo refuses to create the layer when the parent is outside your personal or organization scope, uses a different repository, or is being deleted. If the parent branch has not been pushed, creation fails with a specific reason before the workspace starts. If the parent branch is rewritten while the layer is starting, the layer fails with a retryable base-changed error.
+
+The sidebar groups a stack into one unit. Expand it to see each layer with its own row and pull request status. A collapsed stack shows its layer count and most urgent status. Sidebar order and smart folders such as **In review** are personal preferences, so they do not change another member's layout.
+
+The **Changes** view compares a layer with its base branch (the layer below it), not with its own branch. If the base branch no longer exists, Kilo falls back to the repository's default branch and labels that fallback. Automatic commit and push only touch the layer's own branch, and auto-commit never force-pushes.
+
+When a base branch changes, restack the affected layers:
+
+- **Restack** updates one layer. **Restack stack** updates every layer in the stack.
+- Restack requires an explicit action. It refuses while any chat in the worktree is running or the working tree has uncommitted changes.
+- Restack rewrites only branches in the stack and uses force-with-lease pinned to the expected remote head. Waking an idle sandbox appears as operation progress.
+- **Restack stack** visits layers from the bottom up and stops at the first refusal or conflict.
+- If a rebase conflicts, Kilo aborts it and hands the agent the exact operation, command, files, and expected result so the agent can resolve the conflict.
+
+When the remote branch has changes, Kilo keeps your local commits instead of discarding them or force-pushing over them.
+
+Deleting a parent worktree keeps its branch and its children's base branches. Kilo warns when stacked children exist, and the children remain usable after the parent worktree is deleted.
+
+A Cloud Agent with child-session permission can create the stack for you when you ask it to build a pull request stack. It launches the first layer, then stacks the next layer on that worktree after the parent pushes.
+
 ## Reviewing changes
 
 Select **Changes** in the chat header to open the worktree's saved change summary. It compares your work two ways: **Uncommitted** first, which shows changes in the working tree since the last commit, and **Against base branch** second, which shows the commits on the worktree branch since it diverged from the base branch. A file you committed and then edited further appears under both. Each file tab is labelled with its comparison, so you can open the same path in either one.
@@ -233,6 +263,8 @@ When a session is linked to a GitHub pull request, a PR badge appears on its row
 - **Synced** — when the status was last received.
 
 The popover shows cached status from GitHub webhooks rather than querying GitHub while you hover. Select **Refresh** to request the latest status; the action appears when the status has not synced yet and otherwise at most once every 60 seconds. Values GitHub has not reported yet show as **Unknown**, and the popover notes which evidence is missing. Select the badge to open the pull request on GitHub.
+
+A pull request opened from a worktree's checked-out branch belongs to that workspace, so every chat in the worktree shows its badge without any chat reporting a link. When more than one pull request matches, Kilo prefers an open or draft pull request over a closed or merged one, the workspace's pull request over the chat's own verified link, and then the newest pull request. Matching stays within the session's personal or organization scope, and outside worktrees a branch name alone does not link a pull request.
 
 ## Previewing a running app
 
