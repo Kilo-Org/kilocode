@@ -10,9 +10,8 @@ import { KiloSessionDrainRpc } from "@opencode/schema/kilocode/session-drain"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Deferred, Effect, Layer, References, Stream } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdtemp, rm } from "node:fs/promises"
-import os from "node:os"
 import path from "node:path"
+import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { KiloHost } from "../src/host"
 import { KiloRunDrain } from "../src/run-drain"
 import { hostMirrorsPlugin } from "../src/mirrors"
@@ -29,7 +28,9 @@ type Env = {
 // stands in for the provider, and a local stand-in for the Kilo API answers the Gateway.
 const boot = (body: (env: Env) => Promise<void>) => async () => {
   using backend = fixture()
-  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-drain-"))
+  // The shared fixture resolves Windows paths and explicitly retries EBUSY after process teardown.
+  await using temporary = await tmpdir("kilo-drain-")
+  const directory = temporary.path
   await Bun.write(
     path.join(directory, "kilo2.json"),
     JSON.stringify({
@@ -97,8 +98,6 @@ const boot = (body: (env: Env) => Promise<void>) => async () => {
     )
   } finally {
     apply(previous)
-    // Shell removal precedes scoped process teardown, which can briefly retain Windows directory handles.
-    await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 }
 
