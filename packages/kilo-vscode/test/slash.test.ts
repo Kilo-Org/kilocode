@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { CommandInfo, ModelRef, SkillInfo } from "@opencode/client"
 import { matchSlash, mergeCatalog, parseSlash, slashQuery, type SlashEntry } from "../webview-ui/src/v2/slash"
-import { createModelAttribution } from "../webview-ui/src/v2/attribution"
+import { createModelDrafts } from "../webview-ui/src/v2/model-draft"
 import { reviewScopes, slashActions } from "../webview-ui/src/v2/slash-actions"
 import { createSlashCatalog } from "../webview-ui/src/v2/slash-catalog"
 import { dispatchSlash, type SlashDeps } from "../webview-ui/src/v2/slash-dispatch"
@@ -254,12 +254,13 @@ describe("slash dispatch", () => {
     expect(own.calls.map((call) => (call as unknown[])[0])).toEqual(["command"])
   })
 
-  test("keeps a settled variant switch that the store does not report yet", async () => {
-    // The composer switched to high; the request settled, but the store still reports the old variant.
-    const attribution = createModelAttribution()
-    attribution.request("ses_1", high)
+  test("runs on the composer's uncommitted effort, not the one the session stores", async () => {
+    // Shift+Tab moved the composer to high; the session reports low until a send commits the draft.
+    const low: ModelRef = { providerID: "kilo", id: "claude", variant: "low" }
+    const drafts = createModelDrafts()
+    drafts.set("ses_1", high, low)
     const run = deps()
-    run.value.selected = (id) => attribution.read(id, { providerID: "kilo", id: "claude", variant: "low" })
+    run.value.selected = (id) => drafts.get(id) ?? low
     await dispatchSlash({ entry: entry("init"), args: "" }, run.value)
     expect(run.calls[0]).toEqual(["switchModel", high])
   })
