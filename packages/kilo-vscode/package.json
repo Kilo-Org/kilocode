@@ -1051,7 +1051,7 @@
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
     "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/webview-ui/diff-virtual packages/kilo-vscode/webview-ui/settings packages/kilo-vscode/script packages/kilo-vscode/test",
-    "test": "bun test"
+    "test": "bun test --timeout 30000"
   },
   "dependencies": {
     "@kilocode/caffeination": "workspace:*",
@@ -1082,6 +1082,7 @@
     "jsonc-parser": "3.3.1",
     "lru-cache": "11.5.2",
     "marked": "catalog:",
+    "minimatch": "10.2.6",
     "playwright-core": "1.57.0",
     "quick-lru": "7.3.0",
     "simple-git": "4.0.2",

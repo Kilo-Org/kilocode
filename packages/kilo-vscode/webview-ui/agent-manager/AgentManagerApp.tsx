@@ -814,16 +814,16 @@ const AgentManagerContent: Component = () => {
   })
   // Past-chat mentions use the loaded session lists plus the host catalog, so a worktree whose store is not shown yet
   // still offers its sessions.
-  const mentionSessions = createMemo(() => {
-    const known = new Map<string, { id: string; title: string; updated: number }>()
-    const add = (info: { id: string; title?: string; time: { updated: number } }) => {
-      if (info.title) known.set(info.id, { id: info.id, title: info.title, updated: info.time.updated })
-    }
-    for (const info of sessions.sessions()) add(info)
-    for (const info of projectSessionsLive()[currentProjectId() ?? ""] ?? []) add(info)
-    return [...known.values()].toSorted((a, b) => b.updated - a.updated)
-  })
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
+  // `@git-changes` in a worktree diffs against the branch the worktree was created from, on its remote when it has one.
+  const gitTarget = () => {
+    const id = selection()
+    if (!id || id === LOCAL) return undefined
+    const worktree = worktrees().find((item) => item.id === id)
+    if (!worktree) return undefined
+    const base = worktree.remote ? `${worktree.remote}/${worktree.parentBranch}` : worktree.parentBranch
+    return { directory: worktree.path, base }
+  }
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
     if (!pid) return undefined
@@ -1793,7 +1793,6 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
-            sessions={mentionSessions()}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
@@ -2339,6 +2338,11 @@ const AgentManagerContent: Component = () => {
                     onViewTurnChanges={openTurnChanges}
                     onForkMessage={handleForkSession}
                     onMissing={(id) => handleCloseTab(id)}
+                    worktrees={references}
+                    git={isGitRepo}
+                    gitTarget={gitTarget}
+                    terminalContext={() => selection() ?? undefined}
+                    resolveEmbeddedTerminal={resolveTerminal}
                     onPrompted={(sessionId, text, model) =>
                       to({
                         type: "agentManager.promptSent",

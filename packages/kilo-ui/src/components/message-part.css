@@ -203,6 +203,12 @@
   text-decoration: underline;
 }
 
+[data-slot="user-message-text"] [data-highlight="file"][data-clickable]:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, var(--vscode-textLink-foreground, var(--syntax-property)));
+  outline-offset: 1px;
+  text-decoration: underline;
+}
+
 html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   border-radius: 0;
   border: 0;
