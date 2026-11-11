@@ -2621,13 +2621,13 @@
   "module:packages/opencode/src/kilocode/mcp/cleanup.ts": {
     "state": "native",
     "v2": "packages/core/src/mcp/stdio.ts",
-    "note": "v1 released clients that a partially-started MCP state had connected, killing their stdio process children. v2 starts the MCP service under a scope: the stdio transport registers its own scope/finalizer (packages/core/src/mcp/stdio.ts), and process-group cleanup closes children when the scope ends, so an interrupted startup leaves nothing running. Covered by the interruption cases in packages/core/test/mcp.test.ts.",
+    "note": "v1 released clients that a partially-started MCP state had connected, killing their stdio process children. v2 starts the MCP service under a scope: packages/core/src/mcp/stdio.ts spawns the child in the calling scope (ChildProcess.make), so closing that scope kills the process group. The scope-kill primitive is covered by packages/core/test/effect/cross-spawn-spawner.test.ts ('uses the configured kill signal when scope exits'), and the remote caller-interrupt paths by the two interruption cases in packages/core/test/mcp.test.ts. The exact v1 local end-to-end case (interrupt mcp.status with one connected local fixture and one hanging, then assert the child is gone and a retry works) has no direct v2 test; recorded as a test gap, not a behavior gap.",
     "by": "mcp-marketplace-rescope"
   },
   "module:packages/opencode/test/kilocode/mcp-interrupted-state.test.ts": {
     "state": "native",
-    "v2": "packages/core/test/mcp.test.ts",
-    "note": "The v1 scenario (interrupt mcp.status while one fixture server is connected and another hangs, then assert the connected server process is gone and a retry works) is covered natively by the two interruption tests in packages/core/test/mcp.test.ts ('finishes an MCP connect whose caller is interrupted during the handshake' and the disconnect case) plus the stdio scope finalizers.",
+    "v2": "packages/core/src/mcp/stdio.ts",
+    "note": "v2 has no direct port of this end-to-end local scenario. The process-kill behavior it guards is covered by the scoped stdio spawn in packages/core/src/mcp/stdio.ts and the scope-kill primitive in packages/core/test/effect/cross-spawn-spawner.test.ts ('uses the configured kill signal when scope exits'); the remote caller-interrupt paths are covered by the two interruption cases in packages/core/test/mcp.test.ts. Recorded as native for the behavior; the exact local fixture remains a test gap.",
     "by": "mcp-marketplace-rescope"
   },
   "module:packages/opencode/test/kilocode/mcp-branding.test.ts": {

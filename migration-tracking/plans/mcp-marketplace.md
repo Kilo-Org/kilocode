@@ -51,9 +51,11 @@ Deliberate differences from v1, all recorded in the PRs above:
 - A marketplace catalog `id` need not equal the plugin identity, and TUI-only plugin packages are
   refused because v2 has one config for server and TUI.
 
-Already native in v2, nothing to port: process-group cleanup and `windowsHide`, sandbox MCP network
-delegation, token-refresh coalescing, per-attempt OAuth state/PKCE, MCP remove/cancel/external
-auth, interrupted-startup cleanup, and the `needs_auth` copy ("Sign in from /mcps").
+Already native in v2: process-group cleanup and `windowsHide` (the scoped spawn in
+`packages/core/src/mcp/stdio.ts`; `cross-spawn-spawner.test.ts` covers the scope kill), sandbox MCP
+network delegation, token-refresh coalescing, per-attempt OAuth state/PKCE, MCP
+remove/cancel/external auth, and the `needs_auth` copy ("Sign in from /mcps"). The v1 local
+interrupted-startup end-to-end fixture has no direct v2 test; that is a test gap, not a behavior gap.
 
 ## 2. What needs to be implemented
 
@@ -68,7 +70,7 @@ No feature code. Only PR B below (record the decisions in the map) is required t
 | OAuth callback takeover (`mcp-oauth-callback.ts`, shared `oauth-callback.ts` hunks) | v1 needed a machine-wide listener because `kilo mcp auth` ran in separate processes. v2 owns each attempt in the integration service: own listener and scope, `oauth.cancel`/`oauth.status`, 10-minute expiry, Cancel in TUI and VS Code. The only gap: two CIMD attempts at once collide on port 19876; the second fails at bind with a port error, nothing is corrupted. | module, test and `patch:mcp:78080472f471` `dropped` |
 | Docker `--rm` injection (`ensureDockerRm`) | Container hygiene only; catalog entries and users pass `--rm`. | test `dropped` (the code hunk is unattributed) |
 | Env sanitization (`modelEnv`) | Not a functional break: local MCP servers inherit the host env, as upstream does by design. It is a security-hardening question, moved to follow-up C. | no feature cell (unattributed) |
-| v1 `cleanup.ts`, interrupted-state and branding tests | Already covered: scoped stdio startup and `packages/core/test/mcp.test.ts` interruption cases; host identity tests. | `native` |
+| v1 `cleanup.ts`, interrupted-state and branding tests | The behavior is native: `packages/core/src/mcp/stdio.ts` spawns in the caller's scope, `cross-spawn-spawner.test.ts` covers the scope kill, and the remote interruption cases cover caller interrupts. The exact local end-to-end fixture is a test gap. Branding identity is covered by the host tests. | `native` (local end-to-end gap noted) |
 | MCP Apps | U-E11-05. | 4 cells stay open |
 
 ### Follow-ups outside #15307 (optional, each its own issue)
@@ -76,9 +78,11 @@ No feature code. Only PR B below (record the decisions in the map) is required t
 - **C. MCP env inheritance (security).** Decide whether local MCP servers should stop inheriting
   Kilo secrets: `OPENCODE_SERVER_PASSWORD`/`OPENCODE_SERVER_USERNAME` (when the user exported them),
   `OPENCODE_CONFIG*`, `KILO2_CONFIG*`/`KILO2_DB`, and VS Code's `KILO_BROWSER_BROKER_*` and
-  `KILO_NOTEBOOK_BROKER_*`. If yes: a host env hook in `McpHost.Host`, applied in `client.ts` with
-  `extendEnv: false`, filter in Kilo-owned code, and a test that a spawned server sees none of these
-  but still sees its own `mcp.environment`.
+  `KILO_NOTEBOOK_BROKER_*`. If yes: add a host env filter and pass the filtered environment through
+  `McpStdio.make` from `client.ts`; `packages/core/src/mcp/stdio.ts:107` is where the child is
+  spawned with `extendEnv: true`, so the hook must replace that environment or the spawner call must
+  stop extending the host env. Add a test that a spawned server sees none of these but still sees its
+  own `mcp.environment`.
 - **D. Concurrent CIMD sign-in.** Only if the port-19876 collision shows up in practice: cancel the
   same integration's pending OAuth attempt at the start of `Integration.oauth.connect`
   (`packages/core/src/integration.ts`), with a test that a second sign-in succeeds. Do not port the
