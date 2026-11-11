@@ -24,7 +24,7 @@ The app-dir-name part of those hunks is already done (`OPENCODE_APP_DIR_NAME="ki
 
 `kilo-cli/src/index.ts` imports `./env` first, before any `@opencode/util/global` import, so `env.ts` (and a boot step it triggers) is the correct, already-established rung-2 seam-free location.
 
-## Design (Option A — host boot step, rung 2, zero shared patches)
+## Design (Option A — host boot step, rung 2, plus one generic rung-3 knob)
 
 New Kilo-owned module `packages/kilo-cli/src/global-resilience.ts` holding the ported logic (each with a `kilo_port(global:…)` proof):
 
@@ -74,4 +74,4 @@ Recommendation: **port all five** behaviors. v1 history shows none are v1-specif
 
 - DB-preflight actionable "not writable" error / self-heal — separate `db-preflight` feature.
 - Any v1-Kilo → v2 user-data migration — deferred release-migration slices (U-E3-03/U-E8-02).
-- The `installation` cells: v1's Kilo distribution identity (the npm, brew, choco and scoop names, the installer URL, the npm-registry `latest` fallback) and its use by upgrade and uninstall. On v2 the host provides a disabled updater on purpose (`packages/kilo-cli/src/updater.ts`; `kilo2 upgrade` fails with the manual-update message), so the five cells stay open and move with the Kilo updater to #15311 (M2). Only the isolated `kilo2 uninstall` test (`TODO(rebrand, #15324)` in `updater.ts`) stays with #15324.
+- The `installation` cells: v1's Kilo distribution identity and its use by upgrade and uninstall. v2 runs a disabled updater on purpose (`packages/kilo-cli/src/updater.ts`), so the cells stay open and belong to #15311. The isolated `kilo2 uninstall` check (dry run and cleanup with the disabled updater; see the `removal` comment there) belongs to #15324, not to these cells.
