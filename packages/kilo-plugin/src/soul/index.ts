@@ -1,0 +1,23 @@
+import { SystemPart } from "@opencode/ai/effect"
+import { define } from "@opencode/plugin/effect/plugin"
+import type { SessionHooks } from "@opencode/plugin/effect/session"
+import { Effect } from "effect"
+import SOUL from "./soul.txt"
+
+/**
+ * The Kilo persona: who the agent is and how it works. It leads the system prompt of every agent request, including
+ * agents with their own prompt, and is left out of title requests. It is its own first system part, so the
+ * model-specific templates that replace `system[0]` (the upstream prompt optimizer and the Gateway prompt) keep it as
+ * long as this plugin runs after them; the host registers it after the config plugins for that reason.
+ */
+export const KiloSoulPlugin = define({
+  id: "kilocode.soul",
+  effect: Effect.fn("KiloSoulPlugin")(function* (ctx) {
+    const hook = (event: SessionHooks["context"]) =>
+      Effect.sync(() => {
+        event.system.unshift(SystemPart.make(SOUL.trim()))
+      })
+    yield* ctx.session.hook("context", hook)
+    yield* ctx.session.hook("compaction", hook)
+  }),
+})

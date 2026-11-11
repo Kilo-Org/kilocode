@@ -2427,5 +2427,11 @@
     "v2": "packages/schema/src/kilocode/session-drain.ts",
     "note": "Served by the kilocode.session-drain RPC method drain (contract packages/schema/src/kilocode/session-drain.ts, handler packages/kilo-plugin/src/session-drain/index.ts) with the drained event carrying the caller token. Round trip: packages/kilo-cli/test/session-drain.test.ts.",
     "by": "kilo/graceful-tower-qr8"
+  },
+  "module:packages/opencode/src/kilocode/soul.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/soul/soul.txt",
+    "note": "The persona text is byte-identical. KiloSoulPlugin (packages/kilo-plugin/src/soul/index.ts, registered in KiloPostPlugins after the Gateway prompt and the upstream prompt optimizer) puts it first in the system prompt of every agent and compaction request, including agents with their own prompt, and leaves title requests out, which matches shouldIncludePersona and the soul lines of llm/request.ts. v2 has no OpenAI OAuth instructions split, so the first system part also covers OAuth. Tests: packages/kilo-plugin/test/soul.test.ts.",
+    "by": "soul-persona"
   }
 }

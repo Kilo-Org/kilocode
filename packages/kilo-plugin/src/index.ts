@@ -41,6 +41,7 @@ import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloSandbox } from "./sandbox"
 import { KiloBoard } from "./board"
+import { KiloSoulPlugin } from "./soul"
 
 export { KiloSandbox }
 
@@ -110,4 +111,6 @@ export const KiloPostPlugins = [
   OpencodeFreeTier.Plugin,
   // The sandbox wraps every tool, so it registers after the config plugins and their tools.
   KiloSandbox.Plugin,
+  // Leads the system prompt with the Kilo persona, after every plugin that replaces the first system part.
+  KiloSoulPlugin,
 ] as const
