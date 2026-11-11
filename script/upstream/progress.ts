@@ -9,7 +9,9 @@
  *
  * Cell kinds and the rule that marks a cell done on v2:
  * - module: a Kilo-owned v1 file. Done when a Kilo-owned v2 file has the same feature and relative
- *   path, or the same feature and basename.
+ *   path, or a disposition names the v2 file. A same-name file elsewhere is not enough for a module:
+ *   `index.ts`, `models.ts` and `service.ts` repeat across a package, so a name alone credited cells
+ *   that were never ported. A test file closes by name as well, because test directories move.
  * - api: a `/kilocode/*` operation in the v1 OpenAPI document. Done when the path literal appears in
  *   `packages/protocol`, `packages/server` or a Kilo-owned v2 file.
  * - patch: one feature-attributed Kilo hunk in a shared upstream file. Its ID is a hash of the added
@@ -71,8 +73,8 @@ const PROOF_FEATURE = "unattributed:[a-z0-9/._-]+|[a-z0-9-]+"
 const PROOF_LINE = new RegExp(`^([^:]+):(\\d+):((kilocode_change|kilo_port)\\((${PROOF_FEATURE}):([0-9a-f]{12})\\))$`)
 const MARKER = /^\s*(?:\/\/|\/\*|\{\/\*|<!--|#|\*)?\s*(?:\/\/|\/\*|\{\/\*)?\s*kilocode_change\b/
 const GENERATED = [/openapi\.json$/, /\/gen\//, /\/generated\//, /\.gen\.ts$/, /\.lock$/, /bun\.lock$/]
-/** Package scaffolding is not code to port, so it is not a module cell. */
-const SCAFFOLDING = /(^|\/)(package\.json|tsconfig[^/]*\.json|bun\.lock|README[^/]*|LICENSE[^/]*|CHANGELOG[^/]*|\.gitignore|\.npmignore)$/
+/** Package scaffolding and documentation are not code to port, so they are not module cells. Skill content stays a cell. */
+const SCAFFOLDING = /(^|\/)(package\.json|tsconfig[^/]*\.json|bun\.lock|README[^/]*|LICENSE[^/]*|CHANGELOG[^/]*|\.gitignore|\.npmignore)$|(^|\/)docs\/.*\.mdx?$/
 
 export function isTestPath(file: string) {
   return /(^|\/)(test|tests|__tests__)\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
@@ -118,6 +120,17 @@ function relativeOf(file: string) {
   const pkg = file.match(/^packages\/kilo-[a-z0-9-]+?(?:-core)?\/(?:src\/)?(.*)$/)
   if (pkg) return pkg[1]
   return file.match(/kilocode\/[^/]+\/(.*)$/)?.[1] ?? path.basename(file)
+}
+
+/**
+ * The v2 file that stands for a v1 file: the same relative path, or for a test file the same name in
+ * another test directory. Other renames need a disposition with the v2 path, because a same-name module
+ * in a different directory is usually an unrelated file (`index.ts`, `models.ts`, `service.ts`).
+ */
+export function twinOf(file: string, feature: string, index: Map<string, string>) {
+  const same = index.get(`${feature}|${relativeOf(file)}`)
+  if (same || !isTestPath(file)) return same
+  return index.get(`${feature}|${path.basename(file)}`)
 }
 
 /** Upstream area of a shared file, for the `unattributed:<area>` boxes. */
@@ -315,7 +328,7 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     if (!isKiloOwned(f) || SCAFFOLDING.test(f)) continue
     const feature = featureOf(f, split, known)
     if (!feature) continue
-    const v2 = v2Modules.get(`${feature}|${relativeOf(f)}`) ?? v2Modules.get(`${feature}|${path.basename(f)}`)
+    const v2 = twinOf(f, feature, v2Modules)
     cells.push({ id: `module:${f}`, kind: isTestPath(f) ? "test" : "module", feature, source: f, v2 })
   }
 
@@ -875,7 +888,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     `## Counting rules`,
     "",
     `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`.`,
-    `- module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.`,
+    `- module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or a disposition names its v2 file. A test file also closes on the same feature and basename, because test directories move; a module with another name needs the disposition.`,
     `- api: a \`/kilocode/*\` operation in the v1 OpenAPI document. Done when the path literal appears in \`packages/protocol/src\`, \`packages/server/src\` or a Kilo-owned v2 file.`,
     `- patch: one feature-attributed Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base, attributed by \`kilocode_change(<feature>)\`, a Kilo import or a Kilo identifier). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
     `- test: a module or feature-attributed patch in a test file, same rules.`,

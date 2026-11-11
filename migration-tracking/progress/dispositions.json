@@ -988,11 +988,6 @@
     "note": "Tests the dropped migrate-default.ts migration of kilo-code.new.autocomplete values; v2 reads kilo-code.v2.autocomplete.* keys with no v1 values to migrate.",
     "by": "autocomplete-inline"
   },
-  "module:packages/kilo-vscode/docs/error-handling/autocomplete-settings-link.md": {
-    "state": "dropped",
-    "note": "Work note for v1 issue #6284 (status bar settings link), not runtime code. The v2 status bar tooltip links to kilo-code.v2.settings with the autocomplete tab (packages/kilo-vscode/src/services/autocomplete/AutocompleteStatusBar.ts).",
-    "by": "autocomplete-inline"
-  },
   "module:packages/opencode/src/kilocode/review/review.txt": {
     "state": "ported",
     "note": "packages/kilo-plugin/src/review/review.txt, the v1 prompt with two adaptations: the sub-agent tool is named `subagent` instead of Task, and the sentence tying the default base list to Review.getBaseBranch() in review.ts is dropped (no base-branch helper on v2; review.ts stays open under #15315/#14394). Scope order, effort flags, base order, target validation, worktree metadata candidates (unchanged: Agent Manager metadata, not runtime config), tracks, output format, no-edit rule and the post-review question with `mode` are unchanged. packages/kilo-plugin/test/review-command.test.ts checks them.",
@@ -1588,11 +1583,6 @@
     "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent across personal and team accounts, team accounts falling back to the team default (then the first Kilo model) when no recent matches, the Kilo Auto Free fallback, and the pending rules while the account or the recents are unknown (including Kilo agent and configured models). packages/kilo-vscode/test/agent-manager-new-worktree-models.test.ts covers the dialog's model memory across reopened modals and reloads.",
     "by": "model-picker-parity"
   },
-  "module:packages/kilo-vscode/docs/features/remember-last-model.md": {
-    "state": "dropped",
-    "note": "Stale v1 design note: it describes an in-memory model and a globalState lastModel key that never shipped. The shipped behavior (persisted recents, config precedence) is ported in v2/model-default.ts and src/model-preferences.ts.",
-    "by": "model-picker-parity"
-  },
   "api:GET /kilocode/notebook": {
     "state": "dropped",
     "note": "v1 listed server-initiated notebook requests for the extension to answer; v2 has no server notebook API because the extension owns the workspace over a loopback broker, so there is no pending request to list.",
@@ -1924,11 +1914,6 @@
     "state": "ported",
     "v2": "packages/kilo-vscode/src/indexing/consent.ts",
     "note": "Machine-local consent per project in globalState and the project list (workspace plus registered Agent Manager projects). packages/kilo-vscode/src/indexing/host.ts sends it to the server through the consent method of kilocode.indexing and re-sends it on every server start; packages/kilo-vscode/test/indexing-consent.test.ts carries the v1 test.",
-    "by": "codebase-indexing-2"
-  },
-  "module:packages/kilo-vscode/docs/non-agent-features/codebase-indexing-semantic-search.md": {
-    "state": "dropped",
-    "note": "Planning note that lists the remaining work to port indexing from kilocode-legacy, not runtime code or user documentation. The work it lists is done by this port (packages/kilo-indexing, packages/kilo-plugin/src/indexing); v2 kilo-vscode has no docs folder.",
     "by": "codebase-indexing-2"
   },
   "module:packages/kilo-vscode/src/kilo-provider/work-style-apply.ts": {
