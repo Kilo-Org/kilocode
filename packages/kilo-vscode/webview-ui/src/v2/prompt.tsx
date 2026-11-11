@@ -73,9 +73,9 @@ import { attachmentDrafts, imageAttachment, mergeAttachments, pasteDrafts } from
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
-import { kiloSettings } from "./kilo-settings"
+import { kiloSettings, runningDelivery } from "./kilo-settings"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
-import { sendMode, sendShortcuts, type SendMode } from "./pending-actions"
+import { other, sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
 import { recommend, type ManagerContext } from "./shortcut-hint"
 import { parseSlash, type SlashEntry } from "./slash"
@@ -134,6 +134,8 @@ export const promptDrafts = {
 // Send keeps every icon it can show mounted and crossfades between them, so a modifier pressed and released quickly
 // reverses the transition instead of restarting it.
 const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
+
+const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
 export function PromptInput(props: {
   session?: string
@@ -416,10 +418,12 @@ export function PromptInput(props: {
     return language.t("prompt.action.send")
   }
   // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
-  // a click will do before pressing it. The accessible name stays "Send".
-  const [held, setHeld] = createSignal<SendMode>("steer")
-  const hold = (event: KeyboardEvent) => setHeld(sendMode(event, true))
-  const release = () => setHeld("steer")
+  // a click will do before pressing it. The accessible name stays "Send". The modifiers are kept rather than the
+  // action, so changing what Enter does in the settings updates the preview at once.
+  const [held, setHeld] = createSignal<Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">>(NO_KEYS)
+  const hold = (event: KeyboardEvent) =>
+    setHeld({ altKey: event.altKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey })
+  const release = () => setHeld(NO_KEYS)
   onMount(() => {
     window.addEventListener("keydown", hold)
     window.addEventListener("keyup", hold)
@@ -451,9 +455,11 @@ export function PromptInput(props: {
       if (props.disabled || v2.connection.status() !== "connected") return undefined
       // A recording prompt sends on the next Enter, so it suggests nothing else.
       if (speech.state() === "recording") return undefined
+      // While the agent runs, the hint teaches the delivery Enter does not do.
+      const alternate = other(runningDelivery())
       return recommend({
         bindings: v2.bindings(),
-        queue: sendShortcuts().queue,
+        alternate: { binding: sendShortcuts(runningDelivery())[alternate], label: alternate },
         focused: focused(),
         away: away(),
         draft: !!text(),
@@ -490,21 +496,20 @@ export function PromptInput(props: {
       ? language.t("prompt.placeholder.plain")
       : language.t("prompt.placeholder.connecting")
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
-  const sendAction = (): SendMode => (busySend() ? held() : "steer")
-  // While the agent runs, Send draws the steer arrow the pending prompt rows use, so Enter reads as "join this turn"
-  // rather than "start a new one". Queueing has no button of its own: ⌥↵ (previewed here) or Move to queue on the
-  // pending row.
+  const sendAction = (): SendMode => (busySend() ? sendMode(held(), true, runningDelivery()) : "steer")
+  // While the agent runs, Send draws the icon the pending prompt rows use for its action: the steer arrow ("join this
+  // turn") or the clock ("after this turn"). The other delivery is ⌥↵, previewed here, or the pending row's controls.
   const sendIcon = () =>
     busySend() ? ({ steer: "arrow-up", queue: "clock", now: "arrow-right" } as const)[sendAction()] : "send"
   // While the agent runs, the tooltip names what Send does now and its key, like the other composer tooltips. Holding a
-  // modifier switches it to that action; the placeholder suggests ⌥↵ to queue.
+  // modifier switches it to that action; the placeholder suggests the other delivery.
   const sendHint = () => {
     if (!busySend()) return sendLabel()
     const action = sendAction()
     return (
       <div data-slot="tooltip-keybind">
         <span>{language.t(action === "now" ? "prompt.action.stopAndSend" : `prompt.action.${action}`)}</span>
-        <span data-slot="tooltip-keybind-key">{sendShortcuts()[action]}</span>
+        <span data-slot="tooltip-keybind-key">{sendShortcuts(runningDelivery())[action]}</span>
       </div>
     )
   }
@@ -1310,7 +1315,7 @@ export function PromptInput(props: {
               if (historyKey(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send(sendMode(e, props.running))
+              send(sendMode(e, props.running, runningDelivery()))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -1411,7 +1416,7 @@ export function PromptInput(props: {
                     data-variant="ghost"
                     data-icon={sendIcon()}
                     class="prompt-send-button"
-                    onClick={(event) => send(sendMode(event, props.running))}
+                    onClick={(event) => send(sendMode(event, props.running, runningDelivery()))}
                     disabled={!canSend()}
                     aria-label={sendLabel()}
                   >

@@ -124,6 +124,19 @@
             "فارسی"
           ]
         },
+        "kilo-code.v2.chat.sendWhileRunning": {
+          "type": "string",
+          "enum": [
+            "steer",
+            "queue"
+          ],
+          "enumDescriptions": [
+            "Enter steers the running turn: the message reaches the agent after the current step. Alt+Enter queues it.",
+            "Enter queues the message for after the turn. Alt+Enter steers the running turn."
+          ],
+          "default": "steer",
+          "markdownDescription": "What Enter does when you send a message while the agent works. Alt+Enter does the other, and Cmd+Enter (Ctrl+Enter) stops the agent and sends."
+        },
         "kilo-code.v2.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,
