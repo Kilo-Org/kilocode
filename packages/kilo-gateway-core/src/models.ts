@@ -212,6 +212,8 @@ export interface Scope {
 
 export interface Result {
   readonly models: readonly Model[]
+  /** The image-output models of the same catalog, which sessions never pick as a chat model. */
+  readonly imageModels: readonly Model[]
   /** Missing credentials or a public retry, not an explicit empty credential. */
   readonly anonymous: boolean
 }
@@ -253,6 +255,7 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
     return {
       models: catalogModels(parsed.value, !scope.token),
+      imageModels: catalogImageModels(parsed.value, !scope.token),
       anonymous: scope.token === undefined,
     }
   })
@@ -263,6 +266,16 @@ export function catalogModels(response: { readonly data: readonly unknown[] }, a
   return response.data
     .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
     .filter(supportsTools)
+    .map(toModel)
+    .filter((model) => !anonymous || model.free)
+}
+
+// Models that output an image. A tool-capable model stays a chat model; the Gateway also serves image-only models,
+// which a chat catalog drops and image generation needs.
+export function catalogImageModels(response: { readonly data: readonly unknown[] }, anonymous = false): Model[] {
+  return response.data
+    .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
+    .filter((model) => model.architecture?.output_modalities?.includes("image"))
     .map(toModel)
     .filter((model) => !anonymous || model.free)
 }
@@ -293,16 +306,11 @@ export function imageModels(scope: Scope): Effect.Effect<ImageModel[], Failure> 
     )
     const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
-    return parsed.value.data
-      .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
-      .filter((model) => model.architecture?.output_modalities?.includes("image"))
-      .map((model) => ({
-        id: model.id,
-        name: model.name,
-        ...(typeof model.description === "string" && model.description.trim() !== ""
-          ? { description: model.description.trim() }
-          : {}),
-      }))
+    return catalogImageModels(parsed.value).map((model) => ({
+      id: model.id,
+      name: model.name,
+      ...(model.description ? { description: model.description } : {}),
+    }))
   })
 }
 
