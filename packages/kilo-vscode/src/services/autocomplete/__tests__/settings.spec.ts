@@ -38,21 +38,21 @@ describe("autocomplete settings", () => {
   })
 
   it("includes the configured direct provider model in loaded settings", () => {
-    state.set("provider", "inception")
-    state.set("model", "mercury-edit-2")
+    state.set("provider", "mistral")
+    state.set("model", "codestral-2508")
 
-    expect(readAutocompleteSettings().provider).toBe("inception")
-    expect(readAutocompleteSettings().model).toBe("mercury-edit-2")
+    expect(readAutocompleteSettings().provider).toBe("mistral")
+    expect(readAutocompleteSettings().model).toBe("codestral-2508")
   })
 
   it("passes a bare model setting through unchanged so the webview can render it as-is", () => {
     // The webview distinguishes "no explicit setting" (null) from "user picked something." We don't
     // try to interpret a bare `model` here: resolving it to a default happens at the runtime layer,
     // not in the settings reader.
-    state.set("model", "mercury-edit-2")
+    state.set("model", "codestral-2508")
 
     expect(readAutocompleteSettings().provider).toBeNull()
-    expect(readAutocompleteSettings().model).toBe("mercury-edit-2")
+    expect(readAutocompleteSettings().model).toBe("codestral-2508")
   })
 
   it("returns null for both keys when nothing is set (let the webview render 'Not set')", () => {
@@ -68,8 +68,8 @@ describe("autocomplete settings", () => {
   })
 
   it("validates supported model updates", () => {
-    expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
-    expect(validAutocompleteSetting("provider", "inception")).toBe(true)
+    expect(validAutocompleteSetting("model", "codestral-2508")).toBe(true)
+    expect(validAutocompleteSetting("provider", "mistral")).toBe(true)
   })
 
   it("accepts null/undefined for provider and model so users can clear the setting", () => {

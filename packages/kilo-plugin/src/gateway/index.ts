@@ -1270,12 +1270,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
             return Effect.succeed(target)
           }),
-        "autocomplete.editTarget": (input, context) =>
-          Effect.suspend(() => {
-            const target = KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
-            if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
-            return Effect.succeed(target)
-          }),
         "catalog.status": () => Effect.sync(() => catalogStatus(catalog)),
         "autocomplete.fim": (input, context) =>
           Effect.gen(function* () {
@@ -1293,40 +1287,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
                   suffix: input.suffix,
                   maxTokens: input.maxTokens,
                   temperature: input.temperature,
-                }),
-              catch: (error) =>
-                error instanceof KiloAutocomplete.AutocompleteRequestError
-                  ? context.error("request", error.message, { status: error.status })
-                  : context.error("failed", error instanceof Error ? error.message : String(error)),
-            })
-          }),
-        "autocomplete.edit": (input, context) =>
-          Effect.gen(function* () {
-            const target = KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
-            if (target.provider === "kilo" && !target.url)
-              return yield* Effect.fail(
-                context.error("request", "Next Edit currently requires the Inception provider (mercury-edit-2).", { status: 400 }),
-              )
-            const credential = yield* autocompleteCredential(target.provider)
-            if (!credential.ok) return yield* Effect.fail(context.error("unauthorized", credential.message))
-            return yield* Effect.tryPromise({
-              try: (signal) =>
-                KiloAutocomplete.requestEdit({
-                  target,
-                  key: credential.key,
-                  headers: credential.headers,
-                  signal,
-                  maxTokens: input.maxTokens,
-                  context: {
-                    currentFilePath: input.currentFilePath,
-                    currentFileContent: input.currentFileContent,
-                    cursorLine: input.cursorLine,
-                    cursorCharacter: input.cursorCharacter,
-                    editableRegionStartLine: input.editableRegionStartLine,
-                    editableRegionEndLine: input.editableRegionEndLine,
-                    recentlyViewedSnippets: input.recentlyViewedSnippets,
-                    editDiffHistory: input.editDiffHistory,
-                  },
                 }),
               catch: (error) =>
                 error instanceof KiloAutocomplete.AutocompleteRequestError
