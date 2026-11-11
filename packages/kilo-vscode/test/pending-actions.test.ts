@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { pendingActions, pendingEditable, sendMode, steerInterrupts } from "../webview-ui/src/v2/pending-actions"
+import { pendingActions, pendingEditable, pendingRequest, promptInterrupt, sendMode, steerInterrupts } from "../webview-ui/src/v2/pending-actions"
 
 const key = (input: { alt?: boolean; ctrl?: boolean; meta?: boolean } = {}) => ({
   altKey: !!input.alt,
@@ -78,8 +78,7 @@ describe("steerInterrupts", () => {
   })
 })
 
-describe("pendingEditable", () => {
-  test("plain text can go back to the composer", () => {
+describe("pendingEditable", () => {  test("plain text can go back to the composer", () => {
     expect(pendingEditable({})).toBe(true)
   })
 
@@ -87,5 +86,27 @@ describe("pendingEditable", () => {
     expect(pendingEditable({ files: [{}] })).toBe(false)
     expect(pendingEditable({ agents: [{}] })).toBe(false)
     expect(pendingEditable({ skills: [{}] })).toBe(false)
+  })
+})
+
+describe("pendingRequest", () => {
+  test("send now stops the turn first", () => {
+    expect(pendingRequest("now")).toEqual({ type: "interrupt" })
+  })
+
+  test("steer and queue only change delivery", () => {
+    expect(pendingRequest("steer")).toEqual({ type: "delivery", delivery: "steer" })
+    expect(pendingRequest("queue")).toEqual({ type: "delivery", delivery: "queue" })
+  })
+
+  test("edit and delete cancel the pending row", () => {
+    expect(pendingRequest("edit")).toEqual({ type: "cancel" })
+    expect(pendingRequest("delete")).toEqual({ type: "cancel" })
+  })
+})
+
+describe("promptInterrupt", () => {
+  test("a prompt-sending action steers and resumes, never carrying a bare stop", () => {
+    expect(promptInterrupt("ses_1")).toEqual({ sessionID: "ses_1", resume: true, steer: true })
   })
 })

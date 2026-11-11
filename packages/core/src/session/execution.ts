@@ -6,6 +6,7 @@ import { Database } from "../database/database.js"
 import { Job } from "../job.js"
 import { Instance } from "../instance/service.js"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
+import { SessionCompaction } from "./compaction.js" // kilocode_change - steer: running-compaction guard
 import { SessionEvent } from "./event.js"
 import { SessionRunCoordinator } from "./run-coordinator.js"
 import { SessionRunner } from "./runner/index.js"
@@ -33,6 +34,7 @@ export interface Interface {
     sessionID: SessionSchema.ID,
     options?: {
       readonly resume?: boolean
+      readonly steer?: boolean // kilocode_change - steer: never cancels a running compaction
     },
   ) => Effect.Effect<boolean>
   /** Resolves once this process owns no active execution for the Session. Returns immediately when idle and never starts work. */
@@ -150,7 +152,12 @@ export const layer = Layer.effect(
       isActive: coordinator.isActive,
       interrupt: (sessionID, options) =>
         Effect.gen(function* () {
-          const interrupted = yield* coordinator.interrupt(sessionID, "user")
+          // kilocode_change start - steer: stop the model call, never the checkpoint being written. A compaction is
+          // all-or-nothing and its summary may already be paid for; the caller admits the prompt anyway, so the
+          // boundary after the compaction delivers it. An interruption without `steer` still cancels one.
+          const compacting = options?.steer === true && (yield* SessionCompaction.running(db, sessionID))
+          const interrupted = compacting ? false : yield* coordinator.interrupt(sessionID, "user")
+          // kilocode_change end
           if (!options?.resume) return interrupted
           // Resume steering input and between-turn control work from the interrupted
           // intent. Queued next-turn prompts stay parked: a steer-scoped drain never

@@ -2282,5 +2282,82 @@
     "v2": "packages/kilo-vscode/src/settings-host.ts",
     "note": "Reading showShortcutHints and pushing it to every webview on change is carried by the generic v2 settings host: showShortcutHints is in KILO_SETTING_KEYS, readKiloSettings returns it, and the onDidChangeConfiguration listener posts the full settings set when a kilo-code.v2 setting changes. webview-ui/src/v2/kilo-settings.ts is the receiving accessor, so the hint reads the same setting as on v1.",
     "by": "port-keyboard-suggestions-to-v1"
+  },
+  "module:packages/opencode/src/kilocode/tool/board.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/tool.ts",
+    "note": "Board.Read and Board.Post, the board_read and board_post permission asserts, the disabled-switch copy, the availability and warning block returned by a post, and the output metadata (participants, cursor, hasMore, observedAt, receipt) are ported as makeTools in packages/kilo-plugin/src/board/tool.ts. The long descriptions moved to board_read.txt and board_post.txt; BoardStore supplies read, post and availability.",
+    "by": "progress-map-repair"
+  },
+  "api:GET /kilocode/session/{sessionID}/board": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/board.ts, packages/kilo-plugin/src/board/index.ts",
+    "note": "The v1 route became the kilocode.board get method: input sessionID, before and limit (1 to 50), output Board with ownerSessionID, revision, messages, cursor and hasMore, and errors not_found and invalid. A read never creates a board. The handler is BoardStore.observe in packages/kilo-plugin/src/board/index.ts. The kilocode path literal is gone, so only a disposition can record the move.",
+    "by": "progress-map-repair"
+  },
+  "api:POST /kilocode/session/{sessionID}/board/reset": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/board.ts, packages/kilo-plugin/src/board/index.ts",
+    "note": "The v1 reset route became the kilocode.board reset method: sessionID plus the revision the client last saw, root session only, conflict on a stale revision, not_found for a session without a board, invalid for a malformed revision. The handler is BoardStore.reset in packages/kilo-plugin/src/board/index.ts; the RPC test in packages/kilo-plugin/test/board-tools.test.ts covers read-only get, root-only reset and revision conflicts.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/src/SubAgentViewerProvider.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/subagent-panel.ts",
+    "note": "One read-only editor tab per child session, revealed when it is already open, restored after a window reload through a webview panel serializer, titled from the subagent title, carrying the owner directory, with a back link that shows the parent session: subagentPanels in packages/kilo-vscode/src/subagent-panel.ts and the subagent view in the chat bundle. The Agent Manager inspector is the same feature on its other surface.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/src/kilo-provider/session-board.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/board/index.ts, packages/kilo-vscode/webview-ui/src/components/chat/SwarmBoard.tsx",
+    "note": "The host broker (validate a request, resolve the session directory through the project routes, call sessionBoard or resetSessionBoard, post the reply back) is gone by design: the v2 webview calls the kilocode.board RPC directly from SwarmBoard.tsx, and the location-scoped RPC transport resolves the session directory. The behavior is the same: a page read with before and limit, a root-only reset with the last revision, the owner check, and not_found, invalid and conflict errors.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/types/messages/board.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/board.ts",
+    "note": "RequestSessionBoardMessage, ResetSessionBoardMessage and SessionBoardLoadedMessage described the webview-to-host board protocol. v2 has no host hop, and the kilocode.board RPC schema carries the same fields (sessionID, before, limit, revision, and Board with ownerSessionID, revision, messages, cursor and hasMore); errors travel as typed RPC failures instead of an error string.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/tests/unit/session-board.test.ts": {
+    "state": "dropped",
+    "note": "Tested the removed host broker: message validation, project and directory routing of sessionBoard and resetSessionBoard, and the sessionBoardLoaded reply. That request/response protocol has no v2 counterpart. The board semantics it exercised are tested in packages/kilo-plugin/test/board-tools.test.ts (read-only get, root-only reset with revision conflicts, not_found), and directory routing is the generic location-scoped RPC transport.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/opencode/src/kilocode/const.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-gateway-core/src/headers.ts",
+    "note": "DEFAULT_HEADERS is carried by KiloHeaders: provider() sends HTTP-Referer https://kilocode.ai and X-Title Kilo Code, and request() sends the User-Agent. v2 keeps the Kilo-Code product prefix and adds the line as a segment (Kilo-Code/v2/<version>) so the Gateway can attribute this line from the User-Agent it already stores; that deliberate difference is the only change. No file named const.ts exists on v2, so the same-basename rule cannot close this cell.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/webview-ui/src/utils/plan-path.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/plan/plan-file.ts",
+    "note": "planDisplayPath turned an absolute plan path into a path relative to the workspace for display in the v1 plan link. v2 computes the same display path on the server: PlanFile.display compares the real project and session directories, returns the path relative to the session directory with forward slashes, and leaves paths outside both as absolute. The plan_exit, open_plan and follow-up messages carry that already-relative path, so the webview no longer formats it.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/src/agent-manager/user-keybindings.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/src/keybinding-format.ts",
+    "note": "parseJsonc, norm, mergeUserKeybindings and userKeybindingFiles are carried in packages/kilo-vscode/src/keybinding-format.ts: comments and trailing commas parse with the same string-aware scanner, a later user entry wins, a -command entry removes the shortcut without reviving the fallback label, and the profile keybindings.json search order is unchanged.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/tests/unit/user-keybindings.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/keybinding-format.test.ts",
+    "note": "The parseJsonc, user override, chord, removed-shortcut and profile-file cases are ported to packages/kilo-vscode/test/keybinding-format.test.ts, including the comment markers inside strings and the profile fallback order.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/kilo-vscode/tests/unit/format-keybinding.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/keybinding-format.test.ts",
+    "note": "The mac and windows/linux formatting cases (cmd, ctrl, shift, alt, arrows, backspace, enter, escape, brackets, chords and a plain key) are ported to packages/kilo-vscode/test/keybinding-format.test.ts as the formatKeybinding suite.",
+    "by": "progress-map-repair"
+  },
+  "module:packages/opencode/test/kilocode/plugin-git-source.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/plugin-git-source.test.ts",
+    "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
+    "by": "plugin-git-sources"
   }
 }

@@ -7,6 +7,7 @@ import { FetchHttpClient } from "effect/http"
 import { Environment } from "../environment/index.js"
 import { KeyedMutex } from "../effect/keyed-mutex.js"
 import type { McpClient } from "./client.js"
+import type { McpHost } from "./host.js" // kilocode_change - embedding hooks
 
 export type Failure = Extract<Mcp.Status, { readonly status: "failed" | "needs_auth" }>
 
@@ -51,6 +52,7 @@ export interface Input {
    */
   readonly shared?: boolean
   readonly clientInfo?: { readonly name: string; readonly version: string }
+  readonly host?: McpHost.Host // kilocode_change - embedding transport, command and OAuth hooks
   /** Read on every attempt, so a credential change applies to the next one. */
   readonly authProvider: Effect.Effect<OAuthClientProvider | undefined>
   readonly elicitation: McpClient.ElicitationHandler
@@ -184,6 +186,7 @@ export function make(input: Input): Connection {
         authProvider,
         elicitation: input.elicitation,
         clientInfo: input.clientInfo,
+        host: input.host, // kilocode_change - embedding transport hooks
         roots: !input.shared,
       }).pipe(
         Effect.flatMap(
