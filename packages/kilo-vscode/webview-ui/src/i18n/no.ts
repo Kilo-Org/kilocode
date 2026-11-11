@@ -394,6 +394,7 @@ export const dict = {
   "common.signIn": "Logg inn",
   "common.dismiss": "Avvis",
   "common.requestFailed": "Forespørsel mislyktes",
+  "common.copyFailed": "Kopiering mislyktes",
   "common.rename": "Gi nytt navn",
   "common.delete": "Slett",
   "common.close": "Lukk",
