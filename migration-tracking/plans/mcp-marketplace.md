@@ -140,7 +140,8 @@ C-E are separate issues.
     `module:packages/opencode/test/kilocode/mcp-oauth-callback.test.ts`, `patch:mcp:78080472f471`,
     `module:packages/opencode/test/kilocode/mcp-docker-rm.test.ts`.
   - `native`: `module:packages/opencode/src/kilocode/mcp/cleanup.ts` (v2 `stdio.ts`),
-    `module:packages/opencode/test/kilocode/mcp-interrupted-state.test.ts` (v2 `mcp.test.ts`),
+    `module:packages/opencode/test/kilocode/mcp-interrupted-state.test.ts` (v2 `stdio.ts`; the local
+    end-to-end fixture is a test gap),
     `module:packages/opencode/test/kilocode/mcp-branding.test.ts` (v2 `host.test.ts`).
 - This plan file.
 - Do not commit the generated `migration-tracking/progress/{README.md,badge.svg,history.svg,progress.json,progress.svg}`;
