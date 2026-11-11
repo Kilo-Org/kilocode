@@ -261,8 +261,9 @@ test("installs and uninstalls the systemd user unit", async () => {
     const file = path.join(target.config, "systemd", "user", "kilo2-latest.service")
     await provided(KiloLoginService.install(target, { command, path: "/usr/bin" }, runner))
     expect(await readFile(file, "utf8")).toContain('ExecStart="/opt/kilo/bin/kilo" "serve" "--service"')
-    // An explicit mode, so a permissive umask cannot leave a world-writable unit that systemd refuses to load.
-    expect((await stat(file)).mode & 0o777).toBe(0o644)
+    // An explicit mode, so a permissive umask cannot leave a world-writable unit that systemd refuses to load. Windows
+    // has no POSIX permission bits to check, and the systemd target is simulated there.
+    if (process.platform !== "win32") expect((await stat(file)).mode & 0o777).toBe(0o644)
     expect(calls).toEqual([
       ["systemctl", "--user", "daemon-reload"],
       ["systemctl", "--user", "enable", "--now", "kilo2-latest.service"],
