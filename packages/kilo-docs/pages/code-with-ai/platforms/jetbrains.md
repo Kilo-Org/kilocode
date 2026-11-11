@@ -15,6 +15,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
+- **Transcript** — choose how blocks render in the session transcript: the reasoning block mode, and whether terminal command, code edit, MCP and generic tool, and question blocks start expanded. Answered question cards start expanded by default. A sample transcript previews each change as you make it.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
@@ -23,9 +24,10 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.
 
-- **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**.
+- **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**. Leave **Fetch latest base branch before creating** enabled (the default) to fetch the selected base branch from its configured remote before the worktree is created, so the new worktree branches from the latest commit instead of a stale local ref. Kilo remembers the choice across projects and IDEs.
 - **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
-- Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
+- In the **Agents** list, the main workspace appears as its own row and local worktrees are nested under an always-visible **Local worktrees** group. Collapse or expand the group to hide or show local worktrees, and drag local worktree rows to reorder them. The main workspace stays at the top and rows cannot move between groups.
+- Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
 - Choose **Update from Base** in a worktree's row menu to have its agent fetch the saved base branch's remote and merge the latest commit. For worktrees created before the saved base metadata existed, the agent first asks you to confirm the main branch as the base. The agent preserves staged, unstaged, and untracked work without using Git stash, resolves conflicts, and runs checks; it does not push or merge the base.
 
@@ -49,6 +51,22 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 ### Forking a session
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
+
+## Prompt navigator
+
+A prompt navigator runs along the right edge of the transcript. Hover it to list the session's entries and select one to jump to that prompt. The rail stays visible even when the session has only a single prompt.
+
+Answered `question` cards appear as their own entries, titled with the question header and previewing your answers. Selecting one expands the card and scrolls to it.
+
+## Cloud sessions
+
+When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in a **Cloud** section beside local worktrees. Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it.
+
+Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only.
+
+- **Refresh Cloud** in the **Core** menu reloads Cloud workspaces and sessions without restarting Core. Refresh a single workspace from its row menu.
+- Cloud prompts are text-only: file attachments and file mentions are not supported yet, and Kilo does not send your editor context or selections with a hosted prompt.
+- Local-only actions, such as worktree, pull request, sharing, and Git actions, are disabled for Cloud sessions.
 
 ## Diagrams in chat
 
