@@ -770,7 +770,7 @@ export const dict = {
   "prompt.goal.set": "Set goal",
   "prompt.goal.start": "Start goal",
   "session.goal.active": "Active",
-  "session.goal.complete": "Complete (model-reported)",
+  "session.goal.complete": "Complete",
   "session.goal.blocked": "Blocked",
   "session.goal.restart": "Restart goal",
   "session.goal.paused": "Paused",

@@ -125,7 +125,8 @@ export const overrides: LayerNode.Replacements = [
   Plugin.node.replace(Plugin.configured({ pluginSource: PluginGitSource.pluginSource })),
   // The plugin update check and `plugin.update` see the same cache instead of asking npm about a `git:` spec.
   Npm.node.replace(KiloPluginNpm.node),
-  // Kilo Plan mode (kilocode.plan) replaces the native one: a remove operation runs before the config operations.
+  // Kilo Plan mode (kilocode.plan) and the Kilo goal (kilocode.goal, which adds the agent's `goal` tool) replace the
+  // native plugins: remove operations run before the config operations.
   ConfigPluginSource.node.replace(
     ConfigPluginSource.node.mapLayer((layer) =>
       Layer.effect(
@@ -137,7 +138,13 @@ export const overrides: LayerNode.Replacements = [
             operations: () =>
               source
                 .operations()
-                .pipe(Effect.map((operations) => [{ type: "remove" as const, target: "opencode.plan" }, ...operations])),
+                .pipe(
+                  Effect.map((operations) => [
+                    { type: "remove" as const, target: "opencode.plan" },
+                    { type: "remove" as const, target: "opencode.goal" },
+                    ...operations,
+                  ]),
+                ),
           }
         }),
       ).pipe(Layer.provide(layer)),

@@ -53,7 +53,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "เสร็จสมบูรณ์ (โมเดลรายงาน)",
+  "session.goal.complete": "เสร็จสมบูรณ์",
   "session.goal.blocked": "ถูกบล็อก",
   "session.goal.restart": "เริ่มเป้าหมายใหม่",
   ...anacondaDesktopDict,
