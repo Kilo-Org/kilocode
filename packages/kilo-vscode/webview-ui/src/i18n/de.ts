@@ -319,6 +319,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.noChanges": "Keine Änderungen.",
   "ui.permission.reject": "Ablehnen",
+  "ui.permission.allowAllSites": "Alle Websites erlauben",
   "ui.permission.feedbackPlaceholder": "Teile Kilo mit, was es anders machen soll",
   "ui.permission.feedbackHint": "Enter zum Ablehnen, Esc zum Abbrechen",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",

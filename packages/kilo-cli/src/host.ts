@@ -139,15 +139,16 @@ export const overrides: LayerNode.Replacements = [
           return {
             ...source,
             operations: () =>
-              source
-                .operations()
-                .pipe(
-                  Effect.map((operations) => [
-                    { type: "remove" as const, target: "opencode.plan" },
-                    { type: "remove" as const, target: "opencode.goal" },
-                    ...operations,
-                  ]),
-                ),
+              source.operations().pipe(
+                Effect.map((operations) => [
+                  { type: "remove" as const, target: "opencode.plan" },
+                  { type: "remove" as const, target: "opencode.goal" },
+                  // One scheduling surface: the wakeup plugin owns the wakeup and cron tools, so the native schedule
+                  // tools (and their /schedule command) would only duplicate the prompt and the model's choice.
+                  { type: "remove" as const, target: "opencode.tool.schedule" },
+                  ...operations,
+                ]),
+              ),
           }
         }),
       ).pipe(Layer.provide(layer)),

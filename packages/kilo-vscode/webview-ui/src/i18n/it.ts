@@ -235,6 +235,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.noChanges": "Nessuna modifica.",
   "ui.permission.reject": "Rifiuta",
+  "ui.permission.allowAllSites": "Consenti tutti i siti",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
   "ui.permission.feedbackHint": "Enter per rifiutare, Esc per annullare",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",

@@ -303,6 +303,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.noChanges": "لا توجد تغييرات.",
   "ui.permission.reject": "رفض",
+  "ui.permission.allowAllSites": "السماح لجميع المواقع",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
   "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",

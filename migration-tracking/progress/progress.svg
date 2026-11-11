@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 36.5% (1952/5348)</text>
+<text x="4.00" y="21.00" font-size="16">Features: 36.9% (1972/5351)</text>
 <g><title>vscode: 1313/2017 (65.1%), 40 dropped</title>
 <rect class="d" x="1.00" y="31.00" width="22.13" height="23.17"/>
 <rect class="d" x="23.13" y="31.00" width="22.13" height="23.17"/>
@@ -919,14 +919,14 @@
 <rect class="b" x="604.60" y="236.52" width="103.68" height="73.48"/>
 <text x="609.60" y="252.52" font-size="12">cli</text>
 </g>
-<g><title>session: 6/113 (5.3%), 2 dropped</title>
+<g><title>session: 7/113 (6.2%), 2 dropped</title>
 <rect class="d" x="709.27" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="715.93" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="722.58" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="729.23" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="735.88" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="742.54" y="31.00" width="6.65" height="6.98"/>
-<rect class="o" x="749.19" y="31.00" width="6.65" height="6.98"/>
+<rect class="d" x="749.19" y="31.00" width="6.65" height="6.98"/>
 <rect class="o" x="755.84" y="31.00" width="6.65" height="6.98"/>
 <rect class="o" x="762.50" y="31.00" width="6.65" height="6.98"/>
 <rect class="o" x="769.15" y="31.00" width="6.65" height="6.98"/>
@@ -1983,18 +1983,18 @@
 <rect class="b" x="967.97" y="94.89" width="32.03" height="35.35"/>
 <text x="972.97" y="110.89" font-size="12">ski</text>
 </g>
-<g><title>goals: 0/21 (0%)</title>
-<rect class="o" x="830.64" y="131.24" width="5.63" height="7.05"/>
-<rect class="o" x="836.27" y="131.24" width="5.63" height="7.05"/>
-<rect class="o" x="841.89" y="131.24" width="5.63" height="7.05"/>
-<rect class="o" x="847.52" y="131.24" width="5.63" height="7.05"/>
-<rect class="o" x="853.15" y="131.24" width="5.63" height="7.05"/>
-<rect class="o" x="858.78" y="131.24" width="5.63" height="7.05"/>
-<rect class="o" x="830.64" y="138.29" width="6.76" height="7.05"/>
-<rect class="o" x="837.39" y="138.29" width="6.76" height="7.05"/>
-<rect class="o" x="844.15" y="138.29" width="6.76" height="7.05"/>
-<rect class="o" x="850.90" y="138.29" width="6.76" height="7.05"/>
-<rect class="o" x="857.66" y="138.29" width="6.76" height="7.05"/>
+<g><title>goals: 11/21 (52.4%)</title>
+<rect class="d" x="830.64" y="131.24" width="5.63" height="7.05"/>
+<rect class="d" x="836.27" y="131.24" width="5.63" height="7.05"/>
+<rect class="d" x="841.89" y="131.24" width="5.63" height="7.05"/>
+<rect class="d" x="847.52" y="131.24" width="5.63" height="7.05"/>
+<rect class="d" x="853.15" y="131.24" width="5.63" height="7.05"/>
+<rect class="d" x="858.78" y="131.24" width="5.63" height="7.05"/>
+<rect class="d" x="830.64" y="138.29" width="6.76" height="7.05"/>
+<rect class="d" x="837.39" y="138.29" width="6.76" height="7.05"/>
+<rect class="d" x="844.15" y="138.29" width="6.76" height="7.05"/>
+<rect class="d" x="850.90" y="138.29" width="6.76" height="7.05"/>
+<rect class="d" x="857.66" y="138.29" width="6.76" height="7.05"/>
 <rect class="o" x="830.64" y="145.34" width="6.76" height="7.05"/>
 <rect class="o" x="837.39" y="145.34" width="6.76" height="7.05"/>
 <rect class="o" x="844.15" y="145.34" width="6.76" height="7.05"/>
@@ -2032,7 +2032,7 @@
 <rect class="b" x="865.41" y="130.24" width="34.07" height="30.21"/>
 <text x="870.41" y="146.24" font-size="12">i18</text>
 </g>
-<g><title>marketplace: 9/11 (81.8%), 9 dropped</title>
+<g><title>marketplace: 14/14 (100%), 6 dropped</title>
 <rect class="d" x="900.49" y="131.24" width="6.41" height="7.05"/>
 <rect class="d" x="906.90" y="131.24" width="6.41" height="7.05"/>
 <rect class="d" x="913.31" y="131.24" width="6.41" height="7.05"/>
@@ -2042,11 +2042,11 @@
 <rect class="d" x="906.90" y="138.29" width="6.41" height="7.05"/>
 <rect class="d" x="913.31" y="138.29" width="6.41" height="7.05"/>
 <rect class="d" x="919.73" y="138.29" width="6.41" height="7.05"/>
-<rect class="o" x="926.14" y="138.29" width="6.41" height="7.05"/>
-<rect class="o" x="900.49" y="145.34" width="6.41" height="7.05"/>
-<rect class="x" x="906.90" y="145.34" width="6.41" height="7.05"/>
-<rect class="x" x="913.31" y="145.34" width="6.41" height="7.05"/>
-<rect class="x" x="919.73" y="145.34" width="6.41" height="7.05"/>
+<rect class="d" x="926.14" y="138.29" width="6.41" height="7.05"/>
+<rect class="d" x="900.49" y="145.34" width="6.41" height="7.05"/>
+<rect class="d" x="906.90" y="145.34" width="6.41" height="7.05"/>
+<rect class="d" x="913.31" y="145.34" width="6.41" height="7.05"/>
+<rect class="d" x="919.73" y="145.34" width="6.41" height="7.05"/>
 <rect class="x" x="926.14" y="145.34" width="6.41" height="7.05"/>
 <rect class="x" x="900.49" y="152.40" width="6.41" height="7.05"/>
 <rect class="x" x="906.90" y="152.40" width="6.41" height="7.05"/>
@@ -2727,10 +2727,10 @@
 <rect class="o" x="953.63" y="280.12" width="10.92" height="4.98"/>
 <rect class="b" x="952.63" y="274.14" width="12.92" height="11.95"/>
 </g>
-<g><title>db-preflight: 0/3 (0%)</title>
-<rect class="o" x="953.63" y="287.10" width="5.46" height="4.98"/>
-<rect class="o" x="959.09" y="287.10" width="5.46" height="4.98"/>
-<rect class="o" x="953.63" y="292.07" width="10.92" height="4.98"/>
+<g><title>db-preflight: 3/3 (100%)</title>
+<rect class="d" x="953.63" y="287.10" width="5.46" height="4.98"/>
+<rect class="d" x="959.09" y="287.10" width="5.46" height="4.98"/>
+<rect class="d" x="953.63" y="292.07" width="10.92" height="4.98"/>
 <rect class="b" x="952.63" y="286.10" width="12.92" height="11.95"/>
 </g>
 <g><title>model-routing: 0/3 (0%)</title>
@@ -2808,5 +2808,5 @@
 <rect class="d" x="4" y="316" width="12" height="12"/><text x="20.00" y="327.00" font-size="12">done</text>
 <rect class="o" x="60" y="316" width="12" height="12"/><text x="76.00" y="327.00" font-size="12">open</text>
 <rect class="x" x="112" y="316" width="12" height="12"/><text x="128.00" y="327.00" font-size="12">dropped</text>
-<text x="190.00" y="327.00" font-size="12">Landed by rung: 39 plugin, 12 host, 4 seam, 2 patch</text>
+<text x="190.00" y="327.00" font-size="12">Landed by rung: 46 plugin, 12 host, 4 seam, 2 patch</text>
 </svg>

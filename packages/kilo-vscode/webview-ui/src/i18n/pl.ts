@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.noChanges": "Brak zmian.",
   "ui.permission.reject": "Odrzuć",
+  "ui.permission.allowAllSites": "Zezwalaj na wszystkie witryny",
   "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
   "ui.permission.feedbackHint": "Enter, aby odrzucić, Esc, aby anulować",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",

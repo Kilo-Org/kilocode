@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.noChanges": "Змін немає.",
   "ui.permission.reject": "Відхилити",
+  "ui.permission.allowAllSites": "Дозволити всі сайти",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
   "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":

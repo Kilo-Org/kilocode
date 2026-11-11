@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.noChanges": "変更はありません。",
   "ui.permission.reject": "拒否",
+  "ui.permission.allowAllSites": "すべてのサイトを許可",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
   "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",

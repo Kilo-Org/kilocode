@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.noChanges": "Aucune modification.",
   "ui.permission.reject": "Rejeter",
+  "ui.permission.allowAllSites": "Autoriser tous les sites",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
   "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",

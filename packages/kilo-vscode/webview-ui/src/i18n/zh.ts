@@ -295,6 +295,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.noChanges": "无更改。",
   "ui.permission.reject": "拒绝",
+  "ui.permission.allowAllSites": "允许所有网站",
   "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
