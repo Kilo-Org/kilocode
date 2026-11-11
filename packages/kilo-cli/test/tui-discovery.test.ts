@@ -3,11 +3,15 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-import { hostMirrors, hostMirrorsPlugin } from "../src/mirrors"
+// Both modules export `localPluginDirectories`; the alias names the upstream one.
+import { localPluginDirectories as upstreamPluginDirectories } from "../../tui/src/plugin/discovery"
+import { hostMirrors } from "../src/mirrors"
 import { projectConfigName } from "../src/tui-config-directories"
-import { compileDefine } from "./fixtures/compile-define"
+import { localPluginDirectories } from "../src/tui-plugin-discovery"
 
 const entry = path.join(import.meta.dir, "fixtures/tui-discovery.ts")
+const build = path.join(import.meta.dir, "fixtures/tui-discovery-build.ts")
+const names = [".kilo2", ".opencode", ".kilo", ".kilocode"]
 
 // The TUI reads custom themes (`<dir>/themes`) and local plugins (`<dir>/plugins`) from project directories. Without
 // the host they are upstream's `.opencode`; under the host they are `.kilo2`, with no fallback to `.opencode`. The
@@ -22,7 +26,7 @@ for (const compiled of [false, true]) {
       await mkdir(path.join(project, ".git"), { recursive: true })
       await Promise.all(
         [project, cwd].flatMap((directory) =>
-          [".kilo2", ".opencode", ".kilo", ".kilocode"].flatMap((name) => {
+          names.flatMap((name) => {
             const id = `${path.basename(directory)}-${name.slice(1)}`
             return [
               Bun.write(path.join(directory, name, "themes", `${id}.json`), JSON.stringify({ source: id })),
@@ -34,63 +38,55 @@ for (const compiled of [false, true]) {
       await Bun.write(path.join(config, "themes", "global.json"), JSON.stringify({ source: "global" }))
       await Bun.write(path.join(config, "plugins", "global", "tui.ts"), "export default {}\n")
 
-      const outfile = path.join(tmp.path, process.platform === "win32" ? "discovery.exe" : "discovery")
-      if (compiled) {
-        const result = await Bun.build({
-          entrypoints: [entry],
-          plugins: hosted ? [hostMirrorsPlugin] : [],
-          compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
-          define: compileDefine,
-        })
-        expect(result.success, result.logs.map(String).join("\n")).toBe(true)
+      const env = {
+        ...Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => /^(PATH|LANG|LC_ALL|TZ|SystemRoot|WINDIR|PATHEXT)$/i.test(key)),
+        ),
+        BUN_OPTIONS: "",
+        HOME: tmp.path,
+        USERPROFILE: tmp.path,
+        TMPDIR: tmp.path,
+        TEMP: tmp.path,
+        TMP: tmp.path,
+        KILO_DISCOVERY_TEST_HOSTED: hosted ? "1" : "0",
+        KILO_DISCOVERY_TEST_CONFIG: config,
       }
-      const child = Bun.spawn(compiled ? [outfile] : [process.execPath, entry], {
-        cwd,
-        env: {
-          ...Object.fromEntries(
-            Object.entries(process.env).filter(([key]) =>
-              /^(PATH|LANG|LC_ALL|TZ|SystemRoot|WINDIR|PATHEXT)$/i.test(key),
-            ),
-          ),
-          BUN_OPTIONS: "",
-          HOME: tmp.path,
-          USERPROFILE: tmp.path,
-          TMPDIR: tmp.path,
-          TEMP: tmp.path,
-          TMP: tmp.path,
-          KILO_DISCOVERY_TEST_HOSTED: hosted ? "1" : "0",
-          KILO_DISCOVERY_TEST_CONFIG: config,
-        },
-        stdout: "pipe",
-        stderr: "pipe",
-        timeout: 60_000,
-      })
-      const [stdout, stderr, code] = await Promise.all([
-        new Response(child.stdout).text(),
-        new Response(child.stderr).text(),
-        child.exited,
-      ])
-      expect(code, stderr).toBe(0)
+      const outfile = path.join(tmp.path, process.platform === "win32" ? "discovery.exe" : "discovery")
+      // A compile leaves a copy of the Bun runtime (`.<id>.bun-build`, about 90 MB) in the working directory of the
+      // process that builds. The build runs in a child process in its own temporary directory, which is removed
+      // with the test's files; the package directory is shared with test files that build at the same time.
+      if (compiled) {
+        await mkdir(path.join(tmp.path, "build"))
+        await run([process.execPath, build, outfile, hosted ? "hosted" : "unhosted"], path.join(tmp.path, "build"), env)
+      }
+      const result = JSON.parse(await run(compiled ? [outfile] : [process.execPath, entry], cwd, env)) as {
+        themes: Record<string, unknown>
+        directories: string[]
+        plugins: string[]
+      }
 
-      const name = hosted ? ".kilo2" : ".opencode"
-      const id = name.slice(1)
-      expect(JSON.parse(stdout)).toEqual({
-        themes: {
-          global: { source: "global" },
-          [`repo-${id}`]: { source: `repo-${id}` },
-          [`package-${id}`]: { source: `package-${id}` },
-        },
-        directories: [
-          path.join(config, "plugins"),
-          path.join(project, name, "plugins"),
-          path.join(cwd, name, "plugins"),
-        ],
-        plugins: [
-          path.join(config, "plugins", "global"),
-          path.join(project, name, "plugins", `repo-${id}`),
-          path.join(cwd, name, "plugins", `package-${id}`),
-        ],
-      })
+      // Themes are read from every ancestor up to the filesystem root, so a directory above the temporary one can add
+      // themes of its own. Only the themes of this project are compared.
+      const used = hosted ? ".kilo2" : ".opencode"
+      expect(result.themes.global).toEqual({ source: "global" })
+      for (const directory of ["repo", "package"]) {
+        for (const name of names) {
+          const id = `${directory}-${name.slice(1)}`
+          expect(result.themes[id], id).toEqual(name === used ? { source: id } : undefined)
+        }
+      }
+      // Plugin directories stop at the repository root (the `.git` above), so the lists are exact.
+      const id = used.slice(1)
+      expect(result.directories).toEqual([
+        path.join(config, "plugins"),
+        path.join(project, used, "plugins"),
+        path.join(cwd, used, "plugins"),
+      ])
+      expect(result.plugins).toEqual([
+        path.join(config, "plugins", "global"),
+        path.join(project, used, "plugins", `repo-${id}`),
+        path.join(cwd, used, "plugins", `package-${id}`),
+      ])
     }, 120_000)
   }
 }
@@ -98,19 +94,17 @@ for (const compiled of [false, true]) {
 // Upstream lists the repository root's plugin directory before it exists, so the TUI's watcher picks it up when it
 // appears. The mirror keeps that for `.kilo2`, and still skips a nested directory that does not exist.
 test("the hosted plugin directories include a missing .kilo2 of the repository root", async () => {
-  const hostedDiscovery = await import("../src/tui-plugin-discovery")
-  const upstream = await import("../../tui/src/plugin/discovery")
   await using tmp = await temporary()
   const cwd = path.join(tmp.path, "repo", "package")
   await mkdir(cwd, { recursive: true })
   await mkdir(path.join(tmp.path, "repo", ".git"))
   const config = path.join(tmp.path, "config")
-  expect(await hostedDiscovery.localPluginDirectories(cwd, config)).toEqual([
+  expect(await localPluginDirectories(cwd, config)).toEqual([
     path.join(config, "plugins"),
     path.join(tmp.path, "repo", ".kilo2", "plugins"),
   ])
   // The upstream module itself is unchanged: loaded without the host, it keeps its default.
-  expect(await upstream.localPluginDirectories(cwd, config)).toEqual([
+  expect(await upstreamPluginDirectories(cwd, config)).toEqual([
     path.join(config, "plugins"),
     path.join(tmp.path, "repo", ".opencode", "plugins"),
   ])
@@ -171,6 +165,17 @@ function body(mirror: string) {
 function replace(text: string, from: string, to: string) {
   expect(text.split(from), from).toHaveLength(2)
   return text.replace(from, to)
+}
+
+async function run(command: string[], cwd: string, env: Record<string, string | undefined>) {
+  const child = Bun.spawn(command, { cwd, env, stdout: "pipe", stderr: "pipe", timeout: 60_000 })
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
+  expect(code, stderr).toBe(0)
+  return stdout
 }
 
 async function temporary() {
