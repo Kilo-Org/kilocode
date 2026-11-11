@@ -115,9 +115,10 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       for (const record of records) {
         const info = infos.get(record.scheduleID)
         // Only an active row can fire. A paused row keeps its due time, so counting it would leave the session
-        // `scheduled` and hold Keep Awake until the horizon although nothing can fire.
+        // `scheduled` and hold Keep Awake until the horizon although nothing can fire. The row is removed with the
+        // record: the native schedule tools are not registered in the host, so nothing else could reach it again.
         if (info === undefined || info.status !== "active") {
-          yield* ctx.storage.remove(KEY + record.id).pipe(Effect.ignore)
+          yield* drop(record)
           continue
         }
         // The row's next window only moves forward; a fire announces before the native loop advances it.
@@ -330,9 +331,10 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
           ? `You scheduled this recurring task yourself as ${record.id}, due ${iso(dueAt)}.`
           : `You scheduled this wakeup yourself as ${record.id}, due ${iso(dueAt)}.`
       // Deliver before the record is retired, with an id derived from the occurrence, so a retried delivery is the same
-      // admission rather than a second message. A session that no longer exists retires the record; any other failure
-      // keeps it (a one-shot then shows in `cancel_wakeup list` instead of vanishing) and reports the occurrence as
-      // unclaimed. The session hook cannot fail, so the native row still advances; this is what v1 did, minus the loss.
+      // admission rather than a second message. A session that no longer exists retires the record. Any other failure
+      // dies, which fails the native tick and makes it retry this occurrence with its backoff while the record and row
+      // stay as they are: the session hook cannot fail, so a silent `false` would let the row finish as `done` and lose
+      // the only wakeup.
       const delivered = yield* ctx.session
         .synthetic({
           id: SessionMessage.ID.make(`msg_${record.id}_${dueAt}`),
@@ -344,20 +346,10 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
         .pipe(
           Effect.as(true),
           Effect.catchIf(notFound, () => Effect.succeed(false)),
-          Effect.catchCause((cause) =>
-            Effect.logError("wakeup could not resume the session", {
-              id: record.id,
-              sessionID: record.sessionID,
-              cause,
-            }).pipe(Effect.as("failed" as const)),
-          ),
+          Effect.orDie,
         )
-      if (delivered === false) {
+      if (!delivered) {
         yield* drop(record)
-        yield* announce(record.sessionID, record.directory)
-        return false
-      }
-      if (delivered === "failed") {
         yield* announce(record.sessionID, record.directory)
         return false
       }

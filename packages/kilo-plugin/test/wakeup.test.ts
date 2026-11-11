@@ -242,7 +242,7 @@ describe("wakeup service", () => {
     }),
   )
 
-  it.effect("keeps a one-shot when delivery fails, and retires it once the session is gone", () =>
+  it.effect("fails the tick on a delivery error so the native retry re-fires it", () =>
     Effect.gen(function* () {
       const { wake, infos, failure, prompts } = setup()
       const created = yield* wake.scheduleWakeup({ sessionID, prompt: "check", delay: "1m" })
@@ -250,13 +250,29 @@ describe("wakeup service", () => {
       const info = [...infos.values()][0]!
 
       failure.mode = "error"
-      expect(yield* wake.fire(info)).toBe(false)
+      const exit = yield* Effect.exit(wake.fire(info))
+      expect(exit._tag).toBe("Failure")
       expect(prompts).toHaveLength(0)
-      // The task survives so the agent can still see and cancel it.
+      // The record and its row survive for the retry, and the same message id makes that retry idempotent.
       expect(yield* wake.list(sessionID)).toHaveLength(1)
+      expect(infos.has(info.id)).toBe(true)
+
+      failure.mode = undefined
+      expect(yield* wake.fire(info)).toBe(true)
+      expect(prompts).toHaveLength(1)
+      expect(yield* wake.list(sessionID)).toEqual([])
+    }),
+  )
+
+  it.effect("retires a task once its session is gone", () =>
+    Effect.gen(function* () {
+      const { wake, infos, failure, prompts } = setup()
+      yield* wake.scheduleWakeup({ sessionID, prompt: "check", delay: "1m" })
+      const info = [...infos.values()][0]!
 
       failure.mode = "notfound"
       expect(yield* wake.fire(info)).toBe(false)
+      expect(prompts).toHaveLength(0)
       expect(yield* wake.list(sessionID)).toEqual([])
       expect(infos.has(info.id)).toBe(false)
     }),
@@ -287,6 +303,8 @@ describe("wakeup service", () => {
       expect(yield* wake.pending(directory)).toEqual([])
       expect(yield* wake.list(sessionID)).toEqual([])
       expect(memory.has(`wakeup:${created.wakeup.id}`)).toBe(false)
+      // The unreachable paused row is removed too, so removed worktrees do not accumulate schedules.
+      expect(infos.has(scheduleID)).toBe(false)
     }),
   )
 
