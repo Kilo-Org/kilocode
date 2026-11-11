@@ -2,6 +2,7 @@
 // change; this module keeps the latest values, applies the font size to the page, and reads the Shift+Tab toggle.
 import { createSignal } from "solid-js"
 import { getVSCodeAPI } from "../context/vscode"
+import type { Delivery } from "./pending-actions"
 
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
@@ -46,6 +47,11 @@ export function applyKiloSettings(values: Record<string, unknown>) {
 /** `kilo-code.v2.chat.shiftTabCyclesVariant`, on by default. */
 export function shiftTabCyclesVariant(): boolean {
   return kiloSettings()["chat.shiftTabCyclesVariant"] !== false
+}
+
+/** `kilo-code.v2.chat.sendWhileRunning`: what Enter does while the agent runs, steer by default. */
+export function runningDelivery(): Delivery {
+  return kiloSettings()["chat.sendWhileRunning"] === "queue" ? "queue" : "steer"
 }
 
 /** `kilo-code.v2.showTokenThroughput`, on by default. */
