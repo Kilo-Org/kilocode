@@ -916,11 +916,13 @@ export function MessageList(props: {
                     </div>
                   )}
                 </For>
-                <Show when={props.question?.()} keyed>
-                  {(form) => <QuestionDock form={form} />}
-                </Show>
               </>
             )}
+          </Show>
+          {/* Outside the loaded-transcript gate: a pending question must stay answerable while the first page
+              loads, and the server only asks one once the session has messages. */}
+          <Show when={props.question?.()} keyed>
+            {(form) => <QuestionDock form={form} />}
           </Show>
         </div>
       </div>
