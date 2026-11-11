@@ -9,6 +9,8 @@
   <!-- packages/opencode/src/provider/models.ts -->
 - <https://api.digitalocean.com>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
+- <https://api.keenable.ai/mcp>
+  <!-- packages/opencode/src/tool/mcp-websearch.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
   <!-- packages/opencode/src/kilocode/cloud/origin.ts -->

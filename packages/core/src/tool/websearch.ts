@@ -19,6 +19,7 @@ export const name = "websearch"
 export const NO_RESULTS = "No search results found. Please try a different query."
 export const EXA_URL = "https://mcp.exa.ai/mcp"
 export const PARALLEL_URL = "https://search.parallel.ai/mcp"
+export const KEENABLE_URL = "https://api.keenable.ai/mcp" // kilocode_change
 export const MAX_NUM_RESULTS = 20
 export const MAX_CONTEXT_CHARACTERS = 50_000
 export const MAX_RESPONSE_BYTES = 256 * 1024
@@ -56,7 +57,7 @@ export const Input = Schema.Struct({
   ),
 })
 
-export const Provider = Schema.Literals(["exa", "parallel"])
+export const Provider = Schema.Literals(["exa", "parallel", "keenable"]) // kilocode_change - keenable
 export type Provider = typeof Provider.Type
 
 export interface Config {
@@ -65,6 +66,7 @@ export interface Config {
   readonly enableParallel: boolean
   readonly exaApiKey?: string
   readonly parallelApiKey?: string
+  readonly keenableApiKey?: string // kilocode_change
 }
 
 export class ConfigService extends Context.Service<ConfigService, Config>()("@opencode/v2/WebSearchConfig") {}
@@ -72,14 +74,19 @@ export class ConfigService extends Context.Service<ConfigService, Config>()("@op
 /** Isolates the retained product environment contract from the generic tool implementation. */
 export const defaultConfigLayer = Layer.sync(ConfigService, () =>
   ConfigService.of({
+    // kilocode_change start - keenable
     provider:
-      process.env.KILO_WEBSEARCH_PROVIDER === "exa" || process.env.KILO_WEBSEARCH_PROVIDER === "parallel"
+      process.env.KILO_WEBSEARCH_PROVIDER === "exa" ||
+      process.env.KILO_WEBSEARCH_PROVIDER === "parallel" ||
+      process.env.KILO_WEBSEARCH_PROVIDER === "keenable"
         ? process.env.KILO_WEBSEARCH_PROVIDER
         : undefined,
+    // kilocode_change end
     enableExa: truthy("KILO_EXPERIMENTAL") || truthy("KILO_ENABLE_EXA") || truthy("KILO_EXPERIMENTAL_EXA"),
     enableParallel: truthy("KILO_ENABLE_PARALLEL") || truthy("KILO_EXPERIMENTAL_PARALLEL"),
     exaApiKey: process.env.EXA_API_KEY,
     parallelApiKey: process.env.PARALLEL_API_KEY,
+    keenableApiKey: process.env.KEENABLE_API_KEY, // kilocode_change
   }),
 )
 
@@ -134,6 +141,19 @@ const ParallelArgs = Schema.Struct({
   search_queries: Schema.Array(Schema.String),
   session_id: Schema.String,
 })
+// kilocode_change start - keenable
+const KeenableArgs = Schema.Struct({
+  query: Schema.String,
+  max_results: Schema.Number,
+})
+
+/** Keenable answers without a key on its public tier; X-Keenable-Title identifies the app. */
+export const keenableHeaders = (apiKey: string | undefined): Record<string, string> => ({
+  "User-Agent": `opencode/${InstallationVersion}`,
+  "X-Keenable-Title": "Kilo Code",
+  ...(apiKey ? { "X-API-Key": apiKey } : {}),
+})
+// kilocode_change end
 const McpRequest = <F extends Schema.Struct.Fields>(args: Schema.Struct<F>) =>
   Schema.Struct({
     jsonrpc: Schema.Literal("2.0"),
@@ -216,31 +236,42 @@ const layer = Layer.effectDiscard(
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
 
+              // kilocode_change start - keenable
               const text =
-                provider === "exa"
-                  ? yield* callMcp(http, exaUrl(config.exaApiKey), "web_search_exa", ExaArgs, {
-                      query: input.query,
-                      type: input.type || "auto",
-                      numResults: input.numResults || 8,
-                      livecrawl: input.livecrawl || "fallback",
-                      contextMaxCharacters: input.contextMaxCharacters,
-                    })
-                  : yield* callMcp(
+                provider === "keenable"
+                  ? yield* callMcp(
                       http,
-                      PARALLEL_URL,
-                      "web_search",
-                      ParallelArgs,
-                      {
-                        objective: input.query,
-                        search_queries: [input.query],
-                        session_id: context.sessionID,
-                        // V2 invocation context does not safely expose the model yet.
-                      },
-                      {
-                        "User-Agent": `opencode/${InstallationVersion}`,
-                        ...(config.parallelApiKey ? { Authorization: `Bearer ${config.parallelApiKey}` } : {}),
-                      },
+                      KEENABLE_URL,
+                      "search_web_pages",
+                      KeenableArgs,
+                      { query: input.query, max_results: input.numResults || 8 },
+                      keenableHeaders(config.keenableApiKey),
                     )
+                  : provider === "exa"
+                    ? yield* callMcp(http, exaUrl(config.exaApiKey), "web_search_exa", ExaArgs, {
+                        query: input.query,
+                        type: input.type || "auto",
+                        numResults: input.numResults || 8,
+                        livecrawl: input.livecrawl || "fallback",
+                        contextMaxCharacters: input.contextMaxCharacters,
+                      })
+                    : yield* callMcp(
+                        http,
+                        PARALLEL_URL,
+                        "web_search",
+                        ParallelArgs,
+                        {
+                          objective: input.query,
+                          search_queries: [input.query],
+                          session_id: context.sessionID,
+                          // V2 invocation context does not safely expose the model yet.
+                        },
+                        {
+                          "User-Agent": `opencode/${InstallationVersion}`,
+                          ...(config.parallelApiKey ? { Authorization: `Bearer ${config.parallelApiKey}` } : {}),
+                        },
+                      )
+              // kilocode_change end
               return {
                 provider,
                 text: text ?? NO_RESULTS,
