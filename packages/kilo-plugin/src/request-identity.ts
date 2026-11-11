@@ -3,17 +3,15 @@ export * as KiloRequestIdentity from "./request-identity"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Effect } from "effect"
 
-/**
- * How Kilo names itself on a model request to a provider that is not the Kilo Gateway. The server builds every
- * model request with the same `User-Agent` and no referer; this replaces them per provider:
- *
- * - `opencode*` providers and `anthropic`: `kilo/<channel>/<version>/<client>`, and nothing else.
- * - every other provider: `Kilo-Code/<version>` with the Kilo `HTTP-Referer` and `X-Title`.
- * - providers in `untouched`: nothing, the request keeps what the server and the provider's own plugin built.
- *
- * The values are request headers, so they take precedence over a `User-Agent`, `HTTP-Referer` or `X-Title` from the
- * provider catalog or from `provider.<id>.options.headers` in config.
- */
+// How Kilo names itself on a model request to a provider that is not the Kilo Gateway. The server builds every
+// model request with the same `User-Agent` and no referer; this replaces them per provider:
+//
+// - `opencode*` providers and `anthropic`: `kilo/<channel>/<version>/<client>`, and nothing else.
+// - every other provider: `Kilo-Code/<version>` with the Kilo `HTTP-Referer` and `X-Title`.
+// - providers in `untouched`: nothing, the request keeps what the server and the provider's own plugin built.
+//
+// The values are request headers, so they take precedence over a `User-Agent`, `HTTP-Referer` or `X-Title` that the
+// provider catalog or the config sets on the provider or on the model.
 const REFERER = "https://kilocode.ai"
 const TITLE = "Kilo Code"
 

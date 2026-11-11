@@ -248,7 +248,8 @@ async function boot(
                           { options: loopback(id), models: { echo: { name: "Echo" } } },
                         ]),
                       ),
-                      // A bring-your-own-key provider, and one whose config names its own referer and title.
+                      // A bring-your-own-key provider, and one whose config names its own referer (on the
+                      // provider) and title (on the model).
                       byok: {
                         npm: "@ai-sdk/openai-compatible",
                         options: loopback("byok"),
@@ -258,9 +259,9 @@ async function boot(
                         npm: "@ai-sdk/openai-compatible",
                         options: {
                           ...loopback("configured"),
-                          headers: { "HTTP-Referer": "https://configured.example", "X-Title": "Configured" },
+                          headers: { "HTTP-Referer": "https://configured.example" },
                         },
-                        models: { echo: { name: "Echo" } },
+                        models: { echo: { name: "Echo", headers: { "X-Title": "Configured" } } },
                       },
                     },
                   }),
