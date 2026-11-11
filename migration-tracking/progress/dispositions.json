@@ -1,4 +1,22 @@
 {
+  "module:packages/core/src/kilocode/db-preflight.ts": {
+    "state": "native",
+    "v2": "packages/core/src/database/database.ts",
+    "note": "v1's DbPreflight.assertWritable existed so a read-only database did not crash startup at PRAGMA wal_checkpoint. v2 gained restrictToOwner (packages/core/src/database/database.ts:87), which chmods the db and its -wal/-shm to 0o600 (restoring the write bit for an owned file on POSIX) in layer() before the pragmas run, so on POSIX the crash the preflight guarded is already prevented natively. Accepted gap: restrictToOwner returns early on win32 (database.ts:88), so unlike v1's chmodSync (which clears the Windows read-only attribute) v2 does not repair a read-only db or sidecar on Windows, and such a file still fails at PRAGMA wal_checkpoint; this needs an externally set read-only attribute and was judged too rare for a shared-file patch. The other residual v1 behavior not carried is turning a few rare opaque errors (a non-owned file, or a custom KILO2_DB in a bad directory) into actionable messages; that enhancement was likewise judged not worth a shared-file patch (PR #15800).",
+    "by": "db-preflight-native"
+  },
+  "module:packages/core/test/kilocode/db-preflight.test.ts": {
+    "state": "native",
+    "v2": "packages/core/test/database.test.ts",
+    "note": "The v1 preflight test asserted the db is writable before the pragmas. v2's packages/core/test/database.test.ts ('tightens an existing database and sidecars') covers restrictToOwner restoring 0o600 on an existing db and sidecars, which is the equivalent guarantee on POSIX. The suite is skipIf(win32), matching restrictToOwner's win32 early return; the Windows read-only gap is recorded on the db-preflight.ts module cell.",
+    "by": "db-preflight-native"
+  },
+  "patch:db-preflight:7186ff6558e9": {
+    "state": "native",
+    "v2": "packages/core/src/database/database.ts",
+    "note": "The v1 database.ts hunk's db-preflight behavior (writable db before wal_checkpoint) is native via restrictToOwner on POSIX (the accepted Windows read-only gap is recorded on the db-preflight.ts module cell); the hunk's other sub-behaviors are native in v2 (pragma ordering, build-time path resolution via Layer.unwrap, channel path in cli/src/database-path.ts) or tracked under the already-resolved database-compat feature. No Kilo patch is needed.",
+    "by": "db-preflight-native"
+  },
   "module:packages/core/src/kilocode/global.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/src/global-resilience.ts",
@@ -1561,13 +1579,13 @@
   "module:packages/kilo-vscode/webview-ui/src/context/model-selection.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/webview-ui/src/v2/model-default.ts",
-    "note": "initialModel keeps the v1 resolveModelSelection order for a new session: the pick of this scope and agent, the agent model, the configured model (when still in the catalog), the team default for a team account, the first recent pick still in the catalog, then Kilo Auto Free (v1 KILO_AUTO, validated against the Gateway catalog) and the server default when that model is gone. It also keeps the v1 pending rule where it cannot block: a Kilo candidate is not trusted before the account is known, and the recents wait for the preferences, so a dialog cannot open on the server default and then jump to a recent pick. The server default, resolved for the scope, stands in when the account read fails, and a team account never waits for the recents. createSelection keeps the draft pick per agent (v1 Pick(composer, agent)), every explicit pick, the New Worktree dialog included, pushes the shared recents and the agent's effort (new-worktree-models.ts rememberPick), as v1 apply did, and an effort-only change writes the effort without touching the recents (rememberEffort).",
+    "note": "initialModel resolves the new-session model in order: the pick of this scope and agent, the agent model, the configured model (when still in the catalog), the first recent pick still in the catalog (for both personal and team accounts, matching the v2 TUI in packages/tui/src/context/local.tsx so modals and new sessions carry over explicit picks instead of snapping back to the team default), then the team default (or first Kilo model) for a team account, or Kilo Auto Free (validated against the Gateway catalog) and the server default for a personal or signed-out client. A Kilo candidate is not trusted before the account is known, and known accounts wait for the preferences before falling back so a dialog cannot open on the fallback and jump to a recent pick; the server default stands in when the account read fails. ModelPreferencesProvider shares per-agent draft and dialog picks within the webview and pushes explicit picks to the persisted recents, while effort-only changes update only the remembered effort.",
     "by": "model-picker-parity"
   },
   "module:packages/kilo-vscode/tests/unit/model-selection.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-vscode/test/model-default.test.ts",
-    "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent, team accounts skipping recents (and falling back to the first Kilo model), the fallback, and the v1 pending rule while the account or the recents are unknown (including Kilo agent and configured models). packages/kilo-vscode/test/agent-manager-new-worktree-models.test.ts covers the dialog's model memory: a pick is recorded for the next new session with its effort, and a Kilo choice waits for the account.",
+    "note": "Covers agent over configured model, a configured model that left the catalog, the first valid recent across personal and team accounts, team accounts falling back to the team default (then the first Kilo model) when no recent matches, the Kilo Auto Free fallback, and the pending rules while the account or the recents are unknown (including Kilo agent and configured models). packages/kilo-vscode/test/agent-manager-new-worktree-models.test.ts covers the dialog's model memory across reopened modals and reloads.",
     "by": "model-picker-parity"
   },
   "module:packages/kilo-vscode/docs/features/remember-last-model.md": {
@@ -2403,5 +2421,29 @@
     "v2": "packages/kilo-plugin/test/plugin-git-source.test.ts",
     "note": "Spec parsing, identity normalization, and resolution cases are ported to packages/kilo-plugin/test/plugin-git-source.test.ts against PluginGitSource in packages/kilo-plugin/src/plugin/git-source.ts: repo/ref/subpath parsing, credential and option-injection rejection, identity normalization (including Windows and POSIX paths), subpath resolution with symlink containment, ref checkout from a shallow clone, per-ref cache entries, staging cleanup after a failed clone, and `~` expansion. The v1 install/detect/remove case needs the marketplace plugin kind (plan phase 3) and lands in packages/kilo-plugin/test/marketplace-plugin-kind.test.ts; the shared `resolvePluginTarget` entrypoint became the `PluginModule.Options.pluginSource` seam, covered end to end by the host test packages/kilo-cli/test/plugin-git-source.test.ts, which loads a `git:` plugin from kilo2.json.",
     "by": "plugin-git-sources"
+  },
+  "module:packages/opencode/src/kilocode/session/drain.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/session-drain/drain.ts",
+    "note": "The tracker is the session-drain plugin (rung 1). v1 kept process-local reservations (hold, track, link, wait) fed by patches in the runner, prompt loop and task tool. v2 observes core state instead: Session.wait (SessionExecution.awaitIdle, which re-checks coalesced follow-up runs and a successor started during interruption cleanup) for every active session in the tree, the session store parent chain for descendants in any Location, and the Job registry (backgroundJobs plus a live Job.get) for background work until its notice is delivered and the job leaves the registry. It never starts, resumes or cancels work, unrelated sessions never count, and a cancelled call cancels nothing. v1 instance-disposal closing of waiters maps to the upstream RPC close (a pending call fails rpc.unavailable when its Location deactivates). Tests: packages/kilo-plugin/test/session-drain.test.ts.",
+    "by": "kilo/graceful-tower-qr8"
+  },
+  "module:packages/opencode/test/kilocode/session-drain.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/session-drain.test.ts",
+    "note": "Carries the behavioural assertions against real Session, Job and TestLLM services through the plugin RPC: blocked foreground work, coalesced follow-up, interruption with slow cleanup, a prompt during that cleanup, an unrelated busy session, resume:false input, a cancelled drain, a failed run that does not poison later drains, a grandchild moved to another Location, a child background job held until its notice is delivered, a background subagent and the parent follow-up its result wakes, the token event, not-found and an empty token. v1 assertions about reservation bookkeeping (stale release, re-acquire races, per-directory disposal) test the dropped reservation design and have no v2 counterpart.",
+    "by": "kilo/graceful-tower-qr8"
+  },
+  "module:packages/opencode/test/kilocode/headless-session-drain.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/session-drain.test.ts",
+    "note": "The round trip through the generated client (token event, not_found, rpc.invalid_input) against an in-process server with the host overrides. The drain is an API for programmatic callers such as Cloud Agent; `kilo2 run` does not call it. The v1 headless-run assertions are native upstream: packages/cli/src/run/noninteractive.ts (upstream #60699, #61911) waits for the background jobs, subagents and follow-up runs its prompt started before the run exits, and cancels them on abort. Dropped on purpose: the v1 assertion that a run (`--session`, `--continue`) also waits for older background work its prompt did not start, and stops it on abort. Upstream filters its wait to jobs started at or after the prompt's admission (noninteractive.ts `background`), because on a shared server another client can own older jobs; a caller that needs the whole session tree to go quiet calls the drain RPC. Summarize and intake work are executions on v2, so Session.wait covers them; the drain is keyed by session ID, so the v1 cross-directory scenarios collapse into the other-Location test of the plugin suite.",
+    "by": "kilo/graceful-tower-qr8"
+  },
+  "api:POST /kilocode/session/{sessionID}/drain": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/session-drain.ts",
+    "note": "Served by the kilocode.session-drain RPC method drain (contract packages/schema/src/kilocode/session-drain.ts, handler packages/kilo-plugin/src/session-drain/index.ts) with the drained event carrying the caller token. Round trip: packages/kilo-cli/test/session-drain.test.ts.",
+    "by": "kilo/graceful-tower-qr8"
   }
 }
