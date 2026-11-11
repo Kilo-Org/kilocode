@@ -5,6 +5,7 @@ import type { OpenCodeClient } from "@opencode/client"
 import type { createClientConnection } from "@opencode/client/solid"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { createEffect, createSignal, on } from "solid-js"
+import { toFailure, type Failure } from "./error"
 import { catalogEvent, createKiloCatalog } from "./kilo-catalog"
 import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
 
@@ -28,7 +29,7 @@ export function createConnectionMetadata(input: {
 }) {
   const [directory, setDirectory] = createSignal<string>()
   const [version, setVersion] = createSignal("")
-  const [handshake, setHandshake] = createSignal("")
+  const [handshake, setHandshake] = createSignal<Failure>()
   const models: KiloModelsCache = createKiloModelsCache()
   const kiloFailure =
     input.chat === false
@@ -49,10 +50,12 @@ export function createConnectionMetadata(input: {
       .then((info) => {
         if (read !== state.handshake) return
         setVersion(info.version)
-        setHandshake("")
+        setHandshake(undefined)
       })
       .catch((err: unknown) => {
-        if (read === state.handshake) setHandshake(`Not a Kilo v2 server: ${message(err)}`)
+        if (read !== state.handshake) return
+        const failure = toFailure(err)
+        setHandshake({ message: "Not a Kilo v2 server.", details: failure.details ?? failure.message })
       })
   }
   createEffect(
@@ -76,10 +79,4 @@ export function createConnectionMetadata(input: {
     kiloFailure,
     kiloModelsCache: models,
   }
-}
-
-function message(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
-  return String(error)
 }

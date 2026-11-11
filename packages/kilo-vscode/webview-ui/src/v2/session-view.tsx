@@ -20,6 +20,7 @@ import type { ComposerHandle } from "./composer"
 import { toPromptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
+import { ErrorBanner } from "./error-banner"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
@@ -457,13 +458,10 @@ export function SessionView(props: {
         </div>
         <Show when={!props.readOnly}>
           <div class="chat-input">
-            <Show when={v2.handshake() || v2.error()}>
-              <div class="error-card" role="alert" data-component="v2-error">
-                <span>{v2.handshake() || v2.error()}</span>
-                <button class="error-card-dismiss" onClick={() => v2.setError("")}>
-                  x
-                </button>
-              </div>
+            <Show when={v2.handshake() ?? v2.failure()}>
+              {(failure) => (
+                <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />
+              )}
             </Show>
             <Show when={permissions()[0]} keyed>
               {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
