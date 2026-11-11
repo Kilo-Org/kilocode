@@ -180,6 +180,13 @@
   justify-content: center;
 }
 
+/* A pending question keeps `.message-list-content` for its lane, so the welcome
+   screen inside it loses the centering above. Grow it into the free space; it
+   centers its own content. */
+.message-list-content > .message-list-empty {
+  flex: 1;
+}
+
 .message-list-empty {
   display: flex;
   flex-direction: column;

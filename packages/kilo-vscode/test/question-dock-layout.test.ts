@@ -47,3 +47,9 @@ test("the question dock renders in the transcript only", () => {
 test("a pending question keeps the transcript lane while the transcript is empty", () => {
   expect(messages).toContain('!props.question?.() ? "message-list-content-empty" : "message-list-content"')
 })
+
+// Keeping the transcript lane on an empty transcript costs the welcome screen
+// the empty layout's centering, so it has to grow into the free space instead.
+test("the welcome screen keeps centering inside the transcript lane", () => {
+  expect(ruleBody(".message-list-content > .message-list-empty")).toContain("flex: 1")
+})
