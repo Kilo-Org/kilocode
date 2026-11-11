@@ -39,19 +39,26 @@ export function variantKey(agent: string, providerID: string, modelID: string) {
   return `agent/${agent}/${providerID}/${modelID}`
 }
 
+// A picker waits for the recents before it falls back, so a dialog does not open on one model and jump to another.
+// The wait is bounded: if the host never answers, the picker still resolves a model instead of staying unsubmittable.
+const PREFERENCES_WAIT = 5000
+
 export const ModelPreferencesProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const [state, setState] = createSignal<ModelPreferences>({ favorites: [], recents: [], usage: {}, variants: {} })
   const [loaded, setLoaded] = createSignal(false)
   const [picks, setPicks] = createSignal<Record<string, { providerID: string; id: string }>>({})
+  const answered = setTimeout(() => setLoaded(true), PREFERENCES_WAIT)
   onCleanup(
     vscode.onMessage((message) => {
       if (message.type !== "modelPreferencesLoaded") return
+      clearTimeout(answered)
       if (loaded() && message.value.recents.length === 0) setPicks({})
       setState(message.value)
       setLoaded(true)
     }),
   )
+  onCleanup(() => clearTimeout(answered))
   vscode.postMessage({ type: "requestModelPreferences" })
 
   const pushRecent = (providerID: string, modelID: string) => {

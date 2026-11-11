@@ -103,4 +103,29 @@ describe("model drafts", () => {
     expect(drafts.get("ses_one")).toEqual(model("high"))
     expect(drafts.get("ses_two")).toBeUndefined()
   })
+
+  test("seeds the draft of a host-created session that has no model of its own", () => {
+    const drafts = createModelDrafts()
+    // The worktree session the host created without a model: the prompt must commit what the composer shows.
+    drafts.ensure("ses_worktree", undefined, model("high"))
+    expect(drafts.get("ses_worktree")).toEqual(model("high"))
+  })
+
+  test("leaves a session that already has a model or a draft untouched", () => {
+    const drafts = createModelDrafts()
+
+    drafts.ensure("ses_session", model("low"), model("high"))
+    expect(drafts.get("ses_session")).toBeUndefined()
+
+    drafts.set("ses_picked", model("low"), model("high"))
+    drafts.ensure("ses_picked", undefined, model())
+    expect(drafts.get("ses_picked")).toEqual(model("low"))
+  })
+
+  test("seeds nothing while the composer shows no model yet", () => {
+    const drafts = createModelDrafts()
+
+    drafts.ensure("ses_waiting", undefined, undefined)
+    expect(drafts.get("ses_waiting")).toBeUndefined()
+  })
 })

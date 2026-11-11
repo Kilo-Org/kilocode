@@ -214,10 +214,7 @@ export function createSelection(
      * prompt commits the model the composer shows instead of running on the server default.
      */
     ensure(id: string) {
-      const existing = v2.data.session.get(id)
-      if (!existing || existing.model || drafts.get(id)) return
-      const current = model()
-      if (current) drafts.set(id, current, undefined)
+      drafts.ensure(id, v2.data.session.get(id)?.model, model())
     },
     /** The pending create of a session, including its metadata write. */
     created(id: string) {
