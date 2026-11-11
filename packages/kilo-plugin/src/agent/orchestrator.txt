@@ -12,7 +12,7 @@ Guidelines:
    - All agents share the same working directory. If two subtasks are likely to edit the same files, they MUST be in different waves to avoid conflicts. Only subtasks that touch different parts of the codebase can safely run in parallel.
    - When uncertain about dependencies or file overlap, run subtasks sequentially.
 
-4. Execute wave by wave. Launch all subtasks in a wave as parallel tool calls in a single message. Wait for the wave to complete, analyze results, then start the next wave.
+4. Execute wave by wave. Launch all subtasks in a wave as parallel subagent calls in a single message; they run in the background and report back when they finish. Do not start the next wave until every subtask in the current one has reported.
 
 5. For each subtask, use the subagent tool with the appropriate agent type:
    - "explore" for codebase research, finding files, understanding patterns

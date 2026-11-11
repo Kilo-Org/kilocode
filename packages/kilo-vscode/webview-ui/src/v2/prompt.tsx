@@ -2,7 +2,19 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { JsonValue, ModelRef } from "@opencode/client"
-import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack, type JSX } from "solid-js"
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  on,
+  onCleanup,
+  onMount,
+  Show,
+  untrack,
+  type Accessor,
+  type JSX,
+} from "solid-js"
 import { record, type ReviewCommentEntry } from "../../../src/shared/review-comments"
 import { pushFixes } from "../../agent-manager/pr/pr-push-fixes"
 import { fold, reserve } from "../components/chat/prompt-fold"
@@ -38,15 +50,25 @@ import {
   type ReviewAppendHandler,
 } from "./append-ready"
 import { BrowserReferences } from "./browser-references"
-import type { PromptAttachment } from "../../../src/protocol"
+import type { PromptAttachment, SessionSearchItem } from "../../../src/protocol"
 import { CodeContextChips } from "../components/chat/CodeContextChips"
+import { ModelSelectorBase } from "../components/shared/ModelSelector"
+import type { MentionFile } from "../hooks/context-mention-utils"
+import { hasGitChangesMention } from "../hooks/git-changes-context-utils"
+import { hasTerminalMention } from "../hooks/terminal-context-utils"
+import { useFileMention } from "../hooks/useFileMention"
+import { useGitChangesContext, type GitChangesTarget } from "../hooks/useGitChangesContext"
 import { useImageAttachments } from "../hooks/useImageAttachments"
 import { usePasteCollapse } from "../hooks/usePasteCollapse"
 import { usePromptHistory } from "../hooks/usePromptHistory"
-import { expandPastes } from "../components/chat/prompt-input-utils"
+import { useTerminalContext } from "../hooks/useTerminalContext"
+import { expandPastes, isPathMention } from "../components/chat/prompt-input-utils"
+import { convertToMentionPath, insertPathMentions } from "../utils/path-mentions"
+import { promptMentionOver, registerPromptMentionDrop, type WorktreeReference } from "../utils/prompt-mention-drop"
 import { message, useV2 } from "./client"
 import { registerComposer, type ComposerHandle } from "./composer"
-import { attachmentDrafts, fileAttachments, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
+import { MentionMenu } from "./mention-menu"
+import { attachmentDrafts, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
@@ -83,6 +105,14 @@ function injected(metadata: { [key: string]: JsonValue } | undefined): boolean {
 // Pending review comments follow the same key as the text, so switching sessions neither loses nor mixes them.
 const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
 
+// The exact `@` mentions of each draft. A path with spaces or a past-chat title cannot be found again from the text
+// alone, so a draft keeps the tokens it had, with the same key as the text.
+const mentionDrafts = new Map<string, { paths: string[]; sessions: SessionSearchItem[] }>()
+
+// The `@` model entry opens a hidden model selector through its programmatic-open event, keyed to this trigger so the
+// chat model selector and the slash command open are unaffected.
+const MENTION_MODEL_TRIGGER = "mention-model"
+
 function saveReviewDraft(key: string | undefined, comments: ReviewCommentEntry[]) {
   if (!key) return
   if (comments.length === 0) reviewDrafts.delete(key)
@@ -114,12 +144,13 @@ export function PromptInput(props: {
   questioning?: boolean
   /**
    * Sends the composed text. While the agent runs, `mode` chooses between steering, queueing and stopping to send now.
-   * `input.items` are editor and terminal attachments; `input.metadata` carries browser references.
+   * `input.items` are editor and terminal attachments, `input.files` the files the `@` mentions attach, and
+   * `input.metadata` carries browser references.
    */
   onSend: (
     text: string,
     mode: SendMode,
-    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
+    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
   ) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
@@ -148,8 +179,26 @@ export function PromptInput(props: {
   /** The slash command menu: its entries, and the runner of a sent server command or skill. */
   slash?: {
     entries: () => SlashEntry[]
-    run: (entry: SlashEntry, args: string, mode: SendMode, items: PromptAttachment[]) => Promise<boolean>
+    run: (
+      entry: SlashEntry,
+      args: string,
+      mode: SendMode,
+      items: PromptAttachment[],
+      files?: MentionFile[],
+    ) => Promise<boolean>
   }
+  /** Agent Manager worktrees the `@` menu can reference. The Worktrees entry is offered only when this is set. */
+  worktrees?: Accessor<WorktreeReference[]>
+  /** Whether the `@` menu offers Git changes. Defaults to true. */
+  git?: () => boolean
+  /** What `@git-changes` diffs. Defaults to the session's directory, whose base the host resolves. */
+  gitTarget?: () => GitChangesTarget | undefined
+  /** The Agent Manager worktree, or `local`, whose terminal `@terminal` reads. */
+  terminalContext?: () => string | undefined
+  /** Reads the focused Agent Manager terminal for `@terminal`; without it the host reads the VS Code terminal. */
+  resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Opens the file a mention in the composer names. */
+  onOpenFile?: (path: string) => void
   /** Another session tab is open, so switching tabs is one of the suggested shortcuts. */
   tabs?: boolean
   /** Agent Manager state for the suggested shortcut. Missing in the sidebar, which has no worktrees or panels. */
@@ -214,9 +263,22 @@ export function PromptInput(props: {
     setAttachments((current) => mergeAttachments(current, read.map(imageAttachment)))
     images.clear()
   })
-  images.setFilePathDropHandler((paths) =>
-    setAttachments((current) => mergeAttachments(current, fileAttachments(paths, v2.directory))),
-  )
+  // Files dropped from the Explorer or an editor tab become `@` mentions at the caret. A drop does not fire the
+  // textarea input event, so it invalidates a pending Enhance itself, as every other programmatic insert does.
+  images.setFilePathDropHandler((paths) => {
+    const ref = refs.input
+    if (props.disabled || !ref) return
+    enhanceToken++
+    preEnhance = null
+    history.reset()
+    const resolved = paths.map((path) => convertToMentionPath(path, v2.directory))
+    const result = insertPathMentions(ref.value, ref.selectionStart ?? ref.value.length, resolved)
+    ref.value = result.text
+    setText(result.text)
+    mention.addPaths(resolved, v2.directory)
+    ref.setSelectionRange(result.pos, result.pos)
+    ref.focus()
+  })
   const removeAttachment = (id: string) => setAttachments((current) => current.filter((item) => item.id !== id))
   const pictures = () => attachments().filter((item) => item.kind === "image")
   const contexts = () => attachments().filter((item) => item.kind !== "image")
@@ -225,8 +287,101 @@ export function PromptInput(props: {
   let preEnhancePastes: string[] = []
   // Ignores a late result after a newer Enhance or a newer edit.
   let enhanceToken = 0
-  const refs = { input: undefined as HTMLTextAreaElement | undefined, overlay: undefined as HTMLDivElement | undefined }
+  const refs = {
+    input: undefined as HTMLTextAreaElement | undefined,
+    overlay: undefined as HTMLDivElement | undefined,
+    container: undefined as HTMLDivElement | undefined,
+    mention: undefined as HTMLDivElement | undefined,
+  }
   const vscode = useVSCode()
+  // `@` mentions: files, folders, terminal output, git changes, past chats, models and worktrees.
+  const modelKeys = createMemo(
+    () => new Set((v2.data.location.model.list() ?? []).map((model) => `${model.providerID}/${model.id}`)),
+  )
+  const git = () => props.git?.() ?? true
+  const mention = useFileMention(
+    vscode,
+    () => props.session ?? props.draftKey,
+    git,
+    props.worktrees,
+    modelKeys,
+    () => v2.directory,
+  )
+  // The Browse files dialog answers through the host; the picked path replaces the `@` query it was opened from.
+  onCleanup(
+    vscode.onMessage((message) => {
+      if (message.type === "filePickerResult") mention.insertFilePickerResult(message.path, message.requestId)
+    }),
+  )
+  const terminal = useTerminalContext(props.resolveEmbeddedTerminal)
+  const changes = useGitChangesContext(vscode, () => props.gitTarget?.() ?? { directory: v2.directory }, git)
+  // Picking the `@` model entry opens the hidden model selector below. The selector owns its open state, so the
+  // mention closes at once and dismissing the selector cannot leave the menu stuck open.
+  createEffect(() => {
+    if (!mention.modelPicker()) return
+    mention.closeMention()
+    window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: MENTION_MODEL_TRIGGER } }))
+  })
+  const highlightMentions = () => {
+    const paths = new Set(mention.mentionedPaths())
+    for (const token of mention.mentionedSessions().keys()) paths.add(token)
+    for (const token of mention.mentionedModels()) paths.add(token)
+    if (hasTerminalMention(text())) paths.add("terminal")
+    if (git() && hasGitChangesMention(text())) paths.add("git-changes")
+    return paths
+  }
+  // Model references are inline text, not files, so they are neither styled nor opened like path mentions.
+  const isModelMention = (value: string) => mention.mentionedModels().has(value.replace(/^@/, ""))
+  const scrollMention = () => {
+    const active = refs.mention?.querySelectorAll(".file-mention-item")[mention.mentionIndex()]
+    if (active instanceof HTMLElement) active.scrollIntoView({ block: "nearest" })
+  }
+  const saveMentions = (key: string | undefined) => {
+    if (!key) return
+    const paths = [...mention.mentionedPaths()]
+    const sessions = [...mention.mentionedSessions()].map(([token, session]) => ({ ...session, title: token }))
+    if (paths.length || sessions.length) mentionDrafts.set(key, { paths, sessions })
+    else mentionDrafts.delete(key)
+  }
+  // A restored draft finds its mentions again: the saved tokens first, then any path the text spells out.
+  const seedMentions = (key: string | undefined, value: string) => {
+    mention.closeMention()
+    mention.seedFromText(value)
+    const saved = key ? mentionDrafts.get(key) : undefined
+    if (!saved) return
+    mention.seedFromParts(saved.paths, value)
+    mention.seedSessions(saved.sessions, value)
+  }
+  seedMentions(props.draftKey, untrack(text))
+  /**
+   * The files the mentions in `value` attach. `@terminal` and `@git-changes` are read now, so a failed read keeps
+   * the draft instead of sending a prompt without the context it names. The file and past-chat mentions are read
+   * before the first await, while the composer still holds them.
+   */
+  const mentionFiles = async (value: string): Promise<MentionFile[] | undefined> => {
+    const known = mention.parseFileAttachments(value)
+    const output = await terminal
+      .resolveAttachment(value, props.session, props.terminalContext?.())
+      .catch((err: Error) => {
+        showToast({
+          variant: "error",
+          title: language.t("prompt.mention.terminalUnavailable"),
+          description: err.message,
+        })
+        return undefined
+      })
+    if (hasTerminalMention(value) && !output) return undefined
+    const diff = await changes.resolveAttachment(value).catch((err: Error) => {
+      showToast({
+        variant: "error",
+        title: language.t("prompt.mention.gitChangesUnavailable"),
+        description: err.message,
+      })
+      return undefined
+    })
+    if (git() && hasGitChangesMention(value) && !diff) return undefined
+    return [...known, ...(output ? [output] : []), ...(diff ? [diff] : [])]
+  }
   const speech = useSpeechToText(
     vscode,
     { goToLogin: () => vscode.postMessage({ type: "openProfile" }) },
@@ -237,7 +392,13 @@ export function PromptInput(props: {
   const canUseSpeech = () => speechStatus.status().enabled
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
-  const ready = () => !props.disabled && !props.blocked && !sending() && images.pending() === 0
+  const ready = () =>
+    !props.disabled &&
+    !props.blocked &&
+    !sending() &&
+    images.pending() === 0 &&
+    !terminal.pending() &&
+    !changes.pending()
   const canSend = () =>
     ready() &&
     (speech.state() === "recording" ||
@@ -325,7 +486,7 @@ export function PromptInput(props: {
       : language.t("prompt.placeholder.connecting")
   const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
   const sendAction = (): SendMode => (busySend() ? held() : "steer")
-  const sendIcon = () => ({ steer: "send", queue: "clock", now: "arrow-right" } as const)[sendAction()]
+  const sendIcon = () => (({ steer: "send", queue: "clock", now: "arrow-right" }) as const)[sendAction()]
   const sendHint = () => {
     if (!busySend()) return sendLabel()
     const keys = sendShortcuts()
@@ -359,6 +520,7 @@ export function PromptInput(props: {
       (key) => {
         if (key === draft) return
         promptDrafts.set(draft, untrack(text))
+        untrack(() => saveMentions(draft))
         attachmentDrafts.set(draft, untrack(attachments))
         pasteDrafts.set(
           draft,
@@ -376,6 +538,7 @@ export function PromptInput(props: {
         preEnhance = null
         setText(value)
         paste.load(value, pasteDrafts.get(key))
+        untrack(() => seedMentions(key, value))
         setAttachments(attachmentDrafts.get(key))
         if (refs.input) {
           refs.input.value = value
@@ -387,6 +550,7 @@ export function PromptInput(props: {
   )
   onCleanup(() => {
     promptDrafts.set(draft, text())
+    saveMentions(draft)
     attachmentDrafts.set(draft, attachments())
     pasteDrafts.set(
       draft,
@@ -506,6 +670,15 @@ export function PromptInput(props: {
     })
   }
   onMount(() => window.addEventListener("focusPrompt", onFocusPrompt))
+  // Session tabs, worktree cards, terminal tabs, diff headers and document tabs drop as a mention at the caret.
+  onMount(() => {
+    registerPromptMentionDrop(refs.container, (drop) => {
+      const ref = refs.input
+      if (!ref || !ref.isConnected || props.disabled) return false
+      return mention.insertDrop(drop, ref, setText, v2.directory)
+    })
+    onCleanup(() => registerPromptMentionDrop(undefined, undefined))
+  })
   onCleanup(() => {
     disposed = true
     for (const id of frames) cancelAnimationFrame(id)
@@ -549,9 +722,23 @@ export function PromptInput(props: {
   const putInDraft = (value: string, items: PromptAttachment[]) => {
     const current = text()
     history.reset()
-    setText(current.trim() ? `${current}\n\n${value}` : value)
+    const next = current.trim() ? `${current}\n\n${value}` : value
+    setText(next)
+    mention.seedFromText(next)
     setAttachments((list) => mergeAttachments(list, items))
     window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { force: true, restore: true } }))
+  }
+
+  // Empties the composer once a draft is sent. Its mentions go with it, so a failed send restores them from the text.
+  const clearDraft = (key: string | undefined) => {
+    setText("")
+    paste.load("", [])
+    setAttachments([])
+    setBrowsers([])
+    replaceComments([])
+    slash.close()
+    mention.closeMention()
+    if (key) mentionDrafts.delete(key)
   }
 
   const submit = (
@@ -587,31 +774,32 @@ export function PromptInput(props: {
       if (text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0) return
       setText(draft)
       paste.load(draft, backing)
+      mention.seedFromText(draft)
       setAttachments(items)
       setBrowsers(picked)
       replaceComments(pending)
-    }
-    if (!external) {
-      setText("")
-      paste.load("", [])
-      setAttachments([])
-      setBrowsers([])
-      replaceComments([])
-      slash.close()
     }
     // The review Markdown leads the text, so the transcript can strip it again with the comments in metadata.
     const review = external
       ? { text: external.text, metadata: external.metadata }
       : composeReviewPrompt(pending, expandPastes(draft, pastes), pushFixes())
+    // The mentions are located in the text that is sent, so the transcript can highlight each one in place. They are
+    // read before the draft is cleared, while the composer still knows them.
+    const located = target ? sent : review.text
+    const pendingFiles = external ? Promise.resolve<MentionFile[]>([]) : mentionFiles(located)
+    if (!external) clearDraft(key)
     setSending(true)
-    const request =
-      runner && target
-        ? runner.run(target.entry, target.args, mode, items)
-        : // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
-          props.onSend(review.text, mode, {
-            items,
-            metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
-          })
+    const request = pendingFiles.then((files) => {
+      // A mention whose context could not be read keeps the draft for another try.
+      if (!files) return false
+      if (runner && target) return runner.run(target.entry, target.args, mode, items, files)
+      // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
+      return props.onSend(review.text, mode, {
+        items,
+        files,
+        metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
+      })
+    })
     void request
       .then((ok) => {
         if (ok) preEnhance = null
@@ -663,7 +851,9 @@ export function PromptInput(props: {
     enhanceToken++
     preEnhance = null
     history.reset()
-    setText(current.trim() ? `${current}\n\n${value}` : value)
+    const next = current.trim() ? `${current}\n\n${value}` : value
+    setText(next)
+    mention.seedFromText(next)
     if (shouldSend) send()
     else focusInput()
   })
@@ -734,6 +924,7 @@ export function PromptInput(props: {
         const next = cleanEnhancedPrompt(response.text)
         setText(next)
         paste.load(next, [])
+        mention.seedFromText(next)
         focusInput()
       })
       .catch((err: unknown) => {
@@ -765,6 +956,7 @@ export function PromptInput(props: {
     preEnhance = null
     setText(restored)
     paste.load(restored, preEnhancePastes)
+    mention.seedFromText(restored)
     return true
   }
 
@@ -902,14 +1094,55 @@ export function PromptInput(props: {
 
   return (
     <div
+      ref={(el) => (refs.container = el)}
       class="prompt-input-container"
-      classList={{ "prompt-input-container--dragging": images.dragging() }}
+      classList={{
+        "prompt-input-container--dragging": images.dragging(),
+        "prompt-input-container--mention-drop": promptMentionOver(),
+      }}
       onDragOver={images.handleDragOver}
       onDragLeave={images.handleDragLeave}
       onDrop={images.handleDrop}
     >
       <Show when={slash.show()}>
         <SlashMenu menu={slash} onSelect={(entry) => slash.select(entry, text(), replaceDraft)} />
+      </Show>
+      <div class="mention-model-anchor" aria-hidden="true">
+        <ModelSelectorBase
+          models={v2.data.location.model.list()}
+          providers={v2.data.location.provider.list()}
+          gateway={v2.kiloModels().entries}
+          value={null}
+          trigger={MENTION_MODEL_TRIGGER}
+          collapsed
+          blocked={props.disabled}
+          onSelect={(providerID, modelID) => {
+            if (providerID && modelID) mention.selectModelReference(providerID, modelID)
+          }}
+          onCancel={() => {
+            mention.closeMention()
+            focusInput()
+          }}
+        />
+      </div>
+      <Show when={mention.showMention()}>
+        <MentionMenu
+          mention={mention}
+          ref={(el) => (refs.mention = el)}
+          onSelect={(item) => {
+            if (refs.input) mention.selectMention(item, refs.input, setText)
+          }}
+          onSession={(picked) => {
+            if (refs.input) mention.selectSession(picked, refs.input, setText)
+          }}
+          onWorktree={(picked) => {
+            if (refs.input) mention.selectWorktree(picked, refs.input, setText)
+          }}
+          onClose={() => {
+            mention.closeMention()
+            focusInput()
+          }}
+        />
       </Show>
       <Show when={comments().length > 0 && !props.disabled}>
         <ReviewComments
@@ -968,9 +1201,31 @@ export function PromptInput(props: {
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={(el) => (refs.overlay = el)} aria-hidden="true" dir="auto">
-            <For each={paste.segments(text())}>
+            <For each={paste.segments(text(), highlightMentions())}>
               {(seg) => (
-                <Show when={seg.kind === "paste"} fallback={<span>{seg.text}</span>}>
+                <Show
+                  when={seg.kind === "paste"}
+                  fallback={
+                    <Show when={seg.kind === "mention"} fallback={<span>{seg.text}</span>}>
+                      <span
+                        class="prompt-input-file-mention"
+                        classList={{
+                          "prompt-input-file-mention--file": isPathMention(seg.text) && !isModelMention(seg.text),
+                        }}
+                        onClick={(e) => {
+                          if (!isPathMention(seg.text) || isModelMention(seg.text)) return
+                          // A past chat opens from the sent message, not from the draft.
+                          if (mention.mentionedSessions().has(seg.text.replace(/^@/, ""))) return
+                          e.preventDefault()
+                          e.stopPropagation()
+                          props.onOpenFile?.(seg.text.replace(/^@/, ""))
+                        }}
+                      >
+                        {seg.text}
+                      </span>
+                    </Show>
+                  }
+                >
                   <span
                     class="prompt-input-paste"
                     title={language.t("prompt.paste.expand")}
@@ -1012,7 +1267,9 @@ export function PromptInput(props: {
               history.reset()
               setText(e.currentTarget.value)
               paste.afterInput()
-              slash.input(e.currentTarget.value, e.currentTarget.selectionStart ?? e.currentTarget.value.length)
+              const cursor = e.currentTarget.selectionStart ?? e.currentTarget.value.length
+              slash.input(e.currentTarget.value, cursor)
+              mention.onInput(e.currentTarget.value, cursor)
             }}
             onPaste={(e) => {
               if (props.disabled || !refs.input) return
@@ -1028,8 +1285,15 @@ export function PromptInput(props: {
               if (speechDown(e)) return
               if (undoEnhance(e)) return
               if (slash.keyDown(e, text(), replaceDraft)) return
+              if (mention.onKeyDown(e, refs.input, setText)) {
+                queueMicrotask(scrollMention)
+                return
+              }
+              // A mention and a collapsed paste each delete as one unit.
+              if (mention.handleBackspace(e, refs.input, setText)) return
               if (paste.backspace(e, refs.input, setText)) return
               paste.arrow(e, refs.input)
+              if (mention.handleArrowKey(e, refs.input)) return
               if (historyKey(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
@@ -1037,6 +1301,9 @@ export function PromptInput(props: {
             }}
             onKeyUp={(e) => {
               speechUp(e)
+            }}
+            onSelect={() => {
+              if (refs.input) mention.snapSelection(refs.input)
             }}
             onScroll={scroll}
             onFocus={() => setFocused(true)}
