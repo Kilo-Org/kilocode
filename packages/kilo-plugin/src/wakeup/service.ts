@@ -200,7 +200,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
           error:
             kind === "wakeup"
               ? `Too many scheduled wakeups: this session already holds the maximum of ${MAX_PER_SESSION} pending wakeups. Cancel one with cancel_wakeup before scheduling another.`
-              : `Too many cron tasks: this session already holds the maximum of ${MAX_CRON_PER_SESSION} scheduled tasks. Cancel one with cancel_wakeup before scheduling another.`,
+              : `Too many cron tasks: this session already holds the maximum of ${MAX_CRON_PER_SESSION} scheduled tasks. Cancel one with cron_delete before scheduling another.`,
         }
       const now = Date.now()
       const created = yield* schedules.create(
