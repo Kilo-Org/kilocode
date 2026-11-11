@@ -6,7 +6,7 @@ import { Schedule } from "@opencode/core/schedule"
 import type { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { Identifier } from "@opencode/schema/identifier"
 import { SessionID } from "@opencode/schema/session-id"
-import { DateTime, Effect, Option } from "effect"
+import { DateTime, Effect, Option, Semaphore } from "effect"
 import {
   clampNotice,
   CRON_TTL_MS,
@@ -61,6 +61,10 @@ const iso = (time: number) => DateTime.formatIso(DateTime.makeUnsafe(time))
 
 export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () => Emit) {
   const emitChanged = (event: KiloWakeupRpc.Changed) => emit()(event).pipe(Effect.ignore)
+  // The caps are read-then-write, and a fire/cancel can race a create. Serialize task mutations so two parallel tool
+  // calls cannot both pass the cap or leave a record behind a removal.
+  const gate = Semaphore.makeUnsafe(1)
+  const serial = <A, E, R>(effect: Effect.Effect<A, E, R>) => gate.withPermits(1)(effect)
 
   const announce = (sessionID: string, directory: string) =>
     Effect.gen(function* () {
@@ -185,7 +189,8 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
     ends: { at: string } | undefined,
     notice?: string,
   ) =>
-    Effect.gen(function* () {
+    serial(
+      Effect.gen(function* () {
       const directory = yield* directoryOf(input.sessionID)
       if (directory === undefined) return { ok: false as const, error: `Session not found: ${input.sessionID}` }
       const held = yield* list(input.sessionID)
@@ -198,8 +203,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
               : `Too many cron tasks: this session already holds the maximum of ${MAX_CRON_PER_SESSION} scheduled tasks. Cancel one with cancel_wakeup before scheduling another.`,
         }
       const now = Date.now()
-      const created = yield* schedules
-        .create(
+      const created = yield* schedules.create(
           {
             sessionID: SessionID.make(input.sessionID),
             name:
@@ -248,7 +252,8 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       yield* write(record)
       yield* announce(record.sessionID, record.directory)
       return { ok: true as const, wakeup: view(record, created.info), notice }
-    })
+      }),
+    )
 
   const scheduleWakeup = (input: CreateInput): Effect.Effect<CreateResult> =>
     Effect.gen(function* () {
@@ -282,7 +287,8 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
     })
 
   const cancel = (sessionID: string, id: string, kind?: Kind) =>
-    Effect.gen(function* () {
+    serial(
+      Effect.gen(function* () {
       const record = yield* read(id)
       if (record === undefined || record.sessionID !== sessionID) return undefined
       if (kind !== undefined && record.kind !== kind) return undefined
@@ -290,19 +296,23 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       yield* ctx.storage.remove(KEY + record.id).pipe(Effect.ignore)
       yield* announce(record.sessionID, record.directory)
       return record
-    })
+      }),
+    )
 
   const cancelSession = (sessionID: string) =>
-    Effect.gen(function* () {
-      const records = (yield* scan).filter((record) => record.sessionID === sessionID)
-      for (const record of records) yield* drop(record)
-      const directory = records[0]?.directory
-      if (directory !== undefined) yield* announce(sessionID, directory)
-    })
+    serial(
+      Effect.gen(function* () {
+        const records = (yield* scan).filter((record) => record.sessionID === sessionID)
+        for (const record of records) yield* drop(record)
+        const directory = records[0]?.directory
+        if (directory !== undefined) yield* announce(sessionID, directory)
+      }),
+    )
 
   /** Deliver a due occurrence to its session and retire or re-arm the record. Returns false for a foreign schedule. */
   const fire = (info: Schedule.Info) =>
-    Effect.gen(function* () {
+    serial(
+      Effect.gen(function* () {
       const record = (yield* scan).find((item) => item.scheduleID === info.id)
       if (record === undefined) return false
       const now = Date.now()
@@ -330,7 +340,8 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
         )
       yield* announce(record.sessionID, record.directory)
       return true
-    })
+      }),
+    )
 
   /** Drop records whose native schedule finished while no process was listening, then publish current counts. */
   const recover = (directory: string) =>

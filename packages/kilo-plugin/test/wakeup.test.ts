@@ -163,6 +163,19 @@ describe("wakeup service", () => {
     }),
   )
 
+  it.effect("serializes creates so parallel callers cannot exceed the cap", () =>
+    Effect.gen(function* () {
+      const { wake } = setup()
+      const results = yield* Effect.forEach(
+        Array.from({ length: MAX_PER_SESSION + 1 }, (_, index) => index),
+        (index) => wake.scheduleWakeup({ sessionID, prompt: `parallel ${index}`, delay: "1m" }),
+        { concurrency: "unbounded" },
+      )
+      expect(results.filter((result) => result.ok)).toHaveLength(MAX_PER_SESSION)
+      expect(results.filter((result) => !result.ok)).toHaveLength(1)
+    }),
+  )
+
   it.effect("creates a recurring cron task that expires in seven days", () =>
     Effect.gen(function* () {
       const { wake, creates } = setup()
