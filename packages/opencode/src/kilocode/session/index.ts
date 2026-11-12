@@ -183,18 +183,19 @@ export namespace KiloSession {
   /**
    * Extract provider-reported cost from response metadata when available.
    *
-   * Supports the following internal transports:
-   *   1. OpenRouter chat completions  -> `metadata.openrouter.usage.cost`
-   *                                      (`costDetails.upstreamInferenceCost` for Kilo
-   *                                      and for BYOK-routed requests)
-   *   2. Anthropic Messages or OpenAI Responses via OpenRouter
-   *                                   -> `usage.providerMetadata.aiSdk.cost_details`
-   *   3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway
-   *                                   -> `metadata.gateway.marketCost`
+   * Kilo Gateway: the gateway rewrites `usage.cost` to what Kilo charged, on every
+   * dialect, and sets `usage.is_byok`. When the call ran on the user's own provider key,
+   * the inference cost is `cost_details.upstream_inference_cost` instead. The raw usage
+   * is read from `usage.providerMetadata.aiSdk`, where the AI SDK and the Kilo Gateway
+   * wrapper keep it verbatim. The gateway strips `provider_metadata`, so Vercel's
+   * `gateway.marketCost` never reaches the client.
    *
-   * Kilo does not charge end users a per-request fee, so for the Kilo provider the
-   * top-level `cost` field (the gateway/marketplace fee) would understate the user's
-   * actual upstream spend. Always prefer the upstream/market cost when present.
+   * Other providers:
+   *   1. OpenRouter chat completions  -> `metadata.openrouter.usage.cost`
+   *                                      (plus `costDetails.upstreamInferenceCost`
+   *                                      for BYOK-routed requests)
+   *   2. Raw AI SDK usage             -> `usage.providerMetadata.aiSdk.cost_details`
+   *   3. Vercel AI Gateway            -> `metadata.gateway.marketCost`
    *
    * For OpenRouter BYOK routing, `cost` is what OpenRouter charged the account ($0,
    * or only its routing fee) and `upstreamInferenceCost` is billed to the user's own
@@ -213,7 +214,13 @@ export namespace KiloSession {
     provider?: Provider.Info
     providerID: string
   }): number | undefined {
-    const isKilo = (input.provider?.id ?? input.providerID) === "kilo"
+    if ((input.provider?.id ?? input.providerID) === "kilo") {
+      const raw = input.usage?.providerMetadata?.["aiSdk"] as
+        | { cost?: unknown; is_byok?: unknown; cost_details?: { upstream_inference_cost?: unknown } | null }
+        | undefined
+      const cost = raw?.is_byok === true ? raw.cost_details?.upstream_inference_cost : raw?.cost
+      return typeof cost === "number" && Number.isFinite(cost) && cost >= 0 ? cost : undefined
+    }
 
     const num = (value: unknown): number | undefined => {
       if (value === undefined || value === null) return undefined
@@ -228,31 +235,23 @@ export namespace KiloSession {
     if (orUsage) {
       const upstream = num(orUsage.costDetails?.upstreamInferenceCost)
       const regular = num(orUsage.cost)
-      // Kilo doesn't charge a fee on top of the upstream inference cost, so for Kilo
-      // prefer the upstream cost (the user's true spend). For the OpenRouter provider
-      // itself, the regular `cost` field is what the user is billed — except when the
-      // request routes through a BYOK provider key: then OpenRouter bills the account
-      // $0 or only its routing fee, and the user's own key is billed the upstream
-      // inference cost. True spend is the sum. A non-BYOK response always bills at
-      // least the upstream cost, so summing only when upstream exceeds the billed
-      // amount never changes non-BYOK sessions.
-      if (isKilo && upstream !== undefined) return upstream
+      // The regular `cost` field is what the user is billed — except when the request
+      // routes through a BYOK provider key: then OpenRouter bills the account $0 or only
+      // its routing fee, and the user's own key is billed the upstream inference cost.
+      // True spend is the sum. A non-BYOK response always bills at least the upstream
+      // cost, so summing only when upstream exceeds the billed amount never changes
+      // non-BYOK sessions.
       if (upstream !== undefined && upstream > (regular ?? -Infinity)) return upstream + (regular ?? 0)
       if (regular !== undefined) return regular
     }
 
-    // 2. Anthropic Messages or OpenAI Responses via OpenRouter. The Kilo Gateway wrapper
-    //    restores the verbatim usage payload under the AI SDK's raw usage escape hatch.
-    //    Kilo doesn't charge end users a per-request fee, so only upstream cost is relevant.
+    // 2. Raw AI SDK usage that reports an upstream inference cost.
     const usage = input.usage?.providerMetadata
     const aiSdk = usage?.["aiSdk"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
     const upstream = num(aiSdk?.upstream_inference_cost)
     if (upstream !== undefined) return upstream
 
-    // 3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway. `cost` is the
-    //    gateway fee that Kilo would pass through, but Kilo doesn't charge end users a
-    //    per-request fee, so always use `marketCost` (the upstream provider's price).
-    //    Values are emitted as strings on the wire.
+    // 3. Vercel AI Gateway. Values are emitted as strings on the wire.
     const gateway = input.metadata?.["gateway"] as { marketCost?: string | number } | undefined
     const marketCost = num(gateway?.marketCost)
     if (marketCost !== undefined) return marketCost
