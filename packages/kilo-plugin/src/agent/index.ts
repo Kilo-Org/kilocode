@@ -11,6 +11,7 @@ import { Agent } from "@opencode/schema/agent"
 import type { Location } from "@opencode/schema/location"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { KiloOrganizationModes } from "../gateway/modes"
 import { PlanFile } from "../plan/plan-file"
 import { Effect, Option, Stream } from "effect"
@@ -394,7 +395,7 @@ function guards(global: Global.Interface, location: Location.Info) {
   const data = path.join(global.data, "plans", "*")
   const stored = [
     path.join(path.relative(location.directory, planDirectory) || ".", "*.md"),
-    path.join(".kilo2", "plans", "*.md"),
+    path.join(KiloConfigFiles.directories[0], "plans", "*.md"),
     path.join("plans", "*.md"),
     path.join(".plans", "*.md"),
     path.join(planDirectory, "*.md"),
