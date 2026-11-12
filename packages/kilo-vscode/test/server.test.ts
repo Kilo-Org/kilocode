@@ -244,9 +244,13 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
     env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
   })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
-  const info = await api
-    .rpc(KiloHandshakeRpc.Definition)
-    .get({}, { location: { directory: path.join(root, "workspace") } })
+  const options = { location: { directory: path.join(root, "workspace") } }
+  // The server no longer waits for a Location's plugins in rpc.call, so this one-shot client waits for the Location's
+  // plugins to register before it calls their RPCs, the way the real extension client does.
+  for (const deadline = performance.now() + 10_000; performance.now() < deadline; await Bun.sleep(25)) {
+    if ((await api.plugin.list(options)).data.length > 0) break
+  }
+  const info = await api.rpc(KiloHandshakeRpc.Definition).get({}, options)
   expect(info.product).toBe("kilo")
   // Without a location, the server creates the session in its own working directory.
   const session = await api.session.create({})
