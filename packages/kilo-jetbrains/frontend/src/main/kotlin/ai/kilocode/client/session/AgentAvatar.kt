@@ -136,11 +136,11 @@ internal object AgentAvatar {
         return Frame(identity.cells, color ?: identity.color, frame = null)
     }
 
-    /** Animated glyph for [id], used while the subagent is actively running. */
-    fun running(id: String, color: Int? = null): Icon {
+    /** Animated glyph for [id]; an optional [palette] replaces only the running colors. */
+    fun running(id: String, color: Int? = null, palette: ((Float) -> Color)? = null): Icon {
         val identity = AgentAvatarIdentity.identity(id)
         val resolved = color ?: identity.color
-        return AnimatedIcon(DELAY, *Array(FRAMES) { Frame(identity.cells, resolved, it) })
+        return AnimatedIcon(DELAY, *Array(FRAMES) { Frame(identity.cells, resolved, it, palette) })
     }
 
     /** Ease-in-out 0..1..0 wave, matching the web client's CSS `ease-in-out` opacity pulses. */
@@ -159,6 +159,7 @@ internal object AgentAvatar {
         private val cells: Set<Int>,
         private val color: Int?,
         private val frame: Int?,
+        private val palette: ((Float) -> Color)? = null,
     ) : Icon {
         override fun getIconWidth() = JBUI.scale(16)
 
@@ -179,7 +180,7 @@ internal object AgentAvatar {
                         frame == null -> STATIC_UNLIT_ALPHA
                         else -> UNLIT_LO + (UNLIT_HI - UNLIT_LO) * ease(frame.toFloat() / FRAMES + phase(cell))
                     }
-                    g2.color = ColorUtil.withAlpha(base, alpha)
+                    g2.color = ColorUtil.withAlpha(palette?.invoke(alpha.toFloat()) ?: base, alpha)
                     val cx = ((cell % 5) * PITCH + RADIUS) * scale
                     val cy = ((cell / 5) * PITCH + RADIUS) * scale
                     g2.fill(Ellipse2D.Float(cx - diameter / 2f, cy - diameter / 2f, diameter, diameter))

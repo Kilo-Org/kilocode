@@ -20,7 +20,7 @@ class RevertProgress(onCancel: () -> Unit) : JPanel(), SessionEditorStyleTarget 
     init {
         isOpaque = false
         add(Stack.horizontal(UiStyle.Gap.sm())
-            .next(JBLabel(SpinnerIcon.icon))
+            .next(JBLabel(SpinnerIcon.branded))
             .next(label)
             .next(cancel))
         applyStyle(style)

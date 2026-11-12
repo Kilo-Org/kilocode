@@ -313,6 +313,19 @@ object UiStyle {
 
     /** Theme-aware colors and color math used by multiple UI surfaces. */
     object Colors {
+        object Brand {
+            private const val YELLOW = 0xFFDD00
+            private const val LIGHT = 0.35f
+            private const val PALE = 0.65f
+
+            /** Kilo's logo yellow; only an explicit brand override may replace it. */
+            val primary: Color = JBColor.lazy { UIManager.getColor("Kilo.Brand.primary") ?: Color(YELLOW) }
+            val light: Color = JBColor.lazy { blend(primary, Color.WHITE, LIGHT) }
+            val pale: Color = JBColor.lazy { blend(primary, Color.WHITE, PALE) }
+
+            fun progress(amount: Float): Color = blend(light, pale, amount)
+        }
+
         /** Stable palette order and theme-aware defaults for section accents and color actions. */
         @Suppress("MagicNumber")
         val sections: Map<String, Color> = linkedMapOf(
