@@ -11,6 +11,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
@@ -18,6 +19,8 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.ListPopup
+import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import javax.swing.JComponent
@@ -51,16 +54,23 @@ class AgentManagerAddAction : ActionGroup(
     @RequiresEdt
     override fun actionPerformed(e: AnActionEvent) {
         val panel = e.getData(SidePanelKeys.WORKTREE_PANEL) ?: return
+        popup(e.dataContext).showUnderneathOf(e.inputEvent?.component ?: panel.component)
+    }
+
+    @RequiresEdt
+    internal fun popup(context: DataContext): ListPopup {
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null,
             this,
-            e.dataContext,
+            context,
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
         )
-        popup.setAdText(KiloBundle.message("agentManager.add.hint"), SwingConstants.LEFT)
+        // Plain advertising text is wrapped to the menu width before popup sizing.
+        popup.setAdText(HtmlChunk.text(KiloBundle.message("agentManager.add.hint")).wrapWith("html").toString(),
+            SwingConstants.LEFT)
         popup.setMinimumSize(JBUI.size(360, 1))
-        popup.showUnderneathOf(e.inputEvent?.component ?: panel.component)
+        return popup
     }
 
     @RequiresEdt
