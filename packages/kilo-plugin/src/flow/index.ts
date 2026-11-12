@@ -425,6 +425,7 @@ export function create(
       flowID: configured.id,
       projectID: session.projectID,
       name: configured.name,
+      worktree: configured.execution.worktree,
     })
     yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
     return managed(configured, schedule)
