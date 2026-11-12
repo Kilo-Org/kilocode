@@ -194,9 +194,11 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
         const done = finished.get(child.id)
         if (info?.status !== "running" && item?.status !== "running") {
           if (!done) {
-            // A completion arrives with a parent run, so a child that has none may still get one while the parent
-            // works or has queued work. Remember it settled only once the parent is idle and its inbox is empty; every
-            // later list then skips the transcript scan for it.
+            // A background child keeps its row in `jobs.backgroundJobs` until the parent receives its completion, so a
+            // row proves a completion may still land and the child must stay adoptable. Without a row, a completion can
+            // also still be queued or being written by a parent run, so settle the child only once the parent is idle
+            // with an empty inbox. Every later list then skips the transcript scan for a foreground child.
+            if (item) return
             const active = yield* input.sessions.active
             const queued = yield* input.sessions.inbox(parent).pipe(Effect.orElseSucceed((): readonly unknown[] => []))
             if (active.has(parent) || queued.length > 0) return
