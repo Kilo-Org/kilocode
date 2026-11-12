@@ -44,6 +44,7 @@ import { KiloSessionDrain } from "./session-drain"
 import { KiloSubagentBackgroundPlugin } from "./subagent-background"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
+import { KiloPagesPlugin } from "./pages"
 import { KiloSandbox } from "./sandbox"
 import { KiloBoard } from "./board"
 import { KiloSoulPlugin } from "./soul"
@@ -107,6 +108,8 @@ export const KiloPlugins = [
   KiloRecallPlugin,
   // v1 enabled codebase indexing through a built-in plugin entry. kilo_port(indexing:2e5dfe2574c6)
   KiloIndexingPlugin,
+  // The remote `pages` MCP server, authenticated with the Kilo sign-in. The host composes the transport wrapper (rung 2).
+  KiloPagesPlugin,
   // The Kilo review command replaces the built-in `review`. kilo_port(review:efc710228c1f)
   KiloReview.Plugin,
   KiloQuestionPlugin.Plugin,

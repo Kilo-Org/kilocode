@@ -176,6 +176,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       return emitCatalog(status).pipe(Effect.catch(() => Effect.void))
     })
 
+    // The catalog has settled for the current account: the Gateway published it, so `KiloGatewayAccounts.get` is stable.
+    const settled = publishCatalog.pipe(Effect.andThen(Effect.sync(() => KiloGatewayAccounts.changed(ctx.location.directory))))
+
     const getProjectID = Effect.gen(function* () {
       if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
       const resolved = yield* KiloProject.resolve(ctx.location.directory)
@@ -590,7 +593,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               yield* loadCatalog(targetEpoch, attempt + 1)
               if (targetEpoch !== epoch) return
               yield* ctx.provider.reload()
-              yield* publishCatalog
+              yield* settled
             }),
           ),
         ),
@@ -638,7 +641,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         loadCatalog(targetEpoch, 0).pipe(
           Effect.andThen(
             Effect.suspend(() =>
-              targetEpoch === epoch ? ctx.provider.reload().pipe(Effect.andThen(publishCatalog)) : Effect.void,
+              targetEpoch === epoch ? ctx.provider.reload().pipe(Effect.andThen(settled)) : Effect.void,
             ),
           ),
         ),
@@ -1301,7 +1304,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     // The first publish announces the reason of a new plugin instance, for example after a location reload, so
     // clients of the previous instance read it again.
     emitCatalog = (status) => registration.events.emit("catalog", status)
-    yield* publishCatalog
+    yield* settled
 
     yield* ctx.event.subscribe().pipe(
       Stream.filter(
