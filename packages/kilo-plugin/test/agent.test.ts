@@ -369,7 +369,7 @@ describe("KiloAgentPlugin", () => {
       expect(effect("kilo.open_plan", "*")).toBe("allow")
       const code = yield* permissions("code")
       expect(Permission.evaluate("kilo.plan_exit", "*", code).effect).toBe("deny")
-      expect(Permission.evaluate("kilo.open_plan", "*", code).effect).toBe("deny")
+      expect(Permission.evaluate("kilo.open_plan", "*", code).effect).toBe("allow")
       expect(effect("shell", "git diff")).toBe("allow")
       expect(effect("shell", "npm install")).toBe("deny")
       expect(effect("subagent", "explore")).toBe("allow")

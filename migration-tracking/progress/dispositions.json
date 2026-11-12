@@ -2049,14 +2049,14 @@
   "module:packages/opencode/src/kilocode/tool/open-plan.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/plan/plan.ts",
-    "note": "openPlan: the open_plan tool, registered for the VS Code client, metadata { plan, open: true }.",
-    "by": "plan-handoff"
+    "note": "openPlan: the open_plan tool, registered for the VS Code client; writable agents open it inside Code Mode and read-only agents get it directly. Metadata is { path, open: true }.",
+    "by": "add-markdown-plan-tooling"
   },
   "module:packages/opencode/test/kilocode/tool/open-plan.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/test/open-plan.test.ts",
-    "note": "open_plan metadata, plan_exit result and the not-found guidance.",
-    "by": "plan-handoff"
+    "note": "open_plan metadata, plan_exit result and the not-found guidance; Code Mode execution is covered in open-plan-codemode.test.ts.",
+    "by": "add-markdown-plan-tooling"
   },
   "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts": {
     "state": "ported",

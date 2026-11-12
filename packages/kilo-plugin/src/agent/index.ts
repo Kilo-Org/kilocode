@@ -31,7 +31,7 @@ const code = Agent.ID.make("code")
 const explore = Agent.ID.make("explore")
 const general = Agent.ID.make("general")
 const plan = Agent.ID.make("plan")
-const planTools = [rule("kilo.plan_exit", "*", "deny"), rule("kilo.open_plan", "*", "deny")]
+const planTools = [rule("kilo.plan_exit", "*", "deny")]
 // Kilo Swarm coordination stays open to the read-only agents; the board plugin registers the tools only when enabled.
 const board = ["board_read", "board_post"]
 
@@ -181,7 +181,8 @@ export const Plugin = define({
       editor.update(code, (item) => {
         if (source) Object.assign(item, structuredClone(source))
         item.name = Agent.Name.make("Code")
-        // Only the Plan agent runs the Kilo plan handoff; other agents must not expose the plan tools.
+        // Only the Plan agent runs the Kilo plan handoff; other agents must not expose plan_exit. open_plan is a
+        // read-only document action and stays available to them, inside Code Mode where it can execute.
         item.permissions.push(...rules("shell", shell), ...planTools)
       })
       // kilo_port(unattributed:agent:6f9571fe6129)
