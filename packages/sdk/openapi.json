@@ -32011,6 +32011,10 @@
           "summary": {
             "type": "boolean"
           },
+          "estimate": {
+            "type": "integer",
+            "minimum": 0
+          },
           "cost": {
             "type": "number"
           },
@@ -32052,6 +32056,10 @@
           },
           "finish": {
             "type": "string"
+          },
+          "contextOverhead": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
