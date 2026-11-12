@@ -1,5 +1,6 @@
 // A model picker for settings: the shared ModelSelector over the v2 model catalog, plus a variant picker when the
 // selected model has variants. `clearable` adds a clear control that calls `onChange` with undefined.
+import type { ModelInfo } from "@opencode/client"
 import { Component, Show, createMemo } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../context/language"
@@ -23,6 +24,8 @@ export interface ModelPickerProps {
   showVariants?: boolean
   preserveVariantOnReselect?: boolean
   showUnavailableVariant?: boolean
+  /** The catalog to pick from. Defaults to the location chat catalog, which excludes image models. */
+  models?: () => ModelInfo[] | undefined
   modelLabel?: string
   variantLabel?: string
   clearButtonLabel?: string
@@ -33,7 +36,8 @@ export interface ModelPickerProps {
 const ModelPicker: Component<ModelPickerProps> = (props) => {
   const v2 = useV2()
   const language = useLanguage()
-  const models = () => v2.data.location.model.list()
+  // A supplied catalog is authoritative: while it loads (undefined), the picker must not fall back to chat models.
+  const models = () => (props.models ? props.models() : v2.data.location.model.list())
   const providers = () => v2.data.location.provider.list()
 
   const selected = createMemo(() =>

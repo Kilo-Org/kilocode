@@ -24389,6 +24389,10 @@
             "items": {
               "$ref": "#/components/schemas/FileDiff.Info"
             }
+          },
+          "workspace": {
+            "type": "string",
+            "enum": ["restored", "snapshots-disabled", "unavailable", "not-a-git-repo"]
           }
         },
         "required": ["messageID"],
