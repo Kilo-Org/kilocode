@@ -49,7 +49,7 @@ test("plan_exit records the saved plan with the generated name", async () => {
 
 test("open_plan asks the client to open the plan once", async () => {
   const result = await run((space, store) => openPlan(ctx(space), store, space.data).execute({}, context))
-  expect(result.metadata).toEqual({ plan: ".kilo2/plans/1000-dark-mode-plan.md", open: true })
+  expect(result.metadata).toEqual({ path: ".kilo2/plans/1000-dark-mode-plan.md", open: true })
 })
 
 test("plan_exit fails with guidance when no plan file was written", async () => {

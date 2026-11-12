@@ -1,5 +1,8 @@
-// Opens the plan file of a completed `open_plan` tool call in the editor. The completion event carries the tool id
-// and metadata but not the tool name, so the name is recorded from the start event.
+// Opens the plan file of a completed `open_plan` call in the editor. A Code Mode call surfaces the nested
+// open_plan request on its `execute` completion instead. The completion event carries the tool id and metadata but
+// not the tool name, so the name is recorded from the start event.
+const OPEN_TOOLS = new Set(["open_plan", "execute"])
+
 export type PlanOpen = {
   id: string
   path: string
@@ -29,13 +32,14 @@ export function createPlanOpener(active: () => string | undefined, open: (plan: 
 
   return {
     started(sessionID: string, toolID: string, name: string) {
-      if (name === "open_plan") plans.add(id(sessionID, toolID))
+      if (OPEN_TOOLS.has(name)) plans.add(id(sessionID, toolID))
     },
     completed(sessionID: string, toolID: string, metadata?: Record<string, unknown>) {
       const key = id(sessionID, toolID)
       if (!plans.delete(key)) return
       if (metadata?.open !== true) return
-      const path = metadata.plan
+      // `plan` is the earlier metadata key; keep reading it so a session started before the rename still opens.
+      const path = metadata.path ?? metadata.plan
       if (typeof path !== "string" || !path) return
       const plan = { id: toolID, path, sessionID }
       if (opened.has(key)) return

@@ -52,17 +52,20 @@ export function planExit(ctx: Context, store: SessionStore.Interface, data: stri
 export function openPlan(ctx: Context, store: SessionStore.Interface, data: string) {
   return {
     name: "open_plan",
-    options: { codemode: false, permission: "kilo.open_plan" },
+    // Code Mode keeps it off the native tool list for agents that can execute, while read-only agents
+    // (where Code Mode is disabled) still get it as a direct tool.
+    options: { permission: "kilo.open_plan", pinned: true },
     description:
-      "Open the saved plan in the client document viewer so the user can review it. Call this after finalizing the plan and before plan_exit.",
+      "Open a saved plan or Markdown document in the document viewer for review.\nCall this after saving a plan, or when the user asks to open a plan file.",
     input: OpenParameters,
     output: Schema.String,
     execute: (params: Input, context) =>
       Effect.gen(function* () {
         yield* assert(ctx, "kilo.open_plan", context)
-        const plan = yield* find(ctx, store, data, params, context, "open_plan")
-        // The client opens a completed part with `open: true` once, in the session it belongs to.
-        return { output: `Opened plan at ${plan} for review.`, metadata: { plan, open: true } }
+        const path = yield* find(ctx, store, data, params, context, "open_plan")
+        // The client opens a completed part with `open: true` once, in the session it belongs to. Code Mode
+        // forwards the same metadata from the nested call to its `execute` result.
+        return { output: `Opened plan at ${path} for review.`, metadata: { path, open: true } }
       }),
   } satisfies Tool.Info<typeof OpenParameters, typeof Schema.String>
 }
