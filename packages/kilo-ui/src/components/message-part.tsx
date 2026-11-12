@@ -32,6 +32,7 @@ import { Accordion } from "./accordion"
 import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
 import { Card } from "./card"
+import { ChartTool } from "./chart"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
 import { DiffChanges } from "./diff-changes"
 import { ExecuteTool } from "./execute-tool"
@@ -913,7 +914,7 @@ function childToolInfo(
       return {
         icon: "console",
         title: i18n.t("ui.tool.shell"),
-        subtitle: string(input.description) || string(input.command) || undefined,
+        subtitle: shellCommandSummary(string(input.description), string(input.command)) || undefined,
       }
     case "edit":
       return {
@@ -944,6 +945,30 @@ function childToolInfo(
     default:
       return { icon: "mcp", title: tool }
   }
+}
+
+// A command usually starts with `cd <absolute worktree> &&`, which on its own identifies nothing in a
+// collapsed row. Prefer the model's description; otherwise drop that prefix and show the real command.
+function shellCommandSummary(description: string, command: string) {
+  const summary = description.trim()
+  if (summary) return summary
+  const line =
+    command
+      .trim()
+      .split("\n")
+      .find((text) => text.trim())
+      ?.trim() ?? ""
+  const stripped = stripWorkdirPrefixes(line)
+  return stripped || line
+}
+
+// Agents chain the prefix (`cd /a && cd packages/core && bun test`), so peel every one. A line that is only
+// the prefix keeps its text rather than leaving the row without a title.
+function stripWorkdirPrefixes(line: string) {
+  const prefix = /^cd\s+(?:'[^']*'|"[^"]*"|\S+)\s*(?:&&|;)\s*/
+  let rest = line
+  while (prefix.test(rest)) rest = rest.replace(prefix, "")
+  return rest.trim()
 }
 
 // A completed foreground child wraps its final text; a background start returns the model instruction instead.
@@ -1162,12 +1187,18 @@ ToolRegistry.register({
               <span data-slot="basic-tool-tool-title">
                 <TextShimmer text={i18n.t("ui.tool.shell")} active={busy(props.status)} />
               </span>
-              {/* The shell tool has no description input, so its first command line is the visible summary. */}
-              <Show when={string(props.input.command).trim().split("\n")[0]}>
-                {(command) => (
-                  <span data-component="shell-submessage">
+              {/* Prefer the model's description, then the copy stored with the result; a bare command can be
+                  just a `cd` prefix. `dir="auto"` keeps commands LTR and lets an RTL summary read correctly. */}
+              <Show
+                when={shellCommandSummary(
+                  string(props.input.description) || string(props.metadata.description),
+                  string(props.input.command),
+                )}
+              >
+                {(summary) => (
+                  <span data-component="shell-submessage" dir="auto">
                     <span data-slot="basic-tool-tool-subtitle">
-                      <span data-slot="shell-submessage-value">{command()}</span>
+                      <span data-slot="shell-submessage-value">{summary()}</span>
                     </span>
                   </span>
                 )}
@@ -1201,9 +1232,10 @@ function ToolFileAccordion(props: {
       multiple
       data-scope="apply-patch"
       style={{ "--sticky-accordion-offset": "37px" }}
-      defaultValue={[props.path || "tool-file"]}
+      defaultValue={["tool-file"]}
     >
-      <Accordion.Item value={props.path || "tool-file"}>
+      {/* Not keyed by path: it changes from the input path to the result path on completion, which would collapse the item. */}
+      <Accordion.Item value="tool-file">
         <StickyAccordionHeader>
           <Accordion.Trigger>
             <div data-slot="apply-patch-trigger-content">
@@ -1900,6 +1932,9 @@ ToolRegistry.register({
   },
 })
 
+// The chart tool result is a Chart.js config that its own card draws.
+ToolRegistry.register({ name: "chart", render: ChartTool })
+
 /** One control of a pending user message, for example to queue, steer or delete it. */
 export type UserMessagePendingAction = {
   key: string
@@ -1983,6 +2018,9 @@ export function UserMessageDisplay(props: {
   bubbleHeader?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
+  /** Shows a revert action beside Copy, for surfaces that can rewind the session to this message. */
+  onRevert?: () => void
+  revertDisabled?: boolean
   /** Dims the message and shows its delivery status and controls in place of the time, fork and copy actions. */
   pending?: UserMessagePending
   /** Opens an image attachment outside the webview. Return false to keep the in-page preview for that image. */
@@ -2157,6 +2195,23 @@ export function UserMessageDisplay(props: {
                   props.onFork?.()
                 }}
                 aria-label={i18n.t("ui.message.forkMessage")}
+              />
+            </Tooltip>
+          </Show>
+          <Show when={props.onRevert && !props.pending}>
+            <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
+              <IconButton
+                data-slot="user-message-revert"
+                icon="arrow-left"
+                size="normal"
+                variant="ghost"
+                disabled={props.revertDisabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  props.onRevert?.()
+                }}
+                aria-label={i18n.t("ui.message.revertMessage")}
               />
             </Tooltip>
           </Show>

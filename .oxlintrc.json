@@ -190,17 +190,13 @@
       "files": ["packages/kilo-vscode/webview-ui/src/v2/form.ts"],
       "rules": { "complexity": ["error", 44] }
     },
-    // kilocode_change start - the autocomplete port keeps the v1 branching unchanged, so these two files are capped
-    // at the maximum they already had. New code in them must stay within the 20 limit above.
+    // kilocode_change start - the autocomplete port keeps the v1 branching unchanged, so this file is capped
+    // at the maximum it already had. New code in it must stay within the 20 limit above.
     {
       "files": [
         "packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts"
       ],
       "rules": { "complexity": ["error", 28] }
-    },
-    {
-      "files": ["packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/index.ts"],
-      "rules": { "complexity": ["error", 21] }
     },
     // kilocode_change end
     {

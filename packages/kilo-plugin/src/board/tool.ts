@@ -41,8 +41,9 @@ const Post = Schema.Struct({
 export function makeTools(runtime: Runtime) {
   const read: Tool.Info<typeof Read> = {
     name: "board_read",
-    // Native calls, so clients render board posts and reads and detect board use by tool name.
-    options: { codemode: false },
+    // Direct calls keep the client rendering and board detection; the same tool is also callable as
+    // `tools.board_read` inside `execute`, because a Code Mode program cannot reach a direct tool.
+    options: { direct: true },
     description: READ_DESCRIPTION.trim(),
     input: Read,
     execute: (params, context) =>
@@ -81,7 +82,7 @@ export function makeTools(runtime: Runtime) {
 
   const post: Tool.Info<typeof Post> = {
     name: "board_post",
-    options: { codemode: false },
+    options: { direct: true },
     description: POST_DESCRIPTION.trim(),
     input: Post,
     execute: (params, context) =>

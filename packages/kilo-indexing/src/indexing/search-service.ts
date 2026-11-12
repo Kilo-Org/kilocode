@@ -38,7 +38,12 @@ export class CodeIndexSearchService {
     const maxResults = this.configManager.currentSearchMaxResults
 
     const currentState = this.stateManager.getCurrentStatus().systemStatus
-    if (currentState !== "Indexed" && currentState !== "Indexing") {
+    // A finished scan can report Error only because the file watcher is unavailable; its index is still searchable.
+    const searchable =
+      currentState === "Indexed" ||
+      currentState === "Indexing" ||
+      (currentState === "Error" && this.stateManager.searchable)
+    if (!searchable) {
       throw new Error(`Code index is not ready for search. Current state: ${currentState}`)
     }
 

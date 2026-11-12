@@ -131,4 +131,8 @@ export const dict = {
   "ui.message.feedback.helpful": "도움이 됐어요",
   "ui.message.feedback.notHelpful": "도움이 안 됐어요",
   "ui.message.feedback.clearRating": "평가 지우기",
+  // Chart tool card
+  "ui.tool.chart": "차트",
+  "ui.tool.chart.invalid": "잘못된 차트 구성입니다 — type과 data가 필요합니다",
+  "ui.tool.chart.failed": "차트를 렌더링하지 못했습니다",
 }

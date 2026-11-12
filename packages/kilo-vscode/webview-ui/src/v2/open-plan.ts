@@ -1,5 +1,8 @@
-// Opens the plan file of a completed `open_plan` tool call in the editor. The completion event carries the tool id
-// and metadata but not the tool name, so the name is recorded from the start event.
+// Opens the plan file of a completed `open_plan` call in the editor. A Code Mode call surfaces the nested
+// open_plan request on its `execute` completion instead. The completion event carries the tool id and metadata but
+// not the tool name, so the name is recorded from the start event.
+const OPEN_TOOLS = new Set(["open_plan", "execute"])
+
 export type PlanOpen = {
   id: string
   path: string
@@ -29,13 +32,17 @@ export function createPlanOpener(active: () => string | undefined, open: (plan: 
 
   return {
     started(sessionID: string, toolID: string, name: string) {
-      if (name === "open_plan") plans.add(id(sessionID, toolID))
+      if (OPEN_TOOLS.has(name)) plans.add(id(sessionID, toolID))
     },
     completed(sessionID: string, toolID: string, metadata?: Record<string, unknown>) {
       const key = id(sessionID, toolID)
       if (!plans.delete(key)) return
-      if (metadata?.open !== true) return
-      const path = metadata.plan
+      // `plan` is the earlier metadata key; keep reading it so a session started before the rename still opens.
+      // A Code Mode call has no open metadata of its own: its nested tool row carries the path.
+      const path =
+        metadata?.open === true
+          ? (metadata.path ?? metadata.plan)
+          : executeOpenPath(metadata?.toolCalls)
       if (typeof path !== "string" || !path) return
       const plan = { id: toolID, path, sessionID }
       if (opened.has(key)) return
@@ -60,4 +67,19 @@ export function createPlanOpener(active: () => string | undefined, open: (plan: 
       for (const plan of pending.values()) if (plan.sessionID === sessionID) schedule(plan)
     },
   }
+}
+
+/** The path of the last completed `open_plan` call inside a Code Mode `execute` result. */
+function executeOpenPath(value: unknown) {
+  if (!Array.isArray(value)) return undefined
+  for (const call of value.toReversed()) {
+    if (!record(call) || call.tool !== "open_plan" || call.status !== "completed") continue
+    const input = record(call.input) ? call.input : {}
+    if (typeof input.path === "string" && input.path) return input.path
+  }
+  return undefined
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
 }

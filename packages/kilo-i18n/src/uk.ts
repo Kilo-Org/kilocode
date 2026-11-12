@@ -135,4 +135,8 @@ export const dict = {
   "ui.message.feedback.helpful": "Це було корисно",
   "ui.message.feedback.notHelpful": "Це не було корисно",
   "ui.message.feedback.clearRating": "Очистити оцінку",
+  // Chart tool card
+  "ui.tool.chart": "Діаграма",
+  "ui.tool.chart.invalid": "Недійсна конфігурація діаграми — мають бути вказані тип і дані",
+  "ui.tool.chart.failed": "Не вдалося відобразити діаграму",
 }

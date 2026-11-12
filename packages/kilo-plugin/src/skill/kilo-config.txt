@@ -221,7 +221,7 @@ kilo2 service restart
 
 `kilo2 service start|stop|get|set|unset` manage it further (`kilo2 daemon` is an alias). `kilo2 run "message"` runs one prompt non-interactively, `kilo2 mini` opens the minimal interface, and `kilo2 session list|export|import|delete` manages sessions.
 
-In Code Mode, call the built-in `tools.opencode.*` namespace inside `execute` first; find its tools with `search({ namespace: "opencode" })`. For anything it does not cover, use `kilo2 api`, which discovers and authenticates against the same service as the TUI. It takes an HTTP method and path or an OpenAPI operation ID, `--data`/`-d` for a JSON body and `--header`/`-H` for headers:
+In Code Mode, call the built-in `tools.kilo.*` namespace inside `execute` first; find its tools with `search({ namespace: "kilo" })`. For anything it does not cover, use `kilo2 api`, which discovers and authenticates against the same service as the TUI. It takes an HTTP method and path or an OpenAPI operation ID, `--data`/`-d` for a JSON body and `--header`/`-H` for headers:
 
 ```sh
 kilo2 api get /api/info

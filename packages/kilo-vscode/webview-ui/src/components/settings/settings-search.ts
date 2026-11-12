@@ -135,7 +135,6 @@ const EXCLUDED_KEYS = new Set([
   "settings.experimental.codeMode.title",
   "settings.experimental.continueOnDeny.title",
   "settings.experimental.globIncludeIgnored.title",
-  "settings.experimental.imageGeneration.title",
   "settings.experimental.imageGenerationModel.title",
   "settings.experimental.mcpTimeout.title",
   "settings.experimental.remote.title",

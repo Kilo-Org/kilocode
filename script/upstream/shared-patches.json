@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 125,
-    "markedLines": 2118,
-    "unmarkedLines": 326,
+    "files": 134,
+    "markedLines": 2326,
+    "unmarkedLines": 332,
     "deletedFiles": 0
   },
   "files": {
@@ -104,12 +104,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -165,17 +165,21 @@
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
     },
+    "packages/schema/src/session-revert.ts": {
+      "rung": 4,
+      "seam": "Optional `workspace` restoration outcome (`restored`, `snapshots-disabled`, `unavailable`, `not-a-git-repo`) on `Session.Revert` and `Session.RevertV1`, carried across `PersistedRevert`. `Session.Info.revert`, `SessionEvent.RevertEvent.Staged` and the `session` table encoder all validate against this struct, so no plugin or host override can attach the outcome without the schema stripping it. Upstream producers omit it, leaving upstream behavior and defaults unchanged."
+    },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
-      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport or OAuth registration, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+      "seam": "Generic MCP embedding hooks (`fetch`, OAuth client identity, client document, loopback callback, registration redirect and credential binding, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
-      "seam": "Apply the optional host `fetch` wrapper per transport attempt and the host `localCommand` rewrite to a local server command. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport or the spawn command; the host sets both through `Mcp.configured`. Omitting the hooks preserves upstream behavior."
+      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. Omitting the hook preserves upstream behavior."
     },
     "packages/core/src/mcp/connection.ts": {
       "rung": 3,
-      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` and `localCommand` hooks also reach connections the connection service and the pool open rather than only a direct client connect. No plugin hook reaches the MCP transport or spawn command; with `host` unset nothing changes."
+      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` hook also reaches connections the connection service and the pool open rather than only a direct client connect, and let the host `authFailure` predicate reclassify a remote connection failure as `needs_auth` while the server may sign in. No plugin hook reaches the MCP transport or connection status; with `host` unset nothing changes. The exact 15-line growth raises only the markedLines budget from 2118 to 2133; file, unmarked-line and deletion budgets are unchanged."
     },
     "packages/core/src/mcp/pool.ts": {
       "rung": 3,
@@ -183,15 +187,35 @@
     },
     "packages/core/src/mcp/index.ts": {
       "rung": 3,
-      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, command or OAuth identity; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
+      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, OAuth identity or auth-failure classification; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
     },
     "packages/core/src/mcp/oauth.ts": {
       "rung": 3,
-      "seam": "Use the optional host OAuth client identity for `client_name`, `client_uri` and the initialize challenge, and let the host name the CIMD document URL. No plugin hook reaches OAuth registration; the host supplies the values through `Mcp.configured`. Defaults stay `opencode` and the upstream document."
+      "seam": "Use the optional host OAuth policy: `client_name`, `client_uri` and the initialize challenge, the client ID metadata document and the loopback callback it lists, the redirect a non-interactive registration must record, and the client-information binding that keeps a configured client's secret with the authorization server that issued it. No plugin hook reaches OAuth registration; the host supplies the policy through `Mcp.configured({ host })`. With `host` unset, defaults stay upstream's own document, callback, redirect and static client."
     },
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
       "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool.ts": {
+      "rung": 3,
+      "seam": "A tool option `direct: true` keeps the tool on the provider's native tool list and in the Code Mode inventory, so a client-rendered tool is also callable from a Code Mode program. The registry's list split and its inventory are private to this service, and no plugin hook observes or changes them. Without the option the native and Code Mode sets are exactly upstream's."
+    },
+    "packages/core/src/codemode/tool.ts": {
+      "rung": 3,
+      "seam": "Mark a dual tool (see `packages/core/src/tool.ts`) in the Code Mode catalog. The catalog is derived from the registry next to the tool options, so a plugin cannot add the mark; unmarked tools keep their existing listing."
+    },
+    "packages/core/src/codemode/catalog.ts": {
+      "rung": 3,
+      "seam": "Carry the optional `direct` mark through the summarized catalog, list it as `[direct]`, and set a summary flag while a marked tool is shown. The summary is the model-facing contract the instructions render and a plugin cannot extend it. Without a marked tool the catalog text and summary are unchanged."
+    },
+    "packages/core/src/codemode/instructions.ts": {
+      "rung": 3,
+      "seam": "Qualify the Code Mode paragraph and the catalog heading while a marked tool is shown, because such a tool is also a normal call, and supersede the whole catalog when the marker first appears. The instructions are static text plus the rendered summary, so a plugin cannot qualify them, and a catalog without a marked tool renders exactly upstream's text."
+    },
+    "packages/core/src/tool/AGENTS.md": {
+      "rung": 3,
+      "seam": "Document the optional `direct` tool option next to `codemode` in the registration contract. The sentence continues the existing options description and changes no rule."
     },
     "packages/core/src/tool/runtime.ts": {
       "rung": 4,
@@ -201,9 +225,17 @@
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
     },
+    "packages/core/src/job/recovery.ts": {
+      "rung": 4,
+      "seam": "The shell recovery record carries the model's optional `description`, so a background command that outlives a server restart produces the same summary as the normal completion notice. The restart notice is built from this record in `session/execution/restart.ts`, and the record schema is upstream-owned. No plugin hook observes background recovery. The field is optional, so records written before it and every upstream default are unchanged."
+    },
+    "packages/core/src/session/execution/restart.ts": {
+      "rung": 4,
+      "seam": "Prefer the recovery record's optional `description` for the shell restart notice and fall back to the command. The notice is built inside the upstream restart path, which no plugin hook reaches. With the fallback, records written before the field existed read exactly as upstream does."
+    },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
-      "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add the optional `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. Both additions are optional: omitted input, every upstream default, and the rest of the result and metadata are unchanged."
     },
     "packages/core/src/tool/plugin/schedule.ts": {
       "rung": 4,
@@ -211,7 +243,7 @@
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+      "seam": "Test coverage for the marked live-output progress behavior and for the optional model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and stays absent when omitted. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
@@ -285,6 +317,10 @@
     "packages/tui/src/app.tsx": {
       "rung": 3,
       "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
+    },
+    "packages/tui/src/mini/runtime.lifecycle.ts": {
+      "rung": 4,
+      "seam": "Call the Kilo-owned `registerMiniParsers` before the mini renderer starts, so fenced code in mini highlights the languages the full TUI supports instead of only OpenTUI's bundled JavaScript, TypeScript, Markdown and Zig. The full TUI registers the same upstream parser config at module load in `tui/src/routes/session/index.tsx`; mini has no equivalent call, so a Kotlin fence renders as plain text. This is a defect fix in upstream's mini lifecycle. Rung 1 has no hook for the CLI frontend's parser registry, rung 2 cannot reach it from `packages/kilo-cli` because the parser config is a package-local module rather than an exported surface, and rung 3 would add a host knob on `MiniHost` for one call. The marked lines only import and call `tui/src/kilocode/mini-parsers.ts`; no Kilo value changes."
     },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
@@ -431,7 +467,7 @@
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
-      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream. A `session.revert.committed` event also cuts the cached transcript at the boundary message's position when it is loaded, instead of at the first message whose ID sorts at or after it: a queued prompt keeps its admission ID and is delivered after later steps, so the ID cut removed steps the server keeps (the projector deletes by sequence). It falls back to the ID cut when the boundary is not loaded. No lower rung: the event reducer is internal to the store and the VS Code and TUI transcripts both read this cache."
     },
     "packages/client/test/solid-eviction.test.ts": {
       "rung": 4,
@@ -452,7 +488,7 @@
     },
     "packages/schema/src/tool.ts": {
       "rung": 3,
-      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. Optional `direct` marks a Code Mode tool that also stays on the provider's native tool list, for a client that renders it by name. The tool registry schema is shared and closed to plugin extension. Both options are omitted by default, which keeps upstream behavior."
     },
     "packages/schema/src/session-instruction-paths.ts": {
       "rung": 4,

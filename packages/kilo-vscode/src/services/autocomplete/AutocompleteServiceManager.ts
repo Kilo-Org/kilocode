@@ -10,15 +10,13 @@ import {
   captureAutocompleteTelemetry,
 } from "./classic-auto-complete/AutocompleteTelemetry"
 import type { Connection } from "./connection"
-import { hasValidCredentials, fimModel as notebookModel } from "./fim"
+import { hasValidCredentials } from "./fim"
 import { AUTOCOMPLETE_SECTION, readAutocompleteSettings } from "./settings"
 import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
-export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector {
-  return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
+export function selector(): vscode.DocumentSelector {
+  return [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }]
 }
-
-export { notebookModel }
 
 export interface AutocompleteServiceSettings {
   enableAutoTrigger?: boolean
@@ -64,7 +62,6 @@ export class AutocompleteServiceManager {
   public readonly codeActionProvider: AutocompleteCodeActionProvider
   public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
-  private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
   /** The last time autocomplete asked for the server, so a stop does not trigger a start loop. */
   private lastBackendAttempt = 0
@@ -128,7 +125,7 @@ export class AutocompleteServiceManager {
       this.inlineCompletionProvider.resetBackoff()
     }
 
-    this.inlineCompletionProvider.setModel(notebookModel(this.settings.provider, this.settings.model).id)
+    this.inlineCompletionProvider.setModel(getAutocompleteModel(this.settings.provider, this.settings.model).id)
 
     if (this.settings?.enableAutoTrigger && !this.connection.connected()) this.restartBackend()
 
@@ -156,20 +153,13 @@ export class AutocompleteServiceManager {
     if (!shouldBeRegistered) {
       this.inlineCompletionProviderDisposable?.dispose()
       this.inlineCompletionProviderDisposable = null
-      this.inlineCompletionProviderKind = null
       return
     }
 
     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-      selector("classic"),
+      selector(),
       this.inlineCompletionProvider,
     )
-    this.inlineCompletionProviderKind = "classic"
-  }
-
-  /** Which provider is currently registered (`null` if none). */
-  public get currentMode(): "classic" | "next-edit" | null {
-    return this.inlineCompletionProviderKind
   }
 
   public async disable() {
@@ -319,7 +309,6 @@ export class AutocompleteServiceManager {
     if (this.inlineCompletionProviderDisposable) {
       this.inlineCompletionProviderDisposable.dispose()
       this.inlineCompletionProviderDisposable = null
-      this.inlineCompletionProviderKind = null
     }
 
     this.inlineCompletionProvider.dispose()

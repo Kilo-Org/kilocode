@@ -13,12 +13,15 @@ import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
+import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { Plugin } from "@opencode/core/plugin"
+import { Session } from "@opencode/core/session"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionStore } from "@opencode/core/session/store"
@@ -35,6 +38,7 @@ import { KiloApp } from "./app"
 import { KiloGatewayErrors } from "./gateway-errors"
 import { KiloPluginNpm } from "./plugin-npm"
 import { KiloGatewayModel } from "./gateway-model"
+import { KiloSessionRevert } from "./session-revert"
 import { KiloSmallModel } from "./small-model"
 import { SessionSync } from "./session-sync"
 import { SessionSyncOutput } from "./session-sync/tool-output"
@@ -156,15 +160,16 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
-  // MCP servers see the Kilo client identity, OAuth registration uses Kilo's product name and URI, and a
+  // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding, and a
   // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop.
   // kilo_port(mcp:18028d867142)
   Mcp.node.replace(
     Mcp.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
       host: {
-        oauth: { name: "Kilo", uri: "https://kilo.ai" },
+        oauth: McpClientMetadata.oauth,
         fetch: (base, endpoint) => KiloSseProbe.probe(base, endpoint),
+        authFailure,
       },
     }),
   ),
@@ -181,6 +186,7 @@ export const overrides: LayerNode.Replacements = [
   ),
   ModelResolver.node.replace(KiloGatewayModel.resolverNode),
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
+  Session.node.replace(KiloSessionRevert.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
   // A sandboxed tool call spawns, writes and sends HTTP requests inside its sandbox profile.

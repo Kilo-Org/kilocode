@@ -11,6 +11,7 @@ import { Agent } from "@opencode/schema/agent"
 import type { Location } from "@opencode/schema/location"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { KiloOrganizationModes } from "../gateway/modes"
 import { PlanFile } from "../plan/plan-file"
 import { Effect, Option, Stream } from "effect"
@@ -31,7 +32,7 @@ const code = Agent.ID.make("code")
 const explore = Agent.ID.make("explore")
 const general = Agent.ID.make("general")
 const plan = Agent.ID.make("plan")
-const planTools = [rule("kilo.plan_exit", "*", "deny"), rule("kilo.open_plan", "*", "deny")]
+const planTools = [rule("kilo.plan_exit", "*", "deny")]
 // Kilo Swarm coordination stays open to the read-only agents; the board plugin registers the tools only when enabled.
 const board = ["board_read", "board_post"]
 
@@ -181,7 +182,8 @@ export const Plugin = define({
       editor.update(code, (item) => {
         if (source) Object.assign(item, structuredClone(source))
         item.name = Agent.Name.make("Code")
-        // Only the Plan agent runs the Kilo plan handoff; other agents must not expose the plan tools.
+        // Only the Plan agent runs the Kilo plan handoff; other agents must not expose plan_exit. open_plan is a
+        // read-only document action and stays available to them, inside Code Mode where it can execute.
         item.permissions.push(...rules("shell", shell), ...planTools)
       })
       // kilo_port(unattributed:agent:6f9571fe6129)
@@ -394,7 +396,7 @@ function guards(global: Global.Interface, location: Location.Info) {
   const data = path.join(global.data, "plans", "*")
   const stored = [
     path.join(path.relative(location.directory, planDirectory) || ".", "*.md"),
-    path.join(".kilo2", "plans", "*.md"),
+    path.join(KiloConfigFiles.directories[0], "plans", "*.md"),
     path.join("plans", "*.md"),
     path.join(".plans", "*.md"),
     path.join(planDirectory, "*.md"),

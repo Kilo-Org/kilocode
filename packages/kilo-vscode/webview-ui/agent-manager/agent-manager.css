@@ -3783,6 +3783,14 @@ body.am-wt-dragging-active * {
   overflow-y: auto;
 }
 
+/* The container is sized by adjustHeight, as in v1. A content-sized textarea
+   grows past it while adjustHeight measures, which resets its scroll to the top
+   and leaves the caret below the visible text. */
+.am-nv-dialog .am-prompt-input:not(:placeholder-shown) {
+  field-sizing: fixed;
+  height: 100%;
+}
+
 .am-nv-config-label {
   font-size: var(--kilo-font-size-11);
   font-weight: 600;

@@ -27,7 +27,7 @@ import { tempGlobalLayer } from "../../core/test/fixture/global"
 import { offlineModels } from "../../core/test/fixture/models"
 import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
 import { testEffect } from "../../core/test/lib/effect"
-import { executeTool, toolIdentity } from "../../core/test/lib/tool"
+import { executeTool, toolDefinitions, toolIdentity } from "../../core/test/lib/tool"
 import { KiloBackgroundJobs } from "../src/background-jobs"
 import { KiloSubagentBackgroundPlugin } from "../src/subagent-background"
 
@@ -106,7 +106,7 @@ const setup = Effect.gen(function* () {
       Effect.flatMap((jobs) => (check(jobs) ? Effect.succeed(jobs) : Effect.fail("pending"))),
       Effect.retry({ times: 400, schedule: Schedule.spaced("10 millis") }),
     )
-  return { parent, rpc, run, list, until }
+  return { parent, registry, rpc, run, list, until }
 })
 
 describe("kilocode.background-jobs", () => {
@@ -188,6 +188,18 @@ describe("kilocode.background-jobs", () => {
       const env = yield* setup
       const llm = yield* TestLLM.Test
       const gate = yield* llm.gate()
+      // What the model reads: the definition carries the background default and asks for it.
+      const subagent = (yield* toolDefinitions(env.registry)).find((tool) => tool.name === "subagent")
+      expect(subagent?.description).toContain("Runs in the background by default")
+      expect(subagent?.description).not.toContain("Use background only")
+      expect(subagent?.inputSchema).toMatchObject({
+        properties: {
+          background: {
+            description: expect.stringContaining("Set false only when you need the answer before you can continue."),
+          },
+        },
+        required: expect.not.arrayContaining(["background"]),
+      })
       const result = yield* env.run({ agent: "reviewer", description: "Defaulted review", prompt: "Review it" })
       expect(result.output?.status).toBe("running")
       yield* gate.started

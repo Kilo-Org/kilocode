@@ -2,16 +2,6 @@ import { beforeEach, describe, expect, test } from "bun:test"
 import { KiloAutocomplete } from "../src/index.js"
 
 const server = "https://kilo.example.test"
-const context = {
-  currentFilePath: "src/index.ts",
-  currentFileContent: "export const value = 1\n",
-  cursorLine: 0,
-  cursorCharacter: 0,
-  editableRegionStartLine: 0,
-  editableRegionEndLine: 0,
-  recentlyViewedSnippets: [],
-  editDiffHistory: [],
-}
 
 type Call = { url: string; init: RequestInit }
 
@@ -75,16 +65,15 @@ describe("FIM request", () => {
   test("passes the requested token limit and temperature through", async () => {
     const http = stub(() => sse({ choices: [{ text: "ok" }] }))
     await KiloAutocomplete.requestFim({
-      target: KiloAutocomplete.resolveFimTarget("inception", "mercury-edit-2", server),
-      key: "inception-key",
+      target: KiloAutocomplete.resolveFimTarget("kilo", "mistralai/codestral-2508", server),
+      key: "gateway-token",
       prefix: "a",
       suffix: "b",
       maxTokens: 64,
       temperature: 0,
       fetch: http.fetch,
     })
-    expect(http.calls[0]?.url).toBe("https://api.inceptionlabs.ai/v1/fim/completions")
-    expect(body(http.calls[0])).toMatchObject({ model: "mercury-edit-2", max_tokens: 64, temperature: 0 })
+    expect(body(http.calls[0])).toMatchObject({ model: "mistralai/codestral-2508", max_tokens: 64, temperature: 0 })
   })
 
   test("tries the Codestral endpoint when the Mistral endpoint rejects the key", async () => {
@@ -154,88 +143,5 @@ describe("FIM stream parsing", () => {
     expect(
       KiloAutocomplete.parseFimStream(JSON.stringify({ choices: [{ text: "abc" }], usage: { prompt_tokens: 3, completion_tokens: 1 } })),
     ).toEqual({ text: "abc", cost: 0, inputTokens: 3, outputTokens: 1 })
-  })
-})
-
-describe("Next Edit request", () => {
-  test("sends one user message with the Mercury prompt and returns the fenced body and usage", async () => {
-    const http = stub(() =>
-      Response.json({
-        choices: [{ message: { content: "```typescript\nexport const value = 2\n```" } }],
-        usage: { prompt_tokens: 12, completion_tokens: 6 },
-      }),
-    )
-    const result = await KiloAutocomplete.requestEdit({
-      target: KiloAutocomplete.resolveEditTarget("kilo", "inception/mercury-next-edit", server),
-      key: "gateway-token",
-      headers: { "X-KILOCODE-ORGANIZATIONID": "org-1", "X-KILOCODE-FEATURE": "autocomplete" },
-      context,
-      fetch: http.fetch,
-    })
-    expect(result).toEqual({ content: "export const value = 2", usage: { prompt_tokens: 12, completion_tokens: 6 } })
-    expect(http.calls[0]?.url).toBe("https://kilo.example.test/api/gateway/edit/completions")
-    const headers = new Headers(http.calls[0]?.init.headers)
-    expect(headers.get("authorization")).toBe("Bearer gateway-token")
-    expect(headers.get("x-kilocode-organizationid")).toBe("org-1")
-    expect(headers.get("x-kilocode-feature")).toBe("autocomplete")
-    expect(body(http.calls[0])).toEqual({
-      model: "inception/mercury-edit-2",
-      max_tokens: 512,
-      messages: [{ role: "user", content: KiloAutocomplete.buildMercuryEditPrompt(context) }],
-    })
-  })
-
-  test("preserves direct Inception edits", async () => {
-    const http = stub(() => Response.json({ choices: [{ message: { content: "```\nx\n```" } }] }))
-    const result = await KiloAutocomplete.requestEdit({
-      target: KiloAutocomplete.resolveEditTarget("inception", "mercury-next-edit", server),
-      key: "inception-key",
-      context,
-      maxTokens: 128,
-      fetch: http.fetch,
-    })
-    expect(result).toEqual({ content: "x" })
-    expect(http.calls[0]?.url).toBe("https://api.inceptionlabs.ai/v1/edit/completions")
-    expect(new Headers(http.calls[0]?.init.headers).get("authorization")).toBe("Bearer inception-key")
-    expect(body(http.calls[0])).toMatchObject({ model: "mercury-edit-2", max_tokens: 128 })
-  })
-
-  test("passes upstream statuses through when the error body is unreadable", async () => {
-    const http = stub(
-      () =>
-        new Response(
-          new ReadableStream({
-            start(controller) {
-              controller.error(new Error("broken"))
-            },
-          }),
-          { status: 429 },
-        ),
-    )
-    expect(
-      await KiloAutocomplete.requestEdit({
-        target: KiloAutocomplete.resolveEditTarget("inception", "mercury-next-edit", server),
-        key: "k",
-        context,
-        fetch: http.fetch,
-      }).catch((err: unknown) => err),
-    ).toMatchObject({ status: 429, message: "Edit request failed: 429 <unreadable>" })
-  })
-
-  test("maps a timeout to 504 and a cancellation to 499", async () => {
-    const target = KiloAutocomplete.resolveEditTarget("inception", "mercury-next-edit", server)
-    const timeout = stub(() => Promise.reject(new DOMException("timed out", "TimeoutError")))
-    expect(await KiloAutocomplete.requestEdit({ target, key: "k", context, fetch: timeout.fetch }).catch((err: unknown) => err)).toMatchObject({
-      status: 504,
-      message: "Edit request timed out",
-    })
-    const abort = new AbortController()
-    abort.abort()
-    const aborted = stub((_url, init) => Promise.reject(init.signal?.reason))
-    expect(
-      await KiloAutocomplete.requestEdit({ target, key: "k", context, signal: abort.signal, fetch: aborted.fetch }).catch(
-        (err: unknown) => err,
-      ),
-    ).toMatchObject({ status: 499, message: "Edit request canceled" })
   })
 })

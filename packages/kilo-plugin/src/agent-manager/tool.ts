@@ -81,7 +81,7 @@ export function makeTools(runtime: Runtime) {
               output: JSON.stringify(
                 {
                   instructions:
-                    "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo2/agent-manager.json.",
+                    "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit agent-manager.json.",
                   ...result.overview,
                 },
                 null,
@@ -317,6 +317,7 @@ function select(
     ...(task.prompt != null ? { prompt: task.prompt } : {}),
     ...(task.name != null ? { name: task.name } : {}),
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
+    ...(task.baseBranch?.trim() ? { baseBranch: task.baseBranch.trim() } : {}),
     ...(task.agent?.trim() ? { agent: task.agent.trim() } : {}),
   }
   if (!task.model?.trim() && !task.variant?.trim()) {

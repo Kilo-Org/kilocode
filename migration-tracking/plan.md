@@ -47,13 +47,13 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 - [#15308](https://github.com/Kilo-Org/kilocode/issues/15308) Memory and indexing: the memory engine and tools, codebase indexing and `semantic_search`.
 - [#15309](https://github.com/Kilo-Org/kilocode/issues/15309) Sandbox: shell, MCP and PTY confinement with network relay on macOS and Linux.
 - [#15310](https://github.com/Kilo-Org/kilocode/issues/15310) Agent coordination and worktrees: background subagents, wakeups and cron, goals, the shared agent board, background processes, worktrees and the Agent Manager control plane.
-- [#15311](https://github.com/Kilo-Org/kilocode/issues/15311) Distribution, updater and signing: a signed `kilo2` that installs beside v1, updates and rolls back, and the release pipeline. Open: updater distribution identity.
+- [#15311](https://github.com/Kilo-Org/kilocode/issues/15311) Distribution, updater and signing: a signed `kilo2` that installs beside v1, updates and rolls back, and the release pipeline. Open: updater distribution identity (the open `installation` cells of the progress map).
 - [#15312](https://github.com/Kilo-Org/kilocode/issues/15312) Remote sessions: `kilo remote` over the Kilo relay.
 - [#15313](https://github.com/Kilo-Org/kilocode/issues/15313) Sharing: individual share, unshare and fork-from-share, and a public viewer for v2 sessions.
 
 ### M3 VS Code on v2
 
-- [#15314](https://github.com/Kilo-Org/kilocode/issues/15314) Editor services and FIM: the FIM and next-edit producer and the generation endpoints (enhance prompt, commit message, branch name). FIM gates VS Code.
+- [#15314](https://github.com/Kilo-Org/kilocode/issues/15314) Editor services and FIM: the FIM producer and the generation endpoints (enhance prompt, commit message, branch name). FIM gates VS Code.
 - [#15315](https://github.com/Kilo-Org/kilocode/issues/15315) VS Code client: a new package on `origin/v2`, the v1 UI ported onto `@opencode/client` plus Kilo RPCs.
 
 ### M4 Cutover

@@ -241,6 +241,13 @@ export const catalog = (inventory: Inventory) => {
       .filter((registration) => registration.options?.pinned === true)
       .map(qualifiedName),
   )
+  // kilocode_change start - codemode-direct: tools that also stay on the provider's native list are marked
+  const direct = new Set(
+    Array.from(inventory.tools.values())
+      .filter((registration) => registration.options?.direct === true)
+      .map(qualifiedName),
+  )
+  // kilocode_change end
   const root: CatalogNode = { children: new Map() }
   for (const namespace of inventory.namespaces?.values() ?? []) getNode(root, namespace.name).namespace = namespace
   // Either engine's runtime has the same catalog; reuse whichever exists rather than preparing the tools again.
@@ -251,6 +258,7 @@ export const catalog = (inventory: Inventory) => {
       description: tool.description,
       signature: tool.signature,
       pinned: pinned.has(tool.path),
+      ...(direct.has(tool.path) ? { direct: true } : {}), // kilocode_change(codemode-direct)
     }
   return {
     tools: renderCatalog(root),

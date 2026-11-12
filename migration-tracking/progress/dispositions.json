@@ -20,7 +20,7 @@
   "module:packages/core/src/kilocode/global.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/src/global-resilience.ts",
-    "note": "ensureRealDir, writable, ready and resolveState are ported into packages/kilo-cli/src/global-resilience.ts and wired by packages/kilo-cli/src/global-boot.ts (a host boot step that runs before @opencode/util/global loads), keeping the upstream util/global.ts pristine. The state-dir fallback is <data>/<app> rather than v1's literal <data>/state because roots() always appends the app name.",
+    "note": "ensureRealDir, writable, ready and resolveState are ported into packages/kilo-cli/src/global-resilience.ts and wired by packages/kilo-cli/src/global-boot.ts (a host boot step that runs before @opencode/util/global loads), so none of this logic is in the upstream util/global.ts, which carries only the two generic identity knobs (OPENCODE_APP_DIR_NAME and OPENCODE_HOME_DIR). The state-dir fallback is <data>/<app> rather than v1's literal <data>/state because roots() always appends the app name.",
     "by": "global-resilience"
   },
   "module:packages/core/src/kilocode/spotlight.ts": {
@@ -46,9 +46,10 @@
     "by": "store-paths"
   },
   "module:packages/opencode/test/kilocode/storage/db.test.ts": {
-    "state": "dropped",
-    "note": "Tested the v1 opencode-<channel>.db -> kilo-<channel>.db fallback that let a renamed binary reuse the old channel database. v2 keeps upstream's opencode*.db filenames inside the distinct kilo2 directory and fail-closes v1 KILO_DB (packages/kilo-cli/src/env.ts:34), so there is no cross-store fallback; channel-path selection is native at packages/cli/src/database-path.ts. The fallback is obsoleted by the D-4 distinct-dir design.",
-    "by": "store-paths"
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/database.test.ts",
+    "note": "Tested the v1 fallback in getChannelPath (packages/opencode/src/storage/db.ts): for a non-release channel, when kilo-<channel>.db did not exist and an older opencode-<channel>.db did, v1 opened the old file, so a build after the file rename kept its sessions. v2 carries that continuity in the host: KiloDatabase.select (packages/kilo-cli/src/database.ts) names the store kilo2.db or kilo2-<channel>.db and, when that file does not exist yet, its adopt helper copies an earlier opencode*.db from the same kilo2 data directory to it once. The mechanism differs on purpose: v2 copies instead of opening the old file in place, so select returns the Kilo file, not the old path. Because the copy happens once, what an earlier build writes to the old file afterwards does not reach the Kilo file (the first test named below asserts it); that is the one user-visible difference from v1's in-place use. v2 also covers the shared opencode.db of the release channels and prefers the earlier file with the most sessions. packages/kilo-cli/test/database.test.ts carries the assertion ('the database of an earlier build is copied once, with the pages still in its WAL'; 'release channels and KILO_DISABLE_CHANNEL_DB copy the earlier shared file'), and 'the first boot copies the database of an earlier build to the Kilo file' in packages/kilo-cli/test/app-dirs.test.ts covers it through the real entry. v2 still does not use v1's own store as its database: a v1 KILO_DB has no effect (the storage list in packages/kilo-cli/src/env.ts), and refuseV1Store and the guard in adopt refuse a Kilo v1 store, which only kilo2 import v1 brings forward.",
+    "by": "identity-store-notes"
   },
   "module:packages/opencode/test/kilocode/storage/storage-init.test.ts": {
     "state": "native",
@@ -58,7 +59,7 @@
   },
   "module:packages/core/src/kilocode/oauth/page.ts": {
     "state": "ported",
-    "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
+    "note": "packages/kilo-cli/src/branding/ brands the upstream OAuth page through the host load/build transform: the rule engine (rules.ts, engine.ts) rebrands the callback text, and a structural transform (structural.ts) swaps the square SVG wordmark. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports, and packages/kilo-cli/script/branding-audit.ts hard-fails on new unbranded user-visible text. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
     "by": "rebrand-identity"
   },
   "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts": {
@@ -122,14 +123,14 @@
     "by": "gateway-account-parity"
   },
   "module:packages/kilo-gateway/src/edit-prompt.ts": {
-    "state": "ported",
-    "note": "packages/kilo-gateway-core/src/autocomplete.ts buildMercuryEditPrompt and its blocks.",
-    "by": "gateway-finish"
+    "state": "dropped",
+    "note": "Built the Mercury Next Edit prompt. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   },
   "module:packages/kilo-gateway/src/edit.ts": {
-    "state": "ported",
-    "note": "packages/kilo-gateway-core/src/autocomplete.ts resolveEditTarget and extractFencedBody.",
-    "by": "gateway-finish"
+    "state": "dropped",
+    "note": "Resolved Next Edit targets and extracted fenced edit bodies. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   },
   "module:packages/kilo-gateway/src/fim.ts": {
     "state": "ported",
@@ -988,9 +989,9 @@
     "by": "commit-message-port"
   },
   "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts": {
-    "state": "ported",
-    "note": "packages/kilo-gateway-core/test/autocomplete-request.test.ts (Kilo headers and body, fenced body and usage, direct Inception BYOK, unreadable error body status passthrough, 504 timeout, 499 cancel) and packages/kilo-plugin/test/gateway-autocomplete.test.ts (401 as unauthorized without Kilo auth, 400 for a FIM model, team header and feature header on the Gateway request) carry the assertions for the kilocode.gateway autocomplete.edit RPC, which replaces the v1 /kilo/edit route.",
-    "by": "autocomplete-server"
+    "state": "dropped",
+    "note": "Tested the v1 /kilo/edit route. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   },
   "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts": {
     "state": "dropped",
@@ -1034,12 +1035,12 @@
   },
   "module:packages/kilo-vscode/webview-ui/src/context/todo-revert.ts": {
     "state": "ported",
-    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids.",
+    "note": "webview-ui/src/v2/todo-state.ts todoState applies the staged revert to the message parts before it selects the latest completed todowrite list: messages after the revert message are hidden, parts at or after the reverted part are hidden, and a message-level revert hides the message. The v2 part order is the content order, so the reverted part is found by id instead of comparing ids. The boundary is located by transcript position when loaded (a queued prompt keeps its admission ID and can sort before steps delivered ahead of it), with ID order as the fallback; webview-ui/src/v2/todo.ts pages older history again for each new revert boundary.",
     "by": "composer-todos"
   },
   "module:packages/kilo-vscode/tests/unit/todo-revert.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts.",
+    "note": "packages/kilo-vscode/test/todo-dock.test.ts carries the revert assertions: a reverted write keeps the list before it, the latest state returns without a revert, and a reverted part inside one message keeps only the earlier todowrite parts. It also covers a reverted queued prompt delivered after later steps and the newer list returning when the revert clears.",
     "by": "composer-todos"
   },
   "module:packages/opencode/test/kilocode/todowrite-description.test.ts": {
@@ -2049,14 +2050,14 @@
   "module:packages/opencode/src/kilocode/tool/open-plan.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/plan/plan.ts",
-    "note": "openPlan: the open_plan tool, registered for the VS Code client, metadata { plan, open: true }.",
-    "by": "plan-handoff"
+    "note": "openPlan: the open_plan tool, registered for the VS Code client; writable agents open it inside Code Mode and read-only agents get it directly. Metadata is { path, open: true }.",
+    "by": "add-markdown-plan-tooling"
   },
   "module:packages/opencode/test/kilocode/tool/open-plan.test.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/test/open-plan.test.ts",
-    "note": "open_plan metadata, plan_exit result and the not-found guidance.",
-    "by": "plan-handoff"
+    "note": "open_plan metadata, plan_exit result and the not-found guidance; Code Mode execution is covered in open-plan-codemode.test.ts.",
+    "by": "add-markdown-plan-tooling"
   },
   "module:packages/kilo-vscode/tests/unit/use-slash-command-sorting.test.ts": {
     "state": "ported",
@@ -2597,5 +2598,103 @@
     "v2": "packages/kilo-plugin/src/soul/soul.txt",
     "note": "The persona keeps v1's identity line and is trimmed to personality only, on review of #16056: v1's tone rules (direct, clear and technical, no openers such as \"Great\", no closing offers) are condensed into three bullets. Not carried in the persona, on purpose: v1's working rules (work iteratively in steps, do not ask for more information than necessary, use the question tool only for a real answer, follow the codebase's conventions), which are left to the v2 model templates, agent prompts and tool descriptions, with two known gaps: the default and Claude templates have no line about asking the user sparingly, and agents with their own prompt (ask, debug, orchestrator) skip the base template and so no longer get the conventions rule; and the absolute ban on ending a message with a question, which is narrowed to questions that only prolong the conversation, because the debug, plan and orchestrator prompts tell the agent to ask the user. KiloSoulPlugin (packages/kilo-plugin/src/soul/index.ts, registered in KiloPostPlugins after the Gateway prompt and the upstream prompt optimizer) puts it first in the system prompt of every agent, compaction and generate request (goal reviewer, cache warming, the session.generate API), including agents with their own prompt, and leaves title requests out, which matches shouldIncludePersona and the soul lines of llm/request.ts. v2 has no OpenAI OAuth instructions split, so the first system part also covers OAuth. Tests: packages/kilo-plugin/test/soul.test.ts.",
     "by": "soul-persona"
+  },
+  "module:packages/opencode/src/kilocode/mcp-oauth-callback.ts": {
+    "state": "dropped",
+    "note": "v1 needed a machine-wide singleton loopback listener with a takeover handshake because `kilo mcp auth` ran in separate CLI processes. v2 runs OAuth attempts in the managed integration service: each attempt owns its listener and scope (packages/core/src/mcp/oauth.ts authorize), and Integration.oauth.connect/cancel/status manage attempts with a 10-minute lifetime (packages/core/src/integration.ts), with a Cancel action in both TUI and VS Code. The only delta is the CIMD-eligible fixed callback port 127.0.0.1:19876 (packages/core/src/kilocode/mcp/client-metadata.ts): a second concurrent attempt fails at bind with a clear port error instead of displacing the first, and the first completes or is cancelled/expired, so no flow is corrupted. Decision: do not port the takeover protocol; if the concurrency limitation is promoted later, superseding the same integration's pending attempt in Integration.oauth.connect is the v2-shaped fix. Recorded in migration-tracking/plans/mcp-marketplace.md (#15307).",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-oauth-callback.test.ts": {
+    "state": "dropped",
+    "note": "Tests the dropped v1 cross-process takeover module (occupied port, takeover rejects the earlier attempt by name, missing header, rebound host). v2 has no machine-wide listener to take over and no `replaced` error; per-attempt listeners, integration cancel/status and the 10-minute expiry replace the scenarios. The CIMD fixed-port limitation is recorded on module:packages/opencode/src/kilocode/mcp-oauth-callback.ts.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "patch:mcp:78080472f471": {
+    "state": "dropped",
+    "note": "The v1 packages/opencode/src/mcp/oauth-callback.ts import of the Kilo takeover module. Dropped with module:packages/opencode/src/kilocode/mcp-oauth-callback.ts: v2 keeps upstream's per-attempt listener and moves attempt lifecycle to the integration service, so no shared-file import is needed.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-docker-rm.test.ts": {
+    "state": "dropped",
+    "note": "Tests v1's ensureDockerRm argument injection. v2 keeps the local command as configured; Docker MCP servers work without `--rm`, and the command comes from the catalog entry or the user's config, which can pass `--rm`. Not carried because it is container hygiene, not a behavior the feature needs. The v1 index.ts hunk is unattributed in the map, so no patch cell is affected.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/src/kilocode/mcp/cleanup.ts": {
+    "state": "native",
+    "v2": "packages/core/src/mcp/stdio.ts",
+    "note": "v1 released clients that a partially-started MCP state had connected, killing their stdio process children. v2 starts the MCP service under a scope: packages/core/src/mcp/stdio.ts spawns the child in the calling scope (ChildProcess.make), so closing that scope kills the process group. The scope-kill primitive is covered by packages/core/test/effect/cross-spawn-spawner.test.ts ('uses the configured kill signal when scope exits'), and the remote caller-interrupt paths by the two interruption cases in packages/core/test/mcp.test.ts. The exact v1 local end-to-end case (interrupt mcp.status with one connected local fixture and one hanging, then assert the child is gone and a retry works) has no direct v2 test; recorded as a test gap, not a behavior gap.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-interrupted-state.test.ts": {
+    "state": "native",
+    "v2": "packages/core/src/mcp/stdio.ts",
+    "note": "v2 has no direct port of this end-to-end local scenario. The process-kill behavior it guards is covered by the scoped stdio spawn in packages/core/src/mcp/stdio.ts and the scope-kill primitive in packages/core/test/effect/cross-spawn-spawner.test.ts ('uses the configured kill signal when scope exits'); the remote caller-interrupt paths are covered by the two interruption cases in packages/core/test/mcp.test.ts. Recorded as native for the behavior; the exact local fixture remains a test gap.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-branding.test.ts": {
+    "state": "native",
+    "v2": "packages/kilo-cli/test/host.test.ts",
+    "note": "The v1 guard asserted the auth toast never tells the user to run `opencode mcp auth` and that the MCP client identifies as kilo. v2 keeps the identity assertion through the host override: packages/core/test/kilocode/mcp/host-hooks.test.ts (client_name/client_uri default to opencode without a host and Kilo with one) and packages/kilo-cli/test/host.test.ts (initialize clientInfo.name is kilo, OAuth registration sends Kilo). User-facing guidance is v2-native copy: packages/core/src/mcp/index.ts reports needs_auth as 'Sign in from /mcps', and the TUI and VS Code expose a Sign in action, so no `kilo mcp auth` toast exists to regress.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/src/kilocode/tool/chart.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/chart/tool.ts",
+    "note": "The chart tool is the Kilo plugin kilocode.chart (packages/kilo-plugin/src/chart/index.ts), which registers makeTool from packages/kilo-plugin/src/chart/tool.ts and the chart skill from chart-skill.txt. Same parameters, description text and result metadata: title and description are emitted as progress metadata, an unparsable spec and a config without type/data return the same user-facing messages with the invalid-json and invalid-spec markers, an area config is remapped to line with fill:true as the dataset default, and a valid config returns JSON.stringify of the parsed spec. The chart.css selectors are the same file. Not carried: Telemetry.trackToolUsed, because the v2 telemetry sink is the usage and telemetry epic (#15303). The tool is a direct (non Code Mode) tool with options.codemode false, like browser_open, so the chat renders its own card.",
+    "by": "port-chart-tool"
+  },
+  "module:packages/opencode/test/kilocode/chart-tool-gating.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/chart.test.ts",
+    "note": "The chart assertions of the v1 gating test are carried through the real v2 tool registry and the plugin's skill transform: chart is present for the vscode client and absent for cli, jetbrains and an unset client, and the chart skill is registered only with the tool. The same file also covers the tool behavior (invalid JSON message, missing type/data message, area to line with fill, valid spec round trip). The other v1 assertions in that file (browser_open, open_plan, link_pr) belong to their own features and are covered by those ports.",
+    "by": "port-chart-tool"
+  },
+  "module:packages/opencode/src/kilocode/session/revert.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/src/session-revert.ts",
+    "note": "KiloSessionRevert in packages/kilo-cli/src/session-revert.ts wraps Session.Service.revert.stage and clear via KiloHost.overrides (Session.node.replace): plans target checkpoint trees from SessionStore, reports workspace outcomes (`restored`, `snapshots-disabled`, `unavailable`, `not-a-git-repo`), stages conversation-only reverts when snapshots are disabled or outside Git, requires a pre-revert workspace snapshot before touching files, and rolls back affected files with KiloSessionRevert.apply/restore on failure. It also wraps Session.fork: a whole-session fork of a session with a staged revert forks before the revert boundary, so tab forks, Agent Manager forks and Continue in worktree copy only the visible conversation (v1 copied the hidden turns too). Deliberate v2 difference: SessionRevert.commit deletes whole messages from the boundary onward (partial partID message revert is not carried on v2, see v1-v2-client-breaking-changes.md).",
+    "by": "session-revert"
+  },
+  "module:packages/opencode/test/kilocode/session/revert.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/session-revert.test.ts",
+    "note": "packages/kilo-cli/test/session-revert.test.ts carries the workspace outcome cases (`snapshots-disabled`, `unavailable`, `not-a-git-repo`, `restored`), multi-message step-forward redo and clear, atomic rollback on read-only target failures for stage, clear and replacing a prior revert, worktree-subdirectory deleted file unrevert, pre-revert capture failure guard, combined rollback error causes, moved-file restore and redo (v1 8db7b685837), and a new prompt after a revert dropping the reverted turns while keeping the restored files (v1 #12274). A whole-session fork of a reverted session stops at the boundary. Index-lock contention is superseded natively by temporary snapshot indexes and KeyedMutex in packages/core/src/git.ts; partial assistant partID revert is not carried on v2.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/tests/unit/revert-checkpoints.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/session-revert.test.ts",
+    "note": "packages/kilo-vscode/test/session-revert.test.ts and test/fixtures/revert-banner-render.tsx verify the rendered behavior instead of regex-matching source text: answered user messages keep their revert action while already reverted, busy state sets data-revert-disabled and the agentBusy tooltip without removing the control, RevertBanner renders explicit workspace notices (`snapshots-disabled` with the Checkpoints settings button, `not-a-git-repo`, `unavailable`) plus the legacy fallback, and prompt/attachment/comment/browser restoration and session diff boundary clamping (by transcript order, so a reverted queued prompt keeps the earlier turns) work end to end. SessionView carries v1's per-session checkpoint chain (createRevertQueue in webview-ui/src/v2/revert.ts, keyed by session ID because the sidebar and Agent Manager reuse one view across tabs): revert and redo run one at a time per session, the restored prompt goes to the reverted session's own draft even after a tab switch, prompts, slash commands and /compact wait for the latest settle, a draft restored after the user already sent is dropped, and revert stays disabled while a turn runs or is admitted, a permission or question is pending, inbox items wait, or a background subagent still runs. Subagents started only by reverted turns leave the background-agent dock. As v1 derived the header family from visible turns, session-usage.ts revertedMembers drops child sessions that only reverted turns started (with their own subagents) from the task header cost, tokens and breakdown, and subtracts the hidden steps from the reverted session's totals; ContextProgress and the header context read only visible messages. Agent Manager tab, card and sidebar tab activity show no outcome while a revert is staged, since the outcome belongs to the hidden last turn, so a reverted failed turn no longer shows as an error.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/tests/unit/revert-toast-owner.test.ts": {
+    "state": "dropped",
+    "note": "Tested deduplication of broadcast `{ type: \"error\", code: REVERT_ERROR_CODE }` host messages across nested v1 SessionProvider instances. v2 has no host session broker or nested SessionProvider: SessionView calls `v2.api.session.revert.stage` and `clear` directly through `@opencode/client` and toasts `REVERT_ERROR_CODE` only in the view that initiated the mutation, while read-only subagent views expose no revert actions.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/tests/fixtures/revert-toast-owner.tsx": {
+    "state": "dropped",
+    "note": "DOM fixture for the dropped nested v1 SessionProvider revert-toast-owner test; v2 revert mutations reject directly in the initiating SessionView without broadcast host error messages.",
+    "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts": {
+    "state": "dropped",
+    "note": "Next Edit constants. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts": {
+    "state": "dropped",
+    "note": "Next Edit types. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/removePrefixOverlap.ts": {
+    "state": "dropped",
+    "note": "Removed the prefix that Mercury repeated in its FIM output. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/__tests__/removePrefixOverlap.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped removePrefixOverlap.ts. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   }
 }
