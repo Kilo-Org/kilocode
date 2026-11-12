@@ -694,9 +694,21 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         failed: false,
         anonymous: start.account?.token === undefined,
       }
+    } else {
+      // Activation can return before the catalog lands, but the account reader below is registered before that and read
+      // once by the plugins that start after this one (codebase indexing), so publish the resolved account first.
+      catalog = {
+        account: start.account,
+        connection: start.connection,
+        envActive: start.envActive,
+        models: [],
+        imageModels: [],
+        failed: false,
+        anonymous: start.account?.token === undefined,
+      }
     }
     yield* stored ? Effect.forkIn(reload, scope) : awaitFirstCatalog(++epoch)
-    // Other Kilo plugins of this Location read the account once the first catalog state has it.
+    // Other Kilo plugins of this Location read the account; it is published above, before the first catalog can land.
     const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
     yield* Effect.addFinalizer(() => Effect.sync(unregister))
 

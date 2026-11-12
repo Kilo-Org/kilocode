@@ -20,6 +20,7 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
+import { Location } from "@opencode/core/location"
 import { VerbosityPlugin } from "@opencode/core/plugin/verbosity"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
@@ -37,6 +38,7 @@ import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
 import { KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
+import { KiloGatewayAccounts } from "../src/gateway/accounts"
 import { GatewayOptions } from "../src/gateway/options"
 import { KiloGatewayModel } from "../../kilo-cli/src/gateway-model"
 
@@ -1606,6 +1608,13 @@ describe("KiloGatewayPlugin", () => {
             const elapsed = performance.now() - started
             expect(elapsed).toBeGreaterThanOrEqual(2_000)
             expect(elapsed).toBeLessThan(5_000)
+            // Codebase indexing reads this reader once, right after the gateway plugin starts, so the account must be
+            // there even though the catalog it comes from has not landed yet.
+            const location = yield* Location.Service
+            expect(KiloGatewayAccounts.get(location.directory)).toMatchObject({
+              server: backend.url,
+              organizationID: "selected",
+            })
             const models = yield* Model.Service
             const kiloModels = Effect.map(models.available(), (list) =>
               list.filter((item) => item.providerID === kilo).map((item) => String(item.id)),
