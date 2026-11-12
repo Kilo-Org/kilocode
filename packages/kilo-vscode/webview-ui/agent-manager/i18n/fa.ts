@@ -596,4 +596,76 @@ export const dict = {
   "agentManager.orphans.deleteButton": "حذف {{count}} پوشه ({{size}})",
   "agentManager.orphans.cancel": "لغو",
   "agentManager.error.title": "خطای Agent Manager",
+  "agentManager.readiness.projects.title": 'یک پروژه در "{{name}}" انتخاب کنید',
+  "agentManager.readiness.projects.body":
+    '"{{name}}" خودش پروژهٔ Git نیست، اما {{count}} پروژه در آن هست. پروژه‌ای را که می‌خواهید در آن کار کنید انتخاب کنید.',
+  "agentManager.readiness.projects.bodyOne":
+    '"{{name}}" خودش پروژهٔ Git نیست، اما یک پروژه در آن هست. برای کار در آن، انتخابش کنید.',
+  "agentManager.readiness.projects.use": "استفاده از {{name}}",
+  "agentManager.readiness.projects.other": "انتخاب پوشهٔ دیگر",
+  "agentManager.readiness.plain.title": '"{{name}}" هنوز برای Git راه‌اندازی نشده است',
+  "agentManager.readiness.plain.body":
+    "Worktreeها به Git نیاز دارند. Kilo می‌تواند آن را در این پوشه راه‌اندازی کند و فایل‌های شما دقیقاً همان‌طور باقی می‌مانند.",
+  "agentManager.readiness.plain.action": "راه‌اندازی Git",
+  "agentManager.readiness.plain.other": "انتخاب پوشهٔ دیگر",
+  "agentManager.readiness.identity.title": "چه نامی روی تغییرات شما ثبت شود؟",
+  "agentManager.readiness.identity.body":
+    "Git هر تغییر را با یک نام و ایمیل برچسب می‌زند. Kilo آن‌ها را برای کاربر Git شما ذخیره می‌کند.",
+  "agentManager.readiness.identity.name": "نام",
+  "agentManager.readiness.identity.email": "ایمیل",
+  "agentManager.readiness.identity.saveInit": "ذخیره و راه‌اندازی Git",
+  "agentManager.readiness.identity.saveCommit": "ذخیره و ایجاد اولین commit",
+  "agentManager.readiness.restricted.title": "پوشه‌ای را که پروژه‌تان در آن است انتخاب کنید",
+  "agentManager.readiness.restricted.body":
+    "این پوشهٔ خانگی شماست، پس Kilo اینجا Git راه‌اندازی نمی‌کند. به‌جای آن پوشهٔ خود پروژه را انتخاب کنید.",
+  "agentManager.readiness.restricted.action": "انتخاب پوشه",
+  "agentManager.readiness.commit.title": '"{{name}}" به اولین commit نیاز دارد',
+  "agentManager.readiness.commit.body":
+    "Worktreeها از آخرین commit شما شروع می‌شوند و این پروژه هنوز commit ندارد. Kilo می‌تواند یک commit خالی برایتان بسازد.",
+  "agentManager.readiness.commit.action": "ایجاد اولین commit",
+  "agentManager.readiness.ready.initGit": "Git راه‌اندازی شد.",
+  "agentManager.readiness.ready.initGitNote":
+    "فایل‌های موجود شما هنوز در Git ذخیره نشده‌اند، پس worktreeهای جدید خالی شروع می‌شوند.",
+  "agentManager.readiness.ready.initialCommit": "اولین commit ایجاد شد.",
+  "agentManager.readiness.ready.initialCommitNote":
+    "فایل‌های موجود شما هنوز در آن نیستند، پس تا وقتی آن‌ها را commit نکنید worktreeهای جدید خالی شروع می‌شوند.",
+  "agentManager.readiness.unknown.title": "Kilo نتوانست این پروژه را بررسی کند",
+  "agentManager.readiness.untrusted": "به این پنجره اعتماد کنید تا Kilo بتواند Git را راه‌اندازی کند.",
+  "agentManager.readiness.error": "Kilo نتوانست این مرحله را کامل کند.",
+  "agentManager.readiness.check": "بررسی دوباره",
+  "agentManager.readiness.working.initGit": "در حال راه‌اندازی Git…",
+  "agentManager.readiness.working.initialCommit": "در حال ایجاد اولین commit…",
+  "agentManager.readiness.working.project": "در حال باز کردن پروژه…",
+  "agentManager.readiness.blocked": "برای ایجاد worktree، مشکل بالا را برطرف کنید.",
+  "agentManager.readiness.blockedGit": "ابتدا Git را نصب کنید. می‌توانید نوشتن وظیفه را ادامه دهید.",
+  "agentManager.readiness.blockedLfs": "ابتدا Git LFS را نصب کنید. می‌توانید نوشتن وظیفه را ادامه دهید.",
+  "agentManager.readiness.git.title": "Kilo برای ساخت worktree به Git نیاز دارد",
+  "agentManager.readiness.git.body":
+    "Git هنوز روی این رایانه نصب نشده است. آن را نصب کنید و به این پنجره بازگردید. وظیفه شما اینجا می‌ماند.",
+  "agentManager.readiness.git.bodyMac":
+    "Git هنوز روی این Mac نصب نشده است. آن را نصب کنید و به این پنجره بازگردید. وظیفه شما اینجا می‌ماند.",
+  "agentManager.readiness.lfs.title": "{{name}} به Git LFS نیاز دارد",
+  "agentManager.readiness.lfs.body":
+    "این پروژه برخی فایل‌های بزرگ را در Git LFS نگه می‌دارد که هنوز نصب نشده است. آن را نصب کنید و به این پنجره بازگردید. وظیفه شما اینجا می‌ماند.",
+  "agentManager.readiness.tool.install": "نصب {{tool}}",
+  "agentManager.readiness.tool.get": "دریافت {{tool}}",
+  "agentManager.readiness.tool.other": "راه‌های دیگر نصب",
+  "agentManager.readiness.install.apple.title": "نصب را در پنجره Apple کامل کنید",
+  "agentManager.readiness.install.apple.body": "Kilo وقتی به این پنجره بازگردید دوباره بررسی می‌کند.",
+  "agentManager.readiness.install.terminal.title": "در حال نصب {{tool}}…",
+  "agentManager.readiness.install.terminal.body": "در ترمینال زیر در حال اجراست. Kilo پس از پایان دوباره بررسی می‌کند.",
+  "agentManager.readiness.install.stale.title": "{{tool}} نصب شده است، اما VS Code هنوز آن را نمی‌بیند",
+  "agentManager.readiness.install.stale.body":
+    "بارگذاری مجدد پنجره معمولاً این را برطرف می‌کند. وظیفه شما پس از بارگذاری مجدد برمی‌گردد.",
+  "agentManager.readiness.install.reload": "بارگذاری مجدد پنجره",
+  "agentManager.readiness.ready.git": "Git آماده است.",
+  "agentManager.readiness.ready.lfs": "Git LFS آماده است.",
+  "agentManager.readiness.install.failed": "نصب با کد {{code}} پایان یافت. خروجی ترمینال را ببینید.",
+  "agentManager.readiness.install.stopped": "نصب متوقف شد. خروجی ترمینال را ببینید.",
+  "agentManager.readiness.lfsSetup.title": "{{name}} به راه‌اندازی Git LFS نیاز دارد",
+  "agentManager.readiness.lfsSetup.body":
+    "Git LFS نصب شده است، اما هنوز برای کاربر Git شما راه‌اندازی نشده است. برای ساخت worktree آن را راه‌اندازی کنید.",
+  "agentManager.readiness.lfsSetup.action": "راه‌اندازی Git LFS",
+  "agentManager.readiness.blockedLfsSetup": "ابتدا Git LFS را راه‌اندازی کنید. می‌توانید نوشتن وظیفه را ادامه دهید.",
+  "agentManager.readiness.working.setupLfs": "در حال راه‌اندازی Git LFS…",
 }

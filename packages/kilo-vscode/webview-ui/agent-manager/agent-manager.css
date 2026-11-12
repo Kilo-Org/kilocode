@@ -4090,6 +4090,158 @@ body.am-wt-dragging-active * {
   }
 }
 
+/* A readiness blocker keeps Create focusable for its tooltip, so it uses aria-disabled
+   instead of disabled and needs its own disabled look. */
+.am-nv-submit[aria-disabled="true"],
+.am-nv-submit[aria-disabled="true"]:hover,
+.am-nv-submit[aria-disabled="true"]:active {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+  box-shadow: none;
+  background-color: var(--surface-brand-base);
+}
+
+/* Worktree readiness card */
+
+.am-readiness:not(:empty) {
+  display: flex;
+  flex-direction: column;
+}
+
+.am-readiness-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.am-readiness-working {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-weak);
+}
+
+.am-readiness-ready {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.am-readiness-ready [data-component="icon"] {
+  color: var(--icon-success-base);
+  flex-shrink: 0;
+}
+
+.am-readiness-ready-title {
+  color: var(--text-strong);
+}
+
+.am-readiness-ready-body {
+  color: var(--text-weak);
+}
+
+/* Line up every card line with the title text, after the warning icon. */
+.am-readiness [data-slot="card-description"],
+.am-readiness .am-readiness-working,
+.am-readiness .am-readiness-form,
+.am-readiness [data-component="collapsible"] {
+  padding-left: var(--card-indent);
+}
+
+/* The shared action row is inline content; make it a wrapping row with even gaps. */
+.am-readiness [data-slot="card-actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The form already carries the indent, so its action row must not add it again. */
+.am-readiness .am-readiness-form [data-slot="card-actions"] {
+  padding-left: 0;
+}
+
+/* Compact neutral chips: the secondary token can be transparent in some themes. */
+.am-readiness [data-component="button"][data-variant="secondary"] {
+  background-color: var(--surface-raised-base);
+  border: 1px solid var(--border-base);
+  color: var(--text-strong);
+  box-shadow: none;
+}
+
+.am-readiness [data-component="button"][data-variant="secondary"]:hover:not(:disabled) {
+  background-color: var(--surface-raised-base-hover);
+  border-color: var(--border-base);
+}
+
+.am-readiness [data-component="button"][data-variant="secondary"]:disabled {
+  background-color: var(--surface-raised-base);
+  border-color: var(--border-base);
+  opacity: 0.5;
+}
+
+.am-readiness [data-component="button"][data-variant="secondary"][data-size="small"] {
+  min-height: 24px;
+  padding: 3px 6px;
+}
+
+.am-readiness-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.am-readiness-fields > * {
+  min-width: 0;
+}
+
+.am-readiness-fields [data-slot="input-input"] {
+  min-height: 28px;
+  padding: 4px 8px;
+}
+
+.am-readiness-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--vscode-textLink-foreground, var(--text-info));
+  cursor: pointer;
+}
+
+.am-readiness-link:hover,
+.am-readiness-link:focus-visible {
+  color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground, var(--text-info)));
+  text-decoration: underline;
+}
+
+.am-readiness-link:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+.am-readiness-link:disabled {
+  color: var(--text-weak);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* Keep the re-check action apart from the folder/action links, even when the row wraps. */
+.am-readiness-check {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.am-readiness-details {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--kilo-font-size-12, 12px);
+  color: var(--text-weak);
+}
+
 /* Branch selector */
 
 .am-branch-badge {

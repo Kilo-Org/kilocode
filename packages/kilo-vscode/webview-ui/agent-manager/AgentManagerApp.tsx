@@ -68,6 +68,7 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { createReopen } from "./new-worktree-draft"
 import { createIntro } from "./intro/AgentManagerIntro"
 import { createShortcutHints } from "./ShortcutHints"
 import { useBaseUpdate } from "./update-from-base"
@@ -1717,19 +1718,35 @@ const AgentManagerContent: Component = () => {
   const showNewWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
-    dialog.show(() => (
-      <NewWorktreeDialog
-        mode={mode}
-        onClose={() => dialog.close()}
-        projectId={activeProjectId()}
-        projects={projectList}
-        activeProjectId={activeProjectId()}
-        defaultBase={defaultBase}
-        onCreate={creation.schedule}
-        worktrees={dialogRefs}
-      />
-    ))
+    const [closing, setClosing] = createSignal(false)
+    dialog.show(
+      () => (
+        <NewWorktreeDialog
+          closing={closing}
+          mode={mode}
+          onClose={() => dialog.close()}
+          projectId={activeProjectId()}
+          projects={projectList}
+          activeProjectId={activeProjectId()}
+          defaultBase={defaultBase}
+          onCreate={creation.schedule}
+          worktrees={dialogRefs}
+        />
+      ),
+      () => setClosing(true),
+    )
   }
+
+  // A Reload from a Git/LFS readiness card reopens this dialog once, after the
+  // restored draft's project is available. A normal reload leaves the flag unset.
+  createReopen({
+    loaded,
+    // The saved project is restored once the catalog arrives, so wait for it.
+    arrived: () => projectList().length > 0,
+    state: () => vscode.getState<Record<string, unknown>>(),
+    save: (state) => vscode.setState(state),
+    open: showNewWorktreeDialog,
+  })
 
   const openLocally = (sid: string) => {
     if (!canOpenRootSession(sid, session.sessions())) return

@@ -42,6 +42,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/EditPreviewPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SessionRowActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ReadinessCard.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewProjectDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/CloneProjectDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectParentField.tsx"),
