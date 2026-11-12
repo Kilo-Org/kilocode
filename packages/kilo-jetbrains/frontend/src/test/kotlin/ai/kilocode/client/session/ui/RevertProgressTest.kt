@@ -21,10 +21,10 @@ class RevertProgressTest : BasePlatformTestCase() {
         assertSame(label, label(view))
     }
 
-    fun `test uses branded transcript spinner`() {
+    fun `test uses session spinner`() {
         val view = RevertProgress {}
 
-        assertSame(SpinnerIcon.branded, spinner(view).icon)
+        assertSame(SpinnerIcon.icon, spinner(view).icon)
     }
 
     fun `test cancel invokes callback`() {

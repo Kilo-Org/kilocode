@@ -62,7 +62,7 @@ class TaskToolView(
     private var avatarId = ""
     private var avatarColorSlot: Int? = null
     private var avatarStatic = AgentAvatar.static(avatarId, avatarColorSlot)
-    private var avatarRunning = AgentAvatar.running(avatarId, avatarColorSlot, UiStyle.Colors.Brand::progress)
+    private var avatarRunning = AgentAvatar.running(avatarId, avatarColorSlot)
     private var following = false
     private var collapsed = false
     private var popup: HeaderPopupBody? = null
@@ -190,8 +190,8 @@ class TaskToolView(
 
     /**
      * Generated per-subagent avatar (see [AgentAvatar]): the neutral unknown glyph before
-     * `childSessionId` is known, then a stable shape/hue keyed by that id. Running/pending pulses in
-     * Kilo yellow; completed/error restore the static identity hue. Never tints through
+     * `childSessionId` is known, then a stable shape/hue keyed by that id. Running/pending shows the
+     * pulsing variant; completed/error settle on the same static glyph. Never tints through
      * `parts.glyph.foreground` — the identity's color is baked into the icon itself.
      */
     @RequiresEdt
@@ -202,7 +202,7 @@ class TaskToolView(
             avatarId = id
             avatarColorSlot = colorSlot
             avatarStatic = AgentAvatar.static(id, colorSlot)
-            avatarRunning = AgentAvatar.running(id, colorSlot, UiStyle.Colors.Brand::progress)
+            avatarRunning = AgentAvatar.running(id, colorSlot)
         }
         val running = item.state == ToolExecState.PENDING || item.state == ToolExecState.RUNNING
         return setIcon(parts.glyph, if (running) avatarRunning else avatarStatic)

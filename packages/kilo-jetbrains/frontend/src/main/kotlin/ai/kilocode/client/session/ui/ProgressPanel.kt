@@ -70,7 +70,7 @@ class ProgressPanel(
     private val elapsed = JBLabel().apply {
         foreground = SessionUiStyle.Text.Secondary.foreground()
     }
-    private val spinner = JBLabel(SpinnerIcon.branded)
+    private val spinner = JBLabel(SpinnerIcon.icon)
     private val footer = Footer(spinner, busy, status, elapsed)
     private val tick = clock.timer(1000) { syncElapsed() }
 

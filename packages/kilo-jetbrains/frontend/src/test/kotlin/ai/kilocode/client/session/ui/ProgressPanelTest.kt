@@ -189,7 +189,7 @@ class ProgressPanelTest : BasePlatformTestCase() {
         model.setState(SessionState.Busy("Thinking\u2026"))
 
         assertTrue(panel.isVisible)
-        assertSame(SpinnerIcon.branded, spinner().icon)
+        assertSame(SpinnerIcon.icon, spinner().icon)
         assertEquals("Thinking\u2026", panel.labelText())
         assertEquals("0s", panel.elapsedText())
     }

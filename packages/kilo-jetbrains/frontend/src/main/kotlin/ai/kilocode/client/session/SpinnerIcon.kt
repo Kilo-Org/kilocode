@@ -4,7 +4,6 @@ import ai.kilocode.client.ui.AnimationIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.ColorUtil
 import com.intellij.util.ui.JBUI
-import java.awt.Color
 import java.awt.Component
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -56,10 +55,6 @@ internal object SpinnerIcon {
 
     val icon: Icon = AnimationIcon.Cycle(DELAY, *Array(FRAMES) { Frame(it) })
 
-    /** Transcript-only opt-in; workspace rows keep the original neutral [icon]. */
-    @Suppress("SpreadOperator")
-    val branded: Icon = AnimationIcon.Cycle(DELAY, *Array(FRAMES) { Frame(it, UiStyle.Colors.Brand::progress) })
-
     /** Ease-in-out 0..1..0 wave, matching CSS `ease-in-out` opacity pulses. */
     private fun ease(t: Float): Float = ((1f - cos(2.0 * Math.PI * t)) / 2.0).toFloat()
 
@@ -69,7 +64,7 @@ internal object SpinnerIcon {
         return lo + (hi - lo) * ease(PHASE[index] + frame.toFloat() / FRAMES)
     }
 
-    private class Frame(private val frame: Int, private val palette: ((Float) -> Color)? = null) : Icon {
+    private class Frame(private val frame: Int) : Icon {
         override fun getIconWidth() = JBUI.scale(16)
 
         override fun getIconHeight() = JBUI.scale(16)
@@ -85,8 +80,7 @@ internal object SpinnerIcon {
                 val base = color()
                 for (i in 0 until COUNT) {
                     if (i in CORNERS) continue
-                    val alpha = opacity(i, frame)
-                    g2.color = ColorUtil.withAlpha(palette?.invoke(alpha) ?: base, alpha.toDouble())
+                    g2.color = ColorUtil.withAlpha(base, opacity(i, frame).toDouble())
                     val px = (i % GRID) * PITCH * scale
                     val py = (i / GRID) * PITCH * scale
                     g2.fill(RoundRectangle2D.Float(px, py, size, size, arc, arc))

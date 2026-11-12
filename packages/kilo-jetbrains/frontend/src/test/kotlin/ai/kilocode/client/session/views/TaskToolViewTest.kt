@@ -130,24 +130,6 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertSame(doneIcon, glyph(view).icon)
     }
 
-    fun `test running transcript avatar uses retained yellow progress then restores its identity hue`() {
-        val view = view(running(), avatarColor = { 3 })
-        val icon = glyph(view).icon
-        val opaque = pixels(icon).filter { it ushr 24 == 255 }.toSet()
-        assertFalse(opaque.isEmpty())
-        assertEquals(setOf(UiStyle.Colors.Brand.progress(1f).rgb), opaque)
-        val count = descendants(view).size
-
-        repeat(100) { index ->
-            view.update(running().also { it.state = if (index % 2 == 0) ToolExecState.PENDING else ToolExecState.RUNNING })
-            assertSame(icon, glyph(view).icon)
-            assertEquals(count, descendants(view).size)
-        }
-
-        view.update(task())
-        assertPixelsEqual(AgentAvatar.static("ses_child", 3), glyph(view).icon)
-    }
-
     fun `test a supplied avatar color resolver changes the identity for the same child session`() {
         val id = "ses_child"
         val default = view(task(sessionId = id))
