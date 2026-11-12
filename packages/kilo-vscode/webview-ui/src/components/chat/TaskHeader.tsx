@@ -15,6 +15,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { useV2 } from "../../v2/client"
+import { visibleMessages } from "../../v2/revert"
 import { sessionMissing } from "../../v2/scope"
 import { setTaskTimelineVisible, taskTimelineVisible } from "../../v2/kilo-settings"
 import { useTranscriptSearch } from "../../v2/transcript-search"
@@ -29,6 +30,7 @@ import {
   mergeModelUsage,
   modelLabel,
   modelUsage,
+  revertedMembers,
   sessionSubtree,
   sessionUsage,
   sumCost,
@@ -53,15 +55,16 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const v2 = useV2()
   const language = useLanguage()
   const info = () => v2.data.session.get(props.sessionID)
-  const messages = () => v2.data.session.message.list(props.sessionID)
+  const allMessages = () => v2.data.session.message.list(props.sessionID)
+  const messages = createMemo(() => visibleMessages(allMessages(), info()?.revert))
   const models = () => v2.data.location.model.list()
   const providers = createMemo(() => v2.data.location.provider.list() ?? [])
 
   const title = createMemo(() => info()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!info())
-  const hasMessages = createMemo(() => messages().length > 0)
+  const hasMessages = createMemo(() => allMessages().length > 0 || !!info()?.revert)
   const busy = createMemo(() => v2.data.session.status(props.sessionID) === "running")
-  const canCompact = createMemo(() => !busy() && hasMessages())
+  const canCompact = createMemo(() => !busy() && messages().length > 0)
 
   const money = createMemo(() => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }))
   const fmt = (n: number) => money().format(n)
@@ -74,10 +77,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
       const member = v2.data.session.get(memberID)
       return member ? [member] : []
     })
-    return sessionSubtree(list, id)
+    return sessionSubtree(
+      revertedMembers(list, (memberID) => v2.data.session.message.list(memberID)),
+      id,
+    )
   })
 
-  const labels = createMemo(() => childLabels(members().map((member) => v2.data.session.message.list(member.id))))
+  const labels = createMemo(() =>
+    childLabels(members().map((member) => visibleMessages(v2.data.session.message.list(member.id), member.revert))),
+  )
 
   const breakdown = createMemo(() =>
     costBreakdown(members(), labels(), props.sessionID, language.t("context.stats.thisSession")),
@@ -105,7 +113,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const context = createMemo(() => {
-    const { usage } = sessionUsage(messages(), models(), info()?.model, info()?.revert?.messageID)
+    const { usage } = sessionUsage(messages(), models(), info()?.model)
     if (!usage) return undefined
     const tokens = usage.tokens.toLocaleString(language.locale())
     const pct = usage.percentage !== null ? `${usage.percentage}%` : undefined
@@ -269,7 +277,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               throw error
             })
             if (next.signal.aborted || version !== run) return
-            if (messages) rows.push(modelUsage(messages).models)
+            if (messages) rows.push(modelUsage(visibleMessages(messages, member.revert)).models)
           }
           if (version !== run) return
           setDetailModels(mergeModelUsage(rows))

@@ -57,7 +57,7 @@ interface Props {
   busy: (projectId: string, id: string) => boolean
   blocked: (projectId: string, id: string) => boolean
   activityFor: (projectId: string, worktreeId: string | null) => Activity
-  sessionActivity: (id: string, info?: Pick<ProjectSessionInfo, "outcome" | "time">) => Activity
+  sessionActivity: (id: string, info?: Pick<ProjectSessionInfo, "outcome" | "time" | "revert">) => Activity
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void

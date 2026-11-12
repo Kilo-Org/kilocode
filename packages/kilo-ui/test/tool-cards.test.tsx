@@ -345,6 +345,31 @@ test("a completed write card replaces the provisional counts with the final diff
   expect(counts(card.host)).toEqual({ additions: "+2", deletions: "-0" })
 })
 
+test("an edit card keeps its file expanded when the final diff names the file relatively", async () => {
+  const input = { path: "/repo/src/math.ts", oldString: 'export const VERSION = "1.2.3"', newString: "y" }
+  const [item, setItem] = createSignal<SessionMessageAssistantTool>(
+    liveTool("edit", { status: "running", input, metadata: {} }),
+  )
+  const card = mountRich(() => (
+    <ContentPart item={item()} message={liveMessage} index={0} directory="/repo" forceOpen />
+  ))
+  mounted.push(card)
+  await waitFor(() => card.host.querySelector('[data-component="edit-content"]'))
+
+  setItem(
+    liveTool("edit", {
+      status: "completed",
+      input,
+      content: [{ type: "text", text: "Edited src/math.ts" }],
+      metadata: { files: [editedFile] },
+    }),
+  )
+
+  await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+1")
+  const content = await waitFor(() => card.host.querySelector('[data-component="edit-content"]'))
+  expect(content.closest('[data-slot="accordion-item"]')?.hasAttribute("data-expanded")).toBe(true)
+})
+
 type StreamingTool = Extract<SessionMessageAssistantTool, { state: { status: "streaming" } }>
 
 test("a streaming write card recounts when the tool input grows", async () => {

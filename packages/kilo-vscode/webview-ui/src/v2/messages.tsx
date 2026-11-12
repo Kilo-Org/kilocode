@@ -9,6 +9,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { type Component, createEffect, createMemo, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { KiloNotifications } from "../components/chat/KiloNotifications"
+import { RevertBanner } from "../components/chat/RevertBanner"
 import { useLanguage } from "../context/language"
 import { useNotificationsOptional } from "../context/notifications"
 import { useVSCode } from "../context/vscode"
@@ -17,6 +18,7 @@ import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { instructionFilesByRead } from "./instruction-files"
 import { QuestionDock } from "./question"
+import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
 import { sessionStarting } from "./session-loading"
 import {
@@ -89,6 +91,11 @@ export function MessageList(props: {
   onShowHistory: () => void
   /** Forks the session before a user message, when the surface can fork. */
   onForkMessage?: (sessionID: string, messageID: string) => void
+  /** Reverts the session to a user message and restores its prompt. */
+  onRevertMessage?: (sessionID: string, messageID: string) => void
+  revertDisabled?: boolean
+  onRedo?: () => void
+  onRedoAll?: () => void
   /** Replaces the welcome screen of an empty session, for example with the Agent Manager introduction. */
   empty?: () => JSX.Element
   /** Selects the model a notification offers; without it the header shows no model action. */
@@ -128,11 +135,14 @@ export function MessageList(props: {
       .list(id)
       .flatMap((item): SessionInboxUser[] => (item.type === "user" && item.delivery === "queue" ? [item] : []))
   }
-  const messages = () => {
+  const revert = () => (props.session ? v2.data.session.get(props.session)?.revert : undefined)
+  const allMessages = () => {
     const all = props.session ? v2.data.session.message.list(props.session) : []
     const ids = new Set(queued().map((item) => item.id))
     return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
   }
+  const messages = createMemo(() => visibleMessages(allMessages(), revert()))
+  const revertCount = createMemo(() => revertedCount(allMessages(), revert()))
   const instructionFiles = createMemo(() => instructionFilesByRead(messages(), v2.directory))
   const sentReferences = createMemo(() =>
     messages().flatMap((message) =>
@@ -148,7 +158,7 @@ export function MessageList(props: {
     !!props.session &&
     v2.data.session.message.more(props.session) &&
     !v2.data.session.message.startLoaded(props.session)
-  const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
+  const empty = () => !props.session || (messages().length === 0 && queued().length === 0 && !revert())
   // The open session shows its loader instead of the welcome screen until the first transcript page lands.
   const starting = () =>
     sessionStarting({
@@ -158,6 +168,7 @@ export function MessageList(props: {
       queued: queued().length,
     })
   const autoScroll = createAutoScroll({ working })
+  createEffect(on(revert, () => autoScroll.resume(), { defer: true }))
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
@@ -797,6 +808,8 @@ export function MessageList(props: {
           searchActive={activeKey() === key}
           onViewTurnChanges={props.onViewTurnChanges}
           onForkMessage={row().message.id === firstUser() ? undefined : props.onForkMessage}
+          onRevertMessage={props.onRevertMessage}
+          revertDisabled={props.revertDisabled}
           onSelectSession={props.onSelectSession}
           pending={props.pending}
         />
@@ -922,6 +935,17 @@ export function MessageList(props: {
                   </Show>
                   <For each={directKeys()}>{(key) => <Row id={key} />}</For>
                 </div>
+                <Show when={revert()}>
+                  {(info) => (
+                    <RevertBanner
+                      revert={info()}
+                      count={revertCount()}
+                      busy={props.revertDisabled}
+                      onRedo={() => props.onRedo?.()}
+                      onRedoAll={() => props.onRedoAll?.()}
+                    />
+                  )}
+                </Show>
                 <For each={partition().queued}>
                   {(row) => (
                     <div class="message-list-queued" data-queued="true" data-row-key={row.key}>
