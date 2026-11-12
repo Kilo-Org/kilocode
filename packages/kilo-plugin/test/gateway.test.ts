@@ -1088,7 +1088,7 @@ describe("KiloGatewayPlugin", () => {
   ]) {
     for (const reasoning of [true, false]) {
       it.live(
-        `uses explicit ${dialect.provider} variants over reasoning_options with reasoning capability ${reasoning}`,
+        `uses explicit ${dialect.provider} variants without reasoning_options with reasoning capability ${reasoning}`,
         () =>
           Effect.acquireUseRelease(
             Effect.sync(() => {
@@ -1123,7 +1123,6 @@ describe("KiloGatewayPlugin", () => {
                         supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
                         opencode: {
                           ai_sdk_provider: dialect.provider,
-                          reasoning_options: [{ type: "effort", values: ["medium"] }],
                           variants: {
                             default: shared,
                             "": shared,
@@ -1208,34 +1207,61 @@ describe("KiloGatewayPlugin", () => {
   }
 
   it.live(
-    "uses reasoning_options when explicit variants are empty and keeps non-reasoning models without variants",
+    "uses reasoning_options over legacy variants and keeps non-reasoning models without variants",
     () =>
       Effect.acquireUseRelease(
         Effect.sync(() => fixture()),
         (backend) =>
           withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
             Effect.gen(function* () {
+              const legacy = { low: { reasoning: { effort: "low" } }, custom: { reasoning: { effort: "high" } } }
               backend.state.models = {
-                data: [true, false].map((reasoning) => ({
-                  id: `test/empty-variants-${reasoning}`,
-                  name: "Empty explicit variants",
-                  context_length: 128000,
-                  supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
-                  opencode: {
-                    ai_sdk_provider: "openai-compatible",
-                    variants: {},
-                    reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+                data: [
+                  ...[true, false].flatMap((reasoning) =>
+                    [{}, legacy].map((variants, index) => ({
+                      id: `test/options-${reasoning}-${index}`,
+                      name: "Reasoning options",
+                      context_length: 128000,
+                      supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                      opencode: {
+                        ai_sdk_provider: "openai-compatible",
+                        variants,
+                        reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+                      },
+                    })),
+                  ),
+                  {
+                    id: "test/always-on",
+                    name: "Always-on reasoning",
+                    context_length: 128000,
+                    supported_parameters: ["tools", "reasoning"],
+                    opencode: { ai_sdk_provider: "openai-compatible", variants: legacy, reasoning_options: [] },
                   },
-                })),
+                  ...[true, false].map((reasoning) => ({
+                    id: `test/heuristic-${reasoning}`,
+                    name: "Neither field",
+                    context_length: 128000,
+                    supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                    opencode: { ai_sdk_provider: "openai-compatible" },
+                  })),
+                ],
               }
               yield* addPlugin()
               const models = yield* Model.Service
+              for (const index of [0, 1]) {
+                expect(
+                  (yield* models.get(kilo, Model.ID.make(`test/options-true-${index}`)))?.variants.map(
+                    (variant) => variant.id,
+                  ),
+                ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("high")])
+                expect((yield* models.get(kilo, Model.ID.make(`test/options-false-${index}`)))?.variants).toEqual([])
+              }
+              // `[]` means reasoning is always on, so legacy variants must not reintroduce a picker.
+              expect((yield* models.get(kilo, Model.ID.make("test/always-on")))?.variants).toEqual([])
               expect(
-                (yield* models.get(kilo, Model.ID.make("test/empty-variants-true")))?.variants.map(
-                  (variant) => variant.id,
-                ),
-              ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("high")])
-              expect((yield* models.get(kilo, Model.ID.make("test/empty-variants-false")))?.variants).toEqual([])
+                (yield* models.get(kilo, Model.ID.make("test/heuristic-true")))?.variants.map((variant) => variant.id),
+              ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("medium"), Model.VariantID.make("high")])
+              expect((yield* models.get(kilo, Model.ID.make("test/heuristic-false")))?.variants).toEqual([])
             }),
           ),
         (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -2351,12 +2377,10 @@ describe("KiloGatewayPlugin", () => {
                   .pipe(Effect.flip),
               ).toMatchObject({ type: "failed" })
               expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: null })
-              for (const method of ["models.images", "models.transcriptions", "models.embeddings", "autocomplete.fimTarget", "autocomplete.editTarget"])
+              for (const method of ["models.images", "models.transcriptions", "models.embeddings", "autocomplete.fimTarget"])
                 expect(yield* rpc.call("kilocode.gateway", method, {}).pipe(Effect.flip)).toMatchObject({ type: "unauthorized" })
               expect(yield* rpc.call("kilocode.gateway", "autocomplete.fimTarget", { provider: "mistral", model: "codestral-2508" }))
                 .toMatchObject({ provider: "mistral" })
-              expect(yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", { provider: "inception", model: "mercury-next-edit" }))
-                .toMatchObject({ provider: "inception" })
               expect(backend.requests).toEqual([])
               expect(yield* host.storage.get("organization:env")).toEqual({ organizationID: "selected" })
             }),
@@ -2735,16 +2759,6 @@ describe("KiloGatewayPlugin", () => {
                   provider: "kilo",
                   model: "mistralai/codestral-2508",
                   url: `${backend.url}/api/gateway/v1/fim/completions`,
-                })
-                expect(
-                  yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", {
-                    provider: "kilo",
-                    model: "inception/mercury-next-edit",
-                  }),
-                ).toEqual({
-                  provider: "kilo",
-                  model: "inception/mercury-edit-2",
-                  url: `${backend.url}/api/gateway/v1/edit/completions`,
                 })
               }),
           ),

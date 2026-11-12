@@ -122,14 +122,14 @@
     "by": "gateway-account-parity"
   },
   "module:packages/kilo-gateway/src/edit-prompt.ts": {
-    "state": "ported",
-    "note": "packages/kilo-gateway-core/src/autocomplete.ts buildMercuryEditPrompt and its blocks.",
-    "by": "gateway-finish"
+    "state": "dropped",
+    "note": "Built the Mercury Next Edit prompt. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   },
   "module:packages/kilo-gateway/src/edit.ts": {
-    "state": "ported",
-    "note": "packages/kilo-gateway-core/src/autocomplete.ts resolveEditTarget and extractFencedBody.",
-    "by": "gateway-finish"
+    "state": "dropped",
+    "note": "Resolved Next Edit targets and extracted fenced edit bodies. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   },
   "module:packages/kilo-gateway/src/fim.ts": {
     "state": "ported",
@@ -988,9 +988,9 @@
     "by": "commit-message-port"
   },
   "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts": {
-    "state": "ported",
-    "note": "packages/kilo-gateway-core/test/autocomplete-request.test.ts (Kilo headers and body, fenced body and usage, direct Inception BYOK, unreadable error body status passthrough, 504 timeout, 499 cancel) and packages/kilo-plugin/test/gateway-autocomplete.test.ts (401 as unauthorized without Kilo auth, 400 for a FIM model, team header and feature header on the Gateway request) carry the assertions for the kilocode.gateway autocomplete.edit RPC, which replaces the v1 /kilo/edit route.",
-    "by": "autocomplete-server"
+    "state": "dropped",
+    "note": "Tested the v1 /kilo/edit route. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   },
   "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts": {
     "state": "dropped",
@@ -2675,5 +2675,25 @@
     "state": "dropped",
     "note": "DOM fixture for the dropped nested v1 SessionProvider revert-toast-owner test; v2 revert mutations reject directly in the initiating SessionView without broadcast host error messages.",
     "by": "session-revert"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts": {
+    "state": "dropped",
+    "note": "Next Edit constants. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts": {
+    "state": "dropped",
+    "note": "Next Edit types. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/removePrefixOverlap.ts": {
+    "state": "dropped",
+    "note": "Removed the prefix that Mercury repeated in its FIM output. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/__tests__/removePrefixOverlap.test.ts": {
+    "state": "dropped",
+    "note": "Tested the dropped removePrefixOverlap.ts. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
+    "by": "retire-mercury"
   }
 }

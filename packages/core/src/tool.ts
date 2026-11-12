@@ -259,9 +259,15 @@ const layer = Layer.effect(
           }
           const codeModeEnabled = !whollyDisabled("execute", rules)
           // Without Code Mode its tools would be unreachable, so expose them as direct tools instead.
+          // kilocode_change start - codemode-direct: a tool may stay on both lists
           const direct = codeModeEnabled
-            ? new Map(Array.from(active).filter(([, tool]) => tool.options?.codemode === false))
+            ? new Map(
+                Array.from(active).filter(
+                  ([, tool]) => tool.options?.codemode === false || tool.options?.direct === true,
+                ),
+              )
             : active
+          // kilocode_change end
           const codeModeTools = new Map(Array.from(active).filter(([, tool]) => tool.options?.codemode !== false))
           const names = Array.from(codeModeTools.keys()).join("\0")
           // Discovery is immutable for a registry revision and visible tool set. Keep executors
