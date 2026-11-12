@@ -1,3 +1,4 @@
+// kilo_mirror: packages/cli/src/server-process.ts
 // Kilo-owned mirror of @opencode/cli/server-process: adds authenticated remote HTTP aliases.
 export * as ServerProcess from "./server-process"
 

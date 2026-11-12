@@ -307,6 +307,8 @@ function printAnalysis(sync: report.SyncReport) {
   }
   logger.info(`Shared files touched: ${a.sharedTouched.length}`)
   logger.list(a.sharedTouched)
+  logger.info(`Mirrors touched: ${a.mirrorsTouched.length}`)
+  logger.list(a.mirrorsTouched.map((m) => `${m.upstream} -> ${m.mirror}`))
 }
 
 /** Remove upstream files under the packages Kilo dropped. Also runs after a clean merge, which skips resolve(). */
@@ -402,17 +404,19 @@ async function validateBun(base: string, upstream: string) {
 }
 
 /**
- * Run the annotation check and the shared-patch counter on the result, for the report. A branch
- * without the scripts or the baseline uses the copies next to this tool.
+ * Run the annotation check, the shared-patch counter and the mirror check on the result, for the
+ * report. A branch without the scripts or the baseline uses the copies next to this tool.
  */
 async function guards(sync: report.SyncReport) {
   const local = await Bun.file(BASELINE).exists()
   const baseline = local ? BASELINE : new URL("./shared-patches.json", import.meta.url).pathname
   if (!local) sync.notes.push(`The branch has no \`${BASELINE}\`: the guards used the copy of this tool`)
-  for (const name of ["check-opencode-annotations.ts", "check-shared-patches.ts"]) {
+  for (const name of ["check-opencode-annotations.ts", "check-shared-patches.ts", "check-mirrors.ts"]) {
     const branch = `script/${name}`
     const script = (await Bun.file(branch).exists()) ? branch : new URL(`../${name}`, import.meta.url).pathname
-    const result = await $`bun ${script} --baseline ${baseline}`.quiet().nothrow()
+    const result = await (name === "check-mirrors.ts"
+      ? $`bun ${script}`.quiet().nothrow()
+      : $`bun ${script} --baseline ${baseline}`.quiet().nothrow())
     console.log(result.stdout.toString() + result.stderr.toString())
     if (result.exitCode === 0) logger.success(`${name}: ok`)
     if (result.exitCode !== 0) {

@@ -1,3 +1,4 @@
+// kilo_mirror: packages/cli/src/acp/agent.ts
 import {
   agent,
   RequestError,

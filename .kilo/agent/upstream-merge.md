@@ -260,6 +260,12 @@ be broken. Check every auto-merged file for:
   deliberately stubbed out (commented blocks, removed fallbacks). If the
   auto-merge pulled in references to names that only exist in the removed
   path, the file compiles upstream but breaks on Kilo.
+- **Registered mirrors.** The sync report lists each mirror whose upstream file
+  changed under "Mirrors touched". Upstream's change lands at the upstream path
+  while the Kilo copy (`// kilo_mirror:` in `packages/kilo-*`) stays behind, so
+  no conflict marks it. Re-merge the change into the copy with the recorded
+  intent in `script/upstream/mirrors.json` in view, then record the new
+  upstream SHA in that file.
 
 ### 7. Verify each resolution before moving on
 
@@ -284,9 +290,10 @@ be broken. Check every auto-merged file for:
 - focused tests in `packages/core`, `cli` and `server` with the test isolation
   from `.kilo/skills/v2-migration/SKILL.md`. Run the same tests on `origin/v2`
   and classify each failure: new from the sync, or already failing before
-- `bun script/check-opencode-annotations.ts` and `bun script/check-shared-patches.ts`.
-  They compare with the pinned upstream release, which is the new release once
-  the merge commit exists. Run them after the commit
+- `bun script/check-opencode-annotations.ts`, `bun script/check-shared-patches.ts`
+  and `bun script/check-mirrors.ts`. They compare with the pinned upstream
+  release, which is the new release once the merge commit exists. Run them
+  after the commit
 - the self-test from the v2-migration skill: `bun dev` quick check and a TUI
   check (the Kilo executable on `v2` must keep working)
 
@@ -361,6 +368,8 @@ Structure the description so reviewers can skim:
   check from §2.5 for each Kilo patch.
 - **Shared files touched**: from the sync report, with the option (1 to 5) and
   the missing seam for each Kilo patch.
+- **Mirrors touched**: from the sync report, with the re-merged change and the
+  new upstream SHA recorded in `script/upstream/mirrors.json`.
 - **Notable auto-merged changes**: new columns, new helper files, renamed
   middleware - anything reviewers should eyeball even though git didn't flag
   it.

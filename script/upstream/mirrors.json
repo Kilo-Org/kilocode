@@ -1,0 +1,40 @@
+{
+  "$comment": "Mirror registry. Every Kilo-owned copy of an upstream file is listed here: the upstream path is the key, `mirror` is the Kilo file, `sha` is the upstream blob SHA at the last verified pinned release, and `changes` is the intent of Kilo's differences. Upstream never edits Kilo-owned paths, so a change to a copied upstream file merges cleanly at its own path and the copy drifts with no conflict and no report line. script/check-mirrors.ts fails when the pinned upstream file no longer has `sha`; re-merge the upstream change into the copy with `changes` in view, then record the new SHA here. It also fails for a mirror without an entry and for an entry without a `// kilo_mirror: <upstream path>` marker in the copy.",
+  "mirrors": {
+    "packages/cli/src/index.ts": {
+      "mirror": "packages/kilo-cli/src/main.ts",
+      "sha": "267bd24d9dbfe3509276a0b591a744fa380d47fe",
+      "changes": "Kilo host entry: translate KILO_* names and select the kilo2 app directory in ./env (imported first), report Kilo's app identity, add Kilo's commands (auto, import, sync, remote, the service extensions and the daemon alias) and handlers (upgrade, uninstall, serve), and run every server with Kilo's plugins and service overrides. Imports point at @opencode/cli/* because the host is a separate entry."
+    },
+    "packages/cli/src/commands/handlers/serve.ts": {
+      "mirror": "packages/kilo-cli/src/serve.ts",
+      "sha": "5e1337a16aef4157c0f08e59d5b79609ea6eb40b",
+      "changes": "Pass KiloHost.overrides (Kilo plugins and service replacements) to ServerProcess.run; imports resolve through @opencode/cli/* and ./server-process."
+    },
+    "packages/cli/src/server-process.ts": {
+      "mirror": "packages/kilo-cli/src/server-process.ts",
+      "sha": "2f64e3ec7b86586cd8b87b20a2e16a12eb4865d2",
+      "changes": "Wrap the app with RemoteHttp.transform for authenticated remote HTTP aliases, accept and pass options.overrides to the server, and import upstream modules from @opencode/cli/* so the host owns its copy."
+    },
+    "packages/cli/src/acp/agent.ts": {
+      "mirror": "packages/kilo-cli/src/acp-agent.ts",
+      "sha": "bb2f7c809fd2b13c441521219eec729097ab8b68",
+      "changes": "Wrap the ACP service with KiloACP.wrap (Kilo's initialize metadata and auth methods) and report KiloBinary as the agent name; ACP modules import from @opencode/cli/acp/*."
+    },
+    "packages/tui/src/theme/v1.ts": {
+      "mirror": "packages/kilo-cli/src/theme-v1.ts",
+      "sha": "5f76c654cc7dd4659d51dd3f10842f66833fc569",
+      "changes": "Add the kilo theme to the registry and import the upstream theme assets from packages/tui/src/theme/assets; the Kilo theme itself is packages/kilo-cli/src/theme.json."
+    },
+    "packages/cli/script/build.ts": {
+      "mirror": "packages/kilo-cli/script/build.ts",
+      "sha": "a9ae9e606975bb38fc3b324c435c8c783e094fd4",
+      "changes": "Build packages/kilo-cli/src/index.ts as kilo2: KILO_CHANNEL, KILO_VERSION, KILO_BUMP and KILO_RELEASE set the channel and version before @opencode/script loads, the branding and host-mirror Bun plugins and the Kilo plugin runtime are added, and upstream's app archive, PTY, artifact and architecture steps are imported from packages/cli/script/*."
+    },
+    "packages/cli/script/pack.ts": {
+      "mirror": "packages/kilo-cli/script/publish.ts",
+      "sha": "b66cfb2e34906236c47389b17ec3f5955f8213b0",
+      "changes": "Publish the npm part only: one @kilocode/cli-<os>-<arch> platform package per target, then the @kilocode/cli launcher, under the kilo-v2 dist-tag. Upstream's update artifacts, Docker image, AUR and Homebrew steps are not part of it."
+    }
+  }
+}
