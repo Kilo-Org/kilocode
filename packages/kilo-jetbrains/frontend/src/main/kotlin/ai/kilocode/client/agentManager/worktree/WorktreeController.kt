@@ -138,10 +138,12 @@ class WorktreeController(
 
     fun kind(path: String): SessionActivityKind? = kinds[normalizeWorktreePath(path)]
 
-    fun reload() {
+    fun reload() = reload(null)
+
+    private fun reload(snapshot: WorktreeListDto?) {
         val gen = generation.incrementAndGet()
         cs.launch {
-            val listing = async { service.list(directory) }
+            val listing = async { snapshot ?: service.list(directory) }
             val branchInfo = service.listBranches(directory)
             val result = listing.await()
             edt {
@@ -179,12 +181,15 @@ class WorktreeController(
      */
     fun refreshBranches() {
         if (branchJob?.isActive == true) return
+        val gen = generation.get()
         branchJob = cs.launch {
             val listing = service.list(directory)
             edt {
+                // A newer reload owns the model now; this older poll must not invalidate its PR state.
+                if (gen != generation.get()) return@edt
                 val moved = branchesMoved(listing) ?: return@edt
                 LOG.info("worktree branches changed, reloading the list")
-                reload()
+                reload(listing)
                 onBranchChanged?.invoke(moved)
             }
         }

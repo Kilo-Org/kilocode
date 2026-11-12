@@ -84,6 +84,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         flush()
         val changes = mutableSetOf<String>()
         controller.onBranchChanged = { changes += it }
+        rpc.listCalls.clear()
 
         rpc.listed[0] = main.copy(branch = "feature/y")
         rpc.listed[1] = feature.copy(branch = "feature/z")
@@ -93,6 +94,41 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("feature/y", controller.current?.branch)
         assertEquals("feature/z", controller.model.getElementAt(0).branch)
         assertEquals(setOf("/repo", "/repo/.kilo/worktrees/feature-x"), changes)
+        assertEquals(listOf("/test"), rpc.listCalls.toList())
+    }
+
+    fun `test branch tracker ignores a listing superseded by a newer reload`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += main
+        val controller = controller()
+        controller.reload()
+        flush()
+        val changes = mutableListOf<Set<String>>()
+        controller.onBranchChanged = { changes += it }
+        var reloads = 0
+        controller.onReload = { reloads++ }
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeList = {
+            entered.complete(Unit)
+            gate.await()
+        }
+
+        controller.refreshBranches()
+        assertTrue(coroutines.pumpUntil { entered.isCompleted })
+        rpc.beforeList = {}
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        controller.reload()
+        flush()
+        assertEquals("feature/y", controller.current?.branch)
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals("feature/y", controller.current?.branch)
+        assertTrue("a stale poll must not invalidate the newer branch's PR badge", changes.isEmpty())
+        assertEquals(1, reloads)
+        assertEquals(3, rpc.listCalls.size)
     }
 
     fun `test branch tracker leaves unchanged rows and selection alone`() {
