@@ -1021,6 +1021,10 @@ ToolRegistry.register({
     createEffect(() => {
       const id = childID()
       if (!id || !open()) return
+      // Read the tools so a removed child history (an inspector release, a released tree) asks to be loaded again.
+      // Without the read, a card whose cached transcript disappeared keeps its empty list and stays on the
+      // "Starting..." placeholder for the rest of the run.
+      if (child?.tools(id).length) return
       child?.load(id)
     })
     const change = (value: boolean) => {

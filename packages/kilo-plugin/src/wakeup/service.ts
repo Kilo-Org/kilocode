@@ -222,16 +222,14 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
                 : `Cron: ${"cron" in input && input.cron ? input.cron : "one-shot"}`,
             when,
             ...(ends === undefined ? {} : { ends }),
-            action: { type: "hook", prompt: "" },
+            // A hook prompt is never admitted; it only lets a schedule inventory show what the task will send.
+            action: { type: "hook", prompt: input.prompt },
           },
-          { requireEnabled: false },
         )
         .pipe(
           Effect.map((info) => ({ ok: true as const, info })),
           Effect.catchTags({
             "Schedule.InvalidError": (error) => Effect.succeed({ ok: false as const, error: error.message }),
-            "Schedule.DisabledError": () =>
-              Effect.succeed({ ok: false as const, error: "Scheduled tasks are disabled" }),
             "Session.NotFoundError": () =>
               Effect.succeed({ ok: false as const, error: `Session not found: ${input.sessionID}` }),
             "Permission.BlockedError": (error) => Effect.succeed({ ok: false as const, error: error.message }),

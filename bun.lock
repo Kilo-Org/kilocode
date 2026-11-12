@@ -302,22 +302,6 @@
         "solid-js": "catalog:",
       },
     },
-    "packages/kilo-flows-plugin": {
-      "name": "@kilocode/flows-plugin",
-      "version": "0.0.0",
-      "dependencies": {
-        "@opencode/plugin": "workspace:*",
-        "@opentui/core": "catalog:",
-        "@opentui/solid": "catalog:",
-        "solid-js": "catalog:",
-      },
-      "devDependencies": {
-        "@opencode/schema": "workspace:*",
-        "@tsconfig/bun": "catalog:",
-        "@typescript/native": "catalog:",
-        "effect": "catalog:",
-      },
-    },
     "packages/kilo-gateway-core": {
       "name": "@kilocode/gateway-core",
       "version": "0.0.0",
@@ -1457,8 +1441,6 @@
     "@js-temporal/polyfill": ["@js-temporal/polyfill@0.5.1", "", { "dependencies": { "jsbi": "^4.3.0" } }, "sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ=="],
 
     "@kilocode/caffeination": ["@kilocode/caffeination@workspace:packages/kilo-caffeination"],
-
-    "@kilocode/flows-plugin": ["@kilocode/flows-plugin@workspace:packages/kilo-flows-plugin"],
 
     "@kilocode/gateway-core": ["@kilocode/gateway-core@workspace:packages/kilo-gateway-core"],
 

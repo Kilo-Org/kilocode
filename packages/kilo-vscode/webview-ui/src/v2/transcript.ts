@@ -75,6 +75,17 @@ export function transcriptRows(messages: readonly SessionMessageInfo[], previous
   return reuseRows(buildRows(messages), previous)
 }
 
+/**
+ * Drops the notice rows of instruction loads a read card already reports. The
+ * filter runs on rows, not on the messages `transcriptRows` groups: a synthetic
+ * message bounds a turn in a transcript without idle markers, so removing it
+ * from the history would merge the steps after it into another turn and change
+ * that turn's duration and token rate.
+ */
+export function withoutReportedNotices(rows: readonly TranscriptRow[], reported: ReadonlySet<string>) {
+  return rows.filter((row) => row.type !== "notice" || !reported.has(row.message.id))
+}
+
 /** Rows of the active turn kept out of the virtual window. */
 export const DIRECT_TAIL_ROWS = 8
 
@@ -140,6 +151,7 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
     const range = current && index >= current.start && index < current.end ? current : undefined
     if (range) turn = range.turn
 
+    const notice = noticeRow(message, range)
     if (message.type === "user" && range) {
       rows.push({
         type: "user",
@@ -151,16 +163,8 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
       })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
-    } else if (message.type === "synthetic" && message.description && range) {
-      // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
-      rows.push({
-        type: "notice",
-        key: `${message.id}:notice`,
-        turn: range.turn,
-        userTurn: range.userTurn,
-        message,
-        text: message.description,
-      })
+    } else if (notice) {
+      rows.push(notice)
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
       // A run can fail before any step, for example without a usable model. The
       // idle row carries that error; a failed step shows its own error instead.
@@ -175,6 +179,26 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
   }
 
   return rows
+}
+
+/**
+ * The notice row for a described synthetic message, or undefined when the message has no row. A subagent completion
+ * already shows as its tool card and in the agent stack; its synthetic message exists for the model, so a notice row
+ * here would only repeat the card title at the end of the transcript. Shell notices keep their row: a backgrounded
+ * shell result, a restart, and a shell start failure are only visible there.
+ */
+function noticeRow(message: SessionMessageInfo, range: MessageTurnRange | undefined) {
+  if (!range || message.type !== "synthetic" || !message.description) return undefined
+  if (message.metadata?.source === "subagent") return undefined
+  // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
+  return {
+    type: "notice" as const,
+    key: `${message.id}:notice`,
+    turn: range.turn,
+    userTurn: range.userTurn,
+    message,
+    text: message.description,
+  }
 }
 
 function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange): TranscriptAssistantRow[] {

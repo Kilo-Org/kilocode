@@ -10,7 +10,7 @@ import { Session } from "@opencode/schema/session"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Tool } from "@opencode/schema/tool"
 import { FSUtil } from "@opencode/util/fs-util"
-import { Cause, DateTime, Effect, Option, Schema, Semaphore, Stream } from "effect"
+import { Cause, DateTime, Effect, Option, Ref, Schema, Semaphore, Stream } from "effect"
 import {
   flowPermissions,
   permissionInstructions,
@@ -53,13 +53,20 @@ const decodeBlockedPermission = Schema.decodeUnknownOption(
 type Runtime = {
   readonly fs: FSUtil.Interface
   readonly locks: Map<KiloFlowRpc.ID, Semaphore.Semaphore>
+  /** Publishes the `changed` RPC event; a no-op until the RPC is registered. */
+  readonly changed: (event: KiloFlowRpc.Changed) => Effect.Effect<void>
 }
 
 export const KiloFlowPlugin = define({
   id: "kilocode.flow",
   effect: Effect.fn(function* (ctx) {
     const schedules = yield* Schedule.Service
-    const runtime = { fs: yield* FSUtil.Service, locks: new Map() } satisfies Runtime
+    const publish = yield* Ref.make<(event: KiloFlowRpc.Changed) => Effect.Effect<void>>(() => Effect.void)
+    const runtime = {
+      fs: yield* FSUtil.Service,
+      locks: new Map(),
+      changed: (event) => Effect.flatMap(Ref.get(publish), (emit) => emit(event)),
+    } satisfies Runtime
     const selections = new Map<Session.ID, { readonly model: Model.Ref; readonly agent: Agent.ID }>()
     const background = new Set<Session.ID>()
     yield* reconcileActive(ctx, runtime).pipe(
@@ -71,7 +78,7 @@ export const KiloFlowPlugin = define({
         if (flowID === undefined) return
         // Claim only once the occurrence has started or was deliberately skipped. A start failure dies here so the
         // scheduler keeps the due time and retries with its failed-retry backoff instead of advancing the row.
-        const outcome = yield* scheduled(ctx, event.schedule, flowID, runtime).pipe(Effect.orDie)
+        const outcome = yield* scheduled(ctx, schedules, event.schedule, flowID, runtime).pipe(Effect.orDie)
         if (outcome === "orphaned") return
         event.claimed = true
       }),
@@ -125,11 +132,19 @@ export const KiloFlowPlugin = define({
         }),
         Effect.forkScoped({ startImmediately: true }),
       )
-    yield* ctx.rpc
+    const registration = yield* ctx.rpc
       .register(KiloFlowRpc.Definition, {
-        list: () => list(ctx, schedules, ctx.location.project.id),
+        list: () => list(ctx, schedules, ctx.location.project.id, runtime.fs),
         create: (input, context) =>
-          create(ctx, schedules, input, ctx.location.project.id).pipe(
+          create(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
+            Effect.mapError((error) => context.error("failed", error.message)),
+          ),
+        update: (input, context) =>
+          update(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
+            Effect.mapError((error) => context.error("failed", error.message)),
+          ),
+        runs: (input, context) =>
+          history(ctx, input, ctx.location.project.id).pipe(
             Effect.mapError((error) => context.error("failed", error.message)),
           ),
         run: (input, context) =>
@@ -137,20 +152,20 @@ export const KiloFlowPlugin = define({
             Effect.mapError((error) => context.error("failed", error.message)),
           ),
         pause: (input, context) =>
-          control(ctx, schedules, input, ctx.location.project.id, "pause").pipe(
+          control(ctx, schedules, input, ctx.location.project.id, "pause", runtime).pipe(
             Effect.mapError((error) => context.error("failed", error.message)),
           ),
         resume: (input, context) =>
-          control(ctx, schedules, input, ctx.location.project.id, "resume").pipe(
+          control(ctx, schedules, input, ctx.location.project.id, "resume", runtime).pipe(
             Effect.mapError((error) => context.error("failed", error.message)),
           ),
         remove: (input, context) =>
           remove(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
-            Effect.as({}),
             Effect.mapError((error) => context.error("failed", error.message)),
           ),
       })
       .pipe(Effect.orDie)
+    yield* Ref.set(publish, (event) => registration.events.emit("changed", event).pipe(Effect.ignore))
     yield* ctx.tool
       .transform((editor) => {
         editor.add({
@@ -174,17 +189,71 @@ export const KiloFlowPlugin = define({
                     agent: input.agent ?? selection?.agent ?? context.agent,
                   },
                   session.projectID,
+                  runtime,
                 ),
               ),
               Effect.map((flow) => ({
                 output: flow,
                 content: `Created scheduled Flow ${flow.name} with ${permissionSummary(flow.permissions ?? [])}. Start an extra run manually with flow_run using Flow ID ${flow.reference.type === "managed" ? flow.reference.flowID : "unknown"}.`,
               })),
-              Effect.mapError(
-                (error) => new Tool.Error({ message: error instanceof Error ? error.message : String(error), error }),
-              ),
+              Effect.mapError(toolError),
             )
           },
+        })
+        editor.add({
+          name: "flow_list",
+          description:
+            "List this project's managed local Flows with their ID, schedule, status, next run, and latest run, plus the other schedules shown in /periodic. Use the Flow ID with flow_run, flow_update, or flow_delete.",
+          input: Schema.Struct({}),
+          output: KiloFlowRpc.ListOutput,
+          options: { codemode: true },
+          execute: (_, context) =>
+            ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.flatMap((session) => list(ctx, schedules, session.projectID, runtime.fs)),
+              Effect.map((output) => ({ output, content: inventory(output) })),
+              Effect.mapError(toolError),
+            ),
+        })
+        editor.add({
+          name: "flow_update",
+          description:
+            "Change a managed local Flow. Pass the Flow ID and only the fields to change: name, prompt, when, ends (null removes the limit), worktree, model, agent, or permissions. permissions replaces the additional unattended patterns beyond the read, glob, and grep baseline, and the user approves a changed allowlist again before it is saved. Run history is kept.",
+          input: KiloFlowRpc.UpdateRequest,
+          output: KiloFlowRpc.Info,
+          options: { codemode: true },
+          execute: (input, context) =>
+            ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
+              Effect.flatMap((session) =>
+                update(ctx, schedules, { ...input, sessionID: context.sessionID }, session.projectID, runtime),
+              ),
+              Effect.map((flow) => ({ output: flow, content: `Updated Flow ${flow.name}.` })),
+              Effect.mapError(toolError),
+            ),
+        })
+        editor.add({
+          name: "flow_delete",
+          description:
+            "Delete a managed local Flow: stops its active run, removes its schedule and run records, and keeps the run Sessions. With deleteWorktrees, also deletes the worktrees its runs created; a worktree with changes is kept.",
+          input: KiloFlowRpc.RemoveInput,
+          output: KiloFlowRpc.RemoveOutput,
+          options: { codemode: true },
+          execute: (input, context) =>
+            ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
+              Effect.flatMap((session) => remove(ctx, schedules, input, session.projectID, runtime)),
+              Effect.map((output) => ({
+                output,
+                content: [
+                  `Deleted Flow ${input.flowID}.`,
+                  ...(output.removedWorktrees?.length ? [`Deleted worktrees: ${output.removedWorktrees.join(", ")}`] : []),
+                  ...(output.keptWorktrees?.length
+                    ? [`Kept worktrees with changes or that could not be removed: ${output.keptWorktrees.join(", ")}`]
+                    : []),
+                ].join("\n"),
+              })),
+              Effect.mapError(toolError),
+            ),
         })
         editor.add({
           name: "flow_run",
@@ -195,6 +264,7 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (input, context) =>
             ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) => run(ctx, input, session.projectID, runtime)),
               Effect.map((execution) => ({
                 output: execution,
@@ -205,9 +275,7 @@ export const KiloFlowPlugin = define({
                       ? `Skipped Flow ${execution.flowID} because another execution is active.`
                       : `Started Flow ${execution.flowID} in Session ${execution.sessionID}.`,
               })),
-              Effect.mapError(
-                (error) => new Tool.Error({ message: error instanceof Error ? error.message : String(error), error }),
-              ),
+              Effect.mapError(toolError),
             ),
         })
       })
@@ -215,11 +283,53 @@ export const KiloFlowPlugin = define({
   }),
 })
 
+/**
+ * A Flow run Session has a deny-by-default allowlist and reads repository content unattended, so it must not manage the
+ * project's other Flows: rewriting a more privileged Flow's prompt and running it would escape its own allowlist.
+ */
+function refuseRunSession(session: Session.Info) {
+  if (Option.isNone(decodeMetadata(session.metadata?.[metadataKey]))) return Effect.void
+  return Effect.fail(new Error(`Session ${session.id} runs a Flow and cannot start, change, or delete Flows`))
+}
+
+function toolError(error: unknown) {
+  return new Tool.Error({ message: error instanceof Error ? error.message : String(error), error })
+}
+
+/** One line per Flow, for models that read tool content rather than output (Code Mode off). */
+function inventory(output: KiloFlowRpc.ListOutput) {
+  if (output.flows.length === 0) return "No Flows or schedules in this project."
+  return output.flows
+    .map((flow) =>
+      [
+        flow.reference.type === "managed" ? flow.reference.flowID : flow.reference.scheduleID,
+        JSON.stringify(flow.name),
+        flow.reference.type === "managed" ? "managed Flow" : "schedule",
+        flow.status,
+        describeWhen(flow.trigger.when),
+        flow.nextRunAt === undefined ? undefined : `next ${new Date(flow.nextRunAt).toISOString()}`,
+        flow.lastOutcome === undefined ? undefined : `last ${flow.lastOutcome}`,
+        flow.health.status === "error" ? `error: ${flow.health.message}` : undefined,
+      ]
+        .filter(Boolean)
+        .join(", "),
+    )
+    .join("\n")
+}
+
+function describeWhen(when: Schedule.When) {
+  if (when.type === "in") return `in ${when.in}`
+  if (when.type === "at") return `at ${when.at}`
+  if (when.type === "every") return `every ${when.every}`
+  return `cron "${when.cron}"`
+}
+
 export function create(
   ctx: Plugin.Context,
   schedules: Pick<Schedule.Interface, "create" | "remove">,
   input: KiloFlowRpc.CreateInput,
   projectID: Session.Info["projectID"] | undefined,
+  runtime: Pick<Runtime, "changed">,
 ): Effect.Effect<KiloFlowRpc.Info, Error> {
   return Effect.gen(function* () {
     const session = yield* ctx.session
@@ -260,6 +370,7 @@ export function create(
       },
       prompt: input.prompt,
       permissions,
+      ...(input.ends ? { ends: input.ends } : {}),
       time: { created: now, updated: now },
     }
     yield* ctx.permission.assert({
@@ -282,15 +393,7 @@ export function create(
       .set(key, JSON.stringify(record))
       .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
     const schedule = yield* schedules
-      .create(
-        {
-          sessionID: session.id,
-          name: `Flow: ${record.name}`,
-          when: record.trigger.when,
-          action: { type: "hook", prompt: "" },
-        },
-        { requireEnabled: false },
-      )
+      .create(backingSchedule(record, session.id))
       .pipe(
         Effect.mapError((error) => new Error(`Couldn't schedule Flow ${record.id}: ${error.message}`)),
         Effect.onError(() => ctx.storage.remove(key).pipe(Effect.ignore)),
@@ -316,7 +419,175 @@ export function create(
         ),
       ),
     )
+    yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
     return managed(configured, schedule)
+  })
+}
+
+/** The native schedule row that fires a Flow. Its hook prompt is descriptive only: the scheduler never admits it. */
+function backingSchedule(record: KiloFlowRpc.Record, sessionID: Session.ID): Schedule.CreateInput {
+  return {
+    sessionID,
+    name: `Flow: ${record.name}`,
+    when: record.trigger.when,
+    ...(record.ends ? { ends: record.ends } : {}),
+    action: { type: "hook", prompt: record.prompt },
+  }
+}
+
+export function update(
+  ctx: Plugin.Context,
+  schedules: Pick<Schedule.Interface, "create" | "remove" | "get" | "pause">,
+  input: KiloFlowRpc.UpdateInput,
+  authorizedProjectID: Session.Info["projectID"],
+  runtime: Runtime,
+): Effect.Effect<KiloFlowRpc.Info, Error> {
+  return Effect.gen(function* () {
+    const current = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
+    const invalidPermission = input.permissions && validatePermissions(input.permissions)
+    if (invalidPermission) return yield* Effect.fail(new Error(invalidPermission))
+    const permissions = input.permissions ? flowPermissions(input.permissions) : (current.permissions ?? [])
+    // Approval waits for the user, so it happens before the Flow lock that runs and removal also take.
+    if (!samePermissions(permissions, current.permissions ?? []))
+      yield* approve(ctx, {
+        flowID: current.id,
+        name: input.name ?? current.name,
+        permissions,
+        sessionID: input.sessionID ?? current.execution.sourceSessionID,
+        projectID: authorizedProjectID,
+        agent: input.agent ?? current.context.agent,
+      })
+    return yield* flowLock(runtime, current.id).withPermit(
+      Effect.gen(function* () {
+        // Read again under the lock: a run or another update may have changed the record while approval waited.
+        const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
+        const ends = input.ends === null ? undefined : (input.ends ?? record.ends)
+        const tz = input.when ? (input.when.tz ?? record.trigger.when.tz) : undefined
+        const next: KiloFlowRpc.Record = {
+          version: 1,
+          id: record.id,
+          name: input.name ?? record.name,
+          authority: record.authority,
+          trigger: input.when
+            ? {
+                type: "time",
+                when: time({ ...input.when, tz }),
+                timezone: tz ?? record.trigger.timezone,
+              }
+            : record.trigger,
+          execution: { ...record.execution, worktree: input.worktree ?? record.execution.worktree },
+          context: {
+            ...record.context,
+            model: input.model ?? record.context.model,
+            agent: input.agent ?? record.context.agent,
+          },
+          prompt: input.prompt ?? record.prompt,
+          // Only an approved new allowlist replaces the stored one; otherwise keep whatever is stored now.
+          permissions: input.permissions ? permissions : (record.permissions ?? []),
+          ...(ends ? { ends } : {}),
+          ...(record.scheduleID ? { scheduleID: record.scheduleID } : {}),
+          time: { ...record.time, updated: Date.now() },
+        }
+        const key = `${prefix}${record.id}`
+        const previous = record.scheduleID
+          ? Option.getOrUndefined(yield* schedules.get(record.scheduleID).pipe(Effect.option))
+          : undefined
+        // There is no schedule update: a new trigger or limit replaces the backing row. Its native run counters
+        // restart, while the Flow's own run records keep the history users see. A rename or a new prompt keeps the
+        // row, whose descriptive name and hook prompt then lag behind; inventories read the Flow record instead.
+        if (input.when === undefined && input.ends === undefined) {
+          yield* ctx.storage
+            .set(key, JSON.stringify(next))
+            .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
+          yield* notify(runtime, next, "updated")
+          return managed(next, previous, (yield* latest(ctx, record.id)).run)
+        }
+        const created = yield* schedules
+          .create(backingSchedule(next, record.execution.sourceSessionID))
+          .pipe(Effect.mapError((error) => new Error(`Couldn't reschedule Flow ${record.id}: ${error.message}`)))
+        const discard = schedules.remove(created.id).pipe(Effect.ignore)
+        const schedule =
+          previous?.status === "paused"
+            ? yield* schedules.pause(created.id).pipe(
+                Effect.mapError((error) => new Error(error.message)),
+                Effect.onError(() => discard),
+              )
+            : created
+        const rescheduled: KiloFlowRpc.Record = {
+          ...next,
+          trigger: next.trigger.type === "time" ? { ...next.trigger, timezone: schedule.tz } : next.trigger,
+          scheduleID: schedule.id,
+        }
+        yield* ctx.storage.set(key, JSON.stringify(rescheduled)).pipe(
+          Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)),
+          Effect.onError(() => discard),
+        )
+        yield* ctx.storage.set(scheduleKey(schedule.id), record.id)
+        if (record.scheduleID) {
+          yield* ctx.storage.remove(scheduleKey(record.scheduleID))
+          yield* schedules.remove(record.scheduleID).pipe(Effect.ignore)
+        }
+        yield* notify(runtime, rescheduled, "updated")
+        return managed(rescheduled, schedule, (yield* latest(ctx, record.id)).run)
+      }),
+    )
+  })
+}
+
+/** Asks the user to approve a Flow's unattended allowlist in a Session of the Flow's project. */
+function approve(
+  ctx: Plugin.Context,
+  input: {
+    readonly flowID: KiloFlowRpc.ID
+    readonly name: string
+    readonly permissions: readonly KiloFlowRpc.PermissionGrant[]
+    readonly sessionID: Session.ID
+    readonly projectID: Session.Info["projectID"]
+    readonly agent: Agent.ID | undefined
+  },
+) {
+  return Effect.gen(function* () {
+    const session = yield* ctx.session
+      .get({ sessionID: input.sessionID })
+      .pipe(Effect.mapError(() => new Error(`Session ${input.sessionID} does not exist`)))
+    if (session.projectID !== input.projectID)
+      return yield* Effect.fail(new Error(`Session ${input.sessionID} does not exist`))
+    yield* ctx.permission.assert({
+      action: permissionAction,
+      resources: input.permissions.map((permission) => `${permission.action}: ${permission.resource}`),
+      sessionID: session.id,
+      agent: input.agent ?? session.agent,
+      metadata: {
+        [metadataKey]: {
+          flowID: input.flowID,
+          name: input.name,
+          permissions: input.permissions,
+          unattended: true,
+        },
+      },
+    })
+  })
+}
+
+function samePermissions(
+  left: readonly KiloFlowRpc.PermissionGrant[],
+  right: readonly KiloFlowRpc.PermissionGrant[],
+) {
+  const key = (permission: KiloFlowRpc.PermissionGrant) => `${permission.action}\u0000${permission.resource}`
+  const known = new Set(right.map(key))
+  return left.length === right.length && left.every((permission) => known.has(key(permission)))
+}
+
+function notify(runtime: Pick<Runtime, "changed">, record: KiloFlowRpc.Record, kind: KiloFlowRpc.Changed["kind"]) {
+  if (!record.context.projectID) return Effect.void
+  return runtime.changed({ projectID: record.context.projectID, flowID: record.id, kind })
+}
+
+function history(ctx: Plugin.Context, input: KiloFlowRpc.ControlInput, authorizedProjectID: Session.Info["projectID"]) {
+  return Effect.gen(function* () {
+    const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
+    const stored = yield* runs(ctx, [record.id])
+    return { runs: stored.runs.toSorted(newest), warnings: stored.warnings }
   })
 }
 
@@ -341,6 +612,7 @@ function control(
   input: KiloFlowRpc.ControlInput,
   authorizedProjectID: Session.Info["projectID"],
   operation: "pause" | "resume",
+  runtime: Pick<Runtime, "changed">,
 ) {
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
@@ -349,6 +621,7 @@ function control(
       ? schedules.pause(record.scheduleID)
       : schedules.resume(record.scheduleID)
     ).pipe(Effect.mapError((error) => new Error(error.message)))
+    yield* notify(runtime, record, "updated")
     return managed(record, schedule, (yield* latest(ctx, record.id)).run)
   })
 }
@@ -356,17 +629,19 @@ function control(
 function remove(
   ctx: Plugin.Context,
   schedules: Pick<Schedule.Interface, "remove">,
-  input: KiloFlowRpc.ControlInput,
+  input: KiloFlowRpc.RemoveInput,
   authorizedProjectID: Session.Info["projectID"],
   runtime: Runtime,
-) {
+): Effect.Effect<KiloFlowRpc.RemoveOutput, Error> {
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
     const lock = flowLock(runtime, record.id)
-    yield* lock.withPermit(
+    const worktrees = yield* lock.withPermit(
       Effect.gen(function* () {
         const active = yield* reconcileFlowActive(ctx, record.id)
         if (active?.sessionID) yield* ctx.session.interrupt({ sessionID: active.sessionID }).pipe(Effect.ignore)
+        // Read the run worktrees before the run records go away.
+        const worktrees = input.deleteWorktrees ? yield* runWorktrees(ctx, record) : []
         if (record.scheduleID)
           yield* schedules.remove(record.scheduleID).pipe(
             Effect.catchTag("Schedule.NotFoundError", () => Effect.void),
@@ -382,9 +657,42 @@ function remove(
           { discard: true },
         )
         yield* removeRuns(ctx, record.id)
+        return worktrees
       }),
     )
     if (runtime.locks.get(record.id) === lock) runtime.locks.delete(record.id)
+    yield* notify(runtime, record, "removed")
+    const projectID = record.context.projectID
+    if (!projectID || worktrees.length === 0) return {}
+    // Without force, git refuses to remove a worktree with changes, so a refusal keeps the user's work.
+    const results = yield* Effect.forEach(worktrees, (directory) =>
+      ctx.worktree.remove({ projectID, directory, force: false }).pipe(
+        Effect.as({ directory, removed: true }),
+        Effect.catchCause(() => Effect.succeed({ directory, removed: false })),
+      ),
+    )
+    return {
+      removedWorktrees: results.filter((result) => result.removed).map((result) => result.directory),
+      keptWorktrees: results.filter((result) => !result.removed).map((result) => result.directory),
+    }
+  })
+}
+
+/**
+ * The worktree roots a Flow created. Retained runs record their root, and every worktree a Flow creates is named after
+ * it, so the project listing also finds the roots whose run record retention already pruned.
+ */
+function runWorktrees(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
+  return Effect.gen(function* () {
+    const stored = yield* runs(ctx, [record.id])
+    const recorded = stored.runs.flatMap((run) => (run.worktreeDirectory ? [run.worktreeDirectory] : []))
+    const projectID = record.context.projectID
+    if (!projectID) return [...new Set(recorded)]
+    const listed = yield* ctx.worktree.list({ projectID }).pipe(Effect.catchCause(() => Effect.succeed([])))
+    const named = listed
+      .filter((worktree) => path.basename(worktree.directory).startsWith(`${record.id}-`))
+      .map((worktree) => worktree.directory)
+    return [...new Set([...recorded, ...named])]
   })
 }
 
@@ -403,10 +711,11 @@ function requireRecord(
 
 export function scheduled(
   ctx: Plugin.Context,
+  schedules: Pick<Schedule.Interface, "pause">,
   schedule: Schedule.Info,
   flowID: KiloFlowRpc.ID,
   runtime: Runtime,
-): Effect.Effect<"fired" | "skipped" | "orphaned", Error> {
+): Effect.Effect<"fired" | "skipped" | "paused" | "orphaned", Error> {
   return Effect.gen(function* () {
     const record = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${flowID}`)))
     if (!record || record.id !== flowID || (record.scheduleID !== undefined && record.scheduleID !== schedule.id)) {
@@ -418,6 +727,25 @@ export function scheduled(
     if (schedule.nextDueAt === undefined)
       return yield* Effect.fail(new Error(`Backing schedule ${schedule.id} has no due time`))
     const dueAt = DateTime.toEpochMillis(schedule.nextDueAt)
+    const directory = record.context.directory
+    if (directory && !(yield* runtime.fs.isDir(directory))) {
+      // Every retry would fail the same way, so the schedule stops until the user restores the directory and
+      // resumes the Flow, or repairs it. The scheduler still records this occurrence, so a resume waits for the next.
+      yield* schedules.pause(schedule.id).pipe(Effect.ignore)
+      const now = Date.now()
+      yield* persistRun(ctx, {
+        version: 1,
+        id: KiloFlowRpc.RunID.make(`flr_${record.id.slice(4)}_${dueAt}`),
+        flowID: record.id,
+        status: "failed",
+        worktree: record.execution.worktree,
+        scheduled: { scheduleID: schedule.id, dueAt },
+        error: missingDirectory(directory),
+        time: { created: now, updated: now, completed: now },
+      })
+      yield* notify(runtime, record, "run")
+      return "paused" as const
+    }
     const execution = yield* start(
       ctx,
       record,
@@ -481,9 +809,27 @@ function start(
       }
       yield* persistRun(ctx, initial)
       yield* ctx.storage.set(activeKey(record.id), initial.id)
+      // A start that fails before its Session exists also drops the worktree it created, so a failed start leaves nothing
+      // behind. A refused removal (changes in the tree) keeps the root recorded for a retry to reuse.
+      const fail = (error: unknown) =>
+        Effect.gen(function* () {
+          const stored = Option.getOrUndefined(decodeRun(yield* ctx.storage.get(runKey(initial))))
+          const run = stored?.id === initial.id ? stored : initial
+          if (run.status !== "starting" || !run.worktreeDirectory) return yield* failRun(ctx, run, error)
+          const removed = yield* ctx.worktree
+            .remove({ projectID, directory: run.worktreeDirectory, force: false })
+            .pipe(Effect.as(true), Effect.catchCause(() => Effect.succeed(false)))
+          return yield* failRun(ctx, removed ? { ...run, worktreeDirectory: undefined } : run, error)
+        })
+      if (!(yield* runtime.fs.isDir(directory))) return yield* fail(new Error(missingDirectory(directory)))
 
+      // A retried occurrence reuses the worktree an earlier attempt kept, so retries never pile up worktrees.
+      const kept =
+        existing?.worktreeDirectory && (yield* runtime.fs.isDir(existing.worktreeDirectory))
+          ? existing.worktreeDirectory
+          : undefined
       const canonicalDirectory = AbsolutePath.make(yield* runtime.fs.resolve(directory))
-      const targetResult = yield* (
+      const target: Effect.Effect<{ readonly root?: AbsolutePath; readonly directory: AbsolutePath }, unknown> =
         record.execution.worktree === "new"
           ? Effect.gen(function* () {
               const sources = yield* Effect.forEach(yield* ctx.worktree.list({ projectID }), (worktree) =>
@@ -496,28 +842,34 @@ function start(
                 .toSorted((left, right) => right.canonical.length - left.canonical.length)[0]
               if (!source)
                 return yield* Effect.fail(new Error(`Flow directory ${directory} has no containing worktree`))
-              const worktree = yield* ctx.worktree.create({
-                projectID,
-                from: source.worktree.directory,
-                name: `${record.id}-${initial.id}`,
-              })
-              return AbsolutePath.make(
-                yield* runtime.fs.resolve(
-                  path.resolve(worktree.directory, path.relative(source.canonical, canonicalDirectory)),
+              const root =
+                kept ??
+                (yield* ctx.worktree.create({
+                  projectID,
+                  from: source.worktree.directory,
+                  name: `${record.id}-${initial.id}`,
+                })).directory
+              // Record the root before anything else can fail, so cleanup and retries can find it.
+              yield* persistRun(ctx, { ...initial, worktreeDirectory: root, time: { ...initial.time, updated: Date.now() } })
+              return {
+                root,
+                directory: AbsolutePath.make(
+                  yield* runtime.fs.resolve(path.resolve(root, path.relative(source.canonical, canonicalDirectory))),
                 ),
-              )
+              }
             })
-          : Effect.succeed(canonicalDirectory)
-      ).pipe(
-        Effect.onInterrupt(() => failRun(ctx, initial, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
+          : Effect.succeed({ directory: canonicalDirectory })
+      const targetResult = yield* target.pipe(
+        Effect.onInterrupt(() => fail(new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
         Effect.result,
       )
-      if (targetResult._tag === "Failure") return yield* failRun(ctx, initial, targetResult.failure)
+      if (targetResult._tag === "Failure") return yield* fail(targetResult.failure)
 
       const admitting: KiloFlowRpc.Run = {
         ...initial,
         sessionID: Session.ID.make(`ses_flow_${initial.id.slice(4)}`),
-        directory: targetResult.success,
+        directory: targetResult.success.directory,
+        ...(targetResult.success.root ? { worktreeDirectory: targetResult.success.root } : {}),
         time: { ...initial.time, updated: Date.now() },
       }
       yield* persistRun(ctx, admitting)
@@ -527,7 +879,7 @@ function start(
           title: `Flow: ${record.name}`,
           agent,
           model,
-          location: { directory: targetResult.success },
+          location: { directory: targetResult.success.directory },
           metadata: { [metadataKey]: { flowID: record.id, runID: initial.id } },
           permissions: [
             { action: "*", resource: "*", effect: "deny" },
@@ -535,10 +887,10 @@ function start(
           ],
         })
         .pipe(
-          Effect.onInterrupt(() => failRun(ctx, admitting, new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
+          Effect.onInterrupt(() => fail(new Error("Flow start was interrupted")).pipe(Effect.asVoid)),
           Effect.result,
         )
-      if (sessionResult._tag === "Failure") return yield* failRun(ctx, admitting, sessionResult.failure)
+      if (sessionResult._tag === "Failure") return yield* fail(sessionResult.failure)
 
       const started = Date.now()
       const running: KiloFlowRpc.Run = {
@@ -554,7 +906,11 @@ function start(
       if (prompted._tag === "Failure") return yield* failRun(ctx, running, prompted.failure)
       return running
     }),
-  )
+  ).pipe(Effect.ensuring(notify(runtime, record, "run")))
+}
+
+function missingDirectory(directory: string) {
+  return `Flow directory ${directory} no longer exists`
 }
 
 function failRun(ctx: Plugin.Context, run: KiloFlowRpc.Run, error: unknown) {
@@ -575,6 +931,7 @@ export function list(
   ctx: Plugin.Context,
   schedules: Pick<Schedule.Interface, "list">,
   projectID: Session.Info["projectID"],
+  fs: Pick<FSUtil.Interface, "isDir">,
 ): Effect.Effect<KiloFlowRpc.ListOutput> {
   return Effect.gen(function* () {
     const observedAt = Date.now()
@@ -598,6 +955,14 @@ export function list(
     const latestRuns = yield* Effect.forEach(scopedRecords, (record) => latest(ctx, record.id), {
       concurrency: lookups,
     })
+    const missing = yield* Effect.forEach(
+      scopedRecords,
+      (record) =>
+        record.context.directory
+          ? fs.isDir(record.context.directory).pipe(Effect.map((exists) => (exists ? [] : [record.id])))
+          : Effect.succeed([]),
+      { concurrency: lookups },
+    ).pipe(Effect.map((ids) => new Set(ids.flat())))
     const managedScheduleIDs = new Set(
       stored.records.flatMap((record) => (record.scheduleID ? [record.scheduleID] : [])),
     )
@@ -629,6 +994,7 @@ export function list(
       runs: latestRuns.flatMap((item) => (item.run ? [item.run] : [])),
       schedules: scopedSchedules,
       sessions,
+      missing,
       warnings: [...nativeWarnings, ...storedWarnings, ...latestRuns.flatMap((item) => item.warnings)],
       observedAt,
     })
@@ -640,6 +1006,8 @@ export function assemble(input: {
   readonly runs?: readonly KiloFlowRpc.Run[]
   readonly schedules: readonly Schedule.Info[]
   readonly sessions: ReadonlyMap<Schedule.ID, Session.Info | undefined>
+  /** Flows whose source directory no longer exists. */
+  readonly missing?: ReadonlySet<KiloFlowRpc.ID>
   readonly warnings: readonly KiloFlowRpc.Warning[]
   readonly observedAt: number
 }): KiloFlowRpc.ListOutput {
@@ -654,7 +1022,12 @@ export function assemble(input: {
   return {
     flows: [
       ...input.records.map((record) =>
-        managed(record, record.scheduleID ? native.get(record.scheduleID) : undefined, latest.get(record.id)),
+        managed(
+          record,
+          record.scheduleID ? native.get(record.scheduleID) : undefined,
+          latest.get(record.id),
+          input.missing?.has(record.id),
+        ),
       ),
       ...input.schedules
         .filter((schedule) => !managedSchedules.has(schedule.id))
@@ -669,45 +1042,14 @@ function managed(
   record: KiloFlowRpc.Record,
   schedule: Schedule.Info | undefined,
   run?: KiloFlowRpc.Run,
+  missing = false,
 ): KiloFlowRpc.Info {
-  const reference = {
-    type: "managed" as const,
-    flowID: record.id,
-    ...(record.scheduleID ? { scheduleID: record.scheduleID } : {}),
-  }
-  if (!record.scheduleID)
-    return {
-      reference,
-      name: record.name,
-      authority: record.authority,
-      trigger: record.trigger,
-      execution: record.execution,
-      context: record.context,
-      prompt: record.prompt,
-      permissions: record.permissions ?? [],
-      status: "paused",
-      ...(run ? { lastRunAt: run.time.started ?? run.time.created } : {}),
-      ...(run && outcome(run) ? { lastOutcome: outcome(run) } : {}),
-      ...(run ? { latestRun: run } : {}),
-      health: { status: "healthy" },
-      time: record.time,
-    }
-  if (!schedule)
-    return {
-      reference,
-      name: record.name,
-      authority: record.authority,
-      trigger: record.trigger,
-      execution: record.execution,
-      context: record.context,
-      prompt: record.prompt,
-      permissions: record.permissions ?? [],
-      status: "error",
-      health: { status: "error", message: `Backing schedule ${record.scheduleID} no longer exists` },
-      time: record.time,
-    }
-  return {
-    reference,
+  const shared = {
+    reference: {
+      type: "managed" as const,
+      flowID: record.id,
+      ...(record.scheduleID ? { scheduleID: record.scheduleID } : {}),
+    },
     name: record.name,
     authority: record.authority,
     trigger: record.trigger,
@@ -715,13 +1057,38 @@ function managed(
     context: record.context,
     prompt: record.prompt,
     permissions: record.permissions ?? [],
+    ...(record.ends ? { ends: record.ends } : {}),
+    time: record.time,
+  }
+  const health: KiloFlowRpc.Health =
+    missing && record.context.directory
+      ? { status: "error", message: missingDirectory(record.context.directory) }
+      : { status: "healthy" }
+  if (!record.scheduleID)
+    return {
+      ...shared,
+      status: "paused",
+      ...(run ? { lastRunAt: run.time.started ?? run.time.created } : {}),
+      ...(run && outcome(run) ? { lastOutcome: outcome(run) } : {}),
+      ...(run ? { latestRun: run } : {}),
+      health,
+    }
+  if (!schedule)
+    return {
+      ...shared,
+      status: "error",
+      health: { status: "error", message: `Backing schedule ${record.scheduleID} no longer exists` },
+    }
+  return {
+    ...shared,
     status: status(schedule.status),
     nextRunAt: instant(schedule.nextDueAt),
     lastRunAt: run?.time.started ?? run?.time.created ?? instant(schedule.lastFiredAt),
     lastOutcome: (run && outcome(run)) ?? schedule.lastOutcome,
+    ...(schedule.endsAt ? { endsAt: instant(schedule.endsAt) } : {}),
+    ...(schedule.remainingRuns === undefined ? {} : { remainingRuns: schedule.remainingRuns }),
     ...(run ? { latestRun: run } : {}),
-    health: { status: "healthy" },
-    time: record.time,
+    health,
   }
 }
 
@@ -744,7 +1111,7 @@ function unmanaged(schedule: Schedule.Info, session: Session.Info | undefined): 
       ? "Native schedule has no Session"
       : `Session ${schedule.sessionID} no longer exists`
   return {
-    reference: { type: "native-schedule", scheduleID: schedule.id },
+    reference: { type: "native-schedule", scheduleID: schedule.id, action: schedule.action.type },
     name: schedule.name ?? "Scheduled prompt",
     authority: { type: "local" },
     trigger: trigger(schedule),
@@ -1019,7 +1386,7 @@ function complete(
   if (event.type === "session.execution.succeeded" && background.has(event.data.sessionID)) return Effect.void
   return Effect.gen(function* () {
     const session = yield* ctx.session.get({ sessionID: event.data.sessionID })
-    yield* withStoredRun(ctx, runtime, session, (stored) =>
+    const matched = yield* withStoredRun(ctx, runtime, session, (stored) =>
       Effect.gen(function* () {
         const completed = event.created
         const status = stored.error
@@ -1039,6 +1406,7 @@ function complete(
         yield* clearActive(ctx, updated)
       }),
     )
+    if (matched) yield* runChanged(runtime, session)
   }).pipe(
     Effect.catchCause((cause) =>
       Effect.logWarning("failed to update Flow run outcome", { sessionID: event.data.sessionID, cause }),
@@ -1064,12 +1432,20 @@ function permissionFailed(
       }),
     )
     // Only an active Flow run is stopped. Ordinary Sessions keep the tool error and continue.
-    if (matched) yield* ctx.session.interrupt({ sessionID }).pipe(Effect.ignore)
+    if (!matched) return
+    yield* runChanged(runtime, session)
+    yield* ctx.session.interrupt({ sessionID }).pipe(Effect.ignore)
   }).pipe(
     Effect.catchCause((cause) =>
       Effect.logWarning("failed to record Flow permission error", { sessionID, tool, cause }),
     ),
   )
+}
+
+function runChanged(runtime: Pick<Runtime, "changed">, session: Session.Info) {
+  const metadata = Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))
+  if (!metadata) return Effect.void
+  return runtime.changed({ projectID: session.projectID, flowID: metadata.flowID, kind: "run" })
 }
 
 function withStoredRun(

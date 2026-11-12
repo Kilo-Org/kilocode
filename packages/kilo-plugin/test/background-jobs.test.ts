@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect, Fiber, Layer, Schedule } from "effect"
+import { DateTime, Effect, Fiber, Layer, Ref, Schedule, Stream } from "effect"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
 import { TestLLM } from "@opencode/ai/testing"
@@ -29,6 +29,7 @@ import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
 import { testEffect } from "../../core/test/lib/effect"
 import { executeTool, toolDefinitions, toolIdentity } from "../../core/test/lib/tool"
 import { KiloBackgroundJobs } from "../src/background-jobs"
+import { make } from "../src/background-jobs/tracker"
 import { KiloSubagentBackgroundPlugin } from "../src/subagent-background"
 
 const llmLayer = TestLLM.testLayer({ fallback: TestLLM.text("Review complete", "review") })
@@ -230,6 +231,151 @@ describe("kilocode.background-jobs", () => {
       yield* env.until((jobs) => jobs[0]?.status === "cancelled")
       yield* gate.release
     }),
+  )
+
+  // A restart empties the tracker; the completion core delivered to the parent is durable.
+  it.live("restores a finished background subagent from its delivered completion", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const sessions = yield* Session.Service
+      const child = yield* sessions.create({ parentID: env.parent.id, title: "Child title" })
+      const foreground = yield* sessions.create({ parentID: env.parent.id, title: "Foreground child" })
+      yield* sessions.synthetic({
+        sessionID: env.parent.id,
+        description: "Restored review",
+        text: `<subagent sessionID="${child.id}" state="cancelled" description="Restored review">\n</subagent>`,
+        metadata: { source: "subagent", childID: child.id, agent: "reviewer", state: "cancelled" },
+      })
+      // The parent run delivers the completion into its transcript.
+      const jobs = yield* env.until((list) => list.length > 0)
+      expect(jobs).toMatchObject([
+        {
+          id: child.id,
+          sessionID: child.id,
+          parentSessionID: env.parent.id,
+          agent: "reviewer",
+          title: "Restored review",
+          status: "cancelled",
+          background: true,
+        },
+      ])
+      expect(jobs[0]?.time.completed).toBeNumber()
+      // A child without a delivered completion ran in the foreground, so it is not restored as a background agent.
+      expect(jobs.some((job) => job.id === foreground.id)).toBe(false)
+      // A later list reuses the settled memory: the restored job stays and the finished foreground child stays out.
+      expect(yield* env.list).toMatchObject([{ id: child.id, status: "cancelled" }])
+    }),
+  )
+
+  it.live("keeps the newest finished subagents without restoring pruned ones again", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const sessions = yield* Session.Service
+      const children = yield* Effect.forEach(Array.from({ length: 52 }), (_, index) =>
+        sessions.create({ parentID: env.parent.id, title: `Child ${index}` }),
+      )
+      // Queue every completion, then let one parent run deliver them in order.
+      yield* Effect.forEach(children, (child, index) =>
+        sessions.synthetic({
+          sessionID: env.parent.id,
+          resume: index === children.length - 1,
+          description: `Review ${index}`,
+          text: `<subagent sessionID="${child.id}" state="completed" description="Review ${index}">\n</subagent>`,
+          metadata: { source: "subagent", childID: child.id, agent: "reviewer", state: "completed" },
+        }),
+      )
+      yield* Effect.retry(
+        sessions
+          .messages({ sessionID: env.parent.id, type: "synthetic" })
+          .pipe(Effect.flatMap((list) => (list.length === children.length ? Effect.void : Effect.fail("pending")))),
+        { times: 400, schedule: Schedule.spaced("10 millis") },
+      )
+
+      const first = yield* env.list
+      // The prune keeps 50 finished jobs per parent, the latest completion included.
+      expect(first).toHaveLength(50)
+      expect(first.map((job) => job.title).toSorted()).toEqual(
+        children.slice(2).map((_, index) => `Review ${index + 2}`).toSorted(),
+      )
+
+      const changes = yield* Ref.make(0)
+      yield* env.rpc.events.subscribe("changed").pipe(
+        Stream.runForEach(() => Ref.update(changes, (count) => count + 1)),
+        Effect.forkScoped({ startImmediately: true }),
+      )
+      const second = yield* env.list
+      yield* Effect.sleep("50 millis")
+      expect(second.map((job) => job.id).toSorted()).toEqual(first.map((job) => job.id).toSorted())
+      expect(yield* Ref.get(changes)).toBe(0)
+    }),
+  )
+
+  // The window the tracker must not close: a background child's row outlives its job until the parent receives the
+  // completion, so a finished child that still has a row may be about to be restored.
+  it.effect("keeps a finished background child adoptable until its completion lands", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const parent = "ses_unit_settle_parent" as never
+        const child = "ses_unit_settle_child"
+        let messages: readonly unknown[] = []
+        const tracker = yield* make({
+          directory: "/unit",
+          jobs: {
+            get: () => Effect.succeed({ status: "completed" } as never),
+            wait: () => Effect.never,
+            background: () => Effect.succeed(undefined) as never,
+            cancel: () => Effect.void as never,
+            backgroundJobs: Effect.succeed([
+              {
+                kind: "subagent",
+                id: child,
+                sessionID: parent,
+                status: "completed",
+                title: "Child",
+                time: { started: 1, completed: 2 },
+                childSessionID: child,
+                agent: "reviewer",
+                description: "Child",
+              },
+            ] as never),
+          },
+          sessions: {
+            list: () =>
+              Effect.succeed({
+                data: [
+                  {
+                    id: child,
+                    parentID: parent,
+                    agent: "reviewer",
+                    title: "Child",
+                    time: { created: DateTime.makeUnsafe(1) },
+                  },
+                ],
+                cursor: {},
+              } as never),
+            interrupt: () => Effect.succeed(true) as never,
+            messages: () => Effect.succeed(messages as never),
+            active: Effect.succeed(new Set() as never),
+            inbox: () => Effect.succeed([]),
+          },
+          publish: () => Effect.void,
+        })
+
+        // Finished, idle parent, no completion yet: the child must not be settled away.
+        expect(yield* tracker.list(parent)).toEqual([])
+
+        messages = [
+          {
+            id: "msg_unit_settle_completion",
+            type: "synthetic",
+            description: "Child",
+            time: { created: DateTime.makeUnsafe(3) },
+            metadata: { source: "subagent", childID: child, agent: "reviewer", state: "completed" },
+          },
+        ]
+        expect(yield* tracker.list(parent)).toMatchObject([{ id: child, status: "completed", background: true }])
+      }),
+    ),
   )
 
   it.live("rejects unknown jobs", () =>
