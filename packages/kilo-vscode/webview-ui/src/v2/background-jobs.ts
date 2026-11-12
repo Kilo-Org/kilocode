@@ -1,6 +1,7 @@
 // The subagent jobs of the open session, on the `kilocode.background-jobs` RPC. A session switch or a reconnect lists
 // them once; `changed` events keep the list current. A subagent part that names a child the list does not know lists
-// again, so a missed event cannot hide an agent. Cleared finished agents stay hidden for the life of the view.
+// again, so a missed event cannot hide an agent. Finished agents stay until the user clears them; the cleared IDs live
+// in the webview state, so they stay hidden after a remount or a reload.
 import type { SessionMessageInfo } from "@opencode/client"
 import { KiloBackgroundJobsRpc } from "@opencode/schema/kilocode/background-jobs"
 import { createComputed, createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js"
@@ -10,7 +11,6 @@ import {
   jobAgents,
   mergeListed,
   revertedChildren,
-  runChildren,
   showBackgroundAgent,
   transcriptAgents,
   transcriptChildren,
@@ -19,10 +19,16 @@ import {
   type BackgroundJob,
 } from "../components/chat/background-agents"
 import { useLanguage } from "../context/language"
+import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
 import { visibleMessages } from "./revert"
 
 const EMPTY: readonly SessionMessageInfo[] = []
+/** Sessions whose cleared agents the webview state keeps, the most recently cleared last. */
+const CLEARED_SESSIONS = 100
+
+type StoredAgents = { clearedAgents?: Record<string, readonly string[]> }
+type LoadedJobs = { readonly sessionID: string; readonly jobs: BackgroundJob[] }
 
 function errorType(error: unknown) {
   if (error && typeof error === "object" && "type" in error && typeof error.type === "string") return error.type
@@ -34,9 +40,16 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
   const language = useLanguage()
   const rpc = v2.api.rpc(KiloBackgroundJobsRpc.Definition)
   const location = { directory: v2.directory }
-  // Undefined until the first list answer for the open session, and on a server without the plugin.
-  const [jobs, setJobs] = createSignal<BackgroundJob[]>()
-  const [hidden, setHidden] = createSignal<Record<string, ReadonlySet<string>>>({})
+  // Keyed to the session that loaded it, so a switch never reads the previous session's list while the next one loads.
+  const [loaded, setLoaded] = createSignal<LoadedJobs>()
+  const jobs = () => {
+    const current = loaded()
+    const id = input.session()
+    return current && current.sessionID === id ? current.jobs : undefined
+  }
+  const vscode = getVSCodeAPI()
+  const stored = () => (vscode.getState() as StoredAgents | undefined)?.clearedAgents ?? {}
+  const [hidden, setHidden] = createSignal(stored())
   let reads = 0
   let touched = new Set<string>()
   let unsupported = false
@@ -49,7 +62,7 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
     const id = input.session()
     return id ? v2.data.session.get(id)?.revert : undefined
   }
-  // A staged revert hides the turns it would remove, so their subagents leave the run and the transcript fallback.
+  // A staged revert hides the turns it would remove, so their subagents leave the stack and the transcript fallback.
   const messages = createMemo(() => visibleMessages(all(), revert()))
   const reverted = createMemo(() => (revert() ? revertedChildren(all(), messages()) : []))
 
@@ -61,7 +74,10 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
       .list({ sessionID }, { location })
       .then((value) => {
         if (token !== reads || input.session() !== sessionID) return
-        setJobs((current) => mergeListed(value.jobs, current ?? [], touched))
+        setLoaded((current) => ({
+          sessionID,
+          jobs: mergeListed(value.jobs, current?.sessionID === sessionID ? current.jobs : [], touched),
+        }))
       })
       .catch((error: unknown) => {
         // The transcript stands in: a server without the plugin, or a new session the server does not have yet.
@@ -71,9 +87,13 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
 
   onCleanup(
     rpc.events.on("changed", (event) => {
-      if (event.data.parentSessionID !== input.session()) return
+      const sessionID = input.session()
+      if (!sessionID || event.data.parentSessionID !== sessionID) return
       touched.add(event.data.job.id)
-      setJobs((current) => upsertJob(current ?? [], event.data.job))
+      setLoaded((current) => ({
+        sessionID,
+        jobs: upsertJob(current?.sessionID === sessionID ? current.jobs : [], event.data.job),
+      }))
     }),
   )
 
@@ -81,7 +101,10 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
     on(
       () => [input.session(), v2.connection.status()] as const,
       ([id, status], previous) => {
-        if (id !== previous?.[0]) setJobs(undefined)
+        if (id !== previous?.[0]) {
+          touched = new Set()
+          setLoaded(undefined)
+        }
         // A server that answered without the plugin may have it after a reconnect, for example once it registered.
         if (id !== previous?.[0] || (status === "connected" && previous?.[1] !== "connected")) unsupported = false
         if (!id || status !== "connected") return
@@ -135,10 +158,6 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
     /** Every job of the open session, foreground ones included. */
     jobs: () => jobs() ?? [],
     job: (sessionID: string) => jobs()?.find((job) => job.sessionID === sessionID),
-    /** The latest user message: the start of the current run. */
-    boundary: createMemo(() => messages().findLast((message) => message.type === "user")?.id),
-    /** The child sessions the current run started. */
-    started: createMemo(() => new Set(runChildren(messages()))),
     /** Stop one subagent, its child session and every session the child started. */
     cancel: (sessionID: string) => {
       void rpc.cancel({ jobID: sessionID }, { location }).catch((error: unknown) => {
@@ -164,11 +183,20 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
         })
         .catch(report)
     },
-    /** Hide finished agents of the open session. */
+    /** Hide finished agents of the open session, for good. */
     dismiss: (ids: string[]) => {
       const id = input.session()
       if (!id) return
-      setHidden((current) => ({ ...current, [id]: new Set([...(current[id] ?? []), ...ids]) }))
+      // Start from the saved state, not this view's copy: another view of this webview may have cleared agents since.
+      const current = stored()
+      const next = Object.fromEntries(
+        [
+          ...Object.entries(current).filter(([key]) => key !== id),
+          [id, [...new Set([...(current[id] ?? []), ...(hidden()[id] ?? []), ...ids])]] as const,
+        ].slice(-CLEARED_SESSIONS),
+      )
+      setHidden(next)
+      vscode.setState({ ...(vscode.getState() as Record<string, unknown> | undefined), clearedAgents: next })
     },
   }
 }

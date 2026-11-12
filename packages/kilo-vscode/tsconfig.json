@@ -22,6 +22,7 @@
   ],
   "exclude": [
     "src/shared",
+    "test/fixtures/agent-stack-render.tsx",
     "test/fixtures/browser-panel-render.tsx",
     "test/fixtures/composer-focus-switch.tsx",
     "test/fixtures/display-preview-render.tsx",

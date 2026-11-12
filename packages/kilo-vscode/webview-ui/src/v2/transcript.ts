@@ -140,6 +140,7 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
     const range = current && index >= current.start && index < current.end ? current : undefined
     if (range) turn = range.turn
 
+    const notice = noticeRow(message, range)
     if (message.type === "user" && range) {
       rows.push({
         type: "user",
@@ -151,16 +152,8 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
       })
     } else if (message.type === "assistant" && range) {
       rows.push(...assistantRows(message, range))
-    } else if (message.type === "synthetic" && message.description && range) {
-      // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
-      rows.push({
-        type: "notice",
-        key: `${message.id}:notice`,
-        turn: range.turn,
-        userTurn: range.userTurn,
-        message,
-        text: message.description,
-      })
+    } else if (notice) {
+      rows.push(notice)
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
       // A run can fail before any step, for example without a usable model. The
       // idle row carries that error; a failed step shows its own error instead.
@@ -175,6 +168,26 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
   }
 
   return rows
+}
+
+/**
+ * The notice row for a described synthetic message, or undefined when the message has no row. A shell or subagent
+ * completion already shows as its tool card and in the agent stack; its synthetic message exists for the model, so a
+ * notice row here would only repeat the card title at the end of the transcript.
+ */
+function noticeRow(message: SessionMessageInfo, range: MessageTurnRange | undefined) {
+  if (!range || message.type !== "synthetic" || !message.description) return undefined
+  const source = message.metadata?.source
+  if (source === "shell" || source === "subagent") return undefined
+  // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
+  return {
+    type: "notice" as const,
+    key: `${message.id}:notice`,
+    turn: range.turn,
+    userTurn: range.userTurn,
+    message,
+    text: message.description,
+  }
 }
 
 function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange): TranscriptAssistantRow[] {

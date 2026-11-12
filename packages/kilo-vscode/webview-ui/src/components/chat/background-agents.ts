@@ -98,12 +98,6 @@ export function subagentBackground(part: SessionMessageAssistantTool): boolean {
   return part.state.status === "completed" && part.state.metadata?.status === "running"
 }
 
-/** The child sessions the current run started: subagent parts after the latest user message. */
-export function runChildren(messages: readonly SessionMessageInfo[]): string[] {
-  const start = messages.findLastIndex((message) => message.type === "user")
-  return [...new Set(tools(messages.slice(start + 1)).flatMap((part) => subagentChild(part) ?? []))]
-}
-
 /** Every child session the transcript started, in spawn order. */
 export function transcriptChildren(messages: readonly SessionMessageInfo[]): string[] {
   return [...new Set(tools(messages).flatMap((part) => subagentChild(part) ?? []))]

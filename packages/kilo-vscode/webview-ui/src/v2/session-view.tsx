@@ -134,26 +134,15 @@ export function SessionView(props: {
   const draftKey = () => props.draftKey ?? session() ?? "new"
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
-  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
-  // tree releases every child loaded from it, so a long-lived view does not keep every expanded child transcript.
+  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a view
+  // releases the session it showed and the children it loaded, so a long-lived view keeps no expanded child transcript.
   const children = createChildSessions({ data: v2.data, report: v2.report })
   const childSessions: ToolChildSession = {
     tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
     running: (sessionID) => v2.data.session.status(sessionID) === "running",
     load: children.load,
   }
-  let previousSession: string | undefined
-  createEffect(
-    on(
-      session,
-      (id) => {
-        const previous = previousSession
-        previousSession = id
-        children.switchTo(id, previous)
-      },
-      { defer: true },
-    ),
-  )
+  createEffect(on(session, (id, previous) => children.switchTo(id, previous), { defer: true }))
   createEffect(
     on(
       v2.connection.status,

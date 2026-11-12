@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect, Fiber, Layer, Schedule } from "effect"
+import { Effect, Fiber, Layer, Ref, Schedule, Stream } from "effect"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
 import { TestLLM } from "@opencode/ai/testing"
@@ -229,6 +229,81 @@ describe("kilocode.background-jobs", () => {
       expect(yield* env.rpc.cancel({ jobID: running[0]!.id })).toBe(true)
       yield* env.until((jobs) => jobs[0]?.status === "cancelled")
       yield* gate.release
+    }),
+  )
+
+  // A restart empties the tracker; the completion core delivered to the parent is durable.
+  it.live("restores a finished background subagent from its delivered completion", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const sessions = yield* Session.Service
+      const child = yield* sessions.create({ parentID: env.parent.id, title: "Child title" })
+      const foreground = yield* sessions.create({ parentID: env.parent.id, title: "Foreground child" })
+      yield* sessions.synthetic({
+        sessionID: env.parent.id,
+        description: "Restored review",
+        text: `<subagent sessionID="${child.id}" state="cancelled" description="Restored review">\n</subagent>`,
+        metadata: { source: "subagent", childID: child.id, agent: "reviewer", state: "cancelled" },
+      })
+      // The parent run delivers the completion into its transcript.
+      const jobs = yield* env.until((list) => list.length > 0)
+      expect(jobs).toMatchObject([
+        {
+          id: child.id,
+          sessionID: child.id,
+          parentSessionID: env.parent.id,
+          agent: "reviewer",
+          title: "Restored review",
+          status: "cancelled",
+          background: true,
+        },
+      ])
+      expect(jobs[0]?.time.completed).toBeNumber()
+      // A child without a delivered completion ran in the foreground, so it is not restored as a background agent.
+      expect(jobs.some((job) => job.id === foreground.id)).toBe(false)
+    }),
+  )
+
+  it.live("keeps the newest finished subagents without restoring pruned ones again", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const sessions = yield* Session.Service
+      const children = yield* Effect.forEach(Array.from({ length: 52 }), (_, index) =>
+        sessions.create({ parentID: env.parent.id, title: `Child ${index}` }),
+      )
+      // Queue every completion, then let one parent run deliver them in order.
+      yield* Effect.forEach(children, (child, index) =>
+        sessions.synthetic({
+          sessionID: env.parent.id,
+          resume: index === children.length - 1,
+          description: `Review ${index}`,
+          text: `<subagent sessionID="${child.id}" state="completed" description="Review ${index}">\n</subagent>`,
+          metadata: { source: "subagent", childID: child.id, agent: "reviewer", state: "completed" },
+        }),
+      )
+      yield* Effect.retry(
+        sessions
+          .messages({ sessionID: env.parent.id, type: "synthetic" })
+          .pipe(Effect.flatMap((list) => (list.length === children.length ? Effect.void : Effect.fail("pending")))),
+        { times: 400, schedule: Schedule.spaced("10 millis") },
+      )
+
+      const first = yield* env.list
+      // The prune keeps 50 finished jobs per parent, the latest completion included.
+      expect(first).toHaveLength(50)
+      expect(first.map((job) => job.title).toSorted()).toEqual(
+        children.slice(2).map((_, index) => `Review ${index + 2}`).toSorted(),
+      )
+
+      const changes = yield* Ref.make(0)
+      yield* env.rpc.events.subscribe("changed").pipe(
+        Stream.runForEach(() => Ref.update(changes, (count) => count + 1)),
+        Effect.forkScoped({ startImmediately: true }),
+      )
+      const second = yield* env.list
+      yield* Effect.sleep("50 millis")
+      expect(second.map((job) => job.id).toSorted()).toEqual(first.map((job) => job.id).toSorted())
+      expect(yield* Ref.get(changes)).toBe(0)
     }),
   )
 
