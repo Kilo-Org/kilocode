@@ -140,8 +140,8 @@ async function selected(
 /**
  * A catalog entry the Gateway answers for. The chat catalog substitutes a default that is missing from its list;
  * indexing also substitutes a default that is listed but refused, which is what a stale catalog entry looks like.
- * Only a model-specific refusal tries another candidate: an authentication, payment, or network failure fails every
- * model alike.
+ * Only an account or connection failure stops the search, because it fails every candidate alike; one model's refusal
+ * says nothing about the next.
  */
 async function servableModel(input: Input, model: KiloEmbeddingModel, catalog: KiloEmbeddingModelCatalog) {
   const apiKey = input.kiloApiKey
@@ -166,7 +166,7 @@ async function servableModel(input: Input, model: KiloEmbeddingModel, catalog: K
   for (const candidate of candidates) {
     const result = await probe(candidate)
     if (result.valid) return candidate
-    if (!result.modelUnavailable) return model
+    if (result.accountWide) return model
   }
   return model
 }

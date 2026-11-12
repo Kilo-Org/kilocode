@@ -316,6 +316,67 @@ describe("indexing runtime", () => {
     expect(seen).toEqual(["kilo/default-embed", "kilo/large-embed"])
   })
 
+  test("keeps trying after a candidate fails for its own reason", async () => {
+    const state = engine()
+    const seen: string[] = []
+    const baseUrl = gateway(async (request) => {
+      const model = ((await request.json()) as { model?: string }).model ?? ""
+      seen.push(model)
+      if (model === "kilo/default-embed")
+        return Response.json({ error: { message: "not available" } }, { status: 404 })
+      if (model === "kilo/large-embed") return Response.json({ error: { message: "bad request" } }, { status: 400 })
+      return embedding(768)
+    })
+    const { runtime } = host({
+      directory: await tmp(),
+      indexing: { enabled: true },
+      auth: { apiKey: "kilo-token", baseUrl },
+      catalog: {
+        defaultModel: "kilo-default",
+        models: [
+          { id: "kilo/default-embed", name: "Default", dimension: 1536, scoreThreshold: 0.35 },
+          { id: "kilo/other-embed", name: "Other", dimension: 768, scoreThreshold: 0.3 },
+          { id: "kilo/large-embed", name: "Large", dimension: 3072, scoreThreshold: 0.25, note: "code" },
+        ],
+        aliases: { "kilo-default": "kilo/default-embed" },
+      },
+    })
+
+    await settled(runtime)
+    expect(state.inits[0]?.input).toMatchObject({ modelId: "kilo/other-embed", modelDimension: 768 })
+    expect(seen).toEqual(["kilo/default-embed", "kilo/large-embed", "kilo/other-embed"])
+  })
+
+  test("stops the search when a candidate fails for an account-wide reason", async () => {
+    const state = engine()
+    const seen: string[] = []
+    const baseUrl = gateway(async (request) => {
+      const model = ((await request.json()) as { model?: string }).model ?? ""
+      seen.push(model)
+      if (model === "kilo/default-embed")
+        return Response.json({ error: { message: "not available" } }, { status: 404 })
+      return Response.json({ error: { message: "Add credits to continue" } }, { status: 402 })
+    })
+    const { runtime } = host({
+      directory: await tmp(),
+      indexing: { enabled: true },
+      auth: { apiKey: "kilo-token", baseUrl },
+      catalog: {
+        defaultModel: "kilo-default",
+        models: [
+          { id: "kilo/default-embed", name: "Default", dimension: 1536, scoreThreshold: 0.35 },
+          { id: "kilo/other-embed", name: "Other", dimension: 768, scoreThreshold: 0.3 },
+          { id: "kilo/large-embed", name: "Large", dimension: 3072, scoreThreshold: 0.25, note: "code" },
+        ],
+        aliases: { "kilo-default": "kilo/default-embed" },
+      },
+    })
+
+    await settled(runtime)
+    expect(state.inits[0]?.input).toMatchObject({ modelId: "kilo/default-embed", modelDimension: 1536 })
+    expect(seen).toEqual(["kilo/default-embed", "kilo/large-embed"])
+  })
+
   test("keeps the catalog default when validation fails for a non-model reason", async () => {    const state = engine()
     const seen: string[] = []
     const baseUrl = gateway(async (request) => {
