@@ -15,10 +15,10 @@ export type Target = Pick<Location.Info, "directory" | "project">
 const VCS = [".git", ".hg"]
 
 /**
- * The Kilo plan directory: `plans` in the project config directory (`.kilo2`) of a version-controlled project,
- * else `plans` in the Kilo data directory. A directory without version control has no project root to keep plans
- * in. The project ID does not tell the two apart: a plain directory gets a hashed ID, and an unidentified repository
- * shares the global ID.
+ * The Kilo plan directory: `plans` in the project config directory (`KiloConfigFiles.directories`: `.kilo2`, or `.kilo`
+ * with `KILO_USE_RELEASE_CONFIG=1`) of a version-controlled project, else `plans` in the Kilo data directory. A
+ * directory without version control has no project root to keep plans in. The project ID does not tell the two apart:
+ * a plain directory gets a hashed ID, and an unidentified repository shares the global ID.
  */
 export function directory(target: Target, data: string) {
   if (!VCS.some((name) => fs.existsSync(path.join(target.project.directory, name)))) return path.join(data, "plans")
