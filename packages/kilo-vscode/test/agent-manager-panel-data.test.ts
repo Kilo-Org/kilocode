@@ -27,7 +27,7 @@ const OTHER = "/other"
 const encoder = new TextEncoder()
 const streams = new Set<ReadableStreamDefaultController<Uint8Array>>()
 const sessions = new Map<string, string>()
-const requests: { path: string; directory: string | null }[] = []
+const requests: { path: string; directory: string | null; location: string | null }[] = []
 
 function created(id: string, directory: string) {
   sessions.set(id, directory)
@@ -57,7 +57,11 @@ const server = Bun.serve({
   port: 0,
   fetch(request) {
     const url = new URL(request.url)
-    requests.push({ path: url.pathname, directory: url.searchParams.get("directory") })
+    requests.push({
+      path: url.pathname,
+      directory: url.searchParams.get("directory"),
+      location: url.searchParams.get("location[directory]"),
+    })
     if (url.pathname === "/api/event") {
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
@@ -157,6 +161,30 @@ describe("createPanelData", () => {
       expect(
         requests.filter((item) => item.path === "/api/session" && item.directory === WORKTREE).length,
       ).toBe(1)
+      dispose()
+    })
+  })
+
+  test("loads a hidden directory's location when it is shown, not when the server connects", async () => {
+    requests.length = 0
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      // Both stores exist before the server connects, as after a panel reopen or a reconnect.
+      panel.store(ROOT)
+      panel.store(WORKTREE)
+      panel.show([ROOT])
+      const located = (directory: string) =>
+        requests.filter((item) => item.path === "/api/location" && item.location === directory)
+      await until(() => located(ROOT).length > 0)
+      await Bun.sleep(50)
+      expect(located(WORKTREE)).toHaveLength(0)
+
+      panel.show([WORKTREE])
+      await until(() => located(WORKTREE).length > 0)
+      panel.show([WORKTREE])
+      await Bun.sleep(50)
+      expect(located(WORKTREE)).toHaveLength(1)
       dispose()
     })
   })

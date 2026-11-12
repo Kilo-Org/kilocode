@@ -12,7 +12,15 @@ import { events } from "../../src/v2/events"
 import { transport } from "../../src/v2/transport"
 import type { ToHost, ToWebview } from "../../../src/protocol"
 
-type Entry = { scope: V2; emit: (event: OpenCodeEvent) => void; dispose: () => void; show: () => void }
+type Entry = {
+  scope: V2
+  emit: (event: OpenCodeEvent) => void
+  dispose: () => void
+  show: () => void
+  visible: () => boolean
+  /** The store was hidden when the server connected and has not loaded its directory for that connection yet. */
+  missed?: boolean
+}
 
 /**
  * Events that every store must see: a move changes the directory of a session, so the old and the new store both
@@ -48,8 +56,20 @@ export function createPanelData(input: {
   const commands = new Set<(name: string) => void>()
   const catalogHandlers = new Set<() => void>()
   let metadata: ConnectionMetadata | undefined
+  let connected: OpenCodeEvent | undefined
   const route = (event: OpenCodeEvent) => {
     if (event.type === catalogEvent) catalogHandlers.forEach((handler) => handler())
+    if (event.type === "server.connected") {
+      // A store loads its directory's location, VCS and project when the server connects, and each of those loads
+      // the whole Location on the server. A hidden store loads them once it is shown, so a reconnect with many
+      // worktrees loads only the shown ones; worktree cards keep their busy state from the host's activity.
+      connected = event
+      stores.forEach((entry) => {
+        entry.missed = !entry.visible()
+        if (!entry.missed) entry.emit(event)
+      })
+      return
+    }
     targets(event, stores.keys()).forEach((item) => stores.get(item)?.emit(event))
   }
   const connection = createClientConnection(api, { onEvent: route, pageLifecycle: true })
@@ -99,7 +119,7 @@ export function createPanelData(input: {
         open,
         scheduled: wakeups.scheduled,
       })
-      return { scope, emit: event.emit, dispose, show: () => setVisible(true) }
+      return { scope, emit: event.emit, dispose, show: () => setVisible(true), visible }
     })
     stores.set(id, entry)
     return entry.scope
@@ -109,7 +129,12 @@ export function createPanelData(input: {
   const show = (directories: Iterable<string>) => {
     for (const directory of directories) {
       store(directory)
-      stores.get(key(directory))?.show()
+      const entry = stores.get(key(directory))
+      if (!entry) continue
+      entry.show()
+      if (!entry.missed || !connected) continue
+      entry.missed = false
+      entry.emit(connected)
     }
   }
 
