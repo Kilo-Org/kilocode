@@ -161,20 +161,58 @@ describe("kilo DOCX reads", () => {
         expect(capped.truncated).toBe(true)
         expect(capped.next).toBeDefined()
         expect(Buffer.byteLength(capped.content, "utf-8")).toBeLessThanOrEqual(ReadToolFileSystem.MAX_READ_BYTES)
+
+        // The last lines returned for an offset past the end keep the same byte cap and end at the last line.
+        const tail = text(yield* run(many, { offset: 9_999 }))
+        const total = text(yield* run(many, { offset: -1 })).offset
+        expect(Buffer.byteLength(tail.content, "utf-8")).toBeLessThanOrEqual(ReadToolFileSystem.MAX_READ_BYTES)
+        expect(tail.offset + tail.content.split("\n").length - 1).toBe(total)
+        expect(tail.offset).toBeGreaterThan(1)
       }),
     ),
   )
 
-  it.live("returns an empty page for an out-of-range offset in extracted text", () =>
+  it.live("returns the last lines for an offset past the end of extracted text", () =>
     withTempDir((tmp) =>
       Effect.gen(function* () {
         const filepath = path.join(tmp.path, "short.docx")
         yield* Effect.promise(async () => Bun.write(filepath, await document(["one", "two", "three"])))
+        const all = text(yield* run(filepath)).content.split("\n")
 
-        // Upstream removed OffsetOutOfRangeError in v2.2.7; an offset past the end yields an empty page.
-        const page = yield* run(filepath, { offset: 50 })
+        const tail = text(yield* run(filepath, { offset: 50 }))
+        expect(tail).toMatchObject({ content: all.join("\n"), offset: 1, truncated: false })
+        expect(tail.next).toBeUndefined()
+        expect(ReadTool.toModelContent("short.docx", 50, tail)).toContain(
+          `(offset 50 is past the end; the file has ${all.length} lines)`,
+        )
 
-        expect(page).toMatchObject({ type: "text-page", content: "", offset: 50, truncated: false })
+        const limited = text(yield* run(filepath, { offset: 50, limit: 2 }))
+        expect(limited).toMatchObject({ content: all.slice(-2).join("\n"), offset: all.length - 1, truncated: false })
+      }),
+    ),
+  )
+
+  it.live("counts a negative offset back from the last line of extracted text", () =>
+    withTempDir((tmp) =>
+      Effect.gen(function* () {
+        const filepath = path.join(tmp.path, "tail.docx")
+        yield* Effect.promise(async () => Bun.write(filepath, await document(["one", "two", "three"])))
+        const all = text(yield* run(filepath)).content.split("\n")
+
+        const last = text(yield* run(filepath, { offset: -2 }))
+        expect(last).toMatchObject({ content: all.slice(-2).join("\n"), offset: all.length - 1, truncated: false })
+
+        const paged = text(yield* run(filepath, { offset: -3, limit: 1 }))
+        expect(paged).toMatchObject({
+          content: all[all.length - 3],
+          offset: all.length - 2,
+          truncated: true,
+          next: all.length - 1,
+        })
+
+        // Counting back past the first line starts at line 1.
+        const whole = text(yield* run(filepath, { offset: -500 }))
+        expect(whole).toMatchObject({ content: all.join("\n"), offset: 1, truncated: false })
       }),
     ),
   )

@@ -22,6 +22,10 @@ const extractor = () => (extract ??= loadExtract())
 
 const MAX_LINE_LENGTH = 2_000
 const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
+// The native reader's cap on the last lines it returns for an offset past the end.
+const TAIL_LINES = 100
+const clamp = (text: string) =>
+  text.length > MAX_LINE_LENGTH ? text.slice(0, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
 
 /** One sentence so the model knows the formats this build extracts instead of rejecting as binary. */
 export const DESCRIPTION_SUFFIX =
@@ -54,38 +58,60 @@ async function page(
   let bytes = 0
   let count = 0
   let next: number | undefined
+  // Adds a line to the page, or records where the next page starts once the page is full.
+  const add = (line: string, number: number) => {
+    const size = Buffer.byteLength(line, "utf-8") + (lines.length > 0 ? 1 : 0)
+    if (lines.length >= limit || bytes + size > ReadToolFileSystem.MAX_READ_BYTES) {
+      next = number
+      return false
+    }
+    lines.push(line)
+    bytes += size
+    return true
+  }
+  // A negative offset counts back from the last line and an offset past the end returns the last lines, as in the
+  // native reader. Both are known only at the end, so keep the latest lines that either answer can need.
+  const keep = offset < 0 ? -offset : Math.min(value.limit || TAIL_LINES, TAIL_LINES)
+  const recent: string[] = []
   try {
     for await (const text of reader) {
       signal?.throwIfAborted()
       count += 1
-      if (count < offset) continue
-      if (lines.length >= limit || bytes >= ReadToolFileSystem.MAX_READ_BYTES) {
-        next = count
-        break
+      if (offset > 0 && count >= offset) {
+        if (!add(clamp(text), count)) break
+        continue
       }
-      const line = text.length > MAX_LINE_LENGTH ? text.slice(0, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
-      const size = Buffer.byteLength(line, "utf-8") + (lines.length > 0 ? 1 : 0)
-      if (bytes + size > ReadToolFileSystem.MAX_READ_BYTES) {
-        next = count
-        break
-      }
-      lines.push(line)
-      bytes += size
+      recent.push(clamp(text))
+      if (recent.length >= keep * 2) recent.splice(0, recent.length - keep)
     }
   } finally {
     reader.close()
     stream.destroy()
   }
-  // Upstream removed OffsetOutOfRangeError in v2.2.7: an offset past the end now yields an empty page here instead of
-  // the removed typed failure. The extraction reader does not reproduce the native reader's tail-on-overflow behavior.
-  return new ReadToolFileSystem.TextPage({
-    type: "text-page",
-    content: lines.join("\n"),
-    mime: FSUtil.mimeType(input),
-    offset,
-    truncated: next !== undefined,
-    ...(next === undefined ? {} : { next }),
-  })
+  const kept = recent.slice(-keep)
+  const result = (start: number) =>
+    new ReadToolFileSystem.TextPage({
+      type: "text-page",
+      content: lines.join("\n"),
+      mime: FSUtil.mimeType(input),
+      offset: start,
+      truncated: next !== undefined,
+      ...(next === undefined ? {} : { next }),
+    })
+  if (offset < 0) {
+    const start = count - kept.length + 1
+    kept.every((line, index) => add(line, start + index))
+    return result(start)
+  }
+  if (offset <= Math.max(1, count)) return result(offset)
+  // Past the end: the last lines that fit, ending at the last line.
+  for (const line of kept.toReversed()) {
+    const size = Buffer.byteLength(line, "utf-8") + (lines.length > 0 ? 1 : 0)
+    if (bytes + size > ReadToolFileSystem.MAX_READ_BYTES) break
+    lines.unshift(line)
+    bytes += size
+  }
+  return result(count - lines.length + 1)
 }
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
