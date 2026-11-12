@@ -29,6 +29,7 @@ import { KiloSkillPlugin } from "./skill"
 import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
+import { KiloChartPlugin } from "./chart"
 import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
 import { KiloNotebookPlugin } from "./notebook"
@@ -44,6 +45,7 @@ import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloSandbox } from "./sandbox"
 import { KiloBoard } from "./board"
+import { KiloSoulPlugin } from "./soul"
 
 export { KiloSandbox }
 
@@ -85,6 +87,8 @@ export const KiloPlugins = [
   KiloWriteToolPlugin,
   KiloBrowserToolPlugin,
   KiloNotebookPlugin,
+  // The chart tool and its skill, for the VS Code chat that draws the chart. It registers nothing elsewhere.
+  KiloChartPlugin,
   KiloCommitMessagePlugin,
   KiloPrivacyPlugin,
   KiloSettingsPlugin,
@@ -116,4 +120,6 @@ export const KiloPostPlugins = [
   OpencodeFreeTier.Plugin,
   // The sandbox wraps every tool, so it registers after the config plugins and their tools.
   KiloSandbox.Plugin,
+  // Leads the system prompt with the Kilo persona, after every plugin that replaces the first system part.
+  KiloSoulPlugin,
 ] as const

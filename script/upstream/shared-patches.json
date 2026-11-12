@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 124,
-    "markedLines": 2105,
+    "files": 126,
+    "markedLines": 2194,
     "unmarkedLines": 326,
     "deletedFiles": 0
   },
@@ -50,7 +50,7 @@
     },
     ".oxlintrc.json": {
       "rung": 3,
-      "seam": "Oxlint loads one repository config and has no host-level rule composition, so the Kilo VS Code size and complexity overrides must live in the shared root config."
+      "seam": "Oxlint loads one repository config and has no host-level rule composition, so the Kilo VS Code size and complexity overrides must live in the shared root config. That covers the 3000-line and complexity 20 gates, the per-file complexity caps, and the 2800-line cap on webview-ui/agent-manager/AgentManagerApp.tsx that v1 pinned after extracting the sidebar body and tab bar (+6 non-empty marked lines for the restored line ratchet; the exact growth raises only the markedLines budget from 2105 to 2111, while the file, unmarked-line and deletion budgets are unchanged). No plugin or host composition can add lint rules to the root config."
     },
     ".github/pull_request_template.md": {
       "rung": 4,
@@ -167,15 +167,15 @@
     },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
-      "seam": "Generic MCP embedding hooks (`fetch`, `localCommand`, OAuth client identity) for an embedding host. No plugin hook reaches the MCP transport or OAuth registration, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
+      "seam": "Generic MCP embedding hooks (`fetch`, OAuth client identity, client document, loopback callback, registration redirect and credential binding, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
-      "seam": "Apply the optional host `fetch` wrapper to the remote transport and the host `localCommand` rewrite to a local server command. No plugin hook reaches the MCP transport or the spawn command; the host sets both through `Mcp.configured`. Omitting the hooks preserves upstream behavior."
+      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. Omitting the hook preserves upstream behavior."
     },
     "packages/core/src/mcp/connection.ts": {
       "rung": 3,
-      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` and `localCommand` hooks also reach connections the connection service and the pool open rather than only a direct client connect. No plugin hook reaches the MCP transport or spawn command; with `host` unset nothing changes."
+      "seam": "Carry the optional `McpHost.Host` from a connection's input to `McpClient.connect`, so the host `fetch` hook also reaches connections the connection service and the pool open rather than only a direct client connect, and let the host `authFailure` predicate reclassify a remote connection failure as `needs_auth` while the server may sign in. No plugin hook reaches the MCP transport or connection status; with `host` unset nothing changes. The exact 15-line growth raises only the markedLines budget from 2118 to 2133; file, unmarked-line and deletion budgets are unchanged."
     },
     "packages/core/src/mcp/pool.ts": {
       "rung": 3,
@@ -183,15 +183,19 @@
     },
     "packages/core/src/mcp/index.ts": {
       "rung": 3,
-      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, command or OAuth identity; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
+      "seam": "Carry the optional `Mcp.Options.host` embedding hooks to the client and OAuth paths. The MCP service has no plugin hook for its transport, OAuth identity or auth-failure classification; the host composes them through `Mcp.configured`. The construction-only field is not decoded, and an absent host changes nothing."
     },
     "packages/core/src/mcp/oauth.ts": {
       "rung": 3,
-      "seam": "Use the optional host OAuth client identity for `client_name`, `client_uri` and the initialize challenge, and let the host name the CIMD document URL. No plugin hook reaches OAuth registration; the host supplies the values through `Mcp.configured`. Defaults stay `opencode` and the upstream document."
+      "seam": "Use the optional host OAuth policy: `client_name`, `client_uri` and the initialize challenge, the client ID metadata document and the loopback callback it lists, the redirect a non-interactive registration must record, and the client-information binding that keeps a configured client's secret with the authorization server that issued it. No plugin hook reaches OAuth registration; the host supplies the policy through `Mcp.configured({ host })`. With `host` unset, defaults stay upstream's own document, callback, redirect and static client."
     },
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
       "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool/runtime.ts": {
+      "rung": 4,
+      "seam": "Defect fix: Zod 4.6+ (pinned 4.6.7) emits the non-standard JSON Schema formats `starts_with`, `ends_with` and `includes` next to the equivalent `pattern`, and strict providers reject tool schemas that carry them. The marked block passes the Kilo-owned Zod `override` (`core/src/kilocode/tool/zod-format.ts`) to both Zod conversions in `standardJsonSchema`: Standard JSON Schema `libraryOptions` (Zod vendor only) and the `toJSONSchema` fallback (zod/mini). `pattern` and standard formats stay; Effect Schema and raw JSON Schema tools are untouched. No lower rung: the conversion runs inside the tool runtime when definitions are derived, after every tool editor transform, so a plugin cannot reach every Zod tool (including third-party plugin tools registered later), and request-body hooks would be per-protocol and miss WebSocket transports. Upstream `dev` has the same defect; the block goes away when upstream fixes it. Raises files 124 to 125 and markedLines 2105 to 2112 (7 lines: import plus the 6-line block)."
     },
     "packages/core/src/tool/plugin/patch.ts": {
       "rung": 4,
@@ -281,6 +285,10 @@
     "packages/tui/src/app.tsx": {
       "rung": 3,
       "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
+    },
+    "packages/tui/src/mini/runtime.lifecycle.ts": {
+      "rung": 4,
+      "seam": "Call the Kilo-owned `registerMiniParsers` before the mini renderer starts, so fenced code in mini highlights the languages the full TUI supports instead of only OpenTUI's bundled JavaScript, TypeScript, Markdown and Zig. The full TUI registers the same upstream parser config at module load in `tui/src/routes/session/index.tsx`; mini has no equivalent call, so a Kotlin fence renders as plain text. This is a defect fix in upstream's mini lifecycle. Rung 1 has no hook for the CLI frontend's parser registry, rung 2 cannot reach it from `packages/kilo-cli` because the parser config is a package-local module rather than an exported surface, and rung 3 would add a host knob on `MiniHost` for one call. The marked lines only import and call `tui/src/kilocode/mini-parsers.ts`; no Kilo value changes."
     },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,

@@ -215,8 +215,38 @@ describe("agent manager tool start", () => {
       { worktreeID: "wt-target", mode: "worktree" },
       { worktreeID: "wt-target", versions: true },
       { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+      { worktreeID: "wt-target", tasks: [{ prompt: "Fix", baseBranch: "main" }] },
     ])
       expect(parseToolRequest({ ...input, ...fields })).toBeUndefined()
+  })
+
+  it("keeps a worktree base branch from the start event", () => {
+    expect(parseToolRequest({ mode: "worktree", tasks: [{ name: "Base", baseBranch: " main " }] })?.tasks).toEqual([
+      { name: "Base", baseBranch: " main " },
+    ])
+    expect(parseToolRequest({ mode: "worktree", tasks: [{ name: "Base", baseBranch: "  " }] })?.tasks).toEqual([
+      { name: "Base" },
+    ])
+  })
+
+  it("creates the worktree from the requested base branch", async () => {
+    const client = {
+      session: {
+        create: mock(async () => session("ses-local")),
+        prompt: mock(async () => undefined),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+    await startFromTool(c, {
+      requestID: "am-base",
+      mode: "worktree",
+      tasks: [{ name: "Release fix", baseBranch: " release/1.0 " }],
+    })
+    expect(c.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ baseBranch: "release/1.0" }))
+
+    const omitted = deps({ getClient: () => client as never })
+    await startFromTool(omitted, { requestID: "am-default", mode: "worktree", tasks: [{ name: "Default" }] })
+    expect(omitted.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ baseBranch: undefined }))
   })
 
   it("targets a non-caller worktree without creating or cleaning it", async () => {

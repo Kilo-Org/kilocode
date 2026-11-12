@@ -19,6 +19,7 @@
     "kilocode.tool-write": 10,
     "kilocode.tool-browser": 10,
     "kilocode.tool-notebook": 10,
+    "kilocode.chart": 10,
     "kilocode.commit-message": 10,
     "kilocode.privacy": 10,
     "kilocode.settings": 10,
@@ -41,7 +42,8 @@
     "kilo.agent.ceiling": 50,
     "kilocode.gateway.options": 10,
     "kilocode.gateway.opencode-free-tier": 10,
-    "kilocode.sandbox": 10
+    "kilocode.sandbox": 10,
+    "kilocode.soul": 10
   },
   "overhead": 60,
   "modules": 140

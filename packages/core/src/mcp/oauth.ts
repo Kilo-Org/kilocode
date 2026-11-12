@@ -151,7 +151,7 @@ interface Options {
     readonly open: (url: URL) => void | Promise<void>
   }
   readonly clientMetadataUrl?: string
-  readonly clientMetadata?: McpHost.OAuthClientMetadata // kilocode_change - embedding OAuth client identity
+  readonly clientMetadata?: McpHost.OAuth // kilocode_change - embedding OAuth client identity
   readonly discovery?: OAuthDiscoveryState
   readonly invalidate?: OAuthClientProvider["invalidateCredentials"]
 }
@@ -161,7 +161,10 @@ const provider = (options: Options): OAuthClientProvider => {
   const client = oauth?.client_id ? { client_id: oauth.client_id, client_secret: oauth.client_secret } : undefined
   const redirect = options.redirect
   // A missing redirectUrl selects the client-credentials grant in the SDK, so connect still names one.
-  const redirectUrl = redirect?.url ?? oauth?.redirect_uri ?? "http://127.0.0.1/callback"
+  // kilocode_change start - a non-interactive registration records the loopback a later login will use
+  const redirectUrl =
+    redirect?.url ?? oauth?.redirect_uri ?? options.clientMetadata?.redirectUrl?.(oauth) ?? "http://127.0.0.1/callback"
+  // kilocode_change end
   const refuse = (what: string) => new UnauthorizedError(`MCP server "${options.config.url}" requires ${what}`)
   const identity = new URL(options.config.url)
   identity.hash = ""
@@ -202,13 +205,28 @@ const provider = (options: Options): OAuthClientProvider => {
       token_endpoint_auth_method: client?.client_secret ? "client_secret_post" : "none",
       ...(oauth?.scope ? { scope: oauth.scope } : {}),
     },
+    // kilocode_change start - a configured client honors its stored issuer binding
+    // kilocode_change(mcp:3232794a3fe3)
     clientInformation: async () => {
+      const binding = client && options.clientMetadata?.binding
+      if (binding)
+        return binding.present({
+          id: client.client_id,
+          secret: client.client_secret,
+          stored: await options.store.clientInformation(),
+        })
+      // kilocode_change end
       if (client) return client
       const stored = await options.store.clientInformation()
       if (!stored && !redirect) throw refuse("a login before it can register a client")
       return stored
     },
-    saveClientInformation: (info) => options.store.saveClientInformation(info),
+    // kilocode_change start - never persist a configured client's secret, only its binding
+    saveClientInformation: (info) => {
+      const binding = client && options.clientMetadata?.binding
+      return options.store.saveClientInformation(binding ? binding.persist({ id: client.client_id, info }) : info)
+    },
+    // kilocode_change end
     tokens: () => options.store.tokens(),
     saveTokens: (tokens) => options.store.saveTokens(tokens),
     redirectToAuthorization: (url) => {
@@ -293,19 +311,21 @@ const toTokens = (credential: Credential.OAuth): StoredOAuthTokens => {
 export const connectProvider = Effect.fnUntraced(function* (input: {
   readonly config: typeof ConfigMCP.Remote.Type
   readonly credential: Credential.Info | undefined
-  readonly clientMetadata?: McpHost.OAuthClientMetadata // kilocode_change - embedding OAuth client identity
+  readonly clientMetadata?: McpHost.OAuth // kilocode_change - embedding OAuth client identity
 }) {
   const credentials = yield* Credential.Service
   const run = Effect.runPromiseWith(yield* Effect.context())
   const fetch = yield* sender
   const found = input.credential
-  // kilocode_change start - embedding OAuth client identity
+  // kilocode_change start - embedding OAuth client identity and the hosted client document
+  const clientMetadataUrl = input.clientMetadata?.document?.(input.config.oauth || undefined)
   if (!found || found.value.type !== "oauth")
     return provider({
       config: input.config,
       store: memoryStore(),
       fetch,
       clientMetadata: input.clientMetadata,
+      ...(clientMetadataUrl ? { clientMetadataUrl } : {}),
     })
   // kilocode_change end
   const id = found.id
@@ -320,6 +340,7 @@ export const connectProvider = Effect.fnUntraced(function* (input: {
     config: input.config,
     fetch,
     clientMetadata: input.clientMetadata, // kilocode_change - embedding OAuth client identity
+    ...(clientMetadataUrl ? { clientMetadataUrl } : {}), // kilocode_change - the host's client document
     invalidate: async (scope) => {
       if (scope === "verifier" || scope === "discovery") return
       const oauth = await read()
@@ -365,7 +386,7 @@ export const authorize = (input: {
   readonly config: typeof ConfigMCP.Remote.Type
   readonly integrationID: Integration.ID
   readonly methodID: Integration.MethodID
-  readonly clientMetadata?: McpHost.OAuthClientMetadata // kilocode_change - embedding OAuth client identity
+  readonly clientMetadata?: McpHost.OAuth // kilocode_change - embedding OAuth client identity
 }) =>
   Effect.gen(function* () {
     const fields = { server: input.name, methodID: input.methodID, oauthAttemptID: crypto.randomUUID() }
@@ -381,11 +402,21 @@ export const authorize = (input: {
     const previous = (yield* credentials.list(input.integrationID)).at(-1)?.value
     if (previous?.type === "oauth") {
       const client = clientFromCredential(previous)
-      if (client) yield* Effect.promise(() => store.saveClientInformation(client))
+      // kilocode_change start - a configured client keeps only its binding, including rows from older builds
+      const id = oauth?.client_id
+      const binding = id && input.clientMetadata?.binding
+      if (client)
+        yield* Effect.promise(() =>
+          store.saveClientInformation(binding ? binding.persist({ id, info: client }) : client),
+        )
+      // kilocode_change end
     }
     const code = yield* Deferred.make<{ code: string; iss: string | undefined; response?: ServerResponse }, Error>()
     const redirect = oauth?.redirect_uri ? new URL(oauth.redirect_uri) : undefined
-    const redirectPath = redirect?.pathname ?? "/callback"
+    // kilocode_change start - the host may pin the loopback its hosted document lists
+    const callback = input.clientMetadata?.callback?.(oauth)
+    const redirectPath = redirect?.pathname ?? callback?.path ?? "/callback"
+    // kilocode_change end
     const state = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url")
 
     // Lazy so runtimes without a loopback listener (workerd) never evaluate node:http.
@@ -427,13 +458,15 @@ export const authorize = (input: {
     })
 
     // callback_port, else the port pinned by redirect_uri, else ephemeral; a mismatch strands the browser.
+    // kilocode_change start - a host callback owns the port, so a configured redirect still beats callback_port
     const redirectPort = Number(redirect?.port) || undefined
     const port = yield* Effect.callback<number, Error>((resume) => {
       server.once("error", (error) => resume(Effect.fail(error)))
-      server.listen(oauth?.callback_port ?? redirectPort ?? 0, "127.0.0.1", () => {
+      server.listen(callback?.port ?? oauth?.callback_port ?? redirectPort ?? 0, "127.0.0.1", () => {
         resume(Effect.succeed((server.address() as AddressInfo).port))
       })
     })
+    // kilocode_change end
     yield* Effect.addFinalizer(() => Effect.sync(() => server.close()))
 
     // The server's 401 names where its resource metadata lives and which scopes it wants; without it
@@ -479,10 +512,16 @@ export const authorize = (input: {
       !oauth?.redirect_uri &&
       discovery.authorizationServerMetadata?.client_id_metadata_document_supported === true &&
       (discovery.authorizationServerMetadata.token_endpoint_auth_methods_supported?.includes("none") ?? false)
-    yield* Effect.logInfo("mcp oauth client registration selected", {
-      ...fields,
-      registration: oauth?.client_id ? "static" : cimd ? "cimd" : "dcr",
-    })
+    // kilocode_change start - a host owns the client document; upstream keeps its own
+    const document = oauth?.client_id ? undefined : input.clientMetadata?.document?.(oauth)
+    const clientDocument = input.clientMetadata ? document : cimd ? CLIENT_METADATA_URL : undefined
+    const registration = oauth?.client_id
+      ? "static"
+      : clientDocument && discovery.authorizationServerMetadata?.client_id_metadata_document_supported
+        ? "cimd"
+        : "dcr"
+    yield* Effect.logInfo("mcp oauth client registration selected", { ...fields, registration })
+    // kilocode_change end
 
     let authorizationUrl: URL | undefined
     const oauthProvider = provider({
@@ -491,7 +530,7 @@ export const authorize = (input: {
       fetch: fetchFn,
       clientMetadata: input.clientMetadata, // kilocode_change - embedding OAuth client identity
       // kilocode_change start - the host may name the hosted client metadata document
-      clientMetadataUrl: cimd ? (input.clientMetadata?.documentUrl ?? CLIENT_METADATA_URL) : undefined,
+      clientMetadataUrl: clientDocument,
       // kilocode_change end
       discovery: { ...discovery, resourceMetadataUrl: resourceMetadataUrl?.toString() },
       redirect: {
