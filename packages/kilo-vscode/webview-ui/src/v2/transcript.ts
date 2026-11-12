@@ -171,14 +171,14 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
 }
 
 /**
- * The notice row for a described synthetic message, or undefined when the message has no row. A shell or subagent
- * completion already shows as its tool card and in the agent stack; its synthetic message exists for the model, so a
- * notice row here would only repeat the card title at the end of the transcript.
+ * The notice row for a described synthetic message, or undefined when the message has no row. A subagent completion
+ * already shows as its tool card and in the agent stack; its synthetic message exists for the model, so a notice row
+ * here would only repeat the card title at the end of the transcript. Shell notices keep their row: a backgrounded
+ * shell result, a restart, and a shell start failure are only visible there.
  */
 function noticeRow(message: SessionMessageInfo, range: MessageTurnRange | undefined) {
   if (!range || message.type !== "synthetic" || !message.description) return undefined
-  const source = message.metadata?.source
-  if (source === "shell" || source === "subagent") return undefined
+  if (message.metadata?.source === "subagent") return undefined
   // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
   return {
     type: "notice" as const,

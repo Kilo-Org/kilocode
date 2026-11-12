@@ -5,12 +5,14 @@ import { SessionID } from "@opencode/schema/session-id"
 import { Clock, DateTime, Effect, Option, Schema } from "effect"
 
 type Jobs = Pick<Job.Interface, "get" | "wait" | "background" | "cancel" | "backgroundJobs">
-type Sessions = Pick<Session.Interface, "list" | "interrupt" | "messages">
+type Sessions = Pick<Session.Interface, "list" | "interrupt" | "messages" | "active" | "inbox">
 type Publish = (event: KiloBackgroundJobsRpc.Changed) => Effect.Effect<void>
 type Finished = Exclude<KiloBackgroundJobsRpc.Status, "running">
 
 /** Finished jobs kept per parent session. Running jobs are always kept. */
 const FINISHED = 50
+/** Settled children remembered per parent session, so adopting them again does not rescan the transcript. */
+const SETTLED = 200
 
 export type Start = {
   readonly sessionID: SessionID
@@ -27,9 +29,10 @@ type Entry = { readonly job: KiloBackgroundJobsRpc.Job; readonly directory: stri
 const records = new Map<string, Entry>()
 // The publisher of the newest plugin generation of each Location directory.
 const publishers = new Map<string, Publish>()
-// Finished jobs the prune dropped, by job ID to parent session ID. Adopting restores finished jobs from their completion
-// messages, so without this a dropped job would come back on the next list and push out another one.
-const pruned = new Map<string, string>()
+// Settled children the tracker leaves alone, by job ID to parent session ID. A job the prune dropped would otherwise
+// come back from its completion message on the next list, and a finished foreground child has no completion message to
+// restore, so remembering both keeps `adopt` from scanning the parent transcript for them again. Bounded per parent.
+const settled = new Map<string, string>()
 
 const decodeSession = Schema.decodeUnknownOption(SessionID)
 
@@ -58,8 +61,11 @@ function prune(parent: SessionID) {
   )
   finished.slice(0, -FINISHED).forEach((entry) => {
     records.delete(entry.job.id)
-    pruned.set(entry.job.id, entry.job.parentSessionID)
+    settled.set(entry.job.id, entry.job.parentSessionID)
   })
+  // Every settled child of one parent, newest last: a re-set key keeps its original position, so the oldest go first.
+  const remembered = [...settled].filter(([, session]) => session === parent)
+  remembered.slice(0, -SETTLED).forEach(([id]) => settled.delete(id))
 }
 
 /**
@@ -136,6 +142,8 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
 
   const start = Effect.fn("KiloBackgroundJobs.start")(function* (job: Start) {
     const now = yield* Clock.currentTimeMillis
+    // A child that runs again is no longer settled, so a later restart can adopt its new completion message.
+    settled.delete(job.sessionID)
     const previous = records.get(job.sessionID)?.job
     const running = previous?.status === "running"
     const agent = job.agent ?? previous?.agent
@@ -167,7 +175,7 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
   // finished background subagent is restored from the completion message core delivered to its parent, so the
   // session keeps its finished agents across a restart.
   const adopt = Effect.fn("KiloBackgroundJobs.adopt")(function* (parent: SessionID) {
-    const missing = (yield* childrenOf(parent)).filter((child) => !records.has(child.id) && !pruned.has(child.id))
+    const missing = (yield* childrenOf(parent)).filter((child) => !records.has(child.id) && !settled.has(child.id))
     if (missing.length === 0) return
     const listed = yield* input.jobs.backgroundJobs
     const backgrounded = new Map(
@@ -185,7 +193,17 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
         const item = backgrounded.get(child.id)
         const done = finished.get(child.id)
         if (info?.status !== "running" && item?.status !== "running") {
-          if (!done) return
+          if (!done) {
+            // A completion arrives with a parent run, so a child that has none may still get one while the parent
+            // works or has queued work. Remember it settled only once the parent is idle and its inbox is empty; every
+            // later list then skips the transcript scan for it.
+            const active = yield* input.sessions.active
+            const queued = yield* input.sessions.inbox(parent).pipe(Effect.orElseSucceed((): readonly unknown[] => []))
+            if (active.has(parent) || queued.length > 0) return
+            settled.set(child.id, parent)
+            prune(parent)
+            return
+          }
           const agent = done.agent ?? child.agent
           const title = done.title ?? child.title
           return yield* save({
@@ -266,7 +284,7 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
     Effect.sync(() => {
       for (const entry of records.values())
         if (entry.job.id === sessionID || entry.job.parentSessionID === sessionID) records.delete(entry.job.id)
-      for (const [id, parent] of pruned) if (id === sessionID || parent === sessionID) pruned.delete(id)
+      for (const [id, parent] of settled) if (id === sessionID || parent === sessionID) settled.delete(id)
     })
 
   // The latest completion core delivered to the parent for each background child, newest first.

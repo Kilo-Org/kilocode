@@ -81,7 +81,7 @@ describe("completion notices", () => {
     expect(rows.some((row) => row.type === "notice")).toBe(false)
   })
 
-  test("a shell completion leaves no notice row", () => {
+  test("a shell completion keeps its notice row", () => {
     const rows = transcriptRows([
       ...turn(),
       message("msg_shell", "synthetic", {
@@ -90,7 +90,8 @@ describe("completion notices", () => {
         metadata: { source: "shell", state: "completed" },
       }),
     ])
-    expect(rows.some((row) => row.type === "notice")).toBe(false)
+    // A backgrounded shell result, a restart, and a shell start failure are only visible as this notice.
+    expect(rows.filter((row) => row.type === "notice")).toHaveLength(1)
   })
 
   test("a goal notice still renders", () => {

@@ -261,6 +261,8 @@ describe("kilocode.background-jobs", () => {
       expect(jobs[0]?.time.completed).toBeNumber()
       // A child without a delivered completion ran in the foreground, so it is not restored as a background agent.
       expect(jobs.some((job) => job.id === foreground.id)).toBe(false)
+      // A later list reuses the settled memory: the restored job stays and the finished foreground child stays out.
+      expect(yield* env.list).toMatchObject([{ id: child.id, status: "cancelled" }])
     }),
   )
 
