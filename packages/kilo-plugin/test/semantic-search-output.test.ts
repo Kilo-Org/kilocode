@@ -39,9 +39,9 @@ describe("reason", () => {
     expect(text).toContain("Enable it in Kilo Settings.")
   })
 
-  test("says nothing was searched when indexing failed", () => {
+  test("explains an empty result when the index reported a problem", () => {
     expect(reason(status({ state: "Error", message: "Failed to initialize: bad model" }))).toContain(
-      "Codebase indexing failed, so nothing was searched. Failed to initialize: bad model",
+      "Codebase indexing reported a problem, so results may be incomplete. Failed to initialize: bad model",
     )
   })
 

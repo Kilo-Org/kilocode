@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 132,
-    "markedLines": 2253,
+    "files": 134,
+    "markedLines": 2326,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -225,9 +225,17 @@
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
     },
+    "packages/core/src/job/recovery.ts": {
+      "rung": 4,
+      "seam": "The shell recovery record carries the model's optional `description`, so a background command that outlives a server restart produces the same summary as the normal completion notice. The restart notice is built from this record in `session/execution/restart.ts`, and the record schema is upstream-owned. No plugin hook observes background recovery. The field is optional, so records written before it and every upstream default are unchanged."
+    },
+    "packages/core/src/session/execution/restart.ts": {
+      "rung": 4,
+      "seam": "Prefer the recovery record's optional `description` for the shell restart notice and fall back to the command. The notice is built inside the upstream restart path, which no plugin hook reaches. With the fallback, records written before the field existed read exactly as upstream does."
+    },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
-      "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add the optional `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. Both additions are optional: omitted input, every upstream default, and the rest of the result and metadata are unchanged."
     },
     "packages/core/src/tool/plugin/schedule.ts": {
       "rung": 4,
@@ -235,7 +243,7 @@
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+      "seam": "Test coverage for the marked live-output progress behavior and for the optional model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and stays absent when omitted. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,

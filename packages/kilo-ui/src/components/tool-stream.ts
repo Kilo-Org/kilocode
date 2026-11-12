@@ -2,6 +2,8 @@ export type ChangeCount = { additions: number; deletions: number }
 
 /** Streamed fields that count while their string is still open. */
 const LIVE = new Set(["content", "command", "oldString", "newString", "patchText"])
+/** The shell card titles itself with the model's description, so it types in instead of appearing at once. */
+const SHELL_LIVE = new Set([...LIVE, "description"])
 /** Fields whose streamed text is large: only their strings feed the count, so they never reach the card. */
 const HIDDEN = new Set(["content", "oldString", "newString", "patchText", "edits"])
 /** Tools whose complete input can show a change count before the final diff arrives. */
@@ -18,7 +20,7 @@ const CHUNK = 32_000
  * only feed the count, so a card never renders a half-written file body.
  */
 export function streamedTool(tool: string, raw: string): { input: Record<string, unknown>; changes?: ChangeCount } {
-  const input = partial(raw, LIVE)
+  const input = partial(raw, tool === "shell" ? SHELL_LIVE : LIVE)
   if (!input) return { input: {} }
   return { input: shape(input), changes: inputChanges(tool, input) }
 }

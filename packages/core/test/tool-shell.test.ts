@@ -880,6 +880,35 @@ describe("ShellTool", () => {
     { timeout: 15_000 },
   )
 
+  // kilocode_change start - the model's description is the tool card title, so it must survive to metadata
+  productionIt.live(
+    "carries the optional model description into result metadata",
+    () =>
+      withTempDir((tmp) => {
+        reset()
+        return withSession(tmp.path, (registry) =>
+          Effect.gen(function* () {
+            // Models write arguments in schema order; first lets the card show the summary before the command.
+            const definition = (yield* toolDefinitions(registry)).find((tool) => tool.name === "shell")
+            expect(Object.keys(definition?.inputSchema.properties ?? {})[0]).toBe("description")
+
+            const described = yield* executeTool(
+              registry,
+              call({ command: helloCommand, description: "Prints hello" }),
+            )
+            expect(described.status).toBe("completed")
+            expect(described.metadata).toMatchObject({ exit: 0, description: "Prints hello" })
+
+            const plain = yield* executeTool(registry, call({ command: helloCommand }, "call-shell-plain"))
+            expect(plain.status).toBe("completed")
+            expect(plain.metadata).not.toHaveProperty("description")
+          }),
+        )
+      }),
+    { timeout: 15_000 },
+  )
+  // kilocode_change end
+
   productionIt.live(
     "uses the session environment instead of the server environment",
     () =>
@@ -1609,6 +1638,35 @@ describe("ShellTool", () => {
       )
     }),
   )
+
+  // kilocode_change start - the completion notice prefers the model's summary
+  it.live("uses the model's description in the background completion notice", () =>
+    withTempDir((tmp) => {
+      reset()
+      return withSession(tmp.path, (registry) =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const admitted = yield* bus.subscribe(SessionEvent.InboxEnqueued).pipe(
+            Stream.filter((event) => event.data.sessionID === sessionID && event.data.item.type === "synthetic"),
+            Stream.runHead,
+            Effect.forkScoped({ startImmediately: true }),
+          )
+          yield* executeTool(
+            registry,
+            call(
+              { command: idleCommand, timeout: 50, background: true, description: "Waits out the timeout" },
+              "call-background-described",
+            ),
+          )
+          expect((yield* Fiber.join(admitted)).valueOrUndefined?.data.item.payload).toMatchObject({
+            description: "Waits out the timeout",
+          })
+        }),
+      )
+    }),
+  )
+
+  // kilocode_change end
 
   it.live("preserves a background command's non-zero exit", () =>
     withTempDir((tmp) => {
