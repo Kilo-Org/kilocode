@@ -5,9 +5,9 @@ import { pathToFileURL } from "url"
 const module = pathToFileURL(path.join(import.meta.dir, "../../src/kilocode/config/files.ts")).href
 
 // The names are fixed when the module loads, so each variant runs in a child process.
-function load(value: string | undefined) {
-  const result = Bun.spawnSync({
-    cmd: [
+async function load(value: string | undefined) {
+  const child = Bun.spawn(
+    [
       process.execPath,
       "-e",
       `const { KiloConfigFiles: f } = await import(${JSON.stringify(module)});
@@ -15,15 +15,23 @@ function load(value: string | undefined) {
          directories: f.directories, newFile: f.newFile, managedFiles: f.managedFiles,
          project: f.writeCandidates("/repo", false), global: f.writeCandidates("/global", true) }))`,
     ],
-    env: { ...process.env, KILO_USE_RELEASE_CONFIG: value },
-    stderr: "pipe",
-  })
-  expect(result.exitCode, result.stderr.toString()).toBe(0)
-  return JSON.parse(result.stdout.toString())
+    {
+      env: { ...process.env, KILO_USE_RELEASE_CONFIG: value },
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  )
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
+  expect(code, stderr).toBe(0)
+  return JSON.parse(stdout)
 }
 
-test("without KILO_USE_RELEASE_CONFIG the internal kilo2 names apply", () => {
-  expect(load(undefined)).toEqual({
+test("without KILO_USE_RELEASE_CONFIG the internal kilo2 names apply", async () => {
+  expect(await load(undefined)).toEqual({
     releaseNames: false,
     names: ["kilo2.json", "kilo2.jsonc"],
     directoryFiles: ["kilo2.jsonc", "kilo2.json"],
@@ -38,10 +46,10 @@ test("without KILO_USE_RELEASE_CONFIG the internal kilo2 names apply", () => {
     ],
     global: [path.join("/global", "kilo2.jsonc"), path.join("/global", "kilo2.json")],
   })
-})
+}, 30_000)
 
-test("KILO_USE_RELEASE_CONFIG=1 switches to the release kilo names", () => {
-  expect(load("1")).toEqual({
+test("KILO_USE_RELEASE_CONFIG=1 switches to the release kilo names", async () => {
+  expect(await load("1")).toEqual({
     releaseNames: true,
     names: ["kilo.json", "kilo.jsonc"],
     directoryFiles: ["kilo.jsonc", "kilo.json"],
@@ -56,9 +64,9 @@ test("KILO_USE_RELEASE_CONFIG=1 switches to the release kilo names", () => {
     ],
     global: [path.join("/global", "kilo.jsonc"), path.join("/global", "kilo.json")],
   })
-})
+}, 30_000)
 
-test("only the value 1 enables the release names", () => {
-  expect(load("true").releaseNames).toBe(false)
-  expect(load("0").releaseNames).toBe(false)
-})
+test("only the value 1 enables the release names", async () => {
+  expect((await load("true")).releaseNames).toBe(false)
+  expect((await load("0")).releaseNames).toBe(false)
+}, 30_000)

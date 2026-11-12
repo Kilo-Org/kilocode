@@ -25,36 +25,38 @@ const files = {
 // The fixture runs in a child process because `KiloConfigFiles` reads the variable when it loads. HOME and the XDG
 // bases point into the temporary root so the child touches no real Kilo data.
 async function discover(release: boolean) {
-  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-release-config-")))
-  const project = path.join(root, "repo")
+  const dir = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-release-config-")))
+  await using tmp = { dir, [Symbol.asyncDispose]: () => rm(dir, { recursive: true, force: true }) }
+  const project = path.join(tmp.dir, "repo")
   await mkdir(path.join(project, ".git"), { recursive: true })
   for (const [file, content] of Object.entries(files)) {
     await mkdir(path.dirname(path.join(project, file)), { recursive: true })
     await writeFile(path.join(project, file), content)
   }
-  const env = {
-    ...process.env,
-    OPENCODE_TEST_HOME: root,
-    XDG_DATA_HOME: path.join(root, "data"),
-    XDG_CONFIG_HOME: path.join(root, "config"),
-    XDG_STATE_HOME: path.join(root, "state"),
-    XDG_CACHE_HOME: path.join(root, "cache"),
-    KILO_USE_RELEASE_CONFIG: release ? "1" : undefined,
-  }
-  try {
-    const result = Bun.spawnSync(
-      [process.execPath, script, project, path.join(root, "global"), release ? "release" : "internal"],
-      {
-        cwd: path.join(import.meta.dir, ".."),
-        env,
-        stderr: "pipe",
+  const child = Bun.spawn(
+    [process.execPath, script, project, path.join(tmp.dir, "global"), release ? "release" : "internal"],
+    {
+      cwd: path.join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        OPENCODE_TEST_HOME: tmp.dir,
+        XDG_DATA_HOME: path.join(tmp.dir, "data"),
+        XDG_CONFIG_HOME: path.join(tmp.dir, "config"),
+        XDG_STATE_HOME: path.join(tmp.dir, "state"),
+        XDG_CACHE_HOME: path.join(tmp.dir, "cache"),
+        KILO_USE_RELEASE_CONFIG: release ? "1" : undefined,
       },
-    )
-    expect(result.exitCode, result.stderr.toString()).toBe(0)
-    return JSON.parse(result.stdout.toString()) as { config: string[]; commands: string[]; skills: string[] }
-  } finally {
-    await rm(root, { recursive: true, force: true })
-  }
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  )
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ])
+  expect(code, stderr).toBe(0)
+  return JSON.parse(stdout) as { config: string[]; commands: string[]; skills: string[] }
 }
 
 test("by default the server reads kilo2.json and .kilo2 and ignores .kilo", async () => {
