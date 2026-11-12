@@ -39,6 +39,8 @@ See [Kilo Code pricing](https://kilo.ai/pricing) for current rates and pricing f
 
 The session header separates **Token Usage** (model inference spend) from **Compute** (the cloud environment's estimated hourly rate). Several sessions can share that environment, so the rate is not a per-session spending total. **Not currently charged** means compute charges are not being applied.
 
+Open **Session Information** from a session to see recorded charges broken down into model spend, compute, and a combined total. Because a workspace's compute is shared, Kilo sums compute across the restarts and chats that share it, so recorded charges can arrive after the work finishes. The **Compute rate** row shows the size and hourly price of the sandbox the session is actually running on; for runtimes Kilo does not manage, no hourly rate is shown. While charges load, the dialog shows a loading state, and it offers **Retry** if a request fails instead of treating unloaded charges as zero.
+
 If a compute billing check fails, follow the recovery action next to the composer. Available actions depend on whether you or your organization pays and your role in that organization. Your prompt is preserved so you can retry after resolving the issue.
 
 ## How to Use
@@ -401,6 +403,8 @@ When creating a trigger, you choose an **activation mode** that cannot be change
 ### Configuration
 
 Triggers can use an [agent environment profile](#agent-environment-profiles) to configure the execution environment for triggered sessions, or run without one and use the repository and account defaults. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+
+Webhook and scheduled triggers can also choose a [repository environment](#repository-environments) in the **Environment** field, which is separate from the agent environment profile. The selector lists only the environments saved for the trigger's repository and rejects a choice that does not belong to the trigger's owner. **Automatic** keeps the default resolution — the repository's saved environment, if any — while selecting an environment passes it to every session the trigger starts. The choice is stored with the trigger, and clearing it returns the trigger to automatic.
 
 Which profiles a trigger offers depends on how it runs. Organization triggers run as the organization webhook bot by default and select organization profiles; a trigger created with **Run as webhook creator** selects personal profiles instead. Clearing a profile returns the trigger to the repository and account defaults, and existing triggers keep the profile they already have until you change it.
 
