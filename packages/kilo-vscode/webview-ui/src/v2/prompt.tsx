@@ -71,6 +71,7 @@ import { message, useV2 } from "./client"
 import { registerComposer, type ComposerHandle } from "./composer"
 import { MentionMenu } from "./mention-menu"
 import { attachmentDrafts, imageAttachment, mergeAttachments, pasteDrafts } from "./prompt-attachments"
+import { type ComposerDraft, visibleMessages } from "./revert"
 import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
@@ -131,6 +132,16 @@ export const promptDrafts = {
     if (value) drafts.set(key, value)
     else drafts.delete(key)
   },
+}
+
+export function setPromptDraft(key: string | undefined, next: ComposerDraft) {
+  promptDrafts.set(key, next.text)
+  attachmentDrafts.set(key, next.items)
+  pasteDrafts.set(key, [])
+  saveReviewDraft(key, next.comments)
+  if (!key) return
+  if (next.browsers.length > 0) references.set(key, [...next.browsers])
+  else references.delete(key)
 }
 
 // Send keeps every icon it can show mounted and crossfades between them, so a modifier pressed and released quickly
@@ -271,7 +282,7 @@ export function PromptInput(props: {
     () => {
       const id = props.session
       if (!id) return []
-      return v2.data.session.message.list(id).flatMap((item) => {
+      return visibleMessages(v2.data.session.message.list(id), v2.data.session.get(id)?.revert).flatMap((item) => {
         if (item.type !== "user" || injected(item.metadata)) return []
         const value = partFeedback(item.metadata, item.text)?.body ?? item.text.replace(REVIEW_PREFIX, "")
         return value.trim() ? [value] : []
@@ -964,6 +975,26 @@ export function PromptInput(props: {
     },
     // A context action sends on its own and leaves the draft and its chips for the user's next prompt.
     submit: (value, items, metadata) => submit({ text: value, items, metadata }),
+    set: (next) => {
+      enhanceToken++
+      preEnhance = null
+      history.reset()
+      slash.close()
+      setText(next.text)
+      paste.load(next.text, [])
+      // A restored draft carries its @path tokens in the text, so the mentions have to be seeded like every other
+      // restore path or the resend drops the file context.
+      mention.seedFromText(next.text)
+      setAttachments(next.items)
+      setBrowsers(next.browsers)
+      replaceComments(next.comments)
+      setPromptDraft(draft, next)
+      const input = refs.input
+      if (!input) return
+      input.value = next.text
+      input.setSelectionRange(next.text.length, next.text.length)
+      if (next.text || next.items.length > 0 || next.comments.length > 0 || next.browsers.length > 0) focusInput()
+    },
   })
 
   registerAppend(props.onAppendReady, (value, shouldSend) => {
