@@ -12,6 +12,8 @@ import type {
   TokenUsageInfo,
 } from "@opencode/client"
 import { lastAssistantWithUsage } from "@opencode/client/solid"
+import { revertedChildren } from "../components/chat/background-agents"
+import { visibleMessages } from "./revert"
 
 type UsageTokens = TokenUsageInfo
 
@@ -55,6 +57,61 @@ export function sessionSubtree(family: readonly SessionInfo[], sessionID: string
   const root = members.get(sessionID)
   const descendants = family.filter((item) => item.id !== sessionID && inside(item))
   return root ? [root, ...descendants] : descendants
+}
+
+/**
+ * The header members as staged reverts leave them, as v1 derived the family from the visible turns: a child that only
+ * reverted turns started drops out with its own subagents, and a reverted session's cost and tokens leave out the
+ * steps the revert hides. The hidden steps are the newest, so the loaded transcript holds them.
+ */
+export function revertedMembers(
+  members: readonly SessionInfo[],
+  messages: (sessionID: string) => readonly SessionMessageInfo[],
+): SessionInfo[] {
+  const hidden = new Set(
+    members.flatMap((member) => {
+      if (!member.revert) return []
+      const all = messages(member.id)
+      return revertedChildren(all, visibleMessages(all, member.revert))
+    }),
+  )
+  const kept = members.filter((member) => !hidden.has(member.id) && !hiddenAncestor(member, members, hidden))
+  return kept.map((member) => {
+    if (!member.revert) return member
+    const all = messages(member.id)
+    const shown = new Set(visibleMessages(all, member.revert))
+    const steps = all.filter(
+      (message): message is SessionMessageAssistant => message.type === "assistant" && !shown.has(message),
+    )
+    const cost = steps.reduce((total, step) => total + (step.cost ?? 0), 0)
+    const tokens = steps.reduce((total, step) => (step.tokens ? addTokens(total, step.tokens) : total), emptyTokens())
+    return {
+      ...member,
+      cost: Math.max(0, member.cost - cost),
+      tokens: subtractTokens(member.tokens, tokens),
+    }
+  })
+}
+
+function hiddenAncestor(member: SessionInfo, members: readonly SessionInfo[], hidden: ReadonlySet<string>) {
+  const byID = new Map(members.map((item) => [item.id, item]))
+  const seen = new Set([member.id])
+  let parentID = member.parentID
+  while (parentID && !seen.has(parentID)) {
+    if (hidden.has(parentID)) return true
+    seen.add(parentID)
+    parentID = byID.get(parentID)?.parentID
+  }
+  return false
+}
+
+function subtractTokens(a: UsageTokens, b: UsageTokens): UsageTokens {
+  return {
+    input: Math.max(0, a.input - b.input),
+    output: Math.max(0, a.output - b.output),
+    reasoning: Math.max(0, a.reasoning - b.reasoning),
+    cache: { read: Math.max(0, a.cache.read - b.cache.read), write: Math.max(0, a.cache.write - b.cache.write) },
+  }
 }
 
 export function sumTokens(members: readonly SessionInfo[]): UsageTokens {
