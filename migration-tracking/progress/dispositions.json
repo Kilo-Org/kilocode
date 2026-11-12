@@ -58,7 +58,7 @@
   },
   "module:packages/core/src/kilocode/oauth/page.ts": {
     "state": "ported",
-    "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
+    "note": "packages/kilo-cli/src/branding/ brands the upstream OAuth page through the host load/build transform: the rule engine (rules.ts, engine.ts) rebrands the callback text, and a structural transform (structural.ts) swaps the square SVG wordmark. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports, and packages/kilo-cli/script/branding-audit.ts hard-fails on new unbranded user-visible text. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
     "by": "rebrand-identity"
   },
   "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts": {
