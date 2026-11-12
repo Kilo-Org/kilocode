@@ -45,6 +45,7 @@ describe("sandbox tool network classification", () => {
     expect(Network.isBuiltin("read")).toBe(true)
     expect(Network.isBuiltin("webfetch")).toBe(true)
     expect(Network.isBuiltin("background_process")).toBe(true)
+    expect(Network.isBuiltin("chart")).toBe(true)
     expect(Network.isBuiltin("custom_network_tool")).toBe(false)
     expect(Network.isBuiltin("mcp__weather__current")).toBe(false)
   })

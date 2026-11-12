@@ -130,4 +130,8 @@ export const dict = {
   "ui.message.feedback.helpful": "كان هذا مفيدًا",
   "ui.message.feedback.notHelpful": "لم يكن هذا مفيدًا",
   "ui.message.feedback.clearRating": "مسح التقييم",
+  // Chart tool card
+  "ui.tool.chart": "مخطط",
+  "ui.tool.chart.invalid": "إعداد المخطط غير صالح — يجب أن يتضمن النوع والبيانات",
+  "ui.tool.chart.failed": "فشل عرض المخطط",
 }
