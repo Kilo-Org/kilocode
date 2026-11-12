@@ -328,7 +328,8 @@ internal class ActiveTreeView(
         putClientProperty(RenderingHelper.SHRINK_LONG_SELECTION, true)
         putClientProperty(Control.Painter.KEY, ActiveTreePainter)
         // Native layout and gestures share the owned painter's disclosure and row geometry.
-        RenderingUtil.setHoverPaintingDisabled(this, true)
+        // The public key mirrors RenderingUtil.setHoverPaintingDisabled, which is internal API.
+        putClientProperty(RenderingUtil.PAINT_HOVERED_BACKGROUND, false)
         setModel(treeModel)
         setCellRenderer(renderer)
         if (surface == ActiveSurface.ToolWindow) isOpaque = true
