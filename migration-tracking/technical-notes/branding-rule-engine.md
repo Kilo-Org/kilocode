@@ -163,19 +163,33 @@ the curated set is forced to stay complete.
 
 The structural fix for hidden regressions. The audit:
 
-1. reads the committed **working tree** (not the pinned upstream tree) for the
-   user-facing surface — `git ls-files` over `packages/{cli,tui}/src` and
-   `packages/core/src/oauth`, excluding tests, `.d.ts`, fixtures, snapshots,
-   storybook and `kilocode/`. Working tree, not pin, because it must see what
-   actually ships: a shared file Kilo patches (for example `mcp/add.ts`, whose
-   `kilocode_change(config)` seam uses `KiloConfigFiles`) must be audited as
-   patched, not as upstream wrote it — auditing the pin produced false positives
-   there;
-2. for each file runs the rule engine's `userVisibleSpans` + `brandSpan`;
-3. reports two failure modes: **missing interception** (a non-intercepted file
-   the rules would brand → its OpenCode ships raw) and **rule gap** (an
+1. reads the committed **working tree** (not the pinned upstream tree) with
+   `git ls-files`, excluding tests, `.d.ts`, fixtures, snapshots, storybook and
+   `kilocode/`, over two scopes:
+   - the user-visible surface (`PATHSPECS`/`INCLUDE`): TS/TSX under
+     `packages/{cli,tui}/src`, `packages/core/src/oauth`, and the `.txt` prompt
+     templates under `packages/core/src` (bundled as strings; the engine treats
+     each as one span);
+   - the tool-namespace scope (`NAMESPACE_PATHSPECS`/`NAMESPACE_INCLUDE`): TS/TSX
+     and bundled `.txt`/`.md` assets under `packages/core/src` and
+     `packages/kilo-plugin/src`.
+
+   Working tree, not pin, because it must see what actually ships: a shared file
+   Kilo patches (for example `mcp/add.ts`, whose `kilocode_change(config)` seam
+   uses `KiloConfigFiles`) must be audited as patched, not as upstream wrote it —
+   auditing the pin produced false positives there;
+2. for each user-visible file runs the rule engine's `userVisibleSpans` +
+   `brandSpan`; for each namespace-scope file runs the full `KiloBranding.transform`
+   and matches the `NAMESPACE` pattern (`namespace: "opencode"`,
+   `tools.opencode.`, `` `opencode` namespace ``) on the result;
+3. reports three failure modes: **missing interception** (a non-intercepted file
+   the rules would brand → its OpenCode ships raw), **rule gap** (an
    intercepted file where a user-visible OpenCode/opencode token survives the
-   rules; near-impossible by construction, kept as a tripwire);
+   rules; near-impossible by construction, kept as a tripwire) and **namespace
+   leak** (a built-in tool or model-facing text still in the `opencode` tool
+   namespace after the transform — the rule engine leaves dotted IDs alone and
+   the structural counts only guard known anchors, so a new upstream tool or
+   reference needs this check);
 4. suppresses reviewed non-branding files via a file-level allowlist
    (`branding-audit-allow.ts`), each with a reason, and warns on a stale entry;
 5. exits non-zero on any unexpected finding, with `file:line:col` and the span.
@@ -236,8 +250,10 @@ engine`. A byte-for-byte parity test proved the new pipeline reproduces the
 3. **Audit. (done)** Added `packages/kilo-cli/script/branding-audit.ts`, its test,
    the `branding:audit` package script, the `kilo-packages` CI step, and the
    sync-checklist updates in the `v2-migration` / `v2-feature-placement` skills.
-   The broader glob (decision 1) is the audit's scan scope (`packages/cli/src`,
-   `packages/tui/src` and `packages/core/src/oauth`); the loader still intercepts
+   The broader glob (decision 1) is the audit's scan scope (see §5: the
+   CLI/TUI/OAuth surface and the core prompt templates, plus the tool-namespace
+   scope over `packages/core/src` and `packages/kilo-plugin/src`, added later
+   with the namespace-leak mode); the loader still intercepts
    the curated `files` set, and the audit's hard-fail forces that set to stay
    complete. This also closes phase-2 review findings 1 and 2 (unverified branding
    on non-compile-tested files is now a checked failure). The audit reads the
