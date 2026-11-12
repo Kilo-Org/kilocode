@@ -176,7 +176,14 @@ export function SessionView(props: {
     return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
   })
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
-  const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
+  const forms = () => formsOf(session())
+  // The same reads for a named session, for a send that outlives the tab it came from.
+  function formsOf(id: string | undefined) {
+    if (!id) return []
+    return [id, ...v2.data.session.family(id).filter((item) => item !== id)].flatMap(
+      (member) => v2.data.session.form.list(member) ?? [],
+    )
+  }
 
   // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
   // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
@@ -226,10 +233,8 @@ export function SessionView(props: {
     ),
   )
 
-  const running = () => {
-    const id = session()
-    return !!id && v2.data.session.status(id) === "running"
-  }
+  const runningOf = (id: string | undefined) => !!id && v2.data.session.status(id) === "running"
+  const running = () => runningOf(session())
 
   // Questions do not block the prompt, as in v1: a pending question is dismissed when the user sends instead.
   // Only a permission blocks sending, and the composer stays writable so typing remains possible.
@@ -384,12 +389,15 @@ export function SessionView(props: {
     const id = existing ?? selection.create(seed)
     if (existing) selection.ensure(id)
     const gate = selection.gate(id)
+    // The selection belongs to the active tab, so it only describes this send while the tab it was pressed in is still
+    // open. After a switch the pinned session keeps its own model, which is what its prompt runs on.
+    const same = session() === existing
     // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
     // Read both before onSession changes the session identity.
-    const model = selection.model()
+    const model = same ? selection.model() : v2.data.session.get(id)?.model
     const draft = selection.draft(id)
-    // A pending question is dismissed when the user sends instead.
-    const questions = forms()
+    // A pending question of this session is dismissed when the user sends instead.
+    const questions = formsOf(id)
     props.onSession(id, key)
     // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
     const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
@@ -406,11 +414,12 @@ export function SessionView(props: {
     const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
     // The goal plugin pauses a goal whose run the user interrupts, so with an active goal a steer waits for the next
     // step boundary instead of stopping the model call: a new message takes priority, then the goal continues, as in
-    // v1. Stop and "stop and send" still stop the run and pause the goal.
+    // v1. Stop and "stop and send" still stop the run and pause the goal. A goal of another session is not readable
+    // here, so with the tab switched a steer waits rather than risking a stop that pauses an unseen goal.
     const interrupt =
-      running() &&
+      runningOf(id) &&
       (mode === "now" ||
-        (mode === "steer" && !goal.active() && steerInterrupts(v2.data.session.message.list(id), waiting)))
+        (mode === "steer" && same && !goal.active() && steerInterrupts(v2.data.session.message.list(id), waiting)))
     if (interrupt) await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
     return { id, gate, model, draft }
   }
