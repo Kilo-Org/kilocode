@@ -12,12 +12,12 @@ export interface Deployment {
   readonly resource: KiloResourceToken.Resource
 }
 
+const DEFAULT: Deployment = { origin: "https://pages.kiloapps.io", resource: "pages" }
+
 export const DEPLOYMENTS: readonly Deployment[] = [
-  { origin: "https://pages.kiloapps.io", resource: "pages" },
+  DEFAULT,
   { origin: "https://pages-dev.kiloapps.io", resource: "pages-dev" },
 ]
-
-export const DEFAULT = DEPLOYMENTS[0]!
 
 // A token is replaced a little before it expires, so a request never reaches Pages with one it already treats as expired.
 const SKEW_MS = 60_000
@@ -35,7 +35,9 @@ type Slot = {
   touched: number
 }
 
-type Result = { readonly ok: true; readonly minted: KiloResourceToken.Minted } | { readonly ok: false; readonly failure: KiloResourceToken.Failure }
+type Result =
+  | { readonly ok: true; readonly minted: KiloResourceToken.Minted }
+  | { readonly ok: false; readonly failure: KiloResourceToken.Failure }
 
 // Process-global, like the other per-process Kilo registries: every Location on one credential shares a token and an
 // in-flight mint. The organization is not part of the key because the mint carries none.
