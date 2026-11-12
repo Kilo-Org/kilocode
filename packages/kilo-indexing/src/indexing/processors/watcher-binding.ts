@@ -1,4 +1,5 @@
 import { createRequire } from "node:module"
+import path from "node:path"
 
 declare const KILO_LIBC: string | undefined
 
@@ -9,9 +10,11 @@ declare const KILO_LIBC: string | undefined
 // `OPENCODE_PARCEL_WATCHER_PATH`.
 export default function load() {
   const require = createRequire(import.meta.url)
+  if (process.env.KILO_PARCEL_WATCHER_PATH) return require(process.env.KILO_PARCEL_WATCHER_PATH)
   const libc = typeof KILO_LIBC === "undefined" ? undefined : KILO_LIBC
-  return require(
-    process.env.KILO_PARCEL_WATCHER_PATH ??
-      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${libc || "glibc"}` : ""}`,
-  )
+  const binding = `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${libc || "glibc"}` : ""}`
+  // The platform package is an optional dependency of @parcel/watcher and is linked inside that package's own
+  // node_modules, so it is not resolvable from this package by name under an isolated install.
+  const main = path.dirname(require.resolve("@parcel/watcher/package.json"))
+  return require(require.resolve(binding, { paths: [main] }))
 }

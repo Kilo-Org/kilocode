@@ -100,10 +100,15 @@ const targets =
       : allTargets
 if (!targets.length) throw new Error(`Unknown build target: ${requestedTarget}`)
 
-if (!skipInstall)
-  // The platform native packages of every target, so cross-compiled builds can embed them: the PTY and opentui
-  // binaries, and the codebase indexing watcher binding the build rewrites to a static require.
-  await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode/pty@${cliPackage.dependencies["@opencode/pty"]} @parcel/watcher@${indexingPackage.dependencies["@parcel/watcher"]}`
+if (!skipInstall) {
+  await $`bun install --os="*" --cpu="*" --libc="*" @opentui/core@${cliPackage.dependencies["@opentui/core"]} @opencode/pty@${cliPackage.dependencies["@opencode/pty"]}`
+  // Kilo: a platform binding is an optional dependency of @parcel/watcher, so a normal install links only the host's
+  // into the package's own node_modules. A cross-compiled build needs every target's package, and publish builds
+  // every target in one run.
+  await $`bun install --no-save --os="*" --cpu="*" --libc="*" @parcel/watcher@${indexingPackage.dependencies["@parcel/watcher"]}`.cwd(
+    path.resolve(dir, "../kilo-indexing"),
+  )
+}
 const appArchive = path.join(dir, ".cache", "bun-app-archive.bin")
 await Bun.write(appArchive, await buildAppArchive(Script.channel, Script.version, { skipBuild: skipWebUi }))
 const appAssetsPlugin: BunPlugin = {
@@ -165,11 +170,17 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     },
   }
   const parcelWatcherPackage = `@parcel/watcher-${item.os}-${item.arch}${item.os === "linux" ? `-${item.abi ?? "glibc"}` : ""}`
+  // The platform package is not resolvable from this workspace by name (it is a nested optional dependency), so
+  // resolve it from @parcel/watcher's own directory and inject that path.
+  const parcelWatcherBinding = Bun.resolveSync(
+    parcelWatcherPackage,
+    path.dirname(Bun.resolveSync("@parcel/watcher/package.json", path.resolve(dir, "../kilo-indexing"))),
+  )
   const parcelWatcherPlugin: BunPlugin = {
     name: "parcel-watcher-binding",
     setup(build) {
       build.onLoad({ filter: /filesystem[/\\]watcher-binding\.ts$/ }, () => ({
-        contents: `export default () => require(${JSON.stringify(parcelWatcherPackage)})`,
+        contents: `export default () => require(${JSON.stringify(parcelWatcherBinding)})`,
         loader: "js",
       }))
     },
@@ -181,7 +192,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     name: "parcel-watcher-indexing-binding",
     setup(build) {
       build.onLoad({ filter: /indexing[/\\]processors[/\\]watcher-binding\.ts$/ }, () => ({
-        contents: `export default () => require(${JSON.stringify(parcelWatcherPackage)})`,
+        contents: `export default () => require(${JSON.stringify(parcelWatcherBinding)})`,
         loader: "js",
       }))
     },
