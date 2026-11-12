@@ -10,7 +10,7 @@ const portable = Schema.toStandardSchemaV1
 
 export const Config = Schema.Struct({
   enabled: Schema.Boolean.pipe(optional).annotate({
-    description: "Use Pages with the Kilo Gateway sign-in (default: off; a project config can only turn it off)",
+    description: "Use Pages with the Kilo Gateway sign-in (default: off)",
   }),
 }).annotate({ identifier: "KiloPagesConfig", description: "Pages configuration" })
 export type Config = typeof Config.Type

@@ -8,7 +8,7 @@ import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Effect, Queue, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { parse } from "jsonc-parser"
-import { mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises"
+import { mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloGatewayAccounts } from "../src/gateway/accounts"
@@ -38,19 +38,12 @@ async function harness(input: {
   documents: { info: Info; path?: string }[]
   server: string
   signedIn?: boolean
-  /** Put this document in the global config directory, which is a symlink to where the file really lives. */
-  symlinkedGlobal?: Info
   /** Run the plugin on a test clock, so `adjust` fires its retry timer. */
   clock?: boolean
   run: (pages: Harness) => Promise<void>
 }) {
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-pages-plugin-")))
   dirs.push(directory)
-  if (input.symlinkedGlobal) {
-    await mkdir(path.join(directory, "real-global"))
-    await writeFile(path.join(directory, "real-global", "kilo2.json"), JSON.stringify(input.symlinkedGlobal))
-    await symlink(path.join(directory, "real-global"), path.join(directory, "global"))
-  }
   const state = { account: input.signedIn === false ? undefined : { token: "account", server: input.server, baseURL: input.server, organizationID: null } }
   const unregister = KiloGatewayAccounts.register(directory, () => state.account)
   const transforms: ((editor: unknown) => void)[] = []
@@ -200,50 +193,25 @@ test("nothing is minted or registered while Pages is off", async () => {
   }).finally(backend.stop)
 })
 
-test("a project document cannot turn Pages on and can turn it off", async () => {
-  const projectOn = mintServer(minted)
+test("the last document that sets pages.enabled wins", async () => {
+  const on = mintServer(minted)
   await harness({
-    documents: [{ info: enabled, path: "/elsewhere/project/kilo2.json" }],
-    server: projectOn.url,
+    documents: [{ info: { pages: { enabled: false } } }, { info: enabled, path: "/elsewhere/project/kilo2.json" }],
+    server: on.url,
     run: async (pages) => {
-      await pages.until((status) => status.state === "disabled")
-      expect(projectOn.count()).toBe(0)
+      await pages.until((status) => status.state === "connecting")
+      expect(on.count()).toBe(1)
     },
-  }).finally(projectOn.stop)
-  const projectOff = mintServer(minted)
+  }).finally(on.stop)
+  const off = mintServer(minted)
   await harness({
     documents: [{ info: enabled }, { info: { pages: { enabled: false } }, path: "/elsewhere/project/kilo2.json" }],
-    server: projectOff.url,
+    server: off.url,
     run: async (pages) => {
       await pages.until((status) => status.state === "disabled")
-      expect(projectOff.count()).toBe(0)
+      expect(off.count()).toBe(0)
     },
-  }).finally(projectOff.stop)
-})
-
-test("a global config directory behind a symlink still counts as global", async () => {
-  const backend = mintServer(minted)
-  await harness({
-    documents: [],
-    server: backend.url,
-    symlinkedGlobal: enabled,
-    run: async (pages) => {
-      await pages.until((status) => status.state === "connecting")
-      expect(backend.count()).toBe(1)
-    },
-  }).finally(backend.stop)
-})
-
-test("a macOS managed preferences document can turn Pages on", async () => {
-  const backend = mintServer(minted)
-  await harness({
-    documents: [{ info: enabled, path: "/Library/Managed Preferences/ai.opencode.managed.plist" }],
-    server: backend.url,
-    run: async (pages) => {
-      await pages.until((status) => status.state === "connecting")
-      expect(backend.count()).toBe(1)
-    },
-  }).finally(backend.stop)
+  }).finally(off.stop)
 })
 
 test("mcp.use policy is checked before anything is minted", async () => {

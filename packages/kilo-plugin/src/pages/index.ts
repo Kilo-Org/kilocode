@@ -1,6 +1,5 @@
 import type { KiloAccount } from "@kilocode/gateway-core"
 import { Config } from "@opencode/core/config"
-import { systemDirectory } from "@opencode/core/kilocode/config/discovery"
 import { KiloConfigWriter } from "@opencode/core/kilocode/config/write"
 import { define } from "@opencode/plugin/effect/plugin"
 import { KiloPagesRpc } from "@opencode/schema/kilocode/pages"
@@ -36,8 +35,6 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
     const directory = ctx.location.directory
     const deployment = PagesToken.DEFAULT
     const globalDirectory = yield* fs.resolve(global.config)
-    // Config entries keep the unresolved global path, so both spellings count as global.
-    const roots = [globalDirectory, global.config, systemDirectory(), PagesConfig.MANAGED_PREFERENCES]
 
     const lock = Semaphore.makeUnsafe(1)
     const scope = yield* Effect.scope
@@ -69,7 +66,7 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
     // What the plugin knows without the network: the setting, policy and the user's own entry.
     const gate = Effect.gen(function* () {
       const entries = yield* config.value.entries()
-      setting = PagesConfig.enabled(entries, roots)
+      setting = PagesConfig.enabled(entries)
       if (PagesConfig.denied(entries)) return { state: "disabled", reason: "policy" } satisfies Snapshot
       if (!setting) return { state: "disabled", reason: "user" } satisfies Snapshot
       if (PagesConfig.manual(entries)) return { state: "manual" } satisfies Snapshot
