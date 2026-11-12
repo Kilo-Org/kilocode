@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 127,
-    "markedLines": 2200,
+    "files": 132,
+    "markedLines": 2246,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -196,6 +196,26 @@
     "packages/core/src/tool/mcp.ts": {
       "rung": 3,
       "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
+    },
+    "packages/core/src/tool.ts": {
+      "rung": 3,
+      "seam": "A tool option `direct: true` keeps the tool on the provider's native tool list and in the Code Mode inventory, so a client-rendered tool is also callable from a Code Mode program. The registry's list split and its inventory are private to this service, and no plugin hook observes or changes them. Without the option the native and Code Mode sets are exactly upstream's."
+    },
+    "packages/core/src/codemode/tool.ts": {
+      "rung": 3,
+      "seam": "Mark a dual tool (see `packages/core/src/tool.ts`) in the Code Mode catalog. The catalog is derived from the registry next to the tool options, so a plugin cannot add the mark; unmarked tools keep their existing listing."
+    },
+    "packages/core/src/codemode/catalog.ts": {
+      "rung": 3,
+      "seam": "Carry the optional `direct` mark through the summarized catalog, list it as `[direct]`, and set a summary flag while a marked tool is shown. The summary is the model-facing contract the instructions render and a plugin cannot extend it. Without a marked tool the catalog text and summary are unchanged."
+    },
+    "packages/core/src/codemode/instructions.ts": {
+      "rung": 3,
+      "seam": "Explain the `[direct]` marker below the catalog while a marked tool is shown, and supersede the whole catalog when one appears. The instructions are static text plus the rendered summary, so a plugin cannot add the note, and a catalog without a marked tool renders exactly upstream's text."
+    },
+    "packages/core/src/tool/AGENTS.md": {
+      "rung": 3,
+      "seam": "Document the optional `direct` tool option next to `codemode` in the registration contract. The sentence continues the existing options description and changes no rule."
     },
     "packages/core/src/tool/runtime.ts": {
       "rung": 4,
@@ -460,7 +480,7 @@
     },
     "packages/schema/src/tool.ts": {
       "rung": 3,
-      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. Optional `direct` marks a Code Mode tool that also stays on the provider's native tool list, for a client that renders it by name. The tool registry schema is shared and closed to plugin extension. Both options are omitted by default, which keeps upstream behavior."
     },
     "packages/schema/src/session-instruction-paths.ts": {
       "rung": 4,

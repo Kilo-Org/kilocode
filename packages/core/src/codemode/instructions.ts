@@ -5,6 +5,10 @@ import { Effect, Schema } from "effect"
 import { Instructions } from "../instructions/index.js"
 import { CodeModeCatalog } from "./catalog.js"
 
+// kilocode_change start - codemode-direct: a tool that stays on the provider's native list too
+const DIRECT = "A tool marked `[direct]` is also a normal tool call: use it either way, directly or inside `execute`."
+// kilocode_change end
+
 // prettier-ignore
 const prompt = (hasMoreTools: boolean) => `# Code Mode
 
@@ -23,6 +27,9 @@ export function render(catalog: CodeModeCatalog.Summary) {
   const tools = catalog.namespaces.flatMap((namespace) => {
     return [CodeModeCatalog.namespaceLine(namespace), ...namespace.entries.map((entry) => entry.line)]
   })
+  // kilocode_change start - codemode-direct: a catalog with a marked tool explains the marker
+  if (catalog.direct === true) tools.push("", DIRECT)
+  // kilocode_change end
 
   return `${prompt(catalog.shown < catalog.total)}
 
@@ -34,6 +41,9 @@ export function update(previous: CodeModeCatalog.Summary, current: CodeModeCatal
 
 ${render(current)}`
   if (current.total === 0) return replacement
+  // kilocode_change start - codemode-direct: a catalog that introduces the marker needs its explanation
+  if (current.direct === true && previous.direct !== true) return replacement
+  // kilocode_change end
   const previousComplete = previous.shown === previous.total
   const currentComplete = current.shown === current.total
   if (previousComplete !== currentComplete) return replacement
