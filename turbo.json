@@ -23,6 +23,13 @@
     "typecheck:tsc": {
       "dependsOn": ["transit"]
     },
+    // kilocode_change start - a cache hit must restore core's declarations: otherwise every dependent that misses
+    // rebuilds them into the same directory at once, and one reads a half-written file (TS2306 "is not a module").
+    "@opencode/core#typecheck:tsc": {
+      "dependsOn": ["transit"],
+      "outputs": ["node_modules/.ts-dist/**"]
+    },
+    // kilocode_change end
     "@opencode/cli#typecheck:tsc": {
       "dependsOn": ["transit", "@opencode/core#typecheck:tsc"]
     },
