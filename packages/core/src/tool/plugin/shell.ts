@@ -283,6 +283,9 @@ export const Plugin = {
                 recovery: {
                   kind: "shell",
                   sessionID: context.sessionID,
+                  // kilocode_change start - carry the summary so the restart notice matches the completion notice
+                  ...(input.description ? { description: input.description } : {}),
+                  // kilocode_change end
                   shellID: info.id,
                   command: info.command,
                 },

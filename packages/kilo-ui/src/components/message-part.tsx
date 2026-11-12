@@ -952,8 +952,23 @@ function childToolInfo(
 function shellCommandSummary(description: string, command: string) {
   const summary = description.trim()
   if (summary) return summary
-  const line = command.trim().split("\n")[0]?.trim() ?? ""
-  return line.replace(/^cd\s+(?:'[^']*'|"[^"]*"|\S+)\s*(?:&&|;)\s*/, "")
+  const line =
+    command
+      .trim()
+      .split("\n")
+      .find((text) => text.trim())
+      ?.trim() ?? ""
+  const stripped = stripWorkdirPrefixes(line)
+  return stripped || line
+}
+
+// Agents chain the prefix (`cd /a && cd packages/core && bun test`), so peel every one. A line that is only
+// the prefix keeps its text rather than leaving the row without a title.
+function stripWorkdirPrefixes(line: string) {
+  const prefix = /^cd\s+(?:'[^']*'|"[^"]*"|\S+)\s*(?:&&|;)\s*/
+  let rest = line
+  while (prefix.test(rest)) rest = rest.replace(prefix, "")
+  return rest.trim()
 }
 
 // A completed foreground child wraps its final text; a background start returns the model instruction instead.
@@ -1172,10 +1187,16 @@ ToolRegistry.register({
               <span data-slot="basic-tool-tool-title">
                 <TextShimmer text={i18n.t("ui.tool.shell")} active={busy(props.status)} />
               </span>
-              {/* Prefer the model's description; the first command line alone can be just a `cd` prefix. */}
-              <Show when={shellCommandSummary(string(props.input.description), string(props.input.command))}>
+              {/* Prefer the model's description, then the copy stored with the result; a bare command can be
+                  just a `cd` prefix. `dir="auto"` keeps commands LTR and lets an RTL summary read correctly. */}
+              <Show
+                when={shellCommandSummary(
+                  string(props.input.description) || string(props.metadata.description),
+                  string(props.input.command),
+                )}
+              >
                 {(summary) => (
-                  <span data-component="shell-submessage" dir="ltr">
+                  <span data-component="shell-submessage" dir="auto">
                     <span data-slot="basic-tool-tool-subtitle">
                       <span data-slot="shell-submessage-value">{summary()}</span>
                     </span>

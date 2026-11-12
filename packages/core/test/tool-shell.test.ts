@@ -1639,6 +1639,35 @@ describe("ShellTool", () => {
     }),
   )
 
+  // kilocode_change start - the completion notice prefers the model's summary
+  it.live("uses the model's description in the background completion notice", () =>
+    withTempDir((tmp) => {
+      reset()
+      return withSession(tmp.path, (registry) =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const admitted = yield* bus.subscribe(SessionEvent.InboxEnqueued).pipe(
+            Stream.filter((event) => event.data.sessionID === sessionID && event.data.item.type === "synthetic"),
+            Stream.runHead,
+            Effect.forkScoped({ startImmediately: true }),
+          )
+          yield* executeTool(
+            registry,
+            call(
+              { command: idleCommand, timeout: 50, background: true, description: "Waits out the timeout" },
+              "call-background-described",
+            ),
+          )
+          expect((yield* Fiber.join(admitted)).valueOrUndefined?.data.item.payload).toMatchObject({
+            description: "Waits out the timeout",
+          })
+        }),
+      )
+    }),
+  )
+
+  // kilocode_change end
+
   it.live("preserves a background command's non-zero exit", () =>
     withTempDir((tmp) => {
       reset()
