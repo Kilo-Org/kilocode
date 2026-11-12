@@ -237,16 +237,6 @@
         "category": "Kilo Code"
       },
       {
-        "command": "kilo-code.new.autocomplete.nextEdit.acceptOrJump",
-        "title": "Next Edit: Accept or Jump to Suggested Edit",
-        "category": "Kilo Code"
-      },
-      {
-        "command": "kilo-code.new.autocomplete.nextEdit.dismiss",
-        "title": "Next Edit: Dismiss Pending Suggestion",
-        "category": "Kilo Code"
-      },
-      {
         "command": "kilo-code.new.agentManager.previousSession",
         "title": "Agent Manager: Previous Session",
         "category": "Kilo Code"
@@ -896,16 +886,6 @@
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
       },
       {
-        "command": "kilo-code.new.autocomplete.nextEdit.acceptOrJump",
-        "key": "tab",
-        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && kilo-code.nextEdit.hasPendingSuggestion"
-      },
-      {
-        "command": "kilo-code.new.autocomplete.nextEdit.dismiss",
-        "key": "escape",
-        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.nextEdit.hasPendingSuggestion"
-      },
-      {
         "command": "kilo-code.new.settingsSearch",
         "key": "ctrl+f",
         "mac": "cmd+f",
@@ -1035,19 +1015,11 @@
           "type": "string",
           "enum": [
             "mistralai/codestral-2508",
-            "inception/mercury-edit-2",
-            "inception/mercury-next-edit",
-            "codestral-2508",
-            "mercury-edit-2",
-            "mercury-next-edit"
+            "codestral-2508"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+            "Codestral via your connected Mistral provider API key"
           ],
           "description": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
         },
@@ -1055,13 +1027,11 @@
           "type": "string",
           "enum": [
             "kilo",
-            "mistral",
-            "inception"
+            "mistral"
           ],
           "enumDescriptions": [
             "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "Use autocomplete models through your connected Mistral provider API key"
           ],
           "description": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },
