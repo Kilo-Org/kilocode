@@ -9,6 +9,7 @@ import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
 import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { loadPlugins } from "./lib/plugins"
 
 type Closable = { readonly type: string; readonly data?: Record<string, unknown> }
 
@@ -42,6 +43,7 @@ const boot = (body: (input: { client: ReturnType<typeof OpenCode.make>; director
               KiloHost.overrides,
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
+          yield* loadPlugins(context, directory)
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))

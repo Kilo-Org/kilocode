@@ -13,6 +13,7 @@ import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
 import path from "node:path"
 import { tmpdir } from "../../core/test/fixture/tmpdir"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 type Env = {
   readonly client: ReturnType<typeof OpenCode.make>
@@ -86,6 +87,8 @@ const boot = (body: (env: Env) => Promise<void>) => async () => {
               { preconnect: fetch.preconnect },
             ),
           })
+          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+          yield* loadPlugins(context, directory)
           const run = Effect.runPromiseWith(yield* Effect.context<never>())
           yield* Effect.promise(() =>
             body({ client, location: { directory }, llm: Context.get(model, TestLLM.Test), run }),

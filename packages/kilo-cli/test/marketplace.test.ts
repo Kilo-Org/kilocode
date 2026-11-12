@@ -12,6 +12,7 @@ import { mkdtemp, readdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
   // A native watcher converges in well under a second, but the CI runner shares four vCPUs with other test
@@ -103,6 +104,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
             }),
           )
           const store = storage(Context.get(kv, KV.Service), "kilocode.marketplace")
+          yield* loadPlugins(context, directory)
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))
@@ -115,6 +117,9 @@ test("lists, installs and removes skills and MCPs through the generated client",
               { preconnect: fetch.preconnect },
             ),
           })
+          // The server no longer waits for a Location's plugins in rpc.call, and client.location.reload()
+          // re-boots the Location without keeping it warm, so a one-shot caller re-awaits activation after a reload.
+          const reactivate = () => Effect.runPromise(loadPlugins(context, directory))
           yield* Effect.promise(async () => {
             const rpc = client.rpc(KiloMarketplaceRpc.Definition)
             const options = { location: { directory } }
@@ -133,6 +138,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
               expect(JSON.stringify([record.resources, record.config])).not.toContain(directory)
               // Retain explicit reload coverage separately from the real watcher test below.
               await client.location.reload()
+              await reactivate()
               expect(await rpc.installed({}, options)).toEqual([record])
               expect((await client.skill.list(options)).data).toContainEqual({
                 id: "demo",
@@ -144,6 +150,7 @@ test("lists, installs and removes skills and MCPs through the generated client",
               })
               await rpc.uninstall(input, options)
               await client.location.reload()
+              await reactivate()
               expect(await rpc.installed({}, options)).toEqual([])
               expect((await client.skill.list(options)).data.some((skill) => skill.id === "demo")).toBe(false)
             }
@@ -305,6 +312,7 @@ test("native watchers activate and remove installed skills and MCPs without loca
               KiloHost.overrides,
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
+          yield* loadPlugins(context, directory)
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))

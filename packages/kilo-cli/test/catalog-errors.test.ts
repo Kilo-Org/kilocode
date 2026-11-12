@@ -34,14 +34,18 @@ const session = Session.Info.make({
 })
 
 // Compile the upstream runner node through the actual host replacement and its declared dependencies.
-const runner = (resolver: Pick<ModelResolver.Interface, "resolve" | "resolveModel">, rpc: Rpc.Interface) =>
+const runner = (
+  resolver: Pick<ModelResolver.Interface, "resolve" | "resolveModel"> & Partial<Pick<ModelResolver.Interface, "fallback">>,
+  rpc: Rpc.Interface,
+) =>
   LayerNode.compile(SessionRunnerModel.node, {
     replacements: [
       ...KiloHost.overrides,
       ModelResolver.node.replace(
         Layer.succeed(ModelResolver.Service, {
-          ...resolver,
-          fallback: () => Effect.undefined,
+          resolve: resolver.resolve,
+          resolveModel: resolver.resolveModel,
+          fallback: resolver.fallback ?? (() => Effect.undefined),
           resolveImage: () => Effect.undefined,
           resolveDecision: () => Effect.undefined,
         }),
@@ -121,10 +125,13 @@ it.effect("does not call the catalog RPC when default or explicit model resoluti
       Effect.provide(
         runner(
           {
+            // The default path resolves the agent's fallback model with no variant; the explicit path keeps the
+            // session's "high" variant. Both reach resolveModel with the selected catalog model.
             resolve: () => Effect.succeed(resolved),
+            fallback: () => Effect.succeed(model),
             resolveModel: (selected, variant) => {
               expect(selected).toBe(model)
-              expect(variant).toBe(Model.VariantID.make("high"))
+              expect(variant === undefined || variant === Model.VariantID.make("high")).toBe(true)
               return Effect.succeed(resolved)
             },
           },

@@ -10,6 +10,7 @@ import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // The kilocode.indexing RPC through the real host and the generated client, with real global and project kilo2.json
 // files. The Kilo API is a local stand-in; indexing itself stays disabled, so no embedder is called.
@@ -56,6 +57,7 @@ const boot =
                 { preconnect: fetch.preconnect },
               ),
             })
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(() => body(client, directory, global))
           }),
         ).pipe(Effect.provideService(References.MinimumLogLevel, "Error")),
