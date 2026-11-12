@@ -216,6 +216,47 @@ describe("SessionExecution lifecycle", () => {
     }),
   )
 
+  // kilocode_change start - the shell restart notice prefers the recovery summary
+  it.effect("uses the recovery summary in the shell restart notice", () =>
+    Effect.gen(function* () {
+      const database = yield* Database.Service
+      const parent = Session.ID.make("ses_shell_restart_summary")
+      const jobID = "sh_restart_summary"
+      yield* seedSessions(database, [parent])
+
+      const scope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
+      const jobs = yield* Job.make.pipe(Scope.provide(scope))
+      yield* buildExecution(scope, () => Effect.never, undefined, jobs)
+      yield* jobs.start({
+        id: jobID,
+        type: "shell",
+        recovery: {
+          kind: "shell",
+          sessionID: parent,
+          shellID: jobID,
+          command: "sleep 60",
+          description: "Waits for the timeout",
+        },
+        run: Effect.never,
+      })
+      yield* jobs.background(jobID)
+      expect(yield* jobs.pendingBackground).toMatchObject([{ id: jobID }])
+      yield* Scope.close(scope, Exit.void)
+
+      const restartedScope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(restartedScope, Exit.void))
+      const restartedJobs = yield* Job.make.pipe(Scope.provide(restartedScope))
+      const restarted = yield* buildExecution(restartedScope, () => Effect.never, undefined, restartedJobs)
+      yield* Context.get(restarted, SessionRestart.Service).resumeSuspendedSessions
+      yield* Context.get(restarted, SessionExecution.Service).awaitIdle(parent)
+      expect(yield* SessionInbox.list(database.db, parent)).toMatchObject([
+        { payload: { description: "Waits for the timeout", metadata: { source: "shell", state: "cancelled" } } },
+      ])
+    }),
+  )
+  // kilocode_change end
+
   it.effect("starts every claimed execution without waiting for earlier drains to finish", () =>
     Effect.gen(function* () {
       const database = yield* Database.Service
