@@ -1,11 +1,8 @@
 import type { KiloAccount } from "@kilocode/gateway-core"
 import { Config } from "@opencode/core/config"
-import { KiloConfigWriter } from "@opencode/core/kilocode/config/write"
 import { define } from "@opencode/plugin/effect/plugin"
 import { KiloPagesRpc } from "@opencode/schema/kilocode/pages"
-import { FSUtil } from "@opencode/util/fs-util"
-import { Global } from "@opencode/util/global"
-import { Context, Duration, Effect, Fiber, Layer, Option, Redacted, Semaphore, Stream, type Scope } from "effect"
+import { Duration, Effect, Fiber, Option, Redacted, Semaphore, Stream, type Scope } from "effect"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 import { PagesAuth } from "./auth"
 import { PagesConfig } from "./config"
@@ -21,21 +18,14 @@ const SIGN_IN = { integrationID: "kilo", methodID: "device" } as const
 
 type Snapshot = Pick<KiloPagesRpc.Status, "state" | "reason" | "retryAt">
 
-export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Scope>({
+export const KiloPagesPlugin = define<Scope.Scope>({
   id: "kilocode.pages",
   effect: Effect.fn("KiloPagesPlugin")(function* (ctx) {
     const config = yield* Effect.serviceOption(Config.Service)
     if (Option.isNone(config)) return yield* Effect.die(new Error("Kilo Pages requires location config"))
-    const fs = yield* FSUtil.Service
-    const global = yield* Global.Service
-    const writer = Context.get(
-      yield* Layer.build(KiloConfigWriter.layer({ reload: config.value.reload?.() ?? Effect.void })),
-      KiloConfigWriter.Service,
-    )
     const directory = ctx.location.directory
     // Resolved once, when the plugin starts: a different destination takes effect on the next start.
     const deployment = PagesConfig.destination(yield* config.value.entries())
-    const globalDirectory = yield* fs.resolve(global.config)
 
     const lock = Semaphore.makeUnsafe(1)
     const scope = yield* Effect.scope
@@ -214,31 +204,9 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
       }),
     )
 
-    const globalTarget = { directory: globalDirectory, global: true } as const
-    const write = (enabled: boolean) =>
-      writer.write({ target: globalTarget, path: ["pages", "enabled"], value: enabled })
-
     const registration = yield* ctx.rpc
       .register(KiloPagesRpc.Definition, {
         status: () => Effect.sync(() => view()),
-        enable: (_, context) =>
-          config.value.entries().pipe(
-            // Policy denial is refused before anything is persisted, so lifting it later cannot activate Pages unasked.
-            Effect.flatMap((entries) => (PagesConfig.denied(entries) ? Effect.void : write(true))),
-            Effect.andThen(refresh(true)),
-            Effect.map(() => view()),
-            Effect.catchTag("KiloConfigWriterError", (error) =>
-              Effect.fail(context.error("failed", error.message, { message: error.message })),
-            ),
-          ),
-        disable: (_, context) =>
-          write(false).pipe(
-            Effect.andThen(refresh(true)),
-            Effect.map(() => view()),
-            Effect.catchTag("KiloConfigWriterError", (error) =>
-              Effect.fail(context.error("failed", error.message, { message: error.message })),
-            ),
-          ),
         ensureConnected: () =>
           Effect.suspend(() => {
             const account = latest()

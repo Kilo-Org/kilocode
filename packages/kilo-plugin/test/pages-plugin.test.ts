@@ -2,13 +2,9 @@ import { afterEach, beforeEach, expect, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
-import { FSUtil } from "@opencode/util/fs-util"
-import { Global } from "@opencode/util/global"
-import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Effect, Queue, Stream } from "effect"
 import { TestClock } from "effect/testing"
-import { parse } from "jsonc-parser"
-import { mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises"
+import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloGatewayAccounts } from "../src/gateway/accounts"
@@ -63,24 +59,14 @@ async function harness(input: {
   let adjust: (millis: number) => Promise<void> = () => Promise.reject(new Error("the harness has no test clock"))
   let servers: Server[] = []
   let mcpEvents: Queue.Queue<{ data: { server: string } }> | undefined
-  // The global config directory is read back, so a write by the plugin reaches the next read as a config reload would.
-  const globalDirectory = path.join(directory, "global")
-  const written = async () =>
-    Promise.all(
-      (await readdir(globalDirectory).catch(() => [])).map(async (name) => ({
-        info: parse(await readFile(path.join(globalDirectory, name), "utf8")) as Info,
-        path: path.join(globalDirectory, name),
-      })),
-    )
   const config = {
     entries: () =>
       Effect.promise(async () =>
-        (reads++, [...input.documents, ...(await written())].map(
+        (reads++, input.documents.map(
           (item) => new Document({ type: "document", info: new KiloConfigPolicy.Info(item.info), ...(item.path ? { path: item.path as never } : {}) }),
         )),
       ),
     changes: () => Stream.empty,
-    reload: () => Effect.void,
   } as unknown as Config.Interface
 
   const harness: Harness = {
@@ -142,8 +128,6 @@ async function harness(input: {
       ).pipe(
         Effect.provideService(Config.Service, config),
         input.clock ? Effect.provide(TestClock.layer()) : (effect) => effect,
-        Effect.provide(Global.layerWith({ home: directory, state: path.join(directory, ".state"), config: path.join(directory, "global") })),
-        Effect.provide(LayerNode.compile(FSUtil.node)),
       ),
     )
   } finally {
@@ -161,7 +145,7 @@ interface Harness {
   readonly emitted: unknown[]
   readonly servers: (next: Server[]) => void
   readonly status: () => Promise<any>
-  readonly call: (method: "enable" | "disable" | "ensureConnected" | "status") => Promise<any>
+  readonly call: (method: "ensureConnected" | "status") => Promise<any>
   readonly entry: () => Entry | undefined
   readonly mcpEvent: () => Promise<boolean>
   readonly until: (predicate: (status: any) => boolean) => Promise<void>
@@ -343,38 +327,6 @@ test("the status event is published once per change", async () => {
   }).finally(backend.stop)
 })
 
-test("enable and disable write the global config and follow it", async () => {
-  const backend = mintServer(minted)
-  await harness({
-    documents: [],
-    server: backend.url,
-    run: async (pages) => {
-      await pages.until((status) => status.state === "disabled")
-      expect(await pages.call("enable")).toMatchObject({ enabled: true, state: "connecting" })
-      expect(pages.entry()).toBeDefined()
-      expect(backend.count()).toBe(1)
-      expect(await pages.call("disable")).toMatchObject({ enabled: false, state: "disabled", reason: "user" })
-      expect(pages.entry()).toBeUndefined()
-      expect(PagesToken.peek({ server: backend.url, token: "account" }, PagesToken.DEFAULT).kind).toBe("none")
-    },
-  }).finally(backend.stop)
-})
-
-test("enable under a deny policy writes nothing", async () => {
-  const backend = mintServer(minted)
-  await harness({
-    documents: [{ info: { policies: [{ action: "mcp.use", resource: "pages", effect: "deny" }] } }],
-    server: backend.url,
-    run: async (pages) => {
-      await pages.until((status) => status.state === "disabled")
-      expect(await pages.call("enable")).toMatchObject({ enabled: false, state: "disabled", reason: "policy" })
-      expect(await readdir(path.join(pages.directory, "global")).catch(() => [])).toEqual([])
-      expect(pages.entry()).toBeUndefined()
-      expect(backend.count()).toBe(0)
-    },
-  }).finally(backend.stop)
-})
-
 test("ensureConnected retries a refusal but never opens a sign-in", async () => {
   let refuse = true
   const backend = mintServer((count) =>
@@ -466,7 +418,6 @@ test("a forced refresh of a connected server keeps it connected", async () => {
       await pages.until((status) => status.state === "connected")
       const reloads = pages.reloads()
       expect(await pages.call("ensureConnected")).toMatchObject({ state: "connected" })
-      expect(await pages.call("enable")).toMatchObject({ state: "connected" })
       expect(pages.entry()).toBeDefined()
       expect(pages.reloads()).toBe(reloads)
       expect(backend.count()).toBe(1)

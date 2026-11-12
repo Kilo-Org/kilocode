@@ -50,10 +50,30 @@ test("concurrent callers share one mint and a valid token is reused", async () =
   expect(PagesToken.peek(backend.account(), backend.deployment).kind).toBe("valid")
 })
 
-test("a token that is within the skew of its expiry is replaced", async () => {
+test("a token that is within the skew of its expiry is replaced once the window has passed", async () => {
   using backend = mint((count) => valid(count, 30))
+  const start = Date.now()
+  setSystemTime(start)
   expect(await get(backend)).toBe("pages-1")
+  setSystemTime(start + 29_999)
+  expect(await get(backend)).toBe("pages-1")
+  setSystemTime(start + 30_000)
   expect(await get(backend)).toBe("pages-2")
+  expect(backend.requests).toHaveLength(2)
+})
+
+test("a local clock ahead of the mint response mints at most once per window", async () => {
+  const start = Date.now()
+  // The response expires 5 minutes after `start`, but the local clock reads 10 minutes after it.
+  using backend = mint((count) => Response.json({ token: `pages-${count}`, expiresAt: new Date(start + 300_000).toISOString() }))
+  setSystemTime(start + 600_000)
+  for (let i = 0; i < 5; i++) expect(await get(backend)).toBe("pages-1")
+  expect(backend.requests).toHaveLength(1)
+  expect(PagesToken.peek(backend.account(), backend.deployment).kind).toBe("valid")
+
+  setSystemTime(start + 630_000)
+  for (let i = 0; i < 5; i++) expect(await get(backend)).toBe("pages-2")
+  expect(backend.requests).toHaveLength(2)
 })
 
 test("each credential has its own token and drop forgets one", async () => {

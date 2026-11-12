@@ -4,7 +4,8 @@ import { Schema } from "effect"
 import { optional } from "../schema.js"
 import { Rpc } from "../rpc.js"
 
-// The `kilocode.pages` RPC: whether Pages is on for a Location and whether it is connected. No method and no field
+// The `kilocode.pages` RPC: whether Pages is on for a Location and whether it is connected. It only reports; the
+// `pages` config key is the one way to turn Pages on or off. No method and no field
 // carries a Pages token, a Kilo token or a header: the credential never leaves the server process.
 const portable = Schema.toStandardSchemaV1
 
@@ -17,7 +18,7 @@ export const Config = Schema.Struct({
   }),
   destination: Destination.pipe(optional).annotate({
     description:
-      "Which Pages deployment to use: pages or pages-dev (default: pages). The KILO_PAGES_DESTINATION environment variable overrides it.",
+      "Which Pages deployment to use: pages or pages-dev (default: pages). The KILO_PAGES_DESTINATION environment variable overrides it. Takes effect on the next start.",
   }),
 }).annotate({ identifier: "KiloPagesConfig", description: "Pages configuration" })
 export type Config = typeof Config.Type
@@ -62,13 +63,9 @@ export const Status = Schema.Struct({
 }).annotate({ identifier: "KiloPages.Status" })
 export interface Status extends Schema.Schema.Type<typeof Status> {}
 
-export const Failure = Schema.Struct({ message: Schema.String }).annotate({ identifier: "KiloPages.Failure" })
-export interface Failure extends Schema.Schema.Type<typeof Failure> {}
-
 const method = {
   input: portable(Schema.Struct({})),
   output: portable(Status),
-  errors: { failed: portable(Failure) },
 }
 
 export const Definition = Rpc.define({
@@ -76,10 +73,6 @@ export const Definition = Rpc.define({
   methods: {
     /** Read the state. Never mints and never changes anything. */
     status: method,
-    /** Turn Pages on in the global config, then connect. Refused while policy denies it. */
-    enable: method,
-    /** Turn Pages off in the global config, drop the cached token and remove the MCP server. */
-    disable: method,
     /** Reconcile now and report the state. Never opens a sign-in. */
     ensureConnected: method,
   },

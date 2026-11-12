@@ -420,4 +420,15 @@ export function indexingConfig(entries: readonly Config.Entry[]) {
   }, undefined)
 }
 
+/** The `pages` key of the effective entries: for each field the last document that sets it wins. */
+export function pagesConfig(entries: readonly Config.Entry[]) {
+  return entries.reduce<{ enabled?: boolean; destination?: KiloPagesRpc.Destination }>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.pages) return value
+    return {
+      enabled: entry.info.pages.enabled ?? value.enabled,
+      destination: entry.info.pages.destination ?? value.destination,
+    }
+  }, {})
+}
+
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))

@@ -12,7 +12,7 @@ export interface Deployment {
   readonly resource: KiloResourceToken.Resource
 }
 
-const DEFAULT: Deployment = { origin: "https://pages.kiloapps.io", resource: "pages" }
+export const DEFAULT: Deployment = { origin: "https://pages.kiloapps.io", resource: "pages" }
 
 export const DEPLOYMENTS: readonly Deployment[] = [
   DEFAULT,
@@ -21,13 +21,14 @@ export const DEPLOYMENTS: readonly Deployment[] = [
 
 // A token is replaced a little before it expires, so a request never reaches Pages with one it already treats as expired.
 const SKEW_MS = 60_000
-// One forced re-mint per window, so a Pages that keeps answering 401 cannot drive a mint loop.
+// At most one mint per window for a token that is still held: a Pages that keeps answering 401, or a local clock ahead
+// of the mint response, cannot drive a mint on every request.
 const FORCE_WINDOW_MS = 30_000
 const FLAG_RETRY_MS = 10 * 60_000
 const IDLE_MS = 60 * 60_000
 
 type Slot = {
-  token?: { readonly value: string; readonly expiresAt: number }
+  token?: { readonly value: string; readonly expiresAt: number; readonly mintedAt: number }
   inflight?: Promise<Result>
   refused?: { readonly failure: KiloResourceToken.Failure & { readonly kind: "refused" }; readonly until?: number }
   backoff?: { readonly attempt: number; readonly retryAt: number; readonly failure: KiloResourceToken.Failure }
@@ -80,7 +81,7 @@ export function get(input: {
       slot.forcedAt = now
     }
 
-    if (slot.token && slot.token.expiresAt - SKEW_MS > now) return Effect.succeed(Redacted.make(slot.token.value))
+    if (slot.token && usable(slot.token, now)) return Effect.succeed(Redacted.make(slot.token.value))
 
     slot.inflight ??= Effect.runPromise(
       KiloResourceToken.mint({
@@ -115,10 +116,16 @@ export function get(input: {
   })
 }
 
+// `expiresAt` is a server timestamp compared with the local clock, so a token the clock calls expired is still served
+// for the window after it was minted instead of being minted again.
+function usable(token: NonNullable<Slot["token"]>, now: number) {
+  return token.expiresAt - SKEW_MS > now || now - token.mintedAt < FORCE_WINDOW_MS
+}
+
 function install(slot: Slot, result: Result) {
   const now = Date.now()
   if (result.ok) {
-    slot.token = { value: result.minted.token, expiresAt: result.minted.expiresAt }
+    slot.token = { value: result.minted.token, expiresAt: result.minted.expiresAt, mintedAt: now }
     slot.refused = undefined
     slot.backoff = undefined
     return
@@ -144,7 +151,7 @@ export function peek(account: Pick<KiloAccount.Info, "server" | "token">, deploy
   if (slot.refused && (slot.refused.until === undefined || slot.refused.until > now))
     return { kind: "refused", failure: slot.refused.failure }
   if (slot.backoff && slot.backoff.retryAt > now) return { kind: "backoff", retryAt: slot.backoff.retryAt }
-  if (slot.token && slot.token.expiresAt - SKEW_MS > now) return { kind: "valid", expiresAt: slot.token.expiresAt }
+  if (slot.token && usable(slot.token, now)) return { kind: "valid", expiresAt: slot.token.expiresAt }
   return { kind: "none" }
 }
 
