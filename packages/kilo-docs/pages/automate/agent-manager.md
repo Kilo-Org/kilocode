@@ -373,6 +373,8 @@ Starting another session in an existing worktree reuses its files and branch wit
 
 Each request can start up to 20 tasks. Sessions started with a prompt inherit the current turn's model and reasoning effort unless you explicitly request a different selection. Sessions created without a prompt use the normal defaults. Ask for independent sessions for separate tasks, or alternate versions of the same task to compare approaches.
 
+In `worktree` mode, a task can set `baseBranch` to start its worktree from an existing branch instead of the project's default, so you can base a session on a release branch or on work another session already pushed. Use the branch name without a remote prefix, such as `main` or `release/1.0`. When you omit it, Kilo uses the selected project's configured default base branch, or falls back to automatic remote-default detection when none is set. `baseBranch` is worktree-only: it is rejected in `local` mode and cannot be combined with `worktreeID`.
+
 The agent can use `agent_manager_models` to look up available models, providers, and reasoning effort before applying your requested override.
 
 The same tool also manages existing sessions. Use `action: "list"` first to get the current sections, worktrees, local sessions, and exact IDs. It can then send a prompt to one managed session, stop a managed session, move a worktree into a section, or answer a pending question. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
