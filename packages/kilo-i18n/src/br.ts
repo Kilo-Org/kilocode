@@ -135,4 +135,8 @@ export const dict = {
   "ui.message.feedback.helpful": "Isso foi útil",
   "ui.message.feedback.notHelpful": "Isso não foi útil",
   "ui.message.feedback.clearRating": "Limpar avaliação",
+  // Chart tool card
+  "ui.tool.chart": "Gráfico",
+  "ui.tool.chart.invalid": "Configuração de gráfico inválida — deve incluir tipo e dados",
+  "ui.tool.chart.failed": "Falha ao renderizar o gráfico",
 }

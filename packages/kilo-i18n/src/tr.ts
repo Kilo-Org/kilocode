@@ -135,4 +135,8 @@ export const dict = {
   "ui.message.feedback.helpful": "Bu yardımcı oldu",
   "ui.message.feedback.notHelpful": "Bu yardımcı olmadı",
   "ui.message.feedback.clearRating": "Değerlendirmeyi temizle",
+  // Chart tool card
+  "ui.tool.chart": "Grafik",
+  "ui.tool.chart.invalid": "Geçersiz grafik yapılandırması — tür ve veri içermelidir",
+  "ui.tool.chart.failed": "Grafik oluşturulamadı",
 }

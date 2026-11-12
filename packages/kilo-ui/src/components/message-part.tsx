@@ -32,6 +32,7 @@ import { Accordion } from "./accordion"
 import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
 import { Card } from "./card"
+import { ChartTool } from "./chart"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
 import { DiffChanges } from "./diff-changes"
 import { ExecuteTool } from "./execute-tool"
@@ -1899,6 +1900,9 @@ ToolRegistry.register({
     )
   },
 })
+
+// The chart tool result is a Chart.js config that its own card draws.
+ToolRegistry.register({ name: "chart", render: ChartTool })
 
 /** One control of a pending user message, for example to queue, steer or delete it. */
 export type UserMessagePendingAction = {
