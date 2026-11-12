@@ -216,47 +216,6 @@ describe("SessionExecution lifecycle", () => {
     }),
   )
 
-  // kilocode_change start - the shell restart notice prefers the recovery summary
-  it.effect("uses the recovery summary in the shell restart notice", () =>
-    Effect.gen(function* () {
-      const database = yield* Database.Service
-      const parent = Session.ID.make("ses_shell_restart_summary")
-      const jobID = "sh_restart_summary"
-      yield* seedSessions(database, [parent])
-
-      const scope = yield* Scope.make()
-      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
-      const jobs = yield* Job.make.pipe(Scope.provide(scope))
-      yield* buildExecution(scope, () => Effect.never, undefined, jobs)
-      yield* jobs.start({
-        id: jobID,
-        type: "shell",
-        recovery: {
-          kind: "shell",
-          sessionID: parent,
-          shellID: jobID,
-          command: "sleep 60",
-          description: "Waits for the timeout",
-        },
-        run: Effect.never,
-      })
-      yield* jobs.background(jobID)
-      expect(yield* jobs.pendingBackground).toMatchObject([{ id: jobID }])
-      yield* Scope.close(scope, Exit.void)
-
-      const restartedScope = yield* Scope.make()
-      yield* Effect.addFinalizer(() => Scope.close(restartedScope, Exit.void))
-      const restartedJobs = yield* Job.make.pipe(Scope.provide(restartedScope))
-      const restarted = yield* buildExecution(restartedScope, () => Effect.never, undefined, restartedJobs)
-      yield* Context.get(restarted, SessionRestart.Service).resumeSuspendedSessions
-      yield* Context.get(restarted, SessionExecution.Service).awaitIdle(parent)
-      expect(yield* SessionInbox.list(database.db, parent)).toMatchObject([
-        { payload: { description: "Waits for the timeout", metadata: { source: "shell", state: "cancelled" } } },
-      ])
-    }),
-  )
-  // kilocode_change end
-
   it.effect("starts every claimed execution without waiting for earlier drains to finish", () =>
     Effect.gen(function* () {
       const database = yield* Database.Service
@@ -428,7 +387,7 @@ describe("SessionRestart background recovery", () => {
       yield* seedSessions(database, [parent])
       yield* seedSessions(database, [child], { parent_id: parent, time_suspended: Date.now() })
       yield* seedBackground(jobs, parent, [
-        { id: "sh_background_orphan", shellID: "sh_background_orphan", command: "sleep 60" },
+        { id: "sh_background_orphan", shellID: "sh_background_orphan", command: "sleep 60", description: "Waits for the timeout" }, // kilocode_change
       ])
       yield* seedBackground(jobs, child, [{ id: "call-child-shell", shellID: "sh_child_orphan", command: "sleep 30" }])
 
@@ -472,7 +431,7 @@ describe("SessionRestart background recovery", () => {
       expect((yield* store.context(parent)).filter((message) => message.type === "synthetic")).toMatchObject([
         {
           type: "synthetic",
-          description: "sleep 60",
+          description: "Waits for the timeout", // kilocode_change - the recovery summary wins
           text: expect.stringContaining("server restarted"),
           metadata: {
             source: "shell",
@@ -485,6 +444,7 @@ describe("SessionRestart background recovery", () => {
       expect((yield* store.context(child)).filter((message) => message.type === "synthetic")).toMatchObject([
         {
           type: "synthetic",
+          description: "sleep 30", // kilocode_change - without a summary the command is the fallback
           metadata: {
             source: "shell",
             jobID: "call-child-shell",
@@ -1373,7 +1333,7 @@ describe("SessionExecution interrupt continuation", () => {
 function seedBackground(
   jobs: Job.Interface,
   sessionID: Session.ID,
-  background: ReadonlyArray<{ readonly id: string; readonly shellID: string; readonly command: string }>,
+  background: ReadonlyArray<{ readonly id: string; readonly shellID: string; readonly command: string; readonly description?: string }>, // kilocode_change
 ) {
   return Effect.forEach(
     background,
@@ -1382,7 +1342,7 @@ function seedBackground(
         yield* jobs.start({
           id: job.id,
           type: "shell",
-          recovery: { kind: "shell", sessionID, shellID: job.shellID, command: job.command },
+          recovery: { kind: "shell", sessionID, shellID: job.shellID, command: job.command, ...(job.description ? { description: job.description } : {}) }, // kilocode_change
           run: Effect.never,
         })
         yield* jobs.background(job.id)
