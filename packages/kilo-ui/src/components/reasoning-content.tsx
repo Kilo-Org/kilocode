@@ -13,7 +13,6 @@ import { createSmoothText, useCollapsible } from "./tool-utils"
 const GLIDE_MAX_MS = 200
 
 const collapsed = new Set<string>()
-const streamed = new Set<string>()
 const opened = new Set<string>()
 
 function remember(set: Set<string>, id: string) {
@@ -37,7 +36,6 @@ export function ReasoningContent(props: {
     () => !done(),
   )
   const view = createMemo(() => reasoningHeading(display(), !done()))
-  if (!done()) remember(streamed, props.id)
   const mode = () => props.mode ?? "expanded"
   const capped = () => mode() === "preview"
   const headline = () => mode() === "headline"
@@ -45,7 +43,6 @@ export function ReasoningContent(props: {
   const derive = () =>
     reasoningOpenState({
       mode: mode(),
-      streamed: streamed.has(props.id),
       userOpened: opened.has(props.id),
       userCollapsed: collapsed.has(props.id),
     })
