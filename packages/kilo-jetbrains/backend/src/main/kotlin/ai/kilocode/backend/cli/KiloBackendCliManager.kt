@@ -612,7 +612,9 @@ internal fun buildKiloCliEnv(
     put("KILO_ENABLE_QUESTION_TOOL", "true")
     put("KILO_PLATFORM", "jetbrains")
     put("KILO_APP_NAME", "kilo-code")
-    put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
+    // Outside dev mode, leave KILO_TELEMETRY_LEVEL to the user: the CLI gives an inherited value
+    // precedence and otherwise follows `experimental.openTelemetry` from the global config.
+    if (KiloDevMode.enabled()) put("KILO_TELEMETRY_LEVEL", "off")
     if (!KiloClaudeCompatSettings.get()) put("KILO_DISABLE_CLAUDE_CODE", "true")
     put("KILOCODE_FEATURE", "jetbrains-plugin")
     ideEnv(log).forEach { entry -> put(entry.key, entry.value) }
