@@ -680,6 +680,51 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.3] - 2026-11-11
+
+### Added
+
+- Cloud workspace management: create, switch, and delete Cloud (hosted) workspaces, remember the profile per repository, and apply organization profile defaults.
+- Cloud sessions now share the worktree editor UI, with session titles and activity kept in sync and a running indicator for Cloud turns like local ones.
+- Transcript find: search the session transcript with match highlighting and next/previous navigation that keeps working while a response is streaming.
+- Worktrees are organized in a shared active tree, with an **Update from Base** action and row buttons that highlight on hover.
+- Questions appear in the prompt navigator so pending agent questions are easier to find.
+- Transcript messages are labeled for screen readers.
+
+### Fixed
+
+- The plugin now uses public platform APIs for tree hover painting, so Marketplace publishing passes plugin verification again.
+- Cloud workspace delete confirmation is simplified, and **Set as default** is removed from the Cloud workspace dialog.
+- Local MCP issues are hidden in Cloud sessions.
+- Plugin tools whose arguments cannot be converted to JSON Schema no longer break tool loading.
+- Questions stay open when background results arrive.
+- Cloud agent control tokens are exchanged correctly from stored credentials.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.28.
+- JetBrains and build dependencies updated (OkHttp, Markdown, Kodein DI, Gradle wrapper) with security floors for transitive build dependencies.
+
+## [7.2.1-rc.2] - 2026-11-11
+
+### Added
+
+- Cloud workspace management: create, switch, and delete Cloud (hosted) workspaces, remember the profile per repository, and apply organization profile defaults.
+- Cloud sessions now share the worktree editor UI, with session titles and activity kept in sync and a running indicator for Cloud turns like local ones.
+- Transcript find: search the session transcript with match highlighting and next/previous navigation that keeps working while a response is streaming.
+- Worktrees are organized in a shared active tree, with an **Update from Base** action and row buttons that highlight on hover.
+- Questions appear in the prompt navigator so pending agent questions are easier to find.
+
+### Fixed
+
+- Plugin tools whose arguments cannot be converted to JSON Schema no longer break tool loading.
+- Questions stay open when background results arrive.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.28.
+- JetBrains and build dependencies updated (OkHttp, Markdown, Kodein DI, Gradle wrapper) with security floors for transitive build dependencies.
+
 ## [7.2.1-rc.1] - 2026-10-28
 
 ### Added

@@ -112,6 +112,23 @@ updates:
       - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
+      # The Kotlin JVM and serialization compiler plugins are pinned to the
+      # same Kotlin minor as intellij-rpc-plugin, and no 2.4-compatible RPC
+      # build exists yet, so a Kotlin minor bump always breaks
+      # :shared:compileKotlin (build.gradle.kts enforces the match). Dependabot
+      # proposes the Kotlin minor on its own without the coupled RPC bump, so
+      # these PRs can never merge and were closed repeatedly (#14755, #14950,
+      # #15157, #15421, #15547, #15799, #15850). Ignore the minor until
+      # JetBrains ships a 2.4 RPC plugin, then bump all three by hand and
+      # remove this entry. Patches still flow, and kotlinx-serialization-json
+      # (org.jetbrains.kotlinx:*) is not pinned to the RPC plugin, so it is
+      # deliberately left to move on its own.
+      - dependency-name: "org.jetbrains.kotlin.jvm"
+        update-types:
+          - "version-update:semver-minor"
+      - dependency-name: "org.jetbrains.kotlin.plugin.serialization"
+        update-types:
+          - "version-update:semver-minor"
     # One bad update must not block the rest, and coupled artifacts must move
     # together (same "-minor-patch" suffix and specificity rules as above).
     groups:
