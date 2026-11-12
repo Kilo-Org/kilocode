@@ -100,7 +100,7 @@ class Scanner {
 }
 
 class Watcher {
-  public readonly watching = true
+  public watching = true
   public readonly onDidStartBatchProcessing = new Emitter<string[]>()
   public readonly onBatchProgressUpdate = new Emitter<{
     processedInBatch: number
@@ -378,6 +378,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
     await orchestrator.startIndexing("background")
 
     expect(state.state).toBe("Error")
+    expect(state.searchable).toBe(true)
     expect(state.getCurrentStatus().message).not.toContain("File watcher started")
     expect(state.getCurrentStatus().message).toContain("changes are only picked up when indexing restarts")
   })
@@ -397,9 +398,17 @@ describe("CodeIndexOrchestrator telemetry", () => {
 
     await orchestrator.startIndexing("background")
     expect(state.state).toBe("Indexed")
+    expect(state.searchable).toBe(true)
 
+    watcher.watching = false
     watcher.onDidStop.fire(new Error("Unable to poll: Interrupted system call"))
 
+    expect(state.state).toBe("Error")
+    expect(state.getCurrentStatus().message).toContain("File watching stopped")
+
+    // A drain of events queued before the stop must not turn the status back into "Index up-to-date".
+    watcher.onDidStartBatchProcessing.fire(["/tmp/ws/queued.ts"])
+    watcher.onBatchProgressUpdate.fire({ processedInBatch: 1, totalInBatch: 1, currentFile: "/tmp/ws/queued.ts" })
     expect(state.state).toBe("Error")
     expect(state.getCurrentStatus().message).toContain("File watching stopped")
   })

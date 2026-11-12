@@ -97,11 +97,15 @@ export class CodeIndexOrchestrator {
             workspacePath: this.workspacePath,
             filesInBatch: paths.length,
           })
+          // A stopped watcher leaves its status at Error; a drain of events queued before it stopped must not
+          // overwrite that with progress and then "Index up-to-date".
+          if (!this.fileWatcher.watching) return
           if (this.stateManager.state !== "Indexing") {
             this.stateManager.setSystemState("Indexing", "Processing file changes...")
           }
         }),
         this.fileWatcher.onBatchProgressUpdate.on(({ processedInBatch, totalInBatch, currentFile }) => {
+          if (!this.fileWatcher.watching) return
           this.stateManager.reportFileQueueProgress(
             processedInBatch,
             totalInBatch,
@@ -187,6 +191,7 @@ export class CodeIndexOrchestrator {
 
     this._cancelRequested = false
     this._isProcessing = true
+    this.stateManager.setSearchable(false)
     this.stateManager.setSystemState("Indexing", "Initializing services...")
 
     let started = false
@@ -369,6 +374,7 @@ export class CodeIndexOrchestrator {
     this.overlay?.reconcile(this.cacheManager.getAllHashes())
     await this.cacheManager.flush?.()
     await this.vectorStore.markIndexingComplete()
+    this.stateManager.setSearchable(true)
     await this.vectorStore.close?.()
     this.fileWatcher.setCollecting(true)
     // Only claim the watcher started when a subscription exists. A missing backend leaves the index frozen at this
@@ -458,6 +464,7 @@ export class CodeIndexOrchestrator {
       }
 
       await this.cacheManager.clearCacheFile()
+      this.stateManager.setSearchable(false)
 
       if (this.stateManager.state !== "Error") {
         this.stateManager.setSystemState("Standby", "Index data cleared successfully.")
