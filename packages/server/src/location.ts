@@ -1,12 +1,13 @@
+import { existsSync } from "node:fs" // kilocode_change(location-boot)
 import { FileSystem } from "@opencode/core/filesystem"
 import { Location } from "@opencode/core/location"
 import { Plugin } from "@opencode/core/plugin"
 import { LocationServiceMap } from "@opencode/core/location-services"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
-import { LocationNotFoundError, InvalidRequestError, ServiceUnavailableError } from "@opencode/protocol/errors"
-import { Effect, Layer, Schema } from "effect"
-import { HttpServerRequest } from "effect/http"
+import { LocationNotFoundError, InvalidRequestError } from "@opencode/protocol/errors" // kilocode_change(location-boot)
+import { Effect, Layer, RcMap, Schema } from "effect" // kilocode_change(location-boot)
+import { HttpServerRequest, HttpServerResponse } from "effect/http" // kilocode_change(location-boot)
 import { HttpApiMiddleware } from "effect/http-api"
 import { missingSession } from "./handlers/session-error"
 
@@ -33,21 +34,11 @@ export function locationErrors<A, E, R>(effect: Effect.Effect<A, E, R>) {
   )
 }
 
-// Temporary: managed policy is applied by the last internal plugin, and State shows each registration as soon as it is
-// made, so until activation finishes a provider the policy denies is still listed and usable. Only the endpoints that
-// list or use providers wait. Remove once a plugin batch becomes visible only when it ends.
-export const awaitPlugins = Plugin.awaitActivation.pipe(
-  Effect.timeoutOrElse({
-    duration: "5 seconds",
-    orElse: () =>
-      Effect.fail(
-        new ServiceUnavailableError({
-          message: "Location plugins did not finish activating",
-          service: "plugin",
-        }),
-      ),
-  }),
-)
+// kilocode_change start - location-boot: wait for activation without a deadline
+// Plugins of a cold Location can take longer than any fixed deadline while other Locations boot, and the
+// catalog is complete a moment later. Failing the request turned that delay into an error for the client.
+export const awaitPlugins = Plugin.awaitActivation
+// kilocode_change end
 
 export function response<A, E, R>(data: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
@@ -89,15 +80,31 @@ function decode(input: string) {
   }
 }
 
+// kilocode_change start - location-boot: endpoints that only read in-memory pending state
+const PENDING_LISTS: ReadonlySet<string> = new Set(["permission.request.list", "form.list"])
+// kilocode_change end
+
 export const layer = Layer.effect(
   LocationMiddleware,
   Effect.gen(function* () {
     const locations = yield* LocationServiceMap.Service
-    return LocationMiddleware.of((effect) =>
+    // kilocode_change start - location-boot: listing pending requests must not boot a Location
+    // Pending permissions and forms live in memory, so a Location that isn't loaded has none (same rule as
+    // session.form.list). Clients poll every worktree they show; each poll used to boot a whole Location.
+    return LocationMiddleware.of((effect, options) =>
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
-        return yield* effect.pipe(Effect.provide(locations.get(requestRef(request))), locationErrors)
+        const ref = requestRef(request)
+        // A missing directory still boots, so it keeps failing with LocationNotFoundError.
+        if (
+          PENDING_LISTS.has(options.endpoint.identifier) &&
+          !(yield* RcMap.has(locations.rcMap, LocationServiceMap.canonical(ref))) &&
+          existsSync(ref.directory)
+        )
+          return HttpServerResponse.jsonUnsafe({ location: { directory: ref.directory }, data: [] })
+        return yield* effect.pipe(Effect.provide(locations.get(ref)), locationErrors)
       }),
     )
+    // kilocode_change end
   }),
 )

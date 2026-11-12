@@ -1,6 +1,6 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import { expect } from "bun:test"
+import { expect, setDefaultTimeout } from "bun:test" // kilocode_change
 import { OpenCode } from "@opencode/client"
 import { Effect } from "effect"
 import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
@@ -14,6 +14,11 @@ const client = (handler: (request: Request) => Promise<Response>) =>
       preconnect: fetch.preconnect,
     }),
   })
+
+// kilocode_change start - the test boots three Locations, and each activates every built-in plugin. That takes about
+// 0.5 s on a fast machine and more than 5 s on the shared Windows CI runner.
+setDefaultTimeout(30_000)
+// kilocode_change end
 
 it.live("manages local and plugin-backed artifacts through /api/experimental/artifacts when enabled", () =>
   Effect.gen(function* () {

@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 134,
-    "markedLines": 2365,
+    "files": 137,
+    "markedLines": 2411,
     "unmarkedLines": 331,
     "deletedFiles": 0
   },
@@ -344,7 +344,7 @@
     },
     "turbo.json": {
       "rung": 3,
-      "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci`, `@opencode/cli#test:ci` and `@kilocode/kilo-cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117).",
+      "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci`, `@opencode/cli#test:ci` and `@kilocode/kilo-cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117). `@opencode/core#typecheck:tsc` declares its declaration build (`node_modules/.ts-dist/**`) as outputs. Upstream makes the packages that reference core wait for core's `tsc -b` so core's declarations exist first, but a cache hit replays only the logs. Every dependent that misses then rebuilds core into the same directory at once, and one reads a half-written declaration: `TS2306: File 'packages/core/src/<file>.ts' is not a module` in `cli` (2026-11-06) and `server` (2026-11-12) CI typecheck runs. With the outputs restored, `tsc -b` in each dependent finds core up to date and only reads it. No compiler option or upstream default changes; a seam in the task graph is the only place to declare a task's outputs.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/src/services/updater.ts": {
@@ -526,6 +526,14 @@
       "rung": 4,
       "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
     },
+    "packages/server/test/artifact.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: `setDefaultTimeout(30_000)` for the file's single test, matching upstream's own budget for Location-booting server tests (packages/server/test/session-diff.test.ts). The test boots three Locations (disabled, enabled, enabled-other), and each activates all 92 built-in plugins before the artifact route runs. That is about 0.5 s on macOS and passed bun's 5 s default on the Windows `packages` leg, where the Kilo host suite runs four test processes beside three package suites on four vCPUs. No assertion and no product code changes. Rung 4: bun's per-test timeout is set inside the upstream test file, and no seam reaches it from Kilo code."
+    },
+    "packages/server/test/fetch.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the OpenAI OAuth tests wait up to 15 s instead of 2 s for the `chatgpt-browser` method to appear in `/api/integration` (the pending-requests test gets the same 15 s for its identical wait on the build agent's permission policy), and the file uses `setDefaultTimeout(30_000)` (the 'both ports busy' test goes from 10 s to 30 s) so bun's deadline stays above that wait plus the fixed 2 s or 3.6 s port retries in `listen`. The wait covers plugin activation of a cold Location: about 0.3 s on macOS and more than 2 s on the Windows `packages` leg, where the Kilo host suite runs beside three package suites on four vCPUs. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the method appears. No assertion and no product code changes; the production `/cancel` probe keeps its 2 s abort. Rung 4: the deadlines are literals inside the upstream test file, and no seam reaches them from Kilo code."
+    },
     "packages/core/src/session.ts": {
       "rung": 3,
       "seam": "`Session.Interface.interrupt` accepts the optional `steer` flag and passes it to `SessionExecution`. A client that steers a running turn needs the server to tell 'stop this model call' apart from 'stop everything'; the interrupt options are the only input the execution layer reads, and no plugin hook reaches interruption. Upstream callers never set the flag, so their behavior does not change."
@@ -557,6 +565,10 @@
     "packages/core/src/plugin/module.ts": {
       "rung": 3,
       "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `PluginModule.Options.pluginSource` lets an embedding host map a configured target to the directory the loader should read, before the existing local-path/npm split, name the `plugin.use` resources the resolution stands for (so a deny-list cannot be bypassed by another spelling), and report `pending` when the source needs the installing pass instead of the fast pass, and let the loader evaluate those resources on the read pass first so a denied plugin is blocked before the resolver reaches the network. The hook returns `undefined` for every upstream target, so npm packages and local directories behave exactly as before. Rungs 1 and 2 cannot reach the loader: the split runs inside `PluginModule.load`, after the plugin registry, and a host cannot supply the Npm or source loading steps from outside it. Kilo supplies `git:` clone resolution here."
+    },
+    "packages/server/src/location.ts": {
+      "rung": 4,
+      "seam": "Location boot fix (feature `location-boot`). Two changes in the location middleware module: (1) `awaitPlugins` waits for plugin activation without the 5-second deadline that turned a slow cold start into a 503 `Location plugins did not finish activating` on `agent.list`, `model.list` and `provider.list`; the catalog is complete a moment later, and `rpc.call` already waits the same way. Upstream removes the wait entirely in bcaf561d949, which the next sync brings; until Kilo clients refresh on `*.updated` and handle `rpc.unavailable` on a cold Location, waiting without a deadline is the reliable behavior. (2) `permission.request.list` and `form.list` answer an empty list for an existing directory whose Location isn't loaded instead of booting it (a missing directory still boots and fails with `LocationNotFoundError`), the rule upstream already applies to `session.form.list` in `middleware/form-location.ts`: pending permissions and forms live in memory, so an unloaded Location has none. Clients poll every worktree they show, and each poll booted a whole Location with all plugins, which starved the root's activation. No hook or host replacement reaches the server's location middleware (`routes.ts` provides `layer` directly), so this needs lines in the upstream file. Rung 4 because the first change alters the deadline behavior; the second is generic and a candidate for upstream."
     }
   }
 }

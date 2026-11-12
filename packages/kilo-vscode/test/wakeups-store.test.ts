@@ -14,10 +14,12 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 type Pending = { sessionID: string; directory: string; pending: number; dueAt?: number }
 
-function scene(input: { now?: number; sessions?: Pending[]; unavailable?: boolean } = {}) {
+function scene(input: { now?: number; sessions?: Pending[]; unavailable?: boolean; home?: string } = {}) {
   const handler: { current?: (event: { data: Pending }) => void } = {}
+  const calls: Array<{ directory: string; location: string }> = []
   const rpc = {
-    pending: async () => {
+    pending: async (value: { directory: string }, options: { location: { directory: string } }) => {
+      calls.push({ directory: value.directory, location: options.location.directory })
       if (input.unavailable) throw { type: "rpc.unavailable", message: "no plugin" }
       return { sessions: input.sessions ?? [] }
     },
@@ -35,15 +37,34 @@ function scene(input: { now?: number; sessions?: Pending[]; unavailable?: boolea
   const [directories, setDirectories] = createSignal<readonly string[]>(["/repo"])
   const wakeups = createRoot((dispose) => ({
     dispose,
-    value: createWakeups({ api, directories, connected }),
+    value: createWakeups({ api, directories, connected, home: input.home ? () => input.home : undefined }),
     connect: (value: boolean) => setConnected(value),
     show: (value: readonly string[]) => setDirectories(value),
     emit: (data: Pending) => handler.current?.({ data }),
   }))
-  return { ...wakeups, setConnected, setDirectories }
+  return { ...wakeups, calls, setConnected, setDirectories }
 }
 
 describe("wakeup store", () => {
+  test("asks the home Location for every directory", async () => {
+    const app = scene({ home: "/repo" })
+    app.show(["/repo", "/repo/.kilo/worktrees/a", "/repo/.kilo/worktrees/b"])
+    await tick()
+    expect(app.calls).toEqual([
+      { directory: "/repo", location: "/repo" },
+      { directory: "/repo/.kilo/worktrees/a", location: "/repo" },
+      { directory: "/repo/.kilo/worktrees/b", location: "/repo" },
+    ])
+    app.dispose()
+  })
+
+  test("asks each directory itself without a home", async () => {
+    const app = scene()
+    await tick()
+    expect(app.calls).toEqual([{ directory: "/repo", location: "/repo" }])
+    app.dispose()
+  })
+
   test("seeds the pending sessions of a directory", async () => {
     const now = Date.now()
     const app = scene({ sessions: [{ sessionID: "ses_a", directory: "/repo", pending: 1, dueAt: now + 60_000 }] })
