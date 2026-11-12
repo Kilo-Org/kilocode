@@ -982,6 +982,9 @@ export function PromptInput(props: {
       slash.close()
       setText(next.text)
       paste.load(next.text, [])
+      // A restored draft carries its @path tokens in the text, so the mentions have to be seeded like every other
+      // restore path or the resend drops the file context.
+      mention.seedFromText(next.text)
       setAttachments(next.items)
       setBrowsers(next.browsers)
       replaceComments(next.comments)

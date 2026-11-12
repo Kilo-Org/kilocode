@@ -19,11 +19,14 @@ describe("revert workspace outcomes", () => {
 
   test("preserves the workspace outcome when decoding a legacy persisted revert", () => {
     const messageID = SessionMessage.ID.make("msg_test")
+    // `Revert` needs `FileDiff.Info.file`, so a `path` entry only fits the legacy shape. Without it this input would
+    // decode as a current revert and never reach the legacy transform.
     const decoded = Schema.decodeUnknownSync(PersistedRevert)({
       messageID,
-      diff: "--- a/math.ts\n+++ b/math.ts\n",
+      files: [{ path: "math.ts", status: "modified", additions: 1, deletions: 1, patch: "..." }],
       workspace: "snapshots-disabled",
     })
     expect(decoded.workspace).toBe("snapshots-disabled")
+    expect(decoded.files?.[0]?.file).toBe("math.ts")
   })
 })

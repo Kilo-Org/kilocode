@@ -14,6 +14,7 @@ import { composeReviewPrompt, mergePromptMetadata } from "../webview-ui/src/v2/r
 import {
   createRevertQueue,
   nextRedoMessageID,
+  redoTarget,
   restoredDraft,
   revertedCount,
   revertedUserMessages,
@@ -100,6 +101,23 @@ describe("createRevertQueue", () => {
     await expect(queue.settled("ses_a")).resolves.toBeUndefined()
     await expect(task).rejects.toThrow("locked")
     expect(queue.busy("ses_a")).toBe(false)
+  })
+})
+
+describe("redoTarget", () => {
+  const messages = [user("msg_1"), assistant("msg_2"), user("msg_3"), assistant("msg_4")]
+
+  it("steps to the next user message when the transcript is loaded", () => {
+    expect(redoTarget(messages, { messageID: "msg_1" })).toEqual({ next: "msg_3" })
+  })
+
+  it("is Redo All only when the loaded transcript has nothing after the boundary", () => {
+    expect(redoTarget(messages, { messageID: "msg_3" })).toBe("all")
+  })
+
+  it("does nothing while the first page is still loading", () => {
+    expect(redoTarget([], { messageID: "msg_3" })).toBeUndefined()
+    expect(redoTarget(messages, undefined)).toBeUndefined()
   })
 })
 
@@ -302,6 +320,43 @@ describe("DiffSourceCatalog session scope with staged revert", () => {
     const empty = await source.fetch()
     expect(empty.diffs).toEqual([])
     expect(calls).toHaveLength(1)
+    catalog.dispose()
+  })
+
+  it("walks the transcript once for a staged boundary across repeated fetches", async () => {
+    let paged = 0
+    const connection = {
+      client: async () => ({
+        session: {
+          get: async () => ({ id: "s1", revert: { messageID: "msg_5" } }),
+          diff: async () => [],
+        },
+        message: {
+          list: async (input: { order?: "asc" | "desc"; limit?: number }) => {
+            if ((input.limit ?? 0) === 200) paged++
+            return {
+              data:
+                input.order === "asc"
+                  ? [{ id: "msg_1", type: "user" }]
+                  : [
+                      { id: "msg_9", type: "user" },
+                      { id: "msg_5", type: "user" },
+                      { id: "msg_1", type: "user" },
+                    ],
+              cursor: {},
+            }
+          },
+        },
+        config: { get: async () => [] },
+      }),
+    } as unknown as AgentManagerConnection
+
+    const catalog = new DiffSourceCatalog(connection)
+    const source = catalog.build("session:s1", { workspaceRoot: "/repo", sessionId: "s1" })
+    await source.fetch()
+    await source.fetch()
+    await source.fetch()
+    expect(paged).toBe(1)
     catalog.dispose()
   })
 

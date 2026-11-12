@@ -51,7 +51,10 @@ export function createRevertQueue() {
       const settled = task.catch(() => undefined)
       tasks.set(id, settled)
       void settled.then(() => {
-        if (tasks.get(id) === settled) tasks.delete(id)
+        if (tasks.get(id) !== settled) return
+        tasks.delete(id)
+        // Nothing of this session is in flight, so its send counter has done its job. This queue outlives tabs.
+        sends.delete(id)
       })
       return task
     },
@@ -103,6 +106,19 @@ export function nextRedoMessageID(
   const index = users.findIndex((item) => item.id === revert.messageID)
   if (index >= 0) return users[index + 1]?.id
   return users.find((item) => item.id > revert.messageID)?.id
+}
+
+/**
+ * What Redo does for the staged revert. The banner can show before the first transcript page lands, so an empty list
+ * means loading, not "the last message": only a loaded transcript with nothing after the boundary means Redo All.
+ */
+export function redoTarget(
+  messages: readonly SessionMessageInfo[],
+  revert?: { messageID: string },
+): { next: string } | "all" | undefined {
+  if (!revert || messages.length === 0) return undefined
+  const next = nextRedoMessageID(messages, revert)
+  return next ? { next } : "all"
 }
 
 /** Rebuild the composer draft from a reverted user message, resolving server-stored media refs when needed. */

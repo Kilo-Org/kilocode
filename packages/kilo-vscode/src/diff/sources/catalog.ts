@@ -58,9 +58,30 @@ export class DiffSourceCatalog implements vscode.Disposable {
     const from = oldest.data[0]?.id
     const boundary = session?.revert?.messageID
     if (from === undefined || (boundary && from >= boundary)) return []
-    const last = boundary ? await newestBeforeBoundary(client, sessionID, boundary) : newest.data[0]?.id
+    const last = boundary ? await this.newestBeforeBoundary(client, sessionID, boundary) : newest.data[0]?.id
     if (last === undefined) return []
     return await client.session.diff({ sessionID, from, to: last === from ? undefined : last })
+  }
+
+  /**
+   * The newest message a staged revert keeps, cached per session and boundary. Finding it pages user messages, and the
+   * session diff is polled, so the same staged revert must not walk the transcript on every tick.
+   */
+  private readonly revertLast = new Map<string, string | undefined>()
+
+  private async newestBeforeBoundary(
+    client: Awaited<ReturnType<AgentManagerConnection["client"]>>,
+    sessionID: string,
+    boundary: string,
+  ): Promise<string | undefined> {
+    const key = `${sessionID}:${boundary}`
+    if (this.revertLast.has(key)) return this.revertLast.get(key)
+    const last = await newestBeforeBoundary(client, sessionID, boundary)
+    // The boundary is gone once the revert commits, which changes the key. A bounded map keeps a long session list
+    // from growing here.
+    if (this.revertLast.size >= 32) this.revertLast.clear()
+    this.revertLast.set(key, last)
+    return last
   }
 
   /** A turn diff starts at the user message that opened the turn. */

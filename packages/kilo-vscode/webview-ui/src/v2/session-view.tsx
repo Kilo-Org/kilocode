@@ -31,7 +31,7 @@ import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { PromptInput, setPromptDraft } from "./prompt"
-import { createRevertQueue, EMPTY_DRAFT, nextRedoMessageID, restoredDraft, type ComposerDraft } from "./revert"
+import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
@@ -347,9 +347,11 @@ export function SessionView(props: {
   const redo = () => {
     const id = session()
     if (!id) return
-    const next = nextRedoMessageID(v2.data.session.message.list(id), v2.data.session.get(id)?.revert)
-    if (!next) return redoAll()
-    revertMessage(id, next)
+    const target = redoTarget(v2.data.session.message.list(id), v2.data.session.get(id)?.revert)
+    // No target means the transcript has not loaded yet, so Redo must not fall through to Redo All and drop the revert.
+    if (!target) return
+    if (target === "all") return redoAll()
+    revertMessage(id, target.next)
   }
   // The transcript quotes and comments through the composer, so it exists only while the composer does.
   const [reply, setReply] = createSignal<ReplyHandler>()
@@ -369,13 +371,15 @@ export function SessionView(props: {
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
   const begin = async (mode: SendMode) => {
-    reverts.sent(session())
-    await reverts.settled(session())
+    // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
+    // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
     const key = draftKey()
+    const existing = session()
+    reverts.sent(existing)
+    await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
-    const existing = session()
     const seed = existing ? undefined : await sandbox.metadata()
     const id = existing ?? selection.create(seed)
     if (existing) selection.ensure(id)
