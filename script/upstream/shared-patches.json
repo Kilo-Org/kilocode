@@ -3,7 +3,7 @@
   "limits": {
     "files": 127,
     "markedLines": 2200,
-    "unmarkedLines": 328,
+    "unmarkedLines": 332,
     "deletedFiles": 0
   },
   "files": {
@@ -109,7 +109,7 @@
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
