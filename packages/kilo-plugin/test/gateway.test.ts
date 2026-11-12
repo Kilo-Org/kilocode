@@ -20,6 +20,7 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
+import { Location } from "@opencode/core/location"
 import { VerbosityPlugin } from "@opencode/core/plugin/verbosity"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
@@ -37,6 +38,7 @@ import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
 import { KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
+import { KiloGatewayAccounts } from "../src/gateway/accounts"
 import { GatewayOptions } from "../src/gateway/options"
 import { KiloGatewayModel } from "../../kilo-cli/src/gateway-model"
 
@@ -1583,6 +1585,79 @@ describe("KiloGatewayPlugin", () => {
           (backend) => Effect.sync(() => backend[Symbol.dispose]()),
         ),
     )
+
+  // A team catalog is never stored and takes sequential profile, modes and models requests. The server answers 503
+  // when Location plugins take longer than 5 seconds to activate, so a slow Kilo API must not hold the activation.
+  it.live("does not hold the activation for a slow team catalog, and loads it in the background", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID,
+              label: "team",
+              value: oauth({ server: backend.url, organizationID: "selected", email: "a@example.test" }),
+            })
+            // Four sequential requests, so the catalog outlives FIRST_CATALOG_WAIT.
+            backend.state.delay = 1_500
+            const started = performance.now()
+            yield* addPlugin()
+            // Activation stops waiting for the catalog, but it does wait for it until FIRST_CATALOG_WAIT.
+            const elapsed = performance.now() - started
+            expect(elapsed).toBeGreaterThanOrEqual(2_000)
+            expect(elapsed).toBeLessThan(5_000)
+            // Codebase indexing reads this reader once, right after the gateway plugin starts, so the account must be
+            // there even though the catalog it comes from has not landed yet.
+            const location = yield* Location.Service
+            expect(KiloGatewayAccounts.get(location.directory)).toMatchObject({
+              server: backend.url,
+              organizationID: "selected",
+            })
+            const models = yield* Model.Service
+            const kiloModels = Effect.map(models.available(), (list) =>
+              list.filter((item) => item.providerID === kilo).map((item) => String(item.id)),
+            )
+            expect(yield* kiloModels).toEqual([])
+            expect(yield* eventually(kiloModels, (list) => list.length > 0, 15_000)).toEqual([
+              "anthropic/claude-sonnet-4.6",
+              "kilo-auto/small",
+            ])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  // The common case: the catalog settles inside the wait, so activation returns with it and nothing loads later.
+  it.live("does not wait longer than the catalog it is waiting for", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID,
+              label: "team",
+              value: oauth({ server: backend.url, organizationID: "selected", email: "a@example.test" }),
+            })
+            backend.state.delay = 100
+            const started = performance.now()
+            yield* addPlugin()
+            expect(performance.now() - started).toBeLessThan(1_900)
+            const models = yield* Model.Service
+            expect(
+              (yield* models.available())
+                .filter((item) => item.providerID === kilo)
+                .map((item) => String(item.id)),
+            ).toEqual(["anthropic/claude-sonnet-4.6", "kilo-auto/small"])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
 
   it.live("keeps the stored default with the stored catalog when the Kilo API is down", () =>
     Effect.acquireUseRelease(

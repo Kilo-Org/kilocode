@@ -1202,9 +1202,10 @@ function ToolFileAccordion(props: {
       multiple
       data-scope="apply-patch"
       style={{ "--sticky-accordion-offset": "37px" }}
-      defaultValue={[props.path || "tool-file"]}
+      defaultValue={["tool-file"]}
     >
-      <Accordion.Item value={props.path || "tool-file"}>
+      {/* Not keyed by path: it changes from the input path to the result path on completion, which would collapse the item. */}
+      <Accordion.Item value="tool-file">
         <StickyAccordionHeader>
           <Accordion.Trigger>
             <div data-slot="apply-patch-trigger-content">
