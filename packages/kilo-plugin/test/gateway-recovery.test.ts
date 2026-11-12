@@ -16,7 +16,7 @@ import { TestClock } from "effect/testing"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
-import { KiloGatewayPlugin } from "../src/gateway"
+import { FIRST_CATALOG_WAIT, KiloGatewayPlugin } from "../src/gateway"
 
 const it = testEffect(PluginTestLayer)
 const kilo = Provider.ID.make("kilo")
@@ -33,6 +33,11 @@ const addPlugin = Effect.fn(function* () {
   const updates = yield* Queue.unbounded<void>()
   const parent = yield* Scope.Scope
   const scope = yield* Scope.fork(parent)
+  // The activation waits at most FIRST_CATALOG_WAIT for the first catalog. This helper runs the plugin effect directly,
+  // without the supervisor's readiness hold, so it passes that wait on the test clock before the effect starts: the
+  // pending load settles in virtual time instead of staying pending, and the tests keep the timing they had when the
+  // activation waited for the catalog without a bound.
+  yield* TestClock.adjust(FIRST_CATALOG_WAIT)
   yield* Effect.gen(function* () {
     yield* providers.transform((editor) => {
       editor.update(kilo, (provider) => {
