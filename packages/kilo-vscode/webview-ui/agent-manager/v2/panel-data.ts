@@ -37,6 +37,8 @@ export function createPanelData(input: {
   api?: OpenCodeClient
   /** Every directory whose sessions the panel draws, for the scheduled state. Defaults to the open stores. */
   directories?: () => readonly string[]
+  /** The project root, whose Location answers the scheduled state of every directory. */
+  home?: () => string | undefined
 }) {
   const bridge = transport(input.post)
   const api = input.api ?? OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
@@ -57,6 +59,7 @@ export function createPanelData(input: {
     api,
     directories: input.directories ?? (() => [...stores.keys()]),
     connected: () => connection.status() === "connected",
+    home: input.home,
   })
   metadata = createConnectionMetadata({
     api,

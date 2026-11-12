@@ -673,8 +673,10 @@ export class AgentManagerOrchestrationBridge {
     if (this.disposed || revision !== this.revision) return
     if (this.backend !== client) this.reset()
     this.backend = client
+    const directories = await this.recoverable(client)
+    if (this.disposed || revision !== this.revision) return
     await Promise.all(
-      [...new Set(this.directories())].map(async (directory) => {
+      directories.map(async (directory) => {
         const pending = await client
           .rpc(KiloAgentManagerRpc.Definition)
           .list({}, { location: { directory } })
@@ -688,6 +690,29 @@ export class AgentManagerOrchestrationBridge {
           if (request) this.request(request, directory)
         }
       }),
+    )
+  }
+
+  /**
+   * The directories that can hold a pending request: the root, and the directories of running sessions. A request
+   * only exists while the tool call that made it runs, and asking an idle worktree would make the server load it
+   * just to answer with an empty list. Without the running sessions, every directory is asked.
+   */
+  private async recoverable(client: OpenCodeClient): Promise<string[]> {
+    const directories = [...new Set(this.directories())]
+    const active = await client.session.active().catch(() => undefined)
+    if (!active) return directories
+    const running = await Promise.all(
+      Object.keys(active).map((sessionID) =>
+        client.session
+          .get({ sessionID })
+          .then((session) => canonicalizePath(session.location.directory))
+          .catch(() => undefined),
+      ),
+    )
+    const live = running.filter((directory): directory is string => directory !== undefined)
+    return directories.filter(
+      (directory, index) => index === 0 || live.some((item) => samePath(item, canonicalizePath(directory))),
     )
   }
 
