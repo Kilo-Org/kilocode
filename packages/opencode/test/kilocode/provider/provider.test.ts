@@ -32,6 +32,8 @@ afterEach(async () => {
 
 const it = testEffect(LayerNode.compile(LayerNode.group([Provider.node, Env.node, Plugin.node])))
 
+const list = Provider.use.list()
+
 it.instance(
   "getSmallModel returns undefined without kilo credentials when model IDs lack family metadata",
   Effect.gen(function* () {
@@ -77,6 +79,85 @@ it.instance(
         },
         kilo: {
           options: { apiKey: "kilo-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "issue #15790: attachment:true alone derives image input capability",
+  Effect.gen(function* () {
+    const providers = yield* list
+    const provider = providers[ProviderV2.ID.make("issue-15790-attachment-only")]
+    expect(provider).toBeDefined()
+    const model = provider.models["vision-model"]
+    expect(model.capabilities.attachment).toBe(true)
+    expect(model.capabilities.input.image).toBe(true)
+  }),
+  {
+    config: {
+      provider: {
+        "issue-15790-attachment-only": {
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "vision-model": { name: "vision-model", attachment: true },
+          },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "issue #15790: modalities alone derive the attachment capability",
+  Effect.gen(function* () {
+    const providers = yield* list
+    const provider = providers[ProviderV2.ID.make("issue-15790-modalities-only")]
+    expect(provider).toBeDefined()
+    const model = provider.models["vision-model"]
+    expect(model.capabilities.attachment).toBe(true)
+    expect(model.capabilities.input.image).toBe(true)
+  }),
+  {
+    config: {
+      provider: {
+        "issue-15790-modalities-only": {
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "vision-model": {
+              name: "vision-model",
+              modalities: { input: ["text", "image"], output: ["text"] },
+            },
+          },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "issue #15790: explicit modalities.input overrides attachment image derivation",
+  Effect.gen(function* () {
+    const providers = yield* list
+    const provider = providers[ProviderV2.ID.make("issue-15790-explicit-modalities")]
+    expect(provider).toBeDefined()
+    const model = provider.models["vision-model"]
+    expect(model.capabilities.attachment).toBe(true)
+    expect(model.capabilities.input.image).toBe(false)
+  }),
+  {
+    config: {
+      provider: {
+        "issue-15790-explicit-modalities": {
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "vision-model": {
+              name: "vision-model",
+              attachment: true,
+              modalities: { input: ["text"], output: ["text"] },
+            },
+          },
         },
       },
     },
