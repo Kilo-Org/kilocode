@@ -4,42 +4,42 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 1972,
-    "total": 5351,
-    "percent": 36.9,
-    "dropped": 89,
+    "done": 2013,
+    "total": 5339,
+    "percent": 37.7,
+    "dropped": 101,
     "kinds": [
       {
         "kind": "module",
-        "done": 1470,
-        "total": 3272
+        "done": 1492,
+        "total": 3266
       },
       {
         "kind": "api",
-        "done": 18,
+        "done": 19,
         "total": 36
       },
       {
         "kind": "patch",
-        "done": 60,
-        "total": 319
+        "done": 66,
+        "total": 318
       },
       {
         "kind": "test",
-        "done": 424,
-        "total": 1724
+        "done": 436,
+        "total": 1719
       }
     ],
     "landed": {
       "plugin": 46,
-      "host": 12,
-      "seam": 4,
+      "host": 15,
+      "seam": 6,
       "patch": 2
     },
-    "coreImports": 59,
+    "coreImports": 62,
     "sharedPatches": {
-      "seam": 74,
-      "patch": 50
+      "seam": 79,
+      "patch": 58
     }
   },
   "notCounted": {
@@ -73,10 +73,12 @@
     "@opencode/core/form",
     "@opencode/core/generate",
     "@opencode/core/instance/service",
+    "@opencode/core/integration",
     "@opencode/core/job",
     "@opencode/core/location",
     "@opencode/core/location-service-map",
     "@opencode/core/mcp",
+    "@opencode/core/mcp/host",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
@@ -104,6 +106,7 @@
     "@opencode/core/shell",
     "@opencode/core/shell/parse",
     "@opencode/core/skill",
+    "@opencode/core/snapshot",
     "@opencode/core/tool",
     "@opencode/core/tool-output",
     "@opencode/core/tool/plugin/file-diff",
@@ -935,13 +938,13 @@
     },
     {
       "feature": "gateway",
-      "done": 62,
-      "total": 75,
-      "dropped": 12,
+      "done": 58,
+      "total": 73,
+      "dropped": 14,
       "kinds": {
         "module": {
-          "done": 31,
-          "total": 35
+          "done": 29,
+          "total": 33
         },
         "api": {
           "done": 0,
@@ -952,7 +955,7 @@
           "total": 18
         },
         "test": {
-          "done": 18,
+          "done": 16,
           "total": 22
         }
       },
@@ -995,12 +998,12 @@
     },
     {
       "feature": "goals",
-      "done": 11,
+      "done": 13,
       "total": 21,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 2,
+          "done": 3,
           "total": 9
         },
         "api": {
@@ -1008,7 +1011,7 @@
           "total": 0
         },
         "patch": {
-          "done": 5,
+          "done": 6,
           "total": 6
         },
         "test": {
@@ -1223,26 +1226,32 @@
     },
     {
       "feature": "mcp",
-      "done": 0,
-      "total": 23,
-      "dropped": 0,
+      "done": 15,
+      "total": 19,
+      "dropped": 4,
       "kinds": {
         "module": {
-          "done": 0,
-          "total": 7
+          "done": 5,
+          "total": 6
         },
         "api": {
           "done": 0,
           "total": 0
         },
         "patch": {
-          "done": 0,
-          "total": 7
+          "done": 3,
+          "total": 6
         },
         "test": {
-          "done": 0,
-          "total": 9
+          "done": 7,
+          "total": 7
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 1,
+        "seam": 2,
+        "patch": 0
       }
     },
     {
@@ -1907,9 +1916,9 @@
     },
     {
       "feature": "server",
-      "done": 7,
-      "total": 96,
-      "dropped": 0,
+      "done": 6,
+      "total": 95,
+      "dropped": 1,
       "kinds": {
         "module": {
           "done": 4,
@@ -1924,8 +1933,8 @@
           "total": 10
         },
         "test": {
-          "done": 2,
-          "total": 35
+          "done": 1,
+          "total": 34
         }
       },
       "landed": {
@@ -1937,12 +1946,12 @@
     },
     {
       "feature": "session",
-      "done": 7,
+      "done": 8,
       "total": 113,
       "dropped": 2,
       "kinds": {
         "module": {
-          "done": 2,
+          "done": 3,
           "total": 23
         },
         "api": {
@@ -2105,12 +2114,12 @@
     },
     {
       "feature": "session-revert",
-      "done": 0,
+      "done": 4,
       "total": 4,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "api": {
@@ -2118,13 +2127,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "test": {
-          "done": 0,
+          "done": 2,
           "total": 2
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 1,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -2279,9 +2294,9 @@
     },
     {
       "feature": "storage",
-      "done": 1,
-      "total": 1,
-      "dropped": 3,
+      "done": 2,
+      "total": 2,
+      "dropped": 2,
       "kinds": {
         "module": {
           "done": 0,
@@ -2296,8 +2311,8 @@
           "total": 0
         },
         "test": {
-          "done": 1,
-          "total": 1
+          "done": 2,
+          "total": 2
         }
       }
     },
@@ -2351,12 +2366,12 @@
     },
     {
       "feature": "tool",
-      "done": 22,
+      "done": 33,
       "total": 109,
       "dropped": 2,
       "kinds": {
         "module": {
-          "done": 13,
+          "done": 23,
           "total": 61
         },
         "api": {
@@ -2368,7 +2383,7 @@
           "total": 7
         },
         "test": {
-          "done": 8,
+          "done": 9,
           "total": 41
         }
       },
@@ -2459,12 +2474,12 @@
     },
     {
       "feature": "ui",
-      "done": 151,
+      "done": 152,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 149,
+          "done": 150,
           "total": 248
         },
         "api": {
@@ -2532,12 +2547,12 @@
     {
       "feature": "vscode",
       "done": 1313,
-      "total": 2017,
-      "dropped": 40,
+      "total": 2011,
+      "dropped": 46,
       "kinds": {
         "module": {
           "done": 1047,
-          "total": 1418
+          "total": 1415
         },
         "api": {
           "done": 0,
@@ -2549,32 +2564,38 @@
         },
         "test": {
           "done": 266,
-          "total": 599
+          "total": 596
         }
       }
     },
     {
       "feature": "wakeup",
-      "done": 0,
+      "done": 11,
       "total": 11,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 5,
           "total": 5
         },
         "api": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "test": {
-          "done": 0,
+          "done": 4,
           "total": 4
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 1,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -2639,6 +2660,7 @@
     "api:GET /kilocode/marketplace",
     "api:GET /kilocode/provider-usage",
     "api:GET /kilocode/session/{sessionID}/board",
+    "api:GET /kilocode/wakeups",
     "api:POST /kilocode/agent-manager/{requestID}/reject",
     "api:POST /kilocode/agent-manager/{requestID}/reply",
     "api:POST /kilocode/agent/remove",
@@ -2680,8 +2702,6 @@
     "module:packages/kilo-gateway/src/auth/polling.ts",
     "module:packages/kilo-gateway/src/auth/token.ts",
     "module:packages/kilo-gateway/src/autocomplete.ts",
-    "module:packages/kilo-gateway/src/edit-prompt.ts",
-    "module:packages/kilo-gateway/src/edit.ts",
     "module:packages/kilo-gateway/src/fim.ts",
     "module:packages/kilo-gateway/src/gateway-metadata.ts",
     "module:packages/kilo-gateway/src/headers.ts",
@@ -2703,8 +2723,6 @@
     "module:packages/kilo-gateway/test/api/url.test.ts",
     "module:packages/kilo-gateway/test/auth/device.test.ts",
     "module:packages/kilo-gateway/test/autocomplete.test.ts",
-    "module:packages/kilo-gateway/test/edit-prompt.test.ts",
-    "module:packages/kilo-gateway/test/edit.test.ts",
     "module:packages/kilo-gateway/test/fim.test.ts",
     "module:packages/kilo-gateway/test/gateway-metadata.test.ts",
     "module:packages/kilo-gateway/test/mistral-fim-endpoint.test.ts",
@@ -2889,6 +2907,7 @@
     "module:packages/kilo-ui/src/components/card.css",
     "module:packages/kilo-ui/src/components/card.tsx",
     "module:packages/kilo-ui/src/components/chart.css",
+    "module:packages/kilo-ui/src/components/chart.tsx",
     "module:packages/kilo-ui/src/components/chat-input.css",
     "module:packages/kilo-ui/src/components/checkbox.css",
     "module:packages/kilo-ui/src/components/checkbox.tsx",
@@ -3289,10 +3308,8 @@
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/filtering/BracketMatchingService.test.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/filtering/BracketMatchingService.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/notebook.ts",
-    "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/__tests__/removePrefixOverlap.test.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/index.test.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/index.ts",
-    "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/removePrefixOverlap.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/snippets/getAllSnippets.test.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/snippets/getAllSnippets.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/snippets/index.ts",
@@ -3389,8 +3406,6 @@
     "module:packages/kilo-vscode/src/services/autocomplete/ensure-backend.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/fim.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/index.ts",
-    "module:packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts",
-    "module:packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/settings.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/shims/FileIgnoreController.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/statusbar-utils.ts",
@@ -3764,6 +3779,7 @@
     "module:packages/kilo-vscode/tests/unit/register-code-actions.test.ts",
     "module:packages/kilo-vscode/tests/unit/register-terminal-actions.test.ts",
     "module:packages/kilo-vscode/tests/unit/remove-config-item.test.ts",
+    "module:packages/kilo-vscode/tests/unit/revert-checkpoints.test.ts",
     "module:packages/kilo-vscode/tests/unit/review-annotations.test.ts",
     "module:packages/kilo-vscode/tests/unit/review-comments-pr.test.ts",
     "module:packages/kilo-vscode/tests/unit/review-comments.test.ts",
@@ -4085,6 +4101,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptRail.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptSelectors.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptShowMore.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/RevertBanner.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/ReviewComments.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionMentionPicker.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/SessionTab.tsx",
@@ -4100,6 +4117,8 @@
     "module:packages/kilo-vscode/webview-ui/src/components/chat/WorktreeMentionPicker.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/background-agents.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/background-jobs.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/goal/GoalHeader.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/goal/useGoalDock.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/index.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/open-subagent.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-fold.ts",
@@ -4388,6 +4407,11 @@
     "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts",
     "module:packages/opencode/src/kilocode/marketplace/schema.ts",
     "module:packages/opencode/src/kilocode/marketplace/skill-archive.ts",
+    "module:packages/opencode/src/kilocode/mcp/auth-failure.ts",
+    "module:packages/opencode/src/kilocode/mcp/cleanup.ts",
+    "module:packages/opencode/src/kilocode/mcp/client-metadata.ts",
+    "module:packages/opencode/src/kilocode/mcp/oauth-issuer.ts",
+    "module:packages/opencode/src/kilocode/mcp/sse-probe.ts",
     "module:packages/opencode/src/kilocode/notebook/protocol.ts",
     "module:packages/opencode/src/kilocode/notebook/service.ts",
     "module:packages/opencode/src/kilocode/permission/agent-manager.ts",
@@ -4421,26 +4445,43 @@
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts",
     "module:packages/opencode/src/kilocode/server/httpapi/handlers/indexing.ts",
     "module:packages/opencode/src/kilocode/session/drain.ts",
+    "module:packages/opencode/src/kilocode/session/goal/tool.ts",
     "module:packages/opencode/src/kilocode/session/native-plan-prompt.txt",
     "module:packages/opencode/src/kilocode/session/recall-search.ts",
+    "module:packages/opencode/src/kilocode/session/revert.ts",
     "module:packages/opencode/src/kilocode/session/transcript.ts",
     "module:packages/opencode/src/kilocode/skill-remove.ts",
     "module:packages/opencode/src/kilocode/skills/builtin.ts",
     "module:packages/opencode/src/kilocode/skills/kilo-config.md",
     "module:packages/opencode/src/kilocode/snapshot/cleanup.ts",
+    "module:packages/opencode/src/kilocode/soul.txt",
     "module:packages/opencode/src/kilocode/tool/board.ts",
     "module:packages/opencode/src/kilocode/tool/browser-open.ts",
     "module:packages/opencode/src/kilocode/tool/browser-open.txt",
+    "module:packages/opencode/src/kilocode/tool/cancel-wakeup.ts",
+    "module:packages/opencode/src/kilocode/tool/cancel-wakeup.txt",
+    "module:packages/opencode/src/kilocode/tool/chart.ts",
+    "module:packages/opencode/src/kilocode/tool/cron-create.txt",
+    "module:packages/opencode/src/kilocode/tool/cron-delete.txt",
+    "module:packages/opencode/src/kilocode/tool/cron-list.txt",
+    "module:packages/opencode/src/kilocode/tool/cron.ts",
     "module:packages/opencode/src/kilocode/tool/notebook.ts",
     "module:packages/opencode/src/kilocode/tool/ods.ts",
     "module:packages/opencode/src/kilocode/tool/open-plan.ts",
     "module:packages/opencode/src/kilocode/tool/plan.ts",
     "module:packages/opencode/src/kilocode/tool/read-docx.ts",
     "module:packages/opencode/src/kilocode/tool/read-extract.ts",
+    "module:packages/opencode/src/kilocode/tool/schedule-wakeup.ts",
+    "module:packages/opencode/src/kilocode/tool/schedule-wakeup.txt",
     "module:packages/opencode/src/kilocode/tool/semantic-search-output.ts",
     "module:packages/opencode/src/kilocode/tool/semantic-search.ts",
     "module:packages/opencode/src/kilocode/tool/semantic-search.txt",
+    "module:packages/opencode/src/kilocode/tool/wakeup-format.ts",
     "module:packages/opencode/src/kilocode/tool/xlsx.ts",
+    "module:packages/opencode/src/kilocode/wakeup/cron.ts",
+    "module:packages/opencode/src/kilocode/wakeup/index.ts",
+    "module:packages/opencode/src/kilocode/wakeup/resume.ts",
+    "module:packages/opencode/src/kilocode/wakeup/schema.ts",
     "module:packages/opencode/src/kilocode/worktree-cleanup.ts",
     "module:packages/opencode/src/kilocode/worktree-family.ts",
     "module:packages/opencode/src/kilocode/worktree/pty-cleanup.ts",
@@ -4459,6 +4500,7 @@
     "module:packages/opencode/test/kilocode/board/store.test.ts",
     "module:packages/opencode/test/kilocode/branch-name.test.ts",
     "module:packages/opencode/test/kilocode/builtin-skills.test.ts",
+    "module:packages/opencode/test/kilocode/chart-tool-gating.test.ts",
     "module:packages/opencode/test/kilocode/commit-message-windows.test.ts",
     "module:packages/opencode/test/kilocode/commit-message/generate.test.ts",
     "module:packages/opencode/test/kilocode/commit-message/git-context.test.ts",
@@ -4481,6 +4523,13 @@
     "module:packages/opencode/test/kilocode/marketplace-companions.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-installer.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts",
+    "module:packages/opencode/test/kilocode/mcp-branding.test.ts",
+    "module:packages/opencode/test/kilocode/mcp-cimd.test.ts",
+    "module:packages/opencode/test/kilocode/mcp-interrupted-state.test.ts",
+    "module:packages/opencode/test/kilocode/mcp-sse-probe.test.ts",
+    "module:packages/opencode/test/kilocode/mcp/auth-classification.test.ts",
+    "module:packages/opencode/test/kilocode/mcp/auth-failure.test.ts",
+    "module:packages/opencode/test/kilocode/mcp/oauth-issuer.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
     "module:packages/opencode/test/kilocode/news.test.ts",
@@ -4514,12 +4563,13 @@
     "module:packages/opencode/test/kilocode/sandbox/tui.test.ts",
     "module:packages/opencode/test/kilocode/semantic-search.test.ts",
     "module:packages/opencode/test/kilocode/server/commit-message-no-changes.test.ts",
-    "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts",
     "module:packages/opencode/test/kilocode/session-drain.test.ts",
+    "module:packages/opencode/test/kilocode/session/revert.test.ts",
     "module:packages/opencode/test/kilocode/session/transcript.test.ts",
     "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
     "module:packages/opencode/test/kilocode/skill-remove.test.ts",
     "module:packages/opencode/test/kilocode/snapshot-repository-cleanup.test.ts",
+    "module:packages/opencode/test/kilocode/storage/db.test.ts",
     "module:packages/opencode/test/kilocode/storage/storage-init.test.ts",
     "module:packages/opencode/test/kilocode/terminal-activity.test.ts",
     "module:packages/opencode/test/kilocode/todowrite-description.test.ts",
@@ -4527,6 +4577,10 @@
     "module:packages/opencode/test/kilocode/tool/open-plan.test.ts",
     "module:packages/opencode/test/kilocode/tool/semantic-search-output.test.ts",
     "module:packages/opencode/test/kilocode/tui/usage.test.ts",
+    "module:packages/opencode/test/kilocode/wakeup/cron.test.ts",
+    "module:packages/opencode/test/kilocode/wakeup/wakeup-cron.test.ts",
+    "module:packages/opencode/test/kilocode/wakeup/wakeup-resume.test.ts",
+    "module:packages/opencode/test/kilocode/wakeup/wakeup.test.ts",
     "module:packages/opencode/test/kilocode/worktree-diff.test.ts",
     "module:packages/opencode/test/kilocode/worktree-family-submodule.test.ts",
     "module:packages/opencode/test/kilocode/worktree-family.test.ts",
@@ -4534,6 +4588,8 @@
     "module:packages/opencode/test/kilocode/worktree-remove-lock.test.ts",
     "module:packages/schema/src/kilocode/provider-usage.ts",
     "module:packages/schema/src/kilocode/session-drain.ts",
+    "module:packages/schema/src/kilocode/wakeup-event.ts",
+    "module:packages/schema/test/kilocode/revert-workspace.test.ts",
     "module:packages/tui/src/kilocode/board-tool.tsx",
     "module:packages/tui/src/kilocode/model-picker.ts",
     "module:packages/tui/test/kilocode/board-tool.test.tsx",
@@ -4565,6 +4621,7 @@
     "patch:global:b9f635c56864",
     "patch:goals:32d5a987d3b1",
     "patch:goals:76a03ae19282",
+    "patch:goals:8f2a39a24f88",
     "patch:goals:b983b6af7e4b",
     "patch:goals:ce1b66acd237",
     "patch:goals:eb79ff7a4e15",
@@ -4577,6 +4634,9 @@
     "patch:indexing:9e6d17f27b30",
     "patch:indexing:d76a31906cd4",
     "patch:indexing:fe813c19ebaf",
+    "patch:mcp:18028d867142",
+    "patch:mcp:3232794a3fe3",
+    "patch:mcp:8821b728d322",
     "patch:notebook:91a426486dc8",
     "patch:oauth:3ad23f430831",
     "patch:oauth:513c5db12e0f",
@@ -4601,10 +4661,12 @@
     "patch:sandbox:fb2d03fdb710",
     "patch:sandbox:fd6329a01ac1",
     "patch:server:5e0f8563b425",
+    "patch:session-revert:d9192fbbb4a5",
     "patch:snapshot:80d332891272",
     "patch:snapshot:8579451b046f",
     "patch:tool:fabed9da976a",
     "patch:tui:c29e2d297ca2",
+    "patch:wakeup:9d6803e786ab",
     "patch:worktree:34f2839b6fa6"
   ],
   "dropped": [
@@ -4617,6 +4679,8 @@
     "module:packages/core/test/kilocode/board/migration.test.ts",
     "module:packages/kilo-gateway/src/auth/device-auth.ts",
     "module:packages/kilo-gateway/src/auth/legacy-migration.ts",
+    "module:packages/kilo-gateway/src/edit-prompt.ts",
+    "module:packages/kilo-gateway/src/edit.ts",
     "module:packages/kilo-gateway/src/loader.ts",
     "module:packages/kilo-gateway/src/provider-debug.ts",
     "module:packages/kilo-gateway/src/server/edit.ts",
@@ -4642,11 +4706,16 @@
     "module:packages/kilo-vscode/src/agent-manager/terminal-destination.ts",
     "module:packages/kilo-vscode/src/kilo-provider/config-bindings.ts",
     "module:packages/kilo-vscode/src/kilo-provider/message-files.ts",
+    "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/__tests__/removePrefixOverlap.test.ts",
+    "module:packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/postprocessing/removePrefixOverlap.ts",
     "module:packages/kilo-vscode/src/services/autocomplete/migrate-default.ts",
+    "module:packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts",
+    "module:packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts",
     "module:packages/kilo-vscode/src/services/marketplace/bundles.ts",
     "module:packages/kilo-vscode/src/services/marketplace/notifier.ts",
     "module:packages/kilo-vscode/src/services/marketplace/notify.ts",
     "module:packages/kilo-vscode/src/services/marketplace/relevance.ts",
+    "module:packages/kilo-vscode/tests/fixtures/revert-toast-owner.tsx",
     "module:packages/kilo-vscode/tests/helpers/prompt-input.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-memory-commands.test.ts",
     "module:packages/kilo-vscode/tests/unit/agent-manager-telemetry.test.ts",
@@ -4662,6 +4731,7 @@
     "module:packages/kilo-vscode/tests/unit/message-files.test.ts",
     "module:packages/kilo-vscode/tests/unit/open-config-message.test.ts",
     "module:packages/kilo-vscode/tests/unit/prompt-input-connection-guard.test.ts",
+    "module:packages/kilo-vscode/tests/unit/revert-toast-owner.test.ts",
     "module:packages/kilo-vscode/tests/unit/run-terminal-destination.test.ts",
     "module:packages/kilo-vscode/tests/unit/session-board.test.ts",
     "module:packages/kilo-vscode/tests/unit/session-terminal-manager.test.ts",
@@ -4673,6 +4743,7 @@
     "module:packages/opencode/src/kilocode/indexing-feature.ts",
     "module:packages/opencode/src/kilocode/marketplace/detection.ts",
     "module:packages/opencode/src/kilocode/marketplace/relevance.ts",
+    "module:packages/opencode/src/kilocode/mcp-oauth-callback.ts",
     "module:packages/opencode/src/kilocode/presence/context.ts",
     "module:packages/opencode/src/kilocode/presence/policy.ts",
     "module:packages/opencode/src/kilocode/presence/service.ts",
@@ -4682,10 +4753,12 @@
     "module:packages/opencode/test/kilocode/marketplace-api.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts",
     "module:packages/opencode/test/kilocode/marketplace-relevance.test.ts",
+    "module:packages/opencode/test/kilocode/mcp-docker-rm.test.ts",
+    "module:packages/opencode/test/kilocode/mcp-oauth-callback.test.ts",
     "module:packages/opencode/test/kilocode/presence/policy.test.ts",
     "module:packages/opencode/test/kilocode/presence/service-presence.test.ts",
     "module:packages/opencode/test/kilocode/presence/service.test.ts",
-    "module:packages/opencode/test/kilocode/storage/db.test.ts",
+    "module:packages/opencode/test/kilocode/server/httpapi-kilo-edit.test.ts",
     "module:packages/opencode/test/kilocode/storage/json-migration.test.ts",
     "module:packages/opencode/test/kilocode/tool-registry-indexing-import-failure.test.ts",
     "module:packages/opencode/test/kilocode/tool-registry-semantic-import-failure.test.ts",
@@ -4694,6 +4767,7 @@
     "patch:gateway:d783ce7945b8",
     "patch:indexing:12755e954b69",
     "patch:marketplace:5fc326e8ea39",
+    "patch:mcp:78080472f471",
     "patch:notebook:752d64cdd86b",
     "patch:notebook:c524c93fe185",
     "patch:presence:391f36cf44c5"
@@ -4731,6 +4805,9 @@
     "patch:indexing:9e6d17f27b30": "plugin",
     "patch:indexing:d76a31906cd4": "host",
     "patch:indexing:fe813c19ebaf": "plugin",
+    "patch:mcp:18028d867142": "host",
+    "patch:mcp:3232794a3fe3": "seam",
+    "patch:mcp:8821b728d322": "seam",
     "patch:notebook:91a426486dc8": "plugin",
     "patch:oauth:3ad23f430831": "seam",
     "patch:oauth:513c5db12e0f": "seam",
@@ -4754,10 +4831,12 @@
     "patch:sandbox:fb2d03fdb710": "host",
     "patch:sandbox:fd6329a01ac1": "plugin",
     "patch:server:5e0f8563b425": "plugin",
+    "patch:session-revert:d9192fbbb4a5": "host",
     "patch:snapshot:80d332891272": "plugin",
     "patch:snapshot:8579451b046f": "plugin",
     "patch:tool:fabed9da976a": "plugin",
     "patch:tui:c29e2d297ca2": "plugin",
+    "patch:wakeup:9d6803e786ab": "host",
     "patch:worktree:34f2839b6fa6": "plugin"
   }
 }
