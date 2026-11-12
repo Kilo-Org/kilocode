@@ -2,14 +2,23 @@ import type { SessionMessageInfo } from "@opencode/client"
 import { readInstructionPaths } from "@opencode/schema/session-instruction-paths"
 import { containsDirectory, getDirectory } from "@opencode/util/path"
 
+export type InstructionFiles = {
+  /** The files each read loaded, keyed by the read tool part ID. */
+  byRead: Map<string, readonly string[]>
+  /** Instruction messages a read card reports, by message ID. */
+  reported: Set<string>
+}
+
 /**
- * The instruction files each read loaded, keyed by the read tool part ID.
- * The read tool publishes instruction paths on a synthetic message, not on the
- * tool part, so the two are matched by their directory, position and timing in
- * the transcript.
+ * The instruction files each read loaded. The read tool publishes instruction
+ * paths on a synthetic message, not on the tool part, so the two are matched by
+ * their directory, position and timing in the transcript. An instruction
+ * message that a read card reports is a transcript notice of the same load and
+ * is named in `reported`, so the row does not repeat the card.
  */
-export function instructionFilesByRead(messages: readonly SessionMessageInfo[], directory?: string) {
-  const files = new Map<string, readonly string[]>()
+export function collectInstructionFiles(messages: readonly SessionMessageInfo[], directory?: string): InstructionFiles {
+  const byRead = new Map<string, readonly string[]>()
+  const reported = new Set<string>()
   let reads: Read[] = []
   for (const message of messages) {
     if (message.type === "assistant") {
@@ -35,10 +44,20 @@ export function instructionFilesByRead(messages: readonly SessionMessageInfo[], 
     if (paths.length === 0) continue
     const read = matchingRead(reads, paths, directory, message.time.created)
     if (!read) continue
-    const loaded = files.get(read.id) ?? []
-    files.set(read.id, [...loaded, ...paths.filter((path) => !loaded.includes(path))])
+    reported.add(message.id)
+    const loaded = byRead.get(read.id) ?? []
+    byRead.set(read.id, [...loaded, ...paths.filter((path) => !loaded.includes(path))])
   }
-  return files
+  return { byRead, reported }
+}
+
+/**
+ * The transcript's view of the history. An instruction message a read card
+ * reports is dropped, because the card lists the same files; a load no card
+ * reports keeps its notice row.
+ */
+export function withoutReportedInstructions(messages: readonly SessionMessageInfo[], files: InstructionFiles) {
+  return messages.filter((message) => !files.reported.has(message.id))
 }
 
 type Read = { id: string; ran?: number; completed?: number; path?: string }
