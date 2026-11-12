@@ -63,3 +63,31 @@ test("a bubble header renders inside the bubble above the text", () => {
   expect(text?.firstElementChild?.textContent).toBe("Sent by Kilo")
   expect(text?.textContent).toContain("Check the tests")
 })
+
+test("a delivered message renders its revert action and disables it while busy", () => {
+  const clicks: string[] = []
+  const view = mountRich(() => <UserMessageDisplay message={message} onRevert={() => clicks.push("revert")} />)
+  mounted.push(view)
+
+  const revert = view.host.querySelector<HTMLButtonElement>('[data-slot="user-message-revert"]')
+  expect(revert).not.toBeNull()
+  expect(revert?.getAttribute("aria-label")).toBe("Revert to here")
+  revert?.click()
+  expect(clicks).toEqual(["revert"])
+
+  const disabled = mountRich(() => (
+    <UserMessageDisplay message={message} onRevert={() => clicks.push("disabled")} revertDisabled />
+  ))
+  mounted.push(disabled)
+  expect(disabled.host.querySelector<HTMLButtonElement>('[data-slot="user-message-revert"]')?.disabled).toBe(true)
+
+  const pending = mountRich(() => (
+    <UserMessageDisplay
+      message={message}
+      onRevert={() => clicks.push("pending")}
+      pending={{ status: "Queued", actions: [] }}
+    />
+  ))
+  mounted.push(pending)
+  expect(pending.host.querySelector('[data-slot="user-message-revert"]')).toBeNull()
+})

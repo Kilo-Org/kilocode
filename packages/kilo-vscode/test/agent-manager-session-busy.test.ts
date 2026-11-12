@@ -33,4 +33,24 @@ describe("createSessionActivity", () => {
     expect(seen.value.project("p1", "w1")).toBe("error")
     seen.dispose()
   })
+
+  test("shows no outcome for a session whose last turn a staged revert hides", () => {
+    const time = { created: 1, updated: 2, idle: 2, viewed: 0 }
+    expect(activityOf({ outcome: "failed", time, revert: { messageID: "msg_1" } })).toBe("idle")
+    expect(activityOf({ outcome: "succeeded", time, revert: { messageID: "msg_1" } })).toBe("idle")
+    const seen = createRoot((dispose) => ({
+      dispose,
+      value: createSessionActivity({
+        managed: () => [{ id: "s1", worktreeId: "w1" }],
+        local: () => [],
+        projects: () => ({
+          p1: [{ id: "s1", worktreeId: "w1", outcome: "failed", time, revert: { messageID: "msg_1" } }],
+        }),
+        active: () => "p1",
+        activityFor: (id, info) => (info ? activityOf(info) : "idle"),
+      }),
+    }))
+    expect(seen.value.project("p1", "w1")).toBe("idle")
+    seen.dispose()
+  })
 })

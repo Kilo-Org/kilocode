@@ -43,6 +43,8 @@ interface OpenAIEmbeddingResponse {
 type OpenAICompatibleOptions = {
   headers?: Record<string, string>
   dimensions?: number
+  /** The embedder name that selects the error mapping, for a delegating embedder such as `kilo`. */
+  embedderType?: string
 }
 
 /**
@@ -59,6 +61,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private readonly maxItemTokens: number
   private readonly headers: Record<string, string>
   private readonly dimensions?: number
+  private readonly embedderType: string
   private readonly omitted = new Set<string>()
 
   // Global rate limiting state shared across all instances
@@ -106,6 +109,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     this.maxItemTokens = maxItemTokens || MAX_ITEM_TOKENS
     this.headers = options.headers ?? {}
     this.dimensions = options.dimensions
+    this.embedderType = options.embedderType ?? "openai-compatible"
   }
 
   /**
@@ -401,7 +405,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         })
         throw error
       }
-    }, "openai-compatible")
+    }, this.embedderType)
   }
 
   /**

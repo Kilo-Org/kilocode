@@ -19,20 +19,19 @@ export function useTodoSource(id: Accessor<string | undefined>): TodoDockSource 
 
   // The initial sync loads a short window of recent messages. If no write is in
   // that window, walk older pages until a write appears. The set keeps a failed
-  // load from retrying on every streamed message.
+  // load from retrying on every streamed message. A revert can hide the only loaded
+  // write, so each revert boundary gets its own walk.
   const paged = new Set<string>()
   createEffect(() => {
     const session = id()
-    if (!session || paged.has(session)) return
+    const revert = session ? v2.data.session.get(session)?.revert : undefined
+    const key = `${session}:${revert?.messageID ?? ""}`
+    if (!session || paged.has(key)) return
     const messages = v2.data.session.message.list(session)
     // Nothing is loaded yet. The sync that follows will run this effect again.
     if (messages.length === 0) return
-    const revert = v2.data.session.get(session)?.revert
-    if (hasTodoWrite(messages, revert) || !v2.data.session.message.more(session)) {
-      paged.add(session)
-      return
-    }
-    paged.add(session)
+    paged.add(key)
+    if (hasTodoWrite(messages, revert) || !v2.data.session.message.more(session)) return
     void page(session, revert).catch(v2.report)
   })
 

@@ -5,7 +5,7 @@ import { realpathSync } from "node:fs"
 import type { IndexingConfig } from "@kilocode/kilo-indexing/config"
 import { toIndexingConfigInput } from "@kilocode/kilo-indexing/config"
 import type { VectorStoreSearchResult } from "@kilocode/kilo-indexing/engine"
-import type { KiloEmbeddingModelCatalog } from "@kilocode/kilo-indexing/embedding-models"
+import type { KiloEmbeddingModel, KiloEmbeddingModelCatalog } from "@kilocode/kilo-indexing/embedding-models"
 import { disabledIndexingStatus, type IndexingStatus } from "@kilocode/kilo-indexing/status"
 import { indexingWithKiloDefault, type KiloIndexingAuth } from "./indexing-auth"
 import { indexingWarningKey, type IndexingWarning } from "./indexing-warning"
@@ -94,14 +94,7 @@ async function model(host: Host, input: Input, auth: KiloIndexingAuth): Promise<
     if (catalog.models.length > 0 && !chosen) {
       throw new IndexingModelError(input.modelId)
     }
-    if (chosen) {
-      return {
-        ...input,
-        modelId: chosen.id,
-        modelDimension: chosen.dimension,
-        searchMinScore: input.searchMinScore ?? chosen.scoreThreshold,
-      }
-    }
+    if (chosen) return await selected(host, input, catalog, chosen)
   }
 
   const fallback = catalog.aliases[catalog.defaultModel] ?? catalog.defaultModel
@@ -113,12 +106,69 @@ async function model(host: Host, input: Input, auth: KiloIndexingAuth): Promise<
     return { ...input, modelId: undefined, modelDimension: undefined }
   }
 
+  return await selected(host, input, catalog, found)
+}
+
+/**
+ * The engine input for a catalog model. The catalog default is a preset, even when the settings editor saved its id
+ * explicitly (VS Code stores the shown default on enable), so it is validated and replaced when the Gateway refuses
+ * it. Any other explicit model is a deliberate choice and is kept.
+ */
+async function selected(
+  host: Host,
+  input: Input,
+  catalog: KiloEmbeddingModelCatalog,
+  chosen: KiloEmbeddingModel,
+): Promise<Input> {
+  const isDefault = chosen.id === (catalog.aliases[catalog.defaultModel] ?? catalog.defaultModel)
+  const model = isDefault ? await servableModel(input, chosen, catalog) : chosen
+  if (model.id !== chosen.id) {
+    host.log("warn", "Kilo embedding catalog default is unavailable; using a fallback model", {
+      defaultModel: chosen.id,
+      model: model.id,
+    })
+  }
+
   return {
     ...input,
-    modelId: found.id,
-    modelDimension: found.dimension,
-    searchMinScore: input.searchMinScore ?? found.scoreThreshold,
+    modelId: model.id,
+    modelDimension: model.dimension,
+    searchMinScore: input.searchMinScore ?? model.scoreThreshold,
   }
+}
+
+/**
+ * A catalog entry the Gateway answers for. The chat catalog substitutes a default that is missing from its list;
+ * indexing also substitutes a default that is listed but refused, which is what a stale catalog entry looks like.
+ * Only an account or connection failure stops the search, because it fails every candidate alike; one model's refusal
+ * says nothing about the next.
+ */
+async function servableModel(input: Input, model: KiloEmbeddingModel, catalog: KiloEmbeddingModelCatalog) {
+  const apiKey = input.kiloApiKey
+  if (!apiKey) return model
+
+  const { probeKiloEmbeddingModel } = await import("@kilocode/kilo-indexing/kilo-embedder")
+  const probe = (candidate: KiloEmbeddingModel) =>
+    probeKiloEmbeddingModel({
+      apiKey,
+      baseUrl: input.kiloBaseUrl,
+      organizationId: input.kiloOrganizationId,
+      modelId: candidate.id,
+      dimensions: candidate.dimension,
+    })
+
+  const first = await probe(model)
+  if (first.valid || !first.modelUnavailable) return model
+
+  const candidates = catalog.models
+    .filter((item) => item.id !== model.id)
+    .sort((left, right) => Number(right.note === "code") - Number(left.note === "code"))
+  for (const candidate of candidates) {
+    const result = await probe(candidate)
+    if (result.valid) return candidate
+    if (result.accountWide) return model
+  }
+  return model
 }
 
 /** The engine input of an effective `indexing` config. VS Code enables indexing through project consent instead. */

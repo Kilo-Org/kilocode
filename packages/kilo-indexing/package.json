@@ -20,7 +20,8 @@
     "./embedding-models": "./src/kilo-embedding-models.ts",
     "./engine": "./src/indexing/index.ts",
     "./file-extensions": "./src/file-extensions.ts",
-    "./status": "./src/status.ts"
+    "./status": "./src/status.ts",
+    "./kilo-embedder": "./src/indexing/embedders/kilo.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
