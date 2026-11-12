@@ -2,6 +2,7 @@
 import {
   KiloAccount,
   KiloAutocomplete,
+  KiloCredential,
   KiloDefaults,
   KiloDevice,
   KiloErrors,
@@ -32,6 +33,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import type { Entry } from "@opencode/schema/config"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
@@ -84,7 +86,11 @@ const decodeSelection = Schema.decodeUnknownOption(Schema.Struct({ organizationI
 // The last good catalog of one personal or anonymous scope: its models and its default model.
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
-    Schema.Struct({ models: Schema.Array(Schema.Unknown), defaultModelID: Schema.optional(Schema.String) }),
+    Schema.Struct({
+      models: Schema.Array(Schema.Unknown),
+      imageModels: Schema.Array(Schema.Unknown).pipe(Schema.optional),
+      defaultModelID: Schema.optional(Schema.String),
+    }),
   ),
 )
 // Published on the global bus (`{ global: true }`), so plugin instances of other locations also reload.
@@ -98,6 +104,8 @@ const OrganizationEvent = Bus.ephemeral({
 
 interface Snapshot {
   readonly models: readonly KiloModels.Model[]
+  /** Image-only models kept with the chat models they share a catalog with. */
+  readonly imageModels?: readonly KiloModels.Model[]
   readonly defaultModelID?: string
 }
 
@@ -107,6 +115,8 @@ interface CatalogState {
   readonly connection?: ConnectionInfo
   readonly envActive: boolean
   readonly models: readonly KiloModels.Model[]
+  /** The image-output models of the same catalog, registered on the provider as `image` models. */
+  readonly imageModels: readonly KiloModels.Model[]
   readonly defaultModelID?: string
   readonly failed: boolean
   readonly failure?: KiloModels.Failure
@@ -126,6 +136,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
     let policy = yield* KiloConfigPolicy.get(config)
+    // Kilo image models are opt-in: an unset setting must not turn the upstream image tool on (and its tool
+    // definition into every request) for users who never asked for image generation.
+    let imageGeneration = imageGenerationEnabled(yield* config.entries())
     const scope = yield* Scope.Scope
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
@@ -135,6 +148,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let catalog: CatalogState = {
       envActive: false,
       models: [],
+      imageModels: [],
       failed: false,
       anonymous: true,
     }
@@ -305,6 +319,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         if (!decoded || decoded.models.length === 0) return undefined
         const snapshot: Snapshot = {
           models: decoded.models as readonly KiloModels.Model[],
+          imageModels: (decoded.imageModels ?? []) as readonly KiloModels.Model[],
           defaultModelID: decoded.defaultModelID,
         }
         lastGood.set(key, snapshot)
@@ -334,6 +349,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: { kind: "unauthenticated" },
           anonymous: true,
@@ -348,6 +364,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: { kind: "scope_conflict" },
           anonymous: false,
@@ -370,6 +387,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: false,
           anonymous: token === undefined,
           skippedOfflineTest: true,
@@ -394,6 +412,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: fetchedProfile.failure,
           anonymous: false,
@@ -409,6 +428,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             connection,
             envActive,
             models: [],
+            imageModels: [],
             failed: true,
             failure: { kind: "personal_unavailable" },
             anonymous: false,
@@ -428,7 +448,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         KiloModes.clearCache()
         organizationModes = []
         yield* ctx.agent.reload()
-        catalog = { account: current, connection, envActive, models: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
+        catalog = { account: current, connection, envActive, models: [], imageModels: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
         return
       }
 
@@ -484,7 +504,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           ? undefined
           : snapshotKey(base, fetched.success.anonymous ? undefined : token)
         if (writeKey && models.length > 0) {
-          yield* saveSnapshot(writeKey, { models, defaultModelID: resolvedDefault })
+          yield* saveSnapshot(writeKey, {
+            models,
+            imageModels: fetched.success.imageModels,
+            defaultModelID: resolvedDefault,
+          })
         }
         if (targetEpoch !== epoch) return
         catalog = {
@@ -492,6 +516,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models,
+          imageModels: fetched.success.imageModels,
           defaultModelID: resolvedDefault,
           failed: false,
           anonymous: fetched.success.anonymous,
@@ -509,6 +534,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: fetched.failure,
           anonymous: false,
@@ -527,6 +553,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: stored.models,
+          imageModels: stored.imageModels ?? [],
           // The stored default belongs to the stored models. `KiloDefaults.get` answers its static fallback when the
           // Kilo API is down, so it must not replace the stored default.
           defaultModelID: stored.defaultModelID ?? defaultModelID,
@@ -539,6 +566,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: fetched.failure,
           anonymous: token === undefined,
@@ -589,7 +617,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         (previous.account?.organizationID ?? previous.organizationID ?? null) !== resolved.organizationID ||
         JSON.stringify(previous.connection) !== JSON.stringify(resolved.connection)
       ) {
-        catalog = { envActive: false, models: [], failed: true, anonymous: true }
+        catalog = { envActive: false, models: [], imageModels: [], failed: true, anonymous: true }
         yield* ctx.provider.reload()
         yield* publishCatalog
       }
@@ -601,6 +629,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const nextPolicy = yield* KiloConfigPolicy.get(config)
       if (targetEpoch !== epoch) return
       policy = nextPolicy
+      imageGeneration = imageGenerationEnabled(yield* config.entries())
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(
@@ -630,6 +659,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         connection: start.connection,
         envActive: start.envActive,
         models: stored.models,
+        imageModels: stored.imageModels ?? [],
         defaultModelID: stored.defaultModelID,
         failed: false,
         anonymous: start.account?.token === undefined,
@@ -728,9 +758,23 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           settings,
           headers: mergedHeaders,
         },
-        models: catalog.models
-          .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
-          .map((item) => toModelInfo(item, baseURL, mergedHeaders, Boolean(catalog.account))),
+        models: [
+          ...catalog.models
+            .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
+            .map((item) => toModelInfo(item, baseURL, mergedHeaders, Boolean(catalog.account))),
+          // Kilo image models are registered only when image generation is enabled: the upstream image tool turns
+          // itself on whenever an image model exists, so registering them by default would add the tool definition to
+          // every request for users who never opted in. A model that is also a chat model stays a chat model: the
+          // provider registry keys models by id, so the image copy would replace it and remove it from the chat catalog.
+          ...catalog.imageModels
+            .filter(
+              (item) =>
+                imageGeneration &&
+                !catalog.models.some((chat) => chat.id === item.id) &&
+                (!policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true),
+            )
+            .map((item) => toImageModelInfo(item, baseURL, mergedHeaders)),
+        ],
         ...(sourceConnection ? { sourceConnection } : {}),
       })
     })
@@ -742,10 +786,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         }
         return
       }
-      if (
-        catalog.defaultModelID &&
-        models.list(id).some((model) => model.id === Model.ID.make(catalog.defaultModelID!))
-      ) {
+      // The default is a chat model: the provider also registers image models, which cannot serve a session.
+      const chat = () => models.list(id).filter((model) => (model.type ?? "chat") === "chat")
+      if (catalog.defaultModelID && chat().some((model) => model.id === Model.ID.make(catalog.defaultModelID!))) {
         models.default.set(id, Model.ID.make(catalog.defaultModelID))
         return
       }
@@ -754,7 +797,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         !catalog.models.some((model) => model.id === catalog.defaultModelID && model.mayTrainOnYourPrompts === true)
       )
         return
-      const allowed = models.list(id).find((model) => model.enabled !== false && model.status === "active")
+      const allowed = chat().find((model) => model.enabled !== false && model.status === "active")
       if (allowed) models.default.set(id, allowed.id)
     })
 
@@ -911,8 +954,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           }
         : undefined
     }
+    // Routers pick a chat model for a session; the provider also registers image models, which are not candidates.
     const catalogModels = ctx.model.list().pipe(
-      Effect.map((result) => result.data),
+      Effect.map((result) => result.data.filter((model) => (model.type ?? "chat") === "chat")),
       Effect.orElseSucceed(() => []),
     )
     const clientRoutes = new Map<string, { provider: string; model: string }>()
@@ -1380,6 +1424,35 @@ function toModelInfo(
   }
 }
 
+function toImageModelInfo(source: KiloModels.Model, baseURL: string, headers: Record<string, string>): Model.Info {
+  const modelID = Model.ID.make(source.id)
+  return {
+    id: modelID,
+    modelID,
+    providerID: id,
+    type: "image",
+    name: source.name,
+    ...(source.family ? { family: Model.Family.make(source.family) } : {}),
+    // The Kilo host builds these models itself (the Gateway serves images on chat completions), so the package marks
+    // them for the host resolver instead of naming an AI package.
+    package: "@kilocode/gateway-images",
+    settings: { baseURL },
+    headers: { ...headers },
+    capabilities: {
+      tools: false,
+      input: [...source.capabilities.input],
+      output: [...source.capabilities.output],
+    },
+    variants: [],
+    time: { released: 0 },
+    // The Gateway prices an image, which the token cost model cannot express; models.dev drops per-image prices too.
+    cost: [],
+    status: "active",
+    enabled: true,
+    limit: { context: source.limit.context, output: source.limit.output },
+  }
+}
+
 function device(server: () => string) {
   return {
     integrationID: id,
@@ -1418,11 +1491,22 @@ function organizationKey(
 }
 
 function credentialInput(credential: Credential.Value): KiloAccount.Input | undefined {
-  if (credential.type === "external") return undefined
+  const token = KiloCredential.token(credential)
+  if (token === undefined) return undefined
   const metadata = Option.getOrUndefined(decodeMetadata(credential.metadata ?? {}))
   return {
-    token: credential.type === "oauth" ? credential.access : credential.key,
+    token,
     server: metadata?.server,
     organizationID: metadata?.organizationID,
   }
+}
+
+/** `experimental.image_generate` is on only when a document sets it to `true` or a `{ model }` object. */
+function imageGenerationEnabled(entries: readonly Entry[]): boolean {
+  const document = entries.findLast(
+    (entry): entry is Extract<Entry, { type: "document" }> =>
+      entry.type === "document" && entry.info.experimental?.image_generate !== undefined,
+  )
+  const value = document?.info.experimental?.image_generate
+  return value !== undefined && value !== false
 }
