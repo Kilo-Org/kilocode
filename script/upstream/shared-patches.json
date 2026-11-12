@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 132,
-    "markedLines": 2246,
+    "markedLines": 2253,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -211,7 +211,7 @@
     },
     "packages/core/src/codemode/instructions.ts": {
       "rung": 3,
-      "seam": "Explain the `[direct]` marker below the catalog while a marked tool is shown, and supersede the whole catalog when one appears. The instructions are static text plus the rendered summary, so a plugin cannot add the note, and a catalog without a marked tool renders exactly upstream's text."
+      "seam": "Qualify the Code Mode paragraph and the catalog heading while a marked tool is shown, because such a tool is also a normal call, and supersede the whole catalog when the marker first appears. The instructions are static text plus the rendered summary, so a plugin cannot qualify them, and a catalog without a marked tool renders exactly upstream's text."
     },
     "packages/core/src/tool/AGENTS.md": {
       "rung": 3,

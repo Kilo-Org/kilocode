@@ -50,7 +50,12 @@ it.effect("keeps a direct tool on both the native and the Code Mode tool list", 
 
     const summary = CodeModeCatalog.summarize(catalog)
     expect(summary.direct).toBe(true)
-    expect(CodeModeInstructions.render(summary)).toContain("A tool marked `[direct]` is also a normal tool call")
+    expect(CodeModeInstructions.render(summary)).toContain(
+      "A tool marked `[direct]` is also a normal tool call: use it either way, directly or inside `execute`.",
+    )
+    expect(CodeModeInstructions.render(summary)).toContain(
+      "## Code Mode tools (call inside `execute`; `[direct]` tools also directly)",
+    )
 
     const sessionID = Session.ID.make("ses_direct")
     const direct = yield* executeTool(tools, {

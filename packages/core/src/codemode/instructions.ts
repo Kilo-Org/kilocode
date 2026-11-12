@@ -5,20 +5,24 @@ import { Effect, Schema } from "effect"
 import { Instructions } from "../instructions/index.js"
 import { CodeModeCatalog } from "./catalog.js"
 
-// kilocode_change start - codemode-direct: a tool that stays on the provider's native list too
-const DIRECT = "A tool marked `[direct]` is also a normal tool call: use it either way, directly or inside `execute`."
+// kilocode_change start - codemode-direct: a marked tool is also a normal tool call, so the invariant text qualifies
+const directIntro = (hasMoreTools: boolean) =>
+  `The tools listed below${hasMoreTools ? ", and \`search\`," : ""} are available as JavaScript inside the \`execute\` tool. A tool marked \`[direct]\` is also a normal tool call: use it either way, directly or inside \`execute\`. Every other tool you have is a normal tool call: call it directly, never inside \`execute\`.`
+const directHeading = "## Code Mode tools (call inside `execute`; `[direct]` tools also directly)"
 // kilocode_change end
 
+// kilocode_change start - codemode-direct: qualify the invariant paragraph and heading when the catalog marks a tool
 // prettier-ignore
-const prompt = (hasMoreTools: boolean) => `# Code Mode
+const prompt = (hasMoreTools: boolean, direct: boolean) => `# Code Mode
 
-The tools listed below${hasMoreTools ? ", and \`search\`," : ""} cannot be called directly: they only work as JavaScript inside the \`execute\` tool. Every other tool you have is a normal tool call: call it directly, never inside \`execute\`.
+${direct ? directIntro(hasMoreTools) : `The tools listed below${hasMoreTools ? ", and \`search\`," : ""} cannot be called directly: they only work as JavaScript inside the \`execute\` tool. Every other tool you have is a normal tool call: call it directly, never inside \`execute\`.`}
 
 ${hasMoreTools ? `The catalog is partial. Before calling a tool that is not listed below, find it with the global \`search(...)\` function. Do not guess tool names. Each result's \`path\` is the complete call expression: write it out as code, for example \`await tools.ns.tool_name({ ... })\`. Do not use it as a key such as \`tools[path]\`.
 
 - ${searchSignature}` : "The catalog is complete. Do not guess tool names."}
 
-## Code Mode tools (call only inside \`execute\`)`
+${direct ? directHeading : "## Code Mode tools (call only inside \`execute\`)"}`
+// kilocode_change end
 
 export function render(catalog: CodeModeCatalog.Summary) {
   if (catalog.total === 0)
@@ -27,13 +31,12 @@ export function render(catalog: CodeModeCatalog.Summary) {
   const tools = catalog.namespaces.flatMap((namespace) => {
     return [CodeModeCatalog.namespaceLine(namespace), ...namespace.entries.map((entry) => entry.line)]
   })
-  // kilocode_change start - codemode-direct: a catalog with a marked tool explains the marker
-  if (catalog.direct === true) tools.push("", DIRECT)
-  // kilocode_change end
 
-  return `${prompt(catalog.shown < catalog.total)}
+  // kilocode_change start - codemode-direct: pass the marker flag to the prompt
+  return `${prompt(catalog.shown < catalog.total, catalog.direct === true)}
 
 ${tools.join("\n")}`
+  // kilocode_change end
 }
 
 export function update(previous: CodeModeCatalog.Summary, current: CodeModeCatalog.Summary) {
