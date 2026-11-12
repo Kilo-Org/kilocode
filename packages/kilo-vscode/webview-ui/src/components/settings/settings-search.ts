@@ -139,7 +139,6 @@ const EXCLUDED_KEYS = new Set([
   "settings.experimental.mcpTimeout.title",
   "settings.experimental.remote.title",
   "settings.context.compaction.title",
-  "settings.context.compactionLimit.title",
   "settings.context.prune.title",
   "settings.context.memory.title",
   "settings.context.memory.autoSave.title",

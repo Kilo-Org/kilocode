@@ -74,6 +74,13 @@ describe("settings search targets", () => {
     expect(keys).not.toContain("settings.experimental.imageGenerationModel.title")
   })
 
+  test("finds the auto compaction limit row on the Context tab", () => {
+    const result = searchSettings("compaction limit", translate).find(
+      (item) => item.titleKey === "settings.context.compactionLimit.title",
+    )
+    expect(result).toMatchObject({ tab: "context", tabOnly: false })
+  })
+
   test("does not index agent dialog and editor rows that cannot be revealed", () => {
     const keys = SETTINGS_ENTRIES.map((entry) => entry.titleKey)
     expect(keys).not.toContain("settings.agentBehaviour.removeMcp.title")

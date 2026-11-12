@@ -155,6 +155,12 @@
         "complexity": ["error", 20]
       }
     },
+    // Restores the v1 file-size ratchet the generic 3000 cap lost on the port. v1 measured 2566 lines and pinned 2800
+    // after extracting the sidebar body and tab bar; this branch is at 2677. Do not raise; lower it when logic moves out.
+    {
+      "files": ["packages/kilo-vscode/webview-ui/agent-manager/AgentManagerApp.tsx"],
+      "rules": { "max-lines": ["error", 2800] }
+    },
     // Per-file complexity exceptions, measured on this branch. Each cap is that file's current maximum. Existing violations are capped at their current maximum, new code must stay <= 20, do not raise these caps, refactor instead.
     {
       "files": ["packages/kilo-vscode/src/config-aliases.ts"],

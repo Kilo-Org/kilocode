@@ -4,6 +4,7 @@ import { Tool } from "@opencode/schema/tool"
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from "@standard-schema/spec"
 import { Effect, JsonPointer, JsonSchema, Result, Schema, SchemaIssue, SchemaRepresentation } from "effect"
 import { $ZodType, toJSONSchema } from "zod/v4/core"
+import { KiloZodFormat } from "../kilocode/tool/zod-format.js" // kilocode_change(tool-schema-format)
 
 const formatEffectIssues = SchemaIssue.makeFormatterStandardSchemaV1()
 
@@ -167,8 +168,12 @@ const outputJsonSchema = (schema: Tool.ValueSchema<any>): JsonSchema.JsonSchema 
 }
 
 const standardJsonSchema = (schema: StandardSchemaV1<any, any>, io: "input" | "output"): JsonSchema.JsonSchema => {
-  if (isStandardJSONSchema(schema)) return schema["~standard"].jsonSchema[io]({ target: "draft-2020-12" })
-  if (schema instanceof $ZodType) return toJSONSchema(schema, { target: "draft-2020-12", io })
+  // kilocode_change start - tool-schema-format: drop Zod 4.6 non-standard formats
+  if (isStandardJSONSchema(schema))
+    return schema["~standard"].jsonSchema[io]({ target: "draft-2020-12", ...KiloZodFormat.options(schema) })
+  if (schema instanceof $ZodType)
+    return toJSONSchema(schema, { target: "draft-2020-12", io, override: KiloZodFormat.override })
+  // kilocode_change end
   throw new Error(`Schema vendor "${schema["~standard"].vendor}" does not support JSON Schema conversion`)
 }
 
