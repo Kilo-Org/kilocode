@@ -28,15 +28,7 @@ async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolea
   throw new Error("The Flow permission request did not appear")
 }
 
-// TODO(flows): the experimental.schedules config gate (origin/v2 #16099) interacts badly with the v2.2.7 Instance
-// graph change that added App.node and Flag.node (upstream bcaf561d94 and the per-request plugin-wait removal). The
-// experimental.schedule.create RPC resolves the flag from the session's location via instances.provide(session), and
-// that instance does not load the project kilo2.json, so experimental.schedules reads false even though the in-process
-// Schedule.Service (schedules.enabled) and the location-scoped experimental.schedule.list both read it true. Waiting on
-// plugin activation (loadPlugins), passing an explicit request location, warming with a prior list, and retrying all
-// fail to make the sessionID-only create see the config. Fixing it belongs in the flows config resolution, not this
-// sync; skipped with a tracking note so the sync is not blocked. See the PR for the full root-cause.
-test.skip("lists local schedules and creates managed definitions through the Kilo Flow RPC", async () => {
+test("lists local schedules and creates managed definitions through the Kilo Flow RPC", async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-flow-rpc-")))
   const global = path.join(root, "global")
   const projects = [path.join(root, "first"), path.join(root, "second"), path.join(root, "disabled")]

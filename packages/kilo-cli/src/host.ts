@@ -172,8 +172,9 @@ export const overrides: LayerNode.Replacements = [
   App.node.replace(App.configured(KiloApp)),
   // Scheduling is always on: the wakeup and Flow plugins own Kilo's schedules, so the scheduler reads
   // `experimental.schedules` as on whatever a config says. Appended last, so it also wins over an earlier `-schedules`.
-  Schedule.node.replace(
-    Schedule.node.mapLayer((layer) =>
+  // The scheduler resolves flags through each Location's Flag service, which reads the overrides when it is built.
+  Flag.node.replace(
+    Flag.node.mapLayer((layer) =>
       layer.pipe(
         Layer.provide(
           Layer.effect(
