@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./read": "./src/read/index.ts",
+    "./request-identity": "./src/request-identity.ts",
     "./plugin/git-source": "./src/plugin/git-source.ts"
   },
   "scripts": {
