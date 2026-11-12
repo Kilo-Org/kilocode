@@ -76,8 +76,8 @@ async function page(
     reader.close()
     stream.destroy()
   }
-  // Upstream removed OffsetOutOfRangeError in v2.2.7: an offset past the end now yields an empty page here instead
-  // of a typed failure, matching the native reader's out-of-range handling.
+  // Upstream removed OffsetOutOfRangeError in v2.2.7: an offset past the end now yields an empty page here instead of
+  // the removed typed failure. The extraction reader does not reproduce the native reader's tail-on-overflow behavior.
   return new ReadToolFileSystem.TextPage({
     type: "text-page",
     content: lines.join("\n"),
