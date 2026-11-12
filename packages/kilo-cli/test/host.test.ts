@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
+import { Flag } from "@opencode/core/flag"
 import { Permission } from "@opencode/core/permission"
+import { Document, Info } from "@opencode/schema/config"
+import { ConfigExperimental } from "@opencode/schema/config/experimental"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
@@ -446,4 +449,21 @@ test("keeps scheduling on unless OPENCODE_FLAGS opts out explicitly", () => {
   expect(KiloHost.schedulingOverrides("-schedules")).toBe("-schedules")
   expect(KiloHost.schedulingOverrides("all,-schedules")).toBe("all,-schedules")
   expect(KiloHost.schedulingOverrides("-media_blob, -schedules")).toBe("-media_blob, -schedules")
+})
+
+test("turns scheduling on in release channels, even against a config that turns it off", () => {
+  const off = new Document({
+    type: "document",
+    info: new Info({ experimental: new ConfigExperimental.Info({ schedules: false }) }),
+  })
+  for (const channel of ["latest", "beta"]) {
+    expect(Flag.resolve({ entries: [], channel }).schedules.enabled).toBeFalse()
+    expect(Flag.resolve({ entries: [off], channel, overrides: KiloHost.schedulingOverrides(undefined) }).schedules).toEqual({
+      enabled: true,
+      source: "env",
+    })
+    expect(
+      Flag.resolve({ entries: [off], channel, overrides: KiloHost.schedulingOverrides("-schedules") }).schedules.enabled,
+    ).toBeFalse()
+  }
 })

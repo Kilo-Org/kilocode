@@ -25,9 +25,8 @@ const runPrefix = "flow-run:v1:"
 const activePrefix = "flow-active:v1:"
 const schedulePrefix = "flow-schedule:v1:"
 const latestPrefix = "flow-latest:v1:"
-const metadataKey = "kilocode.flow"
+const metadataKey = KiloFlowRpc.sessionMetadata
 const permissionAction = "flow"
-const retainedRuns = 20
 const lookups = 8
 const decodeRecord = Schema.decodeUnknownOption(
   Schema.Union([KiloFlowRpc.Record, Schema.fromJsonString(KiloFlowRpc.Record)]),
@@ -178,6 +177,7 @@ export const KiloFlowPlugin = define({
           execute: (input, context) => {
             const selection = selections.get(context.sessionID)
             return ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) =>
                 create(
                   ctx,
@@ -209,6 +209,7 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (_, context) =>
             ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) => list(ctx, schedules, session.projectID, runtime.fs)),
               Effect.map((output) => ({ output, content: inventory(output) })),
               Effect.mapError(toolError),
@@ -285,11 +286,12 @@ export const KiloFlowPlugin = define({
 
 /**
  * A Flow run Session has a deny-by-default allowlist and reads repository content unattended, so it must not manage the
- * project's other Flows: rewriting a more privileged Flow's prompt and running it would escape its own allowlist.
+ * project's Flows: rewriting a more privileged Flow's prompt and running it would escape its own allowlist, creating
+ * one could only fail at the approval its Session denies, and listing would expose other Flows' prompts and allowlists.
  */
 function refuseRunSession(session: Session.Info) {
   if (Option.isNone(decodeMetadata(session.metadata?.[metadataKey]))) return Effect.void
-  return Effect.fail(new Error(`Session ${session.id} runs a Flow and cannot start, change, or delete Flows`))
+  return Effect.fail(new Error(`Session ${session.id} runs a Flow and cannot list, create, start, change, or delete Flows`))
 }
 
 function toolError(error: unknown) {
@@ -419,6 +421,11 @@ export function create(
         ),
       ),
     )
+    yield* Effect.logInfo("Flow created", {
+      flowID: configured.id,
+      projectID: session.projectID,
+      name: configured.name,
+    })
     yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
     return managed(configured, schedule)
   })
@@ -662,6 +669,12 @@ function remove(
     )
     if (runtime.locks.get(record.id) === lock) runtime.locks.delete(record.id)
     yield* notify(runtime, record, "removed")
+    yield* Effect.logInfo("Flow removed", {
+      flowID: record.id,
+      projectID: authorizedProjectID,
+      name: record.name,
+      deleteWorktrees: input.deleteWorktrees === true,
+    })
     const projectID = record.context.projectID
     if (!projectID || worktrees.length === 0) return {}
     // Without force, git refuses to remove a worktree with changes, so a refusal keeps the user's work.
@@ -1255,8 +1268,8 @@ function pruneRuns(ctx: Plugin.Context, flowID: KiloFlowRpc.ID) {
     // Skipped placeholders have their own budget so frequent skips never evict real execution history.
     const keep = new Set<KiloFlowRpc.RunID>([
       ...(active ? [active] : []),
-      ...sorted.filter((run) => run.status !== "skipped").slice(0, retainedRuns).map((run) => run.id),
-      ...sorted.filter((run) => run.status === "skipped").slice(0, retainedRuns).map((run) => run.id),
+      ...sorted.filter((run) => run.status !== "skipped").slice(0, KiloFlowRpc.retainedRuns).map((run) => run.id),
+      ...sorted.filter((run) => run.status === "skipped").slice(0, KiloFlowRpc.retainedRuns).map((run) => run.id),
     ])
     const stale = stored.runs.filter((run) => !keep.has(run.id))
     yield* Effect.forEach(stale, (run) => ctx.storage.remove(runKey(run)), { discard: true })

@@ -1,30 +1,11 @@
 import type { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
+import { KiloFlowPermissions } from "@opencode/schema/kilocode/flow-permissions"
 
-export const baselinePermissions = [
-  { action: "read", resource: "*" },
-  { action: "glob", resource: "*" },
-  { action: "grep", resource: "*" },
-] satisfies KiloFlowRpc.PermissionGrant[]
-
-export function validatePermissions(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
-  const action = permissions.find(
-    (permission) => permission.action.length === 0 || permission.action.includes("*") || permission.action.includes("?"),
-  )
-  if (action) return `permission action ${action.action || "(empty)"} must name one concrete capability`
-  const shellDirectory = permissions.find(
-    (permission) => permission.action === "shell" && absoluteDirectoryWildcard(permission.resource),
-  )
-  if (shellDirectory)
-    return `shell permission ${shellDirectory.resource} is an absolute directory wildcard, but shell resources must match command text; use external_directory: ${shellDirectory.resource} for the path and add separate shell permissions for the required commands, such as command-name *`
-  const external = permissions.find(
-    (permission) => permission.action === "external_directory" && !boundedExternal(permission.resource),
-  )
-  if (external)
-    return `external_directory permission ${external.resource} must use a bounded absolute wildcard below a directory`
-}
+// The rules live in the schema package, which the `/periodic` wizard shares.
+export const validatePermissions = KiloFlowPermissions.validate
 
 export function flowPermissions(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
-  return [...baselinePermissions, ...permissions].filter(
+  return [...KiloFlowPermissions.baseline, ...permissions].filter(
     (permission, index, all) =>
       all.findIndex((item) => item.action === permission.action && item.resource === permission.resource) === index,
   )
@@ -61,19 +42,4 @@ export function permissionInstructions(
 export function permissionSummary(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
   if (permissions.length === 0) return "no unattended permissions"
   return `unattended permissions ${permissions.map((permission) => `${permission.action}: ${permission.resource}`).join(", ")}`
-}
-
-function boundedExternal(resource: string) {
-  const wildcard = resource.search(/[?*]/)
-  if (wildcard < 0) return false
-  const prefix = resource.slice(0, wildcard).replaceAll("\\", "/")
-  const parts = (prefix.match(/^[A-Za-z]:\//) ? prefix.slice(3) : prefix).split("/").filter(Boolean)
-  if (parts.length === 0 || parts.some((part) => part === "." || part === "..")) return false
-  if (/^[A-Za-z]:\//.test(prefix)) return true
-  if (!prefix.startsWith("/")) return false
-  return true
-}
-
-function absoluteDirectoryWildcard(resource: string) {
-  return resource.replaceAll("\\", "/").endsWith("/*") && boundedExternal(resource)
 }

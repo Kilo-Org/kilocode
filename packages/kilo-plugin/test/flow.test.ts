@@ -8,7 +8,11 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { Provider } from "@opencode/core/provider"
 import { Schedule } from "@opencode/core/schedule"
 import { Tool } from "@opencode/core/tool"
-import { assemble, flowPermissions, list, permissionInstructions, storedRecord } from "../src/flow"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { AbsolutePath } from "@opencode/schema/schema"
+import { assemble, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
 import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
@@ -895,6 +899,14 @@ recording.live("lists, updates, and deletes Flows through the agent tools, appro
       .pipe(Effect.flip)
     expect(invalid.message).toContain("must name one concrete capability")
     expect(approvals).toHaveLength(2)
+    // Removing a pattern is a change too: the user approves the narrower allowlist that will be stored.
+    const narrowed = yield* tool("flow_update").execute(
+      { flowID, permissions: [{ action: "shell", resource: "taskctl *" }] },
+      call(source.id, "call_narrow"),
+    )
+    expect(approvals).toHaveLength(3)
+    expect(approvals[2]).toMatchObject({ resources: ["read: *", "glob: *", "grep: *", "shell: taskctl *"] })
+    expect(narrowed.output?.permissions).not.toContainEqual({ action: "edit", resource: "reports/*" })
 
     // A Flow run Session has a deny-by-default allowlist, so it must not manage the project's other Flows.
     const run = yield* tool("flow_run").execute({ flowID }, call(source.id, "call_run"))
@@ -910,7 +922,16 @@ recording.live("lists, updates, and deletes Flows through the agent tools, appro
     expect(refusedDelete.message).toContain("runs a Flow and cannot")
     const refusedRun = yield* tool("flow_run").execute({ flowID }, call(runSession, "call_run_run")).pipe(Effect.flip)
     expect(refusedRun.message).toContain("runs a Flow and cannot")
-    expect(approvals).toHaveLength(2)
+    const refusedCreate = yield* tool("flow_create")
+      .execute(
+        { name: "Escalate", when: { every: "1 day", tz: "UTC" }, prompt: "Do more", worktree: "reuse", permissions: [] },
+        call(runSession, "call_run_create"),
+      )
+      .pipe(Effect.flip)
+    expect(refusedCreate.message).toContain("runs a Flow and cannot")
+    const refusedList = yield* tool("flow_list").execute({}, call(runSession, "call_run_list")).pipe(Effect.flip)
+    expect(refusedList.message).toContain("runs a Flow and cannot")
+    expect(approvals).toHaveLength(3)
 
     const removed = yield* tool("flow_delete").execute({ flowID }, call(source.id, "call_delete"))
     expect(removed.output).toEqual({})
@@ -965,6 +986,77 @@ it.live("pauses a scheduled Flow whose directory no longer exists instead of ret
       health: { status: "error", message: "Flow directory /definitely/missing/flow/directory no longer exists" },
       latestRun: { status: "failed", error: "Flow directory /definitely/missing/flow/directory no longer exists" },
     })
+  }),
+)
+
+it.live("retries an occurrence in the worktree it kept and removes only with force off", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Schedule.Service
+    const fs = yield* FSUtil.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const scratch = mkdtempSync(path.join(tmpdir(), "flow-worktrees-"))
+    const created: string[] = []
+    const removals: { directory: string; force: boolean }[] = []
+    // The first removal is refused, as git refuses a worktree with changes; later ones succeed.
+    const worktree = {
+      ...context.worktree,
+      list: () => Effect.succeed([{ directory: AbsolutePath.make(source.location.directory) }]),
+      create: () =>
+        Effect.sync(() => {
+          const directory = mkdtempSync(path.join(scratch, "run-"))
+          created.push(directory)
+          return { directory: AbsolutePath.make(directory) }
+        }),
+      remove: (input: { directory: AbsolutePath; force: boolean }) => {
+        removals.push({ directory: input.directory, force: input.force })
+        return removals.length === 1 ? Effect.fail(new Error("worktree has changes")) : Effect.void
+      },
+    }
+    // Every start fails before its Session exists.
+    const session = { ...context.session, create: () => Effect.fail(new Error("model unavailable")) }
+    const flaky = { ...context, worktree, session } as typeof context
+    const backing = yield* schedules.create({
+      sessionID: source.id,
+      name: "Flow: Retry",
+      when: { type: "every", every: "1 hour" },
+      action: { type: "hook", prompt: "Retry" },
+    })
+    const retry = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
+      ...record("flw_retry", backing.id),
+      context: {
+        directory: source.location.directory,
+        projectID: source.projectID,
+        sessionID: source.id,
+        model: source.model,
+        agent: source.agent,
+      },
+    })
+    yield* context.storage.set(`flow:v1:${retry.id}`, JSON.stringify(retry))
+    const runtime = { fs, locks: new Map(), changed: () => Effect.void }
+    const runKey = `flow-run:v1:${retry.id}:flr_retry_${DateTime.toEpochMillis(backing.nextDueAt!)}`
+    const stored = () =>
+      context.storage.get(runKey).pipe(Effect.map((value) => Schema.decodeUnknownSync(KiloFlowRpc.Run)(JSON.parse(String(value)))))
+
+    // A refused removal keeps the worktree recorded on the failed run.
+    expect((yield* scheduled(flaky, schedules, backing, retry.id, runtime).pipe(Effect.exit))._tag).toBe("Failure")
+    expect(created).toHaveLength(1)
+    expect(yield* stored()).toMatchObject({ status: "failed", worktreeDirectory: created[0] })
+
+    // The retry of the same occurrence reuses it instead of creating another, and removes it once the start fails.
+    expect((yield* scheduled(flaky, schedules, backing, retry.id, runtime).pipe(Effect.exit))._tag).toBe("Failure")
+    expect(created).toHaveLength(1)
+    expect(removals).toEqual([
+      { directory: created[0], force: false },
+      { directory: created[0], force: false },
+    ])
+    expect((yield* stored()).worktreeDirectory).toBeUndefined()
   }),
 )
 

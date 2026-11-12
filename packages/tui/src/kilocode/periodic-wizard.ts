@@ -5,6 +5,7 @@
 import type { Plugin } from "@opencode/plugin/tui"
 import type { DialogPromptOptions, DialogSelectOption } from "@opencode/plugin/tui/context"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
+import { KiloFlowPermissions } from "@opencode/schema/kilocode/flow-permissions"
 import { KiloSchedule } from "@opencode/schema/kilocode/schedule"
 import { Project } from "@opencode/schema/project"
 import { Schedule } from "@opencode/schema/schedule"
@@ -50,8 +51,44 @@ type Step = {
 }
 
 const headings: Record<Mode, string> = { create: "New Flow", edit: "Edit Flow", repair: "Repair Flow" }
-const baseline = ["read", "glob", "grep"]
 const MINUTE = 60_000
+
+type GrantAction = "shell" | "edit" | "webfetch" | "websearch" | "external_directory" | "read" | "glob" | "grep" | "other"
+
+const grantActions: DialogSelectOption<GrantAction>[] = [
+  { title: "shell", value: "shell", description: "Run commands" },
+  { title: "edit", value: "edit", description: "Change files (write and patch too)" },
+  { title: "webfetch", value: "webfetch", description: "Fetch URLs" },
+  { title: "websearch", value: "websearch", description: "Search the web" },
+  { title: "external_directory", value: "external_directory", description: "Use paths outside the Flow directory" },
+  { title: "read", value: "read", description: "Read files (already allowed with *)" },
+  { title: "glob", value: "glob", description: "List files (already allowed with *)" },
+  { title: "grep", value: "grep", description: "Search file contents (already allowed with *)" },
+  { title: "Other (MCP tool)…", value: "other", description: "A tool an MCP server exposes" },
+]
+
+// The resource domain of each action, the same wording the flow_create tool gives agents.
+const grantHints: Record<GrantAction, { description: string; placeholder: string; value?: string }> = {
+  shell: {
+    description:
+      "Command text, matched against each parsed command, such as npm test or taskctl *. Never a directory: add external_directory for paths outside the Flow directory.",
+    placeholder: "npm test",
+  },
+  edit: { description: "File path or pattern in the Flow directory, such as reports/*.", placeholder: "reports/*" },
+  webfetch: {
+    description: "URL pattern; every redirect must match too, such as https://api.github.com/*.",
+    placeholder: "https://api.github.com/*",
+  },
+  websearch: { description: "Search query pattern, such as *release notes*.", placeholder: "*" },
+  external_directory: {
+    description: "Bounded absolute directory wildcard outside the Flow directory, such as /home/me/data/*.",
+    placeholder: "/home/me/data/*",
+  },
+  read: { description: "File path or pattern, such as docs/*.", placeholder: "docs/*" },
+  glob: { description: "Pattern text the run may list, such as src/**/*.ts.", placeholder: "src/**/*.ts" },
+  grep: { description: "Pattern text the run may search for.", placeholder: "TODO" },
+  other: { description: "MCP tools currently request every resource, so use *.", placeholder: "*", value: "*" },
+}
 
 const scheduleOptions: DialogSelectOption<ScheduleType>[] = [
   { title: "Every", value: "every", description: "Repeat at a fixed interval" },
@@ -140,6 +177,21 @@ export async function createFlow(context: PeriodicContext, open: Open, back: Ini
     broken ? fromFlow(broken) : await fromSession(context, source.id),
   )
   if (!draft) return open(back)
+  return submitCreate(context, open, back, source, draft, broken)
+}
+
+/**
+ * Confirms and creates the Flow. A refused approval or a server rejection returns to the Permissions step with the
+ * answers kept, so the allowlist can be fixed and submitted again.
+ */
+async function submitCreate(
+  context: PeriodicContext,
+  open: Open,
+  back: Initial,
+  source: { readonly id: string; readonly title: string },
+  draft: Draft,
+  broken: KiloFlowRpc.Info | undefined,
+): Promise<void> {
   const confirmed = await context.ui.dialog.confirm({
     title: broken ? `Repair ${broken.name}?` : "Create Flow?",
     message: summary(draft, [
@@ -153,6 +205,7 @@ export async function createFlow(context: PeriodicContext, open: Open, back: Ini
   focus(context, source.id)
   context.ui.toast.show({ variant: "info", message: "Approve the Flow's permissions in the session to finish." })
   const rpc = context.client.rpc(KiloFlowRpc.Definition)
+  let createFailure = ""
   const created = await rpc
     .create(
       {
@@ -164,14 +217,25 @@ export async function createFlow(context: PeriodicContext, open: Open, back: Ini
       options(context),
     )
     .catch((cause: unknown) => {
+      createFailure = errorMessage(cause)
       context.ui.toast.show({
         variant: "error",
         title: broken ? "Flow not repaired" : "Flow not created",
-        message: errorMessage(cause),
+        message: createFailure,
       })
       return undefined
     })
-  if (!created) return
+  if (!created) {
+    const permissions = await askPermissions(
+      context.ui.dialog,
+      stepTitle(broken ? "repair" : "create"),
+      draft.permissions,
+      "done",
+      `not created: ${createFailure}`,
+    )
+    if (permissions === undefined) return open(back)
+    return submitCreate(context, open, back, source, { ...draft, permissions }, broken)
+  }
   const failure =
     broken?.reference.type === "managed"
       ? await rpc.remove({ flowID: broken.reference.flowID }, options(context)).then(
@@ -194,6 +258,54 @@ export async function createFlow(context: PeriodicContext, open: Open, back: Ini
 }
 
 /**
+ * Deletes a Flow only after its exact name is typed, so a stray key cannot remove a scheduled task. Sessions and
+ * worktrees are kept unless `clean` is set, which removes the clean worktrees past runs left behind.
+ */
+export async function deleteFlow(context: PeriodicContext, open: Open, flow: KiloFlowRpc.Info, clean: boolean) {
+  if (flow.reference.type !== "managed") return
+  const flowID = flow.reference.flowID
+  const back = { key: flowID, detail: true }
+  context.ui.dialog.clear()
+  const typed = await context.ui.dialog.prompt({
+    title: `Delete ${flow.name}?`,
+    description: clean
+      ? "Type the Flow's name to delete it and remove its clean run worktrees. Sessions are kept. Esc cancels."
+      : "Type the Flow's name to delete it and its run records. Sessions and worktrees are kept. Esc cancels.",
+    value: "",
+  })
+  if (typed === undefined) return open(back)
+  if (typed.trim() !== flow.name.trim()) {
+    context.ui.toast.show({
+      variant: "warning",
+      title: "Flow not deleted",
+      message: `The name did not match "${flow.name}".`,
+    })
+    return open(back)
+  }
+  const removed = await context.client
+    .rpc(KiloFlowRpc.Definition)
+    .remove(clean ? { flowID, deleteWorktrees: true } : { flowID }, options(context))
+    .catch((cause: unknown) => {
+      context.ui.toast.show({ variant: "error", title: "Delete failed", message: errorMessage(cause) })
+      return undefined
+    })
+  if (!removed) return open(back)
+  const count = removed.removedWorktrees?.length ?? 0
+  context.ui.toast.show({
+    variant: "success",
+    message: `Deleted ${flow.name}.${count === 0 ? "" : ` Removed ${count} worktree${count === 1 ? "" : "s"}.`}`,
+  })
+  const kept = removed.keptWorktrees ?? []
+  if (kept.length > 0)
+    context.ui.toast.show({
+      variant: "warning",
+      title: `Kept ${kept.length} worktree${kept.length === 1 ? "" : "s"} with changes`,
+      message: kept.join("\n"),
+    })
+  open({})
+}
+
+/**
  * Edits a managed Flow and sends only the changed fields. A changed allowlist is approved again, so that update runs
  * with `/periodic` closed and the approval Session shown; any other change saves in the reopened dialog.
  */
@@ -204,6 +316,19 @@ export async function editFlow(context: PeriodicContext, open: Open, flow: KiloF
   const initial = fromFlow(flow)
   const draft = await collect(context.ui.dialog, "edit", initial)
   if (!draft) return open(back)
+  return submitEdit(context, open, flow, flowID, initial, draft)
+}
+
+/** Confirms and saves an edit. A rejected allowlist returns to the Permissions step with the other answers kept. */
+async function submitEdit(
+  context: PeriodicContext,
+  open: Open,
+  flow: KiloFlowRpc.Info,
+  flowID: KiloFlowRpc.ID,
+  initial: Draft,
+  draft: Draft,
+): Promise<void> {
+  const back = { key: flowID, detail: true }
   const changed = changes(initial, draft)
   if (Object.keys(changed).length === 0) {
     context.ui.toast.show({ variant: "info", message: "No changes." })
@@ -219,21 +344,43 @@ export async function editFlow(context: PeriodicContext, open: Open, flow: KiloF
   })
   if (!confirmed) return open(back)
   if (!changed.permissions) return open({ ...back, save: { flowID, ...changed } })
-  const route = context.ui.router.current()
-  const sessionID = route.type === "session" ? route.sessionID : undefined
+  const sessionID = approvalSession(context)
   context.ui.dialog.clear()
   if (!sessionID && flow.execution.mode === "fresh") focus(context, flow.execution.sourceSessionID)
   context.ui.toast.show({ variant: "info", message: "Approve the Flow's new permissions in the session to save." })
+  let saveFailure = ""
   const saved = await context.client
     .rpc(KiloFlowRpc.Definition)
     .update({ flowID, ...changed, ...(sessionID ? { sessionID } : {}) }, options(context))
     .catch((cause: unknown) => {
-      context.ui.toast.show({ variant: "error", title: "Flow not saved", message: errorMessage(cause) })
+      saveFailure = errorMessage(cause)
+      context.ui.toast.show({ variant: "error", title: "Flow not saved", message: saveFailure })
       return undefined
     })
-  if (!saved) return
+  if (!saved) {
+    const permissions = await askPermissions(
+      context.ui.dialog,
+      stepTitle("edit"),
+      draft.permissions,
+      "done",
+      `not saved: ${saveFailure}`,
+    )
+    if (permissions === undefined) return open(back)
+    return submitEdit(context, open, flow, flowID, initial, { ...draft, permissions })
+  }
   context.ui.toast.show({ variant: "success", message: `Saved ${saved.name}.` })
   open(back)
+}
+
+/**
+ * The Session shown now asks for approval, unless it runs a Flow: a run Session denies every permission outside its
+ * allowlist, so the request goes to the Flow's source Session instead.
+ */
+function approvalSession(context: PeriodicContext) {
+  const route = context.ui.router.current()
+  if (route.type !== "session") return
+  if (context.data.session.get(route.sessionID)?.metadata?.[KiloFlowRpc.sessionMetadata] !== undefined) return
+  return route.sessionID
 }
 
 /** The fields of an update that differ from the prefill; `ends: null` removes the limit. */
@@ -273,28 +420,6 @@ export function fromFlow(flow: KiloFlowRpc.Info): Draft {
   }
 }
 
-/** Parses `action: resource` entries, one per line or comma-separated. */
-export function parsePermissions(text: string) {
-  const entries = text
-    .split(/[\n,]/)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
-  const invalid = entries.find((entry) => !/^[^\s:]+\s*:\s*\S/.test(entry))
-  const grants = additional(
-    entries.map((entry) => ({
-      action: entry.slice(0, entry.indexOf(":")).trim(),
-      resource: entry.slice(entry.indexOf(":") + 1).trim(),
-    })),
-  )
-  return {
-    error: invalid === undefined ? undefined : `Use action: resource, such as shell: npm test. Not valid: ${invalid}`,
-    permissions: grants.filter(
-      (grant, index) =>
-        grants.findIndex((item) => item.action === grant.action && item.resource === grant.resource) === index,
-    ),
-  }
-}
-
 /** A short Flow name from the first line of its prompt. */
 export function deriveName(prompt: string) {
   const line = (prompt.split("\n").find((part) => part.trim().length > 0) ?? "").trim().replace(/\s+/g, " ")
@@ -306,7 +431,7 @@ export function deriveName(prompt: string) {
 
 /** The permissions a Flow holds beyond the baseline every Flow receives. */
 export function additional(permissions: readonly KiloFlowRpc.PermissionGrant[]) {
-  return permissions.filter((grant) => grant.resource !== "*" || !baseline.includes(grant.action))
+  return permissions.filter((grant) => !KiloFlowPermissions.inBaseline(grant))
 }
 
 export function permission(grant: KiloFlowRpc.PermissionGrant) {
@@ -351,8 +476,12 @@ export function options(context: Pick<PeriodicContext, "data">) {
   return { location: { directory: context.data.location.default().directory } }
 }
 
+function stepTitle(mode: Mode) {
+  return (step: string) => `${headings[mode]} · ${step}`
+}
+
 async function collect(dialog: Dialog, mode: Mode, draft: Draft): Promise<Draft | undefined> {
-  const title = (step: string) => `${headings[mode]} · ${step}`
+  const title = stepTitle(mode)
   const prompt = await ask(
     dialog,
     {
@@ -410,26 +539,127 @@ async function collect(dialog: Dialog, mode: Mode, draft: Draft): Promise<Draft 
   // A single run has nothing to stop.
   const end = type === "at" || type === "in" ? { type: "none" as const } : await askEnd(dialog, title, draft.end, timezone)
   if (end === undefined) return
-  const text = await ask(
+  const permissions = await askPermissions(dialog, title, draft.permissions)
+  if (permissions === undefined) return
+  return { prompt, name, schedule: { type, value: confirmed, timezone }, worktree, end, permissions }
+}
+
+/**
+ * The permission rows: the baseline every Flow holds, one row per additional grant, then Add and Done. Choosing a grant
+ * offers to edit or delete it; cancelling a nested step returns to the rows, and cancelling the rows cancels the wizard.
+ */
+export async function askPermissions(
+  dialog: Dialog,
+  title: (step: string) => string,
+  grants: readonly KiloFlowRpc.PermissionGrant[],
+  current: string = "done",
+  notice?: string,
+): Promise<readonly KiloFlowRpc.PermissionGrant[] | undefined> {
+  const choice = await dialog.select({
+    title: notice === undefined ? title("Permissions") : `${title("Permissions")} · ${notice}`,
+    options: permissionRows(grants),
+    current,
+  })
+  if (choice === undefined) return
+  if (choice === "done") return grants
+  if (choice === "baseline") return askPermissions(dialog, title, grants, choice, notice)
+  if (choice === "add") {
+    const added = await askGrant(dialog, title, grants)
+    if (!added) return askPermissions(dialog, title, grants, "add", notice)
+    return askPermissions(dialog, title, [...grants, added], `grant:${grants.length}`, notice)
+  }
+  const index = Number(choice.slice("grant:".length))
+  const others = grants.filter((_, position) => position !== index)
+  const operation = await dialog.select({
+    title: title(permission(grants[index])),
+    options: [
+      { title: "Edit", value: "edit" as const, description: "Change the action or the resource" },
+      { title: "Delete", value: "delete" as const, description: "Remove this permission" },
+    ],
+  })
+  if (operation === "delete") return askPermissions(dialog, title, others, "add", notice)
+  const edited = operation === "edit" ? await askGrant(dialog, title, others, grants[index]) : undefined
+  const next = edited ? grants.map((grant, position) => (position === index ? edited : grant)) : grants
+  return askPermissions(dialog, title, next, choice, notice)
+}
+
+function permissionRows(grants: readonly KiloFlowRpc.PermissionGrant[]): DialogSelectOption<string>[] {
+  return [
+    ...KiloFlowPermissions.baseline.map((grant) => ({
+      title: permission(grant),
+      value: "baseline",
+      category: "Always included",
+      description: "Every Flow can read and search its directory",
+    })),
+    ...grants.map((grant, index) => ({
+      title: permission(grant),
+      value: `grant:${index}`,
+      category: "Additional",
+      description: "Choose to edit or delete",
+    })),
+    { title: "Add permission…", value: "add", category: "Actions", description: "Allow another tool unattended" },
+    {
+      title: "Done",
+      value: "done",
+      category: "Actions",
+      description:
+        grants.length === 0 ? "Only the baseline" : `${grants.length} additional permission${grants.length === 1 ? "" : "s"}`,
+    },
+  ]
+}
+
+/** Asks for one grant's action, then its resource, checked with the server's rules; undefined when cancelled. */
+async function askGrant(
+  dialog: Dialog,
+  title: (step: string) => string,
+  others: readonly KiloFlowRpc.PermissionGrant[],
+  existing?: KiloFlowRpc.PermissionGrant,
+): Promise<KiloFlowRpc.PermissionGrant | undefined> {
+  const known = (action: string): action is GrantAction => Object.hasOwn(grantHints, action) && action !== "other"
+  const choice = await dialog.select({
+    title: title("Permission action"),
+    options: grantActions,
+    current: existing ? (known(existing.action) ? existing.action : "other") : undefined,
+  })
+  if (choice === undefined) return
+  const action =
+    choice === "other"
+      ? await ask(
+          dialog,
+          {
+            title: title("MCP tool"),
+            description: "Name of the MCP tool as the model sees it, such as github_create_issue.",
+            value: existing && !known(existing.action) ? existing.action : undefined,
+          },
+          (value) =>
+            /^\S+$/.test(value)
+              ? KiloFlowPermissions.check({ action: value, resource: "*" })
+              : "Enter one tool name without spaces.",
+        )
+      : choice
+  if (action === undefined) return
+  const hint = grantHints[choice]
+  const resource = await ask(
     dialog,
     {
-      title: title("Permissions"),
-      description:
-        "Additional unattended permissions as action: resource, comma-separated. read, glob and grep are always included. Leave empty for none.",
-      placeholder: "shell: npm test, edit: reports/*",
-      value: draft.permissions.map(permission).join(", "),
+      title: title(`${action} resource`),
+      description: hint.description,
+      placeholder: hint.placeholder,
+      value: existing?.action === action ? existing.resource : hint.value,
     },
-    (input) => parsePermissions(input).error,
+    (value) => grantProblem({ action, resource: value }, others),
   )
-  if (text === undefined) return
-  return {
-    prompt,
-    name,
-    schedule: { type, value: confirmed, timezone },
-    worktree,
-    end,
-    permissions: parsePermissions(text).permissions,
-  }
+  if (resource === undefined) return
+  return { action, resource }
+}
+
+function grantProblem(grant: KiloFlowRpc.PermissionGrant, others: readonly KiloFlowRpc.PermissionGrant[]) {
+  if (grant.resource.length === 0) return "Enter a resource pattern."
+  const problem = KiloFlowPermissions.check(grant)
+  if (problem) return problem
+  if (KiloFlowPermissions.inBaseline(grant)) return `${permission(grant)} is always included.`
+  if (others.some((other) => other.action === grant.action && other.resource === grant.resource))
+    return `${permission(grant)} is already in the list.`
 }
 
 async function askEnd(

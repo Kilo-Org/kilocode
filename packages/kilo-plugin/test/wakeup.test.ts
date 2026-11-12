@@ -307,6 +307,28 @@ describe("wakeup service", () => {
     }),
   )
 
+  it.effect("reads prompts without reconciling away a paused schedule or its record", () =>
+    Effect.gen(function* () {
+      const { wake, memory, infos } = setup()
+      infos.set("sch_active", decodeInfo(seed("sch_active")))
+      memory.set("wakeup:wku_active", record("wku_active", "sch_active", { prompt: "check the build" }) as Schema.Json)
+      infos.set("sch_paused", decodeInfo({ ...seed("sch_paused"), status: "paused" }))
+      memory.set("wakeup:wku_paused", record("wku_paused", "sch_paused", { prompt: "check the deploy" }) as Schema.Json)
+
+      expect(yield* wake.prompts(["sch_active", "sch_paused"])).toEqual({
+        sch_active: "check the build",
+        sch_paused: "check the deploy",
+      })
+      expect(memory.has("wakeup:wku_paused")).toBe(true)
+      expect(infos.has("sch_paused")).toBe(true)
+
+      // `list` reconciles, so it drops the paused row and its record; `prompts` above left them intact.
+      expect(yield* wake.list(sessionID)).toHaveLength(1)
+      expect(memory.has("wakeup:wku_paused")).toBe(false)
+      expect(infos.has("sch_paused")).toBe(false)
+    }),
+  )
+
   it.effect("reports only future wakeups in a directory", () =>
     Effect.gen(function* () {
       const { wake, memory, infos } = setup()

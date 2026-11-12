@@ -13,6 +13,12 @@ import { SessionID } from "../session-id.js"
 
 const portable = Schema.toStandardSchemaV1
 
+/** Session metadata key the flow plugin sets on every run Session. */
+export const sessionMetadata = "kilocode.flow"
+
+/** How many run records the flow plugin keeps for each of its two kinds, real runs and skipped placeholders. */
+export const retainedRuns = 20
+
 export const ID = Schema.String.check(Schema.isStartingWith("flw_")).pipe(
   Schema.brand("KiloFlow.ID"),
   Schema.annotate({ identifier: "KiloFlow.ID" }),

@@ -11,11 +11,11 @@ import PeriodicPlugin, { FlowsDialog } from "../../src/kilocode/periodic"
 import {
   changes,
   createFlow,
+  deleteFlow,
   deriveName,
   editFlow,
   endsLabel,
   fromFlow,
-  parsePermissions,
   type PeriodicContext,
 } from "../../src/kilocode/periodic-wizard"
 
@@ -137,15 +137,17 @@ function context(
     commands?: KeymapCommand[]
     route?: { type: "session"; sessionID: string } | { type: "home" }
     script?: {
-      prompts?: Record<string, string>
-      selects?: Record<string, string>
+      prompts?: Record<string, string | string[]>
+      selects?: Record<string, string | string[]>
       confirm?: boolean
     }
     onListCall?: (options: { signal?: AbortSignal } | undefined) => void
     message?: string
+    wakeups?: (scheduleID: string) => string | undefined
   } = {},
 ) {
   const calls: { method: Method; input: unknown }[] = []
+  const wakeupCalls: { method: "list" | "prompts"; input: unknown }[] = []
   const toasts: { variant: string; title?: string; message: string }[] = []
   const cleared: boolean[] = []
   const focused: string[] = []
@@ -153,6 +155,14 @@ function context(
   const alerts: { title?: string; message: string }[] = []
   const listeners = new Set<(event: { data: KiloFlowRpc.Changed }) => void>()
   const scripts = { prompts: {}, selects: {}, confirm: true, ...settings.script }
+  const prompts: { title: string; value?: string; description?: string }[] = []
+  const selects: { title: string; current?: string; options: readonly { title: string; value: unknown }[] }[] = []
+  // A scripted answer is a value, or a queue the steps consume in order (a step asked again takes the next one).
+  const answer = (answers: Record<string, string | string[]>, title: string) => {
+    const scripted = Object.entries(answers).find(([key]) => title.includes(key))?.[1]
+    if (!Array.isArray(scripted)) return scripted
+    return scripted.shift()
+  }
   const active = flow({ id: "flw_active", name: "Active", status: "active", managed: true })
   const handlers = settings.handlers ?? {}
   function record<Value>(method: Method, input: unknown, run: () => Promise<Value>) {
@@ -184,9 +194,26 @@ function context(
     },
   }
   const location = { directory: "/workspace" }
+  const wakeupRpc = {
+    list: (input: { sessionID: string }) => {
+      wakeupCalls.push({ method: "list", input })
+      return Promise.resolve({ wakeups: [] })
+    },
+    prompts: (input: { scheduleIDs: readonly string[] }) => {
+      wakeupCalls.push({ method: "prompts", input })
+      return Promise.resolve({
+        prompts: Object.fromEntries(
+          input.scheduleIDs.flatMap((id) => {
+            const prompt = settings.wakeups?.(id)
+            return prompt ? [[id, prompt] as const] : []
+          }),
+        ),
+      })
+    },
+  }
   const fake = {
     client: {
-      rpc: () => rpc,
+      rpc: (definition: { id: string }) => (definition.id === "kilocode.wakeup" ? wakeupRpc : rpc),
       location: { get: () => Promise.resolve({ project: { id: "proj_tui" } }) },
       session: {
         list: () =>
@@ -206,7 +233,12 @@ function context(
       location: { default: () => location },
       on: () => () => undefined,
       session: {
-        get: (sessionID: string) => ({ id: sessionID, title: "Weekend review" }),
+        // A `ses_flow_*` Session is a Flow run, which the flow plugin marks with its metadata.
+        get: (sessionID: string) => ({
+          id: sessionID,
+          title: "Weekend review",
+          ...(sessionID.startsWith("ses_flow") ? { metadata: { "kilocode.flow": { flowID: "flw_edit" } } } : {}),
+        }),
         message: {
           sync: () => Promise.resolve(),
           list: () => [
@@ -230,16 +262,18 @@ function context(
         clear() {
           cleared.push(true)
         },
-        prompt: (prompt: { title: string; value?: string; placeholder?: string }) =>
-          Promise.resolve(
-            Object.entries(scripts.prompts).find(([key]) => prompt.title.includes(key))?.[1] ??
-              prompt.value ??
-              "text",
-          ),
-        select: (select: { title: string; current?: string }) =>
-          Promise.resolve(
-            Object.entries(scripts.selects).find(([key]) => select.title.includes(key))?.[1] ?? select.current,
-          ),
+        prompt: (prompt: { title: string; value?: string; placeholder?: string; description?: string }) => {
+          prompts.push(prompt)
+          return Promise.resolve(answer(scripts.prompts, prompt.title) ?? prompt.value ?? "text")
+        },
+        select: (select: { title: string; current?: string; options: readonly { title: string; value: unknown }[] }) => {
+          selects.push(select)
+          return Promise.resolve(
+            Object.keys(scripts.selects).some((key) => select.title.includes(key))
+              ? answer(scripts.selects, select.title)
+              : select.current,
+          )
+        },
         confirm: () => Promise.resolve(scripts.confirm),
         alert: (alert: { title?: string; message: string }) => {
           alerts.push(alert)
@@ -270,11 +304,14 @@ function context(
   return {
     context: fake as unknown as PeriodicContext,
     calls,
+    wakeupCalls,
     toasts,
     cleared,
     focused,
     destinations,
     alerts,
+    prompts,
+    selects,
     emit: (event: KiloFlowRpc.Changed) => listeners.forEach((handler) => handler({ data: event })),
     methods: () => calls.map((call) => call.method),
   }
@@ -297,7 +334,11 @@ test("registers /periodic as a large popup with a palette entry", async () => {
   let dialogOptions: unknown
   let cleared = 0
   let unregistered = 0
+  const listed = Promise.withResolvers<KiloFlowRpc.ListOutput>()
+  const base = context({ handlers: { list: () => listed.promise } }).context
   const cleanup = await PeriodicPlugin.setup({
+    client: base.client,
+    data: base.data,
     keymap: {
       layer(factory: () => { commands: readonly KeymapCommand[] }) {
         commands.push(...factory().commands)
@@ -328,6 +369,13 @@ test("registers /periodic as a large popup with a palette entry", async () => {
   const open = commands.find((entry) => entry.id === "kilo.periodic")
   expect(open?.slash).toEqual({ name: "periodic" })
   expect(open?.palette).toBeTrue()
+  // Suggested only once the launch project is known to have a managed Flow.
+  const suggested = open?.suggested
+  if (typeof suggested !== "function") throw new Error("Expected a reactive suggestion")
+  expect(suggested()).toBeFalse()
+  listed.resolve(output([flow({ id: "flw_live", name: "Live", status: "active", managed: true })]))
+  await Bun.sleep(0)
+  expect(suggested()).toBeTrue()
   open?.run()
   open?.run()
   expect(renderDialog).toBeFunction()
@@ -360,7 +408,6 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
       "e",
       "space",
       "d",
-      "y",
       "w",
       "v",
     ])
@@ -607,8 +654,9 @@ test("falls back to Session navigation when tabs are unavailable", async () => {
   }
 })
 
-test("runs, disables, enables, and deletes a managed Flow from its details", async () => {
+test("runs, disables, enables, and offers deletion from a managed Flow's details", async () => {
   const commands: KeymapCommand[] = []
+  const deleted: [string, boolean][] = []
   const active = flow({ id: "flw_control", name: "Controlled", status: "active", managed: true, worktree: "new" })
   const fake = context({
     commands,
@@ -619,31 +667,41 @@ test("runs, disables, enables, and deletes a managed Flow from its details", asy
       run: () => Promise.resolve(run("flw_control")),
     },
   })
-  const app = await testRender(() => <FlowsDialog context={fake.context} />, { width: 88, height: 24 })
+  const app = await testRender(
+    () => (
+      <FlowsDialog
+        context={fake.context}
+        actions={{
+          create: () => {},
+          edit: () => {},
+          repair: () => {},
+          delete: (flow, clean) => {
+            deleted.push([flow.name, clean])
+          },
+        }}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
   try {
     app.renderer.start()
     await app.waitForFrame((frame) => frame.includes("Controlled"))
     command(commands, "return").run()
     await app.waitForFrame((frame) => frame.includes("Disable") && frame.includes("Run now"))
     command(commands, "d").run()
-    await app.waitForFrame((frame) => frame.includes("Delete Controlled?"))
-    expect(command(commands, "n").run()).toBeUndefined()
-    await app.waitForFrame((frame) => frame.includes("Periodic / Controlled") && !frame.includes("Delete Controlled?"))
-    command(commands, "d").run()
-    await app.waitForFrame((frame) => frame.includes("Delete Controlled?"))
-    command(commands, "escape").run()
-    await app.waitForFrame((frame) => frame.includes("Periodic / Controlled") && !frame.includes("Delete Controlled?"))
+    expect(deleted).toEqual([["Controlled", false]])
+    command(commands, "w").run()
+    expect(deleted).toEqual([
+      ["Controlled", false],
+      ["Controlled", true],
+    ])
     command(commands, "space").run()
     await app.waitForFrame((frame) => frame.includes("Disabled Controlled"))
     command(commands, "space").run()
     await app.waitForFrame((frame) => frame.includes("Enabled Controlled"))
     command(commands, "r").run()
     await app.waitForFrame((frame) => frame.includes("Starting Controlled"))
-    command(commands, "d").run()
-    await app.waitForFrame((frame) => frame.includes("Delete Controlled?") && frame.includes("retained run records"))
-    command(commands, "y").run()
-    await app.waitForFrame((frame) => frame.includes("Deleted Controlled") && frame.includes("No periodic flows"))
-    expect(fake.methods().filter((method) => method !== "runs")).toEqual(["list", "pause", "resume", "run", "remove"])
+    expect(fake.methods().filter((method) => method !== "runs")).toEqual(["list", "pause", "resume", "run"])
   } finally {
     app.renderer.destroy()
   }
@@ -696,75 +754,64 @@ test("a late run result leaves the history of the Flow opened since", async () =
   }
 })
 
-test("deletes a Flow together with the worktrees its runs left behind", async () => {
-  const commands: KeymapCommand[] = []
+test("deletes a Flow only after its name is typed and reports kept worktrees", async () => {
   const active = flow({ id: "flw_clean", name: "Clean", status: "active", managed: true, worktree: "new" })
   const fake = context({
-    commands,
     handlers: {
-      list: () => Promise.resolve(output([active])),
       remove: () =>
         Promise.resolve({
           removedWorktrees: [AbsolutePath.make("/tmp/kilo/flw_clean-1")],
           keptWorktrees: [AbsolutePath.make("/tmp/kilo/flw_clean-2")],
         }),
     },
+    script: { prompts: { "Delete Clean?": "Clean" } },
   })
-  const app = await testRender(() => <FlowsDialog context={fake.context} />, { width: 88, height: 30 })
-  try {
-    app.renderer.start()
-    await app.waitForFrame((frame) => frame.includes("Clean") && frame.includes("1 task"))
-    command(commands, "return").run()
-    await app.waitForFrame((frame) => frame.includes("Delete"))
-    command(commands, "d").run()
-    await app.waitForFrame((frame) => frame.includes("Cleaning removes the run worktrees without changes"))
-    command(commands, "w").run()
-    await app.waitForFrame((frame) => frame.includes("Deleted Clean") && frame.includes("Removed 1 worktree"))
-    expect(fake.calls.find((call) => call.method === "remove")?.input).toEqual({
-      flowID: "flw_clean",
-      deleteWorktrees: true,
-    })
-    expect(fake.toasts).toContainEqual({
-      variant: "warning",
-      title: "Kept 1 worktree with changes",
-      message: "/tmp/kilo/flw_clean-2",
-    })
-  } finally {
-    app.renderer.destroy()
-  }
+  const opened: unknown[] = []
+  await deleteFlow(fake.context, (initial) => opened.push(initial), active, true)
+  expect(fake.calls.find((call) => call.method === "remove")?.input).toEqual({
+    flowID: "flw_clean",
+    deleteWorktrees: true,
+  })
+  expect(fake.toasts).toContainEqual({
+    variant: "success",
+    message: "Deleted Clean. Removed 1 worktree.",
+  })
+  expect(fake.toasts).toContainEqual({
+    variant: "warning",
+    title: "Kept 1 worktree with changes",
+    message: "/tmp/kilo/flw_clean-2",
+  })
+  expect(opened).toEqual([{}])
 })
 
-test("recovers when a Flow disappears during delete confirmation", async () => {
-  const commands: KeymapCommand[] = []
-  let calls = 0
-  const fake = context({
-    commands,
-    handlers: {
-      list: () => {
-        calls++
-        return Promise.resolve(
-          calls === 1
-            ? output([flow({ id: "flw_removed", name: "Removed elsewhere", status: "active", managed: true })])
-            : output(),
-        )
-      },
-    },
+test("keeps a Flow when the typed name does not match", async () => {
+  const active = flow({ id: "flw_keep", name: "Keep", status: "active", managed: true })
+  const fake = context({ script: { prompts: { "Delete Keep?": "Kep" } } })
+  const opened: unknown[] = []
+  await deleteFlow(fake.context, (initial) => opened.push(initial), active, false)
+  expect(fake.methods()).not.toContain("remove")
+  expect(fake.toasts).toContainEqual({
+    variant: "warning",
+    title: "Flow not deleted",
+    message: 'The name did not match "Keep".',
   })
-  const app = await testRender(() => <FlowsDialog context={fake.context} />, { width: 88, height: 24 })
-  try {
-    app.renderer.start()
-    await app.waitForFrame((frame) => frame.includes("Removed elsewhere"))
-    command(commands, "return").run()
-    await app.waitForFrame((frame) => frame.includes("Periodic / Removed elsewhere"))
-    command(commands, "d").run()
-    await app.waitForFrame((frame) => frame.includes("Delete Removed elsewhere?"))
-    command(commands, "ctrl+r").run()
-    await app.waitForFrame((frame) => frame.includes("No periodic flows"))
-    expect(enabled(command(commands, "r"))).toBeTrue()
-    expect(enabled(command(commands, "y"))).toBeFalse()
-  } finally {
-    app.renderer.destroy()
-  }
+  expect(opened).toEqual([{ key: "flw_keep", detail: true }])
+})
+
+test("keeps a Flow and reports a failed delete", async () => {
+  const active = flow({ id: "flw_removed", name: "Removed elsewhere", status: "active", managed: true })
+  const fake = context({
+    handlers: { remove: () => Promise.reject(new Error("Flow does not exist")) },
+    script: { prompts: { "Delete Removed elsewhere?": "Removed elsewhere" } },
+  })
+  const opened: unknown[] = []
+  await deleteFlow(fake.context, (initial) => opened.push(initial), active, false)
+  expect(fake.toasts).toContainEqual({
+    variant: "error",
+    title: "Delete failed",
+    message: "Flow does not exist",
+  })
+  expect(opened).toEqual([{ key: "flw_removed", detail: true }])
 })
 
 test("shows failed and rejected run attempts as errors", async () => {
@@ -875,6 +922,38 @@ test("labels agent tasks, internal schedules and native prompts as read-only", a
   }
 })
 
+test("shows the prompt of an agent task whose schedule row predates storing it", async () => {
+  const commands: KeymapCommand[] = []
+  const fake = context({
+    commands,
+    handlers: {
+      list: () =>
+        Promise.resolve(
+          output([
+            flow({ id: "sch_old", name: "Wakeup: nightly", status: "active", action: "hook", prompt: "" }),
+            flow({ id: "sch_orphan", name: "Wakeup: missing owner", status: "active", action: "hook", prompt: "" }),
+          ]),
+        ),
+    },
+    wakeups: (scheduleID) => (scheduleID === "sch_old" ? "check the nightly build" : undefined),
+  })
+  const app = await testRender(() => <FlowsDialog context={fake.context} />, { width: 100, height: 30 })
+  try {
+    app.renderer.start()
+    await app.waitForFrame((frame) => frame.includes("Wakeup: nightly"))
+    command(commands, "return").run()
+    await app.waitForFrame((frame) => frame.includes("check the nightly build"))
+    // One read for every blank row, and no `list` that would reconcile and could drop a paused or finished row.
+    expect(fake.wakeupCalls.filter((call) => call.method === "prompts")).toHaveLength(1)
+    expect(fake.wakeupCalls.find((call) => call.method === "prompts")?.input).toEqual({
+      scheduleIDs: ["sch_old", "sch_orphan"],
+    })
+    expect(fake.wakeupCalls.some((call) => call.method === "list")).toBeFalse()
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
 test("keeps the last successful result visible and marks it stale after refresh fails", async () => {
   const commands: KeymapCommand[] = []
   let calls = 0
@@ -963,7 +1042,10 @@ test("creates a Flow from the current session through the wizard", async () => {
   const created = flow({ id: "flw_created", name: "Review the weekend commits", status: "active", managed: true })
   const fake = context({
     handlers: { create: () => Promise.resolve(created) },
-    script: { prompts: { Permissions: "shell: npm test" }, selects: { Schedule: "every" } },
+    script: {
+      prompts: { "shell resource": "awk '{print $1,$2}' report.csv" },
+      selects: { Schedule: "every", Permissions: ["add", "done"], "Permission action": "shell" },
+    },
   })
   const opened: unknown[] = []
   await createFlow(fake.context, (initial) => opened.push(initial), {})
@@ -972,7 +1054,8 @@ test("creates a Flow from the current session through the wizard", async () => {
     prompt: "Review the weekend commits",
     name: "Review the weekend commits",
     worktree: "reuse",
-    permissions: [{ action: "shell", resource: "npm test" }],
+    // One field per resource, so a comma stays part of the command.
+    permissions: [{ action: "shell", resource: "awk '{print $1,$2}' report.csv" }],
     when: { tz: expect.any(String) },
   })
   expect(fake.cleared.length).toBeGreaterThan(0)
@@ -980,8 +1063,46 @@ test("creates a Flow from the current session through the wizard", async () => {
   expect(opened).toEqual([{ key: "flw_created" }])
 })
 
-test("reports a rejected Flow creation without opening", async () => {
-  const fake = context({ handlers: { create: () => Promise.reject(new Error("permission denied")) } })
+test("lists the baseline as fixed rows and the additional grants as editable rows", async () => {
+  const fake = context({ script: { selects: { Permissions: "done" } } })
+  await createFlow(fake.context, () => undefined, {})
+  const rows = fake.selects.find((select) => select.title.includes("Permissions"))?.options ?? []
+  expect(rows.map((row) => [row.title, row.value])).toEqual([
+    ["read: *", "baseline"],
+    ["glob: *", "baseline"],
+    ["grep: *", "baseline"],
+    ["Add permission…", "add"],
+    ["Done", "done"],
+  ])
+})
+
+test("asks for a rejected resource again with the server's rule and the value kept", async () => {
+  const fake = context({
+    script: {
+      prompts: { "shell resource": ["/home/user/*", "npm test"], "MCP tool": "github_create_issue" },
+      selects: { Permissions: ["add", "add", "done"], "Permission action": ["shell", "other"] },
+    },
+  })
+  await createFlow(fake.context, () => undefined, {})
+  const retried = fake.prompts.filter((prompt) => prompt.title.includes("shell resource"))
+  expect(retried).toHaveLength(2)
+  expect(retried[1]?.value).toBe("/home/user/*")
+  expect(retried[1]?.description).toContain("use external_directory: /home/user/*")
+  expect(fake.calls.find((call) => call.method === "create")?.input).toMatchObject({
+    permissions: [
+      { action: "shell", resource: "npm test" },
+      // An MCP tool's resource defaults to `*`.
+      { action: "github_create_issue", resource: "*" },
+    ],
+  })
+})
+
+test("returns to the permission step when the creation is rejected", async () => {
+  const fake = context({
+    handlers: { create: () => Promise.reject(new Error("permission denied")) },
+    // The wizard's Permissions step, then the retry: cancelling it reopens /periodic.
+    script: { selects: { Permissions: ["done"] } },
+  })
   const opened: unknown[] = []
   await createFlow(fake.context, (initial) => opened.push(initial), { key: "flw_active", detail: true })
   expect(fake.toasts).toContainEqual({
@@ -989,7 +1110,8 @@ test("reports a rejected Flow creation without opening", async () => {
     title: "Flow not created",
     message: "permission denied",
   })
-  expect(opened).toEqual([])
+  expect(fake.selects.filter((select) => select.title.includes("Permissions"))).toHaveLength(2)
+  expect(opened).toEqual([{ key: "flw_active", detail: true }])
 })
 
 test("editing sends only changed fields and re-approves a new allowlist", async () => {
@@ -1015,7 +1137,10 @@ test("editing sends only changed fields and re-approves a new allowlist", async 
 
   const approvedContext = context({
     handlers: { update: () => Promise.resolve(current) },
-    script: { prompts: { Permissions: "shell: npm test" } },
+    script: {
+      prompts: { "shell resource": "npm test" },
+      selects: { Permissions: ["grant:0", "done"], "shell: taskctl": "edit", "Permission action": "shell" },
+    },
   })
   await editFlow(approvedContext.context, (initial) => opened.push(initial), current)
   expect(approvedContext.cleared).toEqual([true])
@@ -1024,6 +1149,73 @@ test("editing sends only changed fields and re-approves a new allowlist", async 
     permissions: [{ action: "shell", resource: "npm test" }],
     sessionID: "ses_tui",
   })
+})
+
+test("deleting and adding rows rejects baseline and duplicate grants", async () => {
+  const current = flow({
+    id: "flw_edit",
+    name: "Weekly report",
+    status: "active",
+    managed: true,
+    permissions: [
+      { action: "shell", resource: "taskctl *" },
+      { action: "edit", resource: "reports/*" },
+    ],
+  })
+  const fake = context({
+    handlers: { update: () => Promise.resolve(current) },
+    script: {
+      prompts: { "read resource": ["*", "reports/*"], "edit resource": ["reports/*", "docs/*"] },
+      selects: {
+        Permissions: ["grant:0", "add", "add", "done"],
+        "shell: taskctl": "delete",
+        "Permission action": ["read", "edit"],
+      },
+    },
+  })
+  await editFlow(fake.context, () => undefined, current)
+  const read = fake.prompts.filter((prompt) => prompt.title.includes("read resource"))
+  expect(read[1]?.description).toBe("read: * is always included.")
+  const edit = fake.prompts.filter((prompt) => prompt.title.includes("edit resource"))
+  expect(edit[1]?.description).toBe("edit: reports/* is already in the list.")
+  expect(fake.calls.find((call) => call.method === "update")?.input).toMatchObject({
+    permissions: [
+      { action: "edit", resource: "reports/*" },
+      { action: "read", resource: "reports/*" },
+      { action: "edit", resource: "docs/*" },
+    ],
+  })
+})
+
+test("treats an existing grant action that only exists on the prototype as an MCP tool", async () => {
+  const current = flow({
+    id: "flw_proto",
+    name: "Prototype",
+    status: "active",
+    managed: true,
+    permissions: [{ action: "toString", resource: "*" }],
+  })
+  const fake = context({
+    handlers: { update: () => Promise.resolve(current) },
+    script: { selects: { Permissions: ["grant:0", "done"], "toString: *": "edit" } },
+  })
+  await editFlow(fake.context, () => undefined, current)
+  const action = fake.selects.find((select) => select.title.includes("Permission action"))
+  expect(action?.current).toBe("other")
+})
+
+test("asks for approval in the source session when edited from a Flow run session", async () => {
+  const current = flow({ id: "flw_edit", name: "Weekly report", status: "active", managed: true })
+  const fake = context({
+    route: { type: "session", sessionID: "ses_flow_run" },
+    handlers: { update: () => Promise.resolve(current) },
+    script: {
+      selects: { Permissions: ["grant:0", "done"], "shell: taskctl": "delete" },
+    },
+  })
+  await editFlow(fake.context, () => undefined, current)
+  expect(fake.calls.find((call) => call.method === "update")?.input).toEqual({ flowID: "flw_edit", permissions: [] })
+  expect(fake.focused).toEqual(["ses_tui"])
 })
 
 test("repairing creates the replacement and deletes the broken Flow", async () => {
@@ -1056,14 +1248,6 @@ test("maps Flow definitions to wizard drafts, changes and permissions", () => {
     permissions: [{ action: "shell", resource: "git status" }],
   })
   expect(changes(fromFlow(current), { ...fromFlow(current), name: "Renamed" })).toEqual({ name: "Renamed" })
-  expect(parsePermissions("shell: npm test, edit: reports/*\nshell: npm test")).toEqual({
-    error: undefined,
-    permissions: [
-      { action: "shell", resource: "npm test" },
-      { action: "edit", resource: "reports/*" },
-    ],
-  })
-  expect(parsePermissions("nope").error).toContain("action: resource")
   expect(deriveName("First line\nSecond line")).toBe("First line")
   expect(deriveName("x".repeat(60))).toBe(`${"x".repeat(40)}…`)
   expect(endsLabel({ times: 1 })).toBe("After 1 run")
