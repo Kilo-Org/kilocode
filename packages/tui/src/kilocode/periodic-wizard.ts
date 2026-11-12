@@ -255,8 +255,16 @@ const ExistsError = Schema.Struct({
   data: Schema.Struct({ flowID: KiloFlowRpc.ID }),
 })
 
-/** Deletes the Flow a repair replaces, then reports the outcome of the create. */
-async function finishCreate(context: PeriodicContext, created: KiloFlowRpc.Info, broken: KiloFlowRpc.Info | undefined) {
+/**
+ * Deletes the Flow a repair replaces, then reports the outcome of the create. `announce: false` skips the success toast
+ * when the Flow was just saved as an edit, which already reported it.
+ */
+async function finishCreate(
+  context: PeriodicContext,
+  created: KiloFlowRpc.Info,
+  broken: KiloFlowRpc.Info | undefined,
+  announce = true,
+) {
   const failure =
     broken?.reference.type === "managed"
       ? await context.client
@@ -273,7 +281,7 @@ async function finishCreate(context: PeriodicContext, created: KiloFlowRpc.Info,
       title: "Broken Flow kept",
       message: `Created ${created.name}, but couldn't delete ${broken?.name}: ${failure}`,
     })
-  if (!failure)
+  if (!failure && announce)
     context.ui.toast.show({
       variant: "success",
       message: `${broken ? "Repaired" : "Created"} ${created.name}.${created.nextRunAt === undefined ? "" : ` Next run ${new Date(created.nextRunAt).toLocaleString()}.`}`,
@@ -322,7 +330,8 @@ async function resumeCreated(
     draft,
     `${existing.name} was already created. Save your changes?`,
   )
-  if (result === "saved") await finishCreate(context, existing, broken)
+  // The edit already reported the save; only a repair still has its broken Flow to delete.
+  if (result === "saved") await finishCreate(context, existing, broken, false)
 }
 
 /**

@@ -1155,6 +1155,9 @@ test("turns a retried create that already succeeded into an edit of that Flow", 
     permissions: [{ action: "shell", resource: "npm test" }],
   })
   expect(fake.toasts.some((toast) => toast.title === "Flow not created")).toBeFalse()
+  // The save is reported once; no stale "Created" toast follows it.
+  expect(fake.toasts.filter((toast) => toast.message.startsWith("Saved Weekly report"))).toHaveLength(1)
+  expect(fake.toasts.some((toast) => toast.message.startsWith("Created "))).toBeFalse()
   expect(opened).toContainEqual({ key: "flw_conflict", detail: true })
 })
 
