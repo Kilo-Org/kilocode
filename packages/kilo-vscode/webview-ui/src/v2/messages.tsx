@@ -16,7 +16,7 @@ import { useVSCode } from "../context/vscode"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
-import { instructionFilesByRead } from "./instruction-files"
+import { collectInstructionFiles } from "./instruction-files"
 import { QuestionDock } from "./question"
 import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
@@ -28,6 +28,7 @@ import {
   retainTurn,
   shiftedScroll,
   transcriptRows,
+  withoutReportedNotices,
   type TranscriptHold,
   type TranscriptPartition,
   type TranscriptRow,
@@ -143,7 +144,7 @@ export function MessageList(props: {
   }
   const messages = createMemo(() => visibleMessages(allMessages(), revert()))
   const revertCount = createMemo(() => revertedCount(allMessages(), revert()))
-  const instructionFiles = createMemo(() => instructionFilesByRead(messages(), v2.directory))
+  const instructions = createMemo(() => collectInstructionFiles(messages(), v2.directory))
   const sentReferences = createMemo(() =>
     messages().flatMap((message) =>
       message.type === "user"
@@ -172,7 +173,12 @@ export function MessageList(props: {
   props.onScrollToBottomReady?.(() => autoScroll.resume())
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
-  const rows = createMemo<TranscriptRow[]>((previous) => transcriptRows(messages(), previous))
+  // An instruction load a read card reports is shown there, so its transcript
+  // notice row would repeat the same line. The row is dropped after the rows are
+  // built, so the turn grouping still sees the instruction message.
+  const rows = createMemo<TranscriptRow[]>((previous) =>
+    withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
+  )
   // A run that waits on a permission reports idle while its last step can still
   // change, so an unfinished last step also keeps its turn live.
   const activeTurn = () => {
@@ -803,7 +809,7 @@ export function MessageList(props: {
           row={row()}
           session={props.session ?? ""}
           actions={props.actions}
-          instructionFiles={(partID) => instructionFiles().get(partID)}
+          instructionFiles={(partID) => instructions().byRead.get(partID)}
           highlight={() => highlight()}
           searchActive={activeKey() === key}
           onViewTurnChanges={props.onViewTurnChanges}
