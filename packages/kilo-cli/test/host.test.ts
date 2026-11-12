@@ -435,3 +435,15 @@ function eventually<A>(effect: Effect.Effect<A>, predicate: (value: A) => boolea
     return yield* eventually(effect, predicate, remaining - 1)
   })
 }
+
+test("keeps scheduling on unless OPENCODE_FLAGS opts out explicitly", () => {
+  expect(KiloHost.schedulingOverrides(undefined)).toBe("schedules")
+  expect(KiloHost.schedulingOverrides("")).toBe("schedules")
+  expect(KiloHost.schedulingOverrides("media_blob")).toBe("media_blob,schedules")
+  expect(KiloHost.schedulingOverrides("-media_blob")).toBe("-media_blob,schedules")
+  expect(KiloHost.schedulingOverrides("all")).toBe("all,schedules")
+  // An explicit opt-out stays an escape hatch: it wins over the always-on default.
+  expect(KiloHost.schedulingOverrides("-schedules")).toBe("-schedules")
+  expect(KiloHost.schedulingOverrides("all,-schedules")).toBe("all,-schedules")
+  expect(KiloHost.schedulingOverrides("-media_blob, -schedules")).toBe("-media_blob, -schedules")
+})
