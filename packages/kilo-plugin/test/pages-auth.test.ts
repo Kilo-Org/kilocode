@@ -20,7 +20,7 @@ function server(respond: (request: Request, count: number) => Response | Promise
 // The transport the wrapper sits on: a real fetch that follows nothing it was not asked to.
 const base = (url: string | URL, init?: RequestInit) => fetch(url, init)
 
-function bind(origin: string, tokens: (string | undefined)[], sessions: Record<string, { agent: string; model: string }> = {}) {
+function bind(origin: string, tokens: (string | undefined)[]) {
   const handle = crypto.randomUUID()
   const asked: (string | undefined)[] = []
   cleanup.push(
@@ -31,7 +31,6 @@ function bind(origin: string, tokens: (string | undefined)[], sessions: Record<s
         asked.push(rejected)
         return tokens.shift()
       },
-      provenance: (id) => sessions[id],
     }),
   )
   return { handle, asked }
@@ -48,27 +47,17 @@ test("a request without the handle is not touched", async () => {
   expect(pages.requests[0]!.headers.get("x-other")).toBe("1")
 })
 
-test("adds the bearer and provenance, and strips the handle", async () => {
+test("adds the bearer and client headers, and strips the handle", async () => {
   const pages = server(() => new Response("ok"))
-  const { handle } = bind(pages.origin, ["tok-1"], { s1: { agent: "code", model: "kilo/auto" } })
-  const body = JSON.stringify({ jsonrpc: "2.0", method: "tools/call", params: { name: "x", _meta: { "ai.opencode/sessionID": "s1" } } })
+  const { handle } = bind(pages.origin, ["tok-1"])
+  const body = JSON.stringify({ jsonrpc: "2.0", method: "tools/call", params: { name: "x" } })
   const response = await call(handle, `${pages.origin}/mcp`, { method: "POST", body })
   expect(response.status).toBe(200)
   const sent = pages.requests[0]!.headers
   expect(sent.get("authorization")).toBe("Bearer tok-1")
   expect(sent.get("x-pages-driver")).toBe("Kilo")
   expect(sent.get("x-pages-client")).toBe("kilo/test")
-  expect(sent.get("x-pages-agent")).toBe("code")
-  expect(sent.get("x-pages-model")).toBe("kilo/auto")
   expect(sent.get(PagesAuth.HANDLE_HEADER)).toBeNull()
-})
-
-test("a request outside tools/call carries no agent or model", async () => {
-  const pages = server(() => new Response("ok"))
-  const { handle } = bind(pages.origin, ["tok-1"], { s1: { agent: "code", model: "kilo/auto" } })
-  await call(handle, `${pages.origin}/mcp`, { method: "POST", body: JSON.stringify({ method: "tools/list" }) })
-  expect(pages.requests[0]!.headers.get("x-pages-agent")).toBeNull()
-  expect(pages.requests[0]!.headers.get("x-pages-model")).toBeNull()
 })
 
 test("never sends the token to another origin", async () => {

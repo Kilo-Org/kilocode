@@ -126,7 +126,6 @@ async function harness(input: {
       subscribe: (options?: { types?: string[] }) =>
         options?.types?.[0] === "mcp.status.changed" && mcpEvents ? Stream.fromQueue(mcpEvents) : Stream.never,
     },
-    session: { hook: () => Effect.void },
   }
   try {
     await Effect.runPromise(

@@ -16,7 +16,6 @@ import { PagesToken } from "./token"
 // minted; the Authorization header is added per request by `PagesAuth.wrap`, which the host puts on the MCP transport.
 // A connect refused with 401 or 403 is final and a plugin cannot reconnect a server, so the entry is removed in every
 // state that is not ready and registered again when the state recovers.
-const MAX_SESSIONS = 200
 const FAILURE_DELAYS_SECONDS = [30, 60, 120, 240, 300]
 const FLAG_RETRY = Duration.minutes(10)
 const SIGN_IN = { integrationID: "kilo", methodID: "device" } as const
@@ -43,7 +42,6 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
     const lock = Semaphore.makeUnsafe(1)
     const scope = yield* Effect.scope
     const handle = crypto.randomUUID()
-    const sessions = new Map<string, { agent: string; model: string }>()
     let closed = false
     let setting = false
     let current: Snapshot = { state: "starting" }
@@ -205,7 +203,6 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
           ),
         )
       },
-      provenance: (sessionID) => sessions.get(sessionID),
     })
 
     const unsubscribe = KiloGatewayAccounts.subscribe(directory, settle)
@@ -216,15 +213,6 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
         unsubscribe()
         if (held) PagesToken.drop(held, deployment)
         if (timer) yield* Fiber.interrupt(timer)
-      }),
-    )
-
-    yield* ctx.session.hook("context", (event) =>
-      Effect.sync(() => {
-        sessions.delete(event.sessionID)
-        sessions.set(event.sessionID, { agent: event.agent, model: `${event.model.providerID}/${event.model.id}` })
-        const oldest = sessions.keys().next().value
-        if (sessions.size > MAX_SESSIONS && oldest !== undefined) sessions.delete(oldest)
       }),
     )
 

@@ -1,12 +1,9 @@
 export * as PagesAuth from "./auth"
 
-import { Option, Schema } from "effect"
-
 type Fetch = (url: string | URL, init?: RequestInit) => Promise<Response>
 
 /** The one header the `pages` MCP entry carries. It is a lookup key for a binding, not a credential. */
 export const HANDLE_HEADER = "x-kilo-pages-handle"
-const SESSION_META = "ai.opencode/sessionID"
 
 export interface Binding {
   /** The only origin the token may be sent to. */
@@ -18,8 +15,6 @@ export interface Binding {
    * Pages refused, so the binding can mint a fresh one.
    */
   readonly token: (rejected?: string) => Promise<string | undefined>
-  /** Agent and model of a session, for the self-declared provenance headers. */
-  readonly provenance: (sessionID: string) => { readonly agent?: string; readonly model?: string } | undefined
 }
 
 // Process-global: the host builds one MCP service for every Location, so its fetch hook sees no Location. Each Pages
@@ -34,7 +29,7 @@ export function register(handle: string, binding: Binding) {
 }
 
 // Wraps the transport fetch of every MCP server. A request without the handle is not touched. With it, the wrapper
-// strips the handle, refuses any origin but the binding's, adds the Authorization and provenance headers, never
+// strips the handle, refuses any origin but the binding's, adds the Authorization and client headers, never
 // follows a redirect itself (the SDK re-enters this wrapper for each hop, so every hop is origin-checked), and
 // retries once on a 401 with a fresh token.
 export function wrap(next: Fetch): Fetch {
@@ -51,10 +46,6 @@ export function wrap(next: Fetch): Fetch {
 
     headers.set("X-Pages-Driver", "Kilo")
     headers.set("X-Pages-Client", binding.client)
-    const session = sessionID(init?.body)
-    const provenance = session ? binding.provenance(session) : undefined
-    if (provenance?.agent) headers.set("X-Pages-Agent", provenance.agent)
-    if (provenance?.model) headers.set("X-Pages-Model", provenance.model)
 
     const send = (token: string) => {
       const authorized = new Headers(headers)
@@ -80,17 +71,4 @@ export function wrap(next: Fetch): Fetch {
 // A fixed body, so a client maps one stable message and never an echo of what Pages or Kilo said.
 function unauthorized() {
   return new Response("Pages rejected the Kilo credential", { status: 401, headers: { "content-type": "text/plain" } })
-}
-
-const Call = Schema.Struct({
-  method: Schema.Literal("tools/call"),
-  params: Schema.Struct({ _meta: Schema.Record(Schema.String, Schema.Unknown) }),
-})
-const decodeCall = Schema.decodeUnknownOption(Schema.fromJsonString(Call))
-
-// Only a `tools/call` carries a session: Kilo puts the session id in its `_meta`.
-function sessionID(body: RequestInit["body"]) {
-  if (typeof body !== "string" || !body.includes("tools/call")) return undefined
-  const id = Option.getOrUndefined(decodeCall(body))?.params._meta[SESSION_META]
-  return typeof id === "string" ? id : undefined
 }
