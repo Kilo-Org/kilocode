@@ -5,7 +5,6 @@ import { SessionStore } from "@opencode/core/session/store"
 import { define } from "@opencode/plugin/effect/plugin"
 import type { Session } from "@opencode/schema/session"
 import type { SessionMessage } from "@opencode/schema/session-message"
-import type { Tool } from "@opencode/schema/tool"
 import { Global } from "@opencode/util/global"
 import { Cause, Effect, Stream, type Scope } from "effect"
 import { PlanMode } from "./mode"
@@ -23,8 +22,16 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
     const document = process.env.OPENCODE_CLIENT === "vscode"
     // The last handled turn per session. Bounded by the sessions that had a plan turn, not by turns.
     const handled = new Map<Session.ID, SessionMessage.ID>()
+    // A nested open_plan call shares the enclosing execute call's ID, so its resolved path can be
+    // attached when that execute settles without parsing model-visible output.
+    const opened = new Map<string, { sessionID: Session.ID; path: string }>()
     yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
-      Stream.runForEach((event) => Effect.sync(() => handled.delete(event.data.sessionID))),
+      Stream.runForEach((event) =>
+        Effect.sync(() => {
+          handled.delete(event.data.sessionID)
+          for (const [key, value] of opened) if (value.sessionID === event.data.sessionID) opened.delete(key)
+        }),
+      ),
       Effect.forkScoped({ startImmediately: true }),
     )
 
@@ -35,17 +42,26 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
       })
       .pipe(Effect.orDie)
 
-    // Code Mode drops a nested tool's metadata, so the resolved plan path is only in the execute output.
-    // Put it back on the execute result for the client, including when the model omitted `path`.
+    // Code Mode drops a nested tool's metadata. The nested open_plan call shares the enclosing
+    // execute call's ID, so remember its validated path and attach it when execute settles.
     if (document)
       yield* ctx.tool
         .hook("execute.after", (event) => {
-          if (event.status !== "completed" || event.tool !== "execute") return Effect.void
-          const calls = event.result.metadata?.toolCalls
-          if (!Array.isArray(calls) || !calls.some(isOpenPlanCall)) return Effect.void
-          const path = openedPath(event.result.content)
-          if (!path) return Effect.void
-          event.result = { ...event.result, metadata: { ...event.result.metadata, path, open: true } }
+          const key = `${event.sessionID}:${event.id}`
+          if (event.status !== "completed") {
+            opened.delete(key)
+            return Effect.void
+          }
+          if (event.tool === "open_plan") {
+            const path = event.result.metadata?.path
+            if (typeof path === "string" && path) opened.set(key, { sessionID: event.sessionID, path })
+            return Effect.void
+          }
+          if (event.tool !== "execute") return Effect.void
+          const value = opened.get(key)
+          if (!value) return Effect.void
+          opened.delete(key)
+          event.result = { ...event.result, metadata: { ...event.result.metadata, path: value.path, open: true } }
           return Effect.void
         })
         .pipe(Effect.orDie)
@@ -64,26 +80,3 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
     )
   }),
 })
-
-function isOpenPlanCall(value: unknown) {
-  return (
-    !!value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    "tool" in value &&
-    value.tool === "open_plan" &&
-    "status" in value &&
-    value.status === "completed"
-  )
-}
-
-/** The resolved plan path from the model-visible output of a completed `open_plan` call. */
-function openedPath(content: Tool.Result["content"]) {
-  const text =
-    typeof content === "string"
-      ? content
-      : (content ?? [])
-          .flatMap((part) => (part.type === "text" ? [part.text] : []))
-          .join("\n")
-  return [...text.matchAll(/Opened plan at (.+?) for review\./g)].at(-1)?.[1]
-}

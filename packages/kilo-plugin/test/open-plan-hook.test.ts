@@ -2,11 +2,12 @@ import { expect, test } from "bun:test"
 import { Bus } from "@opencode/core/bus"
 import { SessionStore } from "@opencode/core/session/store"
 import { Session } from "@opencode/schema/session"
+import { SessionMessage } from "@opencode/schema/session-message"
 import { Global } from "@opencode/util/global"
 import { Effect, Layer } from "effect"
 import { host } from "../../core/test/plugin/host"
 import { KiloPlanPlugin } from "../src/plan"
-import { created, sessionID, workspace } from "./plan-harness"
+import { code, created, sessionID, workspace } from "./plan-harness"
 
 const session = { id: sessionID, time: { created, updated: created } } as unknown as Session.Info
 const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
@@ -14,6 +15,8 @@ const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
 test("puts a Code Mode open_plan path on the execute result even when the model omits it", async () => {
   const space = await workspace()
   const hooks: Array<(event: never) => Effect.Effect<void>> = []
+  const previous = process.env.OPENCODE_CLIENT
+  process.env.OPENCODE_CLIENT = "vscode"
   try {
     await Effect.runPromise(
       Effect.scoped(
@@ -35,17 +38,31 @@ test("puts a Code Mode open_plan path on the execute result even when the model 
               },
             }),
           )
-          const event = {
+          const id = "call-execute"
+          const messageID = SessionMessage.ID.create()
+          const openEvent = {
+            tool: "open_plan",
+            status: "completed" as const,
+            sessionID,
+            agent: code,
+            messageID,
+            id,
+            input: {},
+            result: { metadata: { path: planPath, open: true } },
+          }
+          const executeEvent = {
             tool: "execute",
             status: "completed" as const,
+            sessionID,
+            agent: code,
+            messageID,
+            id,
             input: {},
-            result: {
-              content: [{ type: "text" as const, text: `Opened plan at ${planPath} for review.` }],
-              metadata: { toolCalls: [{ tool: "open_plan", status: "completed", input: {} }] },
-            },
+            result: { content: [{ type: "text" as const, text: "done" }], metadata: { toolCalls: [] } },
           }
-          for (const hook of hooks) yield* hook(event as never)
-          expect(event.result.metadata).toMatchObject({ path: planPath, open: true })
+          for (const hook of hooks) yield* hook(openEvent as never)
+          for (const hook of hooks) yield* hook(executeEvent as never)
+          expect(executeEvent.result.metadata).toMatchObject({ path: planPath, open: true })
         }).pipe(
           Effect.provide(
             Layer.mergeAll(
@@ -61,6 +78,8 @@ test("puts a Code Mode open_plan path on the execute result even when the model 
       ),
     )
   } finally {
+    if (previous === undefined) delete process.env.OPENCODE_CLIENT
+    else process.env.OPENCODE_CLIENT = previous
     await space.dispose()
   }
 })
