@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 134,
-    "markedLines": 2326,
+    "files": 136,
+    "markedLines": 2339,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -525,6 +525,14 @@
     "packages/patchmark/test/slow-inputs.test.ts": {
       "rung": 4,
       "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
+    },
+    "packages/server/test/artifact.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: `setDefaultTimeout(30_000)` for the file's single test, matching upstream's own budget for Location-booting server tests (packages/server/test/session-diff.test.ts). The test boots three Locations (disabled, enabled, enabled-other), and each activates all 92 built-in plugins before the artifact route runs. That is about 0.5 s on macOS and passed bun's 5 s default on the Windows `packages` leg, where the Kilo host suite runs four test processes beside three package suites on four vCPUs. No assertion and no product code changes. Rung 4: bun's per-test timeout is set inside the upstream test file, and no seam reaches it from Kilo code."
+    },
+    "packages/server/test/fetch.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the OpenAI OAuth tests wait up to 15 s instead of 2 s for the `chatgpt-browser` method to appear in `/api/integration` (the pending-requests test gets the same 15 s for its identical wait on the build agent's permission policy), and the file uses `setDefaultTimeout(30_000)` (the 'both ports busy' test goes from 10 s to 30 s) so bun's deadline stays above that wait plus the fixed 2 s or 3.6 s port retries in `listen`. The wait covers plugin activation of a cold Location: about 0.3 s on macOS and more than 2 s on the Windows `packages` leg, where the Kilo host suite runs beside three package suites on four vCPUs. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the method appears. No assertion and no product code changes; the production `/cancel` probe keeps its 2 s abort. Rung 4: the deadlines are literals inside the upstream test file, and no seam reaches them from Kilo code."
     },
     "packages/core/src/session.ts": {
       "rung": 3,
