@@ -1450,9 +1450,13 @@ function toModelInfo(
   }
   return {
     ...base,
-    // kilo_port(gateway:59f57027c538) Explicit backend variants take precedence, including custom names/options.
-    variants:
-      source.variants && Object.keys(source.variants).length > 0
+    // kilo_port(gateway:59f57027c538) The Gateway's reasoning_options win; its `variants` are the legacy v1
+    // shape, so they only apply when reasoning_options is absent (e.g. admin-authored custom LLM variants).
+    variants: source.reasoningOptions
+      ? source.reasoning
+        ? Variant.resolve(base, source.reasoningOptions)
+        : []
+      : source.variants && Object.keys(source.variants).length > 0
         ? Object.entries(source.variants)
             // The native picker owns "default"; empty IDs cannot select a variant.
             .filter(([name]) => name !== "" && name !== "default")
@@ -1461,7 +1465,7 @@ function toModelInfo(
               settings: GatewayOptions.lower(source.aiSDKProvider, options),
             }))
         : source.reasoning
-          ? Variant.resolve(base, source.reasoningOptions)
+          ? Variant.resolve(base)
           : [],
   }
 }
