@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect, Fiber, Layer, Ref, Schedule, Stream } from "effect"
+import { DateTime, Effect, Fiber, Layer, Ref, Schedule, Stream } from "effect"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
 import { TestLLM } from "@opencode/ai/testing"
@@ -29,6 +29,7 @@ import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
 import { testEffect } from "../../core/test/lib/effect"
 import { executeTool, toolDefinitions, toolIdentity } from "../../core/test/lib/tool"
 import { KiloBackgroundJobs } from "../src/background-jobs"
+import { make } from "../src/background-jobs/tracker"
 import { KiloSubagentBackgroundPlugin } from "../src/subagent-background"
 
 const llmLayer = TestLLM.testLayer({ fallback: TestLLM.text("Review complete", "review") })
@@ -307,6 +308,74 @@ describe("kilocode.background-jobs", () => {
       expect(second.map((job) => job.id).toSorted()).toEqual(first.map((job) => job.id).toSorted())
       expect(yield* Ref.get(changes)).toBe(0)
     }),
+  )
+
+  // The window the tracker must not close: a background child's row outlives its job until the parent receives the
+  // completion, so a finished child that still has a row may be about to be restored.
+  it.effect("keeps a finished background child adoptable until its completion lands", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const parent = "ses_unit_settle_parent" as never
+        const child = "ses_unit_settle_child"
+        let messages: readonly unknown[] = []
+        const tracker = yield* make({
+          directory: "/unit",
+          jobs: {
+            get: () => Effect.succeed({ status: "completed" } as never),
+            wait: () => Effect.never,
+            background: () => Effect.succeed(undefined) as never,
+            cancel: () => Effect.void as never,
+            backgroundJobs: Effect.succeed([
+              {
+                kind: "subagent",
+                id: child,
+                sessionID: parent,
+                status: "completed",
+                title: "Child",
+                time: { started: 1, completed: 2 },
+                childSessionID: child,
+                agent: "reviewer",
+                description: "Child",
+              },
+            ] as never),
+          },
+          sessions: {
+            list: () =>
+              Effect.succeed({
+                data: [
+                  {
+                    id: child,
+                    parentID: parent,
+                    agent: "reviewer",
+                    title: "Child",
+                    time: { created: DateTime.makeUnsafe(1) },
+                  },
+                ],
+                cursor: {},
+              } as never),
+            interrupt: () => Effect.succeed(true) as never,
+            messages: () => Effect.succeed(messages as never),
+            active: Effect.succeed(new Set() as never),
+            inbox: () => Effect.succeed([]),
+          },
+          publish: () => Effect.void,
+        })
+
+        // Finished, idle parent, no completion yet: the child must not be settled away.
+        expect(yield* tracker.list(parent)).toEqual([])
+
+        messages = [
+          {
+            id: "msg_unit_settle_completion",
+            type: "synthetic",
+            description: "Child",
+            time: { created: DateTime.makeUnsafe(3) },
+            metadata: { source: "subagent", childID: child, agent: "reviewer", state: "completed" },
+          },
+        ]
+        expect(yield* tracker.list(parent)).toMatchObject([{ id: child, status: "completed", background: true }])
+      }),
+    ),
   )
 
   it.live("rejects unknown jobs", () =>
