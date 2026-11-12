@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.active.ActiveReorder
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Point
+import java.awt.Rectangle
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
@@ -11,9 +12,9 @@ import javax.swing.tree.TreePath
 internal class ActiveTreeReorder(private val view: ActiveTreeView, private val options: ActiveReorder?) {
     private data class Preview(
         val key: String, val previous: String?, val parent: String?, val from: Int, val to: Int,
-        val order: List<ActiveEntry>,
+        val order: List<ActiveEntry>, val area: Rectangle?,
     )
-    private data class Target(val parent: DefaultMutableTreeNode, val index: Int)
+    private data class Target(val parent: DefaultMutableTreeNode, val index: Int, val area: Rectangle? = null)
     private var preview: Preview? = null
     private val opened = linkedSetOf<String>()
 
@@ -38,7 +39,12 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
             cancel()
             return false
         }
-        val target = if (options?.reparent == null) {
+        val state = preview
+        // Preview insertion can shift the header away from a stationary pointer.
+        val area = state?.area?.takeIf { it.contains(point) }
+        val target = if (area != null) {
+            Target(source, source.getIndex(entry), area)
+        } else if (options?.reparent == null) {
             val siblings = siblings(source)
             val index = siblings.indexOfFirst {
                 view.regions.bounds(it)?.let { bounds -> point.y <= bounds.y + bounds.height / 2 } == true
@@ -50,7 +56,6 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
             return false
         }
         val from = source.getIndex(entry)
-        val state = preview
         val order = state?.order ?: siblings(source)
         val same = source === target.parent
         val siblings = siblings(target.parent)
@@ -66,7 +71,7 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
             cancel()
             return false
         }
-        val next = Preview(key, previous, parent, start, to, order)
+        val next = Preview(key, previous, parent, start, to, order, target.area)
         if (next != preview) {
             preview = next
             view.preview {
@@ -86,10 +91,12 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
         if (point.y < bounds.y) return Target(view.hierarchy.root, 0)
         if (point.y >= bounds.y + bounds.height) return Target(view.hierarchy.root, view.hierarchy.root.childCount)
         val cell = view.regions.cell(row)
+        val top = cell.y + cell.height / 4
+        val bottom = cell.y + cell.height * 3 / 4
         if (row.allowsChildren && cell.contains(point) && view.regions.control(row)?.contains(point) != true &&
-            point.y >= cell.y + cell.height / 4 && point.y < cell.y + cell.height * 3 / 4 &&
+            point.y >= top && point.y < bottom &&
             allowed(entry, row)) {
-            return Target(row, row.childCount)
+            return Target(row, row.childCount, Rectangle(cell.x, top, cell.width, bottom - top))
         }
         // A gutter drop, or a branch that cannot enter another branch, targets the containing
         // sibling as a unit. In particular, an expanded section's descendants cannot be split.

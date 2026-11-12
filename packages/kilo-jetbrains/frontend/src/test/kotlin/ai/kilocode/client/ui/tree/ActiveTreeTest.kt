@@ -434,9 +434,10 @@ class ActiveTreeTest : BasePlatformTestCase() {
         for (empty in listOf(true, false)) {
             val moves = mutableListOf<ActiveMove>()
             val tree = ActiveTree("", reorder = sections(moves))
+            val view = tree.preferredFocus() as ActiveTreeView
+            view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
             tree.update(listOf(ActiveTreeNode(Row("a", "A")),
                 if (empty) section("section") else section("section", "b")))
-            val view = tree.preferredFocus() as ActiveTreeView
             view.setSize(400, 300)
             val entry = view.hierarchy.entries.getValue("section")
             val path = TreePath(entry.path)
@@ -458,6 +459,33 @@ class ActiveTreeTest : BasePlatformTestCase() {
             assertEquals(ActiveMove("a", 0, if (empty) 0 else 1, keys(entry), "section", null), moves.single())
             assertTrue("A successful drop leaves the receiving section expanded", view.isExpanded(path))
         }
+    }
+
+    fun `test branch header hover releases its original target when moving to a sibling`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("section", "b", "c")))
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("section")
+        val point = body(view, "section")
+
+        for (offset in listOf(0, 1, -1, 0)) {
+            view.over("a", Point(point.x + offset, point.y + offset))
+            assertEquals(listOf("b", "c", "a"), keys(entry))
+        }
+        val outside = view.regions.cell(view.hierarchy.entries.getValue("c"))
+        view.over("a", Point(outside.x + outside.width / 2, outside.y))
+        assertEquals(listOf("b", "a", "c"), keys(entry))
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue("b"))
+        view.over("a", Point(bounds.x + bounds.width / 2, bounds.y))
+        assertEquals(listOf("a", "b", "c"), keys(entry))
+        view.over("a", point)
+        assertEquals(listOf("a", "b", "c"), keys(entry))
+        view.drop()
+
+        assertEquals(ActiveMove("a", 0, 0, listOf("a", "b", "c"), "section", null), moves.single())
     }
 
     fun `test cancelling repeated hover into an empty section restores its collapsed state`() {
@@ -569,8 +597,9 @@ class ActiveTreeTest : BasePlatformTestCase() {
     fun `test sections cannot nest and move their expanded children together`() {
         val moves = mutableListOf<ActiveMove>()
         val tree = ActiveTree("", reorder = sections(moves))
-        tree.update(listOf(section("first", "a", "b"), section("second", "c", "d")))
         val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(section("first", "a", "b"), section("second", "c", "d")))
         view.setSize(400, 300)
         val first = view.hierarchy.entries.getValue("first")
         val second = view.hierarchy.entries.getValue("second")
@@ -633,7 +662,8 @@ class ActiveTreeTest : BasePlatformTestCase() {
         val view = tree.preferredFocus() as ActiveTreeView
         view.setSize(400, 300)
         val entry = view.hierarchy.entries.getValue("a")
-        view.over("a", body(view, "section"))
+        val point = body(view, "section")
+        view.over("a", point)
 
         tree.update(listOf(ActiveTreeNode(Row("new", "New")), ActiveTreeNode(Row("a", "Renamed")),
             section("section", "b", "c")))
@@ -644,6 +674,8 @@ class ActiveTreeTest : BasePlatformTestCase() {
         assertEquals("Renamed", entry.item.title)
         assertTrue(view.placeholder(entry))
         assertEmpty(moves)
+        for (offset in listOf(0, 1, 0)) view.over("a", Point(point.x + offset, point.y))
+        assertEquals(listOf("b", "a", "c"), keys(view.hierarchy.entries.getValue("section")))
         view.drop()
         assertEquals(ActiveMove("a", 1, 1, listOf("b", "a", "c"), "section", null), moves.single())
     }
