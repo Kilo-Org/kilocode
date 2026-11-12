@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { parseResponse } from "../../src/tool/mcp-websearch"
-import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel } from "../../src/tool/websearch"
-import { keenableHeaders } from "../../src/tool/websearch" // kilocode_change
+import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel, keenableHeaders } from "../../src/tool/websearch" // kilocode_change
 
 import { webSearchEnabled } from "../../src/tool/registry"
 import { it } from "../lib/effect"
