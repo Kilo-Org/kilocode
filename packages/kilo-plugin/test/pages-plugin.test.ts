@@ -8,7 +8,7 @@ import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Effect, Queue, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { parse } from "jsonc-parser"
-import { mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloGatewayAccounts } from "../src/gateway/accounts"
@@ -38,12 +38,19 @@ async function harness(input: {
   documents: { info: Info; path?: string }[]
   server: string
   signedIn?: boolean
+  /** Put this document in the global config directory, which is a symlink to where the file really lives. */
+  symlinkedGlobal?: Info
   /** Run the plugin on a test clock, so `adjust` fires its retry timer. */
   clock?: boolean
   run: (pages: Harness) => Promise<void>
 }) {
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-pages-plugin-")))
   dirs.push(directory)
+  if (input.symlinkedGlobal) {
+    await mkdir(path.join(directory, "real-global"))
+    await writeFile(path.join(directory, "real-global", "kilo2.json"), JSON.stringify(input.symlinkedGlobal))
+    await symlink(path.join(directory, "real-global"), path.join(directory, "global"))
+  }
   const state = { account: input.signedIn === false ? undefined : { token: "account", server: input.server, baseURL: input.server, organizationID: null } }
   const unregister = KiloGatewayAccounts.register(directory, () => state.account)
   const transforms: ((editor: unknown) => void)[] = []
@@ -195,21 +202,47 @@ test("nothing is minted or registered while Pages is off", async () => {
 })
 
 test("a project document cannot turn Pages on and can turn it off", async () => {
-  const backend = mintServer(minted)
+  const projectOn = mintServer(minted)
   await harness({
     documents: [{ info: enabled, path: "/elsewhere/project/kilo2.json" }],
-    server: backend.url,
+    server: projectOn.url,
     run: async (pages) => {
       await pages.until((status) => status.state === "disabled")
-      expect(backend.count()).toBe(0)
+      expect(projectOn.count()).toBe(0)
     },
-  }).finally(backend.stop)
+  }).finally(projectOn.stop)
+  const projectOff = mintServer(minted)
   await harness({
     documents: [{ info: enabled }, { info: { pages: { enabled: false } }, path: "/elsewhere/project/kilo2.json" }],
-    server: backend.url,
+    server: projectOff.url,
     run: async (pages) => {
       await pages.until((status) => status.state === "disabled")
-      expect(backend.count()).toBe(0)
+      expect(projectOff.count()).toBe(0)
+    },
+  }).finally(projectOff.stop)
+})
+
+test("a global config directory behind a symlink still counts as global", async () => {
+  const backend = mintServer(minted)
+  await harness({
+    documents: [],
+    server: backend.url,
+    symlinkedGlobal: enabled,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "connecting")
+      expect(backend.count()).toBe(1)
+    },
+  }).finally(backend.stop)
+})
+
+test("a macOS managed preferences document can turn Pages on", async () => {
+  const backend = mintServer(minted)
+  await harness({
+    documents: [{ info: enabled, path: "/Library/Managed Preferences/ai.opencode.managed.plist" }],
+    server: backend.url,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "connecting")
+      expect(backend.count()).toBe(1)
     },
   }).finally(backend.stop)
 })
@@ -322,6 +355,21 @@ test("enable and disable write the global config and follow it", async () => {
       expect(await pages.call("disable")).toMatchObject({ enabled: false, state: "disabled", reason: "user" })
       expect(pages.entry()).toBeUndefined()
       expect(PagesToken.peek({ server: backend.url, token: "account" }, PagesToken.DEFAULT).kind).toBe("none")
+    },
+  }).finally(backend.stop)
+})
+
+test("enable under a deny policy writes nothing", async () => {
+  const backend = mintServer(minted)
+  await harness({
+    documents: [{ info: { policies: [{ action: "mcp.use", resource: "pages", effect: "deny" }] } }],
+    server: backend.url,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "disabled")
+      expect(await pages.call("enable")).toMatchObject({ enabled: false, state: "disabled", reason: "policy" })
+      expect(await readdir(path.join(pages.directory, "global")).catch(() => [])).toEqual([])
+      expect(pages.entry()).toBeUndefined()
+      expect(backend.count()).toBe(0)
     },
   }).finally(backend.stop)
 })

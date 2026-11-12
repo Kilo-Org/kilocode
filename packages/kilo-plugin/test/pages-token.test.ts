@@ -72,6 +72,15 @@ test("a rejected token forces one re-mint per window, then needs a new sign-in",
   expect(backend.requests).toHaveLength(2)
 })
 
+test("a second rejection inside the window does not make later requests mint", async () => {
+  using backend = mint((count) => valid(count))
+  expect(await get(backend)).toBe("pages-1")
+  expect(await get(backend, { rejected: "pages-1" })).toBe("pages-2")
+  expect(await fail(backend, { rejected: "pages-2" })).toMatchObject({ reason: "needs_login" })
+  for (let i = 0; i < 5; i++) expect(await get(backend)).toBe("pages-2")
+  expect(backend.requests).toHaveLength(2)
+})
+
 test("a refusal is cached and a user retry asks Kilo again", async () => {
   using backend = mint((count) =>
     count === 1 ? Response.json({ error: "Organization credentials are not supported" }, { status: 403 }) : valid(count),

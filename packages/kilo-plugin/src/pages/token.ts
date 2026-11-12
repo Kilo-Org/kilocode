@@ -72,9 +72,10 @@ export function get(input: {
     if (slot.backoff && slot.backoff.retryAt > now) return Effect.fail(slot.backoff.failure)
 
     if (input.rejected !== undefined && slot.token?.value === input.rejected) {
-      slot.token = undefined
+      // The rejected token stays cached inside the window: dropping it would send the next request to mint again.
       if (slot.forcedAt !== undefined && now - slot.forcedAt < FORCE_WINDOW_MS)
         return Effect.fail<KiloResourceToken.Failure>({ kind: "refused", reason: "needs_login", status: 401 })
+      slot.token = undefined
       slot.forcedAt = now
     }
 
@@ -92,12 +93,19 @@ export function get(input: {
           onFailure: (failure): Result => ({ ok: false, failure }),
         }),
       ),
-    ).then((result) => {
-      // A newer mint for the same key cannot exist while this one is in flight, so installing the result is safe.
-      slot.inflight = undefined
-      install(slot, result)
-      return result
-    })
+    ).then(
+      (result) => {
+        // A newer mint for the same key cannot exist while this one is in flight, so installing the result is safe.
+        slot.inflight = undefined
+        install(slot, result)
+        return result
+      },
+      (defect) => {
+        // A defect must not pin a rejected promise to the slot: the next caller mints again.
+        slot.inflight = undefined
+        throw defect
+      },
+    )
     return Effect.promise(() => slot.inflight!).pipe(
       Effect.flatMap((result) =>
         result.ok ? Effect.succeed(Redacted.make(result.minted.token)) : Effect.fail(result.failure),

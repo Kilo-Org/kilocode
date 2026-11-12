@@ -37,7 +37,8 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
     const directory = ctx.location.directory
     const deployment = PagesToken.DEFAULT
     const globalDirectory = yield* fs.resolve(global.config)
-    const roots = [globalDirectory, systemDirectory()]
+    // Config entries keep the unresolved global path, so both spellings count as global.
+    const roots = [globalDirectory, global.config, systemDirectory(), PagesConfig.MANAGED_PREFERENCES]
 
     const lock = Semaphore.makeUnsafe(1)
     const scope = yield* Effect.scope
@@ -165,7 +166,10 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
       })
 
     const refresh = (force: boolean): Effect.Effect<void> =>
-      lock.withPermit(evaluate(force).pipe(Effect.flatMap(apply))).pipe(Effect.orDie)
+      // A refresh that was queued or started before the finalizer must not mint or reload once the plugin is closed.
+      lock
+        .withPermit(Effect.suspend(() => (closed ? Effect.void : evaluate(force).pipe(Effect.flatMap(apply)))))
+        .pipe(Effect.orDie)
 
     const settle = () => {
       if (!closed) Effect.runFork(refresh(false))
@@ -232,7 +236,9 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
       .register(KiloPagesRpc.Definition, {
         status: () => Effect.sync(() => view()),
         enable: (_, context) =>
-          write(true).pipe(
+          config.value.entries().pipe(
+            // Policy denial is refused before anything is persisted, so lifting it later cannot activate Pages unasked.
+            Effect.flatMap((entries) => (PagesConfig.denied(entries) ? Effect.void : write(true))),
             Effect.andThen(refresh(true)),
             Effect.map(() => view()),
             Effect.catchTag("KiloConfigWriterError", (error) =>

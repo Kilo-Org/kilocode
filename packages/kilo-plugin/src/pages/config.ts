@@ -7,6 +7,9 @@ import { ManagedPolicy } from "@opencode/core/managed-policy"
 
 export const SERVER = "pages"
 
+/** Where macOS MDM places the managed preferences document, which is outside the system config directory. */
+export const MANAGED_PREFERENCES = "/Library/Managed Preferences"
+
 /**
  * Whether the effective `pages` key turns Pages on. Pages sends page text to a service outside Kilo, so opt-in is the
  * consent: only a global or managed document can set `enabled: true`, and a project document can only set `false`
