@@ -71,8 +71,6 @@ test("Code Mode gives the Code agent open_plan and forwards its client open requ
       toolCalls: [
         { tool: "open_plan", status: "completed", input: { path: ".kilo2/plans/1000-dark-mode-plan.md" } },
       ],
-      path: ".kilo2/plans/1000-dark-mode-plan.md",
-      open: true,
     })
   } finally {
     await space.dispose()

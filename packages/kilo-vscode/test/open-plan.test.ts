@@ -27,7 +27,11 @@ describe("createPlanOpener", () => {
   test("opens a plan opened by a nested Code Mode call from the execute metadata", async () => {
     const { opened, value } = opener(() => "session-1")
     value.started("session-1", "tool-execute", "execute")
-    value.completed("session-1", "tool-execute", { path: ".kilo2/plans/dark-mode.md", open: true })
+    value.completed("session-1", "tool-execute", {
+      toolCalls: [
+        { tool: "open_plan", status: "completed", input: { path: ".kilo2/plans/dark-mode.md" } },
+      ],
+    })
     await Promise.resolve()
     expect(opened).toEqual(["session-1:tool-execute:.kilo2/plans/dark-mode.md"])
   })
@@ -43,6 +47,14 @@ describe("createPlanOpener", () => {
     value.started("session-1", "tool-failed", "open_plan")
     value.failed("session-1", "tool-failed")
     value.completed("session-1", "tool-failed", { path: ".kilo2/plans/dark-mode.md", open: true })
+    value.started("session-1", "tool-executing", "execute")
+    value.completed("session-1", "tool-executing", {
+      toolCalls: [{ tool: "open_plan", status: "running", input: { path: ".kilo2/plans/dark-mode.md" } }],
+    })
+    value.started("session-1", "tool-execute-nopath", "execute")
+    value.completed("session-1", "tool-execute-nopath", {
+      toolCalls: [{ tool: "open_plan", status: "completed", input: {} }],
+    })
     await Promise.resolve()
     expect(opened).toEqual([])
   })

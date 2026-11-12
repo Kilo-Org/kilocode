@@ -47,9 +47,6 @@ type CollectedFiles = {
   readonly files: Array<typeof ExecuteFile.Type>
 }
 
-/** A nested tool's request for the client to open a document after this execution. */
-type Opened = { readonly open: true; readonly path: string }
-
 type Node<T> = {
   tool?: T
   namespace?: ToolNamespace
@@ -117,7 +114,6 @@ export const create = (
         const callIndex = yield* Ref.make(0)
         const files = yield* Ref.make<Array<CollectedFiles>>([])
         const calls = yield* Ref.make<Array<ExecuteCall>>([])
-        const opened = yield* Ref.make<Opened | undefined>(undefined)
         const lock = Semaphore.makeUnsafe(1)
         // Each update replaces the last, so send at most one per 100 ms; a trailing one carries the latest rows.
         // A success drops a pending one when the scope closes, since the result carries the final rows.
@@ -159,8 +155,6 @@ export const create = (
                   const outputFileParts = outputFiles(content)
                   if (outputFileParts.length > 0)
                     yield* Ref.update(files, (items) => [...items, { index, files: outputFileParts }])
-                  const request = openRequest(executed.metadata)
-                  if (request) yield* Ref.set(opened, request)
                   return resultValue(executed)
                 }),
               hooks: progressHooks(record),
@@ -183,7 +177,6 @@ export const create = (
           files: collected,
           ...(result.ok ? {} : { error: true }),
         }
-        const document = yield* Ref.get(opened)
         const content: Array<Content> = [
           { type: "text", text: value.output },
           ...value.files.map((file) => ({
@@ -195,7 +188,6 @@ export const create = (
         ]
         const metadata: Metadata = {
           toolCalls: value.toolCalls,
-          ...(document ?? {}),
           ...(value.error ? { error: true } : {}),
         }
         return {
@@ -361,13 +353,6 @@ function resultValue(executed: Result) {
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join("\n")
   return text === "" ? null : text
-}
-
-// A client opens the call it sees. Inside Code Mode that is `execute`, so a nested tool's open request rides on
-// the execute result metadata; the last request wins, as only one document can be opened for review.
-function openRequest(metadata: Metadata | undefined): Opened | undefined {
-  if (metadata?.open !== true || typeof metadata.path !== "string" || metadata.path === "") return undefined
-  return { open: true, path: metadata.path }
 }
 
 const runHooks = {

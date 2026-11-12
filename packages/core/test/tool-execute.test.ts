@@ -299,28 +299,6 @@ describe.each([
     expect(result.content).toEqual([{ type: "text", text: '[\n  "admin",\n  "created"\n]' }])
   })
 
-  test("execute forwards a nested tool's open request to the client", async () => {
-    const open: Info = {
-      name: "open_plan",
-      description: "Open a saved plan",
-      input: Schema.Struct({ path: Schema.String }),
-      output: Schema.String,
-      execute: ({ path }) => Effect.succeed({ output: "opened", metadata: { path, open: true } }),
-    }
-    const result = await runFlagged(
-      createCodeMode(new Map([["open_plan", open]])).execute(
-        { code: 'return await tools.open_plan({ path: ".kilo2/plans/a.md" })' },
-        context,
-      ),
-    )
-
-    expect(result.metadata).toEqual({
-      toolCalls: [{ tool: "open_plan", status: "completed", input: { path: ".kilo2/plans/a.md" } }],
-      path: ".kilo2/plans/a.md",
-      open: true,
-    })
-  })
-
   test("executions share the prepared runtime of an inventory while keeping per-call state", async () => {
     let conversions = 0
     const echo: Info = {

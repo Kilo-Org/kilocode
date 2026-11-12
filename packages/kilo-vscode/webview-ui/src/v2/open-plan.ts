@@ -37,9 +37,12 @@ export function createPlanOpener(active: () => string | undefined, open: (plan: 
     completed(sessionID: string, toolID: string, metadata?: Record<string, unknown>) {
       const key = id(sessionID, toolID)
       if (!plans.delete(key)) return
-      if (metadata?.open !== true) return
       // `plan` is the earlier metadata key; keep reading it so a session started before the rename still opens.
-      const path = metadata.path ?? metadata.plan
+      // A Code Mode call has no open metadata of its own: its nested tool row carries the path.
+      const path =
+        metadata?.open === true
+          ? (metadata.path ?? metadata.plan)
+          : executeOpenPath(metadata?.toolCalls)
       if (typeof path !== "string" || !path) return
       const plan = { id: toolID, path, sessionID }
       if (opened.has(key)) return
@@ -64,4 +67,19 @@ export function createPlanOpener(active: () => string | undefined, open: (plan: 
       for (const plan of pending.values()) if (plan.sessionID === sessionID) schedule(plan)
     },
   }
+}
+
+/** The path of the last completed `open_plan` call inside a Code Mode `execute` result. */
+function executeOpenPath(value: unknown) {
+  if (!Array.isArray(value)) return undefined
+  for (const call of value.toReversed()) {
+    if (!record(call) || call.tool !== "open_plan" || call.status !== "completed") continue
+    const input = record(call.input) ? call.input : {}
+    if (typeof input.path === "string" && input.path) return input.path
+  }
+  return undefined
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
 }
