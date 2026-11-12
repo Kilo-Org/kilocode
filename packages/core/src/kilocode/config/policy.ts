@@ -274,6 +274,7 @@ export function parse(
           ...Option.getOrElse(synchronization, () => ({})),
           ...Option.getOrElse(indexingField, () => ({})),
           ...Option.getOrElse(sandboxField, () => ({})),
+          ...compactionSettings(input, normalized, report),
           ...displaySettings(input, report),
           ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
@@ -281,6 +282,35 @@ export function parse(
       ),
     ),
   )
+}
+
+/**
+ * A v1 `compaction.threshold_percent` becomes the v2 `buffer`: the share of the window kept free before automatic
+ * compaction. An explicit v2 `buffer` (or its `reserved` alias, which normalization folds into `buffer`) wins, because
+ * it is the later spelling of the same setting.
+ */
+function compactionSettings(
+  input: unknown,
+  normalized: Readonly<Record<string, unknown>>,
+  report?: (diagnostic: ConfigNormalize.Diagnostic) => void,
+) {
+  if (!record(input) || !record(input.compaction)) return {}
+  if (!("threshold_percent" in input.compaction)) return {}
+  const native = record(normalized.compaction) ? normalized.compaction : {}
+  if (native.buffer !== undefined) return {}
+  const percent = input.compaction.threshold_percent
+  if (percent === null) return {}
+  if (typeof percent !== "number" || !Number.isFinite(percent) || percent <= 0 || percent > 100) {
+    report?.({
+      path: ["compaction", "threshold_percent"],
+      kind: "invalid",
+      message: "ignored invalid compaction.threshold_percent; expected a percentage from 1 to 100",
+    })
+    return {}
+  }
+  const reserved = 100 - percent
+  // The buffer percentage accepts 1 to 99, so a fractional limit above 99 keeps the smallest valid reserve instead.
+  return { compaction: { ...native, buffer: reserved === 0 ? 0 : reserved < 1 ? "1%" : `${reserved}%` } }
 }
 
 /** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */

@@ -299,6 +299,42 @@ describe("agent_manager tool", () => {
     })
   })
 
+  test("accepts a base branch only for new worktree tasks", async () => {
+    const task = { name: "Base", baseBranch: "main" }
+    expect("value" in (await validate({ mode: "worktree", tasks: [task] }))).toBe(true)
+    expect("issues" in (await validate({ mode: "worktree", tasks: [{ name: "Base", baseBranch: 42 }] }))).toBe(true)
+
+    const local = await validate({ mode: "local", tasks: [task] })
+    if (!("issues" in local)) throw new Error("expected a validation failure")
+    expect(local.issues?.[0]?.message).toContain("baseBranch requires mode worktree")
+    for (const baseBranch of [null, "", "  "])
+      expect("value" in (await validate({ mode: "local", tasks: [{ name: "Base", baseBranch }] }))).toBe(true)
+
+    for (const tasks of [[task], JSON.stringify([task])]) {
+      const targeted = await validate({ mode: "local", worktreeID: "wt-target", tasks })
+      if (!("issues" in targeted)) throw new Error("expected a validation failure")
+      expect(targeted.issues?.[0]?.message).toContain("worktreeID cannot be combined with baseBranch")
+    }
+  })
+
+  test("publishes a trimmed base branch for worktree tasks", async () => {
+    const subject = makeRuntime()
+    await Effect.runPromise(
+      subject.agentManager.execute(
+        { mode: "worktree", tasks: [{ name: "Release", baseBranch: " release/1.0 " }, { name: "Default" }] },
+        ctx,
+      ),
+    )
+    expect(subject.events[0]?.tasks).toEqual([{ name: "Release", baseBranch: "release/1.0" }, { name: "Default" }])
+  })
+
+  test("documents the base branch and its constraints", () => {
+    const subject = makeRuntime()
+    expect(subject.agentManager.description).toContain("set `baseBranch` to the existing branch")
+    expect(subject.agentManager.description).toContain("cannot be combined with `worktreeID` or with local mode")
+    expect(subject.agentManager.description).not.toContain("only the base branch always uses the normal default")
+  })
+
   test("explains how to recover from a worktreeID in worktree mode", async () => {
     const result = await validate({ mode: "worktree", worktreeID: "null", tasks: [{ name: "test" }] })
     if (!("issues" in result)) throw new Error("expected a validation failure")

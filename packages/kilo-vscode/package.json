@@ -1063,7 +1063,7 @@
     "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/webview-ui/diff-virtual packages/kilo-vscode/webview-ui/settings packages/kilo-vscode/script packages/kilo-vscode/test",
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui packages/kilo-vscode/script packages/kilo-vscode/test",
     "test": "bun test --timeout 30000"
   },
   "dependencies": {

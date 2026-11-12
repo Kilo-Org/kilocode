@@ -1,34 +1,13 @@
 import { expect, test } from "bun:test"
-import path from "node:path"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
 import { Credential } from "@opencode/core/credential"
+import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
 import { McpClient } from "@opencode/core/mcp/client"
 import type { McpHost } from "@opencode/core/mcp/host"
 import { McpOAuth } from "@opencode/core/mcp/oauth"
 import { Effect, Exit } from "effect"
 import { hostEnvironmentLayer } from "../../fixture/environment"
-
-const fixture = path.join(import.meta.dir, "fixture.ts")
-
-test("applies the host localCommand hook before spawning a local server", async () => {
-  const tools = await Effect.runPromise(
-    Effect.scoped(
-      McpClient.connect({
-        server: "hooks",
-        config: { type: "local", command: [process.execPath, fixture] },
-        directory: import.meta.dir,
-        host: {
-          localCommand: ({ command, args }) => ({ command, args: [...args, "--host-hook"] }),
-        },
-      }).pipe(
-        Effect.flatMap((connection) => connection.tools()),
-        Effect.provide(hostEnvironmentLayer),
-      ),
-    ),
-  )
-
-  expect(tools.map((tool) => tool.name)).toContain("echo")
-})
+import { echoMcpHandler } from "../../fixture/mcp-echo"
 
 test("wraps the remote transport fetch with the host hook", async () => {
   const server = Bun.serve({
@@ -37,7 +16,7 @@ test("wraps the remote transport fetch with the host hook", async () => {
     fetch: () => new Response("Unauthorized", { status: 401 }),
   })
   try {
-    let calls = 0
+    const endpoints: string[] = []
     const exit = await Effect.runPromise(
       Effect.scoped(
         McpClient.connect({
@@ -45,9 +24,9 @@ test("wraps the remote transport fetch with the host hook", async () => {
           config: { type: "remote", url: new URL("/mcp", server.url).toString(), oauth: false },
           directory: import.meta.dir,
           host: {
-            fetch: (base) => (input, init) => {
-              calls += 1
-              return base(input, init)
+            fetch: (base, endpoint) => {
+              endpoints.push(endpoint)
+              return (input, init) => base(input, init)
             },
           },
         }).pipe(Effect.provide(hostEnvironmentLayer)),
@@ -55,7 +34,43 @@ test("wraps the remote transport fetch with the host hook", async () => {
     )
 
     expect(Exit.isFailure(exit)).toBe(true)
-    expect(calls).toBeGreaterThan(0)
+    expect(endpoints).toEqual([new URL("/mcp", server.url).toString()])
+  } finally {
+    server.stop(true)
+  }
+})
+
+test("normalizes a non-SSE stream probe for a real server", async () => {
+  const mcp = echoMcpHandler()
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: (request) =>
+      request.method === "GET"
+        ? new Response("<html>not an event stream</html>", { headers: { "content-type": "text/html" } })
+        : mcp.fetch(request),
+  })
+  const endpoint = new URL("/mcp", server.url).toString()
+  try {
+    const endpoints: string[] = []
+    const exit = await Effect.runPromise(
+      Effect.scoped(
+        McpClient.connect({
+          server: "probe",
+          config: { type: "remote", url: endpoint, oauth: false, codemode: false },
+          directory: import.meta.dir,
+          host: {
+            fetch: (base, dialed) => {
+              endpoints.push(dialed)
+              return KiloSseProbe.probe(base, dialed)
+            },
+          },
+        }).pipe(Effect.provide(hostEnvironmentLayer)),
+      ).pipe(Effect.timeout("5 seconds"), Effect.exit),
+    )
+
+    expect(Exit.isSuccess(exit)).toBe(true)
+    expect(endpoints).toEqual([endpoint])
   } finally {
     server.stop(true)
   }
@@ -75,7 +90,7 @@ test("uses the host OAuth client identity and keeps the upstream default", async
   })
   const config = new ConfigMCP.Remote({ type: "remote", url: "https://example.com/mcp" })
   // An anonymous connect-time provider reads no credential, so it only needs the service to exist.
-  const identity = (clientMetadata?: McpHost.OAuthClientMetadata) =>
+  const identity = (clientMetadata?: McpHost.OAuth) =>
     Effect.runPromise(
       McpOAuth.connectProvider({ config, credential: undefined, clientMetadata }).pipe(
         Effect.provideService(Credential.Service, credentials),
