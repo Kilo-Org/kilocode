@@ -69,6 +69,20 @@ test("no core prompt template names OpenCode", async () => {
   }
 })
 
+test("brands the lowercase prompt names to Kilo and the tool namespace, not the kilo2 command", async () => {
+  // Without their structural transform or override, the command rule turns these lowercase `opencode`
+  // tokens into `kilo2`, which the no-OpenCode check above and the audit both accept.
+  for (const [file, expected] of [
+    ["core/src/plugin/command/schedule.txt", "the `kilo` namespace"],
+    ["core/src/plugin/system-prompt/trinity.txt", "You are Kilo, an interactive"],
+  ] as const) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    expect(branded, file).toContain(expected)
+    expect(branded, file).not.toContain("kilo2")
+  }
+})
+
 test("does not rewrite CLI or ACP executable selection", async () => {
   for (const [file, anchor] of [
     ["cli/src/commands/commands.ts", 'typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : "opencode"'],

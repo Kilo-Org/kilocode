@@ -76,7 +76,8 @@ test("flags a prompt template that names OpenCode and is not intercepted", () =>
   expect(findings.map((f) => f.kind)).toEqual(["missing-interception"])
 })
 
-test("flags the schedule prompt's namespace if its transform is lost", () => {
+test("flags the opencode namespace named in prose in a non-intercepted asset", () => {
+  // Pattern coverage only: the intercepted schedule prompt is pinned by its branded output in branding.test.ts.
   const findings = KiloBrandingAudit.auditNamespace(
     "kilo-plugin/src/command/new.txt",
     "Use the schedule tools in the `opencode` namespace.",
