@@ -22,7 +22,10 @@ export const hostMirrorsPlugin: BunPlugin = {
   name: "kilo-host-mirrors",
   setup(build) {
     build.onLoad({ filter: new RegExp(`[/\\\\]packages[/\\\\](?:${files})$`) }, (args) => {
-      const mirror = hostMirrors[args.path.replaceAll("\\", "/").split("/packages/").at(-1) ?? ""]
+      // Match by suffix: the checkout path itself may contain a `packages` directory.
+      const file = args.path.replaceAll("\\", "/")
+      const mirror = Object.entries(hostMirrors).find(([upstream]) => file.endsWith(`/packages/${upstream}`))?.[1]
+      if (!mirror) throw new Error(`No Kilo host mirror for ${args.path}`)
       return { contents: `export * from ${JSON.stringify(path.join(import.meta.dir, mirror))}`, loader: "js" }
     })
   },

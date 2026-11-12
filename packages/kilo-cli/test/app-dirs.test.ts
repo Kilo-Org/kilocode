@@ -185,7 +185,8 @@ test("v1 storage variables leave v1's database, config and credentials untouched
 
 // The TUI's local plugins come from the project's `.kilo2/plugins`, as its config does. `plugin list` runs the same
 // discovery as the TUI, in the host process: a plugin in upstream's `.opencode`, or in v1 Kilo's `.kilo` or
-// `.kilocode`, is not listed, and the run creates none of those directories.
+// `.kilocode`, is not listed, and the run writes nothing into the project: no new directory, and no file in the
+// fixture directories that already exist.
 test("plugin list reads the project's local plugins from .kilo2 only", async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-plugins-")))
   const project = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-project-")))
@@ -200,13 +201,15 @@ test("plugin list reads the project's local plugins from .kilo2 only", async () 
         Bun.write(path.join(project, name, "plugins", `from-${name.slice(1)}`, "tui.ts"), "export default {}\n"),
       ),
     )
-    const before = await strays(project)
+    // Every entry of the project, so a write into an existing `.opencode`, `.kilo` or `.kilocode` also shows.
+    const listing = async () => (await readdir(project, { recursive: true })).toSorted()
+    const before = await listing()
 
     const output = await cliIn(project, env, "plugin", "list", "--standalone")
 
     expect(output).toContain(path.join(project, ".kilo2", "plugins", "from-kilo2"))
     for (const name of names.slice(1)) expect(output).not.toContain(path.join(project, name, "plugins"))
-    expect(await strays(project)).toEqual(before)
+    expect(await listing()).toEqual(before)
     expect(await strays(root)).toEqual([])
   } finally {
     await rm(root, { recursive: true, force: true })

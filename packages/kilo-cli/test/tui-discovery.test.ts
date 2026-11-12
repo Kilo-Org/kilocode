@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
-import { hostMirrors } from "../src/mirrors"
+import { hostMirrors, hostMirrorsPlugin } from "../src/mirrors"
 import { projectConfigName } from "../src/tui-config-directories"
 import { localPluginDirectories } from "../src/tui-plugin-discovery"
 
@@ -114,6 +114,19 @@ test("every host mirror names an upstream file and a Kilo file", async () => {
     expect(await Bun.file(path.join(import.meta.dir, "../..", upstream)).exists(), upstream).toBe(true)
     expect(await Bun.file(path.join(import.meta.dir, "../src", mirror)).exists(), mirror).toBe(true)
   }
+})
+
+// The mirror is found by the path under the last `packages` directory that names it, also when the checkout itself
+// lies under directories named `packages`.
+test("the host mirror loader serves the mirror under a nested packages path", async () => {
+  await using tmp = await temporary()
+  const file = path.join(tmp.path, "packages", "packages", "tui", "src", "util", "config-directories.ts")
+  await Bun.write(file, "export const upstream = true\n")
+  const result = await Bun.build({ entrypoints: [file], target: "bun", plugins: [hostMirrorsPlugin] })
+  expect(result.success).toBe(true)
+  const output = await result.outputs[0].text()
+  expect(output).toContain("projectConfigName")
+  expect(output).not.toContain("upstream = true")
 })
 
 test("the config directories mirror differs from upstream only in the project directory name", async () => {
