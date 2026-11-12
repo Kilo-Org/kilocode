@@ -1,14 +1,55 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.SystemInfo
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloProcessJobTest {
+
+    @Test
+    fun `missing JNA classes cannot prevent job initialization or retries`() {
+        val parent = KiloProcessJob::class.java.classLoader
+        for (prefix in listOf("com.sun.jna.", "com.sun.jna.win32.StdCallLibrary", "com.intellij.jna.JnaLoader")) {
+            val missing = mutableListOf<String>()
+            val log = TestLog()
+            val loader = object : ClassLoader(parent) {
+                override fun findClass(name: String): Class<*> {
+                    val path = name.replace('.', '/') + ".class"
+                    val bytes = parent.getResourceAsStream(path)?.use { it.readBytes() }
+                        ?: throw ClassNotFoundException(name)
+                    return defineClass(name, bytes, 0, bytes.size)
+                }
+
+                override fun loadClass(name: String, resolve: Boolean): Class<*> {
+                    if (name.startsWith(prefix)) {
+                        missing += name
+                        throw ClassNotFoundException(name)
+                    }
+                    if (!name.startsWith("ai.kilocode.backend.cli.")) return super.loadClass(name, resolve)
+                    return synchronized(getClassLoadingLock(name)) {
+                        val type = findLoadedClass(name) ?: findClass(name)
+                        if (resolve) resolveClass(type)
+                        type
+                    }
+                }
+            }
+            val type = Class.forName(KiloProcessJob::class.java.name, true, loader)
+            val companion = type.getField("Companion").get(null)
+            val assign = companion.javaClass.getMethod("assign", Long::class.javaPrimitiveType, KiloLog::class.java)
+            repeat(2) { assertNull(assign.invoke(companion, 0L, log), "Missing $prefix must preserve fallback") }
+            if (SystemInfo.isWindows) {
+                assertTrue(missing.isNotEmpty(), "The native path must attempt to load $prefix")
+                assertEquals(2, log.messages.count { it.contains("failed to initialize") })
+            }
+            if (!SystemInfo.isWindows) assertTrue(missing.isEmpty(), "Non-Windows must not load JNA: $missing")
+        }
+    }
 
     /**
      * The kill-on-close job is Windows-only. Everywhere else (including CI) [KiloProcessJob.assign]
