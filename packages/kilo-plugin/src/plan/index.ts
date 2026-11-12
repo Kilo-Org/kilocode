@@ -5,6 +5,7 @@ import { SessionStore } from "@opencode/core/session/store"
 import { define } from "@opencode/plugin/effect/plugin"
 import type { Session } from "@opencode/schema/session"
 import type { SessionMessage } from "@opencode/schema/session-message"
+import type { Tool } from "@opencode/schema/tool"
 import { Global } from "@opencode/util/global"
 import { Cause, Effect, Stream, type Scope } from "effect"
 import { PlanMode } from "./mode"
@@ -34,6 +35,21 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
       })
       .pipe(Effect.orDie)
 
+    // Code Mode drops a nested tool's metadata, so the resolved plan path is only in the execute output.
+    // Put it back on the execute result for the client, including when the model omitted `path`.
+    if (document)
+      yield* ctx.tool
+        .hook("execute.after", (event) => {
+          if (event.status !== "completed" || event.tool !== "execute") return Effect.void
+          const calls = event.result.metadata?.toolCalls
+          if (!Array.isArray(calls) || !calls.some(isOpenPlanCall)) return Effect.void
+          const path = openedPath(event.result.content)
+          if (!path) return Effect.void
+          event.result = { ...event.result, metadata: { ...event.result.metadata, path, open: true } }
+          return Effect.void
+        })
+        .pipe(Effect.orDie)
+
     yield* PlanMode.install({ ctx, store, data: global.data, document })
 
     yield* ctx.session.hook("experimental.idle", (event) =>
@@ -48,3 +64,26 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
     )
   }),
 })
+
+function isOpenPlanCall(value: unknown) {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    "tool" in value &&
+    value.tool === "open_plan" &&
+    "status" in value &&
+    value.status === "completed"
+  )
+}
+
+/** The resolved plan path from the model-visible output of a completed `open_plan` call. */
+function openedPath(content: Tool.Result["content"]) {
+  const text =
+    typeof content === "string"
+      ? content
+      : (content ?? [])
+          .flatMap((part) => (part.type === "text" ? [part.text] : []))
+          .join("\n")
+  return [...text.matchAll(/Opened plan at (.+?) for review\./g)].at(-1)?.[1]
+}

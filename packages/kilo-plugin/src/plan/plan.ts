@@ -63,8 +63,8 @@ export function openPlan(ctx: Context, store: SessionStore.Interface, data: stri
       Effect.gen(function* () {
         yield* assert(ctx, "kilo.open_plan", context)
         const path = yield* find(ctx, store, data, params, context, "open_plan")
-        // The client opens a completed part with `open: true` once, in the session it belongs to. Code Mode
-        // forwards the same metadata from the nested call to its `execute` result.
+        // The client opens a completed part with `open: true` once, in the session it belongs to. The plan
+        // plugin also puts the resolved path on a Code Mode `execute` result, where nested metadata is lost.
         return { output: `Opened plan at ${path} for review.`, metadata: { path, open: true } }
       }),
   } satisfies Tool.Info<typeof OpenParameters, typeof Schema.String>
