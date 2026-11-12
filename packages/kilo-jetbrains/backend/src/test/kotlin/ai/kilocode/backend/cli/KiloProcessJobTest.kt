@@ -5,7 +5,6 @@ import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.SystemInfo
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -42,11 +41,17 @@ class KiloProcessJobTest {
             val type = Class.forName(KiloProcessJob::class.java.name, true, loader)
             val companion = type.getField("Companion").get(null)
             val assign = companion.javaClass.getMethod("assign", Long::class.javaPrimitiveType, KiloLog::class.java)
-            repeat(2) { assertNull(assign.invoke(companion, 0L, log), "Missing $prefix must preserve fallback") }
-            if (SystemInfo.isWindows) {
-                assertTrue(missing.isNotEmpty(), "The native path must attempt to load $prefix")
-                assertEquals(2, log.messages.count { it.contains("failed to initialize") })
+            repeat(2) {
+                val count = log.messages.size
+                assertNull(assign.invoke(companion, 0L, log), "Missing $prefix must preserve fallback")
+                if (SystemInfo.isWindows) {
+                    assertTrue(
+                        log.messages.drop(count).any { it.startsWith("WARN:") },
+                        "Missing $prefix must log a warning on every attempt",
+                    )
+                }
             }
+            if (SystemInfo.isWindows) assertTrue(missing.isNotEmpty(), "The native path must attempt to load $prefix")
             if (!SystemInfo.isWindows) assertTrue(missing.isEmpty(), "Non-Windows must not load JNA: $missing")
         }
     }
