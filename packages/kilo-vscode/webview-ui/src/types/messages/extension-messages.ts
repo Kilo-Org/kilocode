@@ -524,6 +524,7 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    agentManagerUpsell: boolean
     agentManagerSplash: boolean
     browserAutomation: boolean
     agentManagerBrowserOpenLinksIn: "external" | "integrated"
@@ -1788,6 +1789,13 @@ export interface AgentManagerBrowserDevtoolsMessage {
 }
 
 export type ExtensionMessage =
+  | {
+      type: "agentManagerUpsellLoaded"
+      request: string
+      state: import("../../../../src/shared/agent-manager-upsell").UpsellState
+      engaged: boolean
+      display: boolean
+    }
   | {
       type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
       projectId?: string

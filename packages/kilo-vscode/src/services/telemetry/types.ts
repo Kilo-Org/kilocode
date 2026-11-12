@@ -28,6 +28,7 @@ export enum TelemetryEventName {
 
   // UI Interactions
   TAB_SHOWN = "Tab Shown",
+  AGENT_MANAGER_UPSELL = "Agent Manager Upsell",
   TITLE_BUTTON_CLICKED = "Title Button Clicked",
   WORK_STYLE_ONBOARDING_SHOWN = "Work Style Onboarding Shown",
   WORK_STYLE_SELECTED = "Work Style Selected",

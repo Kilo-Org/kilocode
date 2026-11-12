@@ -358,6 +358,16 @@ export const dict = {
   "common.edit": "Edit",
   "common.loadMore": "Load more",
 
+  "sidebar.upsell.title": "Put a fleet of Kilo agents to work",
+  "sidebar.upsell.body": "You don't have to wait for one task to finish.",
+  "sidebar.upsell.parallel": "Run several sessions at the same time",
+  "sidebar.upsell.worktree": "Give each its own worktree so changes don't collide",
+  "sidebar.upsell.attention": "See at a glance which one needs you",
+  "sidebar.upsell.open": "Open Agent Manager",
+  "sidebar.upsell.later": "Not now",
+  "sidebar.upsell.never": "Don't show this again",
+  "sidebar.upsell.confirmation": "Got it. We won't suggest Agent Manager here again.",
+  "sidebar.upsell.undo": "Undo",
   "sidebar.settings": "Settings",
 
   "sound.option.alert01": "Alert 01",
@@ -958,6 +968,9 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
+  "settings.experimental.agentManagerUpsell.title": "Agent Manager Sidebar Invitation",
+  "settings.experimental.agentManagerUpsell.description":
+    "Show an optional invitation to try Agent Manager in the Kilo sidebar after coding tasks. Disabled by default.",
   "settings.experimental.browserAutomation.title": "Integrated Browser",
   "settings.experimental.browserAutomation.description":
     "Preview local applications and public HTTPS pages in Agent Manager and the Integrated Browser tab, and expose the browser_open tool to sessions.",

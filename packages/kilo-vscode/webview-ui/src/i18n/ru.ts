@@ -392,6 +392,16 @@ export const dict = {
   "common.edit": "Редактировать",
   "common.loadMore": "Загрузить ещё",
 
+  "sidebar.upsell.title": "Задействуйте целую флотилию агентов Kilo",
+  "sidebar.upsell.body": "Не нужно ждать завершения одной задачи.",
+  "sidebar.upsell.parallel": "Запускайте несколько сессий одновременно",
+  "sidebar.upsell.worktree": "Выделите каждой отдельное рабочее дерево, чтобы изменения не конфликтовали",
+  "sidebar.upsell.attention": "Сразу видите, какой сессии нужно ваше внимание",
+  "sidebar.upsell.open": "Открыть Agent Manager",
+  "sidebar.upsell.later": "Не сейчас",
+  "sidebar.upsell.never": "Больше не показывать",
+  "sidebar.upsell.confirmation": "Понятно. Мы больше не будем предлагать Agent Manager здесь.",
+  "sidebar.upsell.undo": "Отменить",
   "sidebar.settings": "Настройки",
 
   "sound.option.alert01": "Alert 01",
@@ -1466,6 +1476,9 @@ export const dict = {
   "chat.search.close": "Закрыть поиск",
   "chat.search.invalidRegex": "Недопустимое регулярное выражение",
   "chat.search.noResults": "Нет результатов",
+  "settings.experimental.agentManagerUpsell.title": "Приглашение в Agent Manager на боковой панели",
+  "settings.experimental.agentManagerUpsell.description":
+    "Показывать необязательное приглашение попробовать Agent Manager на боковой панели Kilo после задач по программированию. По умолчанию отключено.",
   "settings.experimental.browserAutomation.title": "Встроенный браузер",
   "settings.experimental.browserAutomation.description":
     "Показывайте предпросмотр локальных приложений в Agent Manager и предоставляйте инструмент browser_open сеансам Agent Manager.",
