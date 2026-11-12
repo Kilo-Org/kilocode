@@ -59,7 +59,7 @@ suspend fun orphanSizes(paths: List<String>): Map<String, Long> =
  * Answers null once [active] goes false, so a walk that stopped early contributes nothing rather
  * than a partial sum that would be indistinguishable from a real measurement.
  */
-private fun walkSize(root: Path, active: () -> Boolean): Long? {
+internal fun walkSize(root: Path, active: () -> Boolean): Long? {
     if (!Files.isDirectory(root)) return 0
     var total = 0L
     var stopped = false
