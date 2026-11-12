@@ -1,6 +1,7 @@
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { OpenCode } from "@opencode/client"
 import { Service } from "@opencode/client/effect/service"
+import { waitForPlugins } from "@opencode/cli/services/plugin-startup"
 import { ServerConnection } from "@opencode/cli/services/server-connection"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { KiloRemoteRpc } from "@opencode/schema/kilocode/remote"
@@ -17,6 +18,9 @@ export default Runtime.handler(
     const server = yield* ServerConnection.resolve({ standalone: true })
     const client = OpenCode.make({ baseUrl: server.endpoint.url, headers: Service.headers(server.endpoint) })
     const location = { location: { directory: process.cwd() } }
+    // The private server was just started: its Kilo RPCs answer `rpc.unavailable` until the Location's plugins are
+    // registered.
+    yield* waitForPlugins(client, process.cwd())
     yield* Effect.tryPromise(() => client.rpc(KiloHandshakeRpc.Definition).get({}, location))
     const sync = yield* Effect.tryPromise(() =>
       client.rpc(KiloSessionSyncRpc.Definition).status({ directory: process.cwd() }, location),
