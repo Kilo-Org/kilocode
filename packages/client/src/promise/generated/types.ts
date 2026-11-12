@@ -471,6 +471,7 @@ export type SessionRevert = {
   partID?: string
   snapshot?: SnapshotID
   files?: Array<FileDiffInfo>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type GenerateImageOutput2 = { type: "image"; data: PromptBase64; mime: string; name?: string }
@@ -3858,6 +3859,7 @@ export type ExperimentalSessionImportInput = {
         readonly moved?: boolean
         readonly more?: true
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     readonly location: { readonly directory: string }
   }

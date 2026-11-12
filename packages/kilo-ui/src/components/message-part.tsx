@@ -1996,6 +1996,9 @@ export function UserMessageDisplay(props: {
   bubbleHeader?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
+  /** Shows a revert action beside Copy, for surfaces that can rewind the session to this message. */
+  onRevert?: () => void
+  revertDisabled?: boolean
   /** Dims the message and shows its delivery status and controls in place of the time, fork and copy actions. */
   pending?: UserMessagePending
   /** Opens an image attachment outside the webview. Return false to keep the in-page preview for that image. */
@@ -2170,6 +2173,23 @@ export function UserMessageDisplay(props: {
                   props.onFork?.()
                 }}
                 aria-label={i18n.t("ui.message.forkMessage")}
+              />
+            </Tooltip>
+          </Show>
+          <Show when={props.onRevert && !props.pending}>
+            <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
+              <IconButton
+                data-slot="user-message-revert"
+                icon="arrow-left"
+                size="normal"
+                variant="ghost"
+                disabled={props.revertDisabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  props.onRevert?.()
+                }}
+                aria-label={i18n.t("ui.message.revertMessage")}
               />
             </Tooltip>
           </Show>

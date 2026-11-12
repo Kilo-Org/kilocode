@@ -25,6 +25,28 @@ export type WorktreeHealthState = NonNullable<AgentManagerStateMessage["worktree
 /** A directory under `.kilo/worktrees/` that no worktree claims, and whether it still holds a checkout. */
 export type OrphanDirectory = NonNullable<AgentManagerStateMessage["orphanDirectories"]>[number]
 
+/**
+ * The incoming list with the previous object kept for each item whose fields did not change, and the previous list
+ * when nothing changed. Every state push carries fresh objects; keyed lists would otherwise remount every row.
+ */
+export function keepUnchanged<T extends { id: string }>(prev: T[], next: T[]): T[] {
+  const known = new Map(prev.map((item) => [item.id, item]))
+  const items = next.map((item) => {
+    const old = known.get(item.id)
+    return old && sameFields(old, item) ? old : item
+  })
+  return sameItems(prev, items) ? prev : items
+}
+
+function sameFields<T extends object>(a: T, b: T) {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  return [...keys].every((key) => a[key as keyof T] === b[key as keyof T])
+}
+
+function sameItems<T>(a: readonly T[], b: readonly T[]) {
+  return a.length === b.length && a.every((item, index) => item === b[index])
+}
+
 /** Local session tab ids owned by one project. */
 export function createStoreTabs(initial: string[] = []) {
   const [ids, setIds] = createSignal<string[]>(initial)
@@ -88,12 +110,12 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
 
   /** Write a project state payload into this store (data fields only). */
   const applyState = (state: AgentManagerStateMessage): void => {
-    setWorktrees(state.worktrees)
-    setManagedSessions(state.sessions)
+    setWorktrees((prev) => keepUnchanged(prev, state.worktrees))
+    setManagedSessions((prev) => keepUnchanged(prev, state.sessions))
     setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
     setWorktreeHealth(state.worktreeHealth ?? {})
     setOrphanDirectories(state.orphanDirectories ?? [])
-    setSections(state.sections ?? [])
+    setSections((prev) => keepUnchanged(prev, state.sections ?? []))
     if (state.tabOrder) {
       const incoming = state.tabOrder
       setTabOrder((previous) => ({
@@ -111,7 +133,10 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
       }))
     }
     if (state.pinnedTabs) setPinnedTabs(state.pinnedTabs)
-    if (state.worktreeOrder) setWorktreeOrder(state.worktreeOrder)
+    if (state.worktreeOrder) {
+      const incoming = state.worktreeOrder
+      setWorktreeOrder((prev) => (sameItems(prev, incoming) ? prev : incoming))
+    }
     if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
     setRunScriptConfigured(state.runScriptConfigured === true)
     if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)

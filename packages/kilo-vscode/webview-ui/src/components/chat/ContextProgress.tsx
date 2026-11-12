@@ -12,6 +12,7 @@
 import { Component, createMemo, Show } from "solid-js"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useV2 } from "../../v2/client"
+import { visibleMessages } from "../../v2/revert"
 import { sessionUsage } from "../../v2/session-usage"
 import { formatCompactCount as fmt } from "../../utils/format"
 
@@ -22,11 +23,10 @@ interface ContextProgressProps {
 export const ContextProgress: Component<ContextProgressProps> = (props) => {
   const v2 = useV2()
   const info = () => v2.data.session.get(props.sessionID)
-  const messages = () => v2.data.session.message.list(props.sessionID)
+  // A staged revert hides its steps, so their model and context window no longer count.
+  const messages = () => visibleMessages(v2.data.session.message.list(props.sessionID), info()?.revert)
 
-  const resolved = createMemo(() =>
-    sessionUsage(messages(), v2.data.location.model.list(), info()?.model, info()?.revert?.messageID),
-  )
+  const resolved = createMemo(() => sessionUsage(messages(), v2.data.location.model.list(), info()?.model))
 
   const data = createMemo(() => {
     const usage = resolved().usage

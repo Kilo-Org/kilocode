@@ -384,7 +384,7 @@ export function activate(context: ExtensionContext) {
       (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
     ),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
-      deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
+      deserializeWebviewPanel: async (panel, state) => changes.deserializePanel(panel, state),
     }),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },

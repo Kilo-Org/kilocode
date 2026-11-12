@@ -1,13 +1,18 @@
 // Experimental tab on v2 config. Only the rows with a v2 key are rendered: Share Mode (`share`), Formatter
-// (`formatter`) and LSP (`lsp`). The other rows have no v2 key and are not rendered.
-import { Component } from "solid-js"
+// (`formatter`), LSP (`lsp`) and Image Generation (`experimental.image_generate`). The other rows have no v2 key and
+// are not rendered. The image model row only shows while image generation is on, because writing a model also turns
+// the tool on.
+import { Component, Show } from "solid-js"
 import { Switch } from "./Switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
+import { KiloImageModelsProvider, useKiloImageModels } from "../../context/kilo-image-models"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
+import ModelPicker from "./ModelPicker"
+import { selection, write, type ModelSelection } from "./models-selection"
 import SettingsRow from "./SettingsRow"
-import { keepRecord } from "./settings-values"
+import { imageGenerationEnabled, imageGenerationModel, imageGenerationSwitch, keepRecord } from "./settings-values"
 
 interface ShareOption {
   value: string
@@ -20,9 +25,15 @@ const SHARE_OPTIONS: ShareOption[] = [
   { value: "disabled", labelKey: "settings.experimental.share.disabled" },
 ]
 
-const ExperimentalTab: Component = () => {
+const ExperimentalTabContent: Component = () => {
   const language = useLanguage()
   const config = useSettingsConfig()
+  const imageModels = useKiloImageModels()
+
+  const imageGenerate = () => config.value(["experimental", "image_generate"])
+  const imageModel = () => selection(config.value(["experimental", "image_generate", "model"]))
+  const setImageModel = (value: ModelSelection | undefined) =>
+    config.set(["experimental", "image_generate"], imageGenerationModel(imageGenerate(), write(value)))
 
   return (
     <div>
@@ -76,6 +87,36 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.imageGeneration.title")}
+          description={language.t("settings.experimental.imageGeneration.description")}
+        >
+          <Switch
+            checked={imageGenerationEnabled(imageGenerate())}
+            onChange={(checked) =>
+              config.set(["experimental", "image_generate"], imageGenerationSwitch(imageGenerate(), checked))
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.imageGeneration.title")}
+          </Switch>
+        </SettingsRow>
+
+        <Show when={imageGenerationEnabled(imageGenerate())}>
+          <SettingsRow
+            title={language.t("settings.experimental.imageGenerationModel.title")}
+            description={language.t("settings.experimental.imageGenerationModel.description")}
+          >
+            <ModelPicker
+              models={imageModels.models}
+              value={imageModel()}
+              onChange={setImageModel}
+              clearable
+              clearLabel={language.t("settings.experimental.imageGenerationModel.placeholder")}
+            />
+          </SettingsRow>
+        </Show>
+
+        <SettingsRow
           title={language.t("settings.experimental.conversationPromptHistory.title")}
           description={language.t("settings.experimental.conversationPromptHistory.description")}
         >
@@ -106,4 +147,11 @@ const ExperimentalTab: Component = () => {
   )
 }
 
-export default ExperimentalTab
+// Only this tab reads the image model catalog, so the Settings shell does not mount it.
+export default function ExperimentalTab() {
+  return (
+    <KiloImageModelsProvider>
+      <ExperimentalTabContent />
+    </KiloImageModelsProvider>
+  )
+}

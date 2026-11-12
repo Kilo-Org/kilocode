@@ -9,6 +9,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
+import { CountUp, createCountStart } from "@kilocode/kilo-ui/count-up"
 import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages/agent-manager"
 import type { PRStatus } from "../src/types/messages/agent-manager"
 import { ActivityIcon } from "../src/components/shared/ActivityIcon"
@@ -344,6 +345,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
   const [overAction, setOverAction] = createSignal(false)
   let card: HTMLDivElement | undefined
   let trash: HTMLButtonElement | undefined
+  const start = createCountStart(() => props.stats !== undefined)
   const state = () =>
     strongest([
       props.activity,
@@ -522,24 +524,34 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                       <Show when={hasStats(props.stats)}>
                         <div class="am-worktree-stats">
                           <Show when={props.stats!.behind > 0}>
-                            <span class="am-worktree-behind">↓{props.stats!.behind}</span>
+                            <span class="am-worktree-behind">
+                              ↓<CountUp value={props.stats!.behind} from={start()} />
+                            </span>
                           </Show>
                           <Show when={props.stats!.ahead > 0}>
-                            <span class="am-worktree-commits">↑{props.stats!.ahead}</span>
+                            <span class="am-worktree-commits">
+                              ↑<CountUp value={props.stats!.ahead} from={start()} />
+                            </span>
                           </Show>
                           <Show
                             when={props.stats!.additions > 0 || props.stats!.deletions > 0}
                             fallback={
                               <Show when={props.stats!.files > 0}>
-                                <span class="am-stat-files">{props.stats!.files}f</span>
+                                <span class="am-stat-files">
+                                  <CountUp value={props.stats!.files} from={start()} />f
+                                </span>
                               </Show>
                             }
                           >
                             <Show when={props.stats!.additions > 0}>
-                              <span class="am-stat-additions">+{props.stats!.additions}</span>
+                              <span class="am-stat-additions">
+                                +<CountUp value={props.stats!.additions} from={start()} />
+                              </span>
                             </Show>
                             <Show when={props.stats!.deletions > 0}>
-                              <span class="am-stat-deletions">−{props.stats!.deletions}</span>
+                              <span class="am-stat-deletions">
+                                −<CountUp value={props.stats!.deletions} from={start()} />
+                              </span>
                             </Show>
                           </Show>
                         </div>
@@ -744,7 +756,9 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Show when={props.stats!.files > 0}>
                 <div class="am-hover-card-row">
                   <span class="am-hover-card-row-label">{t("agentManager.hoverCard.files")}</span>
-                  <span class="am-hover-card-row-value">{props.stats!.files}</span>
+                  <span class="am-hover-card-row-value">
+                    <CountUp value={props.stats!.files} />
+                  </span>
                 </div>
               </Show>
               <Show when={props.stats!.additions > 0 || props.stats!.deletions > 0}>
@@ -752,10 +766,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   <span class="am-hover-card-row-label">{t("agentManager.hoverCard.changes")}</span>
                   <span class="am-hover-card-row-value am-hover-card-diff-stats">
                     <Show when={props.stats!.additions > 0}>
-                      <span class="am-stat-additions">+{props.stats!.additions}</span>
+                      <span class="am-stat-additions">
+                        +<CountUp value={props.stats!.additions} />
+                      </span>
                     </Show>
                     <Show when={props.stats!.deletions > 0}>
-                      <span class="am-stat-deletions">−{props.stats!.deletions}</span>
+                      <span class="am-stat-deletions">
+                        −<CountUp value={props.stats!.deletions} />
+                      </span>
                     </Show>
                   </span>
                 </div>
@@ -765,10 +783,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   <span class="am-hover-card-row-label">{t("agentManager.hoverCard.commits")}</span>
                   <span class="am-hover-card-row-value am-hover-card-diff-stats">
                     <Show when={props.stats!.ahead > 0}>
-                      <span class="am-worktree-commits">↑{props.stats!.ahead}</span>
+                      <span class="am-worktree-commits">
+                        ↑<CountUp value={props.stats!.ahead} />
+                      </span>
                     </Show>
                     <Show when={props.stats!.behind > 0}>
-                      <span class="am-worktree-behind">↓{props.stats!.behind}</span>
+                      <span class="am-worktree-behind">
+                        ↓<CountUp value={props.stats!.behind} />
+                      </span>
                     </Show>
                   </span>
                 </div>
