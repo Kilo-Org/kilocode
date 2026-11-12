@@ -657,8 +657,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const settled = yield* Latch.make(false)
       yield* lock.withPermit(loadCatalog(targetEpoch, 0)).pipe(Effect.ensuring(settled.open), Effect.forkIn(scope))
       const loaded = yield* settled.await.pipe(Effect.timeoutOption(FIRST_CATALOG_WAIT))
-      // The provider transform below reads a catalog that settled in time. One that lands later would be invisible, so
-      // reload the provider, as a retry does. A failed load has no models to publish; its retry reloads on success.
+      // The provider transform below reads a catalog that settled in time. One that lands later would be invisible,
+      // whether it carries chat or image models, so reload the provider, as a retry does. A failed load has no models
+      // to publish; its retry reloads on success.
       if (Option.isSome(loaded)) return
       yield* settled.await.pipe(
         Effect.andThen(
