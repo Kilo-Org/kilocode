@@ -3,7 +3,10 @@ import { Cause, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Form } from "@opencode/core/form"
 import { Image } from "@opencode/core/image"
+import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
+import { Project } from "@opencode/core/project"
+import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { Tool } from "@opencode/core/tool"
 import { QuestionTool } from "@opencode/core/tool/plugin/question"
@@ -11,6 +14,7 @@ import { KiloQuestion } from "@opencode/schema/kilocode/question"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { testEffect } from "../../core/test/lib/effect"
+import { location } from "../../core/test/fixture/location"
 import { imagePassthrough } from "../../core/test/lib/image"
 import { permissionLayer } from "../../core/test/lib/permission"
 import { executeTool, registerToolPlugin, toolDefinitions, toolIdentity } from "../../core/test/lib/tool"
@@ -57,6 +61,19 @@ const build = (kilo: boolean, forms: "mock" | "real") =>
       Permission.node.replace(permission),
       ...(forms === "mock" ? [Form.node.replace(form)] : []),
       Image.node.replace(imagePassthrough),
+      Location.node.replace(
+        Layer.succeed(
+          Location.Service,
+          Location.Service.of({
+            ...location({ directory: AbsolutePath.make("/workspace") }),
+            project: {
+              id: Project.ID.global,
+              directory: AbsolutePath.make("/workspace"),
+              canonical: AbsolutePath.make("/workspace"),
+            },
+          }),
+        ),
+      ),
     ],
   )
 

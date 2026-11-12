@@ -2,8 +2,11 @@ import { expect, test } from "bun:test"
 import { Bus } from "@opencode/core/bus"
 import { CodeModeCatalog } from "@opencode/core/codemode/catalog"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
+import { Project } from "@opencode/core/project"
+import { AbsolutePath } from "@opencode/core/schema"
 import { SessionStore } from "@opencode/core/session/store"
 import { Tool } from "@opencode/core/tool"
 import { Session } from "@opencode/schema/session"
@@ -12,6 +15,7 @@ import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Effect, Layer } from "effect"
 import { host } from "../../core/test/plugin/host"
+import { location } from "../../core/test/fixture/location"
 import { permissionLayer } from "../../core/test/lib/permission"
 import { KiloPlanPlugin } from "../src/plan"
 import { code, created, sessionID, workspace } from "./plan-harness"
@@ -21,6 +25,19 @@ const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
 
 const registryLayer = AppNodeBuilder.build(LayerNode.group([Tool.node, PluginHooks.node]), [
   Permission.node.replace(permissionLayer({ assert: () => Effect.void })),
+  Location.node.replace(
+    Layer.succeed(
+      Location.Service,
+      Location.Service.of({
+        ...location({ directory: AbsolutePath.make("/workspace") }),
+        project: {
+          id: Project.ID.global,
+          directory: AbsolutePath.make("/workspace"),
+          canonical: AbsolutePath.make("/workspace"),
+        },
+      }),
+    ),
+  ),
 ])
 
 test("Code Mode gives the Code agent open_plan and attaches its resolved path without a model path", async () => {

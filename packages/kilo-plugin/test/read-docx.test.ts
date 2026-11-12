@@ -165,15 +165,16 @@ describe("kilo DOCX reads", () => {
     ),
   )
 
-  it.live("reports an out-of-range offset for extracted text", () =>
+  it.live("returns an empty page for an out-of-range offset in extracted text", () =>
     withTempDir((tmp) =>
       Effect.gen(function* () {
         const filepath = path.join(tmp.path, "short.docx")
         yield* Effect.promise(async () => Bun.write(filepath, await document(["one", "two", "three"])))
 
-        const error = yield* run(filepath, { offset: 50 }).pipe(Effect.flip)
+        // Upstream removed OffsetOutOfRangeError in v2.2.7; an offset past the end yields an empty page.
+        const page = yield* run(filepath, { offset: 50 })
 
-        expect(error.message).toContain("Offset 50 is out of range")
+        expect(page).toMatchObject({ type: "text-page", content: "", offset: 50, truncated: false })
       }),
     ),
   )
