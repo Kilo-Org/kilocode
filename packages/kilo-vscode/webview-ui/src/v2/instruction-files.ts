@@ -51,15 +51,6 @@ export function collectInstructionFiles(messages: readonly SessionMessageInfo[],
   return { byRead, reported }
 }
 
-/**
- * The transcript's view of the history. An instruction message a read card
- * reports is dropped, because the card lists the same files; a load no card
- * reports keeps its notice row.
- */
-export function withoutReportedInstructions(messages: readonly SessionMessageInfo[], files: InstructionFiles) {
-  return messages.filter((message) => !files.reported.has(message.id))
-}
-
 type Read = { id: string; ran?: number; completed?: number; path?: string }
 type StartedRead = Read & { ran: number }
 type CompletedRead = StartedRead & { completed: number }

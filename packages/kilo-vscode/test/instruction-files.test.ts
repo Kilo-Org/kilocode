@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { SessionMessageAssistant, SessionMessageInfo } from "@opencode/client"
-import { collectInstructionFiles, withoutReportedInstructions } from "../webview-ui/src/v2/instruction-files"
+import { collectInstructionFiles } from "../webview-ui/src/v2/instruction-files"
 
 const instructionFilesByRead = (messages: readonly SessionMessageInfo[], directory?: string) =>
   collectInstructionFiles(messages, directory).byRead
@@ -214,16 +214,5 @@ describe("read instruction files", () => {
 
     expect([...byRead]).toEqual([["read-1", ["/repo/AGENTS.md"]]])
     expect([...reported]).toEqual(["shown"])
-  })
-
-  test("drops a notice row when a read card shows the same load", () => {
-    const messages = [
-      step("a1", 1000, [read("read-1", 1001, 1100, 1300)]),
-      instruction("shown", 1200, ["/repo/AGENTS.md"]),
-      instruction("elsewhere", 1400, ["/repo/lib/AGENTS.md"]),
-    ]
-    const files = collectInstructionFiles(messages, "/repo")
-
-    expect(withoutReportedInstructions(messages, files).map((message) => message.id)).toEqual(["a1", "elsewhere"])
   })
 })

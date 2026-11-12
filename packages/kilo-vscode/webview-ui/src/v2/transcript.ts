@@ -75,6 +75,17 @@ export function transcriptRows(messages: readonly SessionMessageInfo[], previous
   return reuseRows(buildRows(messages), previous)
 }
 
+/**
+ * Drops the notice rows of instruction loads a read card already reports. The
+ * filter runs on rows, not on the messages `transcriptRows` groups: a synthetic
+ * message bounds a turn in a transcript without idle markers, so removing it
+ * from the history would merge the steps after it into another turn and change
+ * that turn's duration and token rate.
+ */
+export function withoutReportedNotices(rows: readonly TranscriptRow[], reported: ReadonlySet<string>) {
+  return rows.filter((row) => row.type !== "notice" || !reported.has(row.message.id))
+}
+
 /** Rows of the active turn kept out of the virtual window. */
 export const DIRECT_TAIL_ROWS = 8
 

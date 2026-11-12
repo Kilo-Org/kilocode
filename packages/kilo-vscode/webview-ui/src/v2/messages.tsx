@@ -16,7 +16,7 @@ import { useVSCode } from "../context/vscode"
 import { onTimelineHighlight, type TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
-import { collectInstructionFiles, withoutReportedInstructions } from "./instruction-files"
+import { collectInstructionFiles } from "./instruction-files"
 import { QuestionDock } from "./question"
 import { revertedCount, visibleMessages } from "./revert"
 import type { Selection } from "./selectors"
@@ -28,6 +28,7 @@ import {
   retainTurn,
   shiftedScroll,
   transcriptRows,
+  withoutReportedNotices,
   type TranscriptHold,
   type TranscriptPartition,
   type TranscriptRow,
@@ -173,9 +174,10 @@ export function MessageList(props: {
   onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
   // An instruction load a read card reports is shown there, so its transcript
-  // notice row would repeat the same line.
+  // notice row would repeat the same line. The row is dropped after the rows are
+  // built, so the turn grouping still sees the instruction message.
   const rows = createMemo<TranscriptRow[]>((previous) =>
-    transcriptRows(withoutReportedInstructions(messages(), instructions()), previous),
+    withoutReportedNotices(transcriptRows(messages(), previous), instructions().reported),
   )
   // A run that waits on a permission reports idle while its last step can still
   // change, so an unfinished last step also keeps its turn live.
