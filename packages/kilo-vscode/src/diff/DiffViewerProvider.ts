@@ -256,8 +256,11 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
    * show and closes.
    */
   deserializePanel(panel: vscode.WebviewPanel, state: unknown): void {
+    // The restore can arrive after the panel was already opened in this window. The open one keeps the provider.
+    if (this.panel) return panel.dispose()
     const ctx = restoredContext(state)
     if (!ctx) return panel.dispose()
+    this.focusPending = !!ctx.comment
     this.baseBranchOverride = ctx.baseBranchOverride
     this.attach(panel, ctx)
   }

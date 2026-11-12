@@ -108,6 +108,33 @@ describe("DiffViewerProvider restore", () => {
     h.provider.deserializePanel(panel as unknown as vscode.WebviewPanel, { sidebarSide: "left" })
     expect(panel.disposed).toBe(true)
   })
+
+  it("keeps the panel that is already open in this window", () => {
+    const h = harness()
+    const open = fakePanel()
+    h.provider.deserializePanel(open as unknown as vscode.WebviewPanel, { diffViewer: { sessionId: "open" } })
+    const restored = fakePanel()
+    h.provider.deserializePanel(restored as unknown as vscode.WebviewPanel, { diffViewer: { sessionId: "restored" } })
+
+    expect(open.disposed).toBe(false)
+    expect(restored.disposed).toBe(true)
+  })
+
+  it("focuses the saved comment of a restored review panel", () => {
+    const h = harness()
+    const panel = fakePanel()
+    h.provider.deserializePanel(panel as unknown as vscode.WebviewPanel, {
+      diffViewer: {
+        sessionId: "session-1",
+        initialSourceId: "workspace",
+        comment: { id: "thread", origin: "pr", author: "alice", body: "snapshot", file: "old.ts", line: 7 },
+      },
+    })
+
+    expect((h.provider as unknown as { focusPending: boolean }).focusPending).toBe(true)
+    const comments = panel.posts.find((message) => message.type === "diffViewer.prComments")
+    expect(comments?.comments).toMatchObject([{ id: "thread", outdated: true }])
+  })
 })
 
 describe("restoredContext", () => {
