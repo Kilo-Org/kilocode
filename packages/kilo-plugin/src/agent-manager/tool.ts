@@ -81,7 +81,7 @@ export function makeTools(runtime: Runtime) {
               output: JSON.stringify(
                 {
                   instructions:
-                    "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo2/agent-manager.json.",
+                    "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit agent-manager.json.",
                   ...result.overview,
                 },
                 null,
