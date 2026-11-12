@@ -4,10 +4,10 @@ import {
   jobAgents,
   mergeListed,
   mergePromptAgents,
-  runChildren,
   showBackgroundAgent,
   stackFit,
   stackPlace,
+  revertedChildren,
   subagentBackground,
   transcriptAgents,
   transcriptChildren,
@@ -84,16 +84,17 @@ describe("subagent children", () => {
     expect(transcriptChildren(messages)).toEqual([])
   })
 
-  it("lists only the children the current run started", () => {
+  it("names the children that only reverted turns started", () => {
     const messages = [
-      assistant("m1", [part({ id: "a", child: "ses_old" })]),
-      user("u2"),
-      assistant("m3", [part({ id: "b", child: "ses_new" })]),
+      user("u1"),
+      assistant("m2", [part({ id: "a", child: "ses_kept" })]),
+      user("u3"),
+      assistant("m4", [part({ id: "b", child: "ses_kept" }), part({ id: "c", child: "ses_gone" })]),
     ]
 
-    expect(runChildren(messages)).toEqual(["ses_new"])
+    expect(revertedChildren(messages, messages.slice(0, 2))).toEqual(["ses_gone"])
+    expect(revertedChildren(messages, messages)).toEqual([])
   })
-
   it("reads background from the input or from a completed part whose child still runs", () => {
     expect(subagentBackground(part({ child: "a", background: true }))).toBe(true)
     expect(subagentBackground(part({ child: "a" }))).toBe(false)

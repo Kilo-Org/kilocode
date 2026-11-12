@@ -410,7 +410,7 @@ describe("agent_manager tool", () => {
     ])
     expect(JSON.parse(result.output!)).toEqual({
       instructions:
-        "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo2/agent-manager.json.",
+        "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit agent-manager.json.",
       sections: [],
       ungrouped: [
         {

@@ -24,6 +24,7 @@ export function createAppSession(opts: {
   const panel = createPanelData({
     post: (message) => opts.vscode.postMessage(message),
     directories: opts.directories.sessionDirectories,
+    home: opts.rootDirectory,
   })
   onCleanup(
     opts.vscode.onMessage((message) =>

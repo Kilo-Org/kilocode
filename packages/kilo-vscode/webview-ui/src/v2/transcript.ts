@@ -22,6 +22,7 @@ interface TranscriptRowBase {
 export interface TranscriptUserRow extends TranscriptRowBase {
   type: "user"
   message: SessionMessageUser
+  answered: boolean
 }
 
 export interface TranscriptAssistantRow extends TranscriptRowBase {
@@ -72,6 +73,17 @@ export interface TranscriptHold {
  */
 export function transcriptRows(messages: readonly SessionMessageInfo[], previous?: readonly TranscriptRow[]) {
   return reuseRows(buildRows(messages), previous)
+}
+
+/**
+ * Drops the notice rows of instruction loads a read card already reports. The
+ * filter runs on rows, not on the messages `transcriptRows` groups: a synthetic
+ * message bounds a turn in a transcript without idle markers, so removing it
+ * from the history would merge the steps after it into another turn and change
+ * that turn's duration and token rate.
+ */
+export function withoutReportedNotices(rows: readonly TranscriptRow[], reported: ReadonlySet<string>) {
+  return rows.filter((row) => row.type !== "notice" || !reported.has(row.message.id))
 }
 
 /** Rows of the active turn kept out of the virtual window. */
@@ -139,20 +151,20 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
     const range = current && index >= current.start && index < current.end ? current : undefined
     if (range) turn = range.turn
 
+    const notice = noticeRow(message, range)
     if (message.type === "user" && range) {
-      rows.push({ type: "user", key: `${message.id}:user`, turn: range.turn, userTurn: range.userTurn, message })
-    } else if (message.type === "assistant" && range) {
-      rows.push(...assistantRows(message, range))
-    } else if (message.type === "synthetic" && message.description && range) {
-      // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
       rows.push({
-        type: "notice",
-        key: `${message.id}:notice`,
+        type: "user",
+        key: `${message.id}:user`,
         turn: range.turn,
         userTurn: range.userTurn,
         message,
-        text: message.description,
+        answered: isAnswered(messages, index, range, rangeIndex < ranges.length - 1),
       })
+    } else if (message.type === "assistant" && range) {
+      rows.push(...assistantRows(message, range))
+    } else if (notice) {
+      rows.push(notice)
     } else if (message.type === "idle" && message.error && !stepFailed(messages[index - 1])) {
       // A run can fail before any step, for example without a usable model. The
       // idle row carries that error; a failed step shows its own error instead.
@@ -167,6 +179,26 @@ function buildRows(messages: readonly SessionMessageInfo[]) {
   }
 
   return rows
+}
+
+/**
+ * The notice row for a described synthetic message, or undefined when the message has no row. A subagent completion
+ * already shows as its tool card and in the agent stack; its synthetic message exists for the model, so a notice row
+ * here would only repeat the card title at the end of the transcript. Shell notices keep their row: a backgrounded
+ * shell result, a restart, and a shell start failure are only visible there.
+ */
+function noticeRow(message: SessionMessageInfo, range: MessageTurnRange | undefined) {
+  if (!range || message.type !== "synthetic" || !message.description) return undefined
+  if (message.metadata?.source === "subagent") return undefined
+  // The TUI shows a described synthetic message as one notice; one without a description stays hidden.
+  return {
+    type: "notice" as const,
+    key: `${message.id}:notice`,
+    turn: range.turn,
+    userTurn: range.userTurn,
+    message,
+    text: message.description,
+  }
 }
 
 function assistantRows(message: SessionMessageAssistant, range: MessageTurnRange): TranscriptAssistantRow[] {
@@ -238,6 +270,19 @@ function stepFailed(message: SessionMessageInfo | undefined) {
   return message?.type === "assistant" && !!message.error
 }
 
+function isAnswered(
+  messages: readonly SessionMessageInfo[],
+  index: number,
+  range: MessageTurnRange,
+  followed: boolean,
+) {
+  if (followed || messages[range.end]?.type === "idle") return true
+  for (let i = index + 1; i < range.end; i++) {
+    if (messages[i]?.type === "assistant") return true
+  }
+  return false
+}
+
 function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
   if (!previous?.length) return rows
   const prior = new Map(previous.map((row) => [row.key, row]))
@@ -249,7 +294,9 @@ function reuseRows(rows: TranscriptRow[], previous?: readonly TranscriptRow[]) {
 
 function sameRow(left: TranscriptRow, right: TranscriptRow) {
   if (left.type !== right.type || left.turn !== right.turn || left.userTurn !== right.userTurn) return false
-  if (left.type === "user" && right.type === "user") return left.message === right.message
+  if (left.type === "user" && right.type === "user") {
+    return left.message === right.message && left.answered === right.answered
+  }
   if (left.type === "assistant" && right.type === "assistant") {
     return (
       left.message === right.message &&

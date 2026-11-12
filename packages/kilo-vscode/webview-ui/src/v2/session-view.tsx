@@ -1,10 +1,12 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
-import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
+import { mediaHashFromUri, type FileDiffInfo, type JsonValue, type ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { REVERT_ERROR_CODE } from "../../../src/shared/revert-error"
 import type { MentionFile } from "../hooks/context-mention-utils"
 import type { GitChangesTarget } from "../hooks/useGitChangesContext"
 import type { WorktreeReference } from "../utils/prompt-mention-drop"
@@ -28,7 +30,9 @@ import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
-import { PromptInput } from "./prompt"
+import { PromptInput, setPromptDraft } from "./prompt"
+import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
+import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
 import { settledLoader, startingLoader } from "./session-loading"
@@ -130,26 +134,15 @@ export function SessionView(props: {
   const draftKey = () => props.draftKey ?? session() ?? "new"
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
-  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
-  // tree releases every child loaded from it, so a long-lived view does not keep every expanded child transcript.
+  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a view
+  // releases the session it showed and the children it loaded, so a long-lived view keeps no expanded child transcript.
   const children = createChildSessions({ data: v2.data, report: v2.report })
   const childSessions: ToolChildSession = {
     tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
     running: (sessionID) => v2.data.session.status(sessionID) === "running",
     load: children.load,
   }
-  let previousSession: string | undefined
-  createEffect(
-    on(
-      session,
-      (id) => {
-        const previous = previousSession
-        previousSession = id
-        children.switchTo(id, previous)
-      },
-      { defer: true },
-    ),
-  )
+  createEffect(on(session, (id, previous) => children.switchTo(id, previous), { defer: true }))
   createEffect(
     on(
       v2.connection.status,
@@ -173,7 +166,14 @@ export function SessionView(props: {
     return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
   })
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
-  const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
+  const forms = () => formsOf(session())
+  // The same reads for a named session, for a send that outlives the tab it came from.
+  function formsOf(id: string | undefined) {
+    if (!id) return []
+    return [id, ...v2.data.session.family(id).filter((item) => item !== id)].flatMap(
+      (member) => v2.data.session.form.list(member) ?? [],
+    )
+  }
 
   // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
   // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
@@ -223,10 +223,8 @@ export function SessionView(props: {
     ),
   )
 
-  const running = () => {
-    const id = session()
-    return !!id && v2.data.session.status(id) === "running"
-  }
+  const runningOf = (id: string | undefined) => !!id && v2.data.session.status(id) === "running"
+  const running = () => runningOf(session())
 
   // Questions do not block the prompt, as in v1: a pending question is dismissed when the user sends instead.
   // Only a permission blocks sending, and the composer stays writable so typing remains possible.
@@ -268,6 +266,88 @@ export function SessionView(props: {
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
+  let composerHandle: ComposerHandle | undefined
+  // The sidebar and the Agent Manager reuse this view across tabs, so revert state is kept per session: a prompt,
+  // command or compaction waits for the latest revert of its own session, as v1 waited for its checkpoint chain.
+  const reverts = createRevertQueue()
+  const applyDraft = (key: string, next: ComposerDraft) => {
+    setPromptDraft(key, next)
+    if (draftKey() === key) composerHandle?.set?.(next)
+  }
+  const reportRevertError = () =>
+    showToast({
+      variant: "error",
+      title: language.t("common.requestFailed"),
+      description: language.t(REVERT_ERROR_CODE),
+    })
+  // Revert and redo stay out of the way of live work: a running or admitted turn, a pending permission or question,
+  // and a background subagent that can still write files would all race the workspace restore.
+  const revertBlocked = () => {
+    const id = session()
+    return (
+      running() ||
+      reverts.busy(id) ||
+      working.submitting() ||
+      dockBlocked() ||
+      jobs.active() ||
+      (!!id && v2.data.session.pending.list(id).length > 0)
+    )
+  }
+  // The restored prompt goes to the reverted session's own draft, which is keyed by its ID, so switching tabs while
+  // the revert runs keeps it for that tab instead of dropping it.
+  const mutateRevert = (sessionID: string, run: () => Promise<ComposerDraft | undefined>) => {
+    if (props.readOnly || revertBlocked()) return
+    void reverts
+      .run(
+        sessionID,
+        () =>
+          run().then((draft) => {
+            getVSCodeAPI().postMessage({ type: "requestGitChangesStats" } satisfies ToHost as never)
+            return draft
+          }),
+        (draft) => {
+          if (draft) applyDraft(sessionID, draft)
+        },
+      )
+      ?.catch(reportRevertError)
+  }
+  const revertMessage = (sessionID: string, messageID: string) =>
+    mutateRevert(sessionID, async () => {
+      const target = v2.data.session.message
+        .list(sessionID)
+        .find((item) => item.type === "user" && item.id === messageID)
+      const draft =
+        target?.type === "user"
+          ? await restoredDraft(target, (uri) => {
+              const hash = mediaHashFromUri(uri)
+              if (!hash) return Promise.resolve(undefined)
+              return v2.api.experimental.media.get({ hash }).catch(() => undefined)
+            })
+          : undefined
+      const staged = await v2.api.session.revert.stage({ sessionID, messageID })
+      const current = v2.data.session.get(sessionID)
+      if (current) v2.data.session.remember({ ...current, revert: staged })
+      return draft
+    })
+  const redoAll = () => {
+    const id = session()
+    if (!id) return
+    mutateRevert(id, async () => {
+      await v2.api.session.revert.clear({ sessionID: id })
+      const current = v2.data.session.get(id)
+      if (current) v2.data.session.remember({ ...current, revert: undefined })
+      return EMPTY_DRAFT
+    })
+  }
+  const redo = () => {
+    const id = session()
+    if (!id) return
+    const target = redoTarget(v2.data.session.message.list(id), v2.data.session.get(id)?.revert)
+    // No target means the transcript has not loaded yet, so Redo must not fall through to Redo All and drop the revert.
+    if (!target) return
+    if (target === "all") return redoAll()
+    revertMessage(id, target.next)
+  }
   // The transcript quotes and comments through the composer, so it exists only while the composer does.
   const [reply, setReply] = createSignal<ReplyHandler>()
   const pending = createPending({
@@ -286,21 +366,35 @@ export function SessionView(props: {
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
   const begin = async (mode: SendMode) => {
+    // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
+    // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
     const key = draftKey()
+    const existing = session()
+    reverts.sent(existing)
+    await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
-    const existing = session()
     const seed = existing ? undefined : await sandbox.metadata()
     const id = existing ?? selection.create(seed)
     if (existing) selection.ensure(id)
     const gate = selection.gate(id)
     // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
-    // Read both before onSession changes the session identity.
-    const model = selection.model()
+    // Read both before onSession changes the session identity. The active selection belongs to the active tab, so it
+    // only describes this send while that tab is still open; otherwise the pinned session's own selection applies.
+    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
+    const binding = sendBinding({
+      pinned: existing,
+      active: session(),
+      running: runningOf(id),
+      goalActive: !!goal.active(),
+      steerInterrupts: steerInterrupts(v2.data.session.message.list(id), waiting),
+      mode,
+    })
+    const model = binding.same ? selection.model() : selection.selected(id)
     const draft = selection.draft(id)
-    // A pending question is dismissed when the user sends instead.
-    const questions = forms()
+    // A pending question of this session is dismissed when the user sends instead.
+    const questions = formsOf(id)
     props.onSession(id, key)
     // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
     const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
@@ -314,15 +408,10 @@ export function SessionView(props: {
     // with the prompt. A failed stop still sends the prompt as a steer. Sending a prompt never cancels a running
     // compaction either way: `now` still stops the model call and running tools, but the checkpoint finishes first
     // and the prompt follows it. Only Stop itself, and Escape with it, may cancel a compaction.
-    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
     // The goal plugin pauses a goal whose run the user interrupts, so with an active goal a steer waits for the next
     // step boundary instead of stopping the model call: a new message takes priority, then the goal continues, as in
     // v1. Stop and "stop and send" still stop the run and pause the goal.
-    const interrupt =
-      running() &&
-      (mode === "now" ||
-        (mode === "steer" && !goal.active() && steerInterrupts(v2.data.session.message.list(id), waiting)))
-    if (interrupt) await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
+    if (binding.interrupt) await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
     return { id, gate, model, draft }
   }
 
@@ -375,8 +464,12 @@ export function SessionView(props: {
   // The selectors listen for these events, so a slash action opens the same picker as a click.
   const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
   // Compaction runs on the composer's selection, as the TUI: an uncommitted draft switches the session first.
+  // Compaction commits a staged revert, so it waits for the revert of that session to settle first.
   const compact = (id: string) =>
-    void v2.data.session.compact({ sessionID: id, model: selection.draft(id) }).catch(v2.report)
+    void reverts
+      .settled(id)
+      .then(() => v2.data.session.compact({ sessionID: id, model: selection.draft(id) }))
+      .catch(v2.report)
   const handlers = (): SlashHandlers => {
     const id = session()
     const start = props.onNewSession
@@ -496,6 +589,10 @@ export function SessionView(props: {
                 onSelectSession={(id) => props.actions.openSession?.(id)}
                 onShowHistory={props.onShowHistory}
                 onForkMessage={running() ? undefined : props.onForkMessage}
+                onRevertMessage={props.readOnly ? undefined : revertMessage}
+                revertDisabled={revertBlocked()}
+                onRedo={redo}
+                onRedoAll={redoAll}
                 empty={props.empty}
                 onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
                 onViewTurnChanges={props.onViewTurnChanges}
@@ -552,7 +649,10 @@ export function SessionView(props: {
                   onReviewAppendReady={props.onReviewAppendReady}
                   onReplyReady={setReply}
                   onReferenceReady={props.onReferenceReady}
-                  onComposerReady={props.onComposerReady}
+                  onComposerReady={(handle) => {
+                    composerHandle = handle
+                    props.onComposerReady?.(handle)
+                  }}
                   slash={{ entries: slashEntries, run: runSlash }}
                   tabs={props.tabs}
                   manager={props.manager}

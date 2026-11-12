@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 126,
-    "markedLines": 2186,
-    "unmarkedLines": 326,
+    "files": 138,
+    "markedLines": 2366,
+    "unmarkedLines": 332,
     "deletedFiles": 0
   },
   "files": {
@@ -104,12 +104,12 @@
     },
     "packages/client/src/promise/generated/types.ts": {
       "rung": 3,
-      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, and the optional PTY create size. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
+      "seam": "Generated client types for schema additions Kilo exposes: the optional command template and model metadata on the command list API, the optional PTY create size, and the optional `workspace` restoration outcome on `Session.Revert`. The client must be regenerated from the public schema. It also carries the optional `steer` query parameter of `session.interrupt`.",
       "unmarked": "Generated TypeScript cannot retain manual marker comments; bun run generate owns this file."
     },
     "packages/protocol/openapi.json": {
       "rung": 3,
-      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
+      "seam": "Generated OpenAPI document for the optional command template and model metadata exposed by the command list API, the optional PTY create size exposed by packages/schema/src/pty.ts, the optional `workspace` restoration outcome on `Session.Revert`, and the `hook` action variant of `Schedule.Action` that lets Kilo-owned Flows own a schedule row without admitting a native prompt. The document is generated from the public schema; editing it by hand is not supported. It also documents the optional `steer` query parameter of `session.interrupt` and the `interrupted: false` outcome it can produce.",
       "unmarked": "Generated JSON cannot carry marker comments; bun run generate in packages/protocol owns this file."
     },
     "packages/core/package.json": {
@@ -123,7 +123,7 @@
     },
     "packages/core/src/schedule.ts": {
       "rung": 3,
-      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. The native experimental.schedules check runs first and is unchanged, so the seam adds no policy; a host that keeps scheduling on provides Flag.Overrides to the Schedule node (Kilo does, in packages/kilo-cli/src/host.ts). A hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows and wakeups use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior. The Kilo `/periodic` wizard validates an `at` time before it asks for permission approval, so it reads the same instant parser through a Kilo-owned schema module (`@opencode/schema/kilocode/schedule`) instead of a second copy, and the local helper is replaced by that import."
+      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. Schedule.create accepts an internal optional requireEnabled flag so a host plugin can own a backing schedule without enabling OpenCode's native schedule UI; the default remains true. The hook runs before the native experimental.schedules check, and only unclaimed occurrences honor that flag, so a plugin-owned schedule keeps firing while the native UI is disabled; a hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows use the hook and option, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
     },
     "packages/schema/src/schedule.ts": {
       "rung": 3,
@@ -165,6 +165,10 @@
       "rung": 4,
       "seam": "Optional `moved` flag on a file diff so clients can label a rename. The patch tool output is this shared struct and no plugin can add a field to an upstream schema; without the flag both clients report a rename as an unlabelled modification. Every other producer omits it, so upstream behavior and defaults are unchanged."
     },
+    "packages/schema/src/session-revert.ts": {
+      "rung": 4,
+      "seam": "Optional `workspace` restoration outcome (`restored`, `snapshots-disabled`, `unavailable`, `not-a-git-repo`) on `Session.Revert` and `Session.RevertV1`, carried across `PersistedRevert`. `Session.Info.revert`, `SessionEvent.RevertEvent.Staged` and the `session` table encoder all validate against this struct, so no plugin or host override can attach the outcome without the schema stripping it. Upstream producers omit it, leaving upstream behavior and defaults unchanged."
+    },
     "packages/core/src/mcp/host.ts": {
       "rung": 3,
       "seam": "Generic MCP embedding hooks (`fetch`, OAuth client identity, client document, loopback callback, registration redirect and credential binding, auth-failure predicate) for an embedding host. The `fetch` hook receives the transport URL for the attempt, so a wrapper can tell the MCP endpoint from other requests the same fetch serves. No plugin hook reaches the MCP transport, OAuth registration or connection status classification, and the Kilo host supplies the values through `Mcp.configured({ host })`. With `host` unset, upstream behavior and defaults are unchanged. The file carries no Kilo value."
@@ -193,6 +197,26 @@
       "rung": 3,
       "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
     },
+    "packages/core/src/tool.ts": {
+      "rung": 3,
+      "seam": "A tool option `direct: true` keeps the tool on the provider's native tool list and in the Code Mode inventory, so a client-rendered tool is also callable from a Code Mode program. The registry's list split and its inventory are private to this service, and no plugin hook observes or changes them. Without the option the native and Code Mode sets are exactly upstream's."
+    },
+    "packages/core/src/codemode/tool.ts": {
+      "rung": 3,
+      "seam": "Mark a dual tool (see `packages/core/src/tool.ts`) in the Code Mode catalog. The catalog is derived from the registry next to the tool options, so a plugin cannot add the mark; unmarked tools keep their existing listing."
+    },
+    "packages/core/src/codemode/catalog.ts": {
+      "rung": 3,
+      "seam": "Carry the optional `direct` mark through the summarized catalog, list it as `[direct]`, and set a summary flag while a marked tool is shown. The summary is the model-facing contract the instructions render and a plugin cannot extend it. Without a marked tool the catalog text and summary are unchanged."
+    },
+    "packages/core/src/codemode/instructions.ts": {
+      "rung": 3,
+      "seam": "Qualify the Code Mode paragraph and the catalog heading while a marked tool is shown, because such a tool is also a normal call, and supersede the whole catalog when the marker first appears. The instructions are static text plus the rendered summary, so a plugin cannot qualify them, and a catalog without a marked tool renders exactly upstream's text."
+    },
+    "packages/core/src/tool/AGENTS.md": {
+      "rung": 3,
+      "seam": "Document the optional `direct` tool option next to `codemode` in the registration contract. The sentence continues the existing options description and changes no rule."
+    },
     "packages/core/src/tool/runtime.ts": {
       "rung": 4,
       "seam": "Defect fix: Zod 4.6+ (pinned 4.6.7) emits the non-standard JSON Schema formats `starts_with`, `ends_with` and `includes` next to the equivalent `pattern`, and strict providers reject tool schemas that carry them. The marked block passes the Kilo-owned Zod `override` (`core/src/kilocode/tool/zod-format.ts`) to both Zod conversions in `standardJsonSchema`: Standard JSON Schema `libraryOptions` (Zod vendor only) and the `toJSONSchema` fallback (zod/mini). `pattern` and standard formats stay; Effect Schema and raw JSON Schema tools are untouched. No lower rung: the conversion runs inside the tool runtime when definitions are derived, after every tool editor transform, so a plugin cannot reach every Zod tool (including third-party plugin tools registered later), and request-body hooks would be per-protocol and miss WebSocket transports. Upstream `dev` has the same defect; the block goes away when upstream fixes it. Raises files 124 to 125 and markedLines 2105 to 2112 (7 lines: import plus the 6-line block)."
@@ -201,9 +225,17 @@
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
     },
+    "packages/core/src/job/recovery.ts": {
+      "rung": 4,
+      "seam": "The shell recovery record carries the model's optional `description`, so a background command that outlives a server restart produces the same summary as the normal completion notice. The restart notice is built from this record in `session/execution/restart.ts`, and the record schema is upstream-owned. No plugin hook observes background recovery. The field is optional, so records written before it and every upstream default are unchanged."
+    },
+    "packages/core/src/session/execution/restart.ts": {
+      "rung": 4,
+      "seam": "Prefer the recovery record's optional `description` for the shell restart notice and fall back to the command. The notice is built inside the upstream restart path, which no plugin hook reaches. With the fallback, records written before the field existed read exactly as upstream does."
+    },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
-      "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add the optional `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. Both additions are optional: omitted input, every upstream default, and the rest of the result and metadata are unchanged."
     },
     "packages/core/src/tool/plugin/schedule.ts": {
       "rung": 4,
@@ -211,7 +243,7 @@
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+      "seam": "Test coverage for the marked live-output progress behavior and for the optional model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and stays absent when omitted. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
@@ -286,6 +318,10 @@
       "rung": 3,
       "seam": "Render the optional `app.header` slot above the main view and session tabs. Existing slots cannot place a process-wide status indicator at the top of both home and session screens, and server host composition cannot alter the TUI layout. One generic line; without a claim it renders nothing and preserves upstream defaults."
     },
+    "packages/tui/src/mini/runtime.lifecycle.ts": {
+      "rung": 4,
+      "seam": "Call the Kilo-owned `registerMiniParsers` before the mini renderer starts, so fenced code in mini highlights the languages the full TUI supports instead of only OpenTUI's bundled JavaScript, TypeScript, Markdown and Zig. The full TUI registers the same upstream parser config at module load in `tui/src/routes/session/index.tsx`; mini has no equivalent call, so a Kotlin fence renders as plain text. This is a defect fix in upstream's mini lifecycle. Rung 1 has no hook for the CLI frontend's parser registry, rung 2 cannot reach it from `packages/kilo-cli` because the parser config is a package-local module rather than an exported surface, and rung 3 would add a host knob on `MiniHost` for one call. The marked lines only import and call `tui/src/kilocode/mini-parsers.ts`; no Kilo value changes."
+    },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
       "seam": "Render the `home.bottom` plugin slot directly below the home prompt (the v1 `home_bottom` position). Without a claim it renders nothing, so the upstream home screen is unchanged. Rungs 1 and 2 cannot add a slot boundary to the home route. One generic line with no Kilo value; the Kilo news banner lives in tui/src/kilocode/kilo-news.tsx."
@@ -308,7 +344,7 @@
     },
     "turbo.json": {
       "rung": 3,
-      "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci`, `@opencode/cli#test:ci` and `@kilocode/kilo-cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117).",
+      "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci`, `@opencode/cli#test:ci` and `@kilocode/kilo-cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117). `@opencode/core#typecheck:tsc` declares its declaration build (`node_modules/.ts-dist/**`) as outputs. Upstream makes the packages that reference core wait for core's `tsc -b` so core's declarations exist first, but a cache hit replays only the logs. Every dependent that misses then rebuilds core into the same directory at once, and one reads a half-written declaration: `TS2306: File 'packages/core/src/<file>.ts' is not a module` in `cli` (2026-11-06) and `server` (2026-11-12) CI typecheck runs. With the outputs restored, `tsc -b` in each dependent finds core up to date and only reads it. No compiler option or upstream default changes; a seam in the task graph is the only place to declare a task's outputs.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/src/services/updater.ts": {
@@ -431,7 +467,7 @@
     },
     "packages/client/src/solid/data.ts": {
       "rung": 3,
-      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream."
+      "seam": "Adds a per-session `session.message.evict(sessionID)` that drops one session's cached messages. The existing `session.evict` clears the root and every known descendant, so the Agent Manager inspector cannot release one subagent without blanking the parent transcript. Also adds `session.message.startLoaded(sessionID)`, which reports whether the last fetched page was shorter than the requested limit. The server returns a next cursor for the last non-empty page even when nothing is older, so a transcript cannot otherwise know that its loaded window reaches the start. Omitted calls behave as upstream. A `session.revert.committed` event also cuts the cached transcript at the boundary message's position when it is loaded, instead of at the first message whose ID sorts at or after it: a queued prompt keeps its admission ID and is delivered after later steps, so the ID cut removed steps the server keeps (the projector deletes by sequence). It falls back to the ID cut when the boundary is not loaded. No lower rung: the event reducer is internal to the store and the VS Code and TUI transcripts both read this cache."
     },
     "packages/client/test/solid-eviction.test.ts": {
       "rung": 4,
@@ -452,7 +488,7 @@
     },
     "packages/schema/src/tool.ts": {
       "rung": 3,
-      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. Optional `direct` marks a Code Mode tool that also stays on the provider's native tool list, for a client that renders it by name. The tool registry schema is shared and closed to plugin extension. Both options are omitted by default, which keeps upstream behavior."
     },
     "packages/schema/src/session-instruction-paths.ts": {
       "rung": 4,
@@ -490,6 +526,14 @@
       "rung": 4,
       "seam": "Kilo CI stability: the 1 MB one-char-at-a-time streaming test keeps its deterministic scan-work assertion, but the wall-clock timeout in the same test is upstream's default, and Windows CI runners crossed it at ~18 s against a 15 s ceiling. The input is reduced to 256 KB, which keeps the identical constant-work-per-character bound, and the timeout is raised to 60 s as a guard for catastrophic regressions only. No seam: bun's per-test timeout and the payload size are inside an upstream test file, and the test suite belongs to the upstream package that Kilo cannot replace (inline patch, option 4)."
     },
+    "packages/server/test/artifact.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: `setDefaultTimeout(30_000)` for the file's single test, matching upstream's own budget for Location-booting server tests (packages/server/test/session-diff.test.ts). The test boots three Locations (disabled, enabled, enabled-other), and each activates all 92 built-in plugins before the artifact route runs. That is about 0.5 s on macOS and passed bun's 5 s default on the Windows `packages` leg, where the Kilo host suite runs four test processes beside three package suites on four vCPUs. No assertion and no product code changes. Rung 4: bun's per-test timeout is set inside the upstream test file, and no seam reaches it from Kilo code."
+    },
+    "packages/server/test/fetch.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, Kilo CI stability: the OpenAI OAuth tests wait up to 15 s instead of 2 s for the `chatgpt-browser` method to appear in `/api/integration` (the pending-requests test gets the same 15 s for its identical wait on the build agent's permission policy), and the file uses `setDefaultTimeout(30_000)` (the 'both ports busy' test goes from 10 s to 30 s) so bun's deadline stays above that wait plus the fixed 2 s or 3.6 s port retries in `listen`. The wait covers plugin activation of a cold Location: about 0.3 s on macOS and more than 2 s on the Windows `packages` leg, where the Kilo host suite runs beside three package suites on four vCPUs. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the method appears. No assertion and no product code changes; the production `/cancel` probe keeps its 2 s abort. Rung 4: the deadlines are literals inside the upstream test file, and no seam reaches them from Kilo code."
+    },
     "packages/core/src/session.ts": {
       "rung": 3,
       "seam": "`Session.Interface.interrupt` accepts the optional `steer` flag and passes it to `SessionExecution`. A client that steers a running turn needs the server to tell 'stop this model call' apart from 'stop everything'; the interrupt options are the only input the execution layer reads, and no plugin hook reaches interruption. Upstream callers never set the flag, so their behavior does not change."
@@ -521,6 +565,10 @@
     "packages/core/src/plugin/module.ts": {
       "rung": 3,
       "seam": "Plugin source resolver seam (feature `plugin`, cell plugin:25cfde80052f): `PluginModule.Options.pluginSource` lets an embedding host map a configured target to the directory the loader should read, before the existing local-path/npm split, name the `plugin.use` resources the resolution stands for (so a deny-list cannot be bypassed by another spelling), and report `pending` when the source needs the installing pass instead of the fast pass, and let the loader evaluate those resources on the read pass first so a denied plugin is blocked before the resolver reaches the network. The hook returns `undefined` for every upstream target, so npm packages and local directories behave exactly as before. Rungs 1 and 2 cannot reach the loader: the split runs inside `PluginModule.load`, after the plugin registry, and a host cannot supply the Npm or source loading steps from outside it. Kilo supplies `git:` clone resolution here."
+    },
+    "packages/server/src/location.ts": {
+      "rung": 4,
+      "seam": "Location boot fix (feature `location-boot`). Two changes in the location middleware module: (1) `awaitPlugins` waits for plugin activation without the 5-second deadline that turned a slow cold start into a 503 `Location plugins did not finish activating` on `agent.list`, `model.list` and `provider.list`; the catalog is complete a moment later, and `rpc.call` already waits the same way. Upstream removes the wait entirely in bcaf561d949, which the next sync brings; until Kilo clients refresh on `*.updated` and handle `rpc.unavailable` on a cold Location, waiting without a deadline is the reliable behavior. (2) `permission.request.list` and `form.list` answer an empty list for an existing directory whose Location isn't loaded instead of booting it (a missing directory still boots and fails with `LocationNotFoundError`), the rule upstream already applies to `session.form.list` in `middleware/form-location.ts`: pending permissions and forms live in memory, so an unloaded Location has none. Clients poll every worktree they show, and each poll booted a whole Location with all plugins, which starved the root's activation. No hook or host replacement reaches the server's location middleware (`routes.ts` provides `layer` directly), so this needs lines in the upstream file. Rung 4 because the first change alters the deadline behavior; the second is generic and a candidate for upstream."
     },
     "packages/tui/test/session-panel.test.tsx": {
       "rung": 4,

@@ -53,8 +53,6 @@ export const SessionDock: Component<SessionDockProps> = (props) => {
   const stack = useAgentStack({
     session,
     agents: props.jobs.agents,
-    boundary: props.jobs.boundary,
-    started: props.jobs.started,
     open: (id, title) => props.onOpenSession?.(id, title),
     stop: props.jobs.cancel,
     dismiss: props.jobs.dismiss,

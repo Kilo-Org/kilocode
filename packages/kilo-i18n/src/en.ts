@@ -163,4 +163,8 @@ export const dict = {
   "ui.message.feedback.helpful": "This was helpful",
   "ui.message.feedback.notHelpful": "This wasn't helpful",
   "ui.message.feedback.clearRating": "Clear rating",
+  // Chart tool card
+  "ui.tool.chart": "Chart",
+  "ui.tool.chart.invalid": "Invalid chart config — must include type and data",
+  "ui.tool.chart.failed": "Failed to render chart",
 }

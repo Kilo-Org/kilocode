@@ -1,4 +1,4 @@
-import { expect } from "bun:test"
+import { expect, setDefaultTimeout } from "bun:test" // kilocode_change
 import fs from "node:fs/promises"
 import { createServer } from "node:http"
 import path from "node:path"
@@ -18,6 +18,11 @@ const options = {
   models: { fetch: false },
   fs: { filewatcher: false },
 } as const
+
+// kilocode_change start - each test builds a server, and most boot a Location whose built-in plugins take seconds
+// to activate on the shared Windows CI runner.
+setDefaultTimeout(30_000)
+// kilocode_change end
 
 it.live("returns LocationNotFoundError for a missing folder and recovers once it exists", () =>
   Effect.gen(function* () {
@@ -190,7 +195,7 @@ const connectOpenAI = (handler: Handler) =>
     }).pipe(
       Effect.filterOrFail((ready) => ready),
       Effect.retry(Schedule.spaced("10 millis")),
-      Effect.timeout("2 seconds"),
+      Effect.timeout("15 seconds"), // kilocode_change - plugin activation: about 0.3 s locally, over 2 s on Windows CI
     )
     return yield* Effect.promise(() =>
       handler(
@@ -474,7 +479,7 @@ it.live(
       })
     }),
   // Real retries wait 18 * 200 ms; startup and scoped cleanup also count toward the deadline.
-  { timeout: 10_000 },
+  { timeout: 30_000 }, // kilocode_change - also covers the 15 s plugin readiness wait
 )
 
 it.live("serves the session view operation and missing-session error", () =>
@@ -637,7 +642,7 @@ it.live("routes pending requests through the Session's instance", () =>
     }).pipe(
       Effect.filterOrFail((ready) => ready),
       Effect.retry(Schedule.spaced("10 millis")),
-      Effect.timeout("2 seconds"),
+      Effect.timeout("15 seconds"), // kilocode_change - the same plugin activation wait as connectOpenAI
     )
     const createdPermission = yield* Effect.promise(() =>
       handler(

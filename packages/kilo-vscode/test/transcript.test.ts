@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { FileDiffInfo, SessionMessageAssistantTool } from "@opencode/client"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "../../kilo-ui/src/components/content-data"
+import { transcriptRows } from "../webview-ui/src/v2/transcript"
 
 describe("v2 transcript content", () => {
   test("joins text output in content order without treating files as text", () => {
@@ -52,5 +53,52 @@ describe("v2 transcript content", () => {
     expect(relativizeProjectPath("C:\\repo\\src\\a.ts", "C:/repo")).toBe("src/a.ts")
     expect(relativizeProjectPath("/repo", "/repo")).toBe("")
     expect(relativizeProjectPath("/repo/a.ts", "/")).toBe("/repo/a.ts")
+  })
+})
+
+describe("completion notices", () => {
+  const message = (id: string, type: string, data: Record<string, unknown>) =>
+    ({ id, type, time: { created: 1 }, ...data }) as never
+  const turn = () => [
+    message("msg_user", "user", { text: "run it" }),
+    message("msg_step", "assistant", {
+      agent: "code",
+      model: { providerID: "kilo", id: "free" },
+      content: [{ type: "text", text: "done" }],
+      time: { created: 2, completed: 3 },
+    }),
+  ]
+
+  test("a subagent completion leaves no notice row", () => {
+    const rows = transcriptRows([
+      ...turn(),
+      message("msg_subagent", "synthetic", {
+        text: '<subagent sessionID="ses_child" state="cancelled" description="Recheck scripts package">\n</subagent>',
+        description: "Recheck scripts package",
+        metadata: { source: "subagent", childID: "ses_child", agent: "Explore", state: "cancelled" },
+      }),
+    ])
+    expect(rows.some((row) => row.type === "notice")).toBe(false)
+  })
+
+  test("a shell completion keeps its notice row", () => {
+    const rows = transcriptRows([
+      ...turn(),
+      message("msg_shell", "synthetic", {
+        text: "<shell>npm test</shell>",
+        description: "npm test",
+        metadata: { source: "shell", state: "completed" },
+      }),
+    ])
+    // A backgrounded shell result, a restart, and a shell start failure are only visible as this notice.
+    expect(rows.filter((row) => row.type === "notice")).toHaveLength(1)
+  })
+
+  test("a goal notice still renders", () => {
+    const rows = transcriptRows([
+      ...turn(),
+      message("msg_goal", "synthetic", { text: "Goal paused", description: "Goal paused", metadata: { source: "goal" } }),
+    ])
+    expect(rows.filter((row) => row.type === "notice")).toHaveLength(1)
   })
 })

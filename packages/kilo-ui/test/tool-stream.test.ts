@@ -33,6 +33,18 @@ describe("streamedTool", () => {
     expect(value.changes).toEqual({ additions: 2, deletions: 2 })
   })
 
+  test("streams a shell description while it is still being written", () => {
+    expect(streamedTool("shell", '{"description":"Show recent com').input).toEqual({ description: "Show recent com" })
+    expect(streamedTool("shell", '{"description":"Show recent commits","command":"git lo').input).toEqual({
+      description: "Show recent commits",
+      command: "git lo",
+    })
+  })
+
+  test("keeps a half-written description of other tools out of the card", () => {
+    expect(streamedTool("subagent", '{"description":"Find usa').input).toEqual({})
+  })
+
   test("shows a complete field of a tool that has no change count", () => {
     const value = streamedTool("read", '{"path":"src/a.ts"')
 

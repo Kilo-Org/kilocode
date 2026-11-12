@@ -15,6 +15,7 @@ import {
   shiftedScroll,
   TRANSCRIPT_CHUNK_SIZE,
   transcriptRows,
+  withoutReportedNotices,
 } from "../webview-ui/src/v2/transcript"
 
 const user = (id: string, created: number) =>
@@ -386,5 +387,19 @@ describe("transcript notices", () => {
     ])
     expect(rows.map((row) => row.type)).toEqual(["notice", "assistant", "assistant"])
     expect(rows[0]).toMatchObject({ type: "notice", text: "Goal: Ship the release", turn: rows[1]?.turn })
+  })
+
+  test("drops a reported notice without regrouping the steps after it", () => {
+    const rows = transcriptRows([
+      assistant({ id: "a1", created: 2, text: "Reading", completed: 3 }),
+      synthetic("s1", 4, "Loaded packages/tui/AGENTS.md"),
+      assistant({ id: "a2", created: 6, text: "Done", completed: 7 }),
+    ])
+    const shown = withoutReportedNotices(rows, new Set(["s1"]))
+
+    // A transcript without idle markers starts a turn at the instruction input, so dropping the
+    // message instead of the row would merge this step into a1's turn.
+    expect(shown.map((row) => row.type)).toEqual(["assistant", "assistant"])
+    expect(shown.map((row) => row.turn)).toEqual(["a1", "s1"])
   })
 })

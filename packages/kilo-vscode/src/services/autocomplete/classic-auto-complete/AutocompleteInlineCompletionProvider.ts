@@ -224,10 +224,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
     const { prefix, suffix } = extractPrefixSuffix(document, position)
 
-    const prompt = await this.fimPromptBuilder.getFimPrompts(
-      autocompleteInput,
-      this.contextProvider.modelId || "codestral",
-    )
+    const prompt = await this.fimPromptBuilder.getFimPrompts(autocompleteInput)
 
     return { prompt, prefix, suffix }
   }

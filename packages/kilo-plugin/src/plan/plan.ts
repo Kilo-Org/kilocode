@@ -19,13 +19,15 @@ const Parameters = Schema.Struct({
 
 const OpenParameters = Schema.Struct({
   path: Schema.optional(
-    Schema.String.annotate({
-      description: "Optional workspace-local path to the plan file. Omit this to open the current plan.",
-    }),
+    Schema.NullOr(
+      Schema.String.annotate({
+        description: "Optional workspace-local path to the plan file. Omit this to open the current plan.",
+      }),
+    ),
   ),
 })
 
-type Input = { readonly path?: string }
+type Input = { readonly path?: string | null }
 
 // kilo_port(tool:fabed9da976a)
 // plan/exit.txt carries the two v1 hunks of tool/plan-exit.txt verbatim (EXIT_DESCRIPTION above):
@@ -52,17 +54,20 @@ export function planExit(ctx: Context, store: SessionStore.Interface, data: stri
 export function openPlan(ctx: Context, store: SessionStore.Interface, data: string) {
   return {
     name: "open_plan",
-    options: { codemode: false, permission: "kilo.open_plan" },
+    // Code Mode keeps it off the native tool list for agents that can execute, while read-only agents
+    // (where Code Mode is disabled) still get it as a direct tool.
+    options: { permission: "kilo.open_plan", pinned: true },
     description:
-      "Open the saved plan in the client document viewer so the user can review it. Call this after finalizing the plan and before plan_exit.",
+      "Open a saved plan or Markdown document in the document viewer for review.\nCall this after saving a plan, or when the user asks to open a plan file.",
     input: OpenParameters,
     output: Schema.String,
     execute: (params: Input, context) =>
       Effect.gen(function* () {
         yield* assert(ctx, "kilo.open_plan", context)
-        const plan = yield* find(ctx, store, data, params, context, "open_plan")
-        // The client opens a completed part with `open: true` once, in the session it belongs to.
-        return { output: `Opened plan at ${plan} for review.`, metadata: { plan, open: true } }
+        const path = yield* find(ctx, store, data, params, context, "open_plan")
+        // The client opens a completed part with `open: true` once, in the session it belongs to. The plan
+        // plugin also puts the resolved path on a Code Mode `execute` result, where nested metadata is lost.
+        return { output: `Opened plan at ${path} for review.`, metadata: { path, open: true } }
       }),
   } satisfies Tool.Info<typeof OpenParameters, typeof Schema.String>
 }
@@ -91,7 +96,7 @@ const find = Effect.fn(function* (
   const messages = yield* store
     .messages({ sessionID: context.sessionID, order: "asc" })
     .pipe(Effect.mapError((error) => new Tool.Error({ message: error.message, error })))
-  const resolved = PlanFile.resolve(params.path, ctx.location, data)
+  const resolved = PlanFile.resolve(params.path ?? undefined, ctx.location, data)
   const target = resolved ?? PlanFile.defaultPath(session, ctx.location, data)
   const file = PlanFile.locate(target, messages, ctx.location, data, context.agent)
   if (file) return PlanFile.display(file, ctx.location)

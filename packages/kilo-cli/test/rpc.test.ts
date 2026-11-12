@@ -309,14 +309,10 @@ test(
       inputTokens: 5,
       outputTokens: 2,
     })
-    expect(await gateway.rpc["autocomplete.edit"]({ ...edit }, gateway.options)).toEqual({
-      content: "fixture edit",
-      usage: { prompt_tokens: 7, completion_tokens: 3 },
-    })
     backend.state.fimHang = true
     const abort = new AbortController()
     const pending = gateway.rpc["autocomplete.fim"]({ prefix: "", suffix: "" }, { ...gateway.options, signal: abort.signal })
-    await until(() => backend.state.autocompleteRequests.length >= 3, "the hung FIM request reached the fixture")
+    await until(() => backend.state.autocompleteRequests.length >= 2, "the hung FIM request reached the fixture")
     abort.abort()
     expect(await pending.then(() => false, () => true)).toBe(true)
     await until(() => backend.state.fimAborted === 1, "the fixture saw the aborted FIM request")
@@ -342,15 +338,4 @@ async function until(condition: () => boolean, what: string, timeout = 5_000) {
     if (condition()) return
   }
   throw new Error(`Timed out waiting until ${what}`)
-}
-
-const edit = {
-  currentFilePath: "src/index.ts",
-  currentFileContent: "export const value = 1\n",
-  cursorLine: 0,
-  cursorCharacter: 0,
-  editableRegionStartLine: 0,
-  editableRegionEndLine: 0,
-  recentlyViewedSnippets: [],
-  editDiffHistory: [],
 }
