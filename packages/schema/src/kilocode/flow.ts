@@ -245,6 +245,12 @@ const CreateFields = {
   permissions: Schema.Array(CreatePermissionGrant).annotate({ description: permissionsDescription }),
   model: Model.Ref.pipe(optional).annotate({ description: "Model override. Defaults to the source Session model." }),
   agent: Agent.ID.pipe(optional).annotate({ description: "Agent override. Defaults to the source Session agent." }),
+  requestID: Schema.String.check(Schema.isPattern(/^[0-9a-f]{32}$/u))
+    .pipe(optional)
+    .annotate({
+      description:
+        "Opaque client idempotency key of 32 lowercase hex characters. A create retried with the same key returns the Flow the first request created instead of creating a duplicate; a new create uses a new key.",
+    }),
 }
 
 const UpdateFields = {

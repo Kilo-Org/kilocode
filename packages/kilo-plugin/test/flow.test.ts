@@ -381,6 +381,51 @@ test("missing Sessions and malformed stored records are isolated", () => {
   expect(storedRecord(`flow:v1:${legacy.id}`, JSON.stringify(legacy))).toEqual({ record: legacy })
 })
 
+it.live("returns the existing Flow when a create is retried with the same request id", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    scheduleCounter = 0
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
+    if (!flowCreate) return yield* Effect.die("Expected flow_create to be registered")
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const requestID = "0123456789abcdef0123456789abcdef"
+    const input = {
+      name: "Idempotent check",
+      when: { every: "1 day" as const, tz: "UTC" },
+      prompt: "Check the project once",
+      worktree: "reuse" as const,
+      permissions: [],
+      requestID,
+    }
+    const call = (id: string) => ({
+      sessionID: source.id,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make(id),
+      progress: () => Effect.void,
+    })
+    const first = yield* flowCreate.execute(input, call("call_idempotent_first"))
+    const second = yield* flowCreate.execute(input, call("call_idempotent_second"))
+    if (!first.output || first.output.reference.type !== "managed")
+      return yield* Effect.die("Expected the first create to return a managed Flow")
+    if (!second.output || second.output.reference.type !== "managed")
+      return yield* Effect.die("Expected the retry to return a managed Flow")
+    expect(second.output.reference.flowID).toBe(first.output.reference.flowID)
+    expect(second.output.reference.flowID).toBe(`flw_${requestID}`)
+    expect(second.output.reference.scheduleID).toBe(first.output.reference.scheduleID)
+    expect((yield* (yield* Schedule.Service).list()).length).toBe(1)
+    expect(backingSchedules.size).toBe(1)
+  }),
+)
+
 it.live("registers and executes the managed Flow creation and run tools", () =>
   Effect.gen(function* () {
     backingSchedules.clear()

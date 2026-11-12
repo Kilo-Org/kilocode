@@ -1114,6 +1114,25 @@ test("returns to the permission step when the creation is rejected", async () =>
   expect(opened).toEqual([{ key: "flw_active", detail: true }])
 })
 
+test("reuses the request id when a rejected create is retried", async () => {
+  const fake = context({
+    handlers: { create: () => Promise.reject(new Error("permission denied")) },
+    // The draft's Permissions step, the failure's Permissions step, then the retry's failure: cancel and reopen.
+    script: { selects: { Permissions: ["done", "done"] } },
+  })
+  const opened: unknown[] = []
+  await createFlow(fake.context, (initial) => opened.push(initial), { key: "flw_active", detail: true })
+  const requestIDs = fake.calls
+    .filter((call) => call.method === "create")
+    .map((call) => (call.input as { requestID?: string }).requestID)
+  expect(requestIDs).toHaveLength(2)
+  // The retry reuses the idempotency key, so a lost first response cannot create a second Flow.
+  expect(requestIDs[0]).toMatch(/^[0-9a-f]{32}$/)
+  expect(requestIDs[1]).toBe(requestIDs[0])
+  expect(fake.selects.filter((select) => select.title.includes("Permissions"))).toHaveLength(3)
+  expect(opened).toEqual([{ key: "flw_active", detail: true }])
+})
+
 test("editing sends only changed fields and re-approves a new allowlist", async () => {
   const current = flow({
     id: "flw_edit",

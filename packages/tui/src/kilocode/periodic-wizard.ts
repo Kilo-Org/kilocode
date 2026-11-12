@@ -177,12 +177,14 @@ export async function createFlow(context: PeriodicContext, open: Open, back: Ini
     broken ? fromFlow(broken) : await fromSession(context, source.id),
   )
   if (!draft) return open(back)
-  return submitCreate(context, open, back, source, draft, broken)
+  // One idempotency key per create intent: a retried request returns the Flow the first attempt created.
+  return submitCreate(context, open, back, source, draft, broken, crypto.randomUUID().replaceAll("-", ""))
 }
 
 /**
  * Confirms and creates the Flow. A refused approval or a server rejection returns to the Permissions step with the
- * answers kept, so the allowlist can be fixed and submitted again.
+ * answers kept, so the allowlist can be fixed and submitted again. `requestID` is reused, so a retry after a lost
+ * response returns the existing Flow instead of creating a duplicate.
  */
 async function submitCreate(
   context: PeriodicContext,
@@ -191,6 +193,7 @@ async function submitCreate(
   source: { readonly id: string; readonly title: string },
   draft: Draft,
   broken: KiloFlowRpc.Info | undefined,
+  requestID: string,
 ): Promise<void> {
   const confirmed = await context.ui.dialog.confirm({
     title: broken ? `Repair ${broken.name}?` : "Create Flow?",
@@ -210,6 +213,7 @@ async function submitCreate(
     .create(
       {
         sourceSessionID: source.id,
+        requestID,
         ...createInput(draft),
         ...(broken?.context.model ? { model: broken.context.model } : {}),
         ...(broken?.context.agent ? { agent: broken.context.agent } : {}),
@@ -234,7 +238,7 @@ async function submitCreate(
       `not created: ${createFailure}`,
     )
     if (permissions === undefined) return open(back)
-    return submitCreate(context, open, back, source, { ...draft, permissions }, broken)
+    return submitCreate(context, open, back, source, { ...draft, permissions }, broken, requestID)
   }
   const failure =
     broken?.reference.type === "managed"

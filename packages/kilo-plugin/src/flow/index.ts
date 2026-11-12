@@ -328,10 +328,10 @@ function describeWhen(when: Schedule.When) {
 
 export function create(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "create" | "remove">,
+  schedules: Pick<Schedule.Interface, "create" | "remove" | "get">,
   input: KiloFlowRpc.CreateInput,
   projectID: Session.Info["projectID"] | undefined,
-  runtime: Pick<Runtime, "changed">,
+  runtime: Pick<Runtime, "changed" | "locks">,
 ): Effect.Effect<KiloFlowRpc.Info, Error> {
   return Effect.gen(function* () {
     const session = yield* ctx.session
@@ -347,9 +347,11 @@ export function create(
     if (invalidPermission) return yield* Effect.fail(new Error(invalidPermission))
     const now = Date.now()
     const permissions = flowPermissions(input.permissions)
+    // A retried create reuses the client's request id, so it addresses the same Flow and the lock below serializes it.
+    const id = input.requestID ? KiloFlowRpc.ID.make(`flw_${input.requestID}`) : KiloFlowRpc.ID.create()
     const record: KiloFlowRpc.Record = {
       version: 1,
-      id: KiloFlowRpc.ID.create(),
+      id,
       name: input.name,
       authority: { type: "local" },
       trigger: {
@@ -375,60 +377,78 @@ export function create(
       ...(input.ends ? { ends: input.ends } : {}),
       time: { created: now, updated: now },
     }
-    yield* ctx.permission.assert({
-      action: permissionAction,
-      resources:
-        permissions.map((permission) => `${permission.action}: ${permission.resource}`),
-      sessionID: session.id,
-      agent,
-      metadata: {
-        [metadataKey]: {
-          flowID: record.id,
-          name: record.name,
-          permissions,
-          unattended: true,
-        },
-      },
-    })
-    const key = `${prefix}${record.id}`
-    yield* ctx.storage
-      .set(key, JSON.stringify(record))
-      .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
-    const schedule = yield* schedules
-      .create(backingSchedule(record, session.id))
-      .pipe(
-        Effect.mapError((error) => new Error(`Couldn't schedule Flow ${record.id}: ${error.message}`)),
-        Effect.onError(() => ctx.storage.remove(key).pipe(Effect.ignore)),
-      )
-    const configured: KiloFlowRpc.Record = {
-      ...record,
-      scheduleID: schedule.id,
-      time: { ...record.time, updated: Date.now() },
-    }
-    yield* ctx.storage.set(key, JSON.stringify(configured)).pipe(
-      Effect.mapError(() => new Error(`Couldn't save backing schedule for Flow ${record.id}`)),
-      Effect.onError(() =>
-        schedules.remove(schedule.id).pipe(Effect.ignore, Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore))),
-      ),
+    return yield* flowLock(runtime, id).withPermit(
+      Effect.gen(function* () {
+        // A retried create may arrive after the first attempt committed but its response was lost. Return that Flow
+        // instead of allocating a second one and a second backing schedule.
+        const existing = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${id}`)))
+        if (existing) {
+          if (existing.context.projectID !== session.projectID)
+            return yield* Effect.fail(new Error(`Flow ${id} already exists`))
+          const schedule = existing.scheduleID
+            ? Option.getOrUndefined(yield* schedules.get(existing.scheduleID).pipe(Effect.option))
+            : undefined
+          return managed(existing, schedule)
+        }
+        yield* ctx.permission.assert({
+          action: permissionAction,
+          resources:
+            permissions.map((permission) => `${permission.action}: ${permission.resource}`),
+          sessionID: session.id,
+          agent,
+          metadata: {
+            [metadataKey]: {
+              flowID: record.id,
+              name: record.name,
+              permissions,
+              unattended: true,
+            },
+          },
+        })
+        const key = `${prefix}${record.id}`
+        yield* ctx.storage
+          .set(key, JSON.stringify(record))
+          .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
+        const schedule = yield* schedules
+          .create(backingSchedule(record, session.id))
+          .pipe(
+            Effect.mapError((error) => new Error(`Couldn't schedule Flow ${record.id}: ${error.message}`)),
+            Effect.onError(() => ctx.storage.remove(key).pipe(Effect.ignore)),
+          )
+        const configured: KiloFlowRpc.Record = {
+          ...record,
+          scheduleID: schedule.id,
+          time: { ...record.time, updated: Date.now() },
+        }
+        yield* ctx.storage.set(key, JSON.stringify(configured)).pipe(
+          Effect.mapError(() => new Error(`Couldn't save backing schedule for Flow ${record.id}`)),
+          Effect.onError(() =>
+            schedules
+              .remove(schedule.id)
+              .pipe(Effect.ignore, Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore))),
+          ),
+        )
+        yield* ctx.storage.set(scheduleKey(schedule.id), configured.id).pipe(
+          Effect.mapError(() => new Error(`Couldn't index backing schedule for Flow ${record.id}`)),
+          Effect.onError(() =>
+            schedules.remove(schedule.id).pipe(
+              Effect.ignore,
+              Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore)),
+              Effect.andThen(ctx.storage.remove(scheduleKey(schedule.id)).pipe(Effect.ignore)),
+            ),
+          ),
+        )
+        yield* Effect.logInfo("Flow created", {
+          flowID: configured.id,
+          projectID: session.projectID,
+          name: configured.name,
+          worktree: configured.execution.worktree,
+          requestID: input.requestID,
+        })
+        yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
+        return managed(configured, schedule)
+      }),
     )
-    yield* ctx.storage.set(scheduleKey(schedule.id), configured.id).pipe(
-      Effect.mapError(() => new Error(`Couldn't index backing schedule for Flow ${record.id}`)),
-      Effect.onError(() =>
-        schedules.remove(schedule.id).pipe(
-          Effect.ignore,
-          Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore)),
-          Effect.andThen(ctx.storage.remove(scheduleKey(schedule.id)).pipe(Effect.ignore)),
-        ),
-      ),
-    )
-    yield* Effect.logInfo("Flow created", {
-      flowID: configured.id,
-      projectID: session.projectID,
-      name: configured.name,
-      worktree: configured.execution.worktree,
-    })
-    yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
-    return managed(configured, schedule)
   })
 }
 
@@ -1361,7 +1381,7 @@ function clearActive(ctx: Plugin.Context, run: Pick<KiloFlowRpc.Run, "flowID" | 
   })
 }
 
-function flowLock(runtime: Runtime, flowID: KiloFlowRpc.ID) {
+function flowLock(runtime: Pick<Runtime, "locks">, flowID: KiloFlowRpc.ID) {
   const current = runtime.locks.get(flowID)
   if (current) return current
   const lock = Semaphore.makeUnsafe(1)
