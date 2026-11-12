@@ -251,7 +251,8 @@ test(
       expect(gateway.syncScopes.length).toBeGreaterThan(0)
       expect(gateway.syncScopes.every((scope) => scope === undefined)).toBe(true)
       expect(gateway.syncOrganizations).toEqual([])
-      // An authStatus read while the profile is pending must not enroll provisionally under Personal.
+      // rpc.call no longer waits for the login's catalog resolution, so authStatus reports no organization yet.
+      // Before upstream v2.2.7 this call waited and returned the organization.
       expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: null })
       profileReady.resolve()
       await until(() => gateway.syncOrganizations.includes("selected"), "automatic organization enrollment reaches the peer")

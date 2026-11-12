@@ -110,6 +110,7 @@ it.effect("does not call the catalog RPC when default or explicit model resoluti
       package: "@opencode/ai/providers/openrouter",
     }
     const resolved = SessionRunnerModel.resolved(yield* ModelResolver.fromCatalogModel(model), model)
+    const variants: (Model.VariantID | undefined)[] = []
     yield* Effect.gen(function* () {
       const models = yield* SessionRunnerModel.Service
       expect(yield* models.resolve(session, () => Effect.die("Default must not sample availability"), { kind: "primary", agent: Agent.ID.make("build") })).toBe(resolved)
@@ -121,17 +122,17 @@ it.effect("does not call the catalog RPC when default or explicit model resoluti
         ),
       ).toBe(resolved)
       expect(calls).toBe(0)
+      // The default path resolves the agent's fallback model with no variant; the explicit path keeps the session's.
+      expect(variants).toEqual([undefined, Model.VariantID.make("high")])
     }).pipe(
       Effect.provide(
         runner(
           {
-            // The default path resolves the agent's fallback model with no variant; the explicit path keeps the
-            // session's "high" variant. Both reach resolveModel with the selected catalog model.
             resolve: () => Effect.succeed(resolved),
             fallback: () => Effect.succeed(model),
             resolveModel: (selected, variant) => {
               expect(selected).toBe(model)
-              expect(variant === undefined || variant === Model.VariantID.make("high")).toBe(true)
+              variants.push(variant)
               return Effect.succeed(resolved)
             },
           },
