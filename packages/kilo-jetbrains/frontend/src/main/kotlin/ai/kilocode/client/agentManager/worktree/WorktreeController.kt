@@ -66,10 +66,9 @@ class WorktreeController(
     var onActivityChanged: (() -> Unit)? = null
 
     /**
-     * Fired on the EDT when [refreshBranches] found checkouts on a different branch than the rows
-     * showed. The argument holds the normalized paths whose branch moved. The list reload that
-     * follows updates their labels; callers use this to drop PR and stats state that was resolved
-     * against the old branch.
+     * Fired on the EDT when an accepted [reload] applies a branch change. The argument holds the
+     * normalized paths whose branch moved; callers use this to drop PR and stats state resolved
+     * against the old branch, regardless of whether a poll or a manual refresh found the change.
      */
     var onBranchChanged: ((Set<String>) -> Unit)? = null
 
@@ -151,6 +150,7 @@ class WorktreeController(
                 // newest answer may replace the model, or a stale listing would restore the branch the
                 // watcher just proved gone.
                 if (gen != generation.get()) return@edt
+                val moved = branchesMoved(result)
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
                 val rows = pending.values.toList().asReversed() + extra
@@ -163,6 +163,7 @@ class WorktreeController(
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
                 origin = branchInfo.origin
                 orphans = result.orphans
+                if (!moved.isNullOrEmpty()) onBranchChanged?.invoke(moved)
                 onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
@@ -187,10 +188,9 @@ class WorktreeController(
             edt {
                 // A newer reload owns the model now; this older poll must not invalidate its PR state.
                 if (gen != generation.get()) return@edt
-                val moved = branchesMoved(listing) ?: return@edt
+                if (branchesMoved(listing) == null) return@edt
                 LOG.info("worktree branches changed, reloading the list")
                 reload(listing)
-                onBranchChanged?.invoke(moved)
             }
         }
     }

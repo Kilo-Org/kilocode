@@ -1338,7 +1338,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("main", row(panel, 0).title)
     }
 
-    fun `test current row shows the pr badge for the main checkout`() {
+    fun `test current row PR badge follows manual branch reloads`() {
         val main = main()
         rpc.listed += main
         rpc.prResult = WorktreePrListDto(
@@ -1361,6 +1361,25 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("#12", current.secondaryBadges.single().text)
         assertEquals("pull-request", current.secondaryBadges.single().id)
         assertTrue(edt { panel.canOpenPr(main) })
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforePrStatus = { gate.await() }
+        rpc.prResult = WorktreePrListDto(
+            GhAvailability.OK,
+            listOf(WorktreePrDto(main.path, 13, GhState.OPEN, "https://example.test/pr/13", "Feature work")),
+        )
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        edt { controller.reload() }
+        waitUntil { row(panel, 0).title == "feature/y" }
+        waitUntil { rpc.prCalls.size == 2 && row(panel, 0).secondaryBadges.isEmpty() }
+
+        assertFalse(edt { panel.canOpenPr(main) })
+        assertEquals(0L, rpc.prAges.last())
+        assertEquals(listOf(main.path), rpc.prFresh.last())
+
+        gate.complete(Unit)
+        waitUntil { row(panel, 0).secondaryBadges.singleOrNull()?.text == "#13" }
+        assertEquals("feature/y", row(panel, 0).title)
     }
 
     fun `test conversation review and check glyphs sit on the title line in that order`() {
