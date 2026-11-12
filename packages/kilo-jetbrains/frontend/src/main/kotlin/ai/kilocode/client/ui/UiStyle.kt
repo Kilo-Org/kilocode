@@ -330,8 +330,10 @@ object UiStyle {
             JBColor(runningLight, runningDark),
         )
 
-        /** Uses the editor background so chat cards feel native beside editor content. */
-        fun editorBackground(): Color = JBColor.lazy { EditorColorsManager.getInstance().globalScheme.defaultBackground }
+        /** Follows the active editor background, falling back to the UI theme while schemes reload. */
+        fun editorBackground(): Color = JBColor.lazy {
+            EditorColorsManager.getInstance().activeVisibleScheme?.defaultBackground ?: UIUtil.getPanelBackground()
+        }
 
         /** Background for code fragments when a caller explicitly wants the editor scheme's doc-code style. */
         fun codeBlockBackground(scheme: EditorColorsScheme): Color =

@@ -35,8 +35,11 @@ import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -70,6 +73,7 @@ internal class KiloToolWindowSetupService(
     fun create(toolWindow: ToolWindow) {
         val start = System.currentTimeMillis()
         try {
+            cs.ensureActive()
             val workspaces = service<KiloWorkspaceService>()
             val hint = project.basePath ?: ""
             // Experimental IntelliJ ProjectId API keeps multi-window and split-mode routing exact.
@@ -86,18 +90,22 @@ internal class KiloToolWindowSetupService(
                     "durationMs" to (System.currentTimeMillis() - start).toString(),
                 ))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Telemetry.send("Tool Window Setup Failed", mapOf("stage" to "create", "errorClass" to e::class.java.name))
             LOG.error("Failed to create Kilo tool window content", e)
         }
     }
 
+    @RequiresEdt
     private fun setup(
         project: Project,
         toolWindow: ToolWindow,
         workspace: Workspace,
     ) {
         try {
+            cs.ensureActive()
             val manager = SessionSidePanelManager(project, workspace)
 
             val worktrees = WorktreeController(
@@ -214,6 +222,8 @@ internal class KiloToolWindowSetupService(
             (ActionManager.getInstance().getAction("Kilo.SettingsGroup") as? ActionGroup)?.let {
                 toolWindow.setAdditionalGearActions(it)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Telemetry.send("Tool Window Setup Failed", mapOf("stage" to "setup", "errorClass" to e::class.java.name))
             LOG.error("Failed to set up Kilo tool window content", e)
