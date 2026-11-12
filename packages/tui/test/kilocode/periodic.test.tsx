@@ -1133,6 +1133,47 @@ test("reuses the request id when a rejected create is retried", async () => {
   expect(opened).toEqual([{ key: "flw_active", detail: true }])
 })
 
+test("turns a retried create that already succeeded into an edit of that Flow", async () => {
+  const existing = flow({ id: "flw_conflict", name: "Weekly report", status: "active", managed: true })
+  const fake = context({
+    handlers: {
+      create: () => Promise.reject({ type: "exists", message: "already created", data: { flowID: "flw_conflict" } }),
+      list: () => Promise.resolve(output([existing])),
+      update: () => Promise.resolve(existing),
+    },
+    script: {
+      prompts: { "shell resource": "npm test" },
+      selects: { Permissions: ["add", "done"], "Permission action": "shell" },
+    },
+  })
+  const opened: unknown[] = []
+  await createFlow(fake.context, (initial) => opened.push(initial), {})
+  // One create, then the draft's differences save onto the existing Flow and its new allowlist is approved again.
+  expect(fake.methods().filter((method) => method === "create")).toHaveLength(1)
+  expect(fake.calls.find((call) => call.method === "update")?.input).toMatchObject({
+    flowID: "flw_conflict",
+    permissions: [{ action: "shell", resource: "npm test" }],
+  })
+  expect(fake.toasts.some((toast) => toast.title === "Flow not created")).toBeFalse()
+  expect(opened).toContainEqual({ key: "flw_conflict", detail: true })
+})
+
+test("does not recreate a Flow whose earlier attempt cannot be loaded", async () => {
+  const fake = context({
+    handlers: {
+      create: () => Promise.reject({ type: "exists", message: "already created", data: { flowID: "flw_gone" } }),
+      list: () => Promise.resolve(output([])),
+    },
+    script: { selects: { Permissions: "done" } },
+  })
+  const opened: unknown[] = []
+  await createFlow(fake.context, (initial) => opened.push(initial), {})
+  expect(fake.methods().filter((method) => method === "create")).toHaveLength(1)
+  expect(fake.methods()).not.toContain("update")
+  expect(fake.toasts.some((toast) => toast.title === "Flow not created")).toBeTrue()
+  expect(opened).toEqual([{}])
+})
+
 test("editing sends only changed fields and re-approves a new allowlist", async () => {
   const current = flow({
     id: "flw_edit",

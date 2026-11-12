@@ -249,7 +249,7 @@ const CreateFields = {
     .pipe(optional)
     .annotate({
       description:
-        "Opaque client idempotency key of 32 lowercase hex characters. A create retried with the same key returns the Flow the first request created instead of creating a duplicate; a new create uses a new key.",
+        "Opaque client idempotency key of 32 lowercase hex characters. A create retried with the same key and settings returns the Flow the first request created instead of creating a duplicate; the same key with different settings fails with `exists`. A new create uses a new key.",
     }),
 }
 
@@ -354,7 +354,8 @@ export const Definition = Rpc.define({
     create: {
       input: portable(CreateInput),
       output: portable(Info),
-      errors: { failed: portable(Schema.Undefined) },
+      // `exists`: the request id already created a Flow with different settings; data names that Flow.
+      errors: { failed: portable(Schema.Undefined), exists: portable(Schema.Struct({ flowID: ID })) },
       description:
         "Experimental: may change without compatibility guarantees. Creates a local managed Flow definition.",
     },

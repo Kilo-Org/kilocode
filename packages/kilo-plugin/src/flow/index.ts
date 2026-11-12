@@ -136,7 +136,11 @@ export const KiloFlowPlugin = define({
         list: () => list(ctx, schedules, ctx.location.project.id, runtime.fs),
         create: (input, context) =>
           create(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
-            Effect.mapError((error) => context.error("failed", error.message)),
+            Effect.mapError((error) =>
+              error instanceof FlowExists
+                ? context.error("exists", error.message, { flowID: error.flowID })
+                : context.error("failed", error.message),
+            ),
           ),
         update: (input, context) =>
           update(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
@@ -385,6 +389,11 @@ export function create(
         if (existing) {
           if (existing.context.projectID !== session.projectID)
             return yield* Effect.fail(new Error(`Flow ${id} already exists`))
+          // The same key with other settings is a conflict: returning the first Flow would silently drop the edits.
+          if (!sameRequest(existing, record))
+            return yield* Effect.fail(
+              new FlowExists(id, `Flow ${id} was already created from this request with different settings`),
+            )
           const schedule = existing.scheduleID
             ? Option.getOrUndefined(yield* schedules.get(existing.scheduleID).pipe(Effect.option))
             : undefined
@@ -595,6 +604,44 @@ function approve(
       },
     })
   })
+}
+
+/** A retried create collided with a Flow its request id already created with different settings. */
+class FlowExists extends Error {
+  constructor(
+    readonly flowID: KiloFlowRpc.ID,
+    message: string,
+  ) {
+    super(message)
+  }
+}
+
+/** True when a stored Flow and a freshly built record describe the same create request. */
+function sameRequest(stored: KiloFlowRpc.Record, requested: KiloFlowRpc.Record) {
+  return (
+    stored.name === requested.name &&
+    stored.prompt === requested.prompt &&
+    stored.execution.sourceSessionID === requested.execution.sourceSessionID &&
+    stored.execution.worktree === requested.execution.worktree &&
+    stored.trigger.timezone === requested.trigger.timezone &&
+    canonical(stored.trigger.when) === canonical(requested.trigger.when) &&
+    canonical(stored.ends) === canonical(requested.ends) &&
+    canonical(stored.context.model) === canonical(requested.context.model) &&
+    stored.context.agent === requested.context.agent &&
+    samePermissions(stored.permissions ?? [], requested.permissions ?? [])
+  )
+}
+
+// Key-order independent JSON, so a decoded record compares equal to one built in memory.
+function canonical(value: unknown): string {
+  if (value === undefined) return ""
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`
+  if (value === null || typeof value !== "object") return JSON.stringify(value)
+  return `{${Object.entries(value)
+    .filter((entry) => entry[1] !== undefined)
+    .toSorted((a, b) => a[0].localeCompare(b[0]))
+    .map((entry) => `${JSON.stringify(entry[0])}:${canonical(entry[1])}`)
+    .join(",")}}`
 }
 
 function samePermissions(

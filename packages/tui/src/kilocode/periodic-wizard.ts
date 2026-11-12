@@ -9,7 +9,7 @@ import { KiloFlowPermissions } from "@opencode/schema/kilocode/flow-permissions"
 import { KiloSchedule } from "@opencode/schema/kilocode/schedule"
 import { Project } from "@opencode/schema/project"
 import { Schedule } from "@opencode/schema/schedule"
-import { Cron, DateTime, Option, Result } from "effect"
+import { Cron, DateTime, Option, Result, Schema } from "effect"
 import { errorMessage } from "../util/error"
 
 export type PeriodicContext = Pick<Plugin.Context, "client" | "data" | "keymap" | "renderer" | "theme" | "ui">
@@ -209,6 +209,7 @@ async function submitCreate(
   context.ui.toast.show({ variant: "info", message: "Approve the Flow's permissions in the session to finish." })
   const rpc = context.client.rpc(KiloFlowRpc.Definition)
   let createFailure = ""
+  let conflict: KiloFlowRpc.ID | undefined
   const created = await rpc
     .create(
       {
@@ -221,6 +222,8 @@ async function submitCreate(
       options(context),
     )
     .catch((cause: unknown) => {
+      conflict = Option.getOrUndefined(Schema.decodeUnknownOption(ExistsError)(cause))?.data.flowID
+      if (conflict) return undefined
       createFailure = errorMessage(cause)
       context.ui.toast.show({
         variant: "error",
@@ -229,6 +232,8 @@ async function submitCreate(
       })
       return undefined
     })
+  // An earlier attempt with this request id already created the Flow, with other settings than the draft now has.
+  if (conflict) return resumeCreated(context, open, back, conflict, draft, broken)
   if (!created) {
     const permissions = await askPermissions(
       context.ui.dialog,
@@ -240,12 +245,27 @@ async function submitCreate(
     if (permissions === undefined) return open(back)
     return submitCreate(context, open, back, source, { ...draft, permissions }, broken, requestID)
   }
+  await finishCreate(context, created, broken)
+  open({ key: key(created) })
+}
+
+/** The `exists` error of `create`: the request id already created this Flow with different settings. */
+const ExistsError = Schema.Struct({
+  type: Schema.Literal("exists"),
+  data: Schema.Struct({ flowID: KiloFlowRpc.ID }),
+})
+
+/** Deletes the Flow a repair replaces, then reports the outcome of the create. */
+async function finishCreate(context: PeriodicContext, created: KiloFlowRpc.Info, broken: KiloFlowRpc.Info | undefined) {
   const failure =
     broken?.reference.type === "managed"
-      ? await rpc.remove({ flowID: broken.reference.flowID }, options(context)).then(
-          () => undefined,
-          (cause: unknown) => errorMessage(cause),
-        )
+      ? await context.client
+          .rpc(KiloFlowRpc.Definition)
+          .remove({ flowID: broken.reference.flowID }, options(context))
+          .then(
+            () => undefined,
+            (cause: unknown) => errorMessage(cause),
+          )
       : undefined
   if (failure)
     context.ui.toast.show({
@@ -258,7 +278,51 @@ async function submitCreate(
       variant: "success",
       message: `${broken ? "Repaired" : "Created"} ${created.name}.${created.nextRunAt === undefined ? "" : ` Next run ${new Date(created.nextRunAt).toLocaleString()}.`}`,
     })
-  open({ key: key(created) })
+}
+
+/**
+ * A retry whose earlier attempt already created the Flow: the draft's differences become an edit of that Flow, with
+ * the usual confirmation and, for a changed allowlist, a new approval. Never creates a second Flow.
+ */
+async function resumeCreated(
+  context: PeriodicContext,
+  open: Open,
+  back: Initial,
+  flowID: KiloFlowRpc.ID,
+  draft: Draft,
+  broken: KiloFlowRpc.Info | undefined,
+) {
+  const existing = await context.client
+    .rpc(KiloFlowRpc.Definition)
+    .list({}, options(context))
+    .then(
+      (output) =>
+        output.flows.find((flow) => flow.reference.type === "managed" && flow.reference.flowID === flowID),
+      () => undefined,
+    )
+  if (!existing) {
+    context.ui.toast.show({
+      variant: "error",
+      title: broken ? "Flow not repaired" : "Flow not created",
+      message: "An earlier attempt already created this Flow, but it couldn't be loaded. Check /periodic before creating it again.",
+    })
+    return open(back)
+  }
+  const initial = fromFlow(existing)
+  if (Object.keys(changes(initial, draft)).length === 0) {
+    await finishCreate(context, existing, broken)
+    return open({ key: flowID })
+  }
+  const result = await submitEdit(
+    context,
+    open,
+    existing,
+    flowID,
+    initial,
+    draft,
+    `${existing.name} was already created. Save your changes?`,
+  )
+  if (result === "saved") await finishCreate(context, existing, broken)
 }
 
 /**
@@ -323,7 +387,10 @@ export async function editFlow(context: PeriodicContext, open: Open, flow: KiloF
   return submitEdit(context, open, flow, flowID, initial, draft)
 }
 
-/** Confirms and saves an edit. A rejected allowlist returns to the Permissions step with the other answers kept. */
+/**
+ * Confirms and saves an edit. A rejected allowlist returns to the Permissions step with the other answers kept.
+ * Resolves to `saved` once the change is submitted (a change without new permissions saves in the reopened dialog).
+ */
 async function submitEdit(
   context: PeriodicContext,
   open: Open,
@@ -331,23 +398,31 @@ async function submitEdit(
   flowID: KiloFlowRpc.ID,
   initial: Draft,
   draft: Draft,
-): Promise<void> {
+  title = `Save ${flow.name}?`,
+): Promise<"saved" | "unchanged" | "cancelled"> {
   const back = { key: flowID, detail: true }
   const changed = changes(initial, draft)
   if (Object.keys(changed).length === 0) {
     context.ui.toast.show({ variant: "info", message: "No changes." })
-    return open(back)
+    open(back)
+    return "unchanged"
   }
   const confirmed = await context.ui.dialog.confirm({
-    title: `Save ${flow.name}?`,
+    title,
     message: summary(draft, [
       ...(changed.permissions ? ["The new permissions apply once you approve them in the session."] : []),
       ...(changed.when || "ends" in changed ? ["The schedule restarts; run history is kept."] : []),
     ]),
     label: { confirm: "Save" },
   })
-  if (!confirmed) return open(back)
-  if (!changed.permissions) return open({ ...back, save: { flowID, ...changed } })
+  if (!confirmed) {
+    open(back)
+    return "cancelled"
+  }
+  if (!changed.permissions) {
+    open({ ...back, save: { flowID, ...changed } })
+    return "saved"
+  }
   const sessionID = approvalSession(context)
   context.ui.dialog.clear()
   if (!sessionID && flow.execution.mode === "fresh") focus(context, flow.execution.sourceSessionID)
@@ -369,11 +444,15 @@ async function submitEdit(
       "done",
       `not saved: ${saveFailure}`,
     )
-    if (permissions === undefined) return open(back)
-    return submitEdit(context, open, flow, flowID, initial, { ...draft, permissions })
+    if (permissions === undefined) {
+      open(back)
+      return "cancelled"
+    }
+    return submitEdit(context, open, flow, flowID, initial, { ...draft, permissions }, title)
   }
   context.ui.toast.show({ variant: "success", message: `Saved ${saved.name}.` })
   open(back)
+  return "saved"
 }
 
 /**

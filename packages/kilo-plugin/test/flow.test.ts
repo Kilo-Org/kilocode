@@ -423,6 +423,14 @@ it.live("returns the existing Flow when a create is retried with the same reques
     expect(second.output.reference.scheduleID).toBe(first.output.reference.scheduleID)
     expect((yield* (yield* Schedule.Service).list()).length).toBe(1)
     expect(backingSchedules.size).toBe(1)
+    // Reusing the key with other settings is a conflict that names the Flow, never a silent return or a duplicate.
+    const stored = yield* context.storage.get(`flow:v1:flw_${requestID}`)
+    const conflict = yield* flowCreate
+      .execute({ ...input, permissions: [{ action: "shell", resource: "npm test" }] }, call("call_idempotent_edited"))
+      .pipe(Effect.flip)
+    expect(conflict.message).toContain(`Flow flw_${requestID} was already created from this request with different settings`)
+    expect(yield* context.storage.get(`flow:v1:flw_${requestID}`)).toBe(stored)
+    expect(backingSchedules.size).toBe(1)
   }),
 )
 
