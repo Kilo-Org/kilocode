@@ -83,6 +83,11 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
         const account = latest()
         if (!account) return { state: KiloGatewayAccounts.registered(directory) ? "signed_out" : "starting" } satisfies Snapshot
         const same = held !== undefined && PagesToken.key(held, deployment) === PagesToken.key(account, deployment)
+        // A different credential is a different account: forget the previous one's token, refusal and backoff now.
+        if (held && !same) {
+          PagesToken.drop(held, deployment)
+          held = undefined
+        }
         const cached = PagesToken.peek(account, deployment).kind
         // A token that is valid or simply expired does not need a mint now: the transport mints on demand.
         if (!force && same && registered && (cached === "valid" || cached === "none")) return current
@@ -92,6 +97,9 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
         )
         if (!failure) {
           held = account
+          // A forced refresh of a live connection changes nothing: no reconnect follows, so no MCP event would move a
+          // reported `connecting` back to `connected`.
+          if (same && registered) return current
           return { state: "connecting" } satisfies Snapshot
         }
         if (failure.kind === "transient") {
@@ -147,7 +155,13 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
               ? FLAG_RETRY
               : undefined
         if (!delay) return
-        timer = yield* Effect.sleep(delay).pipe(Effect.andThen(refresh(false)), Effect.forkIn(scope))
+        // The handle is cleared before the refresh: the refresh ends in `schedule`, which would otherwise interrupt
+        // this very fiber and end the retry chain after one fire.
+        timer = yield* Effect.sleep(delay).pipe(
+          Effect.andThen(Effect.sync(() => void (timer = undefined))),
+          Effect.andThen(refresh(false)),
+          Effect.forkIn(scope),
+        )
       })
 
     const refresh = (force: boolean): Effect.Effect<void> =>

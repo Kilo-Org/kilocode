@@ -6,6 +6,7 @@ import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Effect, Queue, Stream } from "effect"
+import { TestClock } from "effect/testing"
 import { parse } from "jsonc-parser"
 import { mkdtemp, readdir, readFile, realpath, rm } from "node:fs/promises"
 import os from "node:os"
@@ -37,6 +38,8 @@ async function harness(input: {
   documents: { info: Info; path?: string }[]
   server: string
   signedIn?: boolean
+  /** Run the plugin on a test clock, so `adjust` fires its retry timer. */
+  clock?: boolean
   run: (pages: Harness) => Promise<void>
 }) {
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-pages-plugin-")))
@@ -47,6 +50,8 @@ async function harness(input: {
   const emitted: unknown[] = []
   let handlers: Record<string, (input: unknown, context: unknown) => Effect.Effect<any, any>> = {}
   let reloads = 0
+  let reads = 0
+  let adjust: (millis: number) => Promise<void> = () => Promise.reject(new Error("the harness has no test clock"))
   let servers: Server[] = []
   let mcpEvents: Queue.Queue<{ data: { server: string } }> | undefined
   // The global config directory is read back, so a write by the plugin reaches the next read as a config reload would.
@@ -61,9 +66,9 @@ async function harness(input: {
   const config = {
     entries: () =>
       Effect.promise(async () =>
-        [...input.documents, ...(await written())].map(
+        (reads++, [...input.documents, ...(await written())].map(
           (item) => new Document({ type: "document", info: new KiloConfigPolicy.Info(item.info), ...(item.path ? { path: item.path as never } : {}) }),
-        ),
+        )),
       ),
     changes: () => Stream.empty,
     reload: () => Effect.void,
@@ -73,6 +78,8 @@ async function harness(input: {
     directory,
     state,
     reloads: () => reloads,
+    reads: () => reads,
+    adjust: (millis) => adjust(millis),
     emitted,
     servers: (next) => (servers = next),
     status: () => Effect.runPromise(handlers.status!({}, {})),
@@ -119,11 +126,14 @@ async function harness(input: {
       Effect.scoped(
         Effect.gen(function* () {
           mcpEvents = yield* Queue.unbounded<{ data: { server: string } }>()
+          const context = yield* Effect.context()
+          adjust = (millis) => Effect.runPromiseWith(context)(TestClock.adjust(millis))
           yield* KiloPagesPlugin.effect(ctx as never)
           yield* Effect.promise(() => input.run(harness))
         }),
       ).pipe(
         Effect.provideService(Config.Service, config),
+        input.clock ? Effect.provide(TestClock.layer()) : (effect) => effect,
         Effect.provide(Global.layerWith({ home: directory, state: path.join(directory, ".state"), config: path.join(directory, "global") })),
         Effect.provide(LayerNode.compile(FSUtil.node)),
       ),
@@ -137,6 +147,9 @@ interface Harness {
   readonly directory: string
   readonly state: { account: unknown }
   readonly reloads: () => number
+  /** Config reads: one per reconcile. */
+  readonly reads: () => number
+  readonly adjust: (millis: number) => Promise<void>
   readonly emitted: unknown[]
   readonly servers: (next: Server[]) => void
   readonly status: () => Promise<any>
@@ -326,6 +339,88 @@ test("ensureConnected retries a refusal but never opens a sign-in", async () => 
       refuse = false
       expect(await pages.call("ensureConnected")).toMatchObject({ state: "connecting" })
       expect(pages.entry()).toBeDefined()
+    },
+  }).finally(backend.stop)
+})
+
+test("the retry timer keeps retrying while the failure lasts", async () => {
+  const backend = mintServer(() => new Response("down", { status: 503 }))
+  await harness({
+    documents: [{ info: enabled }],
+    server: backend.url,
+    clock: true,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "retrying")
+      expect(backend.count()).toBe(1)
+      // Each fire reconciles once and, while Kilo keeps failing, schedules the next one. The next timer is set a moment
+      // after the read, so the clock is advanced again until the read happens.
+      for (let fire = 0; fire < 3; fire++) {
+        const before = pages.reads()
+        for (let i = 0; i < 200 && pages.reads() === before; i++) {
+          await pages.adjust(31_000)
+          await Bun.sleep(10)
+        }
+        expect(pages.reads()).toBeGreaterThan(before)
+        expect(await pages.status()).toMatchObject({ state: "retrying" })
+      }
+    },
+  }).finally(backend.stop)
+})
+
+test("a retry that succeeds registers the server", async () => {
+  let down = true
+  const backend = mintServer((count) => (down ? new Response("down", { status: 503 }) : minted(count)))
+  await harness({
+    documents: [{ info: enabled }],
+    server: backend.url,
+    clock: true,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "retrying")
+      expect(pages.entry()).toBeUndefined()
+      down = false
+      PagesToken.reset()
+      await pages.adjust(31_000)
+      await pages.until((status) => status.state === "connecting")
+      expect(pages.entry()).toBeDefined()
+    },
+  }).finally(backend.stop)
+})
+
+test("switching the account forgets the previous account's token at once", async () => {
+  const backend = mintServer(minted)
+  await harness({
+    documents: [{ info: enabled }],
+    server: backend.url,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "connecting")
+      const previous = { server: backend.url, token: "account" }
+      expect(PagesToken.peek(previous, PagesToken.DEFAULT).kind).toBe("valid")
+      pages.state.account = { token: "other", server: backend.url, baseURL: backend.url, organizationID: null }
+      KiloGatewayAccounts.changed(pages.directory)
+      for (let i = 0; i < 200 && backend.count() < 2; i++) await Bun.sleep(10)
+      expect(backend.count()).toBe(2)
+      expect(PagesToken.peek(previous, PagesToken.DEFAULT).kind).toBe("none")
+      expect(PagesToken.peek({ server: backend.url, token: "other" }, PagesToken.DEFAULT).kind).toBe("valid")
+    },
+  }).finally(backend.stop)
+})
+
+test("a forced refresh of a connected server keeps it connected", async () => {
+  const backend = mintServer(minted)
+  await harness({
+    documents: [{ info: enabled }],
+    server: backend.url,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "connecting")
+      pages.servers([{ name: "pages", status: { status: "connected" } }])
+      await pages.mcpEvent()
+      await pages.until((status) => status.state === "connected")
+      const reloads = pages.reloads()
+      expect(await pages.call("ensureConnected")).toMatchObject({ state: "connected" })
+      expect(await pages.call("enable")).toMatchObject({ state: "connected" })
+      expect(pages.entry()).toBeDefined()
+      expect(pages.reloads()).toBe(reloads)
+      expect(backend.count()).toBe(1)
     },
   }).finally(backend.stop)
 })
