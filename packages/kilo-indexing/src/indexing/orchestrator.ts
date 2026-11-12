@@ -89,7 +89,7 @@ export class CodeIndexOrchestrator {
       for (const sub of this._fileWatcherSubscriptions) sub.dispose()
       this._fileWatcherSubscriptions = []
       await this.fileWatcher.initialize()
-      log.info("file watcher initialized", { workspacePath: this.workspacePath })
+      log.info("file watcher initialized", { workspacePath: this.workspacePath, watching: this.fileWatcher.watching })
 
       this._fileWatcherSubscriptions = [
         this.fileWatcher.onDidStartBatchProcessing.on((paths) => {
@@ -126,6 +126,16 @@ export class CodeIndexOrchestrator {
           this.overlay?.prepare()
           this.stateManager.setSystemState("Error", `Failed to process file changes: ${summary.batchError.message}`)
           this.emitError("orchestrator:watcher", summary.batchError, "watcher")
+        }),
+        this.fileWatcher.onDidStop.on((error) => {
+          // The index stays usable, but it no longer follows the workspace. Say so instead of leaving the last
+          // "Index up-to-date" status in place, and let the manager retry the subscription once.
+          log.error("file watcher stopped", { err: error, workspacePath: this.workspacePath })
+          this.stateManager.setSystemState(
+            "Error",
+            "File watching stopped, so changes are only picked up when indexing restarts.",
+          )
+          this.emitError("orchestrator:watcher", error, "watcher")
         }),
       ]
       this.fileWatcher.setCollecting(false)
@@ -361,7 +371,17 @@ export class CodeIndexOrchestrator {
     await this.vectorStore.markIndexingComplete()
     await this.vectorStore.close?.()
     this.fileWatcher.setCollecting(true)
-    this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
+    // Only claim the watcher started when a subscription exists. A missing backend leaves the index frozen at this
+    // scan, so reporting "Indexed" would tell the user changes are tracked when none are.
+    if (this.fileWatcher.watching) {
+      this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
+    } else {
+      log.error("file watcher is unavailable; incremental updates are off", { workspacePath: this.workspacePath })
+      this.stateManager.setSystemState(
+        "Error",
+        "File watching is unavailable, so changes are only picked up when indexing restarts.",
+      )
+    }
     log.info("workspace scan finalized", {
       workspacePath: this.workspacePath,
       mode,

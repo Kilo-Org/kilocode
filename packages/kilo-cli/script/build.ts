@@ -171,6 +171,18 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       }))
     },
   }
+  // Kilo: the codebase indexing watcher resolves its own binding module. Without this rewrite the compiled worker
+  // asks for the platform package at run time with no node_modules next to the executable, so the watcher silently
+  // never subscribes (the index stops updating until a restart).
+  const parcelWatcherIndexingPlugin: BunPlugin = {
+    name: "parcel-watcher-indexing-binding",
+    setup(build) {
+      build.onLoad({ filter: /indexing[/\\]processors[/\\]watcher-binding\.ts$/ }, () => ({
+        contents: `export default () => require(${JSON.stringify(parcelWatcherPackage)})`,
+        loader: "js",
+      }))
+    },
+  }
   const target = targetName(item)
   const name = target.replace(upstreamBinary, "cli")
   const executablePath = await compileExecutable(item)
@@ -194,6 +206,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       appAssetsPlugin,
       solidPlugin,
       parcelWatcherPlugin,
+      parcelWatcherIndexingPlugin,
       opencodePtyPlugin,
       pluginRuntimePlugin,
       wsReexportPlugin,
@@ -239,6 +252,9 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       "process.env.OPENCODE_APP_DIR_NAME": JSON.stringify(directory),
       ...(highlights ? { OPENCODE_RELEASE_HIGHLIGHTS: JSON.stringify(highlights) } : {}),
       OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "undefined",
+      // Kilo: the codebase indexing watcher names the linux binding package with this value, as OPENCODE_LIBC does
+      // for the core watcher. Without it a musl build asks for the glibc binding it does not embed.
+      KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "undefined",
       // FFF_LIBC selects the fff native lib variant: "musl" or "gnu".
       FFF_LIBC: item.os === "linux" ? `'${item.abi ?? "gnu"}'` : "undefined",
       ...(item.os === "linux" ? { "process.env.OPENTUI_LIBC": JSON.stringify(item.abi ?? "glibc") } : {}),

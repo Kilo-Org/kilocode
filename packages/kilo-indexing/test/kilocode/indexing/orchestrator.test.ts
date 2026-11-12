@@ -100,6 +100,7 @@ class Scanner {
 }
 
 class Watcher {
+  public readonly watching = true
   public readonly onDidStartBatchProcessing = new Emitter<string[]>()
   public readonly onBatchProgressUpdate = new Emitter<{
     processedInBatch: number
@@ -107,6 +108,7 @@ class Watcher {
     currentFile?: string
   }>()
   public readonly onDidFinishBatchProcessing = new Emitter<BatchProcessingSummary>()
+  public readonly onDidStop = new Emitter<Error>()
 
   async initialize(): Promise<void> {}
   updateBatchSegmentThreshold(_newThreshold: number): void {}
@@ -124,6 +126,7 @@ class Watcher {
     this.onDidStartBatchProcessing.dispose()
     this.onBatchProgressUpdate.dispose()
     this.onDidFinishBatchProcessing.dispose()
+    this.onDidStop.dispose()
   }
 }
 
@@ -355,6 +358,50 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.clearCount).toBe(0)
     expect(cache.clears).toBe(0)
     expect(orchestrator.state).toBe("Error")
+  })
+
+  test("reports the watcher failure instead of claiming the index is up to date", async () => {
+    class UnsubscribedWatcher extends Watcher {
+      public override readonly watching = false
+    }
+    const state = new CodeIndexStateManager()
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      state,
+      "/tmp/ws",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new UnsubscribedWatcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+
+    expect(state.state).toBe("Error")
+    expect(state.getCurrentStatus().message).not.toContain("File watcher started")
+    expect(state.getCurrentStatus().message).toContain("changes are only picked up when indexing restarts")
+  })
+
+  test("surfaces a watcher that stops after the scan", async () => {
+    const state = new CodeIndexStateManager()
+    const watcher = new Watcher()
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      state,
+      "/tmp/ws",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      watcher as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(state.state).toBe("Indexed")
+
+    watcher.onDidStop.fire(new Error("Unable to poll: Interrupted system call"))
+
+    expect(state.state).toBe("Error")
+    expect(state.getCurrentStatus().message).toContain("File watching stopped")
   })
 
   test("preserves cache and collection data on retryable start failures", async () => {
