@@ -214,7 +214,7 @@ export const WireParams = Schema.Struct({
   worktreeID: Schema.NullOr(WorktreeID),
   action: Schema.NullOr(Action).annotate({
     description:
-      "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo2/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
+      "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
   }),
   filter: Schema.NullOr(Filter),
   sessionID: Schema.NullOr(Schema.String).annotate({
