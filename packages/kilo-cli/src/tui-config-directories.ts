@@ -1,3 +1,4 @@
+// kilo_mirror: packages/tui/src/util/config-directories.ts
 // Kilo: mirror of packages/tui/src/util/config-directories.ts. The TUI reads custom themes and local plugins from the
 // project directories this module names, and upstream names them `.opencode`. Under the Kilo host they are the
 // project config directory of Kilo's config discovery, with no fallback to `.opencode`. ./mirrors loads this file in

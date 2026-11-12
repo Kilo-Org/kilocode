@@ -26,6 +26,16 @@
       "sha": "5f76c654cc7dd4659d51dd3f10842f66833fc569",
       "changes": "Add the kilo theme to the registry and import the upstream theme assets from packages/tui/src/theme/assets; the Kilo theme itself is packages/kilo-cli/src/theme.json."
     },
+    "packages/tui/src/util/config-directories.ts": {
+      "mirror": "packages/kilo-cli/src/tui-config-directories.ts",
+      "sha": "da61a3451dc5bba7f3dd127d43a5d3b59eed3de3",
+      "changes": "The project config directory is Kilo's (KiloConfigFiles.directories[0], .kilo2) instead of upstream's .opencode, with no fallback; the TUI reads custom themes and local plugins from it. ./mirrors loads this file in place of the upstream one."
+    },
+    "packages/tui/src/plugin/discovery.ts": {
+      "mirror": "packages/kilo-cli/src/tui-plugin-discovery.ts",
+      "sha": "9116a3e556a1b55d60072919a2abd49f970e0ff4",
+      "changes": "Local plugins are discovered under Kilo's project config directory (through ./tui-config-directories) instead of upstream's .opencode; ./mirrors loads this file in place of the upstream one."
+    },
     "packages/cli/script/build.ts": {
       "mirror": "packages/kilo-cli/script/build.ts",
       "sha": "a9ae9e606975bb38fc3b324c435c8c783e094fd4",

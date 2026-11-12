@@ -201,6 +201,11 @@ async function list(command: ReturnType<typeof $>) {
   return (await command.quiet().text()).split("\n").filter(Boolean)
 }
 
+// Intent text is free prose, so keep a pipe or newline from breaking the table row.
+function cell(value: string) {
+  return value.replaceAll("|", "\\|").replaceAll("\n", " ")
+}
+
 export function generateMarkdownReport(report: SyncReport): string {
   const a = report.analysis
   const lag = (l: Lag) => `${l.releases} release(s), ${l.days} day(s)`
@@ -257,7 +262,7 @@ export function generateMarkdownReport(report: SyncReport): string {
       : [
           "| Upstream | Mirror | Kilo's changes |",
           "|---|---|---|",
-          ...a.mirrorsTouched.map((m) => `| \`${m.upstream}\` | \`${m.mirror}\` | ${m.changes} |`),
+          ...a.mirrorsTouched.map((m) => `| \`${m.upstream}\` | \`${m.mirror}\` | ${cell(m.changes)} |`),
         ]),
     "",
     ...(report.notes.length === 0 ? [] : ["## Notes", "", ...report.notes.map((n) => `- ${n}`), ""]),

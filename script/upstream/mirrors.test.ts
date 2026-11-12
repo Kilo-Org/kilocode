@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
-import { analyzeSync } from "./utils/report"
+import { analyzeSync, generateMarkdownReport, type SyncReport } from "./utils/report"
 import { defaultConfig } from "./utils/config"
 import { linkUpstream, repo, type Repo } from "./utils/testing"
 
@@ -9,8 +9,9 @@ const script = path.join(import.meta.dir, "..", "check-mirrors.ts")
 async function registry(
   r: Repo,
   mirrors: Record<string, { mirror: string; sha: string; changes: string }>,
+  file = "script/upstream/mirrors.json",
 ) {
-  await r.write("script/upstream/mirrors.json", JSON.stringify({ mirrors }, null, 2))
+  await r.write(file, JSON.stringify({ mirrors }, null, 2))
 }
 
 async function run(r: Repo, ...args: string[]) {
@@ -58,6 +59,38 @@ test("an upstream change fails with the recorded intent until the copy and the S
   expect((await run(r, "--pin", next)).code).toBe(0)
 })
 
+test("a custom registry path is named in the error and a missing registry fails", async () => {
+  await using r = await repo()
+  await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
+  const pin = await r.commit("upstream")
+  const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
+  const mirror = "packages/kilo-probe/src/thing.ts"
+  await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: "0".repeat(40), changes: "adds the kilo copy" } }, "custom/mirrors.json")
+  await r.commit("kilo")
+
+  const changed = await run(r, "--pin", pin, "--registry", "custom/mirrors.json")
+  expect(changed.code).toBe(1)
+  expect(changed.output).toContain("custom/mirrors.json")
+
+  const missing = await run(r, "--pin", pin, "--registry", "custom/absent.json")
+  expect(missing.code).toBe(1)
+  expect(missing.output).toContain("registry not found: custom/absent.json")
+})
+
+test("a CRLF copy marker is read", async () => {
+  await using r = await repo()
+  await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
+  const pin = await r.commit("upstream")
+  const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
+  const mirror = "packages/kilo-probe/src/thing.ts"
+  await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\r\nexport const kilo = 1\r\n")
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, changes: "adds the kilo copy" } })
+  await r.commit("kilo")
+
+  expect((await run(r, "--pin", pin)).code).toBe(0)
+})
+
 test("an unregistered marker, a marker mismatch, a missing copy and a removed upstream file fail", async () => {
   await using r = await repo()
   await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
@@ -100,8 +133,9 @@ test("analysis lists mirrors whose upstream file changed", async () => {
   await r.write("src/a.ts", "export const a = 2\n")
   const target = await r.release("v2.0.27", "2026-10-12T00:00:00Z")
   await linkUpstream(r)
+  const changes = "adds | the\nkilo copy"
   await registry(r, {
-    "src/a.ts": { mirror: "packages/kilo-probe/src/a.ts", sha: "0".repeat(40), changes: "adds the kilo copy" },
+    "src/a.ts": { mirror: "packages/kilo-probe/src/a.ts", sha: "0".repeat(40), changes },
   })
 
   const cwd = process.cwd()
@@ -109,8 +143,21 @@ test("analysis lists mirrors whose upstream file changed", async () => {
   try {
     const result = await analyzeSync("v2", target, base, defaultConfig)
     expect(result.mirrorsTouched).toEqual([
-      { upstream: "src/a.ts", mirror: "packages/kilo-probe/src/a.ts", changes: "adds the kilo copy" },
+      { upstream: "src/a.ts", mirror: "packages/kilo-probe/src/a.ts", changes },
     ])
+
+    const report: SyncReport = {
+      timestamp: "2026-10-12T00:00:00Z",
+      release: { version: "2.0.27", tag: "v2.0.27", tagCommit: target, commit: target, date: "2026-10-12T00:00:00Z" },
+      baseBranch: "v2",
+      baseCommit: base,
+      mergeBranch: "sync-v2-0-27",
+      analysis: result,
+      lagBefore: { releases: 0, days: 0 },
+      lagAfter: { releases: 0, days: 0 },
+      notes: [],
+    }
+    expect(generateMarkdownReport(report)).toContain("adds \\| the kilo copy")
   } finally {
     process.chdir(cwd)
   }

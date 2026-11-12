@@ -114,16 +114,16 @@ export function status(state: MirrorState): "ok" | "changed" | "removed" | "miss
   return "ok"
 }
 
-export function problems(states: MirrorState[], marked: MarkedMirror[]): string[] {
+export function problems(states: MirrorState[], marked: MarkedMirror[], file = REGISTRY): string[] {
   const registered = new Map(states.map((state) => [state.upstream, state.entry.mirror]))
   return [
     ...states.flatMap((state) => {
       const errors: string[] = []
       if (state.current === null)
-        errors.push(`${state.upstream} no longer exists at the pin. Remove ${state.entry.mirror} or update ${REGISTRY}`)
+        errors.push(`${state.upstream} no longer exists at the pin. Remove ${state.entry.mirror} or update ${file}`)
       else if (state.current !== state.entry.sha)
         errors.push(
-          `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror} with this intent: ${state.entry.changes} Then record the new SHA in ${REGISTRY}`,
+          `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror} with this intent: ${state.entry.changes} Then record the new SHA in ${file}`,
         )
       if (!state.exists) errors.push(`mirror is missing: ${state.entry.mirror}`)
       else if (state.declared !== state.upstream)
@@ -134,7 +134,7 @@ export function problems(states: MirrorState[], marked: MarkedMirror[]): string[
     }),
     ...marked
       .filter((item) => !registered.has(item.upstream))
-      .map((item) => `unregistered mirror: ${item.file} declares ${item.upstream}. Add it to ${REGISTRY} with its SHA and intent`),
+      .map((item) => `unregistered mirror: ${item.file} declares ${item.upstream}. Add it to ${file} with its SHA and intent`),
     ...marked.flatMap((item) => {
       const mirror = registered.get(item.upstream)
       if (!mirror || mirror === item.file) return []

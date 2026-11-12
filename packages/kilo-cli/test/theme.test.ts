@@ -85,7 +85,10 @@ test("the Kilo registry mirror stays in step with upstream", async () => {
     "\r\n",
     "\n",
   )
-  const mirror = (await Bun.file(new URL("../src/theme-v1.ts", import.meta.url)).text()).replaceAll("\r\n", "\n")
+  // The registry marker is not part of the upstream comparison.
+  const mirror = (await Bun.file(new URL("../src/theme-v1.ts", import.meta.url)).text())
+    .replaceAll("\r\n", "\n")
+    .replace(/^\/\/ kilo_mirror: \S+\n/, "")
   const addition = 'import kilo from "./theme.json" with { type: "json" }\n'
   expect(mirror.split(addition)).toHaveLength(2)
   expect(mirror.split("  kilo,\n")).toHaveLength(2)

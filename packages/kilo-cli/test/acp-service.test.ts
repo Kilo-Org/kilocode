@@ -99,7 +99,10 @@ test("ACP agent mirror differs from upstream only at host integration points", a
     "\r\n",
     "\n",
   )
-  const mirror = (await Bun.file(new URL("../src/acp-agent.ts", import.meta.url)).text()).replaceAll("\r\n", "\n")
+  // The registry marker is not part of the upstream comparison.
+  const mirror = (await Bun.file(new URL("../src/acp-agent.ts", import.meta.url)).text())
+    .replaceAll("\r\n", "\n")
+    .replace(/^\/\/ kilo_mirror: \S+\n/, "")
   const replace = (source: string, from: string, to: string) => {
     expect(source.split(from)).toHaveLength(2)
     return source.replace(from, to)

@@ -88,7 +88,7 @@ The host is `packages/kilo-cli`. `bun dev` starts it, and every server the CLI s
 - Service replacement: add `X.node.replace(...)` to `overrides` in `packages/kilo-cli/src/host.ts`. `createRoutes` applies the overrides after its standard set, so they win.
 - Environment: add the name to `names` in `packages/kilo-cli/src/env.ts` (`KILO_<NAME>` becomes `OPENCODE_<NAME>`). Never add a name whose OPENCODE_ form means something else upstream (`KILO_API_KEY` is not `OPENCODE_API_KEY`).
 - TUI plugin: the TUI's built-in list is in the TUI process, which the host does not reach. Register it with one marked line in `packages/tui/src/plugin/builtins.ts` (a rung-4 call-out, as `KiloTeams`).
-- A change to the host entry itself: `packages/kilo-cli/src/index.ts` and `serve.ts` mirror upstream files; keep the differences marked `Kilo:` and few. A mirror is rung 2 and stays a mirror: never replace it with a seam in the upstream file it mirrors. Register it in `script/upstream/mirrors.json` with the upstream SHA and intent, and mark the copy with `// kilo_mirror: <upstream path>`.
+- A change to the host entry itself: `packages/kilo-cli/src/main.ts` mirrors upstream's `packages/cli/src/index.ts`, and `serve.ts` mirrors its serve handler (`index.ts` is the Kilo entry that loads `main.ts`); keep the differences marked `Kilo:` and few. A mirror is rung 2 and stays a mirror: never replace it with a seam in the upstream file it mirrors. Register it in `script/upstream/mirrors.json` with the upstream SHA and intent, and mark the copy with `// kilo_mirror: <upstream path>`.
 
 ### 4. Rung 3: design a seam
 

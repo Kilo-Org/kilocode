@@ -20,6 +20,7 @@
  *   bun script/check-mirrors.ts --registry <file>
  */
 
+import path from "node:path"
 import { repoRoot } from "./upstream/utils/baseline"
 import { inspect, problems, REGISTRY, status } from "./upstream/utils/mirrors"
 import { pinned } from "./upstream/utils/upstream"
@@ -42,8 +43,12 @@ if (unknown.length > 0) {
 const root = await repoRoot()
 const pin = value("--pin") ?? (await pinned("HEAD")).commit
 const registry = value("--registry") ?? REGISTRY
+if (!(await Bun.file(path.resolve(root, registry)).exists())) {
+  console.error(`check-mirrors: registry not found: ${registry}`)
+  process.exit(1)
+}
 const { states, marked } = await inspect(root, pin, registry)
-const errors = problems(states, marked)
+const errors = problems(states, marked, registry)
 
 if (argv.includes("--json")) {
   console.log(JSON.stringify({ pin, registry, mirrors: states, marked, errors }, null, 2))
