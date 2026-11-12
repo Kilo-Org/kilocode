@@ -1,8 +1,11 @@
-import { afterEach, expect, test } from "bun:test"
+import { afterEach, expect, setSystemTime, test } from "bun:test"
 import { Effect, Redacted } from "effect"
 import { PagesToken } from "../src/pages/token"
 
-afterEach(() => PagesToken.reset())
+afterEach(() => {
+  setSystemTime()
+  PagesToken.reset()
+})
 
 function mint(respond: (count: number) => Response) {
   const requests: { headers: Headers; body: unknown }[] = []
@@ -79,6 +82,28 @@ test("a second rejection inside the window does not make later requests mint", a
   expect(await fail(backend, { rejected: "pages-2" })).toMatchObject({ reason: "needs_login" })
   for (let i = 0; i < 5; i++) expect(await get(backend)).toBe("pages-2")
   expect(backend.requests).toHaveLength(2)
+})
+
+test("a rejection after the window has passed forces a new mint and opens a fresh window", async () => {
+  using backend = mint((count) => valid(count))
+  const start = Date.now()
+  setSystemTime(start)
+  expect(await get(backend)).toBe("pages-1")
+  expect(await get(backend, { rejected: "pages-1" })).toBe("pages-2")
+  setSystemTime(start + 29_999)
+  expect(await fail(backend, { rejected: "pages-2" })).toMatchObject({ reason: "needs_login" })
+  expect(backend.requests).toHaveLength(2)
+
+  setSystemTime(start + 30_000)
+  expect(await get(backend, { rejected: "pages-2" })).toBe("pages-3")
+  expect(backend.requests).toHaveLength(3)
+
+  // The forced mint opened a new window, so a rejection of the new token is refused again until it passes.
+  expect(await fail(backend, { rejected: "pages-3" })).toMatchObject({ reason: "needs_login" })
+  expect(backend.requests).toHaveLength(3)
+  setSystemTime(start + 60_000)
+  expect(await get(backend, { rejected: "pages-3" })).toBe("pages-4")
+  expect(backend.requests).toHaveLength(4)
 })
 
 test("a refusal is cached and a user retry asks Kilo again", async () => {

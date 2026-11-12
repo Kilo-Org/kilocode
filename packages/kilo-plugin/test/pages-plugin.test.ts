@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test"
+import { afterEach, beforeEach, expect, test } from "bun:test"
 import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
@@ -18,7 +18,14 @@ import { PagesAuth } from "../src/pages/auth"
 import { PagesToken } from "../src/pages/token"
 
 const dirs: string[] = []
+// The plugin reads the destination override from the process environment, so a value set in the shell or CI must not leak in.
+const ambient = process.env[PagesConfig.DESTINATION_ENV]
+beforeEach(() => {
+  delete process.env[PagesConfig.DESTINATION_ENV]
+})
 afterEach(async () => {
+  if (ambient === undefined) delete process.env[PagesConfig.DESTINATION_ENV]
+  else process.env[PagesConfig.DESTINATION_ENV] = ambient
   PagesToken.reset()
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
 })
