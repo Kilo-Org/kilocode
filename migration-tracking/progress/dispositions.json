@@ -20,7 +20,7 @@
   "module:packages/core/src/kilocode/global.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/src/global-resilience.ts",
-    "note": "ensureRealDir, writable, ready and resolveState are ported into packages/kilo-cli/src/global-resilience.ts and wired by packages/kilo-cli/src/global-boot.ts (a host boot step that runs before @opencode/util/global loads), keeping the upstream util/global.ts pristine. The state-dir fallback is <data>/<app> rather than v1's literal <data>/state because roots() always appends the app name.",
+    "note": "ensureRealDir, writable, ready and resolveState are ported into packages/kilo-cli/src/global-resilience.ts and wired by packages/kilo-cli/src/global-boot.ts (a host boot step that runs before @opencode/util/global loads), so none of this logic is in the upstream util/global.ts, which carries only the two generic identity knobs (OPENCODE_APP_DIR_NAME and OPENCODE_HOME_DIR). The state-dir fallback is <data>/<app> rather than v1's literal <data>/state because roots() always appends the app name.",
     "by": "global-resilience"
   },
   "module:packages/core/src/kilocode/spotlight.ts": {
@@ -46,9 +46,10 @@
     "by": "store-paths"
   },
   "module:packages/opencode/test/kilocode/storage/db.test.ts": {
-    "state": "dropped",
-    "note": "Tested the v1 opencode-<channel>.db -> kilo-<channel>.db fallback that let a renamed binary reuse the old channel database. v2 keeps upstream's opencode*.db filenames inside the distinct kilo2 directory and fail-closes v1 KILO_DB (packages/kilo-cli/src/env.ts:34), so there is no cross-store fallback; channel-path selection is native at packages/cli/src/database-path.ts. The fallback is obsoleted by the D-4 distinct-dir design.",
-    "by": "store-paths"
+    "state": "ported",
+    "v2": "packages/kilo-cli/test/database.test.ts",
+    "note": "Tested the v1 fallback in getChannelPath (packages/opencode/src/storage/db.ts): for a non-release channel, when kilo-<channel>.db did not exist and an older opencode-<channel>.db did, v1 opened the old file, so a build after the file rename kept its sessions. v2 carries that continuity in the host: KiloDatabase.select (packages/kilo-cli/src/database.ts) names the store kilo2.db or kilo2-<channel>.db and, when that file does not exist yet, its adopt helper copies an earlier opencode*.db from the same kilo2 data directory to it once. The mechanism differs on purpose: v2 copies instead of opening the old file in place, so select returns the Kilo file, not the old path. Because the copy happens once, what an earlier build writes to the old file afterwards does not reach the Kilo file (the first test named below asserts it); that is the one user-visible difference from v1's in-place use. v2 also covers the shared opencode.db of the release channels and prefers the earlier file with the most sessions. packages/kilo-cli/test/database.test.ts carries the assertion ('the database of an earlier build is copied once, with the pages still in its WAL'; 'release channels and KILO_DISABLE_CHANNEL_DB copy the earlier shared file'), and 'the first boot copies the database of an earlier build to the Kilo file' in packages/kilo-cli/test/app-dirs.test.ts covers it through the real entry. v2 still does not use v1's own store as its database: a v1 KILO_DB has no effect (the storage list in packages/kilo-cli/src/env.ts), and refuseV1Store and the guard in adopt refuse a Kilo v1 store, which only kilo2 import v1 brings forward.",
+    "by": "identity-store-notes"
   },
   "module:packages/opencode/test/kilocode/storage/storage-init.test.ts": {
     "state": "native",
