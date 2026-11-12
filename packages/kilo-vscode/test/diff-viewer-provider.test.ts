@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
-import { DiffViewerProvider, hasReactionComment } from "../src/diff/DiffViewerProvider"
+import { DiffViewerProvider, hasReactionComment, restoredContext } from "../src/diff/DiffViewerProvider"
 import type { DiffSourceCatalog } from "../src/diff/sources/catalog"
 import type { PanelContext } from "../src/diff/context"
 import type { PRReviewCommentData, ReviewCommentEntry } from "../src/shared/review-comments"
@@ -52,6 +52,74 @@ function harness() {
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+function fakePanel() {
+  const disposers: Array<() => void> = []
+  const posts: Record<string, unknown>[] = []
+  const panel = {
+    visible: true,
+    disposed: false,
+    title: "",
+    posts,
+    webview: {
+      options: {},
+      html: "",
+      cspSource: "vscode-webview:",
+      onDidReceiveMessage: () => ({ dispose: () => undefined }),
+      postMessage: async (message: Record<string, unknown>) => {
+        posts.push(message)
+        return true
+      },
+      asWebviewUri: (uri: unknown) => uri,
+    },
+    onDidChangeViewState: () => ({ dispose: () => undefined }),
+    onDidDispose: (callback: () => void) => {
+      disposers.push(callback)
+      return { dispose: () => undefined }
+    },
+    reveal: () => undefined,
+    dispose: () => {
+      panel.disposed = true
+      disposers.forEach((callback) => callback())
+    },
+  }
+  return panel
+}
+
+describe("DiffViewerProvider restore", () => {
+  it("attaches a reloaded panel to the session and turn it showed", () => {
+    const h = harness()
+    const panel = fakePanel()
+    h.provider.deserializePanel(panel as unknown as vscode.WebviewPanel, {
+      diffViewer: { sessionId: "session-1", dir: "/repo", initialSourceId: "turn:session-1:turn-1", hidePicker: true },
+    })
+
+    expect(panel.disposed).toBe(false)
+    expect(panel.webview.html).toContain('data-view="diffViewer"')
+    expect(panel.webview.html).toContain('data-directory="/repo"')
+    expect(panel.posts.find((message) => message.type === "diffViewer.context")).toMatchObject({
+      restore: { sessionId: "session-1", dir: "/repo", initialSourceId: "turn:session-1:turn-1", hidePicker: true },
+    })
+  })
+
+  it("closes a panel that saved no context", () => {
+    const h = harness()
+    const panel = fakePanel()
+    h.provider.deserializePanel(panel as unknown as vscode.WebviewPanel, { sidebarSide: "left" })
+    expect(panel.disposed).toBe(true)
+  })
+})
+
+describe("restoredContext", () => {
+  it("reads only a saved panel context", () => {
+    expect(
+      restoredContext({ diffViewer: { sessionId: "s", dir: "/repo", hidePicker: true, beside: true } }),
+    ).toMatchObject({ sessionId: "s", dir: "/repo", hidePicker: true, beside: true, workspaceRoot: "/repo" })
+    expect(restoredContext(undefined)).toBeUndefined()
+    expect(restoredContext({ sidebarSide: "left" })).toBeUndefined()
+    expect(restoredContext({ diffViewer: 3 })).toBeUndefined()
+  })
+})
 
 describe("DiffViewerProvider.openFromCommand", () => {
   it("resolves the opening session directory, then the sidebar fallback", () => {

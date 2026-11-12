@@ -24,7 +24,8 @@
     "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
     "onWebviewPanel:kilo-code.v2.documentsPanel",
-    "onWebviewPanel:kilo-code.v2.subagentPanel"
+    "onWebviewPanel:kilo-code.v2.subagentPanel",
+    "onWebviewPanel:kilo-code.v2.DiffViewerPanel"
   ],
   "contributes": {
     "configurationDefaults": {
