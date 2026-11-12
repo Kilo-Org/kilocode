@@ -15,6 +15,12 @@ export function createWakeups(input: {
   /** The directories whose sessions are drawn. Read reactively: a project or worktree added later is seeded too. */
   directories: () => readonly string[]
   connected: () => boolean
+  /**
+   * The directory whose Location answers for all of them. The wakeup state is global and `pending` filters it by its
+   * `directory` input, so asking one loaded Location keeps the server from loading every worktree just to answer.
+   * Without it, each directory answers for itself.
+   */
+  home?: () => string | undefined
 }) {
   const rpc = input.api.rpc(KiloWakeupRpc.Definition)
   // Directory to session id to the earliest future due time.
@@ -25,7 +31,7 @@ export function createWakeups(input: {
   const seed = (directory: string) => {
     if (unsupported) return
     void rpc
-      .pending({ directory }, { location: { directory } })
+      .pending({ directory }, { location: { directory: input.home?.() ?? directory } })
       .then((value) => {
         const map: Record<string, number> = {}
         for (const item of value.sessions) if (item.dueAt !== undefined) map[item.sessionID] = item.dueAt
