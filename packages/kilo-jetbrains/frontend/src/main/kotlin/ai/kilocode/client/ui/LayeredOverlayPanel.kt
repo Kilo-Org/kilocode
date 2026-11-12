@@ -3,6 +3,7 @@ package ai.kilocode.client.ui
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.log.KiloLog
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -11,6 +12,7 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.GraphicsEnvironment
+import java.awt.HeadlessException
 import java.awt.MouseInfo
 import java.awt.Point
 import java.awt.Rectangle
@@ -27,6 +29,10 @@ open class LayeredOverlayPanel(
     overlay: Overlay = Overlay(),
     blocker: Blocker = Blocker(),
 ) : JLayeredPane() {
+
+    companion object {
+        private val log = KiloLog.create(LayeredOverlayPanel::class.java)
+    }
 
     private val baseContent = content
 
@@ -125,9 +131,24 @@ open class LayeredOverlayPanel(
     @RequiresEdt
     private fun releaseHover() {
         if (GraphicsEnvironment.isHeadless() || !isShowing) return
-        val point = MouseInfo.getPointerInfo()?.location ?: return
+        val point = pointer() ?: return
         SwingUtilities.convertPointFromScreen(point, this)
         releaseHover(point)
+    }
+
+    @Suppress("TooGenericExceptionCaught") // The JDK exposes native display races as array-index errors.
+    private fun pointer(): Point? = try {
+        MouseInfo.getPointerInfo()?.location
+    } catch (err: ArrayIndexOutOfBoundsException) {
+        // Native pointer and screen-device reads can race with display reconfiguration.
+        log.debug { "Overlay pointer display configuration changed: $err" }
+        null
+    } catch (err: HeadlessException) {
+        log.debug { "Overlay pointer unavailable in a headless environment: $err" }
+        null
+    } catch (err: SecurityException) {
+        log.debug { "Overlay pointer access denied: $err" }
+        null
     }
 
     /** Releases the hover of the content at [point], in this panel's coordinates, when covered. */
