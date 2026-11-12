@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { Media } from "@opencode/ai"
 import { ai, ImageClient } from "@opencode/ai/effect"
 import { RequestExecutor } from "@opencode/ai/route"
 import { Effect, Layer } from "effect"
@@ -76,4 +77,59 @@ test("generates on the Gateway chat completions route with an image modality", a
   expect(response.images).toHaveLength(1)
   expect(response.image.mediaType).toBe("image/png")
   expect((response.image.source as { type: string }).type).toBe("base64")
+})
+
+test("sends input images as chat image parts", async () => {
+  let body: unknown
+  await Effect.runPromise(
+    ai.image
+      .generate({ model, prompt: "Make it blue", images: [Media.base64(PNG, "image/png")] })
+      .pipe(
+        Effect.provide(
+          imageLayer(({ request, text }) =>
+            Effect.gen(function* () {
+              body = JSON.parse(text)
+              return respond(request, {
+                choices: [{ message: { images: [{ image_url: { url: `data:image/png;base64,${PNG}` } }] } }],
+              })
+            }),
+          ),
+        ),
+      ),
+  )
+  expect(body).toEqual({
+    model: "google/gemini-2.5-flash-image",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Make it blue" },
+          { type: "image_url", image_url: { url: `data:image/png;base64,${PNG}` } },
+        ],
+      },
+    ],
+    modalities: ["image", "text"],
+  })
+})
+
+test("keeps an https image reference as a URL asset", async () => {
+  const response = await Effect.runPromise(
+    ai.image.generate({ model, prompt: "A red circle" }).pipe(
+      Effect.provide(
+        imageLayer(({ request }) =>
+          Effect.succeed(
+            respond(request, {
+              choices: [
+                { message: { images: [{ image_url: { url: "https://cdn.example.test/generated.png" } }] } },
+              ],
+            }),
+          ),
+        ),
+      ),
+    ),
+  )
+  expect(response.image.source).toMatchObject({
+    type: "url",
+    url: "https://cdn.example.test/generated.png",
+  })
 })

@@ -244,6 +244,49 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
+  it.live("registers Gateway image models apart from chat models, the default, and image ids that are chat models", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+          Effect.gen(function* () {
+            // A tool-capable model that also outputs images stays a chat model; the image copy would replace it by id.
+            const models = backend.state.models as unknown as { data: Array<Record<string, unknown>> }
+            models.data.push({
+              id: "test/chat-image",
+              name: "Chat Image",
+              context_length: 1000,
+              max_completion_tokens: 100,
+              supported_parameters: ["tools"],
+              architecture: { input_modalities: ["text"], output_modalities: ["text", "image"] },
+              isFree: false,
+            })
+            yield* addPlugin()
+            const catalog = yield* Model.Service
+            const imageModels = yield* eventually(catalog.available(["image"]), (items) => items.length > 0)
+            const image = imageModels.find((item) => item.id === Model.ID.make("google/gemini-2.5-flash-image"))
+            expect(image).toMatchObject({
+              providerID: kilo,
+              type: "image",
+              package: "@kilocode/gateway-images",
+              capabilities: { tools: false, input: ["text", "image"], output: ["text", "image"] },
+            })
+            // A model that is also in the chat catalog is not registered twice.
+            expect(imageModels.map((item) => item.id)).not.toContain(Model.ID.make("test/chat-image"))
+            const chat = yield* catalog.available()
+            expect(chat.map((item) => item.id)).toContain(Model.ID.make("test/chat-image"))
+            expect(chat.map((item) => item.id)).not.toContain(Model.ID.make("google/gemini-2.5-flash-image"))
+            // The provider default stays the chat model from the catalog.
+            expect(yield* catalog.default()).toMatchObject({
+              providerID: kilo,
+              id: Model.ID.make("kilo-auto/frontier"),
+            })
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
   it.live("follows the active credential: team catalog, personal catalog, switch and logout", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
