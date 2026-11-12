@@ -381,7 +381,8 @@ export function create(
       ...(input.ends ? { ends: input.ends } : {}),
       time: { created: now, updated: now },
     }
-    return yield* flowLock(runtime, id).withPermit(
+    const lock = flowLock(runtime, id)
+    return yield* lock.withPermit(
       Effect.gen(function* () {
         // A retried create may arrive after the first attempt committed but its response was lost. Return that Flow
         // instead of allocating a second one and a second backing schedule.
@@ -456,7 +457,20 @@ export function create(
         })
         yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
         return managed(configured, schedule)
-      }),
+      }).pipe(
+        // A create that fails before its record exists (refused approval, schedule or storage error) leaves no Flow
+        // to lock again; drop the lock so every failed request id does not keep a semaphore for the runtime's life.
+        Effect.onError(() =>
+          ctx.storage.get(`${prefix}${id}`).pipe(
+            Effect.tap((stored) =>
+              Effect.sync(() => {
+                if (stored === undefined && runtime.locks.get(id) === lock) runtime.locks.delete(id)
+              }),
+            ),
+            Effect.ignore,
+          ),
+        ),
+      ),
     )
   })
 }

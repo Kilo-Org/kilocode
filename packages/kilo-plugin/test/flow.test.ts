@@ -12,14 +12,14 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AbsolutePath } from "@opencode/schema/schema"
-import { assemble, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
+import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
 import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { FSUtil } from "@opencode/util/fs-util"
-import { DateTime, Effect, Layer, Schema } from "effect"
+import { DateTime, Effect, Layer, Schema, Semaphore } from "effect"
 import { testEffect } from "../../core/test/lib/effect"
 import { makePluginTestLayer, PluginTestLayer } from "../../core/test/plugin/fixture"
 
@@ -380,6 +380,38 @@ test("missing Sessions and malformed stored records are isolated", () => {
   })
   expect(storedRecord(`flow:v1:${legacy.id}`, JSON.stringify(legacy))).toEqual({ record: legacy })
 })
+
+it.live("drops the lock of a create that fails before its Flow exists", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Schedule.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const locks = new Map<KiloFlowRpc.ID, Semaphore.Semaphore>()
+    const runtime = { locks, changed: () => Effect.void }
+    const input = {
+      sourceSessionID: source.id,
+      name: "Lock check",
+      when: { every: "1 day" as const, tz: "UTC" },
+      prompt: "Check once",
+      worktree: "reuse" as const,
+      permissions: [],
+      requestID: "00112233445566778899aabbccddeeff",
+    }
+    const failing = { ...schedules, create: () => Effect.fail(new Schedule.InvalidError({ reason: "scheduler unavailable" })) }
+    const failure = yield* create(context, failing, input, source.projectID, runtime).pipe(Effect.flip)
+    expect(failure.message).toContain("scheduler unavailable")
+    expect(locks.size).toBe(0)
+    // A create that persists keeps its lock for the runs and edits that follow.
+    yield* create(context, schedules, input, source.projectID, runtime)
+    expect([...locks.keys()]).toEqual([KiloFlowRpc.ID.make(`flw_${input.requestID}`)])
+  }),
+)
 
 it.live("returns the existing Flow when a create is retried with the same request id", () =>
   Effect.gen(function* () {
