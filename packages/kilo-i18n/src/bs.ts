@@ -139,4 +139,8 @@ export const dict = {
   "ui.message.feedback.helpful": "Ovo je bilo korisno",
   "ui.message.feedback.notHelpful": "Ovo nije bilo korisno",
   "ui.message.feedback.clearRating": "Obriši ocjenu",
+  // Chart tool card
+  "ui.tool.chart": "Grafikon",
+  "ui.tool.chart.invalid": "Nevažeća konfiguracija grafikona — mora sadržavati tip i podatke",
+  "ui.tool.chart.failed": "Prikaz grafikona nije uspio",
 }

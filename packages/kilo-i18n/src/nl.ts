@@ -137,4 +137,8 @@ export const dict = {
   "ui.message.feedback.helpful": "Dit was nuttig",
   "ui.message.feedback.notHelpful": "Dit was niet nuttig",
   "ui.message.feedback.clearRating": "Beoordeling wissen",
+  // Chart tool card
+  "ui.tool.chart": "Grafiek",
+  "ui.tool.chart.invalid": "Ongeldige grafiekconfiguratie — moet type en data bevatten",
+  "ui.tool.chart.failed": "Grafiek kon niet worden weergegeven",
 }

@@ -2636,6 +2636,18 @@
     "note": "The v1 guard asserted the auth toast never tells the user to run `opencode mcp auth` and that the MCP client identifies as kilo. v2 keeps the identity assertion through the host override: packages/core/test/kilocode/mcp/host-hooks.test.ts (client_name/client_uri default to opencode without a host and Kilo with one) and packages/kilo-cli/test/host.test.ts (initialize clientInfo.name is kilo, OAuth registration sends Kilo). User-facing guidance is v2-native copy: packages/core/src/mcp/index.ts reports needs_auth as 'Sign in from /mcps', and the TUI and VS Code expose a Sign in action, so no `kilo mcp auth` toast exists to regress.",
     "by": "mcp-marketplace-rescope"
   },
+  "module:packages/opencode/src/kilocode/tool/chart.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/chart/tool.ts",
+    "note": "The chart tool is the Kilo plugin kilocode.chart (packages/kilo-plugin/src/chart/index.ts), which registers makeTool from packages/kilo-plugin/src/chart/tool.ts and the chart skill from chart-skill.txt. Same parameters, description text and result metadata: title and description are emitted as progress metadata, an unparsable spec and a config without type/data return the same user-facing messages with the invalid-json and invalid-spec markers, an area config is remapped to line with fill:true as the dataset default, and a valid config returns JSON.stringify of the parsed spec. The chart.css selectors are the same file. Not carried: Telemetry.trackToolUsed, because the v2 telemetry sink is the usage and telemetry epic (#15303). The tool is a direct (non Code Mode) tool with options.codemode false, like browser_open, so the chat renders its own card.",
+    "by": "port-chart-tool"
+  },
+  "module:packages/opencode/test/kilocode/chart-tool-gating.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/chart.test.ts",
+    "note": "The chart assertions of the v1 gating test are carried through the real v2 tool registry and the plugin's skill transform: chart is present for the vscode client and absent for cli, jetbrains and an unset client, and the chart skill is registered only with the tool. The same file also covers the tool behavior (invalid JSON message, missing type/data message, area to line with fill, valid spec round trip). The other v1 assertions in that file (browser_open, open_plan, link_pr) belong to their own features and are covered by those ports.",
+    "by": "port-chart-tool"
+  },
   "module:packages/opencode/src/kilocode/session/revert.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/src/session-revert.ts",
