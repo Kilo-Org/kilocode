@@ -41,7 +41,7 @@ import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
 import { KiloGatewayAccounts } from "./accounts"
 import { createHash, randomUUID } from "node:crypto"
-import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
+import { Clock, Duration, Effect, Fiber, Latch, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
@@ -55,6 +55,9 @@ const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
+// How long activation waits for the first Kilo catalog. The server answers 503 when a Location's plugins take longer
+// than 5 seconds to activate, and a team catalog takes several sequential Kilo API requests.
+export const FIRST_CATALOG_WAIT = Duration.seconds(2)
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
 const IS_TEST_RUNNER = /\.test\.[cm]?[jt]sx?$/.test(process.argv[1] ?? "")
 // Upstream OpenCode request identity from `packages/core/src/session/model-request.ts`. The Gateway attributes through
@@ -644,9 +647,36 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
     yield* ctx.integration.transform((editor) => editor.method.update(device(() => server)))
 
+    // The first start (no stored catalog) and team scope, which fails closed, wait for the catalog, but only for
+    // FIRST_CATALOG_WAIT: the server answers 503 when the plugins of a Location take longer than 5 seconds to
+    // activate, and a team catalog takes several sequential Kilo API requests. A slower catalog keeps loading in the
+    // plugin scope and reloads the provider once it lands, as a retry does.
+    // The load signals a latch instead of being joined, so a slow one is not interrupted with the activation that
+    // stops waiting for it.
+    const awaitFirstCatalog = Effect.fnUntraced(function* (targetEpoch: number) {
+      const settled = yield* Latch.make(false)
+      yield* lock.withPermit(loadCatalog(targetEpoch, 0)).pipe(Effect.ensuring(settled.open), Effect.forkIn(scope))
+      const loaded = yield* settled.await.pipe(Effect.timeoutOption(FIRST_CATALOG_WAIT))
+      // The provider transform below reads a catalog that settled in time. One that lands later would be invisible,
+      // whether it carries chat or image models, so reload the provider, as a retry does. A failed load has no models
+      // to publish; its retry reloads on success.
+      if (Option.isSome(loaded)) return
+      yield* settled.await.pipe(
+        Effect.andThen(
+          Effect.suspend(() =>
+            !catalog.failed && targetEpoch === epoch
+              ? ctx.provider.reload().pipe(Effect.andThen(publishCatalog))
+              : Effect.void,
+          ),
+        ),
+        Effect.catch(() => Effect.void),
+        Effect.forkIn(scope),
+      )
+    })
+
     // A later start in a personal or anonymous scope with a stored catalog for that exact scope starts with it, so
     // activation does not wait for the network. The fresh catalog loads in the plugin scope and reloads the provider
-    // once, as a retry does. The first start (no stored catalog) and team scope, which fails closed, wait for it.
+    // once, as a retry does.
     const start = yield* resolveCurrentAccount
     server = start.server
     gateway = start.gateway
@@ -664,9 +694,21 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         failed: false,
         anonymous: start.account?.token === undefined,
       }
+    } else {
+      // Activation can return before the catalog lands, but the account reader below is registered before that and read
+      // once by the plugins that start after this one (codebase indexing), so publish the resolved account first.
+      catalog = {
+        account: start.account,
+        connection: start.connection,
+        envActive: start.envActive,
+        models: [],
+        imageModels: [],
+        failed: false,
+        anonymous: start.account?.token === undefined,
+      }
     }
-    yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
-    // Other Kilo plugins of this Location read the account once the first catalog state has it.
+    yield* stored ? Effect.forkIn(reload, scope) : awaitFirstCatalog(++epoch)
+    // Other Kilo plugins of this Location read the account; it is published above, before the first catalog can land.
     const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
     yield* Effect.addFinalizer(() => Effect.sync(unregister))
 

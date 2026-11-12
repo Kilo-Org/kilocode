@@ -30,6 +30,7 @@
     "test/fixtures/marketplace-install-modal.tsx",
     "test/fixtures/prompt-rail-render.tsx",
     "test/fixtures/prompt-toolbar-flicker.tsx",
-    "test/fixtures/revert-banner-render.tsx"
+    "test/fixtures/revert-banner-render.tsx",
+    "test/fixtures/settings-search-focus.tsx"
   ]
 }
