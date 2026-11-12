@@ -377,7 +377,8 @@ describe("indexing runtime", () => {
     expect(seen).toEqual(["kilo/default-embed", "kilo/large-embed"])
   })
 
-  test("keeps the catalog default when validation fails for a non-model reason", async () => {    const state = engine()
+  test("keeps the catalog default when validation fails for a non-model reason", async () => {
+    const state = engine()
     const seen: string[] = []
     const baseUrl = gateway(async (request) => {
       seen.push(((await request.json()) as { model?: string }).model ?? "")

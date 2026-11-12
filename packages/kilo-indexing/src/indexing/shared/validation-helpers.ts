@@ -65,8 +65,7 @@ export const EMBEDDING_MODEL_UNAVAILABLE = "The specified embedding model is not
 export const EMBEDDING_AUTH_FAILED = "Authentication failed. Please check your API key."
 export const EMBEDDING_NO_CREDITS = "Add credits to continue, or switch to a free embedding model."
 export const EMBEDDING_RATE_LIMITED = "Service is temporarily unavailable due to rate limiting. Please try again later."
-export const EMBEDDING_CONNECTION_FAILED =
-  "Connection failed. Please check the endpoint URL and network connectivity."
+export const EMBEDDING_CONNECTION_FAILED = "Connection failed. Please check the endpoint URL and network connectivity."
 
 /**
  * True when the failure is the account or the connection rather than one model, so trying another catalog model cannot
