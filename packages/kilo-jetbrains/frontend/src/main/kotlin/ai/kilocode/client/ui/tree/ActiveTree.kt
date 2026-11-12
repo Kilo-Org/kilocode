@@ -76,6 +76,7 @@ import javax.swing.tree.TreeSelectionModel
 internal data class ActiveTreeNode(
     val item: ActiveItem,
     val children: List<ActiveTreeNode>? = null,
+    val color: Color? = null,
 ) {
     val branch: Boolean get() = children != null
 }
@@ -85,6 +86,8 @@ internal class ActiveEntry(
     var item: ActiveItem,
     branch: Boolean,
 ) : DefaultMutableTreeNode(null, branch) {
+    var color: Color? = null
+
     init {
         // The tree renderer receives the node's user object; keep the entry itself so it can resolve
         // hierarchy state (branch/leaf) as well as the row payload.
@@ -779,7 +782,7 @@ internal class ActiveTreeView(
         val cell = if (hovered) button.cell?.takeIf { button.row == getRowForPath(TreePath(entry.path)) } else null
         val fg = UIUtil.getTreeForeground(active, active || focused)
         val background = background
-        val selection = UIUtil.getTreeBackground(true, focused || popups > 0)
+        val selection = UIUtil.getTreeBackground(true, !entry.allowsChildren && active)
         val hover = if (hovered) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
         val backdrop = if (selected) selection else hover ?: background
         val actions = actionsVisible(enabled, selected, hovered, active)

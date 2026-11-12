@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.tree.ActiveTreeNode
+import ai.kilocode.client.ui.tree.ActiveTreeColors
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -12,9 +13,10 @@ import kotlinx.serialization.json.Json
 import java.util.UUID
 
 /** Project-local organization only; workspace metadata remains owned by git and Cloud. */
+@Suppress("TooManyFunctions")
 internal class AgentManagerLayout(private val properties: PropertiesComponent? = null) {
     @Serializable
-    data class Section(override val key: String, override val title: String) : ActiveItem
+    data class Section(override val key: String, override val title: String, val color: String? = null) : ActiveItem
 
     @Serializable
     private data class State(
@@ -31,6 +33,7 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
         }
     } ?: State()
     private var order = state.order
+    private var pinned: String? = null
 
     fun section(key: String): Section? = state.sections.firstOrNull { it.key == key }
 
@@ -58,14 +61,20 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     @RequiresEdt
     fun create(name: String): Section {
         val section = Section("kilo:agent-manager:section:${UUID.randomUUID()}", name)
-        save(state.copy(sections = state.sections + section))
-        return section
+        assign(state.sections + section)
+        return requireNotNull(this.section(section.key))
     }
 
     @RequiresEdt
     fun rename(key: String, name: String) {
         val title = name.trim().takeIf { it.isNotEmpty() } ?: return
         save(state.copy(sections = state.sections.map { if (it.key == key) it.copy(title = title) else it }))
+    }
+
+    @RequiresEdt
+    fun color(key: String, color: String) {
+        if (color !in ActiveTreeColors.keys) return
+        save(state.copy(sections = state.sections.map { if (it.key == key) it.copy(color = color) else it }))
     }
 
     @RequiresEdt
@@ -82,6 +91,7 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
 
     @RequiresEdt
     fun move(move: ActiveMove) {
+        if (move.key == pinned) return
         if (move.parent != null && (section(move.parent) == null || section(move.key) != null)) return
         val membership = if (move.parent == null) state.membership - move.key
             else state.membership + (move.key to move.parent)
@@ -100,7 +110,9 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     }
 
     @RequiresEdt
-    fun nodes(items: List<ActiveItem>): List<ActiveTreeNode> {
+    fun nodes(items: List<ActiveItem>, pin: String? = null): List<ActiveTreeNode> {
+        pinned = pin ?: pinned
+        assign()
         val sections = state.sections.associateBy { it.key }
         val grouped = items.groupBy { state.membership[it.key]?.takeIf(sections::containsKey) ?: ROOT }
         fun sorted(parent: String, rows: List<ActiveItem>): List<ActiveItem> {
@@ -110,7 +122,7 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
         val nodes = sorted(ROOT, grouped[ROOT].orEmpty() + state.sections).map { item ->
             ActiveTreeNode(item, sections[item.key]?.let { section ->
                 sorted(section.key, grouped[section.key].orEmpty()).map { ActiveTreeNode(it) }
-            })
+            }, color = ActiveTreeColors.color(sections[item.key]?.color))
         }
         // Retain temporarily undiscovered Cloud rows so a refresh cannot lose their placement.
         val visible = mapOf(ROOT to nodes.map { it.item.key }) + nodes.mapNotNull { node ->
@@ -129,7 +141,26 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     }
 
     @RequiresEdt
-    private fun save(value: State) {
+    private fun assign(sections: List<Section> = state.sections) {
+        val keys = ActiveTreeColors.keys
+        val colors = sections.mapNotNull { it.color?.takeIf(keys::contains) }.toMutableList()
+        save(state.copy(sections = sections.map { section ->
+            if (section.color in keys) return@map section
+            val color = keys.firstOrNull { it !in colors } ?: keys[colors.size % keys.size]
+            colors += color
+            section.copy(color = color)
+        }))
+    }
+
+    @RequiresEdt
+    private fun save(next: State) {
+        val value = pinned?.let { key ->
+            next.copy(
+                membership = next.membership - key,
+                order = next.order.mapValues { (_, keys) -> keys.filterNot { it == key } } +
+                    (ROOT to (listOf(key) + next.order[ROOT].orEmpty().filterNot { it == key })),
+            )
+        } ?: next
         if (value == state) return
         if (value.order != state.order) order = value.order
         state = value

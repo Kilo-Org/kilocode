@@ -77,6 +77,7 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.tree.ActiveTree
+import ai.kilocode.client.ui.tree.ActiveTreeColors
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveDeleteOptions
@@ -112,6 +113,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -173,7 +175,7 @@ class AgentManagerPanel(
     private val ordering = AgentManagerLayout(project?.let(PropertiesComponent::getInstance))
     private val missed = mutableMapOf<String, Int>()
     private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
-    private val sections = arrayOf<AnAction>(
+    private val sections: Array<AnAction> = arrayOf(
         object : DumbAwareAction(KiloBundle.message("agentManager.section.rename")) {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -182,6 +184,12 @@ class AgentManagerPanel(
                 e.getData(SECTION)?.let(::renameSection)
             }
         },
+        Separator.getInstance(),
+        ActiveTreeColors.group(SECTION, { ordering.section(it)?.color }) { key, color ->
+            ordering.color(key, color)
+            sync()
+        },
+        Separator.getInstance(),
         object : DumbAwareAction(KiloBundle.message("agentManager.section.delete")) {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -236,6 +244,7 @@ class AgentManagerPanel(
         ),
         reorder = ActiveReorder(
             movable = { row -> row.progress == null },
+            pinned = { row -> row is WorktreeRow && row.dto.main },
             onMove = { move -> ordering.move(move); sync() },
             reparent = { row, parent ->
                 parent == null || parent is AgentManagerLayout.Section && row !is AgentManagerLayout.Section
@@ -956,7 +965,7 @@ class AgentManagerPanel(
             emptyList()
         }
         tree.update(
-            ordering.nodes(listOfNotNull(current) + local + hosted),
+            ordering.nodes(listOfNotNull(current) + local + hosted, current?.key),
             ActiveSelection.Preserve,
         )
     }

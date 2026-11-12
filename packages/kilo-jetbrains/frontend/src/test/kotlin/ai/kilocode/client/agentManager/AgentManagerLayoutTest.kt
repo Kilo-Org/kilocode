@@ -3,9 +3,14 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.tree.ActiveTreeNode
+import ai.kilocode.client.ui.tree.ActiveTreeColors
 import ai.kilocode.client.util.edtWait
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class AgentManagerLayoutTest : BasePlatformTestCase() {
     private data class Row(override val key: String, override val title: String = key) : ActiveItem
@@ -57,6 +62,73 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(second, layout.section(second.key))
         assertEquals(emptyList<ActiveTreeNode>(), children(nodes, first))
         assertEquals(emptyList<ActiveTreeNode>(), children(nodes, second))
+    }
+
+    fun `test section colors follow the palette and cycle using persisted color keys`() = edtWait {
+        val keys = listOf("red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta", "red", "orange")
+        val sections = keys.mapIndexed { index, _ -> layout.create("Section $index") }
+
+        assertEquals(keys, sections.map { it.color })
+        val props = PropertiesComponent.getInstance(project)
+        val saved = Json.parseToJsonElement(props.getValue(STORAGE)!!).jsonObject.getValue("sections").jsonArray
+        assertEquals(keys, saved.map { it.jsonObject.getValue("color").jsonPrimitive.content })
+        val restored = AgentManagerLayout(props)
+        assertEquals(sections, sections.map { restored.section(it.key) })
+        assertEquals(keys.map(ActiveTreeColors::color), restored.nodes(emptyList()).map { it.color })
+    }
+
+    fun `test uncolored and unknown section colors receive the next unused color without losing layout`() = edtWait {
+        val props = PropertiesComponent.getInstance(project)
+        props.setValue(STORAGE, """{
+            "sections":[{"key":"first","title":"First"},{"key":"second","title":"Second","color":"blue"},
+                {"key":"third","title":"Third","color":"unknown"}],
+            "membership":{"local":"first"},
+            "order":{"": ["third","first","cloud","second"],"first":["local"]}
+        }""")
+        val restored = AgentManagerLayout(props)
+
+        val nodes = restored.nodes(listOf(local, cloud))
+
+        assertEquals(listOf("third", "first", "cloud", "second"), keys(nodes))
+        assertEquals("red", restored.section("first")!!.color)
+        assertEquals("blue", restored.section("second")!!.color)
+        assertEquals("orange", restored.section("third")!!.color)
+        assertEquals(listOf(local.key), keys(nodes.single { it.item.key == "first" }.children!!))
+        assertEquals(nodes, AgentManagerLayout(props).nodes(listOf(cloud, local)))
+        assertEquals("yellow", restored.create("New").color)
+    }
+
+    fun `test choosing a section color persists without changing order membership or other colors`() = edtWait {
+        val section = layout.create("Planning")
+        val other = layout.create("Other")
+        layout.nodes(items)
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key), parent = section.key))
+        val before = layout.nodes(items)
+
+        layout.color(section.key, "cyan")
+
+        val props = PropertiesComponent.getInstance(project)
+        val restored = AgentManagerLayout(props)
+        val nodes = restored.nodes(items.reversed())
+        assertEquals(keys(before), keys(nodes))
+        assertEquals(children(before, section), children(nodes, section))
+        assertEquals(section.copy(color = "cyan"), restored.section(section.key))
+        assertEquals(other, restored.section(other.key))
+        assertEquals(ActiveTreeColors.color("cyan"), nodes.single { it.item.key == section.key }.color)
+        val saved = props.getValue(STORAGE)
+        restored.color(section.key, "invalid")
+        restored.color("missing", "red")
+        assertEquals(saved, props.getValue(STORAGE))
+    }
+
+    fun `test deleting a section makes its palette color available without recoloring survivors`() = edtWait {
+        val first = layout.create("First")
+        val second = layout.create("Second")
+
+        layout.delete(first.key)
+
+        assertEquals("red", layout.create("Third").color)
+        assertEquals(second, layout.section(second.key))
     }
 
     fun `test local cloud and current items move into a section and back`() = edtWait {
@@ -279,6 +351,125 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         val restored = AgentManagerLayout(props)
         assertEquals(listOf(cloud.key, current.key, local.key), keys(restored.nodes(items.reversed())))
         assertEquals(listOf(current.key, local.key), restored.neighbors(cloud.key))
+    }
+
+    fun `test pinning repairs persisted primary membership and duplicate orders without losing other layout data`() = edtWait {
+        val props = PropertiesComponent.getInstance(project)
+        props.setValue(STORAGE, """{
+            "sections":[{"key":"first","title":"Planning","color":"cyan"},
+                {"key":"second","title":"Other","color":"magenta"}],
+            "membership":{"current":"first","local":"first","cloud":"second","hidden":"second"},
+            "order":{"": ["second","extra","current","first","current","missing"],
+                "first":["current","local","current","missing:first"],
+                "second":["current","cloud","current","hidden"]}
+        }""")
+        val restored = AgentManagerLayout(props)
+        val rows = items + Row("extra")
+
+        val nodes = restored.nodes(rows.reversed(), pin = current.key)
+
+        val first = requireNotNull(restored.section("first"))
+        val second = requireNotNull(restored.section("second"))
+        assertEquals(listOf(current.key, second.key, "extra", first.key), keys(nodes))
+        assertNull(nodes.first().children)
+        assertEquals(listOf(local.key), keys(children(nodes, first)))
+        assertEquals(listOf(cloud.key), keys(children(nodes, second)))
+        assertEquals(AgentManagerLayout.Section("first", "Planning", "cyan"), first)
+        assertEquals(AgentManagerLayout.Section("second", "Other", "magenta"), second)
+        assertEquals(ActiveTreeColors.color("cyan"), nodes.single { it.item.key == first.key }.color)
+        assertEquals(ActiveTreeColors.color("magenta"), nodes.single { it.item.key == second.key }.color)
+        val saved = props.getValue(STORAGE)!!
+        val data = Json.parseToJsonElement(saved).jsonObject
+        assertEquals(Json.parseToJsonElement("""{"local":"first","cloud":"second","hidden":"second"}"""),
+            data.getValue("membership"))
+        val order = data.getValue("order").jsonObject
+        assertEquals(listOf(current.key, second.key, "extra", first.key, "missing"),
+            order.getValue("").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(listOf(local.key, "missing:first"),
+            order.getValue(first.key).jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(listOf(cloud.key, "hidden"),
+            order.getValue(second.key).jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(nodes, restored.nodes(rows))
+        assertEquals(nodes, AgentManagerLayout(props).nodes(rows.reversed()))
+        assertEquals(saved, props.getValue(STORAGE))
+    }
+
+    fun `test forged moves of the remembered primary checkout are ignored`() = edtWait {
+        val section = layout.create("Planning")
+        val nodes = layout.nodes(items, pin = current.key)
+        val props = PropertiesComponent.getInstance(project)
+        val saved = props.getValue(STORAGE)
+
+        for (move in listOf(
+            ActiveMove(current.key, 0, 2, listOf(cloud.key, local.key, current.key, section.key)),
+            ActiveMove(current.key, 0, 0, listOf(current.key), parent = section.key),
+        )) {
+            layout.nodes(items)
+            layout.move(move)
+
+            assertEquals(saved, props.getValue(STORAGE))
+            assertEquals(nodes, layout.nodes(items))
+        }
+    }
+
+    fun `test other moves and section deletion save the primary checkout first`() = edtWait {
+        val first = layout.create("Planning")
+        val second = layout.create("Other")
+        layout.nodes(items, pin = current.key)
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key), parent = first.key))
+        layout.move(ActiveMove(cloud.key, 1, 1, listOf(local.key, cloud.key), parent = first.key))
+        layout.nodes(items)
+        val props = PropertiesComponent.getInstance(project)
+
+        layout.move(ActiveMove(second.key, 2, 0, listOf(second.key, current.key, first.key)))
+
+        val grouped = listOf(current.key, second.key, first.key)
+        assertEquals(grouped, Json.parseToJsonElement(props.getValue(STORAGE)!!).jsonObject
+            .getValue("order").jsonObject.getValue("").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(grouped, keys(layout.nodes(items.reversed())))
+        assertEquals(listOf(local.key, cloud.key), keys(children(layout.nodes(items), first)))
+
+        layout.move(ActiveMove(cloud.key, 1, 0, listOf(cloud.key, current.key, second.key, first.key), previous = first.key))
+
+        val ungrouped = listOf(current.key, cloud.key, second.key, first.key)
+        assertEquals(ungrouped, Json.parseToJsonElement(props.getValue(STORAGE)!!).jsonObject
+            .getValue("order").jsonObject.getValue("").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(ungrouped, keys(layout.nodes(items)))
+        layout.delete(first.key)
+        layout.rename(second.key, "Renamed")
+        layout.color(second.key, "blue")
+        val added = layout.create("New")
+        layout.nodes(items)
+        layout.prune { it != cloud.key }
+
+        val roots = listOf(current.key, second.key, local.key, added.key)
+        assertEquals(roots, Json.parseToJsonElement(props.getValue(STORAGE)!!).jsonObject
+            .getValue("order").jsonObject.getValue("").jsonArray.map { it.jsonPrimitive.content })
+        val restored = AgentManagerLayout(props)
+        assertEquals(roots, keys(restored.nodes(listOf(local, current), pin = current.key)))
+        assertNull(restored.section(first.key))
+        assertEquals(second.copy(title = "Renamed", color = "blue"), restored.section(second.key))
+    }
+
+    fun `test delayed pin discovery stays remembered through missing listings and later saves`() = edtWait {
+        val section = layout.create("Planning")
+        layout.nodes(listOf(cloud, local))
+        layout.move(ActiveMove(section.key, 2, 0, listOf(section.key, cloud.key, local.key)))
+        assertEquals(listOf(section.key), keys(layout.nodes(emptyList())))
+
+        assertEquals(listOf(current.key, section.key, cloud.key, local.key),
+            keys(layout.nodes(items.reversed(), pin = current.key)))
+        assertEquals(listOf(section.key, cloud.key, local.key), keys(layout.nodes(listOf(local, cloud))))
+
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key, section.key, cloud.key)))
+        layout.rename(section.key, "Renamed")
+
+        val props = PropertiesComponent.getInstance(project)
+        val roots = listOf(current.key, local.key, section.key, cloud.key)
+        assertEquals(roots, Json.parseToJsonElement(props.getValue(STORAGE)!!).jsonObject
+            .getValue("order").jsonObject.getValue("").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(roots, keys(layout.nodes(items)))
+        assertEquals(roots, keys(AgentManagerLayout(props).nodes(items.reversed(), pin = current.key)))
     }
 
     private fun keys(nodes: List<ActiveTreeNode>) = nodes.map { it.item.key }

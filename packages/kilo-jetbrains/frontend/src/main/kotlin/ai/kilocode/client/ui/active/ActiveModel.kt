@@ -285,6 +285,8 @@ internal class ActiveReorder(
     val onMove: (ActiveMove) -> Unit,
     /** Opt into tree branch moves and parent changes; a null parent is the invisible root. */
     val reparent: ((ActiveItem, ActiveItem?) -> Boolean)? = null,
+    /** Reserve leading tree rows: they cannot move or accept insertions above them. */
+    val pinned: (ActiveItem) -> Boolean = { false },
 )
 
 internal data class ActiveMove(

@@ -749,12 +749,65 @@ class ActiveTreeTest : BasePlatformTestCase() {
         assertEmpty(moves)
     }
 
+    fun `test pinned root stays first through root section and cross parent drag targets`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves, pinned = { it.key == "main" }))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("main", "Main")), ActiveTreeNode(Row("local", "Local")),
+            section("section", "child")))
+        view.setSize(400, 300)
+        val main = view.hierarchy.entries.getValue("main")
+        val section = view.hierarchy.entries.getValue("section")
+        val bounds = view.regions.cell(main)
+
+        assertNull(view.pickable(body(view, "main")))
+        assertEquals("local", view.pickable(body(view, "local")))
+        assertEquals("child", view.pickable(body(view, "child")))
+        for (key in listOf("local", "section", "child")) {
+            view.over(key, Point(bounds.x + bounds.width / 2, bounds.y))
+            assertEquals(listOf("main", "local", "section"), keys(view.hierarchy.root))
+            assertSame(section, view.hierarchy.entries.getValue("child").parent)
+            view.drop()
+            assertEmpty(moves)
+        }
+
+        view.over("child", Point(bounds.x + bounds.width / 2, bounds.y + bounds.height - 1))
+        assertEquals(listOf("main", "child", "local", "section"), keys(view.hierarchy.root))
+        view.drop()
+        assertEquals(ActiveMove("child", 0, 1, listOf("main", "child", "local", "section"), null, "section"),
+            moves.single())
+    }
+
+    fun `test discovering a pinned root cancels a cross parent preview above it`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves, pinned = { it.key == "main" }))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("local", "Local")), section("section", "child")))
+        view.setSize(400, 300)
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue("local"))
+        view.over("child", Point(bounds.x + bounds.width / 2, bounds.y))
+        assertEquals(listOf("child", "local", "section"), keys(view.hierarchy.root))
+
+        tree.update(listOf(ActiveTreeNode(Row("main", "Main")), ActiveTreeNode(Row("local", "Local")),
+            section("section", "child")))
+
+        assertEquals(listOf("main", "local", "section"), keys(view.hierarchy.root))
+        assertSame(view.hierarchy.entries.getValue("section"), view.hierarchy.entries.getValue("child").parent)
+        assertEquals(listOf("child"), tree.selectedKeys())
+        view.drop()
+        assertEmpty(moves)
+    }
+
     private fun section(key: String, vararg children: String) = ActiveTreeNode(Row(key, key), children.map {
         ActiveTreeNode(Row(it, it))
     })
 
-    private fun sections(moves: MutableList<ActiveMove>, movable: (ActiveItem) -> Boolean = { true }) = ActiveReorder(
+    private fun sections(moves: MutableList<ActiveMove>, pinned: (ActiveItem) -> Boolean = { false },
+        movable: (ActiveItem) -> Boolean = { true }) = ActiveReorder(
         movable = movable,
+        pinned = pinned,
         onMove = { moves += it },
         reparent = { row, parent -> parent == null || parent.key in listOf("first", "second", "section") &&
             row.key !in listOf("first", "second", "section") },

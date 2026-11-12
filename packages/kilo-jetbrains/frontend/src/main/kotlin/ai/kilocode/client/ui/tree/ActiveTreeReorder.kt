@@ -28,7 +28,7 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
 
     private fun movable(entry: ActiveEntry): Boolean =
         (!entry.allowsChildren || options?.reparent != null) && !entry.item.disabled && entry.item.progress == null &&
-            options?.movable?.invoke(entry.item) == true
+            options?.pinned?.invoke(entry.item) != true && options?.movable?.invoke(entry.item) == true
 
     @RequiresEdt
     fun over(key: String, point: Point): Boolean {
@@ -65,7 +65,8 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
         val parent = (target.parent as? ActiveEntry)?.key
         val start = state?.from ?: from
         // Returning from another parent must still respect the original fixed sibling segment.
-        val blocked = same && (minOf(from, to)..maxOf(from, to)).any { !movable(siblings[it]) } ||
+        val blocked = to < siblings.takeWhile { options?.pinned?.invoke(it.item) == true }.size ||
+            same && (minOf(from, to)..maxOf(from, to)).any { !movable(siblings[it]) } ||
             parent == previous && (minOf(start, to)..maxOf(start, to)).any { !movable(order[it]) }
         if (blocked) {
             cancel()
@@ -133,7 +134,8 @@ internal class ActiveTreeReorder(private val view: ActiveTreeView, private val o
             val to = state.to.coerceIn(0, parent.childCount - if (source === parent) 1 else 0)
             val order = siblings(source)
             val siblings = siblings(parent)
-            if (source === parent && (minOf(from, to)..maxOf(from, to)).any { !movable(siblings[it]) }) {
+            if (to < siblings.takeWhile { options?.pinned?.invoke(it.item) == true }.size ||
+                source === parent && (minOf(from, to)..maxOf(from, to)).any { !movable(siblings[it]) }) {
                 cancel()
                 return
             }
