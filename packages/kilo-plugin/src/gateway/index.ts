@@ -2,6 +2,7 @@
 import {
   KiloAccount,
   KiloAutocomplete,
+  KiloCredential,
   KiloDefaults,
   KiloDevice,
   KiloErrors,
@@ -1482,10 +1483,11 @@ function organizationKey(
 }
 
 function credentialInput(credential: Credential.Value): KiloAccount.Input | undefined {
-  if (credential.type === "external") return undefined
+  const token = KiloCredential.token(credential)
+  if (token === undefined) return undefined
   const metadata = Option.getOrUndefined(decodeMetadata(credential.metadata ?? {}))
   return {
-    token: credential.type === "oauth" ? credential.access : credential.key,
+    token,
     server: metadata?.server,
     organizationID: metadata?.organizationID,
   }

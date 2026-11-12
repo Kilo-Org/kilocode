@@ -1,6 +1,6 @@
 export * as KiloGatewayModel from "./gateway-model"
 
-import { KiloErrors, KiloServer } from "@kilocode/gateway-core"
+import { KiloCredential, KiloErrors, KiloServer } from "@kilocode/gateway-core"
 import { LanguageModel } from "@opencode/ai/effect"
 import { Auth } from "@opencode/ai/route"
 import { Integration } from "@opencode/core/integration"
@@ -56,12 +56,11 @@ const emptyCredentialsLayer = Layer.effect(
             record.provider.integrationID ?? Integration.ID.make(ref.providerID),
           )
           const credential = connection ? yield* integrations.connection.resolve(connection) : undefined
-          const key =
-            credential?.type === "oauth" ? credential.access : credential?.type === "key" ? credential.key : undefined
+          const token = credential ? KiloCredential.token(credential) : undefined
           return KiloGatewayImage.model({
             id: ref.id,
             baseURL: typeof settings?.baseURL === "string" ? settings.baseURL : KiloServer.aiGatewayFromEnv(),
-            apiKey: key ?? (typeof settings?.apiKey === "string" ? settings.apiKey : undefined),
+            apiKey: token ?? (typeof settings?.apiKey === "string" ? settings.apiKey : undefined),
             headers: info.headers,
           })
         })
