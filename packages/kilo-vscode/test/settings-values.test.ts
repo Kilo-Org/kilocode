@@ -42,8 +42,8 @@ describe("keepRecord", () => {
 })
 
 describe("imageGenerationEnabled", () => {
-  test("is on for an unset, true or model value and off only for false", () => {
-    expect(imageGenerationEnabled(undefined)).toBe(true)
+  test("is on only for true or a model value, and off for unset or false", () => {
+    expect(imageGenerationEnabled(undefined)).toBe(false)
     expect(imageGenerationEnabled(true)).toBe(true)
     expect(imageGenerationEnabled({ model: { providerID: "openai", model: "gpt-image-2" } })).toBe(true)
     expect(imageGenerationEnabled(false)).toBe(false)

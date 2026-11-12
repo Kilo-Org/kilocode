@@ -17,9 +17,13 @@ export function keepRecord(current: unknown, enabled: boolean): unknown {
   return typeof current === "object" && current !== null ? current : {}
 }
 
-/** `experimental.image_generate` is on unless the config says `false`; the `{ model }` form is also on. */
+/**
+ * `experimental.image_generate` is an explicit opt-in: only `true` or the `{ model }` form enable it. An unset value
+ * means off so the Kilo image models, and the upstream image tool they turn on, stay out of the context until the user
+ * asks for them.
+ */
 export function imageGenerationEnabled(value: unknown): boolean {
-  return value !== false
+  return value === true || (typeof value === "object" && value !== null)
 }
 
 /** The `experimental.image_generate` value its switch writes: `false` off, otherwise `true` or the configured model. */

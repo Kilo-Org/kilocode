@@ -36,7 +36,8 @@ export interface ModelPickerProps {
 const ModelPicker: Component<ModelPickerProps> = (props) => {
   const v2 = useV2()
   const language = useLanguage()
-  const models = () => props.models?.() ?? v2.data.location.model.list()
+  // A supplied catalog is authoritative: while it loads (undefined), the picker must not fall back to chat models.
+  const models = () => (props.models ? props.models() : v2.data.location.model.list())
   const providers = () => v2.data.location.provider.list()
 
   const selected = createMemo(() =>

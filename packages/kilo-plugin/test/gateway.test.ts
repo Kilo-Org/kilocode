@@ -28,6 +28,7 @@ import { SessionModelTransport } from "@opencode/core/session/model-transport"
 import { WebSocketConstructor } from "@opencode/core/effect/websocket-constructor"
 import { Agent } from "@opencode/schema/agent"
 import { Document, Event, Info } from "@opencode/schema/config"
+import { ConfigExperimental } from "@opencode/schema/config/experimental"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
 import { Global } from "@opencode/util/global"
@@ -87,9 +88,21 @@ const addPlugin = Effect.fn(function* () {
   return host
 })
 
+const setImageGeneration = (image_generate: ConfigExperimental.Info["image_generate"]) =>
+  Effect.gen(function* () {
+    const config = yield* Config.Test
+    yield* config.setEntries([
+      new Document({
+        type: "document",
+        info: new Info({ experimental: new ConfigExperimental.Info({ image_generate }) }),
+      }),
+    ])
+    const bus = yield* Bus.Service
+    yield* bus.publish(Event.Updated, {})
+  })
+
 const oauth = (metadata: Record<string, unknown>) =>
   Credential.OAuth.make({ type: "oauth", methodID, access: "token", refresh: "token", expires: 0, metadata })
-
 function eventually<A, E>(effect: Effect.Effect<A, E>, predicate: (value: A) => boolean, remaining = 1000) {
   return Effect.gen(function* (): Effect.fn.Return<A, E | Error> {
     const value = yield* effect
@@ -244,7 +257,7 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
-  it.live("registers Gateway image models apart from chat models, the default, and image ids that are chat models", () =>
+  it.live("registers Gateway image models only while image generation is enabled", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
       (backend) =>
@@ -263,6 +276,11 @@ describe("KiloGatewayPlugin", () => {
             })
             yield* addPlugin()
             const catalog = yield* Model.Service
+            // The setting is unset, so the image models stay out of the provider even though the catalog has them.
+            yield* eventually(catalog.available(), (items) => items.some((item) => item.id === Model.ID.make("kilo-auto/frontier")))
+            expect(yield* catalog.available(["image"])).toEqual([])
+
+            yield* setImageGeneration(true)
             const imageModels = yield* eventually(catalog.available(["image"]), (items) => items.length > 0)
             const image = imageModels.find((item) => item.id === Model.ID.make("google/gemini-2.5-flash-image"))
             expect(image).toMatchObject({
@@ -281,6 +299,9 @@ describe("KiloGatewayPlugin", () => {
               providerID: kilo,
               id: Model.ID.make("kilo-auto/frontier"),
             })
+
+            yield* setImageGeneration(false)
+            expect(yield* eventually(catalog.available(["image"]), (items) => items.length === 0)).toEqual([])
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),

@@ -253,9 +253,11 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
     )
     const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
+    // Decode each entry once, then partition the same list into chat and image models.
+    const entries = parsed.value.data.flatMap((entry) => Option.toArray(decodeRawModel(entry)))
     return {
-      models: catalogModels(parsed.value, !scope.token),
-      imageModels: catalogImageModels(parsed.value, !scope.token),
+      models: catalogModelsFrom(entries, !scope.token),
+      imageModels: catalogImageModelsFrom(entries, !scope.token),
       anonymous: scope.token === undefined,
     }
   })
@@ -263,18 +265,30 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
 
 // Validates each entry individually so a single malformed model record does not drop the entire catalog.
 export function catalogModels(response: { readonly data: readonly unknown[] }, anonymous: boolean): Model[] {
-  return response.data
-    .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
-    .filter(supportsTools)
-    .map(toModel)
-    .filter((model) => !anonymous || model.free)
+  return catalogModelsFrom(
+    response.data.flatMap((entry) => Option.toArray(decodeRawModel(entry))),
+    anonymous,
+  )
 }
 
 // Models that output an image. A tool-capable model stays a chat model; the Gateway also serves image-only models,
 // which a chat catalog drops and image generation needs.
 export function catalogImageModels(response: { readonly data: readonly unknown[] }, anonymous = false): Model[] {
-  return response.data
-    .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
+  return catalogImageModelsFrom(
+    response.data.flatMap((entry) => Option.toArray(decodeRawModel(entry))),
+    anonymous,
+  )
+}
+
+function catalogModelsFrom(entries: readonly RawModel[], anonymous: boolean): Model[] {
+  return entries
+    .filter(supportsTools)
+    .map(toModel)
+    .filter((model) => !anonymous || model.free)
+}
+
+function catalogImageModelsFrom(entries: readonly RawModel[], anonymous: boolean): Model[] {
+  return entries
     .filter((model) => model.architecture?.output_modalities?.includes("image"))
     .map(toModel)
     .filter((model) => !anonymous || model.free)

@@ -56,11 +56,14 @@ const emptyCredentialsLayer = Layer.effect(
             record.provider.integrationID ?? Integration.ID.make(ref.providerID),
           )
           const credential = connection ? yield* integrations.connection.resolve(connection) : undefined
-          const token = credential ? KiloCredential.token(credential) : undefined
+          // Same precedence as the plugin's account: a provider key (env, anonymous or an explicit config key) wins
+          // over the stored credential.
+          const providerKey = typeof settings?.apiKey === "string" ? settings.apiKey : undefined
+          const credentialToken = credential ? KiloCredential.token(credential) : undefined
           return KiloGatewayImage.model({
             id: ref.id,
             baseURL: typeof settings?.baseURL === "string" ? settings.baseURL : KiloServer.aiGatewayFromEnv(),
-            apiKey: token ?? (typeof settings?.apiKey === "string" ? settings.apiKey : undefined),
+            apiKey: providerKey ?? credentialToken,
             headers: info.headers,
           })
         })

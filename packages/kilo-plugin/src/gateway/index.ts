@@ -33,6 +33,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import type { Entry } from "@opencode/schema/config"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
@@ -135,6 +136,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
     let policy = yield* KiloConfigPolicy.get(config)
+    // Kilo image models are opt-in: an unset setting must not turn the upstream image tool on (and its tool
+    // definition into every request) for users who never asked for image generation.
+    let imageGeneration = imageGenerationEnabled(yield* config.entries())
     const scope = yield* Scope.Scope
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
@@ -625,6 +629,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const nextPolicy = yield* KiloConfigPolicy.get(config)
       if (targetEpoch !== epoch) return
       policy = nextPolicy
+      imageGeneration = imageGenerationEnabled(yield* config.entries())
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(
@@ -757,11 +762,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           ...catalog.models
             .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
             .map((item) => toModelInfo(item, baseURL, mergedHeaders, Boolean(catalog.account))),
-          // A model that is also a chat model stays a chat model: the provider registry keys models by id, so the
-          // image copy would replace it and remove it from the chat catalog.
+          // Kilo image models are registered only when image generation is enabled: the upstream image tool turns
+          // itself on whenever an image model exists, so registering them by default would add the tool definition to
+          // every request for users who never opted in. A model that is also a chat model stays a chat model: the
+          // provider registry keys models by id, so the image copy would replace it and remove it from the chat catalog.
           ...catalog.imageModels
             .filter(
               (item) =>
+                imageGeneration &&
                 !catalog.models.some((chat) => chat.id === item.id) &&
                 (!policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true),
             )
@@ -1491,4 +1499,14 @@ function credentialInput(credential: Credential.Value): KiloAccount.Input | unde
     server: metadata?.server,
     organizationID: metadata?.organizationID,
   }
+}
+
+/** `experimental.image_generate` is on only when a document sets it to `true` or a `{ model }` object. */
+function imageGenerationEnabled(entries: readonly Entry[]): boolean {
+  const document = entries.findLast(
+    (entry): entry is Extract<Entry, { type: "document" }> =>
+      entry.type === "document" && entry.info.experimental?.image_generate !== undefined,
+  )
+  const value = document?.info.experimental?.image_generate
+  return value !== undefined && value !== false
 }

@@ -40,9 +40,14 @@ export const KiloImageModelsProvider: ParentComponent = (props) => {
   }
 
   createEffect(
-    on(v2.connection.status, (connection) => {
-      if (connection === "connected") refresh()
-    }),
+    on(
+      () => [v2.connection.status(), v2.data.location.model.list()] as const,
+      ([connection, models]) => {
+        // Follow catalog reloads as well as reconnects: sign-in, a team switch and new image models change the chat
+        // catalog too, and the image list must not stay stale behind it.
+        if (connection === "connected" && models !== undefined) refresh()
+      },
+    ),
   )
   onCleanup(() => read++)
 
