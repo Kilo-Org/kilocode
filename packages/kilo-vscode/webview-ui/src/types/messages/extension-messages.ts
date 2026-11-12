@@ -90,6 +90,7 @@ import type {
 } from "./migration"
 import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
 import type { SessionBoardLoadedMessage } from "./board"
+import type { AgentMapLoadedMessage } from "./agent-map"
 
 // ============================================
 // Messages FROM extension TO webview
@@ -2028,3 +2029,4 @@ export type ExtensionMessage =
   | MemoryOperationResultMessage
   | BackgroundJobsLoadedMessage
   | SessionBoardLoadedMessage
+  | AgentMapLoadedMessage

@@ -1,0 +1,468 @@
+/* Agent map dialog: the session family as a tree turned on its side. The
+   root sits on the left, each generation in a column to its right. A narrow
+   dialog, such as one in the sidebar, stacks the tree vertically instead. */
+
+.agent-map[data-slot="dialog-content"] {
+  height: 100%;
+  min-height: 0;
+}
+
+.agent-map [data-slot="dialog-body"] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 0 20px 20px;
+  font-size: var(--kilo-font-size-12);
+}
+
+.agent-map [role="alert"] {
+  margin: 0;
+  color: var(--text-critical-base);
+}
+
+/* The Map and Board tabs fill the dialog body like the map alone does. */
+.agent-map [data-component="tabs"],
+.agent-map [data-slot="tabs-content"],
+[data-slot="agent-map-board"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* The tabs draw a panel inside the dialog. Its content keeps clear of the
+   panel's edges, as the dialog body keeps the map alone clear of its own. */
+.agent-map [data-slot="tabs-content"] {
+  padding: 0 16px 16px;
+}
+
+/* The board takes focus only from code, after a reset confirmation closes. */
+[data-slot="agent-map-board"]:focus {
+  outline: none;
+}
+
+/* The dialog body or the tab panel pads the board already. */
+.agent-map .task-board-scroll {
+  padding: 0;
+}
+
+[data-slot="agent-map-board-actions"] {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+/* Reset asks in place, inside the tab, before it clears the board. */
+[data-slot="agent-map-confirm"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised-base);
+
+  p {
+    margin: 0;
+  }
+}
+
+[data-slot="agent-map-confirm-title"] {
+  font-weight: 600;
+}
+
+[data-slot="agent-map-filter"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-weak);
+}
+
+[data-slot="agent-map-unread"] {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-start: 6px;
+  border-radius: 50%;
+  background: var(--vscode-activityBarBadge-background, var(--icon-info-base));
+  vertical-align: middle;
+}
+
+/* The toolbar over the map and the board. The rule under it keeps it apart
+   from the content that scrolls below. */
+[data-slot="agent-map-bar"] {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="agent-map-summary"],
+[data-slot="agent-map-note"] {
+  margin: 0;
+  color: var(--text-weak);
+}
+
+[data-slot="agent-map-loading"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-weak);
+}
+
+[data-slot="agent-map-canvas"] {
+  /* Card size and the space a connector spans. The card height is its two
+     fixed-height lines plus padding and border, so text never clips. The
+     vertical layout reads it to meet each card at its middle. */
+  --agent-map-card: 240px;
+  --agent-map-height: 54px;
+  --agent-map-gap: 20px;
+  --agent-map-indent: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  container-type: inline-size;
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+}
+
+[data-slot="agent-map-tree"],
+[data-slot="agent-map-children"] {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-slot="agent-map-tree"] {
+  width: max-content;
+  padding: 2px;
+}
+
+[data-slot="agent-map-branch"] {
+  display: flex;
+  align-items: center;
+}
+
+/* Connectors. The children column joins its parent card at the middle, a
+   rail runs from the first child to the last, and each child joins the rail
+   at its own middle. */
+[data-slot="agent-map-children"] {
+  position: relative;
+  margin-left: var(--agent-map-gap);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: calc(var(--agent-map-gap) * -1);
+    width: var(--agent-map-gap);
+    border-top: 1px solid var(--border-base);
+  }
+
+  > [data-slot="agent-map-branch"] {
+    position: relative;
+    padding: 4px 0 4px var(--agent-map-gap);
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: var(--agent-map-gap);
+      border-top: 1px solid var(--border-base);
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      border-left: 1px solid var(--border-base);
+    }
+
+    &:first-child::after {
+      top: 50%;
+    }
+
+    &:last-child::after {
+      bottom: 50%;
+    }
+
+    &:only-child::after {
+      display: none;
+    }
+  }
+}
+
+[data-slot="agent-map-node"] {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  width: var(--agent-map-card);
+  height: var(--agent-map-height);
+  padding: 8px 10px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised-base);
+  color: var(--text-base);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-raised-base-hover);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+  }
+
+  &[data-kind="root"] {
+    border-color: var(--border-interactive-base);
+  }
+
+  /* Finished work steps back, so the agents that still run stand out. */
+  &[data-status="done"],
+  &[data-status="cancelled"] {
+    background: transparent;
+
+    [data-slot="agent-map-node-title"] {
+      color: var(--text-weak);
+    }
+  }
+
+  [data-component="icon"] {
+    flex: none;
+    color: var(--icon-base);
+  }
+}
+
+[data-slot="agent-map-node-head"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 18px;
+}
+
+[data-slot="agent-map-node-title"] {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The agent's avatar, or a terminal icon for a process, in a fixed slot so
+   titles line up. */
+[data-slot="agent-map-node-lead"] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+[data-slot="agent-map-node-meta"] {
+  overflow: hidden;
+  padding-inline-start: 24px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Filled dots work or need a look: running, waiting for input, failed.
+   Hollow dots are done, dashed when stopped. */
+[data-slot="agent-map-dot"] {
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--text-weak);
+  border-radius: 50%;
+  background: transparent;
+
+  &[data-status="running"] {
+    border-color: var(--icon-success-base);
+    background: var(--icon-success-base);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--icon-success-base) 30%, transparent);
+  }
+
+  &[data-status="waiting"] {
+    border-color: var(--icon-warning-base);
+    background: var(--icon-warning-base);
+  }
+
+  &[data-status="error"] {
+    border-color: var(--icon-critical-base);
+    background: var(--icon-critical-base);
+  }
+
+  &[data-status="cancelled"] {
+    border-style: dashed;
+  }
+}
+
+@container (max-width: 480px) {
+  [data-slot="agent-map-tree"] {
+    width: auto;
+  }
+
+  [data-slot="agent-map-branch"] {
+    display: block;
+  }
+
+  [data-slot="agent-map-node"] {
+    width: 100%;
+  }
+
+  /* The rail drops from under the parent card and each child joins it at
+     the middle of its own card, not of its whole subtree. */
+  [data-slot="agent-map-children"] {
+    margin-left: 12px;
+
+    &::before {
+      display: none;
+    }
+
+    > [data-slot="agent-map-branch"] {
+      padding: 4px 0 0 var(--agent-map-indent);
+
+      &::before {
+        top: calc(4px + var(--agent-map-height) / 2);
+        width: var(--agent-map-indent);
+      }
+
+      &::after,
+      &:first-child::after {
+        top: 0;
+        bottom: 0;
+      }
+
+      &:last-child::after {
+        bottom: auto;
+        height: calc(4px + var(--agent-map-height) / 2);
+      }
+
+      &:only-child::after {
+        display: block;
+      }
+    }
+  }
+}
+
+[data-slot="agent-map-detail"] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+[data-slot="agent-map-detail-head"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+[data-slot="agent-map-detail-title"] {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--kilo-font-size-14);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="agent-map-detail-line"] {
+  margin: 0;
+  color: var(--text-weak);
+}
+
+[data-slot="agent-map-facts"] {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
+  margin: 0;
+
+  dt {
+    color: var(--text-weak);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+[data-slot="agent-map-link"] {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-interactive-base);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+}
+
+[data-slot="agent-map-prompt"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  pre {
+    max-height: 240px;
+    margin: 0;
+    overflow: auto;
+    padding: 8px 10px;
+    border: 1px solid var(--border-weak-base);
+    border-radius: var(--radius-lg);
+    background: var(--surface-base);
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--kilo-font-size-11);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+[data-slot="agent-map-prompt-label"] {
+  color: var(--text-weak);
+}
+
+[data-slot="agent-map-actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

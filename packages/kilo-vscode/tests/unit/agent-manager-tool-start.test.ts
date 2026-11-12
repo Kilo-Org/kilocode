@@ -3,6 +3,7 @@ import { parseToolRequest, startFromTool, type ToolDeps, type ToolRequest } from
 import type { CreateWorktreeResult } from "../../src/agent-manager/WorktreeManager"
 import type { Session } from "@kilocode/sdk/v2/client"
 import { handleToolEvent } from "../../src/agent-manager/tool-project"
+import { REQUEST, SOURCE } from "../../src/agent-manager/prompt-attribution"
 import { normalize } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")
@@ -389,6 +390,73 @@ describe("agent manager tool start", () => {
     )
   })
 
+  it("names the calling session in local session metadata for the agent map", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, {
+      requestID: "am-map",
+      sessionID: "s-parent",
+      mode: "local",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(client.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { "kilocode.sandbox": { enabled: true, version: 0 }, [SOURCE]: "s-parent", [REQUEST]: "am-map" },
+      }),
+      { throwOnError: true },
+    )
+  })
+
+  it("names the calling session in worktree session metadata for the agent map", async () => {
+    const seen: Array<Record<string, unknown> | undefined> = []
+    const create = async (
+      _dir: string,
+      _branch: string,
+      _id?: string,
+      _source?: unknown,
+      boot?: { metadata: () => Promise<Record<string, unknown>> },
+    ) => {
+      seen.push(await boot?.metadata())
+      return session("s-wt")
+    }
+    const c = deps({ createSessionInWorktree: create as never })
+
+    await startFromTool(c, {
+      requestID: "am-map-wt",
+      sessionID: "s-parent",
+      mode: "worktree",
+      tasks: [{ prompt: "Fix" }],
+    })
+
+    expect(seen).toEqual([
+      { "kilocode.sandbox": { enabled: true, version: 0 }, [SOURCE]: "s-parent", [REQUEST]: "am-map-wt" },
+    ])
+  })
+
+  it("leaves metadata alone when no calling session is known", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, { requestID: "am-anon", mode: "local", tasks: [{ prompt: "Do work" }] })
+
+    expect(client.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { "kilocode.sandbox": { enabled: true, version: 0 } } }),
+      { throwOnError: true },
+    )
+  })
+
   it("starts local sessions when Windows drive-letter casing differs", async () => {
     setPlatform("win32")
     const client = {
@@ -465,6 +533,7 @@ describe("agent manager tool start", () => {
       "wt-1",
       {
         sessionID: "s-parent",
+        requestID: "am-2",
         sandboxInheritanceToken: "si-token",
       },
       expect.any(Object),
