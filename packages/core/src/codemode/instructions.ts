@@ -7,7 +7,7 @@ import { CodeModeCatalog } from "./catalog.js"
 
 // kilocode_change start - codemode-direct: a marked tool is also a normal tool call, so the invariant text qualifies
 const directIntro = (hasMoreTools: boolean) =>
-  `The tools listed below${hasMoreTools ? ", and \`search\`," : ""} are available as JavaScript inside the \`execute\` tool. A tool marked \`[direct]\` is also a normal tool call: use it either way, directly or inside \`execute\`. Every other tool you have is a normal tool call: call it directly, never inside \`execute\`.`
+  `The tools listed below${hasMoreTools ? ", and \`search\`," : ""} are available as JavaScript inside the \`execute\` tool; an unmarked tool cannot be called directly. A tool marked \`[direct]\` is also a normal tool call: use it either way, directly or inside \`execute\`. Every other tool you have is a normal tool call: call it directly, never inside \`execute\`.`
 const directHeading = "## Code Mode tools (call inside `execute`; `[direct]` tools also directly)"
 // kilocode_change end
 

@@ -111,5 +111,25 @@ it.effect("supersedes the catalog when a direct tool first appears", () =>
     expect(current.text).toContain("This catalog supersedes the previous Code Mode tool catalog.")
     expect(current.text).toContain("## Code Mode tools (call inside `execute`; `[direct]` tools also directly)")
     expect(current.text).toContain("tools.board_read(): Promise<string | null> // [direct] Read the shared board")
+
+    // The supersede happens once: a later catalog change while a marked tool is shown stays a delta.
+    const added = yield* readUpdate(
+      CodeModeInstructions.make({
+        tools: [
+          { ...plain, direct: true },
+          {
+            type: "tool",
+            name: "board_post",
+            description: "Post to the shared board",
+            signature: "tools.board_post(): Promise<string | null>",
+            direct: true,
+          },
+        ],
+      }),
+      current,
+    )
+    expect(added.text).not.toContain("This catalog supersedes the previous Code Mode tool catalog.")
+    expect(added.text).toContain("New tools are available in addition to those previously listed:")
+    expect(added.text).toContain("// [direct] Post to the shared board")
   }),
 )
