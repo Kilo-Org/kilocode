@@ -189,6 +189,24 @@ describe("createPanelData", () => {
     })
   })
 
+  test("loads the location of a directory opened after the server connected once it is shown", async () => {
+    requests.length = 0
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      panel.store(ROOT)
+      await until(() => panel.connection.status() === "connected")
+      panel.store(WORKTREE)
+      const located = () =>
+        requests.filter((item) => item.path === "/api/location" && item.location === WORKTREE)
+      await Bun.sleep(50)
+      expect(located()).toHaveLength(0)
+      panel.show([WORKTREE])
+      await until(() => located().length > 0)
+      dispose()
+    })
+  })
+
   test("fans one event stream out to lazily created directory stores", async () => {
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {

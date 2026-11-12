@@ -541,8 +541,7 @@ export class AgentManagerOrchestrationBridge {
   }): Promise<ReplyRoute | undefined> {
     if (!input.request.replyTo) return
     const reply =
-      this.replyRoutes.get(input.request.replyTo) ??
-      (await this.restoreReplyRoute(input.client, input.request))
+      this.replyRoutes.get(input.request.replyTo) ?? (await this.restoreReplyRoute(input.client, input.request))
     if (!reply) {
       throw new OrchestrationError("unknown_session", `Agent Manager reply request ${input.request.replyTo} is unknown`)
     }
@@ -589,7 +588,11 @@ export class AgentManagerOrchestrationBridge {
     }
   }
 
-  private async deactivate(sessionID: SessionID, originDirectory: string, active: Active): Promise<Outcome | undefined> {
+  private async deactivate(
+    sessionID: SessionID,
+    originDirectory: string,
+    active: Active,
+  ): Promise<Outcome | undefined> {
     if (!this.options.managed(sessionID, originDirectory)) {
       throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
     }
@@ -629,9 +632,7 @@ export class AgentManagerOrchestrationBridge {
   private async reply(requestID: string, directory: string, result: Result): Promise<boolean> {
     try {
       const client = this.connection.current() ?? (await this.connection.client())
-      await client
-        .rpc(KiloAgentManagerRpc.Definition)
-        .reply({ requestID, result }, { location: { directory } })
+      await client.rpc(KiloAgentManagerRpc.Definition).reply({ requestID, result }, { location: { directory } })
       return true
     } catch (error) {
       this.options.log(`Agent Manager reply ${requestID} failed:`, error)
@@ -642,9 +643,7 @@ export class AgentManagerOrchestrationBridge {
   private async reject(requestID: string, directory: string, error: Failure): Promise<boolean> {
     try {
       const client = this.connection.current() ?? (await this.connection.client())
-      await client
-        .rpc(KiloAgentManagerRpc.Definition)
-        .reject({ requestID, error }, { location: { directory } })
+      await client.rpc(KiloAgentManagerRpc.Definition).reject({ requestID, error }, { location: { directory } })
       return true
     } catch (cause) {
       this.options.log(`Agent Manager rejection ${requestID} failed:`, cause)
@@ -694,9 +693,10 @@ export class AgentManagerOrchestrationBridge {
   }
 
   /**
-   * The directories that can hold a pending request: the root, and the directories of running sessions. A request
-   * only exists while the tool call that made it runs, and asking an idle worktree would make the server load it
-   * just to answer with an empty list. Without the running sessions, every directory is asked.
+   * The directories that can hold a pending request: the project roots, and the directories of running sessions. A
+   * request only exists while the tool call that made it runs, and asking an idle worktree would make the server load
+   * it just to answer with an empty list. When the running sessions or their directories are unknown, every directory
+   * is asked.
    */
   private async recoverable(client: OpenCodeClient): Promise<string[]> {
     const directories = [...new Set(this.directories())]
@@ -710,10 +710,14 @@ export class AgentManagerOrchestrationBridge {
           .catch(() => undefined),
       ),
     )
+    if (running.includes(undefined)) return directories
     const live = running.filter((directory): directory is string => directory !== undefined)
-    return directories.filter(
-      (directory, index) => index === 0 || live.some((item) => samePath(item, canonicalizePath(directory))),
-    )
+    return directories.filter((directory) => {
+      const canonical = canonicalizePath(directory)
+      const root = this.options.root(directory)
+      if (root && samePath(canonicalizePath(root), canonical)) return true
+      return live.some((item) => samePath(item, canonical))
+    })
   }
 
   private rememberOutcome(id: string, outcome: Outcome): void {

@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 135,
-    "markedLines": 2349,
+    "markedLines": 2352,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -560,7 +560,7 @@
     },
     "packages/server/src/location.ts": {
       "rung": 4,
-      "seam": "Location boot fix (feature `location-boot`). Two changes in the location middleware module: (1) `awaitPlugins` waits for plugin activation without the 5-second deadline that turned a slow cold start into a 503 `Location plugins did not finish activating` on `agent.list`, `model.list` and `provider.list`; the catalog is complete a moment later, and `rpc.call` already waits the same way. Upstream removes the wait entirely in bcaf561d949, which the next sync brings; until Kilo clients refresh on `*.updated` and handle `rpc.unavailable` on a cold Location, waiting without a deadline is the reliable behavior. (2) `permission.request.list` and `form.list` answer an empty list for a Location that isn't loaded instead of booting it, the rule upstream already applies to `session.form.list` in `middleware/form-location.ts`: pending permissions and forms live in memory, so an unloaded Location has none. Clients poll every worktree they show, and each poll booted a whole Location with all plugins, which starved the root's activation. No hook or host replacement reaches the server's location middleware (`routes.ts` provides `layer` directly), so this needs lines in the upstream file. Rung 4 because the first change alters the deadline behavior; the second is generic and a candidate for upstream."
+      "seam": "Location boot fix (feature `location-boot`). Two changes in the location middleware module: (1) `awaitPlugins` waits for plugin activation without the 5-second deadline that turned a slow cold start into a 503 `Location plugins did not finish activating` on `agent.list`, `model.list` and `provider.list`; the catalog is complete a moment later, and `rpc.call` already waits the same way. Upstream removes the wait entirely in bcaf561d949, which the next sync brings; until Kilo clients refresh on `*.updated` and handle `rpc.unavailable` on a cold Location, waiting without a deadline is the reliable behavior. (2) `permission.request.list` and `form.list` answer an empty list for an existing directory whose Location isn't loaded instead of booting it (a missing directory still boots and fails with `LocationNotFoundError`), the rule upstream already applies to `session.form.list` in `middleware/form-location.ts`: pending permissions and forms live in memory, so an unloaded Location has none. Clients poll every worktree they show, and each poll booted a whole Location with all plugins, which starved the root's activation. No hook or host replacement reaches the server's location middleware (`routes.ts` provides `layer` directly), so this needs lines in the upstream file. Rung 4 because the first change alters the deadline behavior; the second is generic and a candidate for upstream."
     }
   }
 }

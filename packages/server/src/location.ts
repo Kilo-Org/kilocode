@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs" // kilocode_change(location-boot)
 import { FileSystem } from "@opencode/core/filesystem"
 import { Location } from "@opencode/core/location"
 import { Plugin } from "@opencode/core/plugin"
@@ -94,9 +95,11 @@ export const layer = Layer.effect(
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
         const ref = requestRef(request)
+        // A missing directory still boots, so it keeps failing with LocationNotFoundError.
         if (
           PENDING_LISTS.has(options.endpoint.identifier) &&
-          !(yield* RcMap.has(locations.rcMap, LocationServiceMap.canonical(ref)))
+          !(yield* RcMap.has(locations.rcMap, LocationServiceMap.canonical(ref))) &&
+          existsSync(ref.directory)
         )
           return HttpServerResponse.jsonUnsafe({ location: { directory: ref.directory }, data: [] })
         return yield* effect.pipe(Effect.provide(locations.get(ref)), locationErrors)

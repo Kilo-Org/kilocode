@@ -797,6 +797,22 @@ describe("AgentManagerOrchestrationBridge", () => {
     test.bridge.dispose()
   })
 
+  it("asks every managed directory when a running session's directory is unknown", async () => {
+    const test = harness()
+    test.client.session.active.mockImplementation(async () => ({ ses_target: { type: "running" } }))
+    test.client.session.get.mockImplementation(async () => {
+      throw new Error("offline")
+    })
+    test.lists.set(dir, [request])
+
+    test.handlers.state?.("connected")
+    await waitFor(() => test.rpc.list.mock.calls.length === 2)
+
+    expect(test.rpc.list).toHaveBeenCalledWith({}, { location: { directory: root } })
+    expect(test.rpc.list).toHaveBeenCalledWith({}, { location: { directory: dir } })
+    test.bridge.dispose()
+  })
+
   it("continues recovery when another managed directory fails", async () => {
     const test = harness()
     test.client.session.active.mockImplementation(async () => ({ ses_target: { type: "running" } }))

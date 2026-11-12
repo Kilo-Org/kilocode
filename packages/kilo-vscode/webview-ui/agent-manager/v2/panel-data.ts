@@ -119,7 +119,15 @@ export function createPanelData(input: {
         open,
         scheduled: wakeups.scheduled,
       })
-      return { scope, emit: event.emit, dispose, show: () => setVisible(true), visible }
+      // A store created after the server connected never saw the connect event; it loads its directory once shown.
+      return {
+        scope,
+        emit: event.emit,
+        dispose,
+        show: () => setVisible(true),
+        visible,
+        missed: connected !== undefined,
+      }
     })
     stores.set(id, entry)
     return entry.scope
@@ -172,7 +180,12 @@ export function createPanelData(input: {
         setSelection(message.selection)
         return true
       }
-      if (message.type === "response" || message.type === "chunk" || message.type === "end" || message.type === "error") {
+      if (
+        message.type === "response" ||
+        message.type === "chunk" ||
+        message.type === "end" ||
+        message.type === "error"
+      ) {
         bridge.receive(message)
         return true
       }

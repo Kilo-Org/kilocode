@@ -36,6 +36,11 @@ it.live("lists no pending requests for a Location that is not loaded, without lo
     })
     expect((yield* request("/api/debug/location")).body).toEqual([])
 
+    // A deleted directory still reports that its Location does not exist.
+    const missing = `location[directory]=${encodeURIComponent(`${directory.path}-deleted`)}`
+    expect((yield* request(`/api/permission/request?${missing}`)).status).toBe(404)
+    expect((yield* request(`/api/form?${missing}`)).status).toBe(404)
+
     // Once the Location is loaded, the lists read its pending state.
     const session = yield* request("/api/session", { location: { directory: directory.path } })
     const sessionID = (session.body as { data: { id: string } }).data.id
