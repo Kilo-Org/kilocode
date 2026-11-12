@@ -147,6 +147,7 @@ import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
 internal const val HOSTED_MISS_LIMIT = 20
+internal const val WORKTREE_MISS_LIMIT = 20
 
 /**
  * A unified local and Cloud workspace tree with project-local sections and ordering.
@@ -170,6 +171,7 @@ class AgentManagerPanel(
     private val provider = RowDeleteProvider()
     private val edit = RenameAction()
     private val ordering = AgentManagerLayout(project?.let(PropertiesComponent::getInstance))
+    private val missed = mutableMapOf<String, Int>()
     private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val sections = arrayOf<AnAction>(
         object : DumbAwareAction(KiloBundle.message("agentManager.section.rename")) {
@@ -371,7 +373,20 @@ class AgentManagerPanel(
             controller.current?.let { current ->
                 val keys = (0 until controller.model.size).mapTo(HashSet()) { controller.model.getElementAt(it).id }
                 keys.add(current.id)
-                ordering.prune { HostedIDs.isWorkspace(it) || it in keys || controller.progress(it) != null }
+                ordering.prune { key ->
+                    if (HostedIDs.isWorkspace(key) || key in keys || controller.progress(key) != null) {
+                        missed.remove(key)
+                        return@prune true
+                    }
+                    // A temporary filesystem gap can omit a worktree from a usable listing.
+                    val count = (missed[key] ?: 0) + 1
+                    if (count < WORKTREE_MISS_LIMIT) {
+                        missed[key] = count
+                        return@prune true
+                    }
+                    missed.remove(key)
+                    false
+                }
             }
             sync()
             orphanBanner?.refresh()
@@ -773,6 +788,7 @@ class AgentManagerPanel(
     @RequiresEdt
     private fun onRemoved(item: WorktreeDto) {
         if (currentEditorWorktree() == item.id) advance(ordering.neighbors(item.id).firstNotNullOfOrNull(this::item))
+        missed.remove(item.id)
         ordering.prune { it != item.id }
         close(item)
     }
