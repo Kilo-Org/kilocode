@@ -19,7 +19,7 @@ import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { FSUtil } from "@opencode/util/fs-util"
-import { DateTime, Effect, Layer, Schema, Semaphore } from "effect"
+import { DateTime, Deferred, Effect, Fiber, Layer, Schema, Semaphore } from "effect"
 import { testEffect } from "../../core/test/lib/effect"
 import { makePluginTestLayer, PluginTestLayer } from "../../core/test/plugin/fixture"
 
@@ -410,6 +410,28 @@ it.live("drops the lock of a create that fails before its Flow exists", () =>
     // A create that persists keeps its lock for the runs and edits that follow.
     yield* create(context, schedules, input, source.projectID, runtime)
     expect([...locks.keys()]).toEqual([KiloFlowRpc.ID.make(`flw_${input.requestID}`)])
+
+    // A failing create must not drop the lock another create with the same id is already queued on.
+    const raced = { ...input, requestID: "ffeeddccbbaa99887766554433221100" }
+    const entered = yield* Deferred.make<void>()
+    const gate = yield* Deferred.make<void>()
+    const blocked = {
+      ...schedules,
+      create: () =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.andThen(Effect.fail(new Schedule.InvalidError({ reason: "scheduler unavailable" }))),
+        ),
+    }
+    const first = yield* create(context, blocked, raced, source.projectID, runtime).pipe(Effect.flip, Effect.forkChild)
+    yield* Deferred.await(entered)
+    const lock = locks.get(KiloFlowRpc.ID.make(`flw_${raced.requestID}`))
+    const second = yield* create(context, schedules, raced, source.projectID, runtime).pipe(Effect.forkChild)
+    yield* Effect.yieldNow
+    yield* Deferred.succeed(gate, undefined)
+    expect((yield* Fiber.join(first)).message).toContain("scheduler unavailable")
+    yield* Fiber.join(second)
+    expect(locks.get(KiloFlowRpc.ID.make(`flw_${raced.requestID}`))).toBe(lock)
   }),
 )
 

@@ -382,6 +382,7 @@ export function create(
       time: { created: now, updated: now },
     }
     const lock = flowLock(runtime, id)
+    creating.set(lock, (creating.get(lock) ?? 0) + 1)
     return yield* lock.withPermit(
       Effect.gen(function* () {
         // A retried create may arrive after the first attempt committed but its response was lost. Return that Flow
@@ -457,19 +458,18 @@ export function create(
         })
         yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
         return managed(configured, schedule)
-      }).pipe(
-        // A create that fails before its record exists (refused approval, schedule or storage error) leaves no Flow
-        // to lock again; drop the lock so every failed request id does not keep a semaphore for the runtime's life.
-        Effect.onError(() =>
-          ctx.storage.get(`${prefix}${id}`).pipe(
-            Effect.tap((stored) =>
-              Effect.sync(() => {
-                if (stored === undefined && runtime.locks.get(id) === lock) runtime.locks.delete(id)
-              }),
-            ),
-            Effect.ignore,
-          ),
-        ),
+      }),
+    ).pipe(
+      // A create that ends without a Flow (refused approval, schedule or storage error) leaves nothing to lock again;
+      // drop the lock so failed request ids do not keep a semaphore for the runtime's life. Only the last create still
+      // holding or waiting on this lock may drop it: removing it under a queued create would let a later run or edit
+      // take a fresh lock and run concurrently with that create.
+      Effect.ensuring(
+        Effect.gen(function* () {
+          if (release(lock) > 0) return
+          const stored = yield* ctx.storage.get(`${prefix}${id}`)
+          if (stored === undefined && !creating.has(lock) && runtime.locks.get(id) === lock) runtime.locks.delete(id)
+        }).pipe(Effect.ignore),
       ),
     )
   })
@@ -1440,6 +1440,17 @@ function clearActive(ctx: Plugin.Context, run: Pick<KiloFlowRpc.Run, "flowID" | 
     const active = Option.getOrUndefined(decodeRunID(yield* ctx.storage.get(activeKey(run.flowID))))
     if (active === run.id) yield* ctx.storage.remove(activeKey(run.flowID))
   })
+}
+
+/** Creates holding or waiting on each Flow lock, so a failed create never drops a lock another create still needs. */
+const creating = new WeakMap<Semaphore.Semaphore, number>()
+
+/** Marks one create as done with `lock`; returns how many creates still use it. */
+function release(lock: Semaphore.Semaphore) {
+  const users = (creating.get(lock) ?? 1) - 1
+  if (users > 0) creating.set(lock, users)
+  if (users <= 0) creating.delete(lock)
+  return users
 }
 
 function flowLock(runtime: Pick<Runtime, "locks">, flowID: KiloFlowRpc.ID) {
