@@ -13,6 +13,7 @@ import os from "node:os"
 import path from "node:path"
 import { KiloGatewayAccounts } from "../src/gateway/accounts"
 import { KiloPagesPlugin } from "../src/pages"
+import { PagesConfig } from "../src/pages/config"
 import { PagesAuth } from "../src/pages/auth"
 import { PagesToken } from "../src/pages/token"
 
@@ -25,6 +26,7 @@ afterEach(async () => {
 type Server = { name: string; status: { status: string } }
 type Entry = { type: string; url: string; oauth?: false; headers?: Record<string, string> }
 type Info = ConstructorParameters<typeof KiloConfigPolicy.Info>[0]
+type Pages = NonNullable<NonNullable<Info>["pages"]>
 
 function mintServer(respond: (count: number) => Response) {
   let count = 0
@@ -168,12 +170,12 @@ test("registers the pages server only after a mint, with a handle and no secret"
     run: async (pages) => {
       await pages.until((status) => status.state === "connecting")
       const entry = pages.entry()!
-      expect(entry).toMatchObject({ type: "remote", url: "https://pages-dev.kiloapps.io/mcp", oauth: false })
+      expect(entry).toMatchObject({ type: "remote", url: "https://pages.kiloapps.io/mcp", oauth: false })
       expect(Object.keys(entry.headers!)).toEqual([PagesAuth.HANDLE_HEADER])
       expect(JSON.stringify(entry)).not.toContain("pages-1")
       expect(pages.reloads()).toBe(1)
       expect(backend.count()).toBe(1)
-      expect(await pages.status()).toMatchObject({ enabled: true, state: "connecting", server: "pages", origin: "https://pages-dev.kiloapps.io" })
+      expect(await pages.status()).toMatchObject({ enabled: true, state: "connecting", server: "pages", origin: "https://pages.kiloapps.io" })
       expect(JSON.stringify(await pages.status())).not.toContain("pages-1")
     },
   }).finally(backend.stop)
@@ -212,6 +214,31 @@ test("the last document that sets pages.enabled wins", async () => {
       expect(off.count()).toBe(0)
     },
   }).finally(off.stop)
+})
+
+test("pages.destination picks the deployment, and the environment variable wins", async () => {
+  const entries = (...destinations: Pages[]) =>
+    destinations.map((pages) => ({ type: "document", info: new KiloConfigPolicy.Info({ pages }) }) as any)
+  expect(PagesConfig.destination([], undefined)).toEqual({ origin: "https://pages.kiloapps.io", resource: "pages" })
+  expect(PagesConfig.destination(entries({ destination: "pages-dev" }), undefined)).toEqual({
+    origin: "https://pages-dev.kiloapps.io",
+    resource: "pages-dev",
+  })
+  expect(PagesConfig.destination(entries({ destination: "pages-dev" }, { enabled: true }), undefined).resource).toBe("pages-dev")
+  expect(PagesConfig.destination(entries({ destination: "pages" }, { destination: "pages-dev" }), undefined).resource).toBe("pages-dev")
+  expect(PagesConfig.destination(entries({ destination: "pages" }), "pages-dev").resource).toBe("pages-dev")
+  expect(PagesConfig.destination(entries({ destination: "pages-dev" }), "nonsense").resource).toBe("pages-dev")
+
+  const backend = mintServer(minted)
+  await harness({
+    documents: [{ info: { pages: { enabled: true, destination: "pages-dev" } } }],
+    server: backend.url,
+    run: async (pages) => {
+      await pages.until((status) => status.state === "connecting")
+      expect(pages.entry()).toMatchObject({ url: "https://pages-dev.kiloapps.io/mcp" })
+      expect(await pages.status()).toMatchObject({ origin: "https://pages-dev.kiloapps.io" })
+    },
+  }).finally(backend.stop)
 })
 
 test("mcp.use policy is checked before anything is minted", async () => {

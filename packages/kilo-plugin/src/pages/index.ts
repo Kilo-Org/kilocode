@@ -33,7 +33,8 @@ export const KiloPagesPlugin = define<Global.Service | FSUtil.Service | Scope.Sc
       KiloConfigWriter.Service,
     )
     const directory = ctx.location.directory
-    const deployment = PagesToken.DEFAULT
+    // Resolved once, when the plugin starts: a different destination takes effect on the next start.
+    const deployment = PagesConfig.destination(yield* config.value.entries())
     const globalDirectory = yield* fs.resolve(global.config)
 
     const lock = Semaphore.makeUnsafe(1)

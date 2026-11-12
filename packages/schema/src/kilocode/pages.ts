@@ -8,9 +8,16 @@ import { Rpc } from "../rpc.js"
 // carries a Pages token, a Kilo token or a header: the credential never leaves the server process.
 const portable = Schema.toStandardSchemaV1
 
+export const Destination = Schema.Literals(["pages", "pages-dev"]).annotate({ identifier: "KiloPages.Destination" })
+export type Destination = typeof Destination.Type
+
 export const Config = Schema.Struct({
   enabled: Schema.Boolean.pipe(optional).annotate({
     description: "Use Pages with the Kilo Gateway sign-in (default: off)",
+  }),
+  destination: Destination.pipe(optional).annotate({
+    description:
+      "Which Pages deployment to use: pages or pages-dev (default: pages). The KILO_PAGES_DESTINATION environment variable overrides it.",
   }),
 }).annotate({ identifier: "KiloPagesConfig", description: "Pages configuration" })
 export type Config = typeof Config.Type

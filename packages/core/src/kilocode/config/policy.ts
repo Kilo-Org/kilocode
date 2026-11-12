@@ -263,7 +263,7 @@ export function parse(
     report?.({
       path: ["pages"],
       kind: "invalid",
-      message: "ignored invalid pages; expected an object with an optional boolean enabled",
+      message: "ignored invalid pages; expected an object with optional enabled and destination (pages or pages-dev)",
     })
   const sandboxField = Schema.decodeUnknownOption(sandboxSetting)(input)
   if (Option.isNone(sandboxField))

@@ -13,11 +13,10 @@ export interface Deployment {
 }
 
 export const DEPLOYMENTS: readonly Deployment[] = [
-  { origin: "https://pages-dev.kiloapps.io", resource: "pages-dev" },
   { origin: "https://pages.kiloapps.io", resource: "pages" },
+  { origin: "https://pages-dev.kiloapps.io", resource: "pages-dev" },
 ]
 
-// `pages.kiloapps.io` does not resolve yet, so the development deployment is the one that serves Kilo tokens.
 export const DEFAULT = DEPLOYMENTS[0]!
 
 // A token is replaced a little before it expires, so a request never reaches Pages with one it already treats as expired.
