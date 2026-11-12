@@ -48,16 +48,20 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
       yield* ctx.tool
         .hook("execute.after", (event) => {
           const key = `${event.sessionID}:${event.id}`
+          if (event.tool === "open_plan") {
+            if (event.status === "completed") {
+              const path = event.result.metadata?.path
+              if (typeof path === "string" && path) opened.set(key, { sessionID: event.sessionID, path })
+            } else {
+              opened.delete(key)
+            }
+            return Effect.void
+          }
+          if (event.tool !== "execute") return Effect.void
           if (event.status !== "completed") {
             opened.delete(key)
             return Effect.void
           }
-          if (event.tool === "open_plan") {
-            const path = event.result.metadata?.path
-            if (typeof path === "string" && path) opened.set(key, { sessionID: event.sessionID, path })
-            return Effect.void
-          }
-          if (event.tool !== "execute") return Effect.void
           const value = opened.get(key)
           if (!value) return Effect.void
           opened.delete(key)
@@ -69,14 +73,17 @@ export const KiloPlanPlugin = define<Bus.Service | Global.Service | SessionStore
     yield* PlanMode.install({ ctx, store, data: global.data, document })
 
     yield* ctx.session.hook("experimental.idle", (event) =>
-      PlanFollowup.ask({ ctx, store, bus, handled, data: global.data, document, sessionID: event.sessionID }).pipe(
-        // A user interruption must reach the runner; only unexpected failures are logged and swallowed.
-        Effect.catchCause((cause) =>
-          Cause.hasInterrupts(cause)
-            ? Effect.interrupt
-            : Effect.logWarning("failed to ask the plan follow-up question", { sessionID: event.sessionID, cause }),
-        ),
-      ),
+      Effect.gen(function* () {
+        for (const [key, value] of opened) if (value.sessionID === event.sessionID) opened.delete(key)
+        yield* PlanFollowup.ask({ ctx, store, bus, handled, data: global.data, document, sessionID: event.sessionID }).pipe(
+          // A user interruption must reach the runner; only unexpected failures are logged and swallowed.
+          Effect.catchCause((cause) =>
+            Cause.hasInterrupts(cause)
+              ? Effect.interrupt
+              : Effect.logWarning("failed to ask the plan follow-up question", { sessionID: event.sessionID, cause }),
+          ),
+        )
+      }),
     )
   }),
 })
