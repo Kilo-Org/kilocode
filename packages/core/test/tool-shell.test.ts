@@ -880,6 +880,35 @@ describe("ShellTool", () => {
     { timeout: 15_000 },
   )
 
+  // kilocode_change start - the model's description is the tool card title, so it must survive to metadata
+  productionIt.live(
+    "carries the optional model description into result metadata",
+    () =>
+      withTempDir((tmp) => {
+        reset()
+        return withSession(tmp.path, (registry) =>
+          Effect.gen(function* () {
+            // Models write arguments in schema order; first lets the card show the summary before the command.
+            const definition = (yield* toolDefinitions(registry)).find((tool) => tool.name === "shell")
+            expect(Object.keys(definition?.inputSchema.properties ?? {})[0]).toBe("description")
+
+            const described = yield* executeTool(
+              registry,
+              call({ command: helloCommand, description: "Prints hello" }),
+            )
+            expect(described.status).toBe("completed")
+            expect(described.metadata).toMatchObject({ exit: 0, description: "Prints hello" })
+
+            const plain = yield* executeTool(registry, call({ command: helloCommand }, "call-shell-plain"))
+            expect(plain.status).toBe("completed")
+            expect(plain.metadata).not.toHaveProperty("description")
+          }),
+        )
+      }),
+    { timeout: 15_000 },
+  )
+  // kilocode_change end
+
   productionIt.live(
     "uses the session environment instead of the server environment",
     () =>

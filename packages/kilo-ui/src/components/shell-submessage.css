@@ -1,0 +1,7 @@
+/* The base styles make the shell summary an inline-block so upstream can animate its width. Kilo does not
+   animate it, and as an atomic box a long command is cut mid-glyph at the row edge instead of ellipsized by
+   the subtitle. Inline text keeps the subtitle's ellipsis working, and keeps the title baseline: an
+   inline-block with clipped overflow would sit on its bottom edge, above the tool name. */
+[data-component="shell-submessage"] [data-slot="shell-submessage-value"] {
+  display: inline;
+}
