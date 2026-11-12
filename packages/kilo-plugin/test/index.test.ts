@@ -22,6 +22,7 @@ test("Gateway modes override built-in agents before config, and post-config step
     "kilocode.tool-write",
     "kilocode.tool-browser",
     "kilocode.tool-notebook",
+    "kilocode.chart",
     "kilocode.commit-message",
     "kilocode.privacy",
     "kilocode.settings",

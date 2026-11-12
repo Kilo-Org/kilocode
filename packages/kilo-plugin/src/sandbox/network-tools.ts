@@ -31,6 +31,7 @@ export const builtin = [
   "subagent",
   "goal",
   "review",
+  "chart",
   "experimental_image_generate",
   "schedule_wakeup",
   "cancel_wakeup",

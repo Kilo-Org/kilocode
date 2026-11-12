@@ -124,4 +124,8 @@ export const dict = {
   "ui.message.feedback.helpful": "這有幫助",
   "ui.message.feedback.notHelpful": "這沒有幫助",
   "ui.message.feedback.clearRating": "清除評分",
+  // Chart tool card
+  "ui.tool.chart": "圖表",
+  "ui.tool.chart.invalid": "圖表設定無效 — 必須包含 type 與 data",
+  "ui.tool.chart.failed": "圖表轉譯失敗",
 }

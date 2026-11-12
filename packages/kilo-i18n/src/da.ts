@@ -134,4 +134,8 @@ export const dict = {
   "ui.message.feedback.helpful": "Dette var nyttigt",
   "ui.message.feedback.notHelpful": "Dette var ikke nyttigt",
   "ui.message.feedback.clearRating": "Ryd bedømmelse",
+  // Chart tool card
+  "ui.tool.chart": "Diagram",
+  "ui.tool.chart.invalid": "Ugyldig diagramkonfiguration — skal indeholde type og data",
+  "ui.tool.chart.failed": "Diagrammet kunne ikke vises",
 }
