@@ -60,6 +60,9 @@ export interface ValidationError {
   code?: string
 }
 
+/** The provider answers requests but does not serve the selected model. */
+export const EMBEDDING_MODEL_UNAVAILABLE = "The specified embedding model is not available."
+
 /**
  * Maps HTTP status codes to appropriate error messages
  */
@@ -69,8 +72,10 @@ export function getErrorMessageForStatus(status: number | undefined, embedderTyp
     case 403:
       return "Authentication failed. Please check your API key."
     case 404:
-      return embedderType === "openai"
-        ? "The specified embedding model is not available."
+      // The Kilo Gateway serves one URL for every model, and the catalog can list a model the route refuses, so a
+      // 404 there names the model, not the endpoint.
+      return embedderType === "openai" || embedderType === "kilo"
+        ? EMBEDDING_MODEL_UNAVAILABLE
         : "Invalid endpoint URL. Please verify the endpoint."
     case 429:
       return "Service is temporarily unavailable due to rate limiting. Please try again later."
