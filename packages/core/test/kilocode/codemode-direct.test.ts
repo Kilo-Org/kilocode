@@ -129,7 +129,8 @@ it.effect("supersedes the catalog when a direct tool first appears", () =>
       current,
     )
     expect(added.text).not.toContain("This catalog supersedes the previous Code Mode tool catalog.")
-    expect(added.text).toContain("New tools are available in addition to those previously listed:")
+    // board_post is its own top-level namespace, so it is reported as a new namespace delta, not a supersede.
+    expect(added.text).toContain("New tools are available:")
     expect(added.text).toContain("// [direct] Post to the shared board")
   }),
 )

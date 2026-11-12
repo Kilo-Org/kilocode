@@ -76,8 +76,8 @@ async function page(
     reader.close()
     stream.destroy()
   }
-  if (lines.length === 0 && offset !== 1)
-    throw new ReadToolFileSystem.OffsetOutOfRangeError({ offset, lines: count })
+  // Upstream removed OffsetOutOfRangeError in v2.2.7: an offset past the end now yields an empty page here instead
+  // of a typed failure, matching the native reader's out-of-range handling.
   return new ReadToolFileSystem.TextPage({
     type: "text-page",
     content: lines.join("\n"),

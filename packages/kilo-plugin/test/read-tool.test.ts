@@ -45,6 +45,7 @@ const node = makeLocationNode({
     Skill.node,
     SessionInstructions.node,
     FSUtil.node,
+    Environment.node,
     Location.node,
   ],
 })

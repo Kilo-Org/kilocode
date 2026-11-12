@@ -1781,60 +1781,60 @@ describe("ShellTool", () => {
   )
 
   it.live("returns the shell id for a background command", () =>
-  withTempDir((tmp) => {
-    reset()
-    return withSession(tmp.path, (registry) =>
-      Effect.gen(function* () {
-        const bus = yield* Bus.Service
-        const admitted = yield* bus.subscribe(SessionEvent.InboxEnqueued).pipe(
-          Stream.filter((event) => event.data.sessionID === sessionID && event.data.item.type === "synthetic"),
-          Stream.runHead,
-          Effect.forkScoped({ startImmediately: true }),
-        )
-        const settled = yield* executeTool(registry, call({ command: idleCommand, timeout: 50, background: true }))
-        const shellID = typeof settled.metadata?.shellID === "string" ? settled.metadata.shellID : undefined
-        expect(settled.metadata).toMatchObject({ truncated: false })
-        expect(shellID).toStartWith("sh_")
+    withTempDir((tmp) => {
+      reset()
+      return withSession(tmp.path, (registry) =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const admitted = yield* bus.subscribe(SessionEvent.InboxEnqueued).pipe(
+            Stream.filter((event) => event.data.sessionID === sessionID && event.data.item.type === "synthetic"),
+            Stream.runHead,
+            Effect.forkScoped({ startImmediately: true }),
+          )
+          const settled = yield* executeTool(registry, call({ command: idleCommand, timeout: 50, background: true }))
+          const shellID = typeof settled.metadata?.shellID === "string" ? settled.metadata.shellID : undefined
+          expect(settled.metadata).toMatchObject({ truncated: false })
+          expect(shellID).toStartWith("sh_")
 
-        const shell = yield* Shell.Service
-        if (!shellID) return
-        const id = ID.make(shellID)
-        const info = yield* shell.get(id)
-        expect(settled.content).toEqual([
-          {
-            type: "text",
-            text: `Command moved to the background (shell ID: ${shellID}).\nOutput is streaming to: ${info.file}`,
-          },
-          {
-            type: "text",
-            text: "You will be notified automatically when the command finishes. The notification will include the command's output. Unless the user explicitly asks otherwise, DO NOT poll for completion, even if you need the final result to continue. Repeatedly sleeping and reading or searching the output file is polling, not useful work. You may read the current output if it lets you do useful work now, but do not repeatedly check it while waiting for the command to finish. Keep working on anything that does not depend on the result. If you have nothing else to do, end your response; you will be resumed automatically when the command finishes.",
-          },
-        ])
-        expect((yield* shell.list()).map((info) => info.id)).toContain(id)
-        const timedOut = yield* shell.wait(id)
-        expect(timedOut.status).toBe("timeout")
-        // The timeout keeps its status but still records how the killed process exited.
-        expect(timedOut.exit !== undefined || timedOut.signal !== undefined).toBe(true)
-        if (!isWindows) expect(timedOut).toMatchObject({ signal: "SIGTERM" })
-        expect((yield* Fiber.join(admitted)).valueOrUndefined?.data.item.payload).toMatchObject({
-          text: expect.stringMatching(
-            new RegExp(
-              `\\nCommand timed out after 0\\.05 seconds\\. If it needs longer and isn't waiting for input, rerun with a larger timeout\\.\\nExit code: ${timedOutExit}\\n</shell>$`,
+          const shell = yield* Shell.Service
+          if (!shellID) return
+          const id = ID.make(shellID)
+          const info = yield* shell.get(id)
+          expect(settled.content).toEqual([
+            {
+              type: "text",
+              text: `Command moved to the background (shell ID: ${shellID}).\nOutput is streaming to: ${info.file}`,
+            },
+            {
+              type: "text",
+              text: "You will be notified automatically when the command finishes. The notification will include the command's output. Unless the user explicitly asks otherwise, DO NOT poll for completion, even if you need the final result to continue. Repeatedly sleeping and reading or searching the output file is polling, not useful work. You may read the current output if it lets you do useful work now, but do not repeatedly check it while waiting for the command to finish. Keep working on anything that does not depend on the result. If you have nothing else to do, end your response; you will be resumed automatically when the command finishes.",
+            },
+          ])
+          expect((yield* shell.list()).map((info) => info.id)).toContain(id)
+          const timedOut = yield* shell.wait(id)
+          expect(timedOut.status).toBe("timeout")
+          // The timeout keeps its status but still records how the killed process exited.
+          expect(timedOut.exit !== undefined || timedOut.signal !== undefined).toBe(true)
+          if (!isWindows) expect(timedOut).toMatchObject({ signal: "SIGTERM" })
+          expect((yield* Fiber.join(admitted)).valueOrUndefined?.data.item.payload).toMatchObject({
+            text: expect.stringMatching(
+              new RegExp(
+                `\\nCommand timed out after 0\\.05 seconds\\. If it needs longer and isn't waiting for input, rerun with a larger timeout\\.\\nExit code: ${timedOutExit}\\n</shell>$`,
+              ),
             ),
-          ),
-          description: idleCommand,
-          metadata: {
-            source: "shell",
-            shellID,
-            state: "completed",
-            timeout: true,
-            truncated: false,
-          },
-        })
-      }),
-    )
-  }),
-)
+            description: idleCommand,
+            metadata: {
+              source: "shell",
+              shellID,
+              state: "completed",
+              timeout: true,
+              truncated: false,
+            },
+          })
+        }),
+      )
+    }),
+  )
 
   // kilocode_change start - the completion notice prefers the model's summary
   it.live("uses the model's description in the background completion notice", () =>
