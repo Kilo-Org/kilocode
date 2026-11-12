@@ -8,6 +8,7 @@ import { Tool } from "@opencode/core/tool"
 import { Session } from "@opencode/schema/session"
 import type { Info } from "@opencode/schema/tool"
 import { Effect, Schema } from "effect"
+import { readInitial, readUpdate } from "../lib/instructions"
 import { it } from "../lib/effect"
 import { codeModeListings, executeTool, toolIdentity } from "../lib/tool"
 
@@ -91,4 +92,24 @@ it.effect("keeps a direct tool on both the native and the Code Mode tool list", 
     })
     expect(unavailable.output?.error).toBe(true)
   }).pipe(Effect.scoped, Effect.provide(node)),
+)
+
+// The marker changes the invariant paragraph and heading, so a catalog that first shows a marked tool is superseded
+// as a whole instead of described by a delta.
+it.effect("supersedes the catalog when a direct tool first appears", () =>
+  Effect.gen(function* () {
+    const plain: CodeModeCatalog.Tool = {
+      type: "tool",
+      name: "board_read",
+      description: "Read the shared board",
+      signature: "tools.board_read(): Promise<string | null>",
+    }
+    const previous = yield* readInitial(CodeModeInstructions.make({ tools: [plain] }))
+    const current = yield* readUpdate(CodeModeInstructions.make({ tools: [{ ...plain, direct: true }] }), previous)
+
+    expect(previous.text).toContain("## Code Mode tools (call only inside `execute`)")
+    expect(current.text).toContain("This catalog supersedes the previous Code Mode tool catalog.")
+    expect(current.text).toContain("## Code Mode tools (call inside `execute`; `[direct]` tools also directly)")
+    expect(current.text).toContain("tools.board_read(): Promise<string | null> // [direct] Read the shared board")
+  }),
 )
