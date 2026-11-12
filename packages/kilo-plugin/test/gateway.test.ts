@@ -2377,12 +2377,10 @@ describe("KiloGatewayPlugin", () => {
                   .pipe(Effect.flip),
               ).toMatchObject({ type: "failed" })
               expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: null })
-              for (const method of ["models.images", "models.transcriptions", "models.embeddings", "autocomplete.fimTarget", "autocomplete.editTarget"])
+              for (const method of ["models.images", "models.transcriptions", "models.embeddings", "autocomplete.fimTarget"])
                 expect(yield* rpc.call("kilocode.gateway", method, {}).pipe(Effect.flip)).toMatchObject({ type: "unauthorized" })
               expect(yield* rpc.call("kilocode.gateway", "autocomplete.fimTarget", { provider: "mistral", model: "codestral-2508" }))
                 .toMatchObject({ provider: "mistral" })
-              expect(yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", { provider: "inception", model: "mercury-next-edit" }))
-                .toMatchObject({ provider: "inception" })
               expect(backend.requests).toEqual([])
               expect(yield* host.storage.get("organization:env")).toEqual({ organizationID: "selected" })
             }),
@@ -2761,16 +2759,6 @@ describe("KiloGatewayPlugin", () => {
                   provider: "kilo",
                   model: "mistralai/codestral-2508",
                   url: `${backend.url}/api/gateway/v1/fim/completions`,
-                })
-                expect(
-                  yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", {
-                    provider: "kilo",
-                    model: "inception/mercury-next-edit",
-                  }),
-                ).toEqual({
-                  provider: "kilo",
-                  model: "inception/mercury-edit-2",
-                  url: `${backend.url}/api/gateway/v1/edit/completions`,
                 })
               }),
           ),

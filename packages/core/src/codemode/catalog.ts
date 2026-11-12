@@ -8,6 +8,7 @@ export type Tool = {
   readonly description: string
   readonly signature: string
   readonly pinned?: boolean
+  readonly direct?: boolean // kilocode_change(codemode-direct) - also a provider-native tool call
 }
 
 export type Namespace = {
@@ -37,6 +38,7 @@ export const Summary = Schema.Struct({
   total: Schema.Number,
   shown: Schema.Number,
   namespaces: Schema.Array(NamespaceSummary),
+  direct: Schema.optionalKey(Schema.Boolean), // kilocode_change(codemode-direct) - the catalog shows a [direct] marker
 })
 export type Summary = typeof Summary.Type
 
@@ -61,12 +63,18 @@ export function summarize(inventory: Inventory, options: Options = {}): Summary 
     })
     .map(([name, namespaceEntries]) => {
       const description = flattened.namespaces.get(name)?.description
+      // kilocode_change start - codemode-direct: tools that stay on the provider's native list too
+      const direct = new Set(namespaceEntries.filter((entry) => entry.direct === true).map((entry) => entry.path))
+      // kilocode_change end
       const listings = namespaceEntries
         .map((entry) => {
           const firstLine = entry.description.split("\n", 1)[0]?.trim() ?? ""
           const description =
             firstLine.length > DESCRIPTION_LIMIT ? firstLine.slice(0, DESCRIPTION_LIMIT - 3) + "..." : firstLine
-          const suffix = description.length === 0 ? "" : ` // ${description}`
+          // kilocode_change start - codemode-direct: mark a tool that is also a normal tool call
+          const parts = [direct.has(entry.path) ? "[direct]" : "", description].filter((part) => part.length > 0)
+          const suffix = parts.length === 0 ? "" : ` // ${parts.join(" ")}`
+          // kilocode_change end
           return { path: entry.path, line: `  - ${entry.signature}${suffix}` }
         })
         .toSorted((left, right) => {
@@ -85,6 +93,7 @@ export function summarize(inventory: Inventory, options: Options = {}): Summary 
         name,
         ...(description === undefined ? {} : { description }),
         listings,
+        direct, // kilocode_change(codemode-direct)
         selectionOrder: ranked.filter((candidate) => !pinned.has(candidate.listing)),
         selectedListings: pinned,
         selectionIndex: 0,
@@ -134,6 +143,15 @@ export function summarize(inventory: Inventory, options: Options = {}): Summary 
   return {
     total: flattened.tools.length,
     shown: namespaceSummaries.reduce((total, namespace) => total + namespace.entries.length, 0),
+    // kilocode_change start - codemode-direct: explain the marker only while one is shown
+    ...(namespaces.some((namespace) =>
+      namespace.listings.some(
+        (listing) => namespace.selectedListings.has(listing) && namespace.direct.has(listing.path),
+      ),
+    )
+      ? { direct: true }
+      : {}),
+    // kilocode_change end
     namespaces: namespaceSummaries,
   }
 }
@@ -149,6 +167,7 @@ function flatten(entries: ReadonlyArray<Tool | Namespace>, path: ReadonlyArray<s
         description: entry.description,
         signature: entry.signature,
         ...(entry.pinned === undefined ? {} : { pinned: entry.pinned }),
+        ...(entry.direct === undefined ? {} : { direct: entry.direct }), // kilocode_change(codemode-direct)
       })
       continue
     }

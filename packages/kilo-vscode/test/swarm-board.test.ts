@@ -60,4 +60,24 @@ describe("usesBoard", () => {
   it("ignores other tools", () => {
     expect(usesBoard([tool("shell"), tool("subagent")])).toBe(false)
   })
+
+  it("finds a board tool call nested in a Code Mode execute", () => {
+    const execute = (toolCalls: unknown) =>
+      ({
+        type: "assistant",
+        id: "m",
+        content: [
+          {
+            type: "tool",
+            id: "t",
+            name: "execute",
+            state: { status: "completed", input: {}, content: [], metadata: { toolCalls } },
+          },
+        ],
+      }) as unknown as SessionMessageInfo
+
+    expect(usesBoard([execute([{ tool: "board_post", status: "completed" }])])).toBe(true)
+    expect(usesBoard([execute([{ tool: "board_read", status: "running" }])])).toBe(true)
+    expect(usesBoard([execute([{ tool: "shell", status: "completed" }])])).toBe(false)
+  })
 })

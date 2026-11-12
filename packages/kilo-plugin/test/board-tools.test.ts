@@ -149,6 +149,9 @@ describe("shared board tools", () => {
     const host = await boot()
     const tools = host.tools()
     expect(Object.keys(tools)).toEqual(["board_read", "board_post"])
+    // Direct calls keep the client rendering; the tools are also callable inside Code Mode `execute`.
+    expect(tools.board_read.options).toEqual({ direct: true })
+    expect(tools.board_post.options).toEqual({ direct: true })
     expect(tools.board_read.description).toStartWith(
       "Read the shared board for this main session and its subagent children when peer context is relevant",
     )

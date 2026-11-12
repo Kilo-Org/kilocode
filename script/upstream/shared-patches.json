@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 128,
-    "markedLines": 2223,
+    "files": 135,
+    "markedLines": 2349,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -197,6 +197,26 @@
       "rung": 3,
       "seam": "Mark every MCP tool registration with `mcp: true`. The sandbox plugin must treat an MCP tool as delegated network authority even when a server named `opencode` exposes a tool named like a built-in, and namespace plus declared name cannot separate the two. Provenance exists only at registration and no plugin hook observes it. Without the sandbox plugin nothing reads the flag, so upstream behavior and defaults are unchanged."
     },
+    "packages/core/src/tool.ts": {
+      "rung": 3,
+      "seam": "A tool option `direct: true` keeps the tool on the provider's native tool list and in the Code Mode inventory, so a client-rendered tool is also callable from a Code Mode program. The registry's list split and its inventory are private to this service, and no plugin hook observes or changes them. Without the option the native and Code Mode sets are exactly upstream's."
+    },
+    "packages/core/src/codemode/tool.ts": {
+      "rung": 3,
+      "seam": "Mark a dual tool (see `packages/core/src/tool.ts`) in the Code Mode catalog. The catalog is derived from the registry next to the tool options, so a plugin cannot add the mark; unmarked tools keep their existing listing."
+    },
+    "packages/core/src/codemode/catalog.ts": {
+      "rung": 3,
+      "seam": "Carry the optional `direct` mark through the summarized catalog, list it as `[direct]`, and set a summary flag while a marked tool is shown. The summary is the model-facing contract the instructions render and a plugin cannot extend it. Without a marked tool the catalog text and summary are unchanged."
+    },
+    "packages/core/src/codemode/instructions.ts": {
+      "rung": 3,
+      "seam": "Qualify the Code Mode paragraph and the catalog heading while a marked tool is shown, because such a tool is also a normal call, and supersede the whole catalog when the marker first appears. The instructions are static text plus the rendered summary, so a plugin cannot qualify them, and a catalog without a marked tool renders exactly upstream's text."
+    },
+    "packages/core/src/tool/AGENTS.md": {
+      "rung": 3,
+      "seam": "Document the optional `direct` tool option next to `codemode` in the registration contract. The sentence continues the existing options description and changes no rule."
+    },
     "packages/core/src/tool/runtime.ts": {
       "rung": 4,
       "seam": "Defect fix: Zod 4.6+ (pinned 4.6.7) emits the non-standard JSON Schema formats `starts_with`, `ends_with` and `includes` next to the equivalent `pattern`, and strict providers reject tool schemas that carry them. The marked block passes the Kilo-owned Zod `override` (`core/src/kilocode/tool/zod-format.ts`) to both Zod conversions in `standardJsonSchema`: Standard JSON Schema `libraryOptions` (Zod vendor only) and the `toJSONSchema` fallback (zod/mini). `pattern` and standard formats stay; Effect Schema and raw JSON Schema tools are untouched. No lower rung: the conversion runs inside the tool runtime when definitions are derived, after every tool editor transform, so a plugin cannot reach every Zod tool (including third-party plugin tools registered later), and request-body hooks would be per-protocol and miss WebSocket transports. Upstream `dev` has the same defect; the block goes away when upstream fixes it. Raises files 124 to 125 and markedLines 2105 to 2112 (7 lines: import plus the 6-line block)."
@@ -205,9 +225,17 @@
       "rung": 4,
       "seam": "Set the optional `moved` flag when an update hunk has a move target. The move already applies here; only the result metadata loses the fact that it was a rename. The tool has no plugin hook for its own result metadata, and add, delete and plain update hunks stay unchanged."
     },
+    "packages/core/src/job/recovery.ts": {
+      "rung": 4,
+      "seam": "The shell recovery record carries the model's optional `description`, so a background command that outlives a server restart produces the same summary as the normal completion notice. The restart notice is built from this record in `session/execution/restart.ts`, and the record schema is upstream-owned. No plugin hook observes background recovery. The field is optional, so records written before it and every upstream default are unchanged."
+    },
+    "packages/core/src/session/execution/restart.ts": {
+      "rung": 4,
+      "seam": "Prefer the recovery record's optional `description` for the shell restart notice and fall back to the command. The notice is built inside the upstream restart path, which no plugin hook reaches. With the fallback, records written before the field existed read exactly as upstream does."
+    },
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
-      "seam": "Publish the running command's current output and running state to the tool card while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. The final result and metadata are unchanged."
+      "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add the optional `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. Both additions are optional: omitted input, every upstream default, and the rest of the result and metadata are unchanged."
     },
     "packages/core/src/tool/plugin/schedule.ts": {
       "rung": 4,
@@ -215,7 +243,7 @@
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
-      "seam": "Test coverage for the marked live-output progress behavior. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
+      "seam": "Test coverage for the marked live-output progress behavior and for the optional model description. The existing progress test asserted a single update, which the new behavior supersedes; the added tests cover streamed output before exit, the bounded large-output preview, the background running state and interruption, plus that the description reaches result metadata and stays absent when omitted. The harness must stay next to the upstream shell tests because it composes the real Job, Session and Shell services."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
@@ -460,7 +488,7 @@
     },
     "packages/schema/src/tool.ts": {
       "rung": 3,
-      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. The tool registry schema is shared and closed to plugin extension. Omitted keeps upstream behavior."
+      "seam": "Optional `mcp` provenance on tool options, set by the MCP registration so the sandbox plugin can never read a namespaced MCP tool as a built-in. Optional `direct` marks a Code Mode tool that also stays on the provider's native tool list, for a client that renders it by name. The tool registry schema is shared and closed to plugin extension. Both options are omitted by default, which keeps upstream behavior."
     },
     "packages/schema/src/session-instruction-paths.ts": {
       "rung": 4,
