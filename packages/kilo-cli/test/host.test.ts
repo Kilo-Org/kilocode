@@ -333,6 +333,100 @@ test("the server reads kilo2.json and .kilo2 and ignores v1 and opencode config"
   }
 }, 30_000)
 
+// The host supplies Kilo's hosted client document, so a server that supports CIMD receives Kilo's client ID and the
+// loopback the document lists, with no dynamic registration. The document and callback come from the same
+// `Mcp.node` override as the client identity.
+test("the server offers the Kilo client document to MCP servers", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-host-"))
+  const registrations: Record<string, unknown>[] = []
+  const remote = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const url = new URL(request.url)
+      if (url.pathname === "/.well-known/oauth-authorization-server")
+        return Response.json({
+          issuer: url.origin,
+          authorization_endpoint: `${url.origin}/authorize`,
+          token_endpoint: `${url.origin}/token`,
+          registration_endpoint: `${url.origin}/register`,
+          response_types_supported: ["code"],
+          client_id_metadata_document_supported: true,
+          token_endpoint_auth_methods_supported: ["none"],
+        })
+      if (request.method !== "POST") return new Response(null, { status: 404 })
+      if (url.pathname === "/register") {
+        registrations.push(JSON.parse(await request.text()))
+        return Response.json({ client_id: "registered" })
+      }
+      // A 401 sends the connect attempt to OAuth.
+      return new Response("Unauthorized", { status: 401 })
+    },
+  })
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const context = yield* Layer.build(
+            createRoutes(
+              {
+                password: "secret",
+                database: { path: ":memory:" },
+                models: { fetch: false },
+                fs: { filewatcher: false },
+                config: { directory, project: false },
+              },
+              () => [],
+              KiloHost.overrides,
+            ).pipe(Layer.provide(HttpServer.layerServices)),
+          )
+          const handler = Context.get(context, HttpRouter.HttpRouter)
+            .asHttpEffect()
+            .pipe(HttpEffect.toWebHandlerWith(context))
+          const call = (method: string, route: string, body?: unknown) =>
+            Effect.promise(async () => {
+              const url = new URL(route, "http://kilo.local")
+              url.searchParams.set("location[directory]", directory)
+              const response = await handler(
+                new Request(url, {
+                  method,
+                  headers: {
+                    authorization: `Basic ${btoa("opencode:secret")}`,
+                    ...(body === undefined ? {} : { "content-type": "application/json" }),
+                  },
+                  ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+                }),
+              )
+              return { status: response.status, body: response.status === 204 ? undefined : await response.json() }
+            })
+
+          yield* call("PUT", "/api/experimental/mcp/hosted", {
+            config: { type: "remote", url: remote.url.href },
+          })
+          const integrations = yield* eventually(call("GET", "/api/integration"), (result) =>
+            result.body.data?.some((item: { metadata?: { source?: string } }) => item.metadata?.source === "mcp"),
+          )
+          const integration = integrations.body.data.find(
+            (item: { metadata?: { source?: string } }) => item.metadata?.source === "mcp",
+          )
+          const method = integration.methods.find((item: { type: string }) => item.type === "oauth")
+          const attempt = yield* call("POST", `/api/integration/${integration.id}/connect/oauth`, {
+            methodID: method.id,
+          })
+          const url = new URL(attempt.body.data.url)
+          expect(url.searchParams.get("client_id")).toBe("https://kilo.ai/docs/oauth/kilo/client.json")
+          expect(url.searchParams.get("redirect_uri")).toBe("http://127.0.0.1:19876/mcp/oauth/callback")
+          expect(registrations).toHaveLength(0)
+          // Release the loopback listener the attempt holds.
+          yield* call("DELETE", `/api/integration/${integration.id}/connect/oauth/${attempt.body.data.attemptID}`)
+        }),
+      ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
+    )
+  } finally {
+    remote.stop(true)
+    await rm(directory, { recursive: true, force: true })
+  }
+}, 30_000)
+
 function eventually<A>(effect: Effect.Effect<A>, predicate: (value: A) => boolean, remaining = 200): Effect.Effect<A> {
   return Effect.gen(function* () {
     const value = yield* effect

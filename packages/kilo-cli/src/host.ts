@@ -13,6 +13,9 @@ import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
+import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
+import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
@@ -157,11 +160,17 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
-  // MCP servers see the Kilo client identity, and OAuth registration uses Kilo's product name and URI.
+  // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding, and a
+  // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop.
+  // kilo_port(mcp:18028d867142)
   Mcp.node.replace(
     Mcp.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
-      host: { oauth: { name: "Kilo", uri: "https://kilo.ai" } },
+      host: {
+        oauth: McpClientMetadata.oauth,
+        fetch: (base, endpoint) => KiloSseProbe.probe(base, endpoint),
+        authFailure,
+      },
     }),
   ),
   Model.node.replace(

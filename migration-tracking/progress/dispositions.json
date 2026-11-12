@@ -2592,6 +2592,50 @@
     "note": "v1 paused a session's goal in `setArchived` (session.ts). The Kilo goal plugin now subscribes to `session.archived` and pauses an active goal with the reason \"The session was archived\", covered by packages/kilo-plugin/test/goal-tool.test.ts.",
     "by": "port-v1-goal-to-vscode"
   },
+  "module:packages/opencode/src/kilocode/soul.txt": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/soul/soul.txt",
+    "note": "The persona keeps v1's identity line and is trimmed to personality only, on review of #16056: v1's tone rules (direct, clear and technical, no openers such as \"Great\", no closing offers) are condensed into three bullets. Not carried in the persona, on purpose: v1's working rules (work iteratively in steps, do not ask for more information than necessary, use the question tool only for a real answer, follow the codebase's conventions), which are left to the v2 model templates, agent prompts and tool descriptions, with two known gaps: the default and Claude templates have no line about asking the user sparingly, and agents with their own prompt (ask, debug, orchestrator) skip the base template and so no longer get the conventions rule; and the absolute ban on ending a message with a question, which is narrowed to questions that only prolong the conversation, because the debug, plan and orchestrator prompts tell the agent to ask the user. KiloSoulPlugin (packages/kilo-plugin/src/soul/index.ts, registered in KiloPostPlugins after the Gateway prompt and the upstream prompt optimizer) puts it first in the system prompt of every agent, compaction and generate request (goal reviewer, cache warming, the session.generate API), including agents with their own prompt, and leaves title requests out, which matches shouldIncludePersona and the soul lines of llm/request.ts. v2 has no OpenAI OAuth instructions split, so the first system part also covers OAuth. Tests: packages/kilo-plugin/test/soul.test.ts.",
+    "by": "soul-persona"
+  },
+  "module:packages/opencode/src/kilocode/mcp-oauth-callback.ts": {
+    "state": "dropped",
+    "note": "v1 needed a machine-wide singleton loopback listener with a takeover handshake because `kilo mcp auth` ran in separate CLI processes. v2 runs OAuth attempts in the managed integration service: each attempt owns its listener and scope (packages/core/src/mcp/oauth.ts authorize), and Integration.oauth.connect/cancel/status manage attempts with a 10-minute lifetime (packages/core/src/integration.ts), with a Cancel action in both TUI and VS Code. The only delta is the CIMD-eligible fixed callback port 127.0.0.1:19876 (packages/core/src/kilocode/mcp/client-metadata.ts): a second concurrent attempt fails at bind with a clear port error instead of displacing the first, and the first completes or is cancelled/expired, so no flow is corrupted. Decision: do not port the takeover protocol; if the concurrency limitation is promoted later, superseding the same integration's pending attempt in Integration.oauth.connect is the v2-shaped fix. Recorded in migration-tracking/plans/mcp-marketplace.md (#15307).",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-oauth-callback.test.ts": {
+    "state": "dropped",
+    "note": "Tests the dropped v1 cross-process takeover module (occupied port, takeover rejects the earlier attempt by name, missing header, rebound host). v2 has no machine-wide listener to take over and no `replaced` error; per-attempt listeners, integration cancel/status and the 10-minute expiry replace the scenarios. The CIMD fixed-port limitation is recorded on module:packages/opencode/src/kilocode/mcp-oauth-callback.ts.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "patch:mcp:78080472f471": {
+    "state": "dropped",
+    "note": "The v1 packages/opencode/src/mcp/oauth-callback.ts import of the Kilo takeover module. Dropped with module:packages/opencode/src/kilocode/mcp-oauth-callback.ts: v2 keeps upstream's per-attempt listener and moves attempt lifecycle to the integration service, so no shared-file import is needed.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-docker-rm.test.ts": {
+    "state": "dropped",
+    "note": "Tests v1's ensureDockerRm argument injection. v2 keeps the local command as configured; Docker MCP servers work without `--rm`, and the command comes from the catalog entry or the user's config, which can pass `--rm`. Not carried because it is container hygiene, not a behavior the feature needs. The v1 index.ts hunk is unattributed in the map, so no patch cell is affected.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/src/kilocode/mcp/cleanup.ts": {
+    "state": "native",
+    "v2": "packages/core/src/mcp/stdio.ts",
+    "note": "v1 released clients that a partially-started MCP state had connected, killing their stdio process children. v2 starts the MCP service under a scope: packages/core/src/mcp/stdio.ts spawns the child in the calling scope (ChildProcess.make), so closing that scope kills the process group. The scope-kill primitive is covered by packages/core/test/effect/cross-spawn-spawner.test.ts ('uses the configured kill signal when scope exits'), and the remote caller-interrupt paths by the two interruption cases in packages/core/test/mcp.test.ts. The exact v1 local end-to-end case (interrupt mcp.status with one connected local fixture and one hanging, then assert the child is gone and a retry works) has no direct v2 test; recorded as a test gap, not a behavior gap.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-interrupted-state.test.ts": {
+    "state": "native",
+    "v2": "packages/core/src/mcp/stdio.ts",
+    "note": "v2 has no direct port of this end-to-end local scenario. The process-kill behavior it guards is covered by the scoped stdio spawn in packages/core/src/mcp/stdio.ts and the scope-kill primitive in packages/core/test/effect/cross-spawn-spawner.test.ts ('uses the configured kill signal when scope exits'); the remote caller-interrupt paths are covered by the two interruption cases in packages/core/test/mcp.test.ts. Recorded as native for the behavior; the exact local fixture remains a test gap.",
+    "by": "mcp-marketplace-rescope"
+  },
+  "module:packages/opencode/test/kilocode/mcp-branding.test.ts": {
+    "state": "native",
+    "v2": "packages/kilo-cli/test/host.test.ts",
+    "note": "The v1 guard asserted the auth toast never tells the user to run `opencode mcp auth` and that the MCP client identifies as kilo. v2 keeps the identity assertion through the host override: packages/core/test/kilocode/mcp/host-hooks.test.ts (client_name/client_uri default to opencode without a host and Kilo with one) and packages/kilo-cli/test/host.test.ts (initialize clientInfo.name is kilo, OAuth registration sends Kilo). User-facing guidance is v2-native copy: packages/core/src/mcp/index.ts reports needs_auth as 'Sign in from /mcps', and the TUI and VS Code expose a Sign in action, so no `kilo mcp auth` toast exists to regress.",
+    "by": "mcp-marketplace-rescope"
+  },
   "module:packages/opencode/src/kilocode/session/revert.ts": {
     "state": "ported",
     "v2": "packages/kilo-cli/src/session-revert.ts",

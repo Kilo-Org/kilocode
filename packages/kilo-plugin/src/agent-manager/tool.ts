@@ -317,6 +317,7 @@ function select(
     ...(task.prompt != null ? { prompt: task.prompt } : {}),
     ...(task.name != null ? { name: task.name } : {}),
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
+    ...(task.baseBranch?.trim() ? { baseBranch: task.baseBranch.trim() } : {}),
     ...(task.agent?.trim() ? { agent: task.agent.trim() } : {}),
   }
   if (!task.model?.trim() && !task.variant?.trim()) {

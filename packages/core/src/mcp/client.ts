@@ -326,32 +326,29 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
 
   const exit = yield* Effect.gen(function* () {
     if (config.type === "attached") return yield* initialize(config.transport)
-    // kilocode_change start - embedding command hook
     if (config.type === "local") {
       const [command, ...args] = config.command
-      const local = options.host?.localCommand?.({ command, args }) ?? { command, args }
       const transport = yield* McpStdio.make({
         server,
-        command: local.command,
-        args: local.args,
+        command,
+        args,
         cwd: McpStdio.resolveCwd(options.directory, config.cwd),
         environment: {
-          ...(local.command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
+          ...(command === "opencode" ? { BUN_BE_BUN: "1" } : {}),
           ...config.environment,
         },
       })
       return yield* initialize(transport)
     }
-    // kilocode_change end
     const { McpOAuth } = yield* Effect.promise(() => import("./oauth.js"))
     const baseFetch = yield* McpOAuth.loggedFetch({ server, directory: options.directory }) // kilocode_change - embedding transport hook
-    const fetch = options.host?.fetch?.(baseFetch) ?? baseFetch // kilocode_change - embedding transport hook
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked
     // with ?codemode=false, which is what our Code Mode wants. The configured URL stays the OAuth identity.
     const url = new URL(config.url)
     const addedCodemode = config.codemode !== false && !url.searchParams.has("codemode") && !rejectsUnknownQuery(url)
     if (addedCodemode) url.searchParams.set("codemode", "false")
     const open = Effect.fnUntraced(function* (url: URL) {
+      const fetch = options.host?.fetch?.(baseFetch, url.href) ?? baseFetch // kilocode_change(unattributed:mcp:6d0c29d2df2a) - embedding transport hook
       session.transport = new StreamableHTTPClientTransport(url, {
         requestInit: config.headers ? { headers: config.headers } : undefined,
         authProvider: options.authProvider,
