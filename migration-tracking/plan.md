@@ -53,7 +53,7 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 
 ### M3 VS Code on v2
 
-- [#15314](https://github.com/Kilo-Org/kilocode/issues/15314) Editor services and FIM: the FIM and next-edit producer and the generation endpoints (enhance prompt, commit message, branch name). FIM gates VS Code.
+- [#15314](https://github.com/Kilo-Org/kilocode/issues/15314) Editor services and FIM: the FIM producer and the generation endpoints (enhance prompt, commit message, branch name). FIM gates VS Code.
 - [#15315](https://github.com/Kilo-Org/kilocode/issues/15315) VS Code client: a new package on `origin/v2`, the v1 UI ported onto `@opencode/client` plus Kilo RPCs.
 
 ### M4 Cutover

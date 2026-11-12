@@ -267,19 +267,11 @@
           "type": "string",
           "enum": [
             "mistralai/codestral-2508",
-            "inception/mercury-edit-2",
-            "inception/mercury-next-edit",
-            "codestral-2508",
-            "mercury-edit-2",
-            "mercury-next-edit"
+            "codestral-2508"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+            "Codestral via your connected Mistral provider API key"
           ],
           "markdownDescription": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
         },
@@ -287,13 +279,11 @@
           "type": "string",
           "enum": [
             "kilo",
-            "mistral",
-            "inception"
+            "mistral"
           ],
           "enumDescriptions": [
             "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "Use autocomplete models through your connected Mistral provider API key"
           ],
           "markdownDescription": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },
