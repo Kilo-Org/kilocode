@@ -1,6 +1,7 @@
 export * as KiloHost from "./host"
 
 import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { PagesAuth } from "@kilocode/kilo-plugin/pages/auth"
 import { PluginGitSource } from "@kilocode/kilo-plugin/plugin/git-source"
 import { networkHttpLayer } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
@@ -187,14 +188,15 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding, and a
-  // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop.
+  // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop. The Pages wrapper
+  // adds the Kilo bearer to the `pages` entry that the Pages plugin registers and to nothing else.
   // kilo_port(mcp:18028d867142)
   Mcp.node.replace(
     Mcp.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
       host: {
         oauth: McpClientMetadata.oauth,
-        fetch: (base, endpoint) => KiloSseProbe.probe(base, endpoint),
+        fetch: (base, endpoint) => PagesAuth.wrap(KiloSseProbe.probe(base, endpoint)),
         authFailure,
       },
     }),
