@@ -19,13 +19,15 @@ const Parameters = Schema.Struct({
 
 const OpenParameters = Schema.Struct({
   path: Schema.optional(
-    Schema.String.annotate({
-      description: "Optional workspace-local path to the plan file. Omit this to open the current plan.",
-    }),
+    Schema.NullOr(
+      Schema.String.annotate({
+        description: "Optional workspace-local path to the plan file. Omit this to open the current plan.",
+      }),
+    ),
   ),
 })
 
-type Input = { readonly path?: string }
+type Input = { readonly path?: string | null }
 
 // kilo_port(tool:fabed9da976a)
 // plan/exit.txt carries the two v1 hunks of tool/plan-exit.txt verbatim (EXIT_DESCRIPTION above):
@@ -94,7 +96,7 @@ const find = Effect.fn(function* (
   const messages = yield* store
     .messages({ sessionID: context.sessionID, order: "asc" })
     .pipe(Effect.mapError((error) => new Tool.Error({ message: error.message, error })))
-  const resolved = PlanFile.resolve(params.path, ctx.location, data)
+  const resolved = PlanFile.resolve(params.path ?? undefined, ctx.location, data)
   const target = resolved ?? PlanFile.defaultPath(session, ctx.location, data)
   const file = PlanFile.locate(target, messages, ctx.location, data, context.agent)
   if (file) return PlanFile.display(file, ctx.location)

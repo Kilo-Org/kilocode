@@ -52,6 +52,11 @@ test("open_plan asks the client to open the plan once", async () => {
   expect(result.metadata).toEqual({ path: ".kilo2/plans/1000-dark-mode-plan.md", open: true })
 })
 
+test("open_plan accepts an explicit null path from Code Mode", async () => {
+  const result = await run((space, store) => openPlan(ctx(space), store, space.data).execute({ path: null }, context))
+  expect(result.metadata).toEqual({ path: ".kilo2/plans/1000-dark-mode-plan.md", open: true })
+})
+
 test("plan_exit fails with guidance when no plan file was written", async () => {
   const error = await run((space, store) =>
     Effect.gen(function* () {
