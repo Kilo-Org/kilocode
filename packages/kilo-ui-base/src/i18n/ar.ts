@@ -280,6 +280,7 @@ export const dict = {
   "ui.messagePart.board.route": "من {{from}} إلى {{to}}",
   "ui.messagePart.board.empty": "لا توجد رسائل من الوكلاء",
   "ui.messagePart.board.stored": "تم الحفظ فقط. لم يتم تأكيد التسليم أو القراءة.",
+  "ui.messagePart.board.more": "المزيد من الرسائل متاحة.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "تم التغيير",
