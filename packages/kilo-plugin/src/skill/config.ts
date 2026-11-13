@@ -14,7 +14,7 @@ KILO_USE_RELEASE_CONFIG=1 is set, which overrides the names in the guide below: 
 `
 
 const DESCRIPTION =
-  "Use for any question about Kilo itself: kilo2.json and kilo2.jsonc paths, config directories, commands, agents, skills, permissions and policies, MCP servers, providers and Kilo Gateway sign-in, plugins, indexing, sandbox, session sync, importing v1 sessions, the CLI and TUI settings in cli.json, slash commands, themes and keybinds, the background service, the kilo2 api command, Agent Manager worktrees and setup, run and state files, troubleshooting and the Kilo documentation. Use it to locate loaded config or change settings."
+  "Use for any question about Kilo itself: kilo2.json and kilo2.jsonc paths, config directories, commands, agents, skills, permissions and policies, MCP servers, providers and Kilo Gateway sign-in, plugins, indexing, sandbox, session sync, importing v1 sessions, the CLI and TUI settings in cli.json, slash commands, themes and keybinds, /periodic, scheduled Flows, wakeups and cron, the background service and service install, the kilo2 api command, Agent Manager worktrees and setup, run and state files, troubleshooting and the Kilo documentation. Use it to locate loaded config or change settings."
 
 // The upstream built-in skills document OpenCode itself. Kilo hides them and registers its own guide, which carries
 // the parts of the OpenCode guide that hold for Kilo, so a question about Kilo does not reach another product's docs. The plugin runs after the
