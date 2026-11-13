@@ -77,7 +77,7 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.tree.ActiveTree
-import ai.kilocode.client.ui.tree.ActiveTreeNode
+import ai.kilocode.client.ui.tree.ActiveTreeColors
 import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveConfig
 import ai.kilocode.client.ui.active.ActiveDeleteOptions
@@ -100,16 +100,20 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
 import com.intellij.ide.IdeTooltipManager
 import com.intellij.ide.actions.RevealFileAction
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -117,12 +121,14 @@ import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.util.edt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -138,16 +144,17 @@ import java.awt.Component
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
+import java.awt.event.HierarchyEvent
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
 internal const val HOSTED_MISS_LIMIT = 20
+internal const val WORKTREE_MISS_LIMIT = 20
 
 /**
- * Agent Manager panel: a git-worktree list with search and a delete action revealed on selection,
- * plus a create prompt driven from the tool-window action.
+ * A unified local and Cloud workspace tree with project-local sections and ordering.
  */
 class AgentManagerPanel(
     parent: Disposable,
@@ -167,15 +174,42 @@ class AgentManagerPanel(
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = RowDeleteProvider()
     private val edit = RenameAction()
-    private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
+    private val ordering = AgentManagerLayout(project?.let(PropertiesComponent::getInstance))
+    private val missed = mutableMapOf<String, Int>()
+    private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
+    private val sections: Array<AnAction> = arrayOf(
+        object : DumbAwareAction(KiloBundle.message("agentManager.section.rename")) {
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+            @RequiresEdt
+            override fun actionPerformed(e: AnActionEvent) {
+                e.getData(SECTION)?.let(::renameSection)
+            }
+        },
+        Separator.getInstance(),
+        ActiveTreeColors.group(SECTION, { ordering.section(it)?.color }) { key, color ->
+            ordering.color(key, color)
+            sync()
+        },
+        Separator.getInstance(),
+        object : DumbAwareAction(KiloBundle.message("agentManager.section.delete")) {
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+            @RequiresEdt
+            override fun actionPerformed(e: AnActionEvent) {
+                e.getData(SECTION)?.let { key -> ordering.delete(key); sync() }
+            }
+        },
+    )
+    private val group = object : ActionGroup(), DumbAware {
+        override fun getChildren(e: AnActionEvent?) = if (e?.getData(SECTION) != null) sections else rows.getChildren(e)
+    }
     private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val createdHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val missedHosted = mutableMapOf<String, Int>()
     private val removedHosted = mutableSetOf<String>()
     private var hostedRun = -1L
     private var deletingHosted: Set<String> = emptySet()
-    private val groupRow = LocalWorktreesRow()
-    private val cloudRow = CloudWorktreesRow()
     private val tree = ActiveTree(
         KiloBundle.message("worktree.empty"),
         cfg = ActiveConfig(
@@ -197,19 +231,26 @@ class AgentManagerPanel(
             hover = { row -> hover(row) },
         ),
         menu = ActiveMenu(
-            WorktreeDataKeys.WORKTREE, group, element = { row ->
-                (row as? WorktreeRow)?.dto?.takeIf {
-                    canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
-                        canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it) || canUpdateFromBase(it)
-                }
-            },
-            alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
-                (row as? HostedWorkspaceRow)?.data?.dto
-            }),
+            SECTION, group, element = { row -> (row as? AgentManagerLayout.Section)?.key },
+            alternate = ActiveMenu(
+                WorktreeDataKeys.WORKTREE, group, element = { row ->
+                    (row as? WorktreeRow)?.dto?.takeIf {
+                        canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
+                            canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it) || canUpdateFromBase(it)
+                    }
+                },
+                alternate = ActiveMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
+                    (row as? HostedWorkspaceRow)?.data?.dto
+                }),
+            ),
         ),
         reorder = ActiveReorder(
-            movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
-            onMove = { move -> controller.reorder(move.keys) },
+            movable = { row -> row.progress == null },
+            pinned = { row -> row is WorktreeRow && row.dto.main },
+            onMove = { move -> ordering.move(move); sync() },
+            reparent = { row, parent ->
+                parent == null || parent is AgentManagerLayout.Section && row !is AgentManagerLayout.Section
+            },
         ),
     )
     // Rows are dense and neighbours are only ever passed over on the way somewhere else, so the dwell is
@@ -228,10 +269,23 @@ class AgentManagerPanel(
     private var observed = emptySet<String>()
     private var hovered: String? = null
     private var orphanBanner: OrphanBanner? = null
+    private val branchPoll = UiTimers.timer(BRANCH_POLL) { if (isShowing) controller.refreshBranches() }
 
     init {
         Disposer.register(parent, this)
         Disposer.register(this, popup)
+        Disposer.register(this) { branchPoll.stop() }
+        addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
+            if (isShowing) {
+                // A branch switched while this tab was hidden has no other observer: the tab-switch
+                // listener only fires on the way in, and no poll runs while the panel is not showing.
+                controller.refreshBranches()
+                branchPoll.start()
+            } else {
+                branchPoll.stop()
+            }
+        }
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         tree.onScroll = { dismissTransient() }
@@ -315,6 +369,7 @@ class AgentManagerPanel(
                             createdHosted.remove(ref.key)
                             missedHosted.remove(ref.key)
                             removedHosted.add(ref.key)
+                            ordering.prune { it != ref.key }
                             sync()
                         }
                     }
@@ -337,12 +392,41 @@ class AgentManagerPanel(
             project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
-        controller.onReload = { sync(); orphanBanner?.refresh() }
+        controller.onReload = {
+            // Failed listings have no main checkout; only reconcile a usable local snapshot.
+            controller.current?.let { current ->
+                val keys = (0 until controller.model.size).mapTo(HashSet()) { controller.model.getElementAt(it).id }
+                keys.add(current.id)
+                ordering.prune { key ->
+                    if (HostedIDs.isWorkspace(key) || key in keys || controller.progress(key) != null) {
+                        missed.remove(key)
+                        return@prune true
+                    }
+                    // A temporary filesystem gap can omit a worktree from a usable listing.
+                    val count = (missed[key] ?: 0) + 1
+                    if (count < WORKTREE_MISS_LIMIT) {
+                        missed[key] = count
+                        return@prune true
+                    }
+                    missed.remove(key)
+                    false
+                }
+            }
+            sync()
+            orphanBanner?.refresh()
+        }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
-        controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
+        controller.onRemoveSuccess = { item, _ -> onRemoved(item) }
         controller.onActivityChanged = {
             sync()
+            project?.service<WorktreeStatusService>()?.refreshStats()
+        }
+        // A checkout that moved to another branch invalidates the PR resolved against the old one.
+        // Drop that badge at once and reload; waiting for the scheduled poll would leave the previous
+        // branch's pull request sitting beside the new branch name.
+        controller.onBranchChanged = { paths ->
+            project?.service<WorktreeStatusService>()?.branchChanged(paths)
             project?.service<WorktreeStatusService>()?.refreshStats()
         }
         bindStatus()
@@ -405,6 +489,22 @@ class AgentManagerPanel(
 
     internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
         controller.move(sessionId, directory, surface)
+
+    @RequiresEdt
+    internal fun createSection() {
+        val section = ordering.create(KiloBundle.message("agentManager.section.new"))
+        sync()
+        renameSection(section.key)
+    }
+
+    @RequiresEdt
+    private fun renameSection(key: String) {
+        tree.rename(
+            key,
+            current = { ordering.section(it)?.title },
+            commit = { id, name -> ordering.rename(id, name); sync() },
+        )
+    }
 
     @RequiresEdt
     internal fun createHosted(anchor: Component) {
@@ -506,6 +606,7 @@ class AgentManagerPanel(
 
     @RequiresEdt
     private fun closeHostedPending(target: Project, pending: HostedWorkspaceDto) {
+        ordering.prune { it != pending.ref.key }
         service<HostedWorkspaceCache>().remove(pending.ref)
         target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(pending))
     }
@@ -513,6 +614,7 @@ class AgentManagerPanel(
     @RequiresEdt
     internal fun dismissHosted(item: HostedWorkspaceDto) {
         val target = project ?: return
+        ordering.prune { it != item.ref.key }
         target.service<HostedManagementService>().dismiss(item.ref)
         service<HostedWorkspaceCache>().remove(item.ref)
         target.service<KiloVfsManager>().close(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(item))
@@ -708,14 +810,17 @@ class AgentManagerPanel(
 
     /**
      * Reacts to a confirmed deletion. When the removed worktree is the one on screen, advances the
-     * selection to the row that slid into its slot ([index] now points at the following row, or the
-     * last row when the removed row was last) and opens it before closing the deleted tab so the
-     * neighbour becomes the active editor. Deleting a background row leaves the selection untouched.
+     * selection to the next worktree in display order (or the previous one when it was last) and
+     * opens it before closing the deleted tab so the neighbour becomes the active editor.
+     * Deleting a background row leaves the selection untouched.
      *
      * The active editor is read before close(item) as the ground-truth "shown" signal.
      */
-    private fun onRemoved(item: WorktreeDto, index: Int) {
-        if (currentEditorWorktree() == item.id) advance(neighbor(index))
+    @RequiresEdt
+    private fun onRemoved(item: WorktreeDto) {
+        if (currentEditorWorktree() == item.id) advance(ordering.neighbors(item.id).firstNotNullOfOrNull(this::item))
+        missed.remove(item.id)
+        ordering.prune { it != item.id }
         close(item)
     }
 
@@ -732,16 +837,6 @@ class AgentManagerPanel(
         }
         if (tree.select(next.id)) tree.focus()
         open(next, focus = false)
-    }
-
-    /**
-     * The row that slides into [index] after a removal: the following worktree, or the last row
-     * when the removed row was last. Null when the list is now empty.
-     */
-    private fun neighbor(index: Int): WorktreeDto? {
-        val size = controller.model.size
-        if (size == 0) return null
-        return controller.model.getElementAt(index.coerceIn(0, size - 1))
     }
 
     private fun notifyCreateFailed(failure: CreateFailure) {
@@ -825,7 +920,16 @@ class AgentManagerPanel(
         Disposer.register(this) { controller.model.removeListDataListener(listener) }
     }
 
+    @RequiresEdt
     private fun sync() {
+        ordering.prune { key ->
+            when {
+                key.startsWith("pending:") -> controller.isPending(key)
+                HostedIDs.parseWorkspace(key)?.second?.startsWith(HostedWorkspaceEditorKind.PENDING_PREFIX) == true ->
+                    key in pendingHosted
+                else -> true
+            }
+        }
         val current = controller.current?.let { item ->
             WorktreeRow(
                 item,
@@ -838,7 +942,7 @@ class AgentManagerPanel(
                 running = running.contains(normalizeWorktreePath(item.path)),
             )
         }
-val local = (0 until controller.model.size).map {
+        val local = (0 until controller.model.size).map {
             val item = controller.model.getElementAt(it)
             val key = normalizeWorktreePath(item.path)
             val pull = prs[key]
@@ -883,13 +987,7 @@ val local = (0 until controller.model.size).map {
             emptyList()
         }
         tree.update(
-            buildList {
-                current?.let { add(ActiveTreeNode(it)) }
-                add(ActiveTreeNode(groupRow, local.map { ActiveTreeNode(it) }))
-                if (hostedState.enabled) {
-                    add(ActiveTreeNode(cloudRow, hosted.map { ActiveTreeNode(it) }))
-                }
-            },
+            ordering.nodes(listOfNotNull(current) + local + hosted, current?.key),
             ActiveSelection.Preserve,
         )
     }
@@ -1074,13 +1172,16 @@ val local = (0 until controller.model.size).map {
         controller.onMoveFailure = null
         controller.onRemoveSuccess = null
         controller.onActivityChanged = null
+        controller.onBranchChanged = null
     }
 
+    @RequiresEdt
     override fun uiDataSnapshot(sink: DataSink) {
         project?.let { sink[CommonDataKeys.PROJECT] = it }
         sink[SidePanelKeys.WORKTREE_PANEL] = this
         selectedRow()?.dto?.let { sink[WorktreeDataKeys.WORKTREE] = it }
         (tree.selected() as? HostedWorkspaceRow)?.data?.dto?.let { sink[HostedWorkspaceDataKeys.WORKSPACE] = it }
+        (tree.selected() as? AgentManagerLayout.Section)?.let { sink[SECTION] = it.key }
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
     }
 
@@ -1092,12 +1193,20 @@ val local = (0 until controller.model.size).map {
     private inner class RowDeleteProvider : DeleteProvider {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
+        @RequiresEdt
         override fun canDeleteElement(dataContext: DataContext): Boolean {
+            if (tree.selected() is AgentManagerLayout.Section) return true
             selectedRow()?.let { return deletable(it.dto) }
             return selectedHosted()?.let(::deletableHosted) ?: false
         }
 
+        @RequiresEdt
         override fun deleteElement(dataContext: DataContext) {
+            (tree.selected() as? AgentManagerLayout.Section)?.let { section ->
+                ordering.delete(section.key)
+                sync()
+                return
+            }
             selectedRow()?.let { row ->
                 if (!deletable(row.dto)) return
                 showDeletePopup(row.dto)
@@ -1123,34 +1232,28 @@ val local = (0 until controller.model.size).map {
     ) {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
+        @RequiresEdt
         override fun update(e: AnActionEvent) {
-            e.presentation.isEnabled = renameable(selectedRow()?.dto)
+            e.presentation.isEnabled = tree.selected() is AgentManagerLayout.Section || renameable(selectedRow()?.dto)
         }
 
+        @RequiresEdt
         override fun actionPerformed(e: AnActionEvent) {
+            (tree.selected() as? AgentManagerLayout.Section)?.let { renameSection(it.key); return }
             selectedRow()?.dto?.takeIf(::renameable)?.let { beginRename(it) }
         }
     }
 
     private companion object {
+        val SECTION = DataKey.create<String>("kilo.agentManager.section")
         // Wider than a chat card popup: PR titles are conventional commit lines and the summary row puts
         // the committed and uncommitted counts beside each other. This is only a cap — the popup asks for
         // the width its content needs and [SidePopupGeometry.beside] trims it to the room beside the row,
         // so a narrow window gets a narrow popup rather than one re-pointed above the list.
         const val POPUP_WIDTH = 1840
         const val POPUP_HEIGHT = 320
-    }
-
-    private inner class LocalWorktreesRow : ActiveItem {
-        override val key: String get() = "kilo:worktree-group:local"
-        override val identity: Any get() = key
-        override val title: String get() = KiloBundle.message("worktree.group.local")
-    }
-
-    private inner class CloudWorktreesRow : ActiveItem {
-        override val key: String get() = "kilo:worktree-group:cloud"
-        override val identity: Any get() = key
-        override val title: String get() = KiloBundle.message("worktree.section.cloud")
+        /** How often a visible Agent Manager checks for a branch switched outside this list. */
+        const val BRANCH_POLL = 10_000
     }
 
     private inner class WorktreeRow(
