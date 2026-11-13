@@ -291,9 +291,10 @@ be broken. Check every auto-merged file for:
   from `.kilo/skills/v2-migration/SKILL.md`. Run the same tests on `origin/v2`
   and classify each failure: new from the sync, or already failing before
 - `bun script/check-opencode-annotations.ts`, `bun script/check-shared-patches.ts`
-  and `bun script/check-mirrors.ts`. They compare with the pinned upstream
+  and `bun script/check-mirrors.ts --drift`. They compare with the pinned upstream
   release, which is the new release once the merge commit exists. Run them
-  after the commit
+  after the commit. The sync is not finished while a mirror is behind: re-merge
+  the copy and record the new SHA before you hand the branch off
 - the self-test from the v2-migration skill: `bun dev` quick check and a TUI
   check (the Kilo executable on `v2` must keep working)
 

@@ -20,7 +20,7 @@ async function run(r: Repo, ...args: string[]) {
   return { code: await proc.exited, stdout, output: stdout + (await new Response(proc.stderr).text()) }
 }
 
-test("a registered mirror matches the pinned upstream file", async () => {
+test("a registered mirror matches the registry structure without a pin", async () => {
   await using r = await repo()
   await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
   const pin = await r.commit("upstream")
@@ -31,13 +31,18 @@ test("a registered mirror matches the pinned upstream file", async () => {
   })
   await r.commit("kilo")
 
-  const result = await run(r, "--pin", pin)
+  const result = await run(r)
   expect(result.code).toBe(0)
   expect(result.output).toContain("check-mirrors: ok")
   expect(result.output).toContain("1 mirror(s) registered, 1 marker(s) found")
+  expect(result.stdout).not.toContain("At pin")
+
+  const drift = await run(r, "--drift", "--pin", pin)
+  expect(drift.code).toBe(0)
+  expect(drift.stdout).toContain("At pin")
 })
 
-test("an upstream change fails with the recorded intent until the copy and the SHA are updated", async () => {
+test("the structure check ignores drift, and --drift fails until the SHA is recorded", async () => {
   await using r = await repo()
   await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
   const pin = await r.commit("upstream")
@@ -49,14 +54,21 @@ test("an upstream change fails with the recorded intent until the copy and the S
 
   await r.write("packages/cli/src/thing.ts", "export const upstream = 2\n")
   const next = await r.commit("upstream change")
-  const changed = await run(r, "--pin", next)
+
+  // This is what CI runs: a normal PR cannot re-merge a copy, so drift is not its failure.
+  expect((await run(r)).code).toBe(0)
+
+  const changed = await run(r, "--drift", "--pin", next)
   expect(changed.code).toBe(1)
   expect(changed.output).toContain("changed upstream")
   expect(changed.output).toContain("adds the kilo copy")
 
+  // --pin implies drift, so the sync never has to remember both flags.
+  expect((await run(r, "--pin", next)).code).toBe(1)
+
   const current = await r.git("rev-parse", `${next}:packages/cli/src/thing.ts`)
   await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: current, changes: "adds the kilo copy" } })
-  expect((await run(r, "--pin", next)).code).toBe(0)
+  expect((await run(r, "--drift", "--pin", next)).code).toBe(0)
 })
 
 test("a custom registry path is named in the error and a missing registry fails", async () => {
@@ -66,14 +78,14 @@ test("a custom registry path is named in the error and a missing registry fails"
   const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
   const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
-  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: "0".repeat(40), changes: "adds the kilo copy" } }, "custom/mirrors.json")
+  await registry(r, { "packages/cli/src/other.ts": { mirror, sha, changes: "adds the kilo copy" } }, "custom/mirrors.json")
   await r.commit("kilo")
 
-  const changed = await run(r, "--pin", pin, "--registry", "custom/mirrors.json")
-  expect(changed.code).toBe(1)
-  expect(changed.output).toContain("custom/mirrors.json")
+  const unregistered = await run(r, "--registry", "custom/mirrors.json")
+  expect(unregistered.code).toBe(1)
+  expect(unregistered.output).toContain("custom/mirrors.json")
 
-  const missing = await run(r, "--pin", pin, "--registry", "custom/absent.json")
+  const missing = await run(r, "--registry", "custom/absent.json")
   expect(missing.code).toBe(1)
   expect(missing.output).toContain("registry not found: custom/absent.json")
 })
@@ -88,10 +100,10 @@ test("a CRLF copy marker is read", async () => {
   await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, changes: "adds the kilo copy" } })
   await r.commit("kilo")
 
-  expect((await run(r, "--pin", pin)).code).toBe(0)
+  expect((await run(r)).code).toBe(0)
 })
 
-test("an unregistered marker, a marker mismatch, a missing copy and a removed upstream file fail", async () => {
+test("an unregistered marker, a marker mismatch and a missing copy fail without a pin", async () => {
   await using r = await repo()
   await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
   const pin = await r.commit("upstream")
@@ -102,23 +114,33 @@ test("an unregistered marker, a marker mismatch, a missing copy and a removed up
   await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, changes: "adds the kilo copy" } })
   await r.commit("kilo")
 
-  const unregistered = await run(r, "--pin", pin)
+  const unregistered = await run(r)
   expect(unregistered.code).toBe(1)
   expect(unregistered.output).toContain("unregistered mirror: packages/kilo-probe/src/other.ts")
 
   await r.write(mirror, "// kilo_mirror: packages/cli/src/elsewhere.ts\nexport const kilo = 1\n")
-  const mismatch = await run(r, "--pin", pin)
+  const mismatch = await run(r)
   expect(mismatch.code).toBe(1)
   expect(mismatch.output).toContain("must start with")
 
   await r.remove(mirror)
-  const missing = await run(r, "--pin", pin)
+  const missing = await run(r)
   expect(missing.code).toBe(1)
   expect(missing.output).toContain("mirror is missing")
+})
 
+test("a removed upstream file is drift, not structure", async () => {
+  await using r = await repo()
+  const before = await r.commit("before the file existed")
+  await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
+  await r.commit("upstream")
+  const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
-  await registry(r, { "packages/cli/src/gone.ts": { mirror, sha, changes: "adds the kilo copy" } })
-  const removed = await run(r, "--pin", pin)
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: "0".repeat(40), changes: "adds the kilo copy" } })
+  await r.commit("kilo")
+
+  expect((await run(r)).code).toBe(0)
+  const removed = await run(r, "--drift", "--pin", before)
   expect(removed.code).toBe(1)
   expect(removed.output).toContain("no longer exists at the pin")
 })

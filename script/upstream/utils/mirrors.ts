@@ -6,9 +6,12 @@
  * conflict and no report line. Each entry records the upstream blob SHA last verified against the
  * pinned release and the intent of Kilo's differences.
  *
- * `script/check-mirrors.ts` fails when the pinned upstream file no longer has that SHA, when a copy
- * has no entry, or when an entry and its copy disagree about the upstream path. The fix is to
- * re-merge the upstream change into the copy with the intent in view, then record the new SHA.
+ * The registry has two kinds of problem, and they belong to different people:
+ * - Structure: a copy without an entry, an entry whose copy is missing, a marker naming another
+ *   path. The PR that adds the copy fixes it, so this is checked on every PR and needs no pin.
+ * - Drift: the pinned upstream file no longer has the recorded SHA. Only an upstream sync can take
+ *   that change, re-merge it into the copy and record the new SHA, so the sync checks it and does
+ *   not finish while a copy is behind (`script/check-mirrors.ts --drift`).
  */
 
 import { $ } from "bun"
@@ -30,8 +33,8 @@ export interface Mirrors {
 export interface MirrorState {
   upstream: string
   entry: MirrorEntry
-  /** Upstream blob SHA at the pin, or null when the file no longer exists there */
-  current: string | null
+  /** Upstream blob SHA at the pin, null when the file no longer exists there, undefined when no pin was checked */
+  current?: string | null
   exists: boolean
   /** Upstream path declared by the copy's `kilo_mirror:` marker */
   declared: string | null
@@ -88,7 +91,8 @@ export async function marked(root: string): Promise<MarkedMirror[]> {
   return found.filter((item): item is MarkedMirror => item !== null)
 }
 
-export async function inspect(root: string, pin: string, file = REGISTRY) {
+/** Read the registry and the copies. Blob lookups happen only with a pin, so the structure check needs none. */
+export async function inspect(root: string, file = REGISTRY, pin?: string) {
   const registry = await readMirrors(root, file)
   const states = await Promise.all(
     Object.entries(registry.mirrors).map(async ([upstream, entry]): Promise<MirrorState> => {
@@ -97,7 +101,7 @@ export async function inspect(root: string, pin: string, file = REGISTRY) {
       return {
         upstream,
         entry,
-        current: await blob(pin, upstream),
+        current: pin ? await blob(pin, upstream) : undefined,
         exists,
         declared: exists ? declared(await handle.slice(0, HEAD).text()) : null,
       }
@@ -108,29 +112,23 @@ export async function inspect(root: string, pin: string, file = REGISTRY) {
 
 export function status(state: MirrorState): "ok" | "changed" | "removed" | "missing" | "unmarked" {
   if (state.current === null) return "removed"
-  if (state.current !== state.entry.sha) return "changed"
+  if (state.current !== undefined && state.current !== state.entry.sha) return "changed"
   if (!state.exists) return "missing"
   if (state.declared !== state.upstream) return "unmarked"
   return "ok"
 }
 
+/** Problems the PR that adds or edits a copy can fix without knowing the pin. */
 export function problems(states: MirrorState[], marked: MarkedMirror[], file = REGISTRY): string[] {
   const registered = new Map(states.map((state) => [state.upstream, state.entry.mirror]))
   return [
     ...states.flatMap((state) => {
-      const errors: string[] = []
-      if (state.current === null)
-        errors.push(`${state.upstream} no longer exists at the pin. Remove ${state.entry.mirror} or update ${file}`)
-      else if (state.current !== state.entry.sha)
-        errors.push(
-          `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror} with this intent: ${state.entry.changes} Then record the new SHA in ${file}`,
-        )
-      if (!state.exists) errors.push(`mirror is missing: ${state.entry.mirror}`)
-      else if (state.declared !== state.upstream)
-        errors.push(
+      if (!state.exists) return [`mirror is missing: ${state.entry.mirror}`]
+      if (state.declared !== state.upstream)
+        return [
           `${state.entry.mirror} must start with \`// ${MARKER} ${state.upstream}\` (found ${state.declared ?? "no marker"})`,
-        )
-      return errors
+        ]
+      return []
     }),
     ...marked
       .filter((item) => !registered.has(item.upstream))
@@ -141,4 +139,16 @@ export function problems(states: MirrorState[], marked: MarkedMirror[], file = R
       return [`${item.file} declares ${item.upstream}, which is registered to ${mirror}`]
     }),
   ]
+}
+
+/** Copies whose upstream file changed or disappeared since the recorded SHA. Needs a pin. */
+export function drift(states: MirrorState[], file = REGISTRY): string[] {
+  return states.flatMap((state) => {
+    if (state.current === null)
+      return [`${state.upstream} no longer exists at the pin. Remove ${state.entry.mirror} or update ${file}`]
+    if (state.current === undefined || state.current === state.entry.sha) return []
+    return [
+      `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror} with this intent: ${state.entry.changes} Then record the new SHA in ${file}`,
+    ]
+  })
 }

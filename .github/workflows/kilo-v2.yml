@@ -164,7 +164,9 @@ jobs:
       - name: Count shared upstream patches
         run: bun script/check-shared-patches.ts
 
-      - name: Check mirror drift
+      - name: Check the mirror registry
+        # Structure only: every `// kilo_mirror:` copy is registered and marked. Drift against the
+        # pinned release belongs to the sync, which runs `bun script/check-mirrors.ts --drift`.
         run: bun script/check-mirrors.ts
 
   # The generated map files change with every merge, so parallel PRs that commit them always conflict and go stale.
