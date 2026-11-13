@@ -84,12 +84,14 @@ internal class SpeechRecorder internal constructor(
     private var starting = false
     private var active: Capture? = null
     private val closing = mutableSetOf<Capture>()
+    private var unavailable: Throwable? = null
     private var disposed = false
 
     override suspend fun start(
         cap: (String, Long) -> Unit,
         fail: (String, Throwable) -> Unit,
     ): String = withContext(NonCancellable) {
+        synchronized(lock) { unavailable }?.let { throw SpeechRecorderUnavailableException(it) }
         runCatching {
             withTimeout(timeout) {
                 while (true) {
@@ -98,7 +100,8 @@ internal class SpeechRecorder internal constructor(
                 }
             }
         }.getOrElse { err ->
-            throw IllegalStateException(KiloBundle.message("prompt.speech.microphone"), err)
+            markUnavailable(err)
+            throw SpeechRecorderUnavailableException(err)
         }
         synchronized(lock) {
             check(!disposed) { "Speech recorder is disposed" }
@@ -139,9 +142,14 @@ internal class SpeechRecorder internal constructor(
         }
         val attempt = finish(item)
         return withContext(NonCancellable + Dispatchers.IO) {
-            withTimeout(timeout) {
-                attempt.await().getOrThrow()
-                item.done.await()
+            runCatching {
+                withTimeout(timeout) {
+                    attempt.await().getOrThrow()
+                    item.done.await()
+                }
+            }.getOrElse { err ->
+                markUnavailable(err)
+                throw SpeechRecorderUnavailableException(err)
             }
             settle(item)
             item.error.get()?.let { throw it }
@@ -158,7 +166,10 @@ internal class SpeechRecorder internal constructor(
             closing.add(value)
             value
         }
-        finish(item)
+        val attempt = finish(item)
+        cs.launch {
+            attempt.await().exceptionOrNull()?.let(::markUnavailable)
+        }
     }
 
     override fun dispose() {
@@ -288,10 +299,22 @@ internal class SpeechRecorder internal constructor(
     }
 
     private fun settle(item: Capture) {
-        synchronized(lock) { closing.remove(item) }
+        synchronized(lock) {
+            closing.remove(item)
+            if (closing.isEmpty()) unavailable = null
+        }
         item.closed.complete(Unit)
     }
+
+    private fun markUnavailable(err: Throwable) {
+        synchronized(lock) { unavailable = err }
+    }
 }
+
+private class SpeechRecorderUnavailableException(cause: Throwable) : IllegalStateException(
+    "Speech recorder is unavailable because the previous microphone could not close",
+    cause,
+)
 
 interface SpeechCapture {
     suspend fun start(

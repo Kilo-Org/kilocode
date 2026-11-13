@@ -142,14 +142,16 @@ class SpeechRecorderTest {
             val id = recorder.start { _, _ -> }
             reading.await("audio read did not start")
 
-            val err = runCatching { recorder.stop(id) }.exceptionOrNull()
-            assertIs<TimeoutCancellationException>(err)
+            val err = assertIs<IllegalStateException>(runCatching { recorder.stop(id) }.exceptionOrNull())
+            assertEquals("Speech recorder is unavailable because the previous microphone could not close", err.message)
+            assertIs<TimeoutCancellationException>(err.cause)
             closing.await("stop did not attempt to close the audio line")
 
             val restart = scope.async { runCatching { recorder.start { _, _ -> } }.exceptionOrNull() }
             val restartErr = withTimeout(TimeUnit.SECONDS.toMillis(WAIT_SECONDS)) { restart.await() }
             assertIs<IllegalStateException>(restartErr)
-            assertEquals(KiloBundle.message("prompt.speech.microphone"), restartErr.message)
+            assertEquals("Speech recorder is unavailable because the previous microphone could not close", restartErr.message)
+            assertIs<TimeoutCancellationException>(restartErr.cause)
 
             recorder.dispose()
             line.closed.await("dispose did not retry the timed-out close")
@@ -184,12 +186,14 @@ class SpeechRecorderTest {
             reading.await("audio read did not start")
 
             val err = assertIs<IllegalStateException>(runCatching { recorder.stop(id) }.exceptionOrNull())
-            assertEquals(failure.message, err.message)
+            assertEquals("Speech recorder is unavailable because the previous microphone could not close", err.message)
+            assertEquals(failure.message, err.cause?.message)
 
             val restart = scope.async { runCatching { recorder.start { _, _ -> } }.exceptionOrNull() }
             val restartErr = withTimeout(TimeUnit.SECONDS.toMillis(WAIT_SECONDS)) { restart.await() }
             assertIs<IllegalStateException>(restartErr)
-            assertEquals(KiloBundle.message("prompt.speech.microphone"), restartErr.message)
+            assertEquals("Speech recorder is unavailable because the previous microphone could not close", restartErr.message)
+            assertEquals(failure.message, restartErr.cause?.message)
 
             recorder.dispose()
             line.closed.await("dispose did not retry the throwing close")

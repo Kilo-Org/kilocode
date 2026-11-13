@@ -70,6 +70,8 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var configUpdateReturnStale = false
     var afterConfig: (suspend (ConfigPatchDto) -> Unit)? = null
     var speechModels = listOf(SpeechModelDto("openai/whisper-1", "Whisper"))
+    var speechModelsError: Exception? = null
+    var speechModelCalls = 0
     var speechResult = SpeechResultDto("transcript")
     val speechDirectories = mutableListOf<String?>()
     val speechRequests = mutableListOf<SpeechRequestDto>()
@@ -100,6 +102,8 @@ class FakeAppRpcApi : KiloAppRpcApi {
 
     override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> {
         assertNotEdt("transcriptionModels")
+        speechModelCalls++
+        speechModelsError?.let { throw it }
         speechDirectories.add(directory)
         return speechModels
     }

@@ -76,7 +76,10 @@ class SpeechInputActionTest : BasePlatformTestCase() {
 
         assertTrue(start.contains("class=\"ai.kilocode.client.actions.SpeechInputAction\""))
         assertTrue(start.contains("keymap=\"\$default\""))
-        assertTrue(start.contains("first-keystroke=\"control K\""))
+        assertEquals(3, "first-keystroke=\"control K\"".toRegex().findAll(start).count())
+        assertTrue(start.contains("keymap=\"Mac OS X\""))
+        assertTrue(start.contains("keymap=\"Mac OS X 10.5+\""))
+        assertFalse(start.contains("first-keystroke=\"meta K\""))
     }
 
     private fun event(action: SpeechInputAction, ctx: SpeechInputContext?): AnActionEvent {

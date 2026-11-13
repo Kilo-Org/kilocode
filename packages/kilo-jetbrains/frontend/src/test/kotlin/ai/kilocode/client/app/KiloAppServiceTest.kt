@@ -77,6 +77,25 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         assertTrue(request.data.contentEquals(byteArrayOf(4, 5, 6)))
     }
 
+    fun `test transcription caches selected model`() = runBlocking(Dispatchers.Default) {
+        rpc.speechModels = listOf(SpeechModelDto("speech/model", "Speech"))
+
+        app.transcribe("/repo", byteArrayOf(1))
+        app.transcribe("/repo", byteArrayOf(2))
+
+        assertEquals(1, rpc.speechModelCalls)
+        assertEquals(listOf("speech/model", "speech/model"), rpc.speechRequests.map { it.model })
+    }
+
+    fun `test transcription falls back to default model when discovery fails`() = runBlocking(Dispatchers.Default) {
+        rpc.speechModelsError = IllegalStateException("catalog unavailable")
+
+        val result = app.transcribe("/repo", byteArrayOf(1))
+
+        assertEquals("transcript", result)
+        assertEquals("openai/whisper-1", rpc.speechRequests.single().model)
+    }
+
     fun `test fetchCoreInfoAsync dedupes in flight requests`() = runBlocking(Dispatchers.Default) {
         rpc.cliInfoGate = CompletableDeferred()
         val seen = mutableListOf<CoreInfo?>()

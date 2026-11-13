@@ -314,6 +314,12 @@
                 class="ai.kilocode.client.actions.SpeechInputAction">
             <keyboard-shortcut keymap="$default"
                                first-keystroke="control K"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="control K"
+                               replace-all="true"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="control K"
+                               replace-all="true"/>
         </action>
 
         <action id="Kilo.SubmitDialog"

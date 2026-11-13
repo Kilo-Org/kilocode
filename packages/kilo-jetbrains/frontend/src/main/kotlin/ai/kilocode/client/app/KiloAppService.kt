@@ -58,6 +58,8 @@ class KiloAppService internal constructor(
     }
 
     private val started = AtomicBoolean(false)
+    @Volatile
+    private var speechModel: String? = null
 
     /** Core version and platform from the backend, or null if unknown. */
     @Volatile
@@ -145,11 +147,17 @@ class KiloAppService internal constructor(
         call { transcriptionModels(directory) }
 
     suspend fun transcribe(directory: String?, data: ByteArray): String {
-        val models = transcriptionModels(directory)
-        val model = models.firstOrNull { it.id == DEFAULT_SPEECH_MODEL } ?: models.firstOrNull()
-            ?: error("No speech-to-text models are available")
+        val model = speechModel ?: runCatching { transcriptionModels(directory) }
+            .onFailure { LOG.warn("speech model discovery failed; using default", it) }
+            .getOrDefault(emptyList())
+            .let { models ->
+                models.firstOrNull { it.id == DEFAULT_SPEECH_MODEL }?.id
+                    ?: models.firstOrNull()?.id
+                    ?: DEFAULT_SPEECH_MODEL
+            }
+            .also { speechModel = it }
         return call {
-            transcribe(directory, SpeechRequestDto(data = data, model = model.id)).text
+            transcribe(directory, SpeechRequestDto(data = data, model = model)).text
         }
     }
 
@@ -499,6 +507,7 @@ class KiloAppService internal constructor(
     }
 
     private fun setProfile(profile: ProfileDto?) {
+        speechModel = null
         val current = _state.value
         val progress = current.progress?.copy(
             profile = if (profile == null) ProfileStatusDto.NOT_LOGGED_IN else ProfileStatusDto.LOADED,
