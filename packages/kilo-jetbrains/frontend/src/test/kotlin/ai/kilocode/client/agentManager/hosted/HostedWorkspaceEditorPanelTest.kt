@@ -38,6 +38,7 @@ import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileEditorManager
 import ai.kilocode.rpc.KiloHostedRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -637,6 +638,39 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
                 (descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue as ActiveItem).key)
             assertEquals(1, descendants(panel).filterIsInstance<SessionUi>().size)
         }
+    }
+
+    fun testEmptyWorkspaceRefreshRetainsOneBlankSessionAndReleasesItsEditors() {
+        edtWait { Disposer.dispose(panel) }
+        coroutines.drain()
+        val baseline = edtWait { EditorFactory.getInstance().allEditors.size }
+        panel = edtWait { HostedWorkspaceEditorPanel(testRootDisposable, project, ref, "Cloud workspace") }
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionUi>().singleOrNull()?.id == key
+        } })
+
+        rpc.rootSessions = emptyList()
+        hosted.refresh(project.basePath.orEmpty())
+
+        assertTrue("An empty workspace must finish creating its blank session", coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<SessionUi>().singleOrNull()?.blank == true
+        } })
+        coroutines.drain()
+        edtWait {
+            val blank = descendants(panel).filterIsInstance<SessionUi>().single()
+            val count = descendants(panel).size
+            val editors = EditorFactory.getInstance().allEditors.size
+            val model = controller(blank).model
+            repeat(200) {
+                model.loadHistory(emptyList())
+                assertSame(blank, descendants(panel).filterIsInstance<SessionUi>().single())
+                assertEquals(count, descendants(panel).size)
+                assertEquals(editors, EditorFactory.getInstance().allEditors.size)
+            }
+            Disposer.dispose(panel)
+        }
+        coroutines.drain()
+        edtWait { assertEquals(baseline, EditorFactory.getInstance().allEditors.size) }
     }
 
     fun testCurrentSessionIsReobservedAfterSignInRestoresTheGate() {
