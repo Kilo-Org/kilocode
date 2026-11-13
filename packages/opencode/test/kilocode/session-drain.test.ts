@@ -1,5 +1,6 @@
 import { expect } from "bun:test"
-import { Deferred, Effect, Exit, Fiber, Scheduler } from "effect"
+import { Deferred, Effect, Exit, Fiber, Logger, Scheduler } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import { InstanceState } from "@/effect/instance-state"
 import { InstanceRef } from "@/effect/instance-ref"
 import { disposeInstance, registerDisposer } from "@/effect/instance-registry"
@@ -227,4 +228,39 @@ it.instance(
     yield* drain.track(id, Effect.void)
     yield* drain.wait(id)
   }),
+)
+
+it.instance(
+  "reports the holds that keep a drain open while it waits and when its caller cancels",
+  Effect.gen(function* () {
+    const drain = yield* SessionDrain.Service
+    const parent = SessionID.make("ses_drain_report_parent")
+    const child = SessionID.make("ses_drain_report_child")
+    const messages: unknown[] = []
+    const logs = Logger.layer([
+      Logger.make<unknown, void>((options) => {
+        messages.push(options.message)
+      }),
+    ])
+    yield* drain.link(child, parent)
+    const runner = yield* drain.hold(parent, "runner")
+    const background = yield* drain.hold(child, "background ses_drain_report_child")
+    runner()
+    const waiting = yield* drain.wait(parent).pipe(Effect.provide(logs), Effect.forkChild({ startImmediately: true }))
+    yield* TestClock.adjust("59 seconds")
+    expect(messages).toEqual([])
+    yield* TestClock.adjust("1 second")
+    const report = {
+      "session.id": parent,
+      count: 1,
+      pending: [{ session: child, owner: "background ses_drain_report_child", count: 1 }],
+    }
+    expect(messages).toEqual([["session drain pending", { ...report, elapsed: 60_000 }]])
+    yield* TestClock.adjust("1 minute")
+    expect(messages).toHaveLength(2)
+    yield* Fiber.interrupt(waiting)
+    expect(messages.at(-1)).toEqual(["session drain cancelled", { ...report, elapsed: 120_000 }])
+    background()
+    yield* drain.wait(parent)
+  }).pipe(Effect.provide(TestClock.layer())),
 )

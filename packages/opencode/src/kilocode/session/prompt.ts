@@ -201,6 +201,7 @@ export namespace KiloSessionPrompt {
       input.drain.track(
         input.sessionID,
         work.pipe(Effect.ensuring(input.events.publish(Interrupted, { sessionID: input.sessionID }))),
+        "cancel",
       ),
   )
 
