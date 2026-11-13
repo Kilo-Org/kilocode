@@ -108,6 +108,7 @@ export const dict: Record<string, string> = {
   "ui.messagePart.board.route": "{{from}} to {{to}}",
   "ui.messagePart.board.empty": "No agent messages",
   "ui.messagePart.board.stored": "Stored only. Delivery and reading are not confirmed.",
+  "ui.messagePart.board.more": "More messages are available.",
   // kilocode_change end
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
