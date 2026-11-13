@@ -48,6 +48,8 @@ import com.intellij.ui.components.JBHtmlPaneConfiguration
 import com.intellij.ui.components.JBHtmlPaneStyleConfiguration
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.ExtendableHTMLViewFactory
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BasicStroke
@@ -78,8 +80,10 @@ import javax.swing.text.Document
 import javax.swing.text.Element
 import javax.swing.text.Highlighter
 import javax.swing.text.JTextComponent
+import javax.swing.text.html.InlineView
 import javax.swing.text.html.StyleSheet
 import kotlin.reflect.KProperty
+import javax.swing.text.View as SwingView
 
 @Suppress("UnstableApiUsage")
 internal open class MdViewHybrid(
@@ -547,6 +551,29 @@ internal open class MdViewHybrid(
         }
     }
 
+    // The platform's word-break view returns a null-backed Segment that breaks Swing bidi navigation.
+    // Preserve its near-zero geometry while inheriting InlineView's document-backed text.
+    private class Wrap @RequiresEdt constructor(element: Element) : InlineView(element) {
+        companion object {
+            private const val SPAN = 0.01f
+        }
+
+        override fun paint(g: Graphics?, allocation: Shape?) = Unit
+
+        override fun getMinimumSpan(axis: Int): Float = 0f
+
+        override fun getMaximumSpan(axis: Int): Float = if (axis == X_AXIS) 0f else Int.MAX_VALUE.toFloat()
+
+        override fun getPreferredSpan(axis: Int): Float = if (axis == X_AXIS) SPAN else 0f
+
+        @RequiresEdt
+        override fun setSize(width: Float, height: Float) = super.setSize(0f, 0f)
+
+        override fun breakView(axis: Int, offset: Int, pos: Float, len: Float): SwingView = this
+
+        override fun getBreakWeight(axis: Int, pos: Float, len: Float): Int = ExcellentBreakWeight
+    }
+
     private fun htmlBlock(body: String, disposable: Disposable): JBHtmlPane {
         val opts = opts()
         return object : JBHtmlPane(
@@ -556,6 +583,10 @@ internal open class MdViewHybrid(
             },
             JBHtmlPaneConfiguration {
                 customStyleSheetProvider { sheet() }
+                extensions(object : ExtendableHTMLViewFactory.Extension {
+                    override fun invoke(element: Element, view: SwingView): SwingView? =
+                        if (element.name.equals("wbr", ignoreCase = true)) Wrap(element) else null
+                })
             },
         ), UiDataProvider {
             // A stationary pointer over scrolling content must keep this pane's hovered link and

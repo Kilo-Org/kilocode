@@ -40,8 +40,13 @@ import kotlinx.coroutines.runBlocking
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
+import java.awt.DefaultKeyboardFocusManager
+import java.awt.KeyboardFocusManager
 import java.awt.event.FocusEvent
+import javax.swing.ComboBoxEditor
+import javax.swing.JComboBox
 import javax.swing.JTextField
+import javax.swing.event.CaretListener
 import javax.swing.plaf.basic.BasicComboBoxUI
 import javax.swing.plaf.basic.BasicComboPopup
 
@@ -219,6 +224,104 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         edt { field().text = "relcan" }
 
         edt { assertEquals("release/candidate", popup().list.selectedValue) }
+    }
+
+    fun `test editing a showing branch picker does not mutate its document notification`() {
+        open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
+
+        edt {
+            val picker = combo()
+            showing(picker) { field, popup, _ ->
+                field.document.remove(field.document.length - 1, 1)
+                assertEquals("mai", field.text)
+                assertFalse(picker.isPopupVisible)
+                UIUtil.dispatchAllInvocationEvents()
+                assertTrue(picker.isPopupVisible)
+                assertEquals("mai", field.text)
+                assertEquals("main", popup.list.selectedValue)
+            }
+        }
+    }
+
+    fun `test opening branch suggestions preserves raw text and reversed selection`() {
+        open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
+
+        edt {
+            val picker = combo()
+            showing(picker) { field, popup, _ ->
+                field.text = " relcan "
+                field.caret.setDot(7)
+                field.caret.moveDot(2)
+                UIUtil.dispatchAllInvocationEvents()
+
+                assertTrue(picker.isPopupVisible)
+                assertEquals(" relcan ", field.text)
+                assertEquals(7, field.caret.mark)
+                assertEquals(2, field.caret.dot)
+                assertEquals("release/candidate", popup.list.selectedValue)
+            }
+        }
+    }
+
+    fun `test branch suggestions ignore stale edits and stay closed after selection`() {
+        open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
+
+        edt {
+            val picker = combo()
+            showing(picker) { field, popup, _ ->
+                val count = picker.componentCount
+                repeat(200) { index -> field.text = if (index % 2 == 0) "relcan" else "refui" }
+                field.text = ""
+                UIUtil.dispatchAllInvocationEvents()
+                assertFalse(picker.isPopupVisible)
+                assertEquals(0, (picker.ui as Popup).opens)
+
+                field.text = "refui"
+                UIUtil.dispatchAllInvocationEvents()
+                assertTrue(picker.isPopupVisible)
+                assertEquals("refui", field.text)
+                assertEquals("feature/refactor-ui", popup.list.selectedValue)
+                assertEquals(1, (picker.ui as Popup).opens)
+                assertSame(field, picker.editor.editorComponent)
+                assertEquals(count, picker.componentCount)
+                assertEquals(3, picker.itemCount)
+
+                picker.selectedItem = "feature/refactor-ui"
+                picker.isPopupVisible = false
+                UIUtil.dispatchAllInvocationEvents()
+                assertFalse(picker.isPopupVisible)
+                assertEquals("feature/refactor-ui", field.text)
+                assertEquals(1, (picker.ui as Popup).opens)
+            }
+        }
+    }
+
+    fun `test queued branch suggestions cancel on focus loss removal and disabling`() {
+        open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
+
+        edt {
+            val picker = combo()
+            showing(picker) { field, _, focus ->
+                field.text = "relcan"
+                field.focusListeners.forEach { it.focusLost(FocusEvent(field, FocusEvent.FOCUS_LOST)) }
+                focus.focus(null)
+                focus.focus(field)
+                UIUtil.dispatchAllInvocationEvents()
+                assertFalse(picker.isPopupVisible)
+
+                field.text = "refui"
+                picker.removeNotify()
+                picker.addNotify()
+                focus.focus(field)
+                UIUtil.dispatchAllInvocationEvents()
+                assertFalse(picker.isPopupVisible)
+
+                field.text = "relcan"
+                picker.isEnabled = false
+                UIUtil.dispatchAllInvocationEvents()
+                assertFalse(picker.isPopupVisible)
+            }
+        }
     }
 
     fun `test empty base branch restores default on focus lost`() {
@@ -527,6 +630,63 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
+
+    private fun showing(picker: ComboBox<*>, block: (JTextField, BasicComboPopup, Focus) -> Unit) {
+        val field = picker.editor.editorComponent as JTextField
+        picker.setUI(Popup(picker.editor))
+        assertSame(field, picker.editor.editorComponent)
+        // Accessibility screen coordinates require a native host window, which headless tests lack.
+        (field.accessibleContext as? CaretListener)?.let(field::removeCaretListener)
+        field.text = picker.selectedItem?.toString().orEmpty()
+        val popup = picker.accessibleContext.getAccessibleChild(0) as BasicComboPopup
+        val root = JBPanel<Nothing>(BorderLayout()).apply {
+            add(picker)
+            setSize(400, 100)
+            addNotify()
+            doLayout()
+        }
+        val original = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        val owner = original.focusOwner
+        val focus = Focus()
+        KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
+        focus.focus(field)
+        try {
+            assertTrue(picker.isShowing)
+            assertTrue(field.isFocusOwner)
+            block(field, popup, focus)
+        } finally {
+            picker.isPopupVisible = false
+            root.removeNotify()
+            focus.focus(owner)
+            KeyboardFocusManager.setCurrentKeyboardFocusManager(original)
+            UIUtil.dispatchAllInvocationEvents()
+        }
+    }
+
+    private class Focus : DefaultKeyboardFocusManager() {
+        fun focus(component: Component?) = setGlobalFocusOwner(component)
+    }
+
+    // Keep ComboBox's real editor configuration while avoiding native popup windows in headless tests.
+    private class Popup(private val delegate: ComboBoxEditor) : BasicComboBoxUI() {
+        private var showing = false
+        var opens = 0
+            private set
+
+        override fun createEditor(): ComboBoxEditor = delegate
+
+        override fun setPopupVisible(c: JComboBox<*>, visible: Boolean) {
+            if (showing == visible) return
+            showing = visible
+            if (visible) {
+                opens++
+                c.firePopupMenuWillBecomeVisible()
+            }
+            if (!visible) c.firePopupMenuWillBecomeInvisible()
+        }
+
+        override fun isPopupVisible(c: JComboBox<*>): Boolean = showing
+    }
 
     private fun flush() = runBlocking {
         repeat(20) {

@@ -27,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
+    val listCalls = CopyOnWriteArrayList<String>()
     /** Orphan directories [list] reports, alongside [listed]. See [ai.kilocode.rpc.dto.orphans.OrphanDto]. */
     var orphans: List<ai.kilocode.rpc.dto.orphans.OrphanDto> = emptyList()
     val branchesList = CopyOnWriteArrayList<String>()
@@ -78,6 +79,8 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
     var beforeGhStatus: suspend () -> Unit = {}
+    /** Gate for delaying a worktree listing captured before a newer reload. */
+    var beforeList: suspend () -> Unit = {}
     /** Gate for holding a [stats] answer open, so a test can prove polls do not stack. */
     var beforeStats: suspend () -> Unit = {}
     /** Gate for holding a [prStatus] answer open while the test changes state around it. */
@@ -115,7 +118,10 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun list(directory: String): WorktreeListDto {
         assertNotEdt("list")
-        return WorktreeListDto(listed.toList(), orphans = orphans)
+        listCalls.add(directory)
+        val answer = WorktreeListDto(listed.toList(), orphans = orphans)
+        beforeList()
+        return answer
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {

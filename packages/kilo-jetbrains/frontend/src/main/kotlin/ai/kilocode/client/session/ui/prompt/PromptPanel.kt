@@ -224,7 +224,7 @@ class PromptPanel(
             completion?.let { MentionNavigator(ed, it).install() }
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
-            syncHighlights()
+            syncHighlights(ed)
             folds.install(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
@@ -695,11 +695,17 @@ class PromptPanel(
     }
 
     @RequiresEdt
-    private fun syncHighlights() {
-        val provider = completion ?: return
-        val ed = editor.getEditor(false) ?: return
-        highlighters.forEach(ed.markupModel::removeHighlighter)
+    private fun clearHighlights() {
+        // Each handle owns its markup model, which may belong to a replaced editor.
+        highlighters.forEach { if (it.isValid) it.dispose() }
         highlighters.clear()
+    }
+
+    @RequiresEdt
+    private fun syncHighlights(ed: EditorEx? = editor.getEditor(false)) {
+        clearHighlights()
+        val provider = completion ?: return
+        if (ed == null || ed.isDisposed) return
         val length = ed.document.textLength
         val text = ed.document.text
         val caret = ed.caretModel.offset
@@ -756,7 +762,9 @@ class PromptPanel(
         bindCommandRefresh()
     }
 
+    @RequiresEdt
     override fun removeNotify() {
+        clearHighlights()
         root?.removeComponentListener(resize)
         root = null
         bus?.disconnect()

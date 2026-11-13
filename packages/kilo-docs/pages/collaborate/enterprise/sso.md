@@ -62,6 +62,14 @@ After enabling SSO:
 - Manage team access and roles from the **[Organization](/docs/collaborate/adoption-dashboard/overview)** tab.
 - View user activity across the team in the **[Audit Logs](/docs/collaborate/enterprise/audit-logs)** tab
 
+## Directory Sync (SCIM)
+
+Alongside SSO, Kilo Enterprise supports directory sync (SCIM) through WorkOS. When Directory Sync is enabled for your organization, Kilo applies WorkOS Directory Sync events so your identity provider drives provisioning instead of you inviting each person by hand. A directory group maps to a sub-organization, and a person's group memberships add or remove their access to match.
+
+Creating, updating, reactivating, or deactivating a user in your IdP, and changing group membership, are applied automatically. As with SSO, the Kilo team configures Directory Sync in WorkOS for your organization. See [Sub-organizations](/docs/collaborate/enterprise/sub-organizations) for how provisioned sub-organizations are managed.
+
+Before Kilo provisions or binds an account for a directory user, Kilo accepts the user's email domain when it matches your organization's SSO policy domain or is a domain your WorkOS organization reports as verified. Kilo requires DNS verification: a domain verified manually in the WorkOS dashboard is not accepted, because a manual tick does not prove your organization controls the domain, and binding can take over an account someone already holds. A directory user whose address uses any other domain is refused — Kilo neither creates an account nor takes over a pre-existing one. Because only one domain can be the SSO policy domain, the verified-domain check lets a single directory provision people across every mail domain your organization routes through it.
+
 ## Signing in with SSO
 
 When you open an SSO sign-in link, Kilo checks whether your browser is already signed in to Kilo with a different address than the one the link requests. If the addresses differ, sign-in stops and Kilo shows a **Wrong account signed in** page instead of continuing. The page names the address the app requested and the address currently signed in, with a single button that signs out of the current browser session and returns you to SSO sign-in for the expected address. The switch keeps the original callback path and device code, so sign-in completes for the right account once you sign in with it. A matching address continues to the callback path unchanged.
