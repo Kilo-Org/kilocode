@@ -178,6 +178,14 @@ export function chat(input: {
 }
 
 /**
+ * The session a web link opened from this view belongs to. A chat editor tab reports the session it shows; the
+ * sidebar reports its own session, which the host tracks separately.
+ */
+export function linkSession(input: { session?: () => string | undefined } = {}): string | undefined {
+  return input.session ? input.session() : sidebarSession()
+}
+
+/**
  * Connects one webview (the sidebar view or an editor panel) to the server relay and the host messages, and loads
  * the webview bundle. `view` selects the root view of the bundle.
  */
@@ -191,6 +199,12 @@ export function wire(input: {
   directory: string
   webview: Webview
   view: View
+  /** Where the webview lives. The chat editor panel passes "editor" and the session it opens on. */
+  surface?: "editor" | "sidebar"
+  /** The session a chat editor tab starts on; the sidebar restores its own local tabs instead. */
+  sessionID?: string
+  /** The live session of this surface, for links and the Integrated Browser. The sidebar reports its own. */
+  session?: () => string | undefined
   trackCostSession?: (sessionID: string) => void
   /** Directory for a saved image, when the view follows a session in another directory. */
   saveImageDirectory?: () => string | undefined
@@ -226,7 +240,7 @@ export function wire(input: {
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
     open: (url, external) => {
-      const session = sidebarSession()
+      const session = linkSession(input)
       // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
       void openBrowserLink(
         url,
@@ -552,6 +566,8 @@ export function wire(input: {
     version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     sidebar,
+    surface: input.surface,
+    sessionID: input.sessionID,
     settings: readKiloSettings(),
     globals: input.globals,
   })
@@ -615,6 +631,10 @@ export function html(input: {
   view?: View
   /** Physical workbench edge of the sidebar view; editor panels have none. */
   sidebar?: "left" | "right"
+  /** Where this webview lives, for the chat that an editor tab shows instead of the sidebar. */
+  surface?: "editor" | "sidebar"
+  /** The session a chat editor tab starts on; null for a new-session tab and the sidebar. */
+  sessionID?: string | null
   settings: Record<string, unknown>
   globals?: Record<string, unknown>
 }) {
@@ -638,6 +658,8 @@ export function html(input: {
     ICONS_BASE_URI: input.icons,
     KILO_SHIKI_WORKER_URI: input.worker,
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
+    KILO_SURFACE: input.surface ?? "sidebar",
+    KILO_SESSION_ID: input.sessionID ?? null,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
     KILO_SANDBOX_CONTROLS: process.platform !== "win32",

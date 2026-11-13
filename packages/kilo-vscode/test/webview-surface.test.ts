@@ -63,3 +63,17 @@ describe("webview sidebar edge", () => {
     expect(page("agentManager")).toContain('data-sidebar=""')
   })
 })
+
+describe("webview chat surface", () => {
+  test("the sidebar is the default surface, with no bound session", () => {
+    expect(page("chat")).toContain('window.KILO_SURFACE = "sidebar"')
+    expect(page("chat")).toContain("window.KILO_SESSION_ID = null")
+  })
+
+  test("a chat editor tab carries its surface and the session it opens on", () => {
+    const editor = (sessionID: string | null) => html({ ...base, view: "chat", surface: "editor", sessionID })
+    expect(editor("ses_a")).toContain('window.KILO_SURFACE = "editor"')
+    expect(editor("ses_a")).toContain('window.KILO_SESSION_ID = "ses_a"')
+    expect(editor(null)).toContain("window.KILO_SESSION_ID = null")
+  })
+})

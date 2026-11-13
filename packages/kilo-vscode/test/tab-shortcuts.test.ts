@@ -10,6 +10,11 @@ describe("tab shortcut target", () => {
     expect(tabShortcutTarget(false, true)).toBe("agentManager")
   })
 
+  test("a focused chat editor tab receives the shortcut before the Agent Manager", () => {
+    expect(tabShortcutTarget(false, true, true)).toBe("chatPanel")
+    expect(tabShortcutTarget(false, false, true)).toBe("chatPanel")
+  })
+
   test("neither surface receives the shortcut when neither is focused", () => {
     expect(tabShortcutTarget(false, false)).toBeUndefined()
   })

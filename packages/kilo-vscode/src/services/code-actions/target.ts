@@ -12,6 +12,13 @@ type AgentPanel = {
   postMessage(message: unknown): void
 }
 
+/** A chat editor tab: the shared code and terminal actions post to it like the sidebar. */
+export type ChatPanelTarget = {
+  post(message: ToWebview): void
+  /** Reveals the tab and focuses its composer. */
+  focus(): void
+}
+
 export type ChatTarget = {
   attach(items: PromptAttachment[]): Promise<void>
   /** Sends a prompt Kilo composed. `injectedTitle` labels it in the transcript. */
@@ -21,7 +28,7 @@ export type ChatTarget = {
   search(): Promise<void>
 }
 
-type Surface = "sidebar" | "agentManager"
+type Surface = "sidebar" | "agentManager" | "chatPanel"
 
 // The chat the user focused last. Selecting code moves focus to the editor, so context added from there goes back to
 // that chat instead of whichever panel is active now. A surface is forgotten only when it closes.
@@ -34,21 +41,44 @@ export const chatFocus = {
   closed(surface: Surface) {
     if (lastFocused === surface) lastFocused = undefined
   },
+  /** The chat surface that last had DOM focus, for host paths that act on it such as browser references. */
+  surface: () => lastFocused,
 }
 
-export function createChatTarget(input: { view: ChatView; agentManager: AgentPanel }): ChatTarget {
+type Preferred =
+  | { surface: "sidebar" }
+  | { surface: "agentManager" }
+  | { surface: "chatPanel"; panel: ChatPanelTarget }
+
+export function createChatTarget(input: {
+  view: ChatView
+  agentManager: AgentPanel
+  /** The chat editor tab the user worked in last, if one is open. */
+  chatPanel?: () => ChatPanelTarget | undefined
+}): ChatTarget {
   const showChat = () => commands.executeCommand("kilo-code.v2.chat.focus")
-  const preferAgentManager = () => {
-    if (lastFocused === "agentManager") return true
-    if (lastFocused === "sidebar") return false
-    return input.agentManager.isActive()
+  // The sidebar and Agent Manager are remembered by `chatFocus`. A chat tab also needs the specific tab: selecting
+  // code moves DOM focus to the editor, so the tab no longer reports itself as focused when the action runs.
+  const preferred = (): Preferred => {
+    if (lastFocused === "sidebar") return { surface: "sidebar" }
+    if (lastFocused === "agentManager") return { surface: "agentManager" }
+    const panel = lastFocused === "chatPanel" ? input.chatPanel?.() : undefined
+    if (panel) return { surface: "chatPanel", panel }
+    if (input.agentManager.isActive()) return { surface: "agentManager" }
+    return { surface: "sidebar" }
   }
 
   const attach = async (items: PromptAttachment[]) => {
-    if (preferAgentManager()) {
+    const target = preferred()
+    if (target.surface === "agentManager") {
       input.agentManager.focusPanel()
       if (!(await input.agentManager.waitForReady())) return
       input.agentManager.postMessage({ type: "appendContext", items })
+      return
+    }
+    if (target.surface === "chatPanel") {
+      target.panel.focus()
+      target.panel.post({ type: "appendContext", items })
       return
     }
     await showChat()
@@ -57,10 +87,16 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
 
   const prompt = async (text: string, items?: PromptAttachment[], injectedTitle?: string) => {
     const message: ToWebview = { type: "startPrompt", text, items, injectedTitle }
-    if (preferAgentManager()) {
+    const target = preferred()
+    if (target.surface === "agentManager") {
       input.agentManager.focusPanel()
       if (!(await input.agentManager.waitForReady())) return
       input.agentManager.postMessage(message)
+      return
+    }
+    if (target.surface === "chatPanel") {
+      target.panel.focus()
+      target.panel.post(message)
       return
     }
     await showChat()
@@ -68,9 +104,14 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
   }
 
   const focus = async () => {
-    if (preferAgentManager()) {
+    const target = preferred()
+    if (target.surface === "agentManager") {
       input.agentManager.focusPanel()
       input.agentManager.postMessage({ type: "action", action: "focusInput" })
+      return
+    }
+    if (target.surface === "chatPanel") {
+      target.panel.focus()
       return
     }
     await showChat()
@@ -78,10 +119,16 @@ export function createChatTarget(input: { view: ChatView; agentManager: AgentPan
   }
 
   const search = async () => {
-    if (preferAgentManager()) {
+    const target = preferred()
+    if (target.surface === "agentManager") {
       input.agentManager.focusPanel()
       if (!(await input.agentManager.waitForReady())) return
       input.agentManager.postMessage({ type: "action", action: "focusSearch" })
+      return
+    }
+    if (target.surface === "chatPanel") {
+      target.panel.focus()
+      target.panel.post({ type: "command", name: "focusSearch" })
       return
     }
     await showChat()
