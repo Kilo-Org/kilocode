@@ -13,7 +13,7 @@ import type { AgentManagerOutMessage } from "../types"
 import { restoreWorktrees } from "../state-recovery"
 import { reconcileWorktrees, summarize, type WorktreeHealthReport } from "../worktree-reconcile"
 import { trackOrphanSizes } from "../orphans/sizing"
-import { canonicalizePath, samePath } from "./paths"
+import { pathKey, samePath } from "./paths"
 import type { ProjectSessionView } from "./session-view"
 import type { ProjectContext, ProjectInitResult } from "./context"
 
@@ -186,24 +186,18 @@ export async function collectProjectSessions(
   const seen = new Set<string>()
   const views: ProjectSessionView[] = []
   const state = ctx.peekState()
+  const home = homes(ctx)
   const moved: string[] = []
   for (const entry of byDirectory) {
     for (const session of entry.sessions) {
       if (session.parentID !== undefined && session.parentID !== null) continue
       if (seen.has(session.id)) continue
       seen.add(session.id)
-      const managed = state?.getSession(session.id)?.worktreeId
-      const home = homeOf(ctx, session.location.directory)
-      // The server runs a session in one directory, and only that directory's view receives its events. A tracked
-      // session filed under another worktree (by an older build) is filed under the worktree it runs in again.
-      if (state && managed !== undefined && home !== undefined && managed !== home) {
-        state.moveSession(session.id, home)
-        moved.push(session.id)
-      }
+      if (refile(ctx, session, home)) moved.push(session.id)
       views.push({
         ...session,
         parentID: undefined,
-        worktreeId: home !== undefined ? home : (managed ?? entry.worktreeId),
+        worktreeId: state?.getSession(session.id)?.worktreeId ?? entry.worktreeId,
       })
     }
   }
@@ -211,10 +205,32 @@ export async function collectProjectSessions(
   return { views, moved }
 }
 
-/** The worktree that owns `directory`, `null` for the project root, or undefined when no tracked path matches. */
-function homeOf(ctx: ProjectContext, directory: string): string | null | undefined {
-  if (samePath(canonicalizePath(directory), canonicalizePath(ctx.root))) return null
-  return ctx.peekState()?.findWorktreeByPath(directory)?.id
+/**
+ * The context that owns a directory: a worktree id, `null` for the project root, or undefined when no tracked path
+ * matches. Canonical keys are built once per collection, since resolving a path touches the file system.
+ */
+function homes(ctx: ProjectContext): (directory: string) => string | null | undefined {
+  const root = pathKey(ctx.root)
+  const worktrees = new Map((ctx.peekState()?.getWorktrees() ?? []).map((item) => [pathKey(item.path), item.id]))
+  return (directory) => {
+    const key = pathKey(directory)
+    return key === root ? null : worktrees.get(key)
+  }
+}
+
+/**
+ * A worktree view reads from the store of its own directory, so a session filed under a worktree it does not run in
+ * (by an older build) never receives its events there. Files it under the worktree it runs in, or under Local. A
+ * Local filing stays: Local reads every session from the store of its own directory.
+ */
+function refile(ctx: ProjectContext, session: SessionInfo, home: ReturnType<typeof homes>): boolean {
+  const state = ctx.peekState()
+  const managed = state?.getSession(session.id)?.worktreeId
+  if (!state || !managed) return false
+  const target = home(session.location.directory)
+  if (target === undefined || target === managed) return false
+  state.moveSession(session.id, target)
+  return true
 }
 
 /** How long a collected catalog is reused before the next push re-lists from the backend. */

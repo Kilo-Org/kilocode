@@ -776,6 +776,7 @@ interface OpenLocallyIn {
 
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
+  projectId?: string
   worktreeId: string
   sessionId?: string
 }

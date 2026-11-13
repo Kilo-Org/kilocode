@@ -6,6 +6,7 @@ import { ProjectContext } from "../src/agent-manager/project/context"
 import {
   addSessionToLifecycleWorktree,
   closeLifecycleSession,
+  promoteLifecycleSession,
   createLifecycleWorktree,
   deleteLifecycleWorktree,
   removeStaleLifecycleWorktree,
@@ -398,6 +399,45 @@ describe("Agent Manager worktree lifecycle", () => {
 
     expect(state.getSession("elsewhere")?.worktreeId).toBe(owner)
     expect(calls).toContain("post:agentManager.sessionAdded")
+  })
+
+  it("files a promoted session under the new worktree once the server moved it", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    state.addSession("promoted", null)
+    const synthetic = mock(async () => ({}))
+    ;(client.session as unknown as { synthetic: typeof synthetic }).synthetic = synthetic
+
+    await promoteLifecycleSession(ctx, host, "promoted")
+
+    expect(client.session.move).toHaveBeenCalledWith({ sessionID: "promoted", directory: worktree })
+    expect(state.getSession("promoted")?.worktreeId).toBe(wt.id)
+    expect(synthetic).toHaveBeenCalled()
+  })
+
+  it("keeps a promoted session in Local when the server cannot move it", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    host.notifyReady = mock(() => undefined)
+    state.addSession("promoted", null)
+    client.session.move.mockRejectedValue(new Error("move failed"))
+
+    await promoteLifecycleSession(ctx, host, "promoted")
+
+    expect(state.getSession("promoted")?.worktreeId).toBeNull()
+    expect(calls).toContain("post:error")
+    expect(host.notifyReady).not.toHaveBeenCalled()
+  })
+
+  it("keeps the requested worktree for a session in a directory outside the project", async () => {
+    const id = state.getWorktrees()[0]!.id
+    client.session.get.mockResolvedValue({ id: "outside", location: { directory: path.join(os.tmpdir(), "elsewhere") } })
+
+    await addSessionToLifecycleWorktree(ctx, host, id, "outside")
+
+    expect(state.getSession("outside")?.worktreeId).toBe(id)
   })
 
   it("files a session that runs in the project root under Local", async () => {

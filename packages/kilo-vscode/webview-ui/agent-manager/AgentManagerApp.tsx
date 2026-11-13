@@ -45,10 +45,12 @@ import { useLanguage } from "../src/context/language"
 import { fallbackFontSize } from "../src/v2/kilo-settings"
 import {
   LOCAL,
+  directoryWorktree,
   canOpenRootSession,
   isKnownRootSession,
   adjacentHint,
   focusChatSearch,
+  sendFiling,
   sessionOwner,
   showsSession,
 } from "./navigate"
@@ -881,15 +883,18 @@ const AgentManagerContent: Component = () => {
   const ownerOf = (sid: string) => {
     const pid = currentProjectId()
     const catalog = (pid ? projectSessionsLive()[pid] : undefined) ?? []
-    return sessionOwner(sid, [...sessions.sessions(), ...catalog], worktrees())
+    return sessionOwner(sid, [...sessions.sessions(), ...catalog], worktrees(), directories.root(pid))
   }
   // The host may not have stamped a freshly created worktree session yet, but its tab is already in the order.
   const sessionsForWorktree = (id: string) => {
     const order = worktreeTabOrder()[id] ?? []
-    const list = worktreeSessions(id, managedSessions(), sessions.sessions(), order)
+    // A session that runs in another directory is not a tab of this worktree, even while a stale host filing or tab
+    // order still names it: the worktree's chat could not show it, and a send there would start a new session.
+    const list = worktreeSessions(id, managedSessions(), sessions.sessions(), order).filter((session) =>
+      showsSession(id, ownerOf(session.id)),
+    )
     const known = new Set(list.map((session) => session.id))
-    // The tab order also names sessions the host has not filed yet, such as one just created here. A session that
-    // runs in another directory is not a tab of this worktree, even when a stale order still lists it.
+    // The tab order also names sessions the host has not filed yet, such as one just created here.
     const extra = order.flatMap((sessionID) => {
       const session = sessions.get(sessionID)
       if (!session || known.has(sessionID) || !isKnownRootSession(session)) return []
@@ -1064,10 +1069,15 @@ const AgentManagerContent: Component = () => {
   const openInWorktree = (sid: string) => {
     const sel = selection()
     if (!canOpenRootSession(sid, sessions.sessions())) return false
-    const current = managedSessions().find((entry) => entry.id === sid)
-    if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
+    const current = managedSessions().find((entry) => entry.id === sid)?.worktreeId
     const owner = ownerOf(sid)
-    if (owner === null) return false
+    if (current && (owner === undefined || owner === current)) return focusManagedSession(current, sid)
+    // A stale filing under a worktree the session does not run in: the host files it again where it runs.
+    if (owner === null) {
+      if (!current) return false
+      openLocally(sid)
+      return true
+    }
     if (owner === undefined && (!sel || sel === LOCAL)) return false
     saveTabMemory()
     closeHistory()
@@ -1234,27 +1244,50 @@ const AgentManagerContent: Component = () => {
     },
   })
 
-  const handleSessionCreated = (id: string | undefined) => {
+  // Where a chat view creates sessions: its project and the worktree of its store's directory, or Local. Read when
+  // the view mounts, so a send that resolves after a project or worktree switch still knows where it started.
+  const sessionOrigin = (directory: string) => ({
+    project: currentProjectId(),
+    worktree: directoryWorktree(directory, worktrees()),
+  })
+  const handleSessionCreated = (id: string | undefined, origin: ReturnType<typeof sessionOrigin>) => {
     if (!id) {
       sessions.clearCurrentSession()
       return
     }
+    // The project changed during the send: file the session in the project that created it and leave this one alone.
+    if (origin.project !== currentProjectId()) {
+      if (origin.worktree)
+        to({
+          type: "agentManager.addSessionToWorktree",
+          projectId: origin.project,
+          worktreeId: origin.worktree,
+          sessionId: id,
+        })
+      else to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
+      return
+    }
     const sel = selection()
-    if (sel && sel !== LOCAL) {
-      // Every send reports its session. Adopting a session the worktree already owns would end its branch auto-naming,
-      // and adopting one the server runs in another directory would steal it from its worktree.
-      const owner = ownerOf(id)
-      if (owner === undefined || owner === sel) {
-        appendToTabOrder(sel, id)
-        if (managedSessions().find((entry) => entry.id === id)?.worktreeId !== sel)
-          to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: id })
-      }
-      sessions.selectSession(id)
+    const filed = managedSessions().find((entry) => entry.id === id)?.worktreeId
+    const known = ownerOf(id)
+    const worktree = sendFiling({
+      selection: sel,
+      filed,
+      local: localSessionIDs().includes(id),
+      owner: known === undefined ? origin.worktree : known,
+    })
+    if (worktree) {
+      appendToTabOrder(worktree, id)
+      // Adopting a session the worktree already owns would end its branch auto-naming.
+      if (filed !== worktree)
+        to({ type: "agentManager.addSessionToWorktree", projectId: origin.project, worktreeId: worktree, sessionId: id })
+      if (worktree === sel) sessions.selectSession(id)
+      else focusManagedSession(worktree, id)
       return
     }
     placeLocal(id, activePendingId(), activePendingId() ?? sessions.currentSessionID())
     setSelection(LOCAL)
-    to({ type: "agentManager.persistSession", projectId: currentProjectId(), sessionId: id })
+    to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
     sessions.selectSession(id)
   }
 
@@ -1408,15 +1441,15 @@ const AgentManagerContent: Component = () => {
       selectSession: (sessionID) => sessions.selectSession(sessionID),
       setReviewActive,
     })
-  // The plan handoff creates a new session on the server and asks the client to show it. Select the new
-  // session in its worktree so the Agent Manager leaves the plan tab for the Code session.
+  // The plan handoff creates a new session on the server and asks the client to show it. File the new session in the
+  // context of its directory and select it there, so the Agent Manager leaves the plan tab for the Code session.
   createEffect(() => {
     for (const directory of directories.sessionDirectories()) {
       const store = panel.store(directory)
       onCleanup(
         store.data.on("tui.session.select", (event) => {
           if (event.location && event.location.directory !== directory) return
-          selectSessionTab(event.data.sessionID, false)
+          handleSessionCreated(event.data.sessionID, sessionOrigin(store.directory))
         }),
       )
     }
@@ -2345,52 +2378,55 @@ const AgentManagerContent: Component = () => {
             </div>
           }
         >
-          {(store) => (
-            <V2Scope value={store}>
-              <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
-                <SpeechToTextStatusProvider>
-                  <SessionView
-                    session={shownSession()}
-                    draftKey={shownSession() ?? draftTab()}
-                    readOnly={readOnly()}
-                    onSession={handleSessionCreated}
-                    actions={toolActions}
-                    onShowHistory={() => openHistory()}
-                    row={sessionActions}
-                    rowWhenEmpty={!!transfer.branch()}
-                    onNewSession={handleNewTabForCurrentSelection}
-                    worktree={!!selection() && selection() !== LOCAL}
-                    manager={hints.manager}
-                    focusOnDraftChange={focusOnDraftChange}
-                    onFocusChange={focusCtl.prompt}
-                    empty={intro.render}
-                    onAppendReady={(append) => (promptAppend = append)}
-                    onReviewAppendReady={(append) => (promptReviewAppend = append)}
-                    onComposerReady={composerQueue.ready}
-                    onReferenceReady={(add) => (promptReference = add)}
-                    onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                    onViewTurnChanges={openTurnChanges}
-                    onForkMessage={handleForkSession}
-                    onMissing={(id) => handleCloseTab(id)}
-                    worktrees={references}
-                    git={isGitRepo}
-                    gitTarget={gitTarget}
-                    terminalContext={() => selection() ?? undefined}
-                    resolveEmbeddedTerminal={resolveTerminal}
-                    onPrompted={(sessionId, text, model) =>
-                      to({
-                        type: "agentManager.promptSent",
-                        sessionId,
-                        text,
-                        providerID: model?.providerID,
-                        modelID: model?.id,
-                      })
-                    }
-                  />
-                </SpeechToTextStatusProvider>
-              </ReviewCommentActionsContext.Provider>
-            </V2Scope>
-          )}
+          {(store) => {
+            const origin = untrack(() => sessionOrigin(store.directory))
+            return (
+              <V2Scope value={store}>
+                <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
+                  <SpeechToTextStatusProvider>
+                    <SessionView
+                      session={shownSession()}
+                      draftKey={shownSession() ?? draftTab()}
+                      readOnly={readOnly()}
+                      onSession={(id) => handleSessionCreated(id, origin)}
+                      actions={toolActions}
+                      onShowHistory={() => openHistory()}
+                      row={sessionActions}
+                      rowWhenEmpty={!!transfer.branch()}
+                      onNewSession={handleNewTabForCurrentSelection}
+                      worktree={!!selection() && selection() !== LOCAL}
+                      manager={hints.manager}
+                      focusOnDraftChange={focusOnDraftChange}
+                      onFocusChange={focusCtl.prompt}
+                      empty={intro.render}
+                      onAppendReady={(append) => (promptAppend = append)}
+                      onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                      onComposerReady={composerQueue.ready}
+                      onReferenceReady={(add) => (promptReference = add)}
+                      onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                      onViewTurnChanges={openTurnChanges}
+                      onForkMessage={handleForkSession}
+                      onMissing={(id) => handleCloseTab(id)}
+                      worktrees={references}
+                      git={isGitRepo}
+                      gitTarget={gitTarget}
+                      terminalContext={() => selection() ?? undefined}
+                      resolveEmbeddedTerminal={resolveTerminal}
+                      onPrompted={(sessionId, text, model) =>
+                        to({
+                          type: "agentManager.promptSent",
+                          sessionId,
+                          text,
+                          providerID: model?.providerID,
+                          modelID: model?.id,
+                        })
+                      }
+                    />
+                  </SpeechToTextStatusProvider>
+                </ReviewCommentActionsContext.Provider>
+              </V2Scope>
+            )
+          }}
         </Show>
         <Show when={readOnly()}>
           <div class="am-readonly-banner">

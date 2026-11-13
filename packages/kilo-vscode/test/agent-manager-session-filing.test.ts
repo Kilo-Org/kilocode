@@ -84,6 +84,23 @@ describe("Agent Manager session filing", () => {
     ).toEqual({ "root-run": null, "one-run": first.id, "two-run": second.id })
   })
 
+  it("keeps a worktree session the user opened in Local", async () => {
+    state.addWorktree({ branch: "one", path: one, parentBranch: "main" })
+    state.addSession("one-run", null)
+    let repairs = 0
+
+    await pushProjectSessions(
+      ctx,
+      async (directory) => (directory === one ? [info("one-run", one)] : []),
+      () => undefined,
+      () => undefined,
+      () => repairs++,
+    )
+
+    expect(state.getSession("one-run")?.worktreeId).toBeNull()
+    expect(repairs).toBe(0)
+  })
+
   it("leaves filings that match the server alone", async () => {
     const first = state.addWorktree({ branch: "one", path: one, parentBranch: "main" })
     state.addSession("one-run", first.id)
