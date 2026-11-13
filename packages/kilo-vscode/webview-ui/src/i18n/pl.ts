@@ -658,8 +658,6 @@ export const dict = {
 
   "common.retry": "Ponów",
   "common.refresh": "Odśwież",
-  "common.reload": "Przeładuj",
-  "common.reloadDescription": "Przeładuj konfigurację, umiejętności, agentów i polecenia z dysku",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nie zalogowano",

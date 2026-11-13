@@ -100,7 +100,7 @@ preferences, especially themes and keybindings.
 
 Config changes apply without a restart. OpenCode watches config files and
 reloads agents, commands, skills, MCP servers, and plugins after a save. The TUI
-does the same for `cli.json`. To force a full reload, use `/reload`. Don't tell
+does the same for `cli.json`. Don't tell <!-- kilocode_change - no /reload: a save hot-reloads every location -->
 the user to restart OpenCode after editing config.
 
 Do not guess field names or shapes. Fetch the V2 configuration guide and its

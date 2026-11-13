@@ -74,10 +74,9 @@ describe("slash catalog merge", () => {
 
 describe("slash actions", () => {
   test("lists only the actions this surface handles, in menu order", () => {
-    const list = slashActions({ reload: () => {}, new: () => {}, compact: undefined }, (key) => `t:${key}`)
+    const list = slashActions({ new: () => {}, compact: undefined }, (key) => `t:${key}`)
     expect(list.map((entry) => [entry.name, entry.description, entry.hints])).toEqual([
       ["new", "t:command.session.new", ["clear"]],
-      ["reload", "t:common.reloadDescription", ["refresh"]],
     ])
   })
 
