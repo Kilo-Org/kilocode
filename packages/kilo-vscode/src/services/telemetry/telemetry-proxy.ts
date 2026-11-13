@@ -38,6 +38,8 @@ export class TelemetryProxy {
   /** Connect to a started server and record the current consent there. */
   configure(server: Pick<Server, "url" | "authorization">, connect: (server: Pick<Server, "url" | "authorization">) => Rpc = rpc) {
     this.rpc = connect(server)
+    // A consent call still pending against the previous server must not hold up the new one.
+    this.ready = Promise.resolve()
     this.setEnabled(this.isVSCodeTelemetryEnabled())
   }
 
@@ -63,7 +65,11 @@ export class TelemetryProxy {
     const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
     if (!built) return
     void this.ready
-      .then(() => rpc.capture(built))
+      .then(() => {
+        // The server stopped or was replaced while the consent call was pending.
+        if (this.rpc !== rpc) return
+        return rpc.capture(built)
+      })
       .catch((error: unknown) => this.log("Telemetry capture failed", error))
   }
 
@@ -71,7 +77,10 @@ export class TelemetryProxy {
   setEnabled(enabled: boolean) {
     const rpc = this.rpc
     if (!rpc) return
-    this.ready = rpc.setEnabled({ enabled }).catch((error: unknown) => this.log("Telemetry setEnabled failed", error))
+    // Serialized, so two quick changes reach the server in order and the last one wins.
+    this.ready = this.ready
+      .then(() => rpc.setEnabled({ enabled }))
+      .catch((error: unknown) => this.log("Telemetry setEnabled failed", error))
   }
 }
 

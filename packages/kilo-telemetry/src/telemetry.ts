@@ -126,15 +126,15 @@ export function isEnabled(): boolean {
 export async function updateIdentity(token: string | null, accountId?: string | null, server?: string): Promise<void> {
   if (!isEnabled()) return
 
-  const previousId = Identity.getDistinctId()
   await Identity.updateFromKiloAuth(token, accountId, server)
-
   const email = Identity.getUserId()
-  // Link the anonymous machine ID to the authenticated email.
-  if (email && previousId && email !== previousId) Client.alias(email, previousId)
+  // Link the anonymous machine ID to the authenticated email. Not the previous distinct ID: after an account switch
+  // in the same process that is the other account's email, and aliasing it would merge two people.
+  const machine = await Identity.getMachineId()
+  if (email && machine && email !== machine) Client.alias(email, machine)
 }
 
-// v2 shares the PostHog project and the identities with v1, so every event names the line it comes from.
+// The PostHog project and the identities are shared with the other Kilo line, so every event names its line.
 const LINE = "v2"
 
 export function track(event: string, properties?: Record<string, unknown>) {

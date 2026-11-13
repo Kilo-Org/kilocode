@@ -57,8 +57,7 @@ export function getClient(): PostHog | null {
 export function setEnabled(value: boolean) {
   state.enabled = value
   if (!state.client) return
-  if (value) void state.client.optIn()
-  else void state.client.optOut()
+  void (value ? state.client.optIn() : state.client.optOut())
 }
 
 export function isEnabled(): boolean {

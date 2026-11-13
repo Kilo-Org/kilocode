@@ -30,13 +30,11 @@ beforeEach(() => {
   calls.length = 0
   state.dir = mkdtempSync(path.join(tmpdir(), "kilo-telemetry-identity-"))
   Identity.reset()
-  Identity.resetMachine()
   Identity.setDataPath(state.dir)
 })
 
 afterEach(() => {
   Identity.setDataPath("")
-  Identity.resetMachine()
 })
 
 afterAll(() => api.stop(true))
@@ -61,7 +59,8 @@ describe("Identity", () => {
       const id = await Identity.getMachineId()
       expect(id).toMatch(/^[0-9a-f-]{36}$/)
       expect(readFileSync(path.join(state.dir, "telemetry-id"), "utf8")).toBe(id!)
-      Identity.resetMachine()
+      // Setting the data path again forgets the cached ID, so this reads the file.
+      Identity.setDataPath(state.dir)
       expect(await Identity.getMachineId()).toBe(id)
       expect(Identity.getDistinctId()).toBe(id!)
     } finally {
@@ -128,6 +127,20 @@ describe("Identity.updateFromKiloAuth profile cache", () => {
     await Identity.updateFromKiloAuth("bad-token", undefined, server)
     expect(Identity.getUserId()).toBeNull()
     expect(existsSync(path.join(state.dir, "telemetry-profile.json"))).toBe(false)
+  })
+
+  test("an invalid API URL leaves the user anonymous instead of failing", async () => {
+    await Identity.updateFromKiloAuth("token-a", undefined, "not-a-url")
+    expect(Identity.getUserId()).toBeNull()
+    const previous = process.env.KILO_API_URL
+    process.env.KILO_API_URL = "not-a-url"
+    try {
+      await Identity.updateFromKiloAuth("token-a")
+      expect(Identity.getUserId()).toBeNull()
+    } finally {
+      if (previous === undefined) delete process.env.KILO_API_URL
+      else process.env.KILO_API_URL = previous
+    }
   })
 
   test("refreshes a stale cache in the background and keeps using it", async () => {

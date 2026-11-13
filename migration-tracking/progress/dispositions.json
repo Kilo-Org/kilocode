@@ -2699,7 +2699,17 @@
   },
   "module:packages/kilo-vscode/tests/unit/telemetry-errors.test.ts": {
     "state": "dropped",
-    "note": "The test covered ApiProviderError and ConsecutiveMistakeError in src/services/telemetry/errors.ts, which have no caller on the v1 target outside this test (git grep isApiProviderError, ConsecutiveMistakeError, getApiProviderErrorProperties). Dead v1 code; the v2 telemetry service (packages/kilo-vscode/src/services/telemetry) does not carry it.",
+    "note": "The test covered ApiProviderError, isApiProviderError, getApiProviderErrorProperties, ConsecutiveMistakeError, isConsecutiveMistakeError and getConsecutiveMistakeErrorProperties in src/services/telemetry/errors.ts. On the v1 target none of them has a caller outside errors.ts and this test (git grep). Dead v1 code; the v2 telemetry service (packages/kilo-vscode/src/services/telemetry) does not carry it.",
+    "by": "telemetry-port"
+  },
+  "module:packages/opencode/src/kilocode/server/httpapi/groups/telemetry.ts": {
+    "state": "ported",
+    "note": "The telemetry route group (POST /telemetry/capture, /telemetry/setEnabled) is the kilocode.telemetry Kilo RPC: contract packages/schema/src/kilocode/telemetry.ts (capture, setEnabled, plus state), served through the generic rpc.call route. Clients call the RPC, not a raw route.",
+    "by": "telemetry-port"
+  },
+  "module:packages/opencode/src/kilocode/server/httpapi/handlers/telemetry.ts": {
+    "state": "ported",
+    "note": "The handlers are KiloTelemetryPlugin in packages/kilo-plugin/src/telemetry/index.ts: capture forwards to Telemetry.track of packages/kilo-telemetry, setEnabled sets the consent of the PostHog client. v2 adds the consent and experimental.openTelemetry gate before the engine; packages/kilo-cli/test/telemetry.test.ts proves the round trip.",
     "by": "telemetry-port"
   }
 }

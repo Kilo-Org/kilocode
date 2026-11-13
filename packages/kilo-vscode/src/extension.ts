@@ -163,7 +163,7 @@ export function activate(context: ExtensionContext) {
         claudeCodeCompat: values.claudeCodeCompat === true,
         extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
         editor: `${env.appName} ${version}`,
-        machine: env.machineId,
+        client: { machine: env.machineId, version: extensionVersion, editor: env.appName, vscode: version },
       }),
       ...browser,
       ...notebook,
@@ -171,10 +171,8 @@ export function activate(context: ExtensionContext) {
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
-  const telemetry = registerTelemetry({
-    context,
-    version: (context.extension.packageJSON as { version?: string }).version ?? "unknown",
-  })
+  const extensionVersion = (context.extension.packageJSON as { version?: string }).version ?? "unknown"
+  const telemetry = registerTelemetry({ context, version: extensionVersion })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
   // Plan mode writes plans outside a version-controlled project to the server's data directory, so plan links resolve there too.
   usePlanDir(serverPlans(serverCommand(), process.env))

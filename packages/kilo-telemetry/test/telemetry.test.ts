@@ -17,7 +17,6 @@ async function start(host: string, enabled = true) {
 afterEach(async () => {
   await Telemetry.shutdown(2000)
   Identity.reset()
-  Identity.resetMachine()
 })
 
 describe("Telemetry", () => {
@@ -88,6 +87,33 @@ describe("Telemetry", () => {
     expect(backend.requests).toEqual([])
   })
 
+  test("an account switch aliases the machine to the new email, never the previous email", async () => {
+    using backend = posthog()
+    const api = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: (request) =>
+        Response.json({ user: { email: `${request.headers.get("authorization")?.replace("Bearer ", "")}@example.com` } }),
+    })
+    const previous = process.env.KILO_MACHINE_ID
+    process.env.KILO_MACHINE_ID = "machine-b"
+    try {
+      await start(backend.url)
+      await Telemetry.updateIdentity("first", undefined, api.url.origin)
+      await Telemetry.updateIdentity("second", undefined, api.url.origin)
+      await Telemetry.shutdown(2000)
+      const aliases = backend.batches.filter((item) => item.event === "$create_alias")
+      expect(aliases.map((item) => [item.distinct_id, item.properties.alias])).toEqual([
+        ["first@example.com", "machine-b"],
+        ["second@example.com", "machine-b"],
+      ])
+    } finally {
+      api.stop(true)
+      if (previous === undefined) delete process.env.KILO_MACHINE_ID
+      else process.env.KILO_MACHINE_ID = previous
+    }
+  })
+
   test("setEnabled(false) drops the events captured after it", async () => {
     using backend = posthog()
     await start(backend.url)
@@ -107,10 +133,15 @@ test("the engine event catalog is the v1 catalog", async () => {
   }
   const pin = features.pins.v1Target
   // A shallow CI checkout has no v1 history: fetch the pinned commit without blobs, then read the one file.
-  const present = await $`git cat-file -e ${pin}^{commit}`.cwd(root).quiet().nothrow()
-  if (present.exitCode !== 0) await $`git fetch --no-tags --depth=1 --filter=blob:none origin ${pin}`.cwd(root).quiet()
+  const present = async () => (await $`git cat-file -e ${pin}^{commit}`.cwd(root).quiet().nothrow()).exitCode === 0
+  // Another test process can hold the git locks while it fetches the same commit; it then exists afterwards.
+  if (!(await present())) await $`git fetch --no-tags --depth=1 --filter=blob:none origin ${pin}`.cwd(root).quiet().nothrow()
+  for (let attempt = 0; attempt < 50 && !(await present()); attempt++) await Bun.sleep(200)
+  if (!(await present())) throw new Error(`the v1 pin ${pin} is not in this checkout and could not be fetched from origin`)
   const source = await $`git show ${`${pin}:packages/kilo-telemetry/src/events.ts`}`.cwd(root).quiet().text()
   const v1 = [...source.matchAll(/^\s*([A-Z0-9_]+) = "([^"]*)",?$/gm)].map((match) => [match[1], match[2]])
+  // A member the pattern cannot read must fail the test, not drop out of it.
+  expect(v1).toHaveLength(source.split("\n").filter((line) => line.includes(" = ")).length)
   expect(v1.length).toBeGreaterThan(20)
   expect(Object.entries(TelemetryEvent).map(([key, value]) => [key, value as string])).toEqual(v1)
 }, 60_000)

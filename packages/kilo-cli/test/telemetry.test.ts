@@ -43,6 +43,7 @@ const boot = async (
     KILO_API_KEY: undefined,
     KILO_TELEMETRY_URL: posthog.url.origin,
     KILO_MACHINE_ID: "machine-fixture",
+    KILO_TELEMETRY_LEVEL: undefined,
     KILO_PLATFORM: "vscode",
     ...input.env,
   }
@@ -84,6 +85,8 @@ const boot = async (
             body(
               {
                 capture: (event, properties) => telemetry.capture({ event, properties }, options),
+                // The extension sends no location: the event belongs to the server's own location.
+                captureDefault: (event) => telemetry.capture({ event }),
                 setEnabled: (enabled) => telemetry.setEnabled({ enabled }, options),
                 state: () => telemetry.state({}, options),
               },
@@ -104,6 +107,7 @@ const boot = async (
 
 type Rpc = {
   capture: (event: string, properties?: Record<string, unknown>) => Promise<{ captured: boolean }>
+  captureDefault: (event: string) => Promise<{ captured: boolean }>
   setEnabled: (enabled: boolean) => Promise<KiloTelemetryRpc.State>
   state: () => Promise<KiloTelemetryRpc.State>
 }
@@ -207,6 +211,30 @@ test(
         expect(await rpc.capture(event)).toEqual({ captured: false })
       },
     )
+    expect(received).toEqual([])
+  },
+  30_000,
+)
+
+test(
+  "a capture without a location, as the extension sends it, reaches PostHog",
+  async () => {
+    const received = await boot({}, async (rpc) => {
+      await rpc.setEnabled(true)
+      expect(await rpc.captureDefault(KiloTelemetryRpc.EventName.TASK_COMPLETED)).toEqual({ captured: true })
+    })
+    expect(received.flatMap((item) => item.body.batch).map((item) => item.event)).toEqual(["Task Completed"])
+  },
+  30_000,
+)
+
+test(
+  "KILO_TELEMETRY_LEVEL off keeps every event local, also with consent",
+  async () => {
+    const received = await boot({ env: { KILO_TELEMETRY_LEVEL: "off" } }, async (rpc) => {
+      expect(await rpc.setEnabled(true)).toEqual({ enabled: false, consent: true, config: false })
+      expect(await rpc.capture(event)).toEqual({ captured: false })
+    })
     expect(received).toEqual([])
   },
   30_000,

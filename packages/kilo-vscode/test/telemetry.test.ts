@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "bun:test"
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
 import {
   AutocompleteTelemetry,
@@ -32,9 +32,14 @@ const started = { url: `http://127.0.0.1:${server.port}`, authorization: "Basic 
 const env = vscode.env as { isTelemetryEnabled: boolean; onDidChangeTelemetryEnabled: unknown }
 const original = { enabled: env.isTelemetryEnabled, change: env.onDidChangeTelemetryEnabled }
 const listeners: Array<(enabled: boolean) => void> = []
-env.onDidChangeTelemetryEnabled = (listener: (enabled: boolean) => void) => {
+const subscribe = (listener: (enabled: boolean) => void) => {
   listeners.push(listener)
-  return { dispose: () => listeners.splice(listeners.indexOf(listener), 1) }
+  return {
+    dispose: () => {
+      const index = listeners.indexOf(listener)
+      if (index >= 0) listeners.splice(index, 1)
+    },
+  }
 }
 
 const settle = async (count: number) => {
@@ -48,16 +53,19 @@ function setup() {
 }
 
 describe("registerTelemetry", () => {
+  // The vscode mock is shared by every test file in the process, so it is changed per test and restored after each.
   beforeEach(() => {
     calls.length = 0
     env.isTelemetryEnabled = true
+    env.onDidChangeTelemetryEnabled = subscribe
   })
 
-  afterAll(() => {
+  afterEach(() => {
     env.isTelemetryEnabled = original.enabled
     env.onDidChangeTelemetryEnabled = original.change
-    server.stop(true)
   })
+
+  afterAll(() => server.stop(true))
 
   it("records consent on a started server, then the autocomplete events of the default sink arrive", async () => {
     const telemetry = setup()
@@ -117,6 +125,60 @@ describe("registerTelemetry", () => {
     ])
     telemetry.dispose()
     expect(listeners).toHaveLength(0)
+  })
+
+  it("records consent again on every server start", async () => {
+    const telemetry = setup()
+    telemetry.hooks.started(started)
+    await settle(1)
+    telemetry.hooks.stopped()
+    env.isTelemetryEnabled = false
+    telemetry.hooks.started(started)
+    await settle(2)
+    expect(calls.map((call) => [call.method, call.input.enabled])).toEqual([
+      ["setEnabled", true],
+      ["setEnabled", false],
+    ])
+    telemetry.dispose()
+  })
+
+  it("delivers consent changes in order", async () => {
+    const telemetry = setup()
+    telemetry.hooks.started(started)
+    listeners.forEach((listener) => listener(false))
+    listeners.forEach((listener) => listener(true))
+    listeners.forEach((listener) => listener(false))
+    await settle(4)
+    expect(calls.map((call) => call.input.enabled)).toEqual([true, false, true, false])
+    telemetry.dispose()
+  })
+
+  it("a failed consent call does not block later events", async () => {
+    const proxy = new TelemetryProxy(() => {})
+    const captured: string[] = []
+    proxy.configure(started, () => ({
+      setEnabled: () => Promise.reject(new Error("server unavailable")),
+      capture: async (input) => captured.push(input.event),
+    }))
+    proxy.capture("Task Created")
+    await Bun.sleep(20)
+    expect(captured).toEqual(["Task Created"])
+  })
+
+  it("drops an event queued for a server that was replaced", async () => {
+    const proxy = new TelemetryProxy(() => {})
+    const consent = Promise.withResolvers<void>()
+    const first: string[] = []
+    const second: string[] = []
+    proxy.configure(started, () => ({ setEnabled: () => consent.promise, capture: async (input) => first.push(input.event) }))
+    proxy.capture("Task Created")
+    proxy.reset()
+    proxy.configure(started, () => ({ setEnabled: async () => {}, capture: async (input) => second.push(input.event) }))
+    consent.resolve()
+    proxy.capture("Task Completed")
+    await Bun.sleep(20)
+    expect(first).toEqual([])
+    expect(second).toEqual(["Task Completed"])
   })
 
   it("drops events while no server runs", async () => {

@@ -126,11 +126,23 @@ describe("settingsEnvironment", () => {
     })
   })
 
-  test("passes the VS Code machine ID as the server's machine ID", () => {
-    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor, machine: "vscode-machine" })).toEqual({
+  test("passes the VS Code machine ID and app identity to the server", () => {
+    const client = { machine: "vscode-machine", version: "9.9.9", editor: "Visual Studio Code", vscode: "1.114.0" }
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor, client })).toEqual({
       KILOCODE_EDITOR_NAME: editor,
       KILO_MACHINE_ID: "vscode-machine",
+      KILO_APP_NAME: "kilo-code",
+      KILO_APP_VERSION: "9.9.9",
+      KILO_EDITOR_NAME: "Visual Studio Code",
+      KILO_VSCODE_VERSION: "1.114.0",
     })
+  })
+
+  test("an inherited machine ID or app identity never reaches the server", () => {
+    const env = environment({ KILO_MACHINE_ID: "inherited", KILO_APP_NAME: "other", KILO_VSCODE_VERSION: "0" }, {})
+    expect(env.KILO_MACHINE_ID).toBeUndefined()
+    expect(env.KILO_APP_NAME).toBeUndefined()
+    expect(env.KILO_VSCODE_VERSION).toBeUndefined()
   })
 
   test("leaves Claude Code loading on when compatibility is enabled", () => {

@@ -1,5 +1,4 @@
 // One engine process run: start, resolve the identity of a signed-in token, track, and drain the queue on exit.
-import { Client } from "../../src/client"
 import { Telemetry } from "../../src/telemetry"
 
 const env = process.env
@@ -20,7 +19,7 @@ if (env.TEST_LOGIN) {
   Telemetry.trackCliExit()
 }
 if (!env.TEST_LOGIN) Telemetry.trackCliStart()
-await Client.shutdown().catch((error: unknown) => {
+await Telemetry.shutdown().catch((error: unknown) => {
   if (!env.TEST_FAIL) throw error
 })
 process.exit(0)

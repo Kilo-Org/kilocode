@@ -24,8 +24,10 @@ const state = {
   dataPath: "",
 }
 
+/** The machine ID belongs to the data path, so a new path reads it again. */
 export function setDataPath(p: string) {
   state.dataPath = p
+  state.machineId = null
 }
 
 /** The anonymous machine ID shared with the Gateway headers: `KILO_MACHINE_ID`, else `<data>/telemetry-id`. */
@@ -88,26 +90,23 @@ async function write(cache: Cache): Promise<void> {
   }
 }
 
-function fetchEmail(token: string, server: string) {
+// Never rejects: an unreachable API, a rejected token and an invalid API URL all leave the user anonymous.
+function fetchEmail(token: string, server: string | undefined) {
   return Effect.runPromise(
-    KiloProfile.get(server, token).pipe(
+    Effect.suspend(() => KiloProfile.get(server ?? KiloServer.fromEnv(), token)).pipe(
       Effect.map((profile) => profile.email || null),
-      Effect.orElseSucceed(() => null),
+      Effect.catchCause(() => Effect.succeed(null)),
     ),
   )
 }
 
-async function refresh(token: string, tokenHash: string, server: string): Promise<void> {
+async function refresh(token: string, tokenHash: string, server: string | undefined): Promise<void> {
   const email = await fetchEmail(token, server)
   if (email) await write({ token: tokenHash, email, fetchedAt: Date.now() })
 }
 
 /** Resolve the account email of a Kilo token. `server` is the Kilo API of the account; it defaults to `KILO_API_URL`. */
-export async function updateFromKiloAuth(
-  token: string | null,
-  accountId?: string | null,
-  server = KiloServer.fromEnv(),
-): Promise<void> {
+export async function updateFromKiloAuth(token: string | null, accountId?: string | null, server?: string): Promise<void> {
   state.organizationId = accountId || null
 
   if (!token) {
@@ -135,9 +134,4 @@ export async function updateFromKiloAuth(
 export function reset() {
   state.userId = null
   state.organizationId = null
-}
-
-/** Test seam: forget the machine ID so the next lookup reads the data path again. */
-export function resetMachine() {
-  state.machineId = null
 }
