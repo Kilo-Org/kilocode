@@ -61,8 +61,7 @@ export const CancelWakeupTool = Tool.define<typeof Params, Meta, Wakeup.Service,
             }
           }
 
-          // Cancel is idempotent: an already-fired, already-cancelled, or
-          // unknown id is reported, never thrown.
+          // Cancel reports absent ids and lock failures; storage removal faults propagate.
           const removed = yield* wake.cancel(id as Wakeup.ID, ctx.sessionID)
           if (!removed) {
             return {
@@ -76,7 +75,15 @@ export const CancelWakeupTool = Tool.define<typeof Params, Meta, Wakeup.Service,
             output: `Cancelled wakeup ${removed.id} (${new Date(removed.dueAt).toISOString()}).`,
             metadata: { id: removed.id, cancelled: true },
           }
-        }),
+        }).pipe(
+          Effect.catchTag(["LockTimeoutError", "LockCompromisedError"], () =>
+            Effect.succeed({
+              title: "Wakeup cancellation busy",
+              output: "Could not cancel right now, retry.",
+              metadata: { cancelled: false },
+            }),
+          ),
+        ),
     }
   }),
 )
