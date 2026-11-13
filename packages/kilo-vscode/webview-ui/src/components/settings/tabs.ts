@@ -96,6 +96,13 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     component: lazy(() => import("./AutocompleteTab")),
   },
   {
+    id: "notifications",
+    icon: "circle-check",
+    title: "settings.notifications.title",
+    ready: true,
+    component: lazy(() => import("./NotificationsTab")),
+  },
+  {
     id: "context",
     icon: "server",
     title: "settings.context.title",

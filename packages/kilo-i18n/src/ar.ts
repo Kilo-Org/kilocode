@@ -134,4 +134,17 @@ export const dict = {
   "ui.tool.chart": "مخطط",
   "ui.tool.chart.invalid": "إعداد المخطط غير صالح — يجب أن يتضمن النوع والبيانات",
   "ui.tool.chart.failed": "فشل عرض المخطط",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "أكمل Kilo المهمة.",
+  "attention.question": "يحتاج Kilo إلى ردك.",
+  "attention.permission": "يحتاج Kilo إلى إذن.",
+  "attention.error": "أوقف Kilo المهمة بسبب خطأ.",
+  "attention.show": "عرض",
+  "attention.workspace": "مساحة العمل",
+  "attention.session": "الجلسة",
+  "attention.test": "هذا إشعار تجريبي من Kilo Code.",
+  "attention.unsupported": "إشعارات نظام التشغيل غير مدعومة على هذه المنصة.",
+  "attention.identity":
+    "تعذّر تحديد هوية الإشعارات لهذا المحرر، لذا فإن الإشعارات الأصلية غير متاحة. لا تزال إشعارات VS Code تعمل.",
 }

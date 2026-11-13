@@ -139,4 +139,17 @@ export const dict = {
   "ui.tool.chart": "Grafik",
   "ui.tool.chart.invalid": "Geçersiz grafik yapılandırması — tür ve veri içermelidir",
   "ui.tool.chart.failed": "Grafik oluşturulamadı",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo görevi tamamladı.",
+  "attention.question": "Kilo girdinizi bekliyor.",
+  "attention.permission": "Kilo izin istiyor.",
+  "attention.error": "Kilo bir hata nedeniyle görevi durdurdu.",
+  "attention.show": "Göster",
+  "attention.workspace": "Çalışma alanı",
+  "attention.session": "Oturum",
+  "attention.test": "Bu, Kilo Code'dan bir test bildirimidir.",
+  "attention.unsupported": "İşletim sistemi bildirimleri bu platformda desteklenmiyor.",
+  "attention.identity":
+    "Bu düzenleyicinin bildirim kimliği belirlenemedi, bu nedenle yerel bildirimler kullanılamıyor. VS Code bildirimleri çalışmaya devam ediyor.",
 }

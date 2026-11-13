@@ -135,4 +135,17 @@ export const dict = {
   "ui.tool.chart": "차트",
   "ui.tool.chart.invalid": "잘못된 차트 구성입니다 — type과 data가 필요합니다",
   "ui.tool.chart.failed": "차트를 렌더링하지 못했습니다",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo가 작업을 완료했습니다.",
+  "attention.question": "Kilo가 입력을 기다리고 있습니다.",
+  "attention.permission": "Kilo에 권한이 필요합니다.",
+  "attention.error": "오류로 인해 Kilo가 작업을 중단했습니다.",
+  "attention.show": "표시",
+  "attention.workspace": "작업 영역",
+  "attention.session": "세션",
+  "attention.test": "Kilo Code의 테스트 알림입니다.",
+  "attention.unsupported": "이 플랫폼에서는 OS 알림이 지원되지 않습니다.",
+  "attention.identity":
+    "이 편집기의 알림 ID를 확인할 수 없어 네이티브 알림을 사용할 수 없습니다. VS Code 알림은 계속 작동합니다.",
 }

@@ -14,6 +14,7 @@ import {
   type ExtensionContext,
 } from "vscode"
 import { createAgentManagerConnection } from "./agent-manager/connection"
+import { attentionHost } from "./attention/host"
 import { canonicalizePath, samePath } from "./agent-manager/project/paths"
 import { DocumentViewerProvider } from "./DocumentViewerProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
@@ -329,6 +330,19 @@ export function activate(context: ExtensionContext) {
     },
   })
   const marketplacePanel = marketplace({ context, server, directory })
+  // Sounds and notifications for finished, failed and blocked sessions. The Agent Manager connection is the host's one
+  // event stream; it runs whenever the server does, so attention also covers sessions no webview shows.
+  const attention = attentionHost({
+    connection,
+    extensionPath: context.extensionPath,
+    visible: (sessionID) =>
+      (view.visible() && sidebarSession() === sessionID) || connection.viewing(sessionID) || subagents.visible(sessionID),
+    show: async (sessionID) => {
+      if (await agentManager.revealSession(sessionID)) return
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "openSession", sessionID })
+    },
+  })
   const chatTarget = createChatTarget({ view, agentManager })
   registerCodeActions(context, chatTarget)
   registerTerminalActions(context, chatTarget)
@@ -489,6 +503,7 @@ export function activate(context: ExtensionContext) {
       })
     }),
     agentManager,
+    attention,
     { dispose: () => connection.dispose() },
     { dispose: () => void shutdown.run(() => server.stop()) },
     { dispose: alerts.dispose },

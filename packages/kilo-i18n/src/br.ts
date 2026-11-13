@@ -139,4 +139,17 @@ export const dict = {
   "ui.tool.chart": "Gráfico",
   "ui.tool.chart.invalid": "Configuração de gráfico inválida — deve incluir tipo e dados",
   "ui.tool.chart.failed": "Falha ao renderizar o gráfico",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo concluiu a tarefa.",
+  "attention.question": "Kilo precisa da sua resposta.",
+  "attention.permission": "Kilo precisa de permissão.",
+  "attention.error": "Kilo parou a tarefa devido a um erro.",
+  "attention.show": "Mostrar",
+  "attention.workspace": "Espaço de trabalho",
+  "attention.session": "Sessão",
+  "attention.test": "Esta é uma notificação de teste do Kilo Code.",
+  "attention.unsupported": "As notificações do sistema operacional não são compatíveis com esta plataforma.",
+  "attention.identity":
+    "Não foi possível determinar a identidade de notificação deste editor, então as notificações nativas não estão disponíveis. As notificações do VS Code continuam funcionando.",
 }

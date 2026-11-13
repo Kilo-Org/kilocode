@@ -11,6 +11,7 @@ import {
   type WebviewViewProvider,
 } from "vscode"
 import { getErrorMessage } from "./agent-manager/errors"
+import { OS_NOTIFICATION_PLATFORMS } from "./attention/os"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import type { GitChanges } from "./git-changes"
@@ -174,6 +175,8 @@ export function chat(input: {
     post: send,
     syncState,
     focused: () => state.focused,
+    /** True when the sidebar is on screen; it then shows the session it reported through `sidebar.session`. */
+    visible: () => state.view?.visible === true,
   }
 }
 
@@ -641,6 +644,7 @@ export function html(input: {
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
     KILO_SANDBOX_CONTROLS: process.platform !== "win32",
+    KILO_OS_NOTIFICATIONS: OS_NOTIFICATION_PLATFORMS.includes(process.platform),
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
     KILO_SETTINGS: input.settings,
     KILO_EXTENSION_VERSION: input.version,

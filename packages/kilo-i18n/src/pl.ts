@@ -139,4 +139,17 @@ export const dict = {
   "ui.tool.chart": "Wykres",
   "ui.tool.chart.invalid": "Nieprawidłowa konfiguracja wykresu — musi zawierać typ i dane",
   "ui.tool.chart.failed": "Nie udało się wyrenderować wykresu",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo ukończył zadanie.",
+  "attention.question": "Kilo potrzebuje twojej odpowiedzi.",
+  "attention.permission": "Kilo potrzebuje uprawnienia.",
+  "attention.error": "Kilo zatrzymał zadanie z powodu błędu.",
+  "attention.show": "Pokaż",
+  "attention.workspace": "Obszar roboczy",
+  "attention.session": "Sesja",
+  "attention.test": "To jest powiadomienie testowe z Kilo Code.",
+  "attention.unsupported": "Powiadomienia systemu operacyjnego nie są obsługiwane na tej platformie.",
+  "attention.identity":
+    "Nie udało się ustalić tożsamości powiadomień tego edytora, więc powiadomienia natywne są niedostępne. Powiadomienia VS Code nadal działają.",
 }
