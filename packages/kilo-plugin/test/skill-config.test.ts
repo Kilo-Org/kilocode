@@ -51,6 +51,7 @@ describe("Kilo builtin config skill", () => {
       expect(items[0]?.content).toContain("flow_create")
       expect(items[0]?.content).toContain("schedule_wakeup")
       expect(items[0]?.content).toContain("service install")
+      expect(items[0]?.content).toContain("press `r` to repair")
     }),
   )
 
