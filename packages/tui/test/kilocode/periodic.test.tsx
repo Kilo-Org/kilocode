@@ -777,6 +777,29 @@ test("deletes only the Flow, keeping its run sessions and worktrees", async () =
   expect(opened).toEqual([{}])
 })
 
+test("keeps worktree cleaning for a Flow edited to reuse after runs that made worktrees", async () => {
+  // Now reuses its directory, but an earlier run (before the edit) created a worktree the server still removes.
+  const edited = flow({ id: "flw_edited", name: "Edited", status: "active", managed: true })
+  const fake = context({
+    handlers: {
+      runs: () =>
+        Promise.resolve({ runs: [{ ...run("flw_edited", "succeeded", "flr_old"), worktree: "new" as const }], warnings: [] }),
+    },
+    script: { selects: { "Delete Edited?": "worktrees" } },
+  })
+  await deleteFlow(fake.context, () => undefined, edited)
+  expect(fake.selects.find((select) => select.title === "Delete Edited?")?.options.map((option) => option.value)).toEqual([
+    "cancel",
+    "flow",
+    "worktrees",
+    "all",
+  ])
+  expect(fake.calls.find((call) => call.method === "remove")?.input).toEqual({
+    flowID: "flw_edited",
+    deleteWorktrees: true,
+  })
+})
+
 test("cleans the run worktrees and reports the ones kept with changes", async () => {
   const active = flow({ id: "flw_clean", name: "Clean", status: "active", managed: true, worktree: "new" })
   const fake = context({

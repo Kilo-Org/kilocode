@@ -815,7 +815,7 @@ function runSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
   })
 }
 
-/** Project Sessions whose Flow metadata names this Flow, read page by page. */
+/** Project run Sessions (not forks of them) whose Flow metadata names this Flow, read page by page. */
 function flowSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
   const projectID = record.context.projectID
   if (!projectID) return Effect.succeed<Session.ID[]>([])
@@ -825,8 +825,13 @@ function flowSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
   ): Effect.Effect<Session.ID[], never> =>
     ctx.session.list({ project: projectID, limit: 200, ...(cursor ? { cursor } : {}) }).pipe(
       Effect.flatMap((output) => {
+        // A fork copies its parent's metadata, so a Session the user forked from a run still names the Flow. Forks are
+        // never run Sessions, and deleting one would remove a transcript the user kept on purpose.
         const matched = output.data.flatMap((session) =>
-          Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))?.flowID === record.id ? [session.id] : [],
+          session.fork === undefined &&
+          Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))?.flowID === record.id
+            ? [session.id]
+            : [],
         )
         const next = output.cursor.next
         return next && output.data.length > 0 ? page(next, [...found, ...matched]) : Effect.succeed([...found, ...matched])

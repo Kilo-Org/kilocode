@@ -435,6 +435,76 @@ it.live("drops the lock of a create that fails before its Flow exists", () =>
   }),
 )
 
+it.live("keeps a Session the user forked from a run when deleting run Sessions", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const host = yield* PluginHost.make(plugins, "test")
+    // A fork copies its parent's metadata, so it names the Flow too; the listing marks it with `fork`.
+    const forked = new Set<Session.ID>()
+    const context = {
+      ...host,
+      session: {
+        ...host.session,
+        list: (input: Parameters<typeof host.session.list>[0]) =>
+          host.session.list(input).pipe(
+            Effect.map((output) => ({
+              ...output,
+              data: output.data.map((session) =>
+                forked.has(session.id) ? { ...session, fork: { sessionID: session.id, boundary: "end" as const } } : session,
+              ),
+            })),
+          ),
+      },
+    } as typeof host
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
+    const flowDelete = (yield* tools.list()).find((tool) => tool.id === "flow_delete")
+    if (!flowCreate || !flowDelete) return yield* Effect.die("Expected flow_create and flow_delete")
+    const model = { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") }
+    const source = yield* host.session.create({ title: "Flow source", agent: Agent.ID.make("build"), model })
+    const call = (id: string) => ({
+      sessionID: source.id,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make(id),
+      progress: () => Effect.void,
+    })
+    const created = yield* flowCreate.execute(
+      {
+        name: "Fork check",
+        when: { every: "1 day" as const, tz: "UTC" },
+        prompt: "Check",
+        worktree: "reuse" as const,
+        permissions: [],
+        requestID: "cccccccccccccccccccccccccccccccc",
+      },
+      call("call_create_fork"),
+    )
+    if (created.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const flowID = created.output.reference.flowID
+    const tagged = (title: string) =>
+      host.session.create({
+        title,
+        agent: Agent.ID.make("build"),
+        model,
+        metadata: { "kilocode.flow": { flowID, runID: KiloFlowRpc.RunID.create() } },
+      })
+    const runSession = yield* tagged("Run")
+    const fork = yield* tagged("Fork of the run")
+    forked.add(fork.id)
+    const deleted = yield* flowDelete.execute({ flowID, deleteSessions: true }, call("call_delete_fork"))
+    expect(deleted.output?.removedSessions).toEqual([runSession.id])
+    expect(
+      yield* host.session.get({ sessionID: fork.id }).pipe(
+        Effect.as(true),
+        Effect.catchCause(() => Effect.succeed(false)),
+      ),
+    ).toBeTrue()
+  }),
+)
+
 it.live("deletes a Flow's run Sessions only when asked, never its source Session", () =>
   Effect.gen(function* () {
     backingSchedules.clear()

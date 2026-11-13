@@ -335,14 +335,16 @@ async function resumeCreated(
 }
 
 /**
- * Deletes a Flow only after its exact name is typed, so a stray key cannot remove a scheduled task. Sessions and
- * worktrees are kept unless `clean` is set, which removes the clean worktrees past runs left behind.
+ * Deletes a Flow after a choice whose first, preselected option is Cancel, so a stray key or Enter cannot remove a
+ * scheduled task. The other options choose the scope: only the Flow, also its clean run worktrees (offered when it
+ * left any behind), or also its run Sessions, which asks once more because their transcripts cannot be restored.
+ * The source Session is never deleted.
  */
 export async function deleteFlow(context: PeriodicContext, open: Open, flow: KiloFlowRpc.Info) {
   if (flow.reference.type !== "managed") return
   const flowID = flow.reference.flowID
   const back = { key: flowID, detail: true }
-  const worktrees = flow.execution.mode === "fresh" && flow.execution.worktree === "new"
+  const worktrees = await leftWorktrees(context, flow, flowID)
   context.ui.dialog.clear()
   // Cancel is first and preselected, so a stray Enter never deletes; deleting needs a deliberate choice.
   const choice = await context.ui.dialog.select({
@@ -398,6 +400,22 @@ export async function deleteFlow(context: PeriodicContext, open: Open, flow: Kil
   if (!removed) return open(back)
   reportRemoval(context, flow.name, removed)
   open({})
+}
+
+/**
+ * Whether the Flow runs in new worktrees or did before an edit: earlier runs still left worktrees behind, and the server
+ * removes those too, so cleaning stays available after the Flow switches to reusing its directory.
+ */
+async function leftWorktrees(context: PeriodicContext, flow: KiloFlowRpc.Info, flowID: KiloFlowRpc.ID) {
+  if (flow.execution.mode === "fresh" && flow.execution.worktree === "new") return true
+  if (flow.latestRun?.worktree === "new") return true
+  return context.client
+    .rpc(KiloFlowRpc.Definition)
+    .runs({ flowID }, options(context))
+    .then(
+      (output) => output.runs.some((run) => run.worktree === "new"),
+      () => false,
+    )
 }
 
 function reportRemoval(context: PeriodicContext, name: string, removed: KiloFlowRpc.RemoveOutput) {
