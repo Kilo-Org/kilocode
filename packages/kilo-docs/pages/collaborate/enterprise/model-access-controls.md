@@ -49,6 +49,10 @@ Lists all providers. For each provider you can:
 
 When you toggle a provider off, all models it offers become unavailable to team members. Re-enabling the provider restores access to all its models.
 
+### Provider details dialog
+
+Select a provider to open its details dialog. It lists that provider's models with a **Model allowed** checkbox for each. **Select all** and **Deselect all** above the list allow or deny every model the dialog lists in one action. The change goes into the same unsaved draft as the per-model checkboxes and applies only after you save. The controls are unavailable when you do not have permission to edit.
+
 ### Bulk actions
 
 The **Models** and **Providers** tabs share a toolbar that combines **Search**, **Show enabled only**, and bulk actions.
