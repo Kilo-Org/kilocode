@@ -50,6 +50,7 @@ import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
 import { createMentionHost, isMentionRequest } from "./kilo-provider/mention-requests"
+import { KiloProviderMemory, memoryApi } from "./kilo-provider/memory"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -244,6 +245,8 @@ export function wire(input: {
     log: (message, error) => console.error(`Kilo indexing: ${message}`, error),
   })
   const detachIndexing = indexing.attach(post)
+  // Project memory of the view's directory; replies go only to the view that asked.
+  const memory = new KiloProviderMemory({ api: memoryApi(input.server, input.directory), post })
   // The composer's `@` menu: file and past-chat search, the file picker, terminal output and git changes.
   const mentions = createMentionHost({ server: input.server, directory: input.directory, post })
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
@@ -438,6 +441,7 @@ export function wire(input: {
   }
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
+    if (memory.handle(message)) return true
     if (message.type === "saveImage") {
       void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
       return true

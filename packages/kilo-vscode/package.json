@@ -1083,6 +1083,7 @@
     "@kilocode/caffeination": "workspace:*",
     "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/sandbox": "workspace:*",
     "@kobalte/core": "catalog:",

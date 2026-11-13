@@ -57,3 +57,46 @@ export function reviewScopes(commands: readonly CommandInfo[], worktree: boolean
     args: item.scope,
   }))
 }
+
+// The `/memory` children of v1's slash menu. `input` children take text, so selecting one writes it into the draft.
+const MEMORY = [
+  { command: "status", key: "chat.memory.command.status" },
+  { command: "show", key: "chat.memory.command.show" },
+  { command: "on", key: "chat.memory.command.on" },
+  { command: "off", key: "chat.memory.command.off" },
+  { command: "inspect", key: "chat.memory.command.inspect" },
+  { command: "rebuild", key: "chat.memory.command.rebuild" },
+  { command: "remember", key: "chat.memory.command.remember", input: true },
+  { command: "correct", key: "chat.memory.command.correct", input: true },
+  { command: "forget", key: "chat.memory.command.forget", input: true },
+  { command: "auto on", key: "chat.memory.command.autoOn" },
+  { command: "auto off", key: "chat.memory.command.autoOff" },
+  { command: "purge confirm", key: "chat.memory.command.purge" },
+] as const
+
+/**
+ * The client-side `/memory` command (alias `/mem`) and its nested entries. `run` receives the words after
+ * `/memory`; a typed `/memory ...` draft is run by the composer itself, so the root entry only opens its children.
+ */
+export function memoryCommands(run: ((command: string) => void) | undefined, t: (key: string) => string): SlashEntry[] {
+  if (!run) return []
+  return [
+    {
+      kind: "action",
+      name: "memory",
+      description: t("chat.memory.command.description"),
+      hints: ["mem"],
+      run: () => {},
+    },
+    ...MEMORY.map(
+      (item): SlashEntry => ({
+        kind: "action",
+        name: `memory ${item.command}`,
+        description: t(item.key),
+        hints: [],
+        input: "input" in item,
+        run: () => run(item.command),
+      }),
+    ),
+  ]
+}

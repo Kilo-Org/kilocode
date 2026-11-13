@@ -402,6 +402,18 @@ export function commitMessagePrompt(entries: readonly Config.Entry[]) {
   return prompt || undefined
 }
 
+/** The `memory_model` of the effective entries: the last document that sets it wins; null or empty means the session model. */
+export function memoryModel(entries: readonly Config.Entry[]) {
+  const model = entries.reduce<string | null | undefined>(
+    (value, entry) =>
+      entry.type === "document" && entry.info instanceof Info && entry.info.memory_model !== undefined
+        ? entry.info.memory_model
+        : value,
+    undefined,
+  )
+  return model || undefined
+}
+
 /** The `indexing` key of the effective entries: later documents win, and nested provider options merge. */
 export function indexingConfig(entries: readonly Config.Entry[]) {
   return entries.reduce<KiloIndexingRpc.Config | undefined>((value, entry) => {

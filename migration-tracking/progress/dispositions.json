@@ -2696,5 +2696,39 @@
     "state": "dropped",
     "note": "Tested the dropped removePrefixOverlap.ts. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
     "by": "retire-mercury"
+  },
+  "module:packages/kilo-memory/src/effect/httpapi.ts": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/memory.ts",
+    "note": "The v1 HttpApi contract (MemoryContract, ten /memory routes) is the kilocode.memory RPC contract: KiloMemoryRpc.Definition with the same ten methods (status, show, enable, disable, configure, rebuild, remember, correct, forget, purge), the same payload limits and the status/updated/error events. Nullable stats stay null on the wire instead of being coerced to 0/\"\". Handlers: packages/kilo-plugin/src/memory/index.ts; round trip: packages/kilo-cli/test/memory.test.ts.",
+    "by": "memory-v2"
+  },
+  "module:packages/opencode/src/kilocode/memory/marker.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/memory/index.ts",
+    "note": "The per-session marker (startup index from MemoryMarkerMeta.fromBlocks, replaced by a successful kilo_memory_recall via fromRecall, verbose items only for recall) is kept per session in the plugin and returned as `marker` by kilocode.memory status({sessionID}). v1 persisted it as an empty synthetic text part on the assistant message; v2 assistant content has no such part, and the only v1 consumer (the TUI sidebar success tone) reads it from the RPC instead.",
+    "by": "memory-v2"
+  },
+  "module:packages/opencode/src/kilocode/memory/runtime.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/memory/index.ts",
+    "note": "installMemoryRuntime (MemoryPaths data directory, logger, event sink, once per process) is the `shared.installed` block of KiloMemory.Plugin: data directory from Global.Service (kilo2 data dir), Effect log warnings, and the package event sink routed to the RPC events of every Location on the same memory folder. The instance binder is not needed: v2 has no per-instance ALS.",
+    "by": "memory-v2"
+  },
+  "module:packages/opencode/test/kilocode/memory/memory-ports.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/memory-ports.test.ts",
+    "note": "Carries the session-port assertions (latest turn, all assistant steps, recall usage, diffs, unfinished step, parent lookup) and the model-port assertions (configured memory_model, fallback for unset, malformed and unavailable models, timeout). Dropped on purpose: the ai-SDK-level assertions (x-opencode-session headers, OpenAI-compatible stream:false body, OpenAI instructions, one retry), because v2 runs memory prompts through ctx.experimental.generate.text, which owns provider options and transport. memory_model resolution from config: KiloConfigPolicy.memoryModel.",
+    "by": "memory-v2"
+  },
+  "patch:memory:6dfdd50f23cd": {
+    "state": "dropped",
+    "note": "Test preload that installed the v1 memory runtime before tests imported src/. v2 has no global memory runtime to install: KiloMemory.Plugin wires the package when the host registers it, and packages/kilo-cli/test/memory.test.ts boots it through KiloHost.overrides.",
+    "by": "memory-v2"
+  },
+  "patch:memory:dc3d51186ed2": {
+    "state": "dropped",
+    "note": "v1 prompt.test.ts imported MemoryService only to provide its layer to the shared prompt loop, which called memory directly. v2 session core has no memory dependency (memory is a plugin on the session context hook and execution events), so upstream session tests need no memory layer.",
+    "by": "memory-v2"
   }
 }

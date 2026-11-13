@@ -1,17 +1,21 @@
-import { createSignal, type Component } from "solid-js"
+import { createSignal, Show, type Component } from "solid-js"
 import Switch from "./Switch"
+import { Button } from "@kilocode/kilo-ui/button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
+import { localeToBcp47 } from "../../context/language-utils"
+import { MemoryProvider, useMemory } from "../../context/memory"
 import { useSettingsConfig } from "../../v2/settings-config"
 import SettingsRow from "./SettingsRow"
 import PatternList from "./PatternList"
 import { limitEdit, limitFromBuffer, tokenEdit } from "./context-tokens"
 import type { SettingsTabProps } from "./tabs"
 
-const ContextTab: Component<SettingsTabProps> = (props) => {
+const ContextTabContent: Component<SettingsTabProps> = (props) => {
   const config = useSettingsConfig()
   const language = useLanguage()
+  const memory = useMemory()!
 
   const patterns = () => {
     const value = config.value(["watcher", "ignore"])
@@ -72,9 +76,80 @@ const ContextTab: Component<SettingsTabProps> = (props) => {
   const buffer = field(() => tokens(["compaction", "buffer"]), applyTokens(["compaction", "buffer"]))
   const limitField = field(limit, applyLimit)
 
+  const memoryStats = () => {
+    const status = memory.status()
+    if (!status) return language.t("settings.context.memory.status.notLoaded")
+    if (!status.state.enabled) return language.t("settings.context.memory.status.disabled")
+    if (status.index.estimatedTokens === 0) return language.t("chat.memory.project.empty")
+    const tokens = status.index.estimatedTokens.toLocaleString(localeToBcp47(language.locale()))
+    return language.t("settings.context.memory.status.enabledTokens", { tokens })
+  }
+
   return (
     <div>
-      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.context.compaction.title")}</h4>
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.context.memory.title")}</h4>
+      <Card>
+        <SettingsRow title={language.t("settings.context.memory.project.title")} description={memoryStats()}>
+          <Switch
+            checked={memory.enabled()}
+            onChange={(checked) => (checked ? memory.enable() : memory.disable())}
+            hideLabel
+            disabled={memory.pending() || !memory.status()}
+          >
+            {language.t("settings.context.memory.project.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.context.memory.autoSave.title")}
+          description={language.t("settings.context.memory.autoSave.description")}
+        >
+          <Switch
+            checked={memory.status()?.state.autoConsolidate ?? true}
+            onChange={(checked) => memory.auto(checked ? "on" : "off")}
+            hideLabel
+            disabled={memory.pending() || !memory.status()}
+          >
+            {language.t("settings.context.memory.autoSave.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.context.memory.storage.title")}
+          description={
+            memory.enabled()
+              ? language.t("settings.context.memory.storage.path", { path: memory.status()!.root })
+              : language.t("settings.context.memory.storage.enable")
+          }
+          last
+        >
+          <Button
+            variant="secondary"
+            size="small"
+            icon="eye"
+            disabled={memory.loading() || memory.pending() || !memory.enabled() || memory.totalTokens() === 0}
+            onClick={() => memory.inspect()}
+          >
+            {language.t("settings.context.memory.inspect")}
+          </Button>
+        </SettingsRow>
+        <Show when={memory.error()}>
+          {(err) => (
+            <div
+              data-slot="context-memory-error"
+              style={{
+                padding: "8px 12px",
+                color: "var(--vscode-errorForeground)",
+                "font-size": "var(--kilo-font-size-12)",
+              }}
+            >
+              {err()}
+            </div>
+          )}
+        </Show>
+      </Card>
+
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.context.compaction.title")}
+      </h4>
       <Card>
         <SettingsRow
           title={language.t("settings.context.autoCompaction.title")}
@@ -184,5 +259,12 @@ const ContextTab: Component<SettingsTabProps> = (props) => {
     </div>
   )
 }
+
+// Only this tab reads the project memory state, so the Settings shell does not mount it.
+const ContextTab: Component<SettingsTabProps> = (props) => (
+  <MemoryProvider>
+    <ContextTabContent {...props} />
+  </MemoryProvider>
+)
 
 export default ContextTab

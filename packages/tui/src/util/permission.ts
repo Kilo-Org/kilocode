@@ -1,4 +1,5 @@
 import { flowPermissionPresentation } from "../kilocode/flow-permission" // kilocode_change(flow) - present Flow approval resources without changing the upstream fallback
+import { memoryPermissionPresentation } from "../kilocode/memory-permission" // kilocode_change(memory) - present memory tool approvals with their text or query
 import { Locale } from "./locale"
 import { canonicalToolName, finiteNumber, webSearchProviderLabel } from "./tool-display"
 
@@ -139,6 +140,8 @@ export function permissionPresentation(
 
   const flow = flowPermissionPresentation(source) // kilocode_change(flow) - delegate the Kilo-specific presentation
   if (flow) return flow // kilocode_change(flow) - preserve the upstream fallback for every other custom action
+  const memory = memoryPermissionPresentation(source) // kilocode_change(memory) - delegate the Kilo memory tool presentation
+  if (memory) return memory // kilocode_change(memory) - preserve the upstream fallback for every other custom action
   return {
     icon: "⚙",
     title: `Call tool ${source.action}`,

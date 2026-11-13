@@ -2,8 +2,8 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 138,
-    "markedLines": 2380,
-    "unmarkedLines": 332,
+    "markedLines": 2391,
+    "unmarkedLines": 333,
     "deletedFiles": 0
   },
   "files": {
@@ -271,7 +271,7 @@
     },
     "packages/tui/package.json": {
       "rung": 3,
-      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments. Also add the `@kilocode/caffeination` workspace dependency that the Kilo TUI `/caffeinate` command imports; the driver is Kilo-owned and shared with the VS Code client.",
+      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments. Also add the `@kilocode/caffeination` workspace dependency that the Kilo TUI `/caffeinate` command imports; the driver is Kilo-owned and shared with the VS Code client. Also add the `@kilocode/kilo-memory` workspace dependency for the pure memory command parser, autosave summary and token estimate that the Kilo TUI `/memory` command and dialogs import.",
       "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-theme-list.tsx": {
@@ -304,7 +304,7 @@
     },
     "packages/tui/src/util/permission.ts": {
       "rung": 4,
-      "seam": "Call the Kilo-owned Flow permission presenter before the unchanged custom-action fallback. The public TUI plugin API cannot replace the built-in permission prompt or its presentation function; only the Flow action opts into resource-list presentation, so ordinary upstream custom permissions keep their default output."
+      "seam": "Call the Kilo-owned Flow and memory permission presenters before the unchanged custom-action fallback. The public TUI plugin API cannot replace the built-in permission prompt or its presentation function; only the Flow action opts into resource-list presentation and only kilo_memory_save and kilo_memory_recall show their memory action with the text or query (tui/src/kilocode/memory-permission.ts), so ordinary upstream custom permissions keep their default output."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
@@ -328,7 +328,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY) `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity) and `KiloMemory` (`/memory` with its dialogs, the sidebar Memory row and memory error toasts on the `kilocode.memory` RPC). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -377,7 +377,7 @@
     },
     "packages/tui/src/routes/session/index.tsx": {
       "rung": 4,
-      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out. No tool renderer hook or generic knob reaches these rows."
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering. The same closed tool renderers need three transcript behaviors that upstream does not expose: a dismissed question summary, a moved label for a renamed patch target, and a live child line for a subagent with its current tool, retry, tool count, and duration. The Kilo Swarm board_read and board_post tools render through a Kilo-owned BoardTool (packages/tui/src/kilocode/board-tool.tsx) from one import and one Match call-out, and the Kilo memory tools kilo_memory_recall and kilo_memory_save render as one readable inline row through a Kilo-owned MemoryTool (packages/tui/src/kilocode/memory-tool.tsx) the same way. No tool renderer hook or generic knob reaches these rows."
     },
     "packages/tui/src/routes/session/group-view.tsx": {
       "rung": 4,

@@ -141,9 +141,6 @@ const EXCLUDED_KEYS = new Set([
   "settings.context.compaction.title",
   "settings.context.prune.title",
   "settings.context.memory.title",
-  "settings.context.memory.autoSave.title",
-  "settings.context.memory.project.title",
-  "settings.context.memory.storage.title",
   "agentManager.browser.title",
   // Models keys the v2 Models tab does not render: v2 has no subagent settings.
   "settings.providers.subagentModel.title",

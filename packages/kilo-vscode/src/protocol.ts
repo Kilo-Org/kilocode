@@ -1,6 +1,8 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
 import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import type { KiloMemoryRpc } from "@opencode/schema/kilocode/memory"
+import type { MemoryOperation } from "@kilocode/kilo-memory/commands"
 import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
 
@@ -136,6 +138,7 @@ export type ToHost =
   | Settings
   | Speech
   | Indexing
+  | Memory
   | SidebarWorktree
   | AgentManagerCaffeination
   | Mention
@@ -262,6 +265,25 @@ export type SessionSearchItem = {
 export type Indexing =
   | { type: "requestIndexingSettings"; projectId?: string }
   | { type: "setIndexingConsent"; projectId: string; enabled: boolean }
+
+/** Project memory, ported from v1: status reads, the Quick Pick overview and operations of the `kilocode.memory` RPC. */
+export type MemoryOperationMessage = {
+  type: "memoryOperation"
+  operation: MemoryOperation
+  sessionID?: string
+  mode?: "status" | "on" | "off"
+  confirm?: boolean
+  text?: string
+  query?: string
+  key?: string
+  file?: KiloMemoryRpc.Source
+  section?: string
+}
+
+export type Memory =
+  | { type: "requestMemory"; sessionID?: string }
+  | { type: "memoryShow"; sessionID?: string; mode?: "status" | "show" }
+  | MemoryOperationMessage
 
 export type IndexingProject = {
   id: string
@@ -506,6 +528,15 @@ export type ToWebview =
   | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
   | { type: "indexingSettingsLoaded"; settings: IndexingSettings }
   | { type: "indexingStatusLoaded"; status: KiloIndexingRpc.Status; projectId?: string }
+  | { type: "memoryLoaded"; sessionID?: string; status?: KiloMemoryRpc.Status; error?: string }
+  | {
+      type: "memoryOperationResult"
+      operation: MemoryOperation
+      sessionID?: string
+      ok: boolean
+      status?: KiloMemoryRpc.Status
+      error?: string
+    }
   | {
       type: "agentManagerSettingsLoaded"
       requestId: string

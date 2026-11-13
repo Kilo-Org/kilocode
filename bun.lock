@@ -349,6 +349,20 @@
         "@typescript/native": "catalog:",
       },
     },
+    "packages/kilo-memory": {
+      "name": "@kilocode/kilo-memory",
+      "version": "0.0.0",
+      "dependencies": {
+        "effect": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/node22": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native": "catalog:",
+      },
+    },
     "packages/kilo-plugin": {
       "name": "@kilocode/kilo-plugin",
       "version": "0.0.0",
@@ -357,6 +371,7 @@
         "@kilocode/gateway-core": "workspace:*",
         "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-indexing": "workspace:*",
+        "@kilocode/kilo-memory": "workspace:*",
         "@kilocode/sandbox": "workspace:*",
         "@opencode/ai": "workspace:*",
         "@opencode/client": "workspace:*",
@@ -478,6 +493,7 @@
         "@kilocode/caffeination": "workspace:*",
         "@kilocode/gateway-core": "workspace:*",
         "@kilocode/kilo-i18n": "workspace:*",
+        "@kilocode/kilo-memory": "workspace:*",
         "@kilocode/kilo-ui": "workspace:*",
         "@kilocode/sandbox": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -772,6 +788,7 @@
       "version": "2.2.5",
       "dependencies": {
         "@kilocode/caffeination": "workspace:*",
+        "@kilocode/kilo-memory": "workspace:*",
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
         "@opencode/latex": "workspace:*",
@@ -1470,6 +1487,8 @@
     "@kilocode/kilo-i18n": ["@kilocode/kilo-i18n@workspace:packages/kilo-i18n"],
 
     "@kilocode/kilo-indexing": ["@kilocode/kilo-indexing@workspace:packages/kilo-indexing"],
+
+    "@kilocode/kilo-memory": ["@kilocode/kilo-memory@workspace:packages/kilo-memory"],
 
     "@kilocode/kilo-plugin": ["@kilocode/kilo-plugin@workspace:packages/kilo-plugin"],
 

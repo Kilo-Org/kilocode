@@ -196,12 +196,12 @@ import { PENDING_PREFIX, REVIEW_TAB_ID } from "./tab-ids"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { WorktreeDelete } from "./worktree-delete"
 import { SpeechToTextStatusProvider } from "../src/components/speech-to-text/status"
+import { MemoryProvider } from "../src/context/memory"
 import { useDisplaySettings } from "../src/v2/display-settings"
 
 type SidebarSelection = typeof LOCAL | string | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
-
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -910,7 +910,13 @@ const AgentManagerContent: Component = () => {
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
   const sideHostVisible = () =>
-    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache() ? 1 : 0)
+    sideHostNeeded(
+      sidePanel(),
+      diffMounted(),
+      terms.sides().length,
+      subagents.tabs().length,
+      browser.hasCache() ? 1 : 0,
+    )
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -2303,48 +2309,50 @@ const AgentManagerContent: Component = () => {
             <V2Scope value={store}>
               <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
                 <SpeechToTextStatusProvider>
-                  <SessionView
-                    session={
-                      sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                        ? sessions.currentSessionID()
-                        : undefined
-                    }
-                    draftKey={sessions.currentSessionID() ?? activePendingId()}
-                    readOnly={readOnly()}
-                    onSession={handleSessionCreated}
-                    actions={toolActions}
-                    onShowHistory={() => openHistory()}
-                    row={sessionActions}
-                    rowWhenEmpty={!!transfer.branch()}
-                    onNewSession={handleNewTabForCurrentSelection}
-                    worktree={!!selection() && selection() !== LOCAL}
-                    manager={hints.manager}
-                    focusOnDraftChange={focusOnDraftChange}
-                    onFocusChange={focusCtl.prompt}
-                    empty={intro.render}
-                    onAppendReady={(append) => (promptAppend = append)}
-                    onReviewAppendReady={(append) => (promptReviewAppend = append)}
-                    onComposerReady={composerQueue.ready}
-                    onReferenceReady={(add) => (promptReference = add)}
-                    onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                    onViewTurnChanges={openTurnChanges}
-                    onForkMessage={handleForkSession}
-                    onMissing={(id) => handleCloseTab(id)}
-                    worktrees={references}
-                    git={isGitRepo}
-                    gitTarget={gitTarget}
-                    terminalContext={() => selection() ?? undefined}
-                    resolveEmbeddedTerminal={resolveTerminal}
-                    onPrompted={(sessionId, text, model) =>
-                      to({
-                        type: "agentManager.promptSent",
-                        sessionId,
-                        text,
-                        providerID: model?.providerID,
-                        modelID: model?.id,
-                      })
-                    }
-                  />
+                  <MemoryProvider>
+                    <SessionView
+                      session={
+                        sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
+                          ? sessions.currentSessionID()
+                          : undefined
+                      }
+                      draftKey={sessions.currentSessionID() ?? activePendingId()}
+                      readOnly={readOnly()}
+                      onSession={handleSessionCreated}
+                      actions={toolActions}
+                      onShowHistory={() => openHistory()}
+                      row={sessionActions}
+                      rowWhenEmpty={!!transfer.branch()}
+                      onNewSession={handleNewTabForCurrentSelection}
+                      worktree={!!selection() && selection() !== LOCAL}
+                      manager={hints.manager}
+                      focusOnDraftChange={focusOnDraftChange}
+                      onFocusChange={focusCtl.prompt}
+                      empty={intro.render}
+                      onAppendReady={(append) => (promptAppend = append)}
+                      onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                      onComposerReady={composerQueue.ready}
+                      onReferenceReady={(add) => (promptReference = add)}
+                      onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                      onViewTurnChanges={openTurnChanges}
+                      onForkMessage={handleForkSession}
+                      onMissing={(id) => handleCloseTab(id)}
+                      worktrees={references}
+                      git={isGitRepo}
+                      gitTarget={gitTarget}
+                      terminalContext={() => selection() ?? undefined}
+                      resolveEmbeddedTerminal={resolveTerminal}
+                      onPrompted={(sessionId, text, model) =>
+                        to({
+                          type: "agentManager.promptSent",
+                          sessionId,
+                          text,
+                          providerID: model?.providerID,
+                          modelID: model?.id,
+                        })
+                      }
+                    />
+                  </MemoryProvider>
                 </SpeechToTextStatusProvider>
               </ReviewCommentActionsContext.Provider>
             </V2Scope>
