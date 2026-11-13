@@ -249,7 +249,7 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
         Schedule.setInputType<E>(),
         Schedule.while(({ input, now, duration }) =>
           // kilocode_change - consult the host predicate alongside upstream's own rule
-          !transient(input) || now + Duration.toMillis(duration) >= deadline
+          !transient(input) || now + Duration.toMillis(duration) >= deadline // kilocode_change
             ? Effect.succeed(false)
             : Effect.logWarning(`retrying ${what}`, { server, error: describe(input) }).pipe(Effect.as(true)),
         ),
