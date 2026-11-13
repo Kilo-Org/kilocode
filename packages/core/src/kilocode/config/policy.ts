@@ -369,6 +369,15 @@ export function commandDocuments(entries: readonly Config.Entry[], documents: { 
   return [...documents, { commands: overrides }]
 }
 
+/** The model-only `commands.<name>` selection of the effective entries: the last document that sets one wins. */
+export function workflowModel(entries: readonly Config.Entry[], name: string) {
+  return entries.reduce<ConfigModel.Selection | undefined>(
+    (value, entry) =>
+      entry.type === "document" && entry.info instanceof Info ? (entry.info.workflow_models?.[name] ?? value) : value,
+    undefined,
+  )
+}
+
 /** Read only effective location config entries, never plugin storage or a user's ordinary config store. */
 export function fromEntries(entries: readonly Config.Entry[]) {
   return {

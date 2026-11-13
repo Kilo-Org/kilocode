@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test"
-import { DateTime, Effect, Layer, Schema } from "effect"
+import { DateTime, Effect, Layer, PubSub, Schedule, Schema, Stream } from "effect"
 import { Bus } from "@opencode/core/bus"
 import { Command } from "@opencode/core/command"
+import { Config } from "@opencode/core/config"
+import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { Location } from "@opencode/core/location"
 import { Mcp } from "@opencode/core/mcp/index"
 import { CommandPlugin } from "@opencode/core/plugin/command"
 import { AbsolutePath } from "@opencode/core/schema"
 import { QuestionTool } from "@opencode/core/tool/plugin/question"
+import { Document } from "@opencode/schema/config"
+import { ConfigModel } from "@opencode/schema/config/model"
+import { Event } from "@opencode/schema/event"
 import { Session } from "@opencode/schema/session"
 import { SessionInbox } from "@opencode/schema/session-inbox"
 import { SessionMessage } from "@opencode/schema/session-message"
@@ -28,6 +34,24 @@ const it = testEffect(
   ]),
 )
 
+const configUpdated = () => ({ id: Event.ID.create(), created: Date.now(), type: "config.updated" as const, data: {} })
+
+/** Records the plugin's tool and session hooks so a test can run them like the host does. */
+function hooks() {
+  const callbacks = new Map<string, (event: object) => Effect.Effect<void>>()
+  return {
+    hook:
+      (domain: string) =>
+      (name: string, callback: (event: never) => Effect.Effect<void, unknown>) =>
+        Effect.sync(() => {
+          callbacks.set(`${domain}.${name}`, (event) => Effect.orDie(callback(event as never)))
+          return { dispose: Effect.void }
+        }),
+    run: <A extends object>(name: string, event: A) =>
+      Effect.suspend(() => callbacks.get(name)?.(event) ?? Effect.die(`missing hook ${name}`)).pipe(Effect.as(event)),
+  }
+}
+
 function expectReviewFixContract(text: string) {
   expect(text).toContain("During the initial review phase")
   expect(text).toContain("DO NOT modify any files")
@@ -47,7 +71,9 @@ describe("review command registration", () => {
           transform: command.transform,
           reload: command.reload,
         },
+        tool: { ...host().tool, hook: () => Effect.succeed({ dispose: Effect.void }) },
         session: {
+          hook: () => Effect.succeed({ dispose: Effect.void }),
           prompt: (input) =>
             Effect.sync(() => {
               prompts.push({
@@ -77,6 +103,7 @@ describe("review command registration", () => {
       expect(yield* command.get("review")).toEqual({
         name: "review",
         description: "review changes [uncommitted|staged|unpushed|branch|commit|pr]",
+        template: PROMPT,
       })
       expect((yield* command.list()).filter((item) => item.name === "review")).toHaveLength(1)
       expect((yield* command.get("review"))?.description).not.toContain("worktree")
@@ -106,7 +133,100 @@ describe("review command registration", () => {
       ])
       expect(prompts[0].text).toContain("## User Input\n\nstaged focus on auth $& $$\n")
       expect(prompts[0].text).not.toContain("$ARGUMENTS")
+      expect(prompts[0].text).not.toContain("## Review Model")
     }),
+  )
+
+  it.effect("sends a model-only review model to the sub-agents and follows config updates", () =>
+    Effect.gen(function* () {
+      const command = yield* Command.Service
+      const config = yield* Config.Test
+      const updates = yield* PubSub.unbounded<ReturnType<typeof configUpdated>>()
+      const document = (model: string) => {
+        const input = { commands: { review: { model } } }
+        const normalized = ConfigNormalize.normalize(KiloConfigDiscovery.layout.normalize!(input))
+        if (normalized.type !== "normalized") throw new Error("expected normalized config")
+        const info = KiloConfigDiscovery.layout.parse!(input, normalized.encoded)
+        if (!info) throw new Error("expected Kilo config")
+        return new Document({ type: "document", info })
+      }
+      yield* config.setEntries([document("global/reviewer"), document("project/reviewer#high")])
+      const prompts: string[] = []
+      const recorder = hooks()
+      const context = host({
+        command: { list: () => Effect.die("unused command.list"), transform: command.transform, reload: command.reload },
+        event: { subscribe: () => Stream.fromPubSub(updates) },
+        tool: { ...host().tool, hook: recorder.hook("tool") },
+        session: {
+          hook: recorder.hook("session"),
+          prompt: (input) =>
+            Effect.sync(() => {
+              prompts.push(input.text)
+              return SessionInbox.User.make({
+                id: SessionMessage.ID.make("msg_review_model"),
+                sessionID: input.sessionID,
+                time: { created: DateTime.makeUnsafe(0) },
+                type: "user",
+                payload: { text: input.text },
+                delivery: input.delivery ?? "steer",
+              })
+            }),
+        },
+      })
+      yield* KiloReview.Plugin.effect(context)
+      const selected = Schema.decodeUnknownSync(ConfigModel.Selection)("project/reviewer#high")
+      expect((yield* command.get("review"))?.model).toEqual(selected)
+
+      const sessionID = Session.ID.make("ses_review_model")
+      yield* command.execute({ name: "review", invocation: { sessionID, prompt: { text: "worktree" }, delivery: "steer" } })
+      expect(prompts[0]).toBe(KiloReview.template("worktree", selected))
+      expect(prompts[0]).toContain('runs on `project/reviewer#high` and waits for its result; pass `model: "project/reviewer#high"`')
+
+      // New subagents of the reviewing session run on the review model, whatever model the agent passed; follow-ups
+      // and other sessions keep theirs.
+      const spawn = (input: Record<string, unknown>, session = sessionID) =>
+        recorder.run("tool.execute.before", { tool: "subagent", sessionID: session, input }).pipe(
+          Effect.map((event) => event.input),
+        )
+      expect(yield* spawn({ agent: "general", prompt: "security", background: true })).toMatchObject({
+        model: "project/reviewer#high",
+        background: false,
+      })
+      expect(yield* spawn({ agent: "general", prompt: "x", model: "main/coder" })).toMatchObject({
+        model: "project/reviewer#high",
+      })
+      expect(yield* spawn({ agent: "general", prompt: "x", sessionID: "ses_child" })).not.toHaveProperty("model")
+      expect(yield* spawn({ agent: "general", prompt: "x" }, Session.ID.make("ses_other"))).not.toHaveProperty("model")
+      expect(yield* spawn({ agent: "explore", prompt: "x" })).toMatchObject({
+        model: "project/reviewer#high",
+      })
+
+      // A running subagent keeps the review open; going idle without one ends it.
+      yield* recorder.run("session.experimental.idle", {
+        sessionID,
+        background: [{ kind: "subagent", sessionID, childSessionID: "ses_child" }],
+      })
+      expect(yield* spawn({ agent: "general", prompt: "x" })).toMatchObject({ model: "project/reviewer#high" })
+      yield* recorder.run("session.experimental.idle", { sessionID, background: [] })
+      expect(yield* spawn({ agent: "general", prompt: "x" })).not.toHaveProperty("model")
+      expect(prompts[0]).toContain("spawn exactly one sub-agent that covers every relevant track")
+      expect(prompts[0]).toContain("do not read the full diff, changed files or untracked file contents yourself")
+      expect(prompts[0]).toContain("Start all review sub-agents in one message")
+      expect(prompts[0].indexOf("## Review Model")).toBeGreaterThan(prompts[0].indexOf("## Review Focus"))
+      expect(prompts[0].indexOf("## Review Model")).toBeLessThan(prompts[0].indexOf("## Required Workflow"))
+
+      yield* config.setEntries([document("global/reviewer")])
+      yield* PubSub.publish(updates, configUpdated())
+      const model = yield* command.get("review").pipe(
+        Effect.map((item) => item?.model),
+        Effect.repeat({ until: (item) => item?.providerID === "global", schedule: Schedule.spaced("5 millis") }),
+        Effect.timeout("2 seconds"),
+      )
+      expect(model).toEqual(Schema.decodeUnknownSync(ConfigModel.Selection)("global/reviewer"))
+      yield* command.execute({ name: "review", invocation: { sessionID, prompt: { text: "" }, delivery: "steer" } })
+      expect(prompts[1]).toContain('pass `model: "global/reviewer"`')
+      expect(yield* spawn({ agent: "general", prompt: "x" })).toMatchObject({ model: "global/reviewer" })
+    }).pipe(Effect.provide(Config.testLayer())),
   )
 })
 
