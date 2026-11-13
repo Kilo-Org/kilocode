@@ -1,7 +1,9 @@
 import { Component, Show, createEffect, createMemo, createSignal } from "solid-js"
 import type { NotificationsContextValue } from "../../context/notifications"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import { useV2 } from "../../v2/client"
+import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import type { Selection } from "../../v2/selectors"
 import { KILO_PROVIDER_ID } from "../settings/provider-catalog"
 import { stripSubProviderPrefix } from "../shared/model-selector-filter"
@@ -13,6 +15,7 @@ export const KiloNotifications: Component<{
   selection: Selection
 }> = (props) => {
   const v2 = useV2()
+  const vscode = useVSCode()
   const language = useLanguage()
   const [index, setIndex] = createSignal(0)
 
@@ -62,7 +65,13 @@ export const KiloNotifications: Component<{
 
   const handleTryModel = () => {
     const model = suggestedModel()
-    if (model) props.selection.selectModel(model.providerID, model.id)
+    if (!model) return
+    props.selection.selectModel(model.providerID, model.id)
+    vscode.postMessage({
+      type: "telemetry",
+      event: TelemetryEventName.NOTIFICATION_CLICKED,
+      properties: { actionText: "Try model", suggestModelId: current()?.suggestModelId },
+    })
   }
 
   const open = (url: string) => v2.open(url)

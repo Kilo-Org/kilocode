@@ -26,11 +26,7 @@ const V1_ONLY = [
   "KILO_TREE_SITTER_WASM_DIR",
   "KILO_BWRAP_PATH",
   "KILO_TELEMETRY_LEVEL",
-  "KILO_APP_NAME",
-  "KILO_EDITOR_NAME",
   "KILO_PLATFORM",
-  "KILO_APP_VERSION",
-  "KILO_VSCODE_VERSION",
 ]
 
 /**
@@ -44,7 +40,15 @@ const PASSWORDS = ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "KILO_SERVER
  * setting, so drop it here and set it again in `extra`. The Claude Code `*_SKILLS` names and `NODE_EXTRA_CA_CERTS` are
  * not owned, so an inherited value passes through as in v1.
  */
-const MANAGED = ["KILO_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_CLAUDE_CODE"]
+const MANAGED = [
+  "KILO_DISABLE_CLAUDE_CODE",
+  "OPENCODE_DISABLE_CLAUDE_CODE",
+  "KILO_MACHINE_ID",
+  "KILO_APP_NAME",
+  "KILO_APP_VERSION",
+  "KILO_EDITOR_NAME",
+  "KILO_VSCODE_VERSION",
+]
 
 /**
  * The Integrated Browser and notebook endpoints are this host's private brokers. An inherited value would point
@@ -114,12 +118,24 @@ export function settingsEnvironment(values: {
   claudeCodeCompat: boolean
   extraCaCerts: string
   editor: string
+  client?: { machine: string; version: string; editor: string; vscode: string }
 }): Record<string, string> {
   const extraCaCerts = values.extraCaCerts.trim()
   return {
     // v1 `services/cli-backend/server-manager.ts` reported the editor as `${vscode.env.appName} ${vscode.version}`,
     // which the Gateway stores as `X-KILOCODE-EDITORNAME`.
     KILOCODE_EDITOR_NAME: values.editor,
+    // The VS Code machine ID is the server's machine ID: the anonymous telemetry identity and the Gateway's
+    // `X-KILOCODE-MACHINEID`. The app names are the defaults of the events the server sends on its own.
+    ...(values.client
+      ? {
+          KILO_MACHINE_ID: values.client.machine,
+          KILO_APP_NAME: "kilo-code",
+          KILO_APP_VERSION: values.client.version,
+          KILO_EDITOR_NAME: values.client.editor,
+          KILO_VSCODE_VERSION: values.client.vscode,
+        }
+      : {}),
     ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
     ...(extraCaCerts.length > 0 ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
   }

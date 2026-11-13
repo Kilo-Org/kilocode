@@ -57,6 +57,7 @@ import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { tabShortcutTarget } from "./tab-shortcuts"
+import { registerTelemetry } from "./services/telemetry"
 
 let shutdownExtension: (() => Promise<void>) | undefined
 
@@ -162,6 +163,7 @@ export function activate(context: ExtensionContext) {
         claudeCodeCompat: values.claudeCodeCompat === true,
         extraCaCerts: typeof values.extraCaCerts === "string" ? values.extraCaCerts : "",
         editor: `${env.appName} ${version}`,
+        client: { machine: env.machineId, version: extensionVersion, editor: env.appName, vscode: version },
       }),
       ...browser,
       ...notebook,
@@ -169,6 +171,8 @@ export function activate(context: ExtensionContext) {
     }
   }
   const shutdown = createShutdown({ log: (text) => output.appendLine(text) })
+  const extensionVersion = (context.extension.packageJSON as { version?: string }).version ?? "unknown"
+  const telemetry = registerTelemetry({ context, version: extensionVersion })
   const serverCommand = () => command({ extension: context.extensionPath, storage, env: process.env })
   // Plan mode writes plans outside a version-controlled project to the server's data directory, so plan links resolve there too.
   usePlanDir(serverPlans(serverCommand(), process.env))
@@ -185,6 +189,8 @@ export function activate(context: ExtensionContext) {
       connection.started(started)
       alerts.start(started)
       autocomplete.started()
+      // The VS Code telemetry setting is the consent; a fresh server has none until the extension records it.
+      telemetry.started(started)
       void automation.started()
       // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
       void indexing?.sync()
@@ -194,6 +200,7 @@ export function activate(context: ExtensionContext) {
       connection.stopped()
       alerts.stop()
       autocomplete.stopped()
+      telemetry.stopped()
       automation.stopped()
     },
     onError: (error) => {

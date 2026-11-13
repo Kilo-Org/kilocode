@@ -1,0 +1,5 @@
+export { Telemetry } from "./telemetry.js"
+export { TelemetryEvent } from "./events.js"
+export { Identity } from "./identity.js"
+export { Client } from "./client.js"
+export type { FeedbackProperties, ReviewCommand, TelemetryProperties } from "./telemetry.js"
