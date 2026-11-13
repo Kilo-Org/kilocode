@@ -4,6 +4,19 @@ import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvi
 import { getEditorContext } from "./editor-utils"
 import { createPrompt } from "./support-prompt"
 
+// Second step of "New Chat with Text" in the Command Palette. "No" comes first,
+// so it is the default. Resolves to undefined when dismissed, which cancels the command.
+async function askSend(): Promise<boolean | undefined> {
+  const pick = await vscode.window.showQuickPick(
+    [
+      { label: "No", description: "Keep it in the prompt box so it can be edited first", send: false },
+      { label: "Yes", description: "Send it right away", send: true },
+    ],
+    { placeHolder: "Send the message now?" },
+  )
+  return pick?.send
+}
+
 export function registerCodeActions(
   context: vscode.ExtensionContext,
   provider: KiloProvider,
@@ -106,6 +119,26 @@ export function registerCodeActions(
       if (!(await revealTarget(view))) return
       view.postMessage({ type: "action", action: "focusInput" })
     }),
+
+    // Other extensions call `executeCommand("kilo-code.new.newChatWithText", { text, send })`.
+    // The text is put in the prompt box of a new chat as written. It is only
+    // sent when `send` is true (default false). From the Command Palette there
+    // is no argument, so ask for the text and then whether to send it. Unlike
+    // terminalAddToContext, it works in hosts that cannot paste into a webview
+    // (e.g. Theia).
+    vscode.commands.registerCommand(
+      "kilo-code.new.newChatWithText",
+      async (args?: string | { text?: string; send?: boolean }) => {
+        const given = typeof args === "string" ? { text: args } : (args ?? {})
+        const text = given.text ?? (await vscode.window.showInputBox({ prompt: "Text to put in a new Kilo Code chat" }))
+        if (!text?.trim()) return
+        const send = typeof given.send === "boolean" ? given.send : given.text === undefined ? await askSend() : false
+        if (send === undefined) return
+        const view = target()
+        if (!(await revealTarget(view))) return
+        view.postMessage({ type: "newChatWithText", text, ...(send ? { send } : {}) })
+      },
+    ),
 
     // Command Palette only — no keybinding. A keybinding would need to
     // route through VS Code's keybinding-to-focused-webview forwarding,

@@ -451,6 +451,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.newChatWithText",
+        "title": "New Chat with Text",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.toggleChatSearch",
         "title": "Toggle Chat Search",
         "category": "Kilo Code"
