@@ -680,6 +680,15 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.6] - 2026-11-13
+
+### Fixed
+- fix(jetbrains): resolve row menu children through ActionManager by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16167
+
+### Changed
+- release(jetbrains): v7.2.1-rc.5 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16164
+
+
 ## [7.2.1-rc.5] - 2026-11-13
 
 ### Added
