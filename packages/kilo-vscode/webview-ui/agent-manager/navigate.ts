@@ -25,6 +25,26 @@ export function canOpenRootSession(id: string, sessions: Pick<SessionLike, "id" 
   return !!session && isKnownRootSession(session)
 }
 
+/**
+ * The worktree that owns a session, from the directory the server runs it in. `null` means the session runs outside
+ * every worktree (the project root), `undefined` that the session is not loaded yet. A session belongs to the worktree
+ * of its directory, so opening it never moves it into another worktree.
+ */
+export function sessionOwner(
+  id: string,
+  sessions: { id: string; location: { directory: string } }[],
+  worktrees: { id: string; path: string }[],
+): string | null | undefined {
+  const session = sessions.find((item) => item.id === id)
+  if (!session) return undefined
+  const directory = trimPath(session.location.directory)
+  return worktrees.find((worktree) => trimPath(worktree.path) === directory)?.id ?? null
+}
+
+function trimPath(directory: string) {
+  return directory.length > 1 ? directory.replace(/[\\/]+$/, "") : directory
+}
+
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index
   if (!current) {

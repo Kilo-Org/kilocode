@@ -298,6 +298,12 @@ interface ErrorOutMessage {
   worktreeId?: string
 }
 
+/**
+ * Sidebar id the panel uses for its Local workspace. A session that runs outside every worktree is filed under Local,
+ * so it reads from the store of the project root that receives its events.
+ */
+export const LOCAL_TARGET = "local"
+
 interface SessionAddedMessage {
   type: "agentManager.sessionAdded"
   projectId?: string

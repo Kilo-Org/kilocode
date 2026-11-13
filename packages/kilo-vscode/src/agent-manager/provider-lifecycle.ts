@@ -1,7 +1,7 @@
 import type { JsonValue, OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
 import { isRunningStatus } from "../session-status"
-import type { AgentManagerOutMessage } from "./types"
+import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
@@ -451,12 +451,26 @@ export async function addSessionToLifecycleWorktree(
   }
 
   if (sessionId) {
-    if (state.getSession(sessionId)) state.moveSession(sessionId, worktreeId)
-    else state.addSession(sessionId, worktreeId)
-    host.register(sessionId, worktree.path)
+    // The server runs a session in its own directory, and only the store of that directory receives its events.
+    // Tracking it under another worktree points that worktree's view at a store that never sees the session, so its
+    // prompts look unsent. File it under the worktree that owns its directory, or under Local for the project root.
+    const info = await client.session.get({ sessionID: sessionId }).catch(() => undefined)
+    const owner = info ? state.findWorktreeByPath(info.location.directory) : worktree
+    if (owner?.id !== worktreeId) host.log(`Session ${sessionId} runs in ${info?.location.directory}, not ${worktree.path}`)
+    if (!owner) {
+      if (state.getSession(sessionId)) state.moveSession(sessionId, null)
+      else state.addSession(sessionId, null)
+      host.push()
+      host.post({ type: "agentManager.sessionAdded", sessionId, worktreeId: LOCAL_TARGET })
+      host.log(`Added existing session ${sessionId} to Local`)
+      return null
+    }
+    if (state.getSession(sessionId)) state.moveSession(sessionId, owner.id)
+    else state.addSession(sessionId, owner.id)
+    host.register(sessionId, owner.path)
     host.push()
-    host.post({ type: "agentManager.sessionAdded", sessionId, worktreeId })
-    host.log(`Added existing session ${sessionId} to worktree ${worktreeId}`)
+    host.post({ type: "agentManager.sessionAdded", sessionId, worktreeId: owner.id })
+    host.log(`Added existing session ${sessionId} to worktree ${owner.id}`)
     return null
   }
 

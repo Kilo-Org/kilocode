@@ -43,7 +43,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useLanguage } from "../src/context/language"
 import { fallbackFontSize } from "../src/v2/kilo-settings"
-import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatSearch } from "./navigate"
+import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatSearch, sessionOwner } from "./navigate"
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
@@ -1027,17 +1027,33 @@ const AgentManagerContent: Component = () => {
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId), ids)
     requestChatFocus()
   }
+  // The directory a session runs in decides its worktree. Both the live stores and the host catalog carry it, so a
+  // session that is not loaded in a store still resolves to the worktree that owns it.
+  const ownerOf = (sid: string) => {
+    const pid = currentProjectId()
+    const catalog = (pid ? projectSessionsLive()[pid] : undefined) ?? []
+    return sessionOwner(sid, [...sessions.sessions(), ...catalog], worktrees())
+  }
+  // Opens a session that no worktree tracks in the worktree its directory belongs to: adopting it into the selected
+  // worktree would point that worktree at a session the server runs elsewhere, and its prompts would never reach the
+  // transcript. A session in the project root returns false so the caller opens it locally.
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
     if (!sel || sel === LOCAL || !canOpenRootSession(sid, sessions.sessions())) return false
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
+    const owner = ownerOf(sid)
+    if (owner === null) return false
     saveTabMemory()
     closeHistory()
     setReviewActive(false)
-    appendToTabOrder(sel, sid)
-    evictLocal(sid)
-    to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: sid })
+    // A loaded session is filed here. For one the panel has not loaded, the host reads its directory from the server
+    // and answers with the worktree that owns it, or with Local when it runs in the project root.
+    if (owner) {
+      appendToTabOrder(owner, sid)
+      evictLocal(sid)
+    }
+    to({ type: "agentManager.addSessionToWorktree", worktreeId: owner ?? sel, sessionId: sid })
     return true
   }
   const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
@@ -1200,10 +1216,14 @@ const AgentManagerContent: Component = () => {
     }
     const sel = selection()
     if (sel && sel !== LOCAL) {
-      appendToTabOrder(sel, id)
-      // Every send reports its session. Adopting a session the worktree already owns would end its branch auto-naming.
-      if (managedSessions().find((entry) => entry.id === id)?.worktreeId !== sel)
-        to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: id })
+      // Every send reports its session. Adopting a session the worktree already owns would end its branch auto-naming,
+      // and adopting one the server runs in another directory would steal it from its worktree.
+      const owner = ownerOf(id)
+      if (owner === undefined || owner === sel) {
+        appendToTabOrder(sel, id)
+        if (managedSessions().find((entry) => entry.id === id)?.worktreeId !== sel)
+          to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: id })
+      }
       sessions.selectSession(id)
       return
     }
@@ -1996,6 +2016,7 @@ const AgentManagerContent: Component = () => {
           appendOrder: appendToTabOrder,
           setSelection: (id) => setSelection(id),
           evictLocal,
+          placeLocal: (id) => placeLocal(id, activePendingId(), activePendingId() ?? sessions.currentSessionID()),
           applyDraft: (worktreeId, sessionId) => drafts.apply(worktreeId, sessionId),
           selectSession: (id) => sessions.selectSession(id),
           requestChatFocus,
