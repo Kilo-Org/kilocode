@@ -9,6 +9,7 @@ import {
   resolveSoundID,
   soundDirectory,
   soundFile,
+  type AttentionSoundID,
 } from "../src/attention/sound"
 import { SOUND_OPTIONS, soundChoice } from "../webview-ui/src/components/settings/notifications"
 
@@ -82,6 +83,11 @@ describe("attention sounds", () => {
     expect(soundFile("error", "yup-04", sounds)).toBe(path.join(sounds, "yup-04.wav"))
     expect(soundFile("done", "system", sounds)).toBeUndefined()
     for (const id of Object.values(DEFAULT_SOUNDS)) expect(existsSync(path.join(sounds, `${id}.wav`))).toBe(true)
+  })
+
+  test("a choice outside the catalog never builds a path outside the sound directory", () => {
+    for (const value of ["../../etc/passwd", "/etc/passwd", "../icon", "nope-13"])
+      expect(soundFile("error", value as AttentionSoundID, sounds)).toBe(path.join(sounds, "nope-03.wav"))
   })
 
   test("each platform plays a file with its own player", () => {

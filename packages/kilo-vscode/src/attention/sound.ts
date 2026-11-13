@@ -86,10 +86,14 @@ export function resolveSoundID(value: unknown): AttentionSoundID {
   return "default"
 }
 
-/** The file a choice plays for an event, or undefined for the system sound. */
+/**
+ * The file a choice plays for an event, or undefined for the system sound. The choice is checked against the catalog
+ * here, next to the path it builds, so only a shipped file in `dir` can ever be played.
+ */
 export function soundFile(name: AttentionSoundName, selected: AttentionSoundID, dir: string): string | undefined {
-  if (selected === "system") return undefined
-  return path.join(dir, `${selected === "default" ? DEFAULT_SOUNDS[name] : selected}.wav`)
+  const id = resolveSoundID(selected)
+  if (id === "system") return undefined
+  return path.join(dir, `${id === "default" ? DEFAULT_SOUNDS[name] : id}.wav`)
 }
 
 /**
