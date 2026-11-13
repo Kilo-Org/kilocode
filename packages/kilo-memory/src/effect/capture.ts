@@ -87,7 +87,7 @@ function typedItems(memory: MemoryService.Interface, root: string) {
 }
 
 export namespace MemoryCapture {
-  export const turn = Effect.fn("MemoryCapture.turn")(function* (input: {
+  type TurnInput = {
     root: string
     sessionID: string
     session: MemoryPorts.SessionPort
@@ -95,11 +95,18 @@ export namespace MemoryCapture {
     reason?: CaptureReason
     bypassInterval?: boolean
     memoryModel?: string
-  }) {
+  }
+
+  // Acquire the per-root abort signal before the turn and release that same signal on every exit, so a
+  // capture still unwinding after disable/purge cannot release a controller a newer capture acquired.
+  export const turn = (input: TurnInput) =>
+    Effect.suspend(() => {
+      const signal = MemoryTimers.signal(input.root)
+      return run(input, signal).pipe(Effect.ensuring(Effect.sync(() => MemoryTimers.release(input.root, signal))))
+    })
+
+  const run = Effect.fn("MemoryCapture.turn")(function* (input: TurnInput, signal: AbortSignal) {
     const root = input.root
-    // Acquire first (sync, cannot fail) so the matching `release` in the finalizer below always pairs
-    // with this acquire regardless of where the turn exits.
-    const signal = MemoryTimers.signal(root)
     const memory = yield* MemoryService.Service
     yield* memory.prepare({ root })
     const state = yield* memory.state({ root })
@@ -218,12 +225,10 @@ export namespace MemoryCapture {
 
     const model =
       digestDue || typedCall
-        ? (
-            yield* input.model.resolve({
-              configured: input.memoryModel,
-              session: view.sessionModel,
-            })
-          ).handle
+        ? (yield* input.model.resolve({
+            configured: input.memoryModel,
+            session: view.sessionModel,
+          })).handle
         : undefined
     // One consolidation model call; a failure is reported once and returned as a reason, never raised.
     const invoke = (system: string, body: string) =>
@@ -472,9 +477,7 @@ export namespace MemoryCapture {
       }),
     )
     return { root, skipped: false as const, operationCount: count, tokens }
-  },
-  // Release the per-root abort controller acquired at the top once the turn settles (any exit path).
-  (effect, input) => effect.pipe(Effect.ensuring(Effect.sync(() => MemoryTimers.release(input.root)))))
+  })
 
   export function report(cause: Cause.Cause<unknown>) {
     // Brief message only: API errors carry response headers/bodies that would flood the host log.

@@ -13,6 +13,7 @@ import {
   memoryPlural,
   memoryRecallCount,
   memoryRecallItems,
+  memoryRecallNotice,
   memorySaveOutcome,
   memoryToolSources,
   memoryToolSubtitle,
@@ -374,6 +375,16 @@ describe("memory tools", () => {
     ])
     expect(memoryRecallItems(catalog)).toEqual(["run bun run lint", "refactor 2026-11-10"])
     expect(memoryRecallItems("No search memory matched the query.")).toEqual([])
+    // A disabled or failed recall shows the server's reason; a plain miss keeps the empty state.
+    expect(
+      memoryRecallNotice({ title: "Kilo memory: disabled", count: 0 }, "Kilo memory is disabled for this project."),
+    ).toBe("Kilo memory is disabled for this project.")
+    expect(memoryRecallNotice({ title: "Kilo memory: error", count: 0 }, "Kilo memory recall failed: disk full")).toBe(
+      "Kilo memory recall failed: disk full",
+    )
+    expect(
+      memoryRecallNotice({ title: "Kilo memory search: no results", count: 0 }, "No search memory matched the query."),
+    ).toBeUndefined()
     expect(memoryRecallCount({ count: 2 })).toBe(2)
     expect(memoryRecallCount({ title: "pending" })).toBeUndefined()
   })

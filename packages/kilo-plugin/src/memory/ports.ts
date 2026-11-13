@@ -25,9 +25,18 @@ export function session(sessions: Session.Interface): MemoryPorts.SessionPort {
     readTurn: ({ sessionID, window }) =>
       Effect.gen(function* () {
         const id = SessionID.make(sessionID)
-        const messages = (yield* sessions.messages({ sessionID: id, limit: window, order: "desc" })).toReversed()
-        const turn = latest(messages)
+        // The turn starts at the latest user message however many steps followed it; `window` bounds only the
+        // recent-context trace, so a long agentic turn is still read whole.
+        const [prompt] = yield* sessions.messages({ sessionID: id, type: "user", limit: 1, order: "desc" })
+        if (!prompt) return undefined
+        const after = yield* sessions.messages({
+          sessionID: id,
+          cursor: { id: prompt.id, direction: "next" },
+          order: "asc",
+        })
+        const turn = latest([prompt, ...after])
         if (!turn) return undefined
+        const messages = (yield* sessions.messages({ sessionID: id, limit: window, order: "desc" })).toReversed()
         const diffs = yield* sessions.diff({ sessionID: id, from: turn.user.id }).pipe(
           Effect.map((items) =>
             items.map((item) => ({
@@ -73,9 +82,7 @@ export function model(runtime: ModelRuntime): MemoryPorts.ModelPort {
         const fallback = Model.Ref.make({ providerID: session.providerID as never, id: session.modelID as never })
         if (!configured) return { handle: fallback }
         const parsed = MemoryConfig.parse(configured)
-        const ref = parsed
-          ? decodeModel({ providerID: parsed.providerID, id: parsed.modelID })
-          : undefined
+        const ref = parsed ? decodeModel({ providerID: parsed.providerID, id: parsed.modelID }) : undefined
         const reason = !ref || ref._tag === "None" ? "invalid model" : undefined
         if (ref && ref._tag === "Some" && (yield* runtime.exists(ref.value))) return { handle: ref.value }
         runtime.warn("memory model config ignored", { reason: reason ?? "model unavailable", model: configured })

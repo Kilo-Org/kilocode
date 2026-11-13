@@ -94,7 +94,7 @@ const ContextTabContent: Component<SettingsTabProps> = (props) => {
             checked={memory.enabled()}
             onChange={(checked) => (checked ? memory.enable() : memory.disable())}
             hideLabel
-            disabled={memory.pending()}
+            disabled={memory.pending() || !memory.status()}
           >
             {language.t("settings.context.memory.project.title")}
           </Switch>

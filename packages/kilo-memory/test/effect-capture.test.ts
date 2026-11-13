@@ -334,7 +334,9 @@ describe("MemoryCapture (fake ports)", () => {
       await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
       await KiloMemory.apply({
         root: t.root,
-        ops: [{ action: "add", file: "project.md", section: "Facts", key: "deploy_target", text: "Deploy to staging." }],
+        ops: [
+          { action: "add", file: "project.md", section: "Facts", key: "deploy_target", text: "Deploy to staging." },
+        ],
       })
 
       const result = await run({
@@ -752,7 +754,9 @@ describe("MemoryCapture (fake ports)", () => {
       await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
       await KiloMemory.apply({
         root: t.root,
-        ops: [{ action: "add", file: "project.md", section: "Facts", key: "deploy_target", text: "Deploy to staging." }],
+        ops: [
+          { action: "add", file: "project.md", section: "Facts", key: "deploy_target", text: "Deploy to staging." },
+        ],
       })
 
       // P1.7: existing_memory / recent_memory_digests must precede latest_assistant so cap() sheds the
@@ -942,12 +946,23 @@ describe("MemoryTimers signal ref-counting", () => {
     const first = MemoryTimers.signal(root)
     const second = MemoryTimers.signal(root)
     expect(second).toBe(first) // concurrent captures share the controller
-    MemoryTimers.release(root)
+    MemoryTimers.release(root, first)
     expect(MemoryTimers.signal(root)).toBe(first) // still alive while one capture remains
-    MemoryTimers.release(root)
-    MemoryTimers.release(root) // last in-flight capture settles → controller dropped
+    MemoryTimers.release(root, first)
+    MemoryTimers.release(root, first) // last in-flight capture settles → controller dropped
     const fresh = MemoryTimers.signal(root)
     expect(fresh).not.toBe(first) // next capture gets a new controller, proving cleanup
-    MemoryTimers.release(root)
+    MemoryTimers.release(root, fresh)
+  })
+
+  test("a capture released after clear cannot drop the controller of a newer capture", () => {
+    const root = "/kilo-memory/stale-release-root"
+    const stale = MemoryTimers.signal(root)
+    MemoryTimers.clear(root) // disable/purge aborts the in-flight capture
+    expect(stale.aborted).toBe(true)
+    const newer = MemoryTimers.signal(root)
+    MemoryTimers.release(root, stale) // the aborted capture unwinds late
+    MemoryTimers.clear(root)
+    expect(newer.aborted).toBe(true) // the newer capture is still reachable by clear
   })
 })

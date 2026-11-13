@@ -38,6 +38,15 @@ export function memoryRecallCount(metadata: Record<string, unknown>) {
 }
 
 /**
+ * The server's own message when a recall did not search: memory is disabled or the recall failed. A plain miss returns
+ * undefined, so the card shows its empty state instead.
+ */
+export function memoryRecallNotice(metadata: Record<string, unknown>, output: string) {
+  if (metadata.title !== "Kilo memory: disabled" && metadata.title !== "Kilo memory: error") return undefined
+  return output.trim() || undefined
+}
+
+/**
  * The memory texts a recall result lists: the stored text after ` :: ` of each `text:` record (the summary of a
  * session digest), and the value of each catalog row. Record headers, ids and markers are for the model only.
  */

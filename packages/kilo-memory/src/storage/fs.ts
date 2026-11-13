@@ -86,15 +86,19 @@ export namespace MemoryFs {
     if (info && !info.isFile()) throw new Error(`memory path is not a file: ${file}`)
     const salt = Math.random().toString(36).slice(2)
     const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.${Date.now()}.${salt}.tmp`)
+    // A failed write, chmod or rename removes the temp file so no stray `*.tmp` stays in the memory root.
     await writeFile(tmp, text, { mode: FILE })
-    await chmod(tmp, FILE).catch((error: unknown) => {
-      if (process.platform === "win32") return
-      throw error
-    })
-    await rename(tmp, file).catch(async (error: unknown) => {
-      await rm(tmp, { force: true }).catch((err: unknown) => warn("failed to clean memory temp file", { err, tmp }))
-      throw error
-    })
+      .then(() =>
+        chmod(tmp, FILE).catch((error: unknown) => {
+          if (process.platform === "win32") return
+          throw error
+        }),
+      )
+      .then(() => rename(tmp, file))
+      .catch(async (error: unknown) => {
+        await rm(tmp, { force: true }).catch((err: unknown) => warn("failed to clean memory temp file", { err, tmp }))
+        throw error
+      })
     await chmod(file, FILE).catch((error: unknown) => {
       if (process.platform === "win32") return
       throw error

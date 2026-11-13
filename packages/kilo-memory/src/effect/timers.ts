@@ -24,7 +24,7 @@ export namespace MemoryTimers {
   // One AbortController per root, shared across concurrent captures and ref-counted so it is dropped
   // once the last in-flight capture for the root settles (see `release`). Without this the map grows
   // for every distinct root a long-lived shared backend ever touches. disable/purge still force-abort
-  // via `clear`; `release` tolerates an already-cleared entry.
+  // via `clear`; `release` ignores a signal whose entry was already cleared.
   export function signal(root: string) {
     const prior = signals.get(root)
     if (prior) {
@@ -36,9 +36,10 @@ export namespace MemoryTimers {
     return ctl.signal
   }
 
-  export function release(root: string) {
+  /** Release the signal a capture acquired; a signal that `clear` already dropped leaves a newer entry alone. */
+  export function release(root: string, signal: AbortSignal) {
     const item = signals.get(root)
-    if (!item) return
+    if (!item || item.ctl.signal !== signal) return
     item.active -= 1
     if (item.active <= 0) signals.delete(root)
   }

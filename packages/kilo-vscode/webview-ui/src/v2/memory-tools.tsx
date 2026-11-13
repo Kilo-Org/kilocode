@@ -15,6 +15,7 @@ import {
   memoryPlural,
   memoryRecallCount,
   memoryRecallItems,
+  memoryRecallNotice,
   memorySaveOutcome,
   memoryToolSources,
   memoryToolSubtitle,
@@ -61,9 +62,10 @@ function RecallTool(props: ToolProps) {
   const language = useLanguage()
   const total = () => (props.status === "completed" ? memoryRecallCount(props.metadata) : undefined)
   const items = () => memoryRecallItems(props.output)
+  const notice = () => (props.status === "completed" ? memoryRecallNotice(props.metadata, props.output) : undefined)
   const badge = () => {
     const value = total()
-    if (value === undefined) return undefined
+    if (value === undefined || notice()) return undefined
     return memoryPlural(language.t, localeToBcp47(language.locale()), "chat.memory.tool.results", value)
   }
   return (
@@ -83,7 +85,7 @@ function RecallTool(props: ToolProps) {
         <MemoryBody sources={memoryToolSources(props.metadata)}>
           <Show
             when={total()! > 0 && items().length > 0}
-            fallback={<div data-slot="memory-tool-empty">{language.t("chat.memory.tool.noMatch")}</div>}
+            fallback={<div data-slot="memory-tool-empty">{notice() ?? language.t("chat.memory.tool.noMatch")}</div>}
           >
             <ul data-slot="memory-tool-items">
               <For each={items()}>{(item) => <li data-slot="memory-tool-item">{item}</li>}</For>

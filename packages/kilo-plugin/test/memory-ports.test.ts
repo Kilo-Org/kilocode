@@ -19,7 +19,10 @@ const user = (text: string): SessionMessage.Info => ({
   text,
 })
 
-const assistant = (content: Extract<SessionMessage.Info, { type: "assistant" }>["content"], done = true): SessionMessage.Info => ({
+const assistant = (
+  content: Extract<SessionMessage.Info, { type: "assistant" }>["content"],
+  done = true,
+): SessionMessage.Info => ({
   id: SessionMessage.ID.create(),
   time: done ? { created, completed: created } : { created },
   type: "assistant",
@@ -33,15 +36,30 @@ const tool = (name: string, input: Record<string, unknown>, metadata: Record<str
   id: Tool.CallID.make(`call-${name}`),
   name,
   time: { created },
-  state: { status: "completed" as const, input, content: [{ type: "text" as const, text: "ok" }] as [{ type: "text"; text: string }], metadata },
+  state: {
+    status: "completed" as const,
+    input,
+    content: [{ type: "text" as const, text: "ok" }] as [{ type: "text"; text: string }],
+    metadata,
+  },
 })
 
 // The session port reads only messages, diff and get; the rest of the service is not reached.
 const sessions = (messages: SessionMessage.Info[], parentID?: string) =>
   ({
-    messages: (input: { order?: "asc" | "desc" }) =>
-      Effect.succeed(input.order === "desc" ? messages.toReversed() : messages),
-    diff: () => Effect.succeed([{ file: "src/a.ts", patch: "", additions: 30, deletions: 2, status: "modified" as const }]),
+    messages: (input: {
+      order?: "asc" | "desc"
+      type?: string
+      limit?: number
+      cursor?: { id: string; direction: "previous" | "next" }
+    }) => {
+      const start = input.cursor ? messages.findIndex((item) => item.id === input.cursor!.id) + 1 : 0
+      const rows = messages.slice(start).filter((item) => !input.type || item.type === input.type)
+      const ordered = input.order === "asc" ? rows : rows.toReversed()
+      return Effect.succeed(input.limit === undefined ? ordered : ordered.slice(0, input.limit))
+    },
+    diff: () =>
+      Effect.succeed([{ file: "src/a.ts", patch: "", additions: 30, deletions: 2, status: "modified" as const }]),
     get: () => Effect.succeed({ parentID }),
   }) as unknown as Session.Interface
 
@@ -51,7 +69,10 @@ test("the session port reads the latest turn with every assistant step, the diff
     assistant([{ type: "text", text: "old answer" }]),
     user("How do we deploy?"),
     assistant([tool("kilo_memory_recall", { mode: "search", query: "deploy" }, { count: 2 })]),
-    assistant([tool("shell", { command: "fly deploy --remote-only" }, { exit: 0 }), { type: "text", text: "Use fly deploy." }]),
+    assistant([
+      tool("shell", { command: "fly deploy --remote-only" }, { exit: 0 }),
+      { type: "text", text: "Use fly deploy." },
+    ]),
   ]
   const view = await Effect.runPromise(
     MemoryPortsV2.session(sessions(messages)).readTurn({ sessionID: SessionID.make("ses_a"), window: 24 }),
@@ -68,8 +89,24 @@ test("the session port reads the latest turn with every assistant step, the diff
   expect(view?.diffs).toEqual([{ file: "src/a.ts", status: "modified", additions: 30, deletions: 2 }])
 })
 
+test("the session port reads a turn longer than the recent-context window", async () => {
+  const steps = Array.from({ length: 40 }, (_, index) => assistant([{ type: "text", text: `step ${index}` }]))
+  const view = await Effect.runPromise(
+    MemoryPortsV2.session(sessions([user("Refactor the parser"), ...steps])).readTurn({
+      sessionID: SessionID.make("ses_a"),
+      window: 24,
+    }),
+  )
+  expect(view?.user).toBe("Refactor the parser")
+  expect(view?.assistant).toContain("step 0")
+  expect(view?.assistant).toContain("step 39")
+  expect(view?.lastAssistantID).toBe(steps[39]!.id)
+})
+
 test("the session port has no turn while the last step is still running, and reports the parent", async () => {
-  const port = MemoryPortsV2.session(sessions([user("go"), assistant([{ type: "text", text: "…" }], false)], "ses_parent"))
+  const port = MemoryPortsV2.session(
+    sessions([user("go"), assistant([{ type: "text", text: "…" }], false)], "ses_parent"),
+  )
   expect(await Effect.runPromise(port.readTurn({ sessionID: SessionID.make("ses_a"), window: 24 }))).toBeUndefined()
   expect(await Effect.runPromise(port.get({ sessionID: "ses_a" }))).toEqual({ parentID: "ses_parent" })
 })
@@ -108,13 +145,22 @@ test("the model port uses the configured memory model and falls back to the sess
 
 test("the model port sends the system prompt ahead of the evidence and times out", async () => {
   const ok = runtime(true, Effect.succeed('{"topic":"t"}'))
-  const result = await ok.port.run({ handle: model, sessionID: "ses_a", system: "SYSTEM", prompt: "EVIDENCE", timeoutMs: 1_000 })
+  const result = await ok.port.run({
+    handle: model,
+    sessionID: "ses_a",
+    system: "SYSTEM",
+    prompt: "EVIDENCE",
+    timeoutMs: 1_000,
+  })
   expect(result.text).toBe('{"topic":"t"}')
   expect(ok.calls).toEqual([{ prompt: "SYSTEM\n\nEVIDENCE", model }])
 
   const slow = runtime(true, Effect.never)
   const error = await slow.port
     .run({ handle: model, sessionID: "ses_a", system: "S", prompt: "P", timeoutMs: 20 })
-    .then(() => undefined, (cause) => cause)
+    .then(
+      () => undefined,
+      (cause) => cause,
+    )
   expect(String(error)).toContain("memory model timed out")
 })

@@ -69,7 +69,10 @@ export function MemorySidebar(props: { context: Plugin.Context; sessionID: strin
       }),
       rpc.events.on("error", bump),
     ]
-    const id = setInterval(bump, 15_000).unref()
+    // Memory events refresh a loaded row; the timer only retries while the status is unavailable.
+    const id = setInterval(() => {
+      if (data() === undefined && !data.loading) bump()
+    }, 15_000).unref()
     onCleanup(() => {
       for (const off of offs) off()
       clearInterval(id)
