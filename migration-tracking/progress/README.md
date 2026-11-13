@@ -8,20 +8,20 @@ Measures Kilo's v1 feature delta: Kilo `main` pinned at `fb7e96eda540` (the v1 t
 
 ## Summary
 
-**2013 / 5339 cells done (37.7%)**, 101 dropped. `██████░░░░░░░░░░`
+**2015 / 5339 cells done (37.7%)**, 101 dropped. `██████░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 1492 | 3266 | 45.7% |
+| module | 1493 | 3266 | 45.7% |
 | api | 19 | 36 | 52.8% |
 | patch | 66 | 318 | 20.8% |
-| test | 436 | 1719 | 25.4% |
+| test | 437 | 1719 | 25.4% |
 
 Not counted: 4163 unattributed shared-file hunks (no feature tag, Kilo import or Kilo identifier; v2 ports behavior through plugins, host composition and generic seams rather than re-applying v1 monolith patches), 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Counted patch attribution: 0 by tag, 261 by import, 97 by identifier.
 
 Landed by rung, for patch cells closed by a done-proof: 46 plugin, 15 host, 6 seam, 2 patch.
 
-Ratchets: 62 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/config/plugin/source`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/database/v1-migration`, `@opencode/core/effect/app-node-builder`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/integration`, `@opencode/core/job`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/mcp`, `@opencode/core/mcp/host`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin`, `@opencode/core/plugin/module`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/project`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schedule`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/shell/parse`, `@opencode/core/skill`, `@opencode/core/snapshot`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/question`, `@opencode/core/tool/plugin/subagent`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 137 shared patches by rung: 79 seam, 58 patch (`script/upstream/shared-patches.json`).
+Ratchets: 65 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/agent`, `@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/config/plugin/source`, `@opencode/core/credential`, `@opencode/core/database/database`, `@opencode/core/database/path`, `@opencode/core/database/v1-migration`, `@opencode/core/effect/app-node-builder`, `@opencode/core/effect/app-node-platform`, `@opencode/core/environment`, `@opencode/core/file-access`, `@opencode/core/flag`, `@opencode/core/form`, `@opencode/core/generate`, `@opencode/core/instance/service`, `@opencode/core/integration`, `@opencode/core/job`, `@opencode/core/location`, `@opencode/core/location-service-map`, `@opencode/core/managed-policy`, `@opencode/core/mcp`, `@opencode/core/mcp/host`, `@opencode/core/mcp/pool`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin`, `@opencode/core/plugin/module`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/project`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schedule`, `@opencode/core/schema`, `@opencode/core/session`, `@opencode/core/session/event`, `@opencode/core/session/projector`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/store`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/shell/parse`, `@opencode/core/skill`, `@opencode/core/snapshot`, `@opencode/core/tool`, `@opencode/core/tool-output`, `@opencode/core/tool/plugin/file-diff`, `@opencode/core/tool/plugin/question`, `@opencode/core/tool/plugin/subagent`, `@opencode/core/tool/plugin/todo`, `@opencode/core/tool/read-filesystem`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 137 shared patches by rung: 79 seam, 58 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -46,7 +46,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-11-09 | 1830 | 5364 | 34.1% |
 | 2026-11-10 | 1869 | 5355 | 34.9% |
 | 2026-11-11 | 1972 | 5351 | 36.9% |
-| now | 2013 | 5339 | 37.7% |
+| 2026-11-12 | 2013 | 5339 | 37.7% |
+| now | 2015 | 5339 | 37.7% |
 
 ## Features
 
@@ -145,7 +146,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tui | 2/15 |  | 1/6 | 2/24 | 5/45 | 11.1% | `██░░░░░░░░░░░░░░` | 1 plugin |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| ui | 150/248 |  | 0/1 | 2/18 | 152/267 | 56.9% | `█████████░░░░░░░` |  |
+| ui | 151/248 |  | 0/1 | 3/18 | 154/267 | 57.7% | `█████████░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | vscode | 1047/1415 |  |  | 266/596 | 1313/2011 | 65.3% | `██████████░░░░░░` |  |
