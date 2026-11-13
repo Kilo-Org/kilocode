@@ -3,6 +3,10 @@ export type PathKind = "literal" | "subtree"
 export interface PathRule {
   readonly path: string
   readonly kind: PathKind
+  // Allow rules only. Beneath this root a regular file may carry a `denyNames` name (such as uv's
+  // `.git` cache marker); directories with those names and their contents stay read-only. Paths
+  // that an allow rule without this flag also covers keep the full name protection.
+  readonly markers?: boolean
 }
 
 export interface FilesystemProfile {
