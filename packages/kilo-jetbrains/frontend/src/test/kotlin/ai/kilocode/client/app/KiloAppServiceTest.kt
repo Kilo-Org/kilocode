@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.SpeechModelDto
 import ai.kilocode.rpc.dto.SpeechResultDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -90,10 +91,22 @@ class KiloAppServiceTest : BasePlatformTestCase() {
     fun `test transcription falls back to default model when discovery fails`() = runBlocking(Dispatchers.Default) {
         rpc.speechModelsError = IllegalStateException("catalog unavailable")
 
-        val result = app.transcribe("/repo", byteArrayOf(1))
+        app.transcribe("/repo", byteArrayOf(1))
+        rpc.speechModelsError = null
+        rpc.speechModels = listOf(SpeechModelDto("speech/allowed", "Allowed"))
+        app.transcribe("/repo", byteArrayOf(2))
 
-        assertEquals("transcript", result)
-        assertEquals("openai/whisper-1", rpc.speechRequests.single().model)
+        assertEquals(2, rpc.speechModelCalls)
+        assertEquals(listOf("openai/whisper-1", "speech/allowed"), rpc.speechRequests.map { it.model })
+    }
+
+    fun `test transcription model discovery propagates cancellation`() = runBlocking(Dispatchers.Default) {
+        rpc.speechModelsError = CancellationException("cancelled")
+
+        val err = runCatching { app.transcribe("/repo", byteArrayOf(1)) }.exceptionOrNull()
+
+        assertTrue(err is CancellationException)
+        assertTrue(rpc.speechRequests.isEmpty())
     }
 
     fun `test fetchCoreInfoAsync dedupes in flight requests`() = runBlocking(Dispatchers.Default) {

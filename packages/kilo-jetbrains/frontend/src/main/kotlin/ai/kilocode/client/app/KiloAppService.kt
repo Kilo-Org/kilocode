@@ -147,18 +147,27 @@ class KiloAppService internal constructor(
         call { transcriptionModels(directory) }
 
     suspend fun transcribe(directory: String?, data: ByteArray): String {
-        val model = speechModel ?: runCatching { transcriptionModels(directory) }
-            .onFailure { LOG.warn("speech model discovery failed; using default", it) }
-            .getOrDefault(emptyList())
-            .let { models ->
-                models.firstOrNull { it.id == DEFAULT_SPEECH_MODEL }?.id
-                    ?: models.firstOrNull()?.id
-                    ?: DEFAULT_SPEECH_MODEL
-            }
-            .also { speechModel = it }
+        val model = model(directory)
         return call {
             transcribe(directory, SpeechRequestDto(data = data, model = model)).text
         }
+    }
+
+    private suspend fun model(directory: String?): String {
+        speechModel?.let { return it }
+        val models = try {
+            transcriptionModels(directory)
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: Exception) {
+            LOG.warn("speech model discovery failed; using default", err)
+            return DEFAULT_SPEECH_MODEL
+        }
+        val model = models.firstOrNull { it.id == DEFAULT_SPEECH_MODEL }?.id
+            ?: models.firstOrNull()?.id
+            ?: return DEFAULT_SPEECH_MODEL
+        speechModel = model
+        return model
     }
 
     suspend fun retry() {
