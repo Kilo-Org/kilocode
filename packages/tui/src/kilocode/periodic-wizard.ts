@@ -168,13 +168,19 @@ const endSteps: Record<Exclude<End["type"], "none">, Step> = {
  * Creates a Flow from a Session, or repairs `broken` by creating its replacement and then deleting it. Cancelling a
  * step reopens `/periodic` at `back`.
  */
-export async function createFlow(context: PeriodicContext, open: Open, back: Initial, broken?: KiloFlowRpc.Info) {
+export async function createFlow(
+  context: PeriodicContext,
+  open: Open,
+  back: Initial,
+  broken?: KiloFlowRpc.Info,
+  timezone?: string,
+) {
   const source = await sourceSession(context)
   if (!source) return open(back)
   const draft = await collect(
     context.ui.dialog,
     broken ? "repair" : "create",
-    broken ? fromFlow(broken) : await fromSession(context, source.id),
+    broken ? fromFlow(broken) : await fromSession(context, source.id, timezone),
   )
   if (!draft) return open(back)
   // One idempotency key per create intent: a retried request returns the Flow the first attempt created.
@@ -898,8 +904,10 @@ async function recentSessions(context: PeriodicContext) {
     )
 }
 
-async function fromSession(context: PeriodicContext, sessionID: string): Promise<Draft> {
+async function fromSession(context: PeriodicContext, sessionID: string, timezone?: string): Promise<Draft> {
   await context.data.session.message.sync(sessionID).catch(() => undefined)
+  const trimmed = timezone?.trim()
+  const zone = trimmed && Option.isSome(DateTime.zoneMakeNamed(trimmed)) ? trimmed : undefined
   return {
     prompt: (
       context.data.session.message
@@ -908,7 +916,7 @@ async function fromSession(context: PeriodicContext, sessionID: string): Promise
         .at(-1) ?? ""
     ).trim(),
     name: "",
-    schedule: { type: "every", value: "1 day", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    schedule: { type: "every", value: "1 day", timezone: zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone },
     worktree: "reuse",
     end: { type: "none" },
     permissions: [],
