@@ -50,8 +50,9 @@ export function sendHintRows(input: {
 export function sendHintText(input: {
   action: string
   click: string
-  alternate: Delivery
+  alternate?: Delivery
   t: (key: string) => string
 }): string {
+  if (!input.alternate) return input.action
   return `${input.action} (${input.click}: ${input.t(`prompt.action.${input.alternate}`)})`
 }

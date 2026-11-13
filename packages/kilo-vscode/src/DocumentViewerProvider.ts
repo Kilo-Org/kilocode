@@ -96,7 +96,6 @@ export class DocumentViewerProvider implements Disposable {
         void panel.webview.postMessage({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
     })
     this.disposables.push(
-      settings,
       panel.webview.onDidReceiveMessage((message) => this.message(message as Record<string, unknown>)),
       panel.onDidDispose(() => {
         settings.dispose()

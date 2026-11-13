@@ -1050,12 +1050,14 @@ export function PromptInput(props: {
   const appendComments = (incoming: ReviewCommentEntry[], intent: SendIntent) => {
     if (incoming.length === 0) return
     if (goalMode()) {
-      if (intent === "enter") return replaceComments(mergeReviewComments(comments(), incoming))
-      const review = composeReviewPrompt(incoming, "", pushFixes())
-      return submit(
-        { text: review.text, items: [], metadata: review.metadata, comments: incoming },
-        sendForIntent(intent),
-      )
+      const merged = mergeReviewComments(comments(), incoming)
+      if (intent === "enter") return replaceComments(merged)
+      // The goal send carries every chip the draft holds, so they leave with it and the restore brings them back
+      // if the send is refused.
+      replaceComments([])
+      const review = composeReviewPrompt(merged, "", pushFixes())
+      submit({ text: review.text, items: [], metadata: review.metadata, comments: merged }, sendForIntent(intent))
+      return
     }
     const empty = !text().trim() && attachments().length === 0 && browsers().length === 0 && comments().length === 0
     replaceComments(mergeReviewComments(comments(), incoming))

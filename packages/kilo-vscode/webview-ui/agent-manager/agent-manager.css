@@ -3323,8 +3323,8 @@ body.am-wt-dragging-active * {
   min-width: 0;
 }
 
-.am-split-button[data-variant="primary"]
-  > :is([data-component="button"], [data-component="tooltip-trigger"] > [data-component="button"]) {
+.am-split-button[data-variant="primary"] > [data-component="button"],
+.am-split-button[data-variant="primary"] > [data-component="tooltip-trigger"] > [data-component="button"] {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 24px;
@@ -3370,8 +3370,10 @@ body.am-wt-dragging-active * {
   transform: rotate(180deg);
 }
 
+.am-split-button[data-variant="primary"] > [data-component="button"]:hover:not(:disabled),
 .am-split-button[data-variant="primary"]
-  > :is([data-component="button"], [data-component="tooltip-trigger"] > [data-component="button"]):hover:not(:disabled) {
+  > [data-component="tooltip-trigger"]
+  > [data-component="button"]:hover:not(:disabled) {
   background: color-mix(in srgb, var(--surface-brand-hover) 88%, var(--vscode-editor-background));
 }
 
@@ -3391,8 +3393,8 @@ body.am-wt-dragging-active * {
   opacity: 0.5;
 }
 
-.am-split-button[data-variant="primary"]
-  > :is([data-component="button"], [data-component="tooltip-trigger"] > [data-component="button"]):disabled,
+.am-split-button[data-variant="primary"] > [data-component="button"]:disabled,
+.am-split-button[data-variant="primary"] > [data-component="tooltip-trigger"] > [data-component="button"]:disabled,
 .am-split-button[data-variant="primary"] > .am-split-arrow:disabled {
   background: transparent;
   color: inherit;

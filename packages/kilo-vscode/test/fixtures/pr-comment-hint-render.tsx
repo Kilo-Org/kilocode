@@ -169,7 +169,51 @@ await verify(
 
 await verify("PR checks", () => <PRChecks pr={pr} worktreeId="hint-checks" />, "Fix with Kilo")
 
-await verify("PR summary", () => <PRSummary pr={pr} worktreeId="hint-summary" />, "Fix with Kilo", expectedClick)
+/** Collects the sends PR panels dispatch through the review-comment handoff. */
+function watchSends() {
+  const sent: string[] = []
+  const listener = (event: Event) => {
+    const detail = (event as CustomEvent<{ comments: unknown[]; send?: string; handled?: boolean }>).detail
+    if (!detail || detail.handled || detail.comments.length === 0) return
+    detail.handled = true
+    sent.push(detail.send ?? "enter")
+  }
+  window.addEventListener(APPEND_REVIEW_COMMENTS, listener)
+  return { sent, dispose: () => window.removeEventListener(APPEND_REVIEW_COMMENTS, listener) }
+}
+
+await verify("PR summary", () => <PRSummary pr={pr} worktreeId="hint-summary" />, "Fix with Kilo")
+
+// ⌥/Alt+Enter on a summary row queues what its send button sends, like the other PR sections.
+{
+  const watch = watchSends()
+  const root = document.createElement("div")
+  document.body.append(root)
+  const dispose = render(
+    () => (
+      <LanguageContext.Provider value={language}>
+        <VSCodeProvider>
+          <RichProvider>
+            <PRSummary pr={pr} worktreeId="hint-summary-keys" />
+          </RichProvider>
+        </VSCodeProvider>
+      </LanguageContext.Provider>
+    ),
+    root,
+  )
+  try {
+    await tick()
+    const button = [...root.querySelectorAll("button")].find((item) => item.textContent?.trim() === "Fix with Kilo")
+    assert.ok(button, "the summary row renders its send button")
+    button.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true }))
+    await tick()
+    assert.deepEqual(watch.sent, ["alternate"], "Alt+Enter on a summary row queues its checks feedback")
+  } finally {
+    dispose()
+    root.remove()
+    watch.dispose()
+  }
+}
 
 const thread = {
   id: "r1",
@@ -295,14 +339,7 @@ await verify(
 
 // ⌥/Alt+Enter queues from the comments section, from a focused card, and stays out of reply fields.
 async function altEnterChecks(worktreeId: string, run: (section: HTMLElement, sent: string[]) => Promise<void>) {
-  const sent: string[] = []
-  const listener = (event: Event) => {
-    const detail = (event as CustomEvent<{ comments: unknown[]; send?: string; handled?: boolean }>).detail
-    if (!detail || detail.handled || detail.comments.length === 0) return
-    detail.handled = true
-    sent.push(detail.send ?? "enter")
-  }
-  window.addEventListener(APPEND_REVIEW_COMMENTS, listener)
+  const watch = watchSends()
   const root = document.createElement("div")
   document.body.append(root)
   const dispose = render(
@@ -326,11 +363,11 @@ async function altEnterChecks(worktreeId: string, run: (section: HTMLElement, se
     await tick()
     const section = root.querySelector<HTMLElement>(".am-pr-panel-section")
     assert.ok(section, "the comments section is rendered")
-    await run(section, sent)
+    await run(section, watch.sent)
   } finally {
     dispose()
     root.remove()
-    window.removeEventListener(APPEND_REVIEW_COMMENTS, listener)
+    watch.dispose()
   }
 }
 

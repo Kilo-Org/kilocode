@@ -47,6 +47,7 @@ const { PromptInput } = await import("../../webview-ui/src/v2/prompt")
 const { applyKiloSettings } = await import("../../webview-ui/src/v2/kilo-settings")
 import type { ReplyHandler, ReviewAppendHandler } from "../../webview-ui/src/v2/append-ready"
 import type { SendMode } from "../../webview-ui/src/v2/pending-actions"
+import type { SlashEntry } from "../../webview-ui/src/v2/slash"
 
 const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -83,6 +84,14 @@ let autoResolve = true
 let reply: ReplyHandler | undefined
 let reviewAppend: ReviewAppendHandler | undefined
 
+// Goal mode needs the plugin's command in the slash catalog, as it is in the real composer.
+const goalEntry: SlashEntry = {
+  kind: "command",
+  name: "goal",
+  hints: [],
+  command: { name: "goal", description: "Start a goal" },
+}
+
 const root = document.createElement("div")
 document.body.append(root)
 const dispose = render(
@@ -105,6 +114,7 @@ const dispose = render(
                 })
               }
               onStop={() => undefined}
+              slash={{ entries: () => [goalEntry], run: async () => false }}
               onReplyReady={(value) => (reply = value)}
               onReviewAppendReady={(value) => (reviewAppend = value)}
             />
@@ -130,12 +140,12 @@ try {
     quote: "Earlier answer passage",
     comment,
   })
-  const local = (id: string) => ({
+  const local = (id: string, comment = "Fix line 3") => ({
     id,
     file: "src/a.ts",
     side: "additions" as const,
     line: 3,
-    comment: "Fix line 3",
+    comment,
     selectedText: "const x = 1",
   })
 
@@ -223,6 +233,36 @@ try {
   assert.equal(sends.length, beforeDisabled)
   assert.equal(textarea.value, "", "offline fallback never pastes raw markdown into textarea")
   assert.equal(reply.pending().length, 1, "offline fallback preserves the reply chip")
+
+  // 7. Goal mode: a plain-click batch stays in the draft, and an Option-click sends both batches together.
+  setDisabled(false)
+  await tick()
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")!.set!
+  setter.call(textarea, "/goal")
+  textarea.dispatchEvent(new window.Event("input", { bubbles: true }))
+  await tick()
+  textarea.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
+  await tick()
+  assert.ok(root.querySelector(".prompt-goal-header"), "the composer entered goal mode")
+  const beforeGoal = sends.length
+  reviewAppend([local("c-goal-1", "Fix the first note")], "enter")
+  await tick()
+  assert.equal(sends.length, beforeGoal, "a plain click in goal mode keeps the chip in the draft")
+  assert.equal(
+    root.querySelectorAll("[data-component=review-comments][data-source=local]").length,
+    1,
+    "goal mode shows the chip",
+  )
+  reviewAppend([local("c-goal-2", "Fix the second note")], "alternate")
+  await tick()
+  assert.equal(sends.length, beforeGoal + 1, "the Option-click sends the merged chips once")
+  assert.match(sends.at(-1)!.text, /Fix the first note/, "the send keeps the chip already in the draft")
+  assert.match(sends.at(-1)!.text, /Fix the second note/, "the send adds the new chip")
+  assert.equal(
+    root.querySelectorAll("[data-component=review-comments][data-source=local]").length,
+    0,
+    "the sent chips leave the draft",
+  )
 } finally {
   dispose()
   root.remove()

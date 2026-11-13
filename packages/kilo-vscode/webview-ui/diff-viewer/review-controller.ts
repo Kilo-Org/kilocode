@@ -261,8 +261,9 @@ export function createReviewController(props: Props) {
       completeRemoteDraft,
       onDestination: setPreferredDestination,
       mount: props.commentForm?.(),
-      labels: labels(props.label, other(runningDelivery())),
-      sendToChatTitle: () => labels(props.label, other(runningDelivery())).sendToChat,
+      labels: labels(props.label, props.activeTerminalId() ? undefined : other(runningDelivery())),
+      sendToChatTitle: () =>
+        labels(props.label, props.activeTerminalId() ? undefined : other(runningDelivery())).sendToChat,
       activeTerminalId: props.activeTerminalId,
     })
 

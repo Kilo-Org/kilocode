@@ -38,7 +38,7 @@ export type CommentFormMount = (
   actions: CommentFormActions,
 ) => (() => void) | undefined
 
-export function labels(t: (key: string, params?: UiI18nParams) => string, alternate: Delivery): AnnotationLabels {
+export function labels(t: (key: string, params?: UiI18nParams) => string, alternate?: Delivery): AnnotationLabels {
   return {
     commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
     editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),

@@ -385,7 +385,6 @@ async function blocked(
   questions?: "dismiss",
   delivery?: "steer" | "queue",
 ): Promise<string | undefined> {
-  if (delivery === "queue") return undefined
   const [perms, forms] = await Promise.all([
     input.client.permission.request.list({ location: { directory: dir } }).catch(() => undefined),
     input.client.form.list({ location: { directory: dir } }).catch(() => undefined),
@@ -406,6 +405,9 @@ async function blocked(
     return `The managed session ${input.sessionID} ("${name}") is waiting for input. Pending question requests: ${detail}. Call agent_manager with action "answer", sessionID "${input.sessionID}", questionID "${first.id}", and one label array per question in that request (${count} total), in order, before prompting.${more}`
   }
   if ((perms.data ?? []).some((value) => value.sessionID === input.sessionID)) {
+    // A queued prompt waits for the turn, so a pending permission does not block it: it runs once the user resolves
+    // the request. Steering and immediate sends stop the run, so they wait for the permission instead.
+    if (delivery === "queue") return undefined
     return `The managed session ${input.sessionID} ("${name}") has a pending permission request; resolve it in Agent Manager before prompting`
   }
   return undefined

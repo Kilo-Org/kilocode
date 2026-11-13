@@ -93,6 +93,7 @@ describe("handleBaseUpdate delivery", () => {
     preferred: "steer" | "queue"
     send?: "enter" | "alternate"
     hasPermission?: boolean
+    hasQuestion?: boolean
   }) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "am-base-update-"))
     const worktreePath = path.join(root, "wt")
@@ -129,7 +130,18 @@ describe("handleBaseUpdate delivery", () => {
           },
         },
         form: {
-          list: mock(async () => ({ location: { directory: worktreePath }, data: [] })),
+          list: mock(async () => ({
+            location: { directory: worktreePath },
+            data: opts.hasQuestion
+              ? [
+                  {
+                    id: "form_1",
+                    sessionID: "ses_busy",
+                    fields: [{ key: "choice", type: "string", title: "Pick one", options: [{ label: "A", value: "a" }] }],
+                  },
+                ]
+              : [],
+          })),
         },
       } as unknown as OpenCodeClient
       const ctx = {
@@ -181,5 +193,18 @@ describe("handleBaseUpdate delivery", () => {
     const idle = await runUpdate({ running: false, preferred: "queue", send: "alternate" })
     expect(idle.errors).toEqual([])
     expect(idle.prompts[0]?.delivery).toBe("steer")
+  })
+
+  it("still refuses a queued update while the target session waits for an answer", async () => {
+    // A queued prompt may wait behind a permission, but an unanswered question parks the turn, so the update would
+    // never run and the operation would report success for a prompt that did not execute.
+    const queued = await runUpdate({ running: true, preferred: "steer", send: "alternate", hasQuestion: true })
+    expect(queued.prompts).toEqual([])
+    expect(queued.errors).toHaveLength(1)
+    expect(queued.errors[0]).toContain("is waiting for input")
+
+    const steered = await runUpdate({ running: true, preferred: "steer", send: "enter", hasQuestion: true })
+    expect(steered.errors).toEqual([])
+    expect(steered.prompts[0]?.delivery).toBe("steer")
   })
 })

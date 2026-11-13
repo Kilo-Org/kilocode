@@ -32,6 +32,8 @@ type Props = {
   projectId?: string
   worktreeId: string
   inline?: boolean
+  /** A terminal takes the send, so the hint names no delivery the click cannot choose. */
+  terminal?: boolean
 } & (
   | { action: "reply"; threadId: string }
   | { action: "create"; prNumber: number; prUrl: string }
@@ -520,6 +522,7 @@ export function PRCommentForm(props: Props) {
                       title={t("diffViewer.comment.sendToKilo")}
                       keybind={mac ? "↵" : "Enter"}
                       alternateKeybind={mac ? "⌥↵" : "Alt+Enter"}
+                      alternate={!props.terminal}
                     >
                       <Button
                         data-action="send-kilo"
@@ -539,6 +542,7 @@ export function PRCommentForm(props: Props) {
                         title={t("diffViewer.comment.sendToKilo")}
                         keybind={mac ? "↵" : "Enter"}
                         alternateKeybind={mac ? "⌥↵" : "Alt+Enter"}
+                        alternate={!props.terminal}
                         inactive={destination() === "github"}
                       >
                         <Button

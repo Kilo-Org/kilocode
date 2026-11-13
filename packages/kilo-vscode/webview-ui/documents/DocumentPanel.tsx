@@ -226,8 +226,9 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(t, other(runningDelivery())),
-      sendToChatTitle: () => labels(t, other(runningDelivery())).sendToChat,
+      labels: labels(t, props.activeTerminalId ? undefined : other(runningDelivery())),
+      sendToChatTitle: () =>
+        labels(t, props.activeTerminalId ? undefined : other(runningDelivery())).sendToChat,
       activeTerminalId: () => props.activeTerminalId,
     })
   const gutter = (range: SelectedLineRange) => {

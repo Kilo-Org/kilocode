@@ -712,7 +712,8 @@
 }
 
 .am-pr-comment-composer[data-action="diff"] .am-split-button,
-.am-pr-comment-composer[data-action="diff"] [data-action="send-kilo"] {
+.am-pr-comment-composer[data-action="diff"] [data-action="send-kilo"],
+.am-pr-comment-composer[data-action="diff"] [data-component="tooltip-trigger"]:has(> [data-action="send-kilo"]) {
   order: 3;
 }
 

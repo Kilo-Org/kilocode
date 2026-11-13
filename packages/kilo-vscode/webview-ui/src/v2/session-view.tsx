@@ -374,12 +374,28 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
+  // A draft has no session id until its first send creates one, so two sends that race on that draft would each
+  // create a session. Each draft's sends queue behind the previous one, so a later send adopts the created session.
+  const draftSends = new Map<string, Promise<unknown>>()
+  const begin = (mode: SendMode) => {
+    // The send is bound to the draft it was pressed in, not the tab it lands on after an earlier send settles it.
+    const key = draftKey()
+    const previous = draftSends.get(key) ?? Promise.resolve()
+    const current = previous.catch(() => undefined).then(() => beginSend(key, mode))
+    draftSends.set(key, current)
+    void current
+      .catch(() => undefined)
+      .then(() => {
+        if (draftSends.get(key) === current) draftSends.delete(key)
+      })
+    return current
+  }
+
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
-  const begin = async (mode: SendMode) => {
+  const beginSend = async (key: string, mode: SendMode) => {
     // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
     // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
-    const key = draftKey()
     const existing = session()
     reverts.sent(existing)
     await reverts.settled(existing)
