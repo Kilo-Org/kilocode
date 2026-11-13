@@ -1,9 +1,12 @@
-import { Context, Deferred, Effect, Layer } from "effect"
+import { Clock, Context, Deferred, Effect, Layer, Option } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
 import { isDisposing, registerBeforeDisposer } from "@/kilocode/effect/instance-registry"
 import { capture, type InstanceContext } from "@/kilocode/instance"
 import type { SessionID } from "@/session/schema"
+
+// A drain that waits longer than this reports the holds that keep it open, again after each interval.
+const REPORT = "1 minute"
 
 type Entry = {
   id: SessionID
@@ -11,16 +14,18 @@ type Entry = {
   children: number
   pins: number
   parent?: Entry
+  // Holds taken on this session itself, by owner. `count` also includes linked descendants.
+  owners: Map<string, number>
   done: Deferred.Deferred<void>
 }
 
 type State = { entries: Map<SessionID, Entry>; closed: boolean }
 
 export interface Interface {
-  readonly hold: (id: SessionID) => Effect.Effect<() => void>
+  readonly hold: (id: SessionID, owner?: string) => Effect.Effect<() => void>
   readonly link: (child: SessionID, parent: SessionID) => Effect.Effect<void>
   readonly wait: (id: SessionID) => Effect.Effect<void>
-  readonly track: <A, E, R>(id: SessionID, work: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
+  readonly track: <A, E, R>(id: SessionID, work: Effect.Effect<A, E, R>, owner?: string) => Effect.Effect<A, E, R>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@kilo/SessionDrain") {}
@@ -70,9 +75,19 @@ export const layer = Layer.effect(
     function entry(data: State, id: SessionID) {
       const found = data.entries.get(id)
       if (found) return found
-      const value: Entry = { id, count: 0, children: 0, pins: 0, done: Deferred.makeUnsafe<void>() }
+      const value: Entry = { id, count: 0, children: 0, pins: 0, owners: new Map(), done: Deferred.makeUnsafe<void>() }
       data.entries.set(id, value)
       return value
+    }
+
+    // Every hold that keeps `root` open: its own and those of its linked descendants.
+    function pending(data: State, root: Entry) {
+      return [...data.entries.values()].flatMap((item) => {
+        for (let current: Entry | undefined = item; current; current = current.parent) {
+          if (current === root) return [...item.owners].map(([owner, count]) => ({ session: item.id, owner, count }))
+        }
+        return []
+      })
     }
 
     function prune(data: State, value: Entry) {
@@ -91,15 +106,20 @@ export const layer = Layer.effect(
       }
     }
 
-    const hold = Effect.fn("SessionDrain.hold")(function* (id: SessionID) {
+    const hold = Effect.fn("SessionDrain.hold")(function* (id: SessionID, owner = "unknown") {
       const data = yield* state
       const value = entry(data, id)
+      value.owners.set(owner, (value.owners.get(owner) ?? 0) + 1)
       update(data, value, 1)
       let held = true
       return () => {
         if (!held) return
         held = false
-        if (!data.closed) update(data, value, -1)
+        if (data.closed) return
+        const left = (value.owners.get(owner) ?? 1) - 1
+        if (left > 0) value.owners.set(owner, left)
+        else value.owners.delete(owner)
+        update(data, value, -1)
       }
     })
 
@@ -122,6 +142,15 @@ export const layer = Layer.effect(
       const data = yield* state
       const value = data.entries.get(id)
       if (!value) return yield* Effect.void
+      const start = yield* Clock.currentTimeMillis
+      const report = Effect.gen(function* () {
+        return {
+          "session.id": id,
+          elapsed: (yield* Clock.currentTimeMillis) - start,
+          count: value.count,
+          pending: pending(data, value),
+        }
+      })
       return yield* Effect.acquireUseRelease(
         Effect.sync(() => {
           value.pins++
@@ -130,10 +159,17 @@ export const layer = Layer.effect(
           Effect.gen(function* () {
             while (!data.closed) {
               if (value.count === 0) return yield* Effect.void
-              yield* Deferred.await(value.done)
+              const done = yield* Deferred.await(value.done).pipe(Effect.timeoutOption(REPORT))
+              if (Option.isNone(done)) yield* Effect.logInfo("session drain pending", yield* report)
             }
             return yield* Effect.interrupt
-          }),
+          }).pipe(
+            Effect.onInterrupt(() =>
+              data.closed || value.count === 0
+                ? Effect.void
+                : report.pipe(Effect.flatMap((info) => Effect.logWarning("session drain cancelled", info))),
+            ),
+          ),
         () =>
           Effect.sync(() => {
             value.pins--
@@ -142,9 +178,9 @@ export const layer = Layer.effect(
       )
     })
 
-    const track = <A, E, R>(id: SessionID, work: Effect.Effect<A, E, R>) =>
+    const track = <A, E, R>(id: SessionID, work: Effect.Effect<A, E, R>, owner?: string) =>
       Effect.acquireUseRelease(
-        hold(id),
+        hold(id, owner),
         () => work,
         (release) => Effect.sync(release),
       )
