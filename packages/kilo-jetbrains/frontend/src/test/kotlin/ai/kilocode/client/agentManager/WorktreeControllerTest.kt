@@ -74,6 +74,154 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("/repo", controller.current?.path)
     }
 
+    fun `test branch tracker reloads a checkout switched outside the list`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val feature = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += main
+        rpc.listed += feature
+        val controller = controller()
+        controller.reload()
+        flush()
+        val changes = mutableListOf<Set<String>>()
+        controller.onBranchChanged = { changes += it }
+        rpc.listCalls.clear()
+
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        rpc.listed[1] = feature.copy(branch = "feature/z")
+        controller.refreshBranches()
+        flush()
+
+        assertEquals("feature/y", controller.current?.branch)
+        assertEquals("feature/z", controller.model.getElementAt(0).branch)
+        assertEquals(listOf(setOf("/repo", "/repo/.kilo/worktrees/feature-x")), changes)
+        assertEquals(listOf("/test"), rpc.listCalls.toList())
+    }
+
+    fun `test reload announces changed branches but not initial or unchanged listings`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val feature = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += listOf(main, feature)
+        val controller = controller()
+        val changes = mutableListOf<Set<String>>()
+        controller.onBranchChanged = { changes += it }
+        controller.reload()
+        flush()
+        assertTrue(changes.isEmpty())
+
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        rpc.listed[1] = feature.copy(branch = "feature/z")
+        controller.reload()
+        flush()
+
+        assertEquals(listOf(setOf("/repo", feature.path)), changes)
+        assertEquals("feature/y", controller.current?.branch)
+        assertEquals("feature/z", controller.model.getElementAt(0).branch)
+
+        controller.reload()
+        flush()
+        assertEquals(1, changes.size)
+    }
+
+    fun `test branch tracker ignores a listing superseded by a newer reload`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += main
+        val controller = controller()
+        controller.reload()
+        flush()
+        val changes = mutableListOf<Set<String>>()
+        controller.onBranchChanged = { changes += it }
+        var reloads = 0
+        controller.onReload = { reloads++ }
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeList = {
+            entered.complete(Unit)
+            gate.await()
+        }
+
+        controller.refreshBranches()
+        assertTrue(coroutines.pumpUntil { entered.isCompleted })
+        rpc.beforeList = {}
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        controller.reload()
+        flush()
+        assertEquals("feature/y", controller.current?.branch)
+        assertEquals("the winning reload must invalidate the old branch's badge", listOf(setOf("/repo")), changes)
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals("feature/y", controller.current?.branch)
+        assertEquals("the stale poll must not invalidate the newer branch's badge again", listOf(setOf("/repo")), changes)
+        assertEquals(1, reloads)
+        assertEquals(3, rpc.listCalls.size)
+    }
+
+    fun `test a superseded reload does not announce its discarded branch change`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += main
+        val controller = controller()
+        controller.reload()
+        flush()
+        val changes = mutableListOf<Set<String>>()
+        controller.onBranchChanged = { changes += it }
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeList = {
+            entered.complete(Unit)
+            gate.await()
+        }
+
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        controller.reload()
+        assertTrue(coroutines.pumpUntil { entered.isCompleted })
+        rpc.beforeList = {}
+        rpc.listed[0] = main
+        controller.reload()
+        flush()
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals("main", controller.current?.branch)
+        assertTrue("a discarded reload must not invalidate PR state", changes.isEmpty())
+    }
+
+    fun `test branch tracker leaves unchanged rows and selection alone`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val controller = controller()
+        controller.reload()
+        flush()
+        val before = controller.model.getElementAt(0)
+        var reloads = 0
+        val changes = mutableSetOf<String>()
+        controller.onReload = { reloads++ }
+        controller.onBranchChanged = { changes += it }
+
+        controller.refreshBranches()
+        flush()
+
+        assertSame(before, controller.model.getElementAt(0))
+        assertEquals(0, reloads)
+        assertTrue(changes.isEmpty())
+    }
+
+    fun `test branch tracker keeps the previous rows when the listing comes back empty`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        rpc.listed.clear()
+        controller.refreshBranches()
+        flush()
+
+        assertEquals("main", controller.current?.branch)
+        assertEquals(1, controller.model.size)
+    }
+
     fun `test service open routes the directory to the backend rpc`() {
         var result: Boolean? = null
         coroutines.scope.launch { result = service.open("/repo/.kilo/worktrees/feature-x") }
