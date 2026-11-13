@@ -25,7 +25,7 @@ import { SessionDock } from "../components/chat/SessionDockWorking"
 import type { AppendHandler, ReferenceHandler, ReplyHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
 import { promptFiles } from "./prompt-attachments"
-import { sessionChildren } from "./session-children"
+import { transcriptChildren } from "../components/chat/background-agents"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
 import { ErrorBanner } from "./error-banner"
@@ -174,12 +174,12 @@ export function SessionView(props: {
     if (!id) return []
     return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
   })
-  // Sibling-aware identicons for the subagents this session spawned, from its subagent tool parts. A subagent
-  // transcript uses its own children, matching the open session's transcript palette.
+  // Sibling-aware identicons for the subagents this session spawned. The shared transcript helper reads the child
+  // IDs from the session's subagent tool parts, matching the palette the open session's transcript had.
   const siblings = createMemo(() => {
     const id = session()
     if (!id) return []
-    return sessionChildren(v2.data.session.message.list(id))
+    return transcriptChildren(v2.data.session.message.list(id))
   })
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
   const forms = () => formsOf(session())
