@@ -248,6 +248,7 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       Schedule.max([Schedule.exponential("250 millis", 4), Schedule.recurs(2)]).pipe(
         Schedule.setInputType<E>(),
         Schedule.while(({ input, now, duration }) =>
+          // kilocode_change - consult the host predicate alongside upstream's own rule
           !transient(input) || now + Duration.toMillis(duration) >= deadline
             ? Effect.succeed(false)
             : Effect.logWarning(`retrying ${what}`, { server, error: describe(input) }).pipe(Effect.as(true)),
@@ -577,8 +578,9 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       server,
       message: `${error.message}; the server supports ${error.supported.join(", ")}. Set "protocol" for this server to one of those or to "legacy".`,
     })
-  // kilocode_change - a host-transient failure was not answered by the server, so it is never a refusal
+  // kilocode_change start - a host-transient failure was not answered by the server, so it is never a refusal
   return yield* new ConnectError({ server, message: explain(error), answered: !repeats(error) && !transient(error) })
+  // kilocode_change end
 })
 
 // Connecting again would fail the same way: the server could not be spawned or reached, did not answer in
