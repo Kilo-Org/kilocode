@@ -52,4 +52,9 @@ export interface Host {
    * `needs_auth` with that message instead of `failed`. Only consulted for a server that may sign in.
    */
   readonly authFailure?: (message: string | undefined) => boolean
+  /**
+   * Recognizes a failure that will pass, such as a token refresh that could not reach its authorization
+   * server, so the connect may retry it and a refused pooled handshake is not recorded as a refusal.
+   */
+  readonly transient?: (error: unknown) => boolean
 }
