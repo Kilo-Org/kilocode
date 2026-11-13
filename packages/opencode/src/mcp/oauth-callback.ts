@@ -211,7 +211,9 @@ export function waitForCallback(oauthState: string, mcpName?: string): Promise<s
     const timeout = setTimeout(() => {
       if (pendingAuths.has(oauthState)) {
         pendingAuths.delete(oauthState)
-        if (mcpName) mcpNameToState.delete(mcpName)
+        // kilocode_change: only drop the reverse index while it still points at this state;
+        // a newer flow may have taken the name over before this timer expired
+        cleanupStateIndex(oauthState)
         reject(KiloOAuthCallback.expired()) // kilocode_change
         stopIfIdle()
       }
@@ -234,6 +236,19 @@ export function cancelPending(mcpName: string): void {
     stopIfIdle()
   }
 }
+
+// kilocode_change start - cancel one flow's browser wait by its own oauthState. cancelPending is
+// name-scoped and would hit a newer flow that took the reverse index over during an interrupt.
+export function cancelPendingState(oauthState: string): void {
+  const pending = pendingAuths.get(oauthState)
+  if (!pending) return
+  clearTimeout(pending.timeout)
+  pendingAuths.delete(oauthState)
+  cleanupStateIndex(oauthState)
+  pending.reject(KiloOAuthCallback.cancelled())
+  stopIfIdle()
+}
+// kilocode_change end
 
 export async function isPortInUse(port: number = OAUTH_CALLBACK_PORT): Promise<boolean> {
   return new Promise((resolve) => {

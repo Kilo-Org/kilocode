@@ -34,12 +34,13 @@ import { McpOAuthPendingProvider, McpOAuthProvider, OAUTH_CALLBACK_PATH } from "
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { probe } from "@/kilocode/mcp/sse-probe" // kilocode_change - normalize the optional GET stream probe
+import { createAuthTransports } from "@/kilocode/mcp/auth-transport" // kilocode_change - SSE fallback for remote MCP sign-in
 import { oauthGuard } from "@/kilocode/mcp/oauth-fetch" // kilocode_change - bind automatic invalidation to the rejected credential
 import { refreshExpired } from "@/kilocode/mcp/refresh" // kilocode_change - refresh an expired token the SDK would otherwise report as needs_auth
 import * as KiloMcpCleanup from "@/kilocode/mcp/cleanup" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
-import { Cause, Effect, Exit, Layer, Context, Schema, Stream } from "effect"
+import { Cause, Effect, Exit, Layer, Context, Option, Schema, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
@@ -156,7 +157,9 @@ type PendingFlow = { transport: TransportWithAuth; provider?: McpOAuthPendingPro
 // so a failed or replaced flow leaves neither the map entry nor the connection open.
 function releaseFlow(mcpName: string, flow: PendingFlow): Effect.Effect<void> {
   const pending = pendingOAuthTransports.get(mcpName)
-  if (!pending || pending.provider === flow.provider) pendingOAuthTransports.delete(mcpName)
+  // kilocode_change: identify the entry by its transport object. Provider comparison collides for
+  // the provider-less entries connectRemote registers, letting an old flow delete a newer one.
+  if (!pending || pending.transport === flow.transport) pendingOAuthTransports.delete(mcpName)
   return Effect.tryPromise(() => flow.transport.close()).pipe(Effect.ignore)
 }
 // kilocode_change end
@@ -666,6 +669,12 @@ const layer = Layer.effect(
                 }),
               { concurrency: "unbounded" },
             )
+            // kilocode_change: release pending OAuth transports before dropping the map
+            yield* Effect.forEach(
+              [...pendingOAuthTransports.values()],
+              (pending) => Effect.tryPromise(() => pending.transport.close()).pipe(Effect.ignore),
+              { concurrency: "unbounded" },
+            )
             pendingOAuthTransports.clear()
           }),
         )
@@ -983,35 +992,77 @@ const layer = Layer.effect(
       // from the process-shared mcp-auth.json when the browser returns
       authProvider.pinState(oauthState)
 
-      const transport = new StreamableHTTPClientTransport(url, {
-        authProvider,
-        requestInit: mcpConfig.headers ? { headers: mcpConfig.headers } : undefined,
-      })
+      // kilocode_change start - mirror connectRemote's dual-transport fallback. Legacy SSE-only
+      // servers answer the StreamableHTTP POST initialize with 405, which the SDK raises as a hard
+      // error instead of starting OAuth; trying the SSE transport lets its 401 event-stream probe
+      // enter the OAuth browser flow.
       const directory = yield* InstanceState.directory
+      const candidates = createAuthTransports(url, {
+        authProvider,
+        headers: mcpConfig.headers,
+      })
 
-      return yield* Effect.tryPromise({
-        try: () => {
-          const client = createClient(directory)
-          return client.connect(transport).then(async () => {
-            await authProvider.commit()
-            return { authorizationUrl: "", oauthState, client } satisfies AuthResult
-          })
-        },
-        catch: (error) => error,
-      }).pipe(
-        Effect.catch((error) => {
-          if (error instanceof UnauthorizedError && capturedUrl) {
-            pendingOAuthTransports.set(mcpName, { transport, provider: authProvider })
-            return Effect.succeed({
-              authorizationUrl: capturedUrl.toString(),
-              oauthState,
-              provider: authProvider,
-              transport,
-            } satisfies AuthResult)
-          }
-          return Effect.die(error)
-        }),
-      )
+      let lastError: unknown
+      for (const transport of candidates) {
+        const exited = yield* Effect.acquireUseRelease(
+          Effect.succeed(transport),
+          () =>
+            Effect.tryPromise({
+              try: () => {
+                const client = createClient(directory)
+                return client.connect(transport).then(async () => {
+                  await authProvider.commit()
+                  return { authorizationUrl: "", oauthState, client } satisfies AuthResult
+                })
+              },
+              catch: (error) => error,
+            }).pipe(Effect.exit),
+          // kilocode_change: the connected client and the pending OAuth flow take ownership of the
+          // transport; every other exit, including interruption, must release its AbortController/EventSource.
+          (t, exit) => {
+            // Effect.exit does not catch interruption: a failed wrapper exit means the fiber was
+            // interrupted, while a completed run carries the connection's own exit as its value.
+            if (Exit.isFailure(exit)) return Effect.tryPromise(() => t.close()).pipe(Effect.ignore)
+            const result = exit.value
+            if (Exit.isSuccess(result)) return Effect.void
+            const failure = Cause.findErrorOption(result.cause).pipe(Option.getOrUndefined)
+            if (failure instanceof UnauthorizedError && capturedUrl) return Effect.void
+            return Effect.tryPromise(() => t.close()).pipe(Effect.ignore)
+          },
+        )
+
+        if (Exit.isSuccess(exited)) return exited.value
+        // Preserve the original interruption instead of collapsing it into an error defect.
+        if (Exit.isFailure(exited) && Cause.hasInterruptsOnly(exited.cause)) return yield* Effect.interrupt
+        const failure = Cause.findErrorOption(exited.cause).pipe(Option.getOrUndefined)
+        // kilocode_change: an unexpected defect must keep its message instead of becoming Error("undefined")
+        const error = failure ?? Cause.squash(exited.cause)
+        // A 401/403-driven OAuth redirect is the single path that should open the browser.
+        if (error instanceof UnauthorizedError && capturedUrl) {
+          // kilocode_change: replace the entry synchronously before any async close, so two
+          // concurrent sign-ins cannot both evict the same previous flow and orphan the loser's transport.
+          const previous = pendingOAuthTransports.get(mcpName)
+          const nextFlow: PendingFlow = { transport, provider: authProvider }
+          pendingOAuthTransports.set(mcpName, nextFlow)
+          const authResult = {
+            authorizationUrl: capturedUrl.toString(),
+            oauthState,
+            provider: authProvider,
+            transport,
+          } satisfies AuthResult
+          // kilocode_change: if this flow never reaches its caller (interrupt while closing the evicted
+          // transport), release the entry we just installed; the identity guard spares a newer replacement
+          return yield* Effect.gen(function* () {
+            if (previous) yield* Effect.tryPromise(() => previous.transport.close()).pipe(Effect.ignore)
+            return authResult
+          }).pipe(
+            Effect.onExit((exit) => (Exit.isFailure(exit) ? releaseFlow(mcpName, nextFlow) : Effect.void)),
+          )
+        }
+        lastError = error
+      }
+      return yield* Effect.die(lastError instanceof Error ? lastError : new Error(String(lastError)))
+      // kilocode_change end
     })
 
     const authenticate = Effect.fn("MCP.authenticate")(function* (
@@ -1041,99 +1092,123 @@ const layer = Layer.effect(
         return yield* storeClient(s, mcpName, client, listed, client.getInstructions()?.trim(), mcpConfig.timeout)
       }
       // kilocode_change start - bind only after redirect exists, and clean up if binding fails
-      const mcpConfig = yield* getMcpConfig(mcpName)
-      if (!mcpConfig) return { status: "failed", error: "MCP config not found after auth" } as Status
-      if (mcpConfig.type !== "remote")
-        return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
-      const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
-      const effectiveRedirectUri =
-        oauthConfig?.redirectUri ??
-        (oauthConfig?.callbackPort ? `http://127.0.0.1:${oauthConfig.callbackPort}${OAUTH_CALLBACK_PATH}` : undefined)
-      const err = yield* Effect.tryPromise({
-        try: () => McpOAuthCallback.ensureRunning(effectiveRedirectUri),
-        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-      }).pipe(
-        Effect.match({
-          onFailure: (err) => err,
-          onSuccess: () => undefined,
-        }),
-      )
-      if (err) {
-        yield* KiloAuthTelemetry.fail("callback_unavailable")
-        const pending = pendingOAuthTransports.get(mcpName)
-        pendingOAuthTransports.delete(mcpName)
-        yield* Effect.tryPromise(() => pending?.transport.close() ?? Promise.resolve()).pipe(Effect.ignore)
-        return { status: "failed", error: err.message } as Status
-      }
-      yield* KiloAuthTelemetry.phase("authorization")
-      // kilocode_change end
-
-      yield* Effect.logInfo("opening browser for oauth", {
-        mcpName,
-        url: result.authorizationUrl,
-        state: result.oauthState,
-      })
-
-      const callbackPromise = McpOAuthCallback.waitForCallback(result.oauthState, mcpName)
-      // kilocode_change start - settle the callback before the browser can fire it: a
-      // rejection with no handler attached is reported as an unhandled rejection, and the
-      // failing step has to be named instead of escaping as an unnamed defect
-      const callbackSettled = callbackPromise.then(
-        (code): BrowserCallback => ({ ok: true, code }),
-        (error): BrowserCallback => ({ ok: false, error: error instanceof Error ? error : new Error(String(error)) }),
-      )
-      // kilocode_change end
-      onAuthorization?.(result.authorizationUrl)
-
-      // kilocode_change start - external clients open the URL on their own machine
-      if (opts?.external) {
-        yield* events.publish(AuthUrl, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
-      } else {
-        yield* browser.open(result.authorizationUrl).pipe(
-          Effect.catch(() => {
-            return events.publish(BrowserOpenFailed, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
+      const flow: PendingFlow = { transport: result.transport!, provider: result.provider }
+      return yield* Effect.gen(function* () {
+        const mcpConfig = yield* getMcpConfig(mcpName)
+        if (!mcpConfig) {
+          // kilocode_change: a failed Status is still a success Exit, so onExit cannot release this flow
+          yield* releaseFlow(mcpName, flow)
+          return { status: "failed", error: "MCP config not found after auth" } as Status
+        }
+        if (mcpConfig.type !== "remote") {
+          // kilocode_change: release the pending sign-in flow before returning a failed Status
+          yield* releaseFlow(mcpName, flow)
+          return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
+        }
+        const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
+        const effectiveRedirectUri =
+          oauthConfig?.redirectUri ??
+          (oauthConfig?.callbackPort ? `http://127.0.0.1:${oauthConfig.callbackPort}${OAUTH_CALLBACK_PATH}` : undefined)
+        const err = yield* Effect.tryPromise({
+          try: () => McpOAuthCallback.ensureRunning(effectiveRedirectUri),
+          catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+        }).pipe(
+          Effect.match({
+            onFailure: (err) => err,
+            onSuccess: () => undefined,
           }),
         )
-      }
-      // kilocode_change end
+        if (err) {
+          yield* KiloAuthTelemetry.fail("callback_unavailable")
+          // kilocode_change: identity-guarded release cannot close a newer flow that replaced this one
+          yield* releaseFlow(mcpName, flow)
+          return { status: "failed", error: err.message } as Status
+        }
+        yield* KiloAuthTelemetry.phase("authorization")
+        // kilocode_change end
 
-      // kilocode_change start
-      const callback = yield* Effect.promise(() => callbackSettled)
-      yield* KiloAuthTelemetry.callback(callback)
-      const flow: PendingFlow = { transport: result.transport!, provider: result.provider }
-      if (!callback.ok) {
-        // A newer attempt for the same server can take this flow's callback listener over
-        // (another `kilo mcp auth` process); the replaced flow is named, not a browser failure.
-        if (McpOAuthCallback.isReplaced(callback.error)) {
+        yield* Effect.logInfo("opening browser for oauth", {
+          mcpName,
+          url: result.authorizationUrl,
+          state: result.oauthState,
+        })
+
+        const callbackPromise = McpOAuthCallback.waitForCallback(result.oauthState, mcpName)
+        // kilocode_change start - settle the callback before the browser can fire it: a
+        // rejection with no handler attached is reported as an unhandled rejection, and the
+        // failing step has to be named instead of escaping as an unnamed defect
+        const callbackSettled = callbackPromise.then(
+          (code): BrowserCallback => ({ ok: true, code }),
+          (error): BrowserCallback => ({
+            ok: false,
+            error: error instanceof Error ? error : new Error(String(error)),
+          }),
+        )
+        // kilocode_change end
+        onAuthorization?.(result.authorizationUrl)
+
+        // kilocode_change start - external clients open the URL on their own machine
+        if (opts?.external) {
+          yield* events.publish(AuthUrl, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
+        } else {
+          yield* browser.open(result.authorizationUrl).pipe(
+            Effect.catch(() => {
+              return events.publish(BrowserOpenFailed, { mcpName, url: result.authorizationUrl }).pipe(Effect.ignore)
+            }),
+          )
+        }
+        // kilocode_change end
+
+        // kilocode_change start
+        const callback = yield* Effect.promise(() => callbackSettled)
+        yield* KiloAuthTelemetry.callback(callback)
+        if (!callback.ok) {
+          // A newer attempt for the same server can take this flow's callback listener over
+          // (another `kilo mcp auth` process); the replaced flow is named, not a browser failure.
+          if (McpOAuthCallback.isReplaced(callback.error)) {
+            yield* releaseFlow(mcpName, flow)
+            return {
+              status: "failed",
+              error: `Browser authorization was rejected: ${callback.error.message}`,
+            } satisfies Status
+          }
+          // The browser step failed, so this flow can no longer complete: release its entry and
+          // transport instead of leaving both open for the next attempt to trip over.
+          yield* releaseFlow(mcpName, flow)
+          return { status: "failed", error: `Browser authorization failed: ${callback.error.message}` } satisfies Status
+        }
+
+        // The authorization flow that owns the pending transport must still be this one. A second
+        // `authenticate` for the same server replaces the entry with its own provider, and a
+        // finished flow removes it; either way this callback belongs to the attempt that was
+        // replaced. `connectRemote` registers a provider-less entry while it auto-connects the
+        // server during the wait, which is not an authorization attempt.
+        const owner = pendingOAuthTransports.get(mcpName)
+        if (!owner || (owner.provider !== undefined && owner.provider !== result.provider)) {
+          yield* KiloAuthTelemetry.superseded()
           yield* releaseFlow(mcpName, flow)
           return {
             status: "failed",
-            error: `Browser authorization was rejected: ${callback.error.message}`,
+            error: "Browser authorization was rejected: this request was replaced by another authorization attempt",
           } satisfies Status
         }
-        // The browser step failed, so this flow can no longer complete: release its entry and
-        // transport instead of leaving both open for the next attempt to trip over.
-        yield* releaseFlow(mcpName, flow)
-        return { status: "failed", error: `Browser authorization failed: ${callback.error.message}` } satisfies Status
-      }
 
-      // The authorization flow that owns the pending transport must still be this one. A second
-      // `authenticate` for the same server replaces the entry with its own provider, and a
-      // finished flow removes it; either way this callback belongs to the attempt that was
-      // replaced. `connectRemote` registers a provider-less entry while it auto-connects the
-      // server during the wait, which is not an authorization attempt.
-      const owner = pendingOAuthTransports.get(mcpName)
-      if (!owner || (owner.provider !== undefined && owner.provider !== result.provider)) {
-        yield* KiloAuthTelemetry.superseded()
-        yield* releaseFlow(mcpName, flow)
-        return {
-          status: "failed",
-          error: "Browser authorization was rejected: this request was replaced by another authorization attempt",
-        } satisfies Status
-      }
-
-      return yield* completeAuth(mcpName, callback.code, flow)
-      // kilocode_change end
+        return yield* completeAuth(mcpName, callback.code, flow)
+        // kilocode_change end
+      }).pipe(
+        // kilocode_change: every abnormal exit releases the pending flow; releaseFlow is idempotent for
+        // the paths that already released. On any failure, also drop this flow's 5-minute callback
+        // timer by oauthState, so a newer flow keeping the same name is never cancelled.
+        Effect.onExit((exit) => {
+          if (Exit.isSuccess(exit)) return Effect.void
+          // kilocode_change: every failure (defect after callback registration included) must drop this
+          // flow's callback timer by oauthState; a settled callback is already gone, making this a no-op there
+          return Effect.gen(function* () {
+            yield* Effect.sync(() => McpOAuthCallback.cancelPendingState(result.oauthState))
+            yield* releaseFlow(mcpName, flow)
+          })
+        }),
+      )
     })
 
     // kilocode_change start - complete a flow that was already matched to its owner, so the
@@ -1158,7 +1233,9 @@ const layer = Layer.effect(
       yield* KiloAuthTelemetry.phase("credential_store")
       yield* Effect.promise(() => flow.provider?.commit() ?? Promise.resolve())
       yield* KiloAuthTelemetry.persisted(flow.provider)
-      pendingOAuthTransports.delete(mcpName)
+      // kilocode_change: the code is exchanged; close the transport that carried the sign-in
+      // instead of dropping it with the map entry.
+      yield* releaseFlow(mcpName, flow)
 
       const mcpConfig = yield* requireMcpConfig(mcpName)
 
@@ -1176,8 +1253,11 @@ const layer = Layer.effect(
 
     const removeAuth = Effect.fn("MCP.removeAuth")(function* (mcpName: string) {
       yield* auth.remove(mcpName)
+      // kilocode_change: resolve the owner after the storage write so a flow starting during the await
+      // is torn down as one consistent unit instead of mixing a stale snapshot with name-scoped deletion
+      const pending = pendingOAuthTransports.get(mcpName)
       McpOAuthCallback.cancelPending(mcpName)
-      pendingOAuthTransports.delete(mcpName)
+      if (pending) yield* releaseFlow(mcpName, pending)
     })
 
     // kilocode_change start - cancel an in-flight flow without deleting stored credentials
