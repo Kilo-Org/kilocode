@@ -111,6 +111,7 @@ import type { CreationBoot } from "./provider-lifecycle"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { ToolRequest } from "./tool-start"
 import type { SetupScriptService } from "./SetupScriptService"
+import { PLATFORM_METADATA } from "./session-create"
 
 export class AgentManagerProvider implements Disposable, ProviderHostsSource, ProviderStateHost, ProviderApiHost {
   public static readonly viewType = "kilo-code.v2.agentManagerPanel"
@@ -750,7 +751,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
         createSessionInWorktree: (dir, branch, id, _source, boot, timing, model, agent) =>
           this.createSessionInWorktree(dir, branch, id, timing, model, agent, boot),
-        sessionMetadata: async () => ({ kilocode: { platform: "agent-manager" } }),
+        sessionMetadata: async () => PLATFORM_METADATA,
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
         push: () => this.pushState(),

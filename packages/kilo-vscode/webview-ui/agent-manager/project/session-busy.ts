@@ -1,13 +1,14 @@
 import type { SessionInfo } from "@opencode/client"
 import { createMemo, createSignal, onCleanup } from "solid-js"
 import type { ExtensionMessage } from "../../src/types/messages/agent-manager"
-import { strongest, type Activity } from "../v2/activity"
+import { strongest, type Activity, type Outcome } from "../v2/activity"
 
 interface Item {
   id: string
   worktreeId?: string | null
   outcome?: SessionInfo["outcome"]
   time?: SessionInfo["time"]
+  revert?: SessionInfo["revert"]
 }
 
 export function createSessionActivity(opts: {
@@ -15,14 +16,16 @@ export function createSessionActivity(opts: {
   local: () => string[]
   projects: () => Record<string, Item[]>
   active: () => string | undefined
-  activityFor: (id: string, info?: Pick<SessionInfo, "outcome" | "time">) => Activity
+  activityFor: (id: string, info?: Outcome) => Activity
 }) {
   const group = (items: Item[]) => {
     const states = new Map<string | null, Activity[]>()
     for (const item of items) {
       const id = item.worktreeId ?? null
       const values = states.get(id) ?? []
-      values.push(opts.activityFor(item.id, item.time ? { outcome: item.outcome, time: item.time } : undefined))
+      values.push(
+        opts.activityFor(item.id, item.time ? { outcome: item.outcome, time: item.time, revert: item.revert } : undefined),
+      )
       states.set(id, values)
     }
     return new Map([...states].map(([id, values]) => [id, strongest(values)]))
@@ -35,7 +38,7 @@ export function createSessionActivity(opts: {
     return group(
       opts.managed().map((item) => {
         const info = catalog.get(item.id)
-        return info?.time ? { ...item, time: info.time, outcome: info.outcome } : item
+        return info?.time ? { ...item, time: info.time, outcome: info.outcome, revert: info.revert } : item
       }),
     )
   })

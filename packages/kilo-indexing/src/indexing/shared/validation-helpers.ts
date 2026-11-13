@@ -60,6 +60,26 @@ export interface ValidationError {
   code?: string
 }
 
+/** The provider answers requests but does not serve the selected model. */
+export const EMBEDDING_MODEL_UNAVAILABLE = "The specified embedding model is not available."
+export const EMBEDDING_AUTH_FAILED = "Authentication failed. Please check your API key."
+export const EMBEDDING_NO_CREDITS = "Add credits to continue, or switch to a free embedding model."
+export const EMBEDDING_RATE_LIMITED = "Service is temporarily unavailable due to rate limiting. Please try again later."
+export const EMBEDDING_CONNECTION_FAILED = "Connection failed. Please check the endpoint URL and network connectivity."
+
+/**
+ * True when the failure is the account or the connection rather than one model, so trying another catalog model cannot
+ * succeed.
+ */
+export function isAccountWideValidationError(message: string | undefined): boolean {
+  return (
+    message === EMBEDDING_AUTH_FAILED ||
+    message === EMBEDDING_NO_CREDITS ||
+    message === EMBEDDING_RATE_LIMITED ||
+    message === EMBEDDING_CONNECTION_FAILED
+  )
+}
+
 /**
  * Maps HTTP status codes to appropriate error messages
  */
@@ -67,15 +87,17 @@ export function getErrorMessageForStatus(status: number | undefined, embedderTyp
   switch (status) {
     case 401:
     case 403:
-      return "Authentication failed. Please check your API key."
+      return EMBEDDING_AUTH_FAILED
     case 404:
-      return embedderType === "openai"
-        ? "The specified embedding model is not available."
+      // The Kilo Gateway serves one URL for every model, and the catalog can list a model the route refuses, so a
+      // 404 there names the model, not the endpoint.
+      return embedderType === "openai" || embedderType === "kilo"
+        ? EMBEDDING_MODEL_UNAVAILABLE
         : "Invalid endpoint URL. Please verify the endpoint."
     case 429:
-      return "Service is temporarily unavailable due to rate limiting. Please try again later."
+      return EMBEDDING_RATE_LIMITED
     case 402:
-      return "Add credits to continue, or switch to a free embedding model."
+      return EMBEDDING_NO_CREDITS
     default:
       if (status && status >= 400 && status < 600) {
         return "Configuration error. Please verify your embedder settings."
@@ -164,7 +186,7 @@ export function handleValidationError(
       errorMessage.includes("HTTP 0:") ||
       errorMessage === "No response"
     ) {
-      return { valid: false, error: "Connection failed. Please check the endpoint URL and network connectivity." }
+      return { valid: false, error: EMBEDDING_CONNECTION_FAILED }
     }
 
     if (errorMessage.includes("Failed to parse response JSON")) {
@@ -204,7 +226,7 @@ export function formatEmbeddingError(error: any, maxRetries: number): Error {
   const statusCode = extractStatusCode(error)
 
   if (statusCode === 401) {
-    return new Error("Authentication failed. Please check your API key.")
+    return new Error(EMBEDDING_AUTH_FAILED)
   }
   if (statusCode) {
     return new Error(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`)

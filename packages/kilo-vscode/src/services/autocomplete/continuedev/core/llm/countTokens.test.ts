@@ -18,7 +18,6 @@ describe("encodingForModel()", () => {
       "gemini-1.5-pro",
       "grok-beta",
       "moonshot-v1",
-      "mercury-chat",
       "pplx-70b",
       "chat-bison",
     ]

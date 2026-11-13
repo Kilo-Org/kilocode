@@ -17,6 +17,8 @@ export function UserMessage(props: {
   rowKey?: string
   sessionID?: string
   onFork?: () => void
+  onRevert?: () => void
+  revertDisabled?: boolean
   /** Opens the session that sent this prompt; the message links to it when set. */
   onSelectSession?: (id: string) => void
   /** Whether the current transcript search match is in this row. */
@@ -98,7 +100,11 @@ export function UserMessage(props: {
       data-pending={props.pending ? "" : undefined}
       data-search-active={props.searchActive ? "" : undefined}
     >
-      <div class="vscode-session-turn-user">
+      <div
+        class="vscode-session-turn-user"
+        data-revert-disabled={props.revertDisabled ? "" : undefined}
+        title={props.revertDisabled ? language.t("revert.disabled.agentBusy") : undefined}
+      >
         <Show when={review()}>
           {(value) => <ReviewComments comments={value().comments} sessionID={props.sessionID} variant="message" />}
         </Show>
@@ -114,6 +120,8 @@ export function UserMessage(props: {
           }
           bubbleHeader={bubble()}
           onFork={props.onFork}
+          onRevert={props.onRevert}
+          revertDisabled={props.revertDisabled}
           pending={props.pending}
           onOpenImage={openImage}
           onOpenFile={

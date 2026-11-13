@@ -19,6 +19,9 @@ export function TranscriptRowView(props: {
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
   /** Forks the session before the user message, when the surface can fork. */
   onForkMessage?: (sessionID: string, messageID: string) => void
+  /** Reverts the session to the user message and restores its prompt. */
+  onRevertMessage?: (sessionID: string, messageID: string) => void
+  revertDisabled?: boolean
   /** Opens the session a prompt came from, for example another Agent Manager session. */
   onSelectSession?: (id: string) => void
   /** The delivery state of a user message the server has not handed to the model yet. */
@@ -43,6 +46,15 @@ export function TranscriptRowView(props: {
               pending={props.pending?.(row().message.id)}
               onSelectSession={props.onSelectSession}
               onFork={props.onForkMessage ? () => props.onForkMessage?.(props.session, row().message.id) : undefined}
+              onRevert={
+                row().answered && props.onRevertMessage
+                  ? () => {
+                      if (props.revertDisabled) return
+                      props.onRevertMessage?.(props.session, row().message.id)
+                    }
+                  : undefined
+              }
+              revertDisabled={row().answered && props.revertDisabled}
             />
           )}
         </Match>

@@ -3,6 +3,28 @@
   "name": "kilo-code-v2",
   "displayName": "Kilo Code (v2 preview)",
   "description": "Kilo Code on the Kilo v2 server",
+  "icon": "assets/icon.png",
+  "author": {
+    "name": "Kilo Code"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "kilo",
+    "kilo code",
+    "ai",
+    "agent",
+    "coding agent",
+    "chat",
+    "autocomplete"
+  ],
+  "galleryBanner": {
+    "color": "#FFFFFF",
+    "theme": "light"
+  },
   "publisher": "kilocode",
   "version": "0.0.1",
   "private": true,
@@ -24,7 +46,8 @@
     "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
     "onWebviewPanel:kilo-code.v2.documentsPanel",
-    "onWebviewPanel:kilo-code.v2.subagentPanel"
+    "onWebviewPanel:kilo-code.v2.subagentPanel",
+    "onWebviewPanel:kilo-code.v2.DiffViewerPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -266,19 +289,11 @@
           "type": "string",
           "enum": [
             "mistralai/codestral-2508",
-            "inception/mercury-edit-2",
-            "inception/mercury-next-edit",
-            "codestral-2508",
-            "mercury-edit-2",
-            "mercury-next-edit"
+            "codestral-2508"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+            "Codestral via your connected Mistral provider API key"
           ],
           "markdownDescription": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
         },
@@ -286,13 +301,11 @@
           "type": "string",
           "enum": [
             "kilo",
-            "mistral",
-            "inception"
+            "mistral"
           ],
           "enumDescriptions": [
             "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "Use autocomplete models through your connected Mistral provider API key"
           ],
           "markdownDescription": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },
@@ -1121,6 +1134,7 @@
     "babel-preset-solid": "1.9.15",
     "esbuild": "0.27.2",
     "happy-dom": "20.8.9",
+    "ovsx": "1.3.0",
     "qrcode": "^1.5.4"
   }
 }

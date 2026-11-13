@@ -345,6 +345,31 @@ test("a completed write card replaces the provisional counts with the final diff
   expect(counts(card.host)).toEqual({ additions: "+2", deletions: "-0" })
 })
 
+test("an edit card keeps its file expanded when the final diff names the file relatively", async () => {
+  const input = { path: "/repo/src/math.ts", oldString: 'export const VERSION = "1.2.3"', newString: "y" }
+  const [item, setItem] = createSignal<SessionMessageAssistantTool>(
+    liveTool("edit", { status: "running", input, metadata: {} }),
+  )
+  const card = mountRich(() => (
+    <ContentPart item={item()} message={liveMessage} index={0} directory="/repo" forceOpen />
+  ))
+  mounted.push(card)
+  await waitFor(() => card.host.querySelector('[data-component="edit-content"]'))
+
+  setItem(
+    liveTool("edit", {
+      status: "completed",
+      input,
+      content: [{ type: "text", text: "Edited src/math.ts" }],
+      metadata: { files: [editedFile] },
+    }),
+  )
+
+  await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+1")
+  const content = await waitFor(() => card.host.querySelector('[data-component="edit-content"]'))
+  expect(content.closest('[data-slot="accordion-item"]')?.hasAttribute("data-expanded")).toBe(true)
+})
+
 type StreamingTool = Extract<SessionMessageAssistantTool, { state: { status: "streaming" } }>
 
 test("a streaming write card recounts when the tool input grows", async () => {
@@ -361,4 +386,65 @@ test("a streaming write card recounts when the tool input grows", async () => {
   setStore("item", "state", "input", (text) => text + "\\ntwo\\nthree")
 
   await waitFor(() => card.host.querySelector('[data-slot="diff-changes-additions"]')?.textContent === "+3")
+})
+
+test("the shell card titles itself with the model description, not the command", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && bun test", description: "Runs the unit tests" },
+    partID: "shell-description",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("Runs the unit tests")
+})
+
+test("the shell card drops a leading cd prefix when the model gives no description", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && bun run check", workdir: "/work/tree" },
+    partID: "shell-command",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("bun run check")
+})
+
+test("the shell card falls back to the description stored with the result", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && bun test" },
+    metadata: { description: "Runs the unit tests" },
+    partID: "shell-result-description",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("Runs the unit tests")
+})
+
+test("the shell card peels chained cd prefixes", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree && cd packages/core && bun test" },
+    partID: "shell-chained-cd",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("bun test")
+})
+
+test("the shell card keeps a title when the first line is only a cd prefix", async () => {
+  const card = mountTool("shell", {
+    input: { command: "cd /work/tree &&\nbun test" },
+    partID: "shell-prefix-only",
+    output: "ok",
+  })
+  mounted.push(card)
+
+  const summary = await waitFor(() => card.host.querySelector('[data-slot="shell-submessage-value"]'))
+  expect(summary.textContent).toBe("cd /work/tree &&")
 })

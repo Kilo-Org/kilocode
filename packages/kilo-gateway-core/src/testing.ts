@@ -275,11 +275,9 @@ export function fixture() {
     evalStatus: 200,
     // Request bodies of the custom router routes, in order.
     customRouterBodies: [] as { method: string; path: string; body: unknown }[],
-    // FIM and Next Edit routes: the stream chunks or JSON body they answer with, and the requests they received.
+    // FIM route: the stream chunks it answers with, and the requests it received.
     fimStatus: 200,
     fim: [{ choices: [{ text: "fixture completion" }] }, { usage: { prompt_tokens: 5, completion_tokens: 2 }, cost: 0.0001 }] as unknown[],
-    editStatus: 200,
-    edit: { choices: [{ message: { content: "```\nfixture edit\n```" } }], usage: { prompt_tokens: 7, completion_tokens: 3 } } as unknown,
     autocompleteRequests: [] as { path: string; body: unknown; feature: string | null }[],
     // The FIM route never answers and counts the requests whose client went away.
     fimHang: false,
@@ -360,14 +358,12 @@ export function fixture() {
         if (state.modesStatus !== 200) return new Response(null, { status: state.modesStatus })
         return Response.json(state.modes)
       }
-      if (path.endsWith("/fim/completions") || path.endsWith("/edit/completions")) {
+      if (path.endsWith("/fim/completions")) {
         state.autocompleteRequests.push({
           path,
           body: await request.json(),
           feature: request.headers.get("x-kilocode-feature"),
         })
-        if (path.endsWith("/edit/completions"))
-          return state.editStatus === 200 ? Response.json(state.edit) : new Response("edit failed", { status: state.editStatus })
         if (state.fimHang)
           return new Promise<Response>((_resolve, reject) =>
             request.signal.addEventListener("abort", () => {

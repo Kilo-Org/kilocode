@@ -39,9 +39,11 @@ export class CaffeinationService {
           client.session.list({ directory: dir, parentID: null }),
           client.session.active(),
           // A server without the wakeup plugin is not an error: the machine simply has no scheduled work here.
+          // The wakeup state is global, so the first path's Location answers for every directory instead of the
+          // server loading each worktree.
           client
             .rpc(KiloWakeupRpc.Definition)
-            .pending({ directory: dir }, { location: { directory: dir } })
+            .pending({ directory: dir }, { location: { directory: this.paths()[0] ?? dir } })
             .catch(() => undefined),
         ])
         const ids = new Set((sessions.data ?? []).map((session) => session.id))

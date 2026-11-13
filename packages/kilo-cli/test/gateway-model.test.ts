@@ -45,6 +45,56 @@ it.effect("an empty Kilo credential keeps image and decision models off the stal
       }),
     )
     yield* media
-    expect(calls).toEqual(["image:kilo", "decision:kilo", "image:openrouter", "decision:openrouter"])
+    // A Kilo image model is built by the wrapper itself; only the decision model reaches the base resolver.
+    expect(calls).toEqual(["decision:kilo", "image:openrouter", "decision:openrouter"])
+  }),
+)
+
+it.effect("builds Kilo image models from the provider settings instead of a provider package", () =>
+  Effect.gen(function* () {
+    const calls: string[] = []
+    const base = Layer.succeed(ModelResolver.Service, {
+      resolve: () => Effect.undefined,
+      resolveModel: () => Effect.die("not used"),
+      resolveImage: (ref) => Effect.sync(() => calls.push(`image:${ref.providerID}`)).pipe(Effect.as(undefined)),
+      resolveDecision: (ref) => Effect.sync(() => calls.push(`decision:${ref.providerID}`)).pipe(Effect.as(undefined)),
+    })
+    const providers = yield* Provider.Service
+    yield* providers.transform((editor) =>
+      editor.add({
+        info: {
+          id: kilo,
+          name: "Kilo Gateway",
+          activation: "enabled",
+          package: "@opencode/ai/providers/openrouter",
+          settings: { apiKey: "test", baseURL: "https://gateway.test/v1" },
+        },
+        models: [
+          Model.Info.make({
+            id: Model.ID.make("google/image"),
+            modelID: Model.ID.make("google/image"),
+            providerID: kilo,
+            type: "image",
+            name: "Image",
+            package: "@kilocode/gateway-images",
+            settings: { baseURL: "https://gateway.test/v1" },
+            capabilities: { tools: false, input: ["text"], output: ["image"] },
+            variants: [],
+            time: { released: 0 },
+            cost: [],
+            status: "active",
+            enabled: true,
+            limit: { context: 0, output: 0 },
+          }),
+        ],
+      }),
+    )
+    const model = yield* Effect.gen(function* () {
+      const resolver = yield* ModelResolver.Service
+      return yield* resolver.resolveImage(Model.Ref.make({ providerID: kilo, id: Model.ID.make("google/image") }))
+    }).pipe(Effect.provide(KiloGatewayModel.resolverLayer(base)))
+    expect(model).toBeDefined()
+    expect(String(model?.provider)).toBe("kilo")
+    expect(calls).toEqual([])
   }),
 )

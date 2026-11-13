@@ -344,10 +344,14 @@ export function activate(context: ExtensionContext) {
   void clearLegacyTerminalDestination().catch((error: unknown) =>
     output.appendLine(`Terminal destination cleanup failed: ${String(error)}`),
   )
-  // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
-  // The panel receives an action, so an open dialog handles it before the session behind the dialog.
+  // The cycle keybindings act on the focused composer: the sidebar when it has focus, else the Agent Manager panel.
+  // The sidebar focus is the precise signal, as for the shared tab shortcuts: the panel stays the selected editor tab
+  // while the user moves focus to the sidebar. The panel receives an action, so an open dialog handles it before the
+  // session behind the dialog.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
-    if (agentManager.isActive()) return agentManager.postMessage({ type: "action", action: name })
+    const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+    if (target === "sidebar") return view.post({ type: "command", name })
+    if (target === "agentManager") return agentManager.postMessage({ type: "action", action: name })
     await commands.executeCommand("kilo-code.v2.chat.focus")
     await view.post({ type: "command", name })
   }
@@ -384,7 +388,7 @@ export function activate(context: ExtensionContext) {
       (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
     ),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
-      deserializeWebviewPanel: async (panel) => changes.deserializePanel(panel),
+      deserializeWebviewPanel: async (panel, state) => changes.deserializePanel(panel, state),
     }),
     window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
       webviewOptions: { retainContextWhenHidden: true },

@@ -9,10 +9,10 @@ import { KiloBranding } from "../src/branding/text"
 test("server process mirror differs from the branded upstream file only at host integration points", async () => {
   const file = path.join(import.meta.dir, "../../cli/src/server-process.ts")
   const upstream = KiloBranding.transform(file, await Bun.file(file).text())
-  const mirror = (await Bun.file(path.join(import.meta.dir, "../src/server-process.ts")).text()).replaceAll(
-    "\r\n",
-    "\n",
-  )
+  // The registry marker added by #16130 is not part of the upstream comparison.
+  const mirror = (await Bun.file(path.join(import.meta.dir, "../src/server-process.ts")).text())
+    .replaceAll("\r\n", "\n")
+    .replace(/^\/\/ kilo_mirror: \S+\n/, "")
   const replace = (source: string, from: string, to: string) => {
     expect(source.split(from)).toHaveLength(2)
     return source.replace(from, to)

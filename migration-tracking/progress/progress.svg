@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 36.9% (1972/5351)</text>
-<g><title>vscode: 1313/2017 (65.1%), 40 dropped</title>
+<text x="4.00" y="21.00" font-size="16">Features: 37.7% (2013/5339)</text>
+<g><title>vscode: 1313/2011 (65.3%), 46 dropped</title>
 <rect class="d" x="1.00" y="31.00" width="22.13" height="23.17"/>
 <rect class="d" x="23.13" y="31.00" width="22.13" height="23.17"/>
 <rect class="d" x="45.25" y="31.00" width="22.13" height="23.17"/>
@@ -410,7 +410,7 @@
 <rect class="b" x="378.13" y="30.00" width="226.47" height="280.00"/>
 <text x="383.13" y="46.00" font-size="12">jetbrains</text>
 </g>
-<g><title>ui: 151/267 (56.6%)</title>
+<g><title>ui: 152/267 (56.9%)</title>
 <rect class="d" x="605.60" y="31.00" width="7.82" height="8.16"/>
 <rect class="d" x="613.42" y="31.00" width="7.82" height="8.16"/>
 <rect class="d" x="621.24" y="31.00" width="7.82" height="8.16"/>
@@ -524,7 +524,7 @@
 <rect class="d" x="656.43" y="96.28" width="8.47" height="8.16"/>
 <rect class="d" x="664.91" y="96.28" width="8.47" height="8.16"/>
 <rect class="d" x="673.38" y="96.28" width="8.47" height="8.16"/>
-<rect class="o" x="681.85" y="96.28" width="8.47" height="8.16"/>
+<rect class="d" x="681.85" y="96.28" width="8.47" height="8.16"/>
 <rect class="o" x="690.33" y="96.28" width="8.47" height="8.16"/>
 <rect class="o" x="698.80" y="96.28" width="8.47" height="8.16"/>
 <rect class="o" x="605.60" y="104.44" width="8.47" height="8.16"/>
@@ -919,7 +919,7 @@
 <rect class="b" x="604.60" y="236.52" width="103.68" height="73.48"/>
 <text x="609.60" y="252.52" font-size="12">cli</text>
 </g>
-<g><title>session: 7/113 (6.2%), 2 dropped</title>
+<g><title>session: 8/113 (7.1%), 2 dropped</title>
 <rect class="d" x="709.27" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="715.93" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="722.58" y="31.00" width="6.65" height="6.98"/>
@@ -927,7 +927,7 @@
 <rect class="d" x="735.88" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="742.54" y="31.00" width="6.65" height="6.98"/>
 <rect class="d" x="749.19" y="31.00" width="6.65" height="6.98"/>
-<rect class="o" x="755.84" y="31.00" width="6.65" height="6.98"/>
+<rect class="d" x="755.84" y="31.00" width="6.65" height="6.98"/>
 <rect class="o" x="762.50" y="31.00" width="6.65" height="6.98"/>
 <rect class="o" x="769.15" y="31.00" width="6.65" height="6.98"/>
 <rect class="o" x="775.80" y="31.00" width="6.65" height="6.98"/>
@@ -1038,7 +1038,7 @@
 <rect class="b" x="708.27" y="30.00" width="75.18" height="78.73"/>
 <text x="713.27" y="46.00" font-size="12">session</text>
 </g>
-<g><title>tool: 22/109 (20.2%), 2 dropped</title>
+<g><title>tool: 33/109 (30.3%), 2 dropped</title>
 <rect class="d" x="709.27" y="109.73" width="6.65" height="6.73"/>
 <rect class="d" x="715.93" y="109.73" width="6.65" height="6.73"/>
 <rect class="d" x="722.58" y="109.73" width="6.65" height="6.73"/>
@@ -1061,17 +1061,17 @@
 <rect class="d" x="767.82" y="116.45" width="7.32" height="6.73"/>
 <rect class="d" x="775.14" y="116.45" width="7.32" height="6.73"/>
 <rect class="d" x="709.27" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="716.59" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="723.91" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="731.23" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="738.55" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="745.86" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="753.18" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="760.50" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="767.82" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="775.14" y="123.18" width="7.32" height="6.73"/>
-<rect class="o" x="709.27" y="129.91" width="7.32" height="6.73"/>
-<rect class="o" x="716.59" y="129.91" width="7.32" height="6.73"/>
+<rect class="d" x="716.59" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="723.91" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="731.23" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="738.55" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="745.86" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="753.18" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="760.50" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="767.82" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="775.14" y="123.18" width="7.32" height="6.73"/>
+<rect class="d" x="709.27" y="129.91" width="7.32" height="6.73"/>
+<rect class="d" x="716.59" y="129.91" width="7.32" height="6.73"/>
 <rect class="o" x="723.91" y="129.91" width="7.32" height="6.73"/>
 <rect class="o" x="731.23" y="129.91" width="7.32" height="6.73"/>
 <rect class="o" x="738.55" y="129.91" width="7.32" height="6.73"/>
@@ -1153,14 +1153,14 @@
 <rect class="b" x="708.27" y="108.73" width="75.18" height="75.99"/>
 <text x="713.27" y="124.73" font-size="12">tool</text>
 </g>
-<g><title>server: 7/96 (7.3%)</title>
+<g><title>server: 6/95 (6.3%), 1 dropped</title>
 <rect class="d" x="709.27" y="185.72" width="6.65" height="7.08"/>
 <rect class="d" x="715.93" y="185.72" width="6.65" height="7.08"/>
 <rect class="d" x="722.58" y="185.72" width="6.65" height="7.08"/>
 <rect class="d" x="729.23" y="185.72" width="6.65" height="7.08"/>
 <rect class="d" x="735.88" y="185.72" width="6.65" height="7.08"/>
 <rect class="d" x="742.54" y="185.72" width="6.65" height="7.08"/>
-<rect class="d" x="749.19" y="185.72" width="6.65" height="7.08"/>
+<rect class="o" x="749.19" y="185.72" width="6.65" height="7.08"/>
 <rect class="o" x="755.84" y="185.72" width="6.65" height="7.08"/>
 <rect class="o" x="762.50" y="185.72" width="6.65" height="7.08"/>
 <rect class="o" x="769.15" y="185.72" width="6.65" height="7.08"/>
@@ -1249,11 +1249,11 @@
 <rect class="o" x="753.18" y="242.36" width="7.32" height="7.08"/>
 <rect class="o" x="760.50" y="242.36" width="7.32" height="7.08"/>
 <rect class="o" x="767.82" y="242.36" width="7.32" height="7.08"/>
-<rect class="o" x="775.14" y="242.36" width="7.32" height="7.08"/>
+<rect class="x" x="775.14" y="242.36" width="7.32" height="7.08"/>
 <rect class="b" x="708.27" y="184.72" width="75.18" height="65.72"/>
 <text x="713.27" y="200.72" font-size="12">server</text>
 </g>
-<g><title>gateway: 62/75 (82.7%), 12 dropped</title>
+<g><title>gateway: 58/73 (79.5%), 14 dropped</title>
 <rect class="d" x="709.27" y="251.44" width="6.65" height="7.19"/>
 <rect class="d" x="715.93" y="251.44" width="6.65" height="7.19"/>
 <rect class="d" x="722.58" y="251.44" width="6.65" height="7.19"/>
@@ -1312,10 +1312,10 @@
 <rect class="d" x="709.27" y="287.42" width="6.65" height="7.19"/>
 <rect class="d" x="715.93" y="287.42" width="6.65" height="7.19"/>
 <rect class="d" x="722.58" y="287.42" width="6.65" height="7.19"/>
-<rect class="d" x="729.23" y="287.42" width="6.65" height="7.19"/>
-<rect class="d" x="735.88" y="287.42" width="6.65" height="7.19"/>
-<rect class="d" x="742.54" y="287.42" width="6.65" height="7.19"/>
-<rect class="d" x="749.19" y="287.42" width="6.65" height="7.19"/>
+<rect class="o" x="729.23" y="287.42" width="6.65" height="7.19"/>
+<rect class="o" x="735.88" y="287.42" width="6.65" height="7.19"/>
+<rect class="o" x="742.54" y="287.42" width="6.65" height="7.19"/>
+<rect class="o" x="749.19" y="287.42" width="6.65" height="7.19"/>
 <rect class="o" x="755.84" y="287.42" width="6.65" height="7.19"/>
 <rect class="o" x="762.50" y="287.42" width="6.65" height="7.19"/>
 <rect class="o" x="769.15" y="287.42" width="6.65" height="7.19"/>
@@ -1327,8 +1327,8 @@
 <rect class="o" x="735.88" y="294.61" width="6.65" height="7.19"/>
 <rect class="o" x="742.54" y="294.61" width="6.65" height="7.19"/>
 <rect class="o" x="749.19" y="294.61" width="6.65" height="7.19"/>
-<rect class="o" x="755.84" y="294.61" width="6.65" height="7.19"/>
-<rect class="o" x="762.50" y="294.61" width="6.65" height="7.19"/>
+<rect class="x" x="755.84" y="294.61" width="6.65" height="7.19"/>
+<rect class="x" x="762.50" y="294.61" width="6.65" height="7.19"/>
 <rect class="x" x="769.15" y="294.61" width="6.65" height="7.19"/>
 <rect class="x" x="775.80" y="294.61" width="6.65" height="7.19"/>
 <rect class="x" x="709.27" y="301.81" width="7.32" height="7.19"/>
@@ -1877,30 +1877,30 @@
 <rect class="b" x="829.64" y="94.89" width="39.31" height="35.35"/>
 <text x="834.64" y="110.89" font-size="12">pty</text>
 </g>
-<g><title>mcp: 0/23 (0%)</title>
-<rect class="o" x="869.95" y="95.89" width="6.30" height="6.67"/>
-<rect class="o" x="876.25" y="95.89" width="6.30" height="6.67"/>
-<rect class="o" x="882.55" y="95.89" width="6.30" height="6.67"/>
-<rect class="o" x="888.84" y="95.89" width="6.30" height="6.67"/>
-<rect class="o" x="895.14" y="95.89" width="6.30" height="6.67"/>
-<rect class="o" x="869.95" y="102.56" width="6.30" height="6.67"/>
-<rect class="o" x="876.25" y="102.56" width="6.30" height="6.67"/>
-<rect class="o" x="882.55" y="102.56" width="6.30" height="6.67"/>
-<rect class="o" x="888.84" y="102.56" width="6.30" height="6.67"/>
-<rect class="o" x="895.14" y="102.56" width="6.30" height="6.67"/>
-<rect class="o" x="869.95" y="109.23" width="6.30" height="6.67"/>
-<rect class="o" x="876.25" y="109.23" width="6.30" height="6.67"/>
-<rect class="o" x="882.55" y="109.23" width="6.30" height="6.67"/>
-<rect class="o" x="888.84" y="109.23" width="6.30" height="6.67"/>
-<rect class="o" x="895.14" y="109.23" width="6.30" height="6.67"/>
+<g><title>mcp: 15/19 (78.9%), 4 dropped</title>
+<rect class="d" x="869.95" y="95.89" width="6.30" height="6.67"/>
+<rect class="d" x="876.25" y="95.89" width="6.30" height="6.67"/>
+<rect class="d" x="882.55" y="95.89" width="6.30" height="6.67"/>
+<rect class="d" x="888.84" y="95.89" width="6.30" height="6.67"/>
+<rect class="d" x="895.14" y="95.89" width="6.30" height="6.67"/>
+<rect class="d" x="869.95" y="102.56" width="6.30" height="6.67"/>
+<rect class="d" x="876.25" y="102.56" width="6.30" height="6.67"/>
+<rect class="d" x="882.55" y="102.56" width="6.30" height="6.67"/>
+<rect class="d" x="888.84" y="102.56" width="6.30" height="6.67"/>
+<rect class="d" x="895.14" y="102.56" width="6.30" height="6.67"/>
+<rect class="d" x="869.95" y="109.23" width="6.30" height="6.67"/>
+<rect class="d" x="876.25" y="109.23" width="6.30" height="6.67"/>
+<rect class="d" x="882.55" y="109.23" width="6.30" height="6.67"/>
+<rect class="d" x="888.84" y="109.23" width="6.30" height="6.67"/>
+<rect class="d" x="895.14" y="109.23" width="6.30" height="6.67"/>
 <rect class="o" x="869.95" y="115.90" width="7.87" height="6.67"/>
 <rect class="o" x="877.82" y="115.90" width="7.87" height="6.67"/>
 <rect class="o" x="885.70" y="115.90" width="7.87" height="6.67"/>
 <rect class="o" x="893.57" y="115.90" width="7.87" height="6.67"/>
-<rect class="o" x="869.95" y="122.57" width="7.87" height="6.67"/>
-<rect class="o" x="877.82" y="122.57" width="7.87" height="6.67"/>
-<rect class="o" x="885.70" y="122.57" width="7.87" height="6.67"/>
-<rect class="o" x="893.57" y="122.57" width="7.87" height="6.67"/>
+<rect class="x" x="869.95" y="122.57" width="7.87" height="6.67"/>
+<rect class="x" x="877.82" y="122.57" width="7.87" height="6.67"/>
+<rect class="x" x="885.70" y="122.57" width="7.87" height="6.67"/>
+<rect class="x" x="893.57" y="122.57" width="7.87" height="6.67"/>
 <rect class="b" x="868.95" y="94.89" width="33.49" height="35.35"/>
 <text x="873.95" y="110.89" font-size="12">mcp</text>
 </g>
@@ -1983,7 +1983,7 @@
 <rect class="b" x="967.97" y="94.89" width="32.03" height="35.35"/>
 <text x="972.97" y="110.89" font-size="12">ski</text>
 </g>
-<g><title>goals: 11/21 (52.4%)</title>
+<g><title>goals: 13/21 (61.9%)</title>
 <rect class="d" x="830.64" y="131.24" width="5.63" height="7.05"/>
 <rect class="d" x="836.27" y="131.24" width="5.63" height="7.05"/>
 <rect class="d" x="841.89" y="131.24" width="5.63" height="7.05"/>
@@ -1995,8 +1995,8 @@
 <rect class="d" x="844.15" y="138.29" width="6.76" height="7.05"/>
 <rect class="d" x="850.90" y="138.29" width="6.76" height="7.05"/>
 <rect class="d" x="857.66" y="138.29" width="6.76" height="7.05"/>
-<rect class="o" x="830.64" y="145.34" width="6.76" height="7.05"/>
-<rect class="o" x="837.39" y="145.34" width="6.76" height="7.05"/>
+<rect class="d" x="830.64" y="145.34" width="6.76" height="7.05"/>
+<rect class="d" x="837.39" y="145.34" width="6.76" height="7.05"/>
 <rect class="o" x="844.15" y="145.34" width="6.76" height="7.05"/>
 <rect class="o" x="850.90" y="145.34" width="6.76" height="7.05"/>
 <rect class="o" x="857.66" y="145.34" width="6.76" height="7.05"/>
@@ -2347,18 +2347,18 @@
 <rect class="o" x="874.30" y="278.38" width="7.38" height="7.15"/>
 <rect class="b" x="858.55" y="263.07" width="24.13" height="23.46"/>
 </g>
-<g><title>wakeup: 0/11 (0%)</title>
-<rect class="o" x="859.55" y="287.54" width="5.53" height="7.15"/>
-<rect class="o" x="865.08" y="287.54" width="5.53" height="7.15"/>
-<rect class="o" x="870.61" y="287.54" width="5.53" height="7.15"/>
-<rect class="o" x="876.14" y="287.54" width="5.53" height="7.15"/>
-<rect class="o" x="859.55" y="294.69" width="5.53" height="7.15"/>
-<rect class="o" x="865.08" y="294.69" width="5.53" height="7.15"/>
-<rect class="o" x="870.61" y="294.69" width="5.53" height="7.15"/>
-<rect class="o" x="876.14" y="294.69" width="5.53" height="7.15"/>
-<rect class="o" x="859.55" y="301.85" width="7.38" height="7.15"/>
-<rect class="o" x="866.92" y="301.85" width="7.38" height="7.15"/>
-<rect class="o" x="874.30" y="301.85" width="7.38" height="7.15"/>
+<g><title>wakeup: 11/11 (100%)</title>
+<rect class="d" x="859.55" y="287.54" width="5.53" height="7.15"/>
+<rect class="d" x="865.08" y="287.54" width="5.53" height="7.15"/>
+<rect class="d" x="870.61" y="287.54" width="5.53" height="7.15"/>
+<rect class="d" x="876.14" y="287.54" width="5.53" height="7.15"/>
+<rect class="d" x="859.55" y="294.69" width="5.53" height="7.15"/>
+<rect class="d" x="865.08" y="294.69" width="5.53" height="7.15"/>
+<rect class="d" x="870.61" y="294.69" width="5.53" height="7.15"/>
+<rect class="d" x="876.14" y="294.69" width="5.53" height="7.15"/>
+<rect class="d" x="859.55" y="301.85" width="7.38" height="7.15"/>
+<rect class="d" x="866.92" y="301.85" width="7.38" height="7.15"/>
+<rect class="d" x="874.30" y="301.85" width="7.38" height="7.15"/>
 <rect class="b" x="858.55" y="286.54" width="24.13" height="23.46"/>
 </g>
 <g><title>auth: 0/10 (0%)</title>
@@ -2680,11 +2680,11 @@
 <rect class="o" x="992.46" y="255.36" width="6.54" height="5.83"/>
 <rect class="b" x="984.93" y="248.53" width="15.07" height="13.66"/>
 </g>
-<g><title>session-revert: 0/4 (0%)</title>
-<rect class="o" x="940.71" y="263.19" width="5.46" height="6.97"/>
-<rect class="o" x="946.17" y="263.19" width="5.46" height="6.97"/>
-<rect class="o" x="940.71" y="270.16" width="5.46" height="6.97"/>
-<rect class="o" x="946.17" y="270.16" width="5.46" height="6.97"/>
+<g><title>session-revert: 4/4 (100%)</title>
+<rect class="d" x="940.71" y="263.19" width="5.46" height="6.97"/>
+<rect class="d" x="946.17" y="263.19" width="5.46" height="6.97"/>
+<rect class="d" x="940.71" y="270.16" width="5.46" height="6.97"/>
+<rect class="d" x="946.17" y="270.16" width="5.46" height="6.97"/>
 <rect class="b" x="939.71" y="262.19" width="12.92" height="15.94"/>
 </g>
 <g><title>session-title: 0/4 (0%)</title>
@@ -2701,9 +2701,9 @@
 <rect class="o" x="946.17" y="302.03" width="5.46" height="6.97"/>
 <rect class="b" x="939.71" y="294.06" width="12.92" height="15.94"/>
 </g>
-<g><title>storage: 1/1 (100%), 3 dropped</title>
+<g><title>storage: 2/2 (100%), 2 dropped</title>
 <rect class="d" x="953.63" y="263.19" width="7.61" height="4.98"/>
-<rect class="x" x="961.24" y="263.19" width="7.61" height="4.98"/>
+<rect class="d" x="961.24" y="263.19" width="7.61" height="4.98"/>
 <rect class="x" x="953.63" y="268.17" width="7.61" height="4.98"/>
 <rect class="x" x="961.24" y="268.17" width="7.61" height="4.98"/>
 <rect class="b" x="952.63" y="262.19" width="17.23" height="11.95"/>
@@ -2808,5 +2808,5 @@
 <rect class="d" x="4" y="316" width="12" height="12"/><text x="20.00" y="327.00" font-size="12">done</text>
 <rect class="o" x="60" y="316" width="12" height="12"/><text x="76.00" y="327.00" font-size="12">open</text>
 <rect class="x" x="112" y="316" width="12" height="12"/><text x="128.00" y="327.00" font-size="12">dropped</text>
-<text x="190.00" y="327.00" font-size="12">Landed by rung: 46 plugin, 12 host, 4 seam, 2 patch</text>
+<text x="190.00" y="327.00" font-size="12">Landed by rung: 46 plugin, 15 host, 6 seam, 2 patch</text>
 </svg>

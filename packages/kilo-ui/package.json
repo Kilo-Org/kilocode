@@ -72,6 +72,7 @@
     "./tool-approval": "./src/components/tool-approval.tsx",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
+    "./count-up": "./src/components/count-up.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",
     "./text-shimmer": "./src/components/text-shimmer.tsx",
     "./text-strikethrough": "./src/components/text-strikethrough.tsx",

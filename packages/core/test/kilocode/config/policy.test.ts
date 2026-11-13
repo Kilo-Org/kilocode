@@ -162,6 +162,21 @@ test("privacy mode is on when any effective document sets privacy_mode to true",
   expect(KiloConfigPolicy.privacyMode([new Document({ type: "document", info: new Info({}) })])).toBe(false)
 })
 
+test("pages config merges per field, and the last document that sets a field wins", () => {
+  const document = (pages?: { enabled?: boolean; destination?: "pages" | "pages-dev" }) =>
+    new Document({ type: "document", info: new KiloConfigPolicy.Info({ pages }) })
+  expect(KiloConfigPolicy.pagesConfig([])).toEqual({})
+  expect(KiloConfigPolicy.pagesConfig([document(), document({})])).toEqual({ enabled: undefined, destination: undefined })
+  // A nearer document that sets only the destination does not reset enabled.
+  expect(KiloConfigPolicy.pagesConfig([document({ enabled: true }), document({ destination: "pages-dev" })])).toEqual({
+    enabled: true,
+    destination: "pages-dev",
+  })
+  expect(
+    KiloConfigPolicy.pagesConfig([document({ enabled: true, destination: "pages-dev" }), document({ enabled: false, destination: "pages" })]),
+  ).toEqual({ enabled: false, destination: "pages" })
+})
+
 test("the display layouts are Kilo settings, and an invalid layout is ignored", () => {
   const valid = {
     terminal_command_display: "collapsed",

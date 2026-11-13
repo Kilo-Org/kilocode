@@ -35,6 +35,9 @@ export function reveal(target: string, deps: CloseOthersDeps) {
  */
 export function closeOthers(target: string, deps: CloseOthersDeps) {
   const ids = [...deps.tabIds()]
+  // A menu can outlive its tab, and a tab strip can be asked to close others for an id that belongs to another strip
+  // (a subagent tab, for example). Without the target open, the loop below closes every tab, so do nothing instead.
+  if (!ids.includes(target)) return
   reveal(target, deps)
   for (const id of ids) {
     if (id === target) continue

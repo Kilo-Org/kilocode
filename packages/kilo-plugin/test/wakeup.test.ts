@@ -17,7 +17,7 @@ function setup() {
   const events: KiloWakeupRpc.Changed[] = []
   const prompts: { sessionID: string; text: string; metadata?: Record<string, unknown> }[] = []
   const infos = new Map<string, Schedule.Info>()
-  const creates: { input: Parameters<Schedule.Interface["create"]>[0]; options?: Schedule.CreateOptions }[] = []
+  const creates: { input: Parameters<Schedule.Interface["create"]>[0] }[] = []
   let sequence = 0
 
   const dueAt = (input: Parameters<Schedule.Interface["create"]>[0]) => {
@@ -28,9 +28,9 @@ function setup() {
   }
 
   const schedules = {
-    create: (input: Parameters<Schedule.Interface["create"]>[0], options?: Schedule.CreateOptions) =>
+    create: (input: Parameters<Schedule.Interface["create"]>[0]) =>
       Effect.sync(() => {
-        creates.push({ input, options })
+        creates.push({ input })
         const id = Schedule.ID.make(`sch_${++sequence}`)
         const now = Date.now()
         const info = {
@@ -122,7 +122,7 @@ const record = (id: string, scheduleID: string, over: Partial<WakeupRecord> = {}
 })
 
 describe("wakeup service", () => {
-  it.effect("clamps a short delay and schedules a hook action that fires without the native flag", () =>
+  it.effect("clamps a short delay and schedules a hook action that carries its prompt for inventories", () =>
     Effect.gen(function* () {
       const { wake, creates, events, memory } = setup()
       const now = Date.now()
@@ -133,8 +133,7 @@ describe("wakeup service", () => {
       expect(result.wakeup.dueAt).toBeLessThan(now + 11_000)
       expect(result.notice).toContain("10-second minimum")
       expect(creates).toHaveLength(1)
-      expect(creates[0]?.options).toEqual({ requireEnabled: false })
-      expect(creates[0]?.input.action).toEqual({ type: "hook", prompt: "" })
+      expect(creates[0]?.input.action).toEqual({ type: "hook", prompt: "check the build" })
       expect(creates[0]?.input.when?.type).toBe("at")
       expect(memory.has(`wakeup:${result.wakeup.id}`)).toBe(true)
       expect(events.at(-1)).toMatchObject({ sessionID, directory, pending: 1 })

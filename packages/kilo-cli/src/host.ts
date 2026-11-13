@@ -1,6 +1,7 @@
 export * as KiloHost from "./host"
 
 import { KiloPlugins, KiloPostPlugins, KiloRemote, KiloSandbox, KiloSessionSync } from "@kilocode/kilo-plugin"
+import { PagesAuth } from "@kilocode/kilo-plugin/pages/auth"
 import { PluginGitSource } from "@kilocode/kilo-plugin/plugin/git-source"
 import { networkHttpLayer } from "@kilocode/sandbox"
 import { Environment } from "@opencode/core/environment/index"
@@ -10,15 +11,21 @@ import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
 import { ConfigPluginSource } from "@opencode/core/config/plugin/source"
+import { Flag } from "@opencode/core/flag"
 import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
+import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
+import { KiloMcpRecovery } from "@opencode/core/kilocode/mcp/recovery"
+import { KiloMcpRefresh } from "@opencode/core/kilocode/mcp/refresh"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { Plugin } from "@opencode/core/plugin"
+import { Session } from "@opencode/core/session"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionStore } from "@opencode/core/session/store"
@@ -35,6 +42,7 @@ import { KiloApp } from "./app"
 import { KiloGatewayErrors } from "./gateway-errors"
 import { KiloPluginNpm } from "./plugin-npm"
 import { KiloGatewayModel } from "./gateway-model"
+import { KiloSessionRevert } from "./session-revert"
 import { KiloSmallModel } from "./small-model"
 import { SessionSync } from "./session-sync"
 import { SessionSyncOutput } from "./session-sync/tool-output"
@@ -112,6 +120,15 @@ const plugins = makeGlobalNode({
 })
 
 /**
+ * The `OPENCODE_FLAGS` value the scheduler reads in Kilo. Scheduling is always on, except that a deliberate
+ * `-schedules` entry stays an escape hatch so a release can stop unattended schedules without a new build.
+ */
+export function schedulingOverrides(overrides: string | undefined) {
+  if (overrides?.split(",").some((flag) => flag.trim() === "-schedules")) return overrides
+  return [overrides, "schedules"].filter(Boolean).join(",")
+}
+
+/**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
  * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
  * `.kilo2`, worktree boundary).
@@ -156,15 +173,36 @@ export const overrides: LayerNode.Replacements = [
     ),
   ),
   App.node.replace(App.configured(KiloApp)),
-  // MCP servers see the Kilo client identity, OAuth registration uses Kilo's product name and URI, and a
-  // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop.
+  // Scheduling is always on: the wakeup and Flow plugins own Kilo's schedules, so the scheduler reads
+  // `experimental.schedules` as on whatever a config says. Appended last, so it also wins over an earlier `-schedules`.
+  Schedule.node.replace(
+    Schedule.node.mapLayer((layer) =>
+      layer.pipe(
+        Layer.provide(
+          Layer.effect(
+            Flag.Overrides,
+            Effect.gen(function* () {
+              return schedulingOverrides(yield* Flag.Overrides)
+            }),
+          ),
+        ),
+      ),
+    ),
+  ),
+  // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding, and a
+  // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop. The Pages wrapper
+  // adds the Kilo bearer to the `pages` entry that the Pages plugin registers and to nothing else. A server that fails,
+  // such as on a DNS outage at startup or after sleep, is retried in the background instead of staying failed, and a
+  // token refresh that cannot reach its server keeps the credential and fails so that retry can recover it.
   // kilo_port(mcp:18028d867142)
   Mcp.node.replace(
-    Mcp.configured({
+    KiloMcpRecovery.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
       host: {
-        oauth: { name: "Kilo", uri: "https://kilo.ai" },
-        fetch: (base, endpoint) => KiloSseProbe.probe(base, endpoint),
+        oauth: McpClientMetadata.oauth,
+        fetch: (base, endpoint) => KiloMcpRefresh.transient(PagesAuth.wrap(KiloSseProbe.probe(base, endpoint))),
+        authFailure,
+        transient: KiloMcpRefresh.isTransient,
       },
     }),
   ),
@@ -181,6 +219,7 @@ export const overrides: LayerNode.Replacements = [
   ),
   ModelResolver.node.replace(KiloGatewayModel.resolverNode),
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
+  Session.node.replace(KiloSessionRevert.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
   // A sandboxed tool call spawns, writes and sends HTTP requests inside its sandbox profile.

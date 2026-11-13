@@ -1,6 +1,7 @@
 import type { JsonValue } from "@opencode/client"
 import { onCleanup } from "solid-js"
 import type { PromptAttachment } from "../../../src/protocol"
+import type { ComposerDraft } from "./revert"
 
 /** Metadata a host request attaches to its prompt, for example the title of a prompt Kilo composed. */
 type PromptMetadata = { [key: string]: JsonValue }
@@ -11,6 +12,8 @@ export type ComposerHandle = {
   attach: (items: PromptAttachment[]) => void
   /** Sends a prompt in the open session at once. The draft and its chips stay as they are. */
   submit: (text: string, items: PromptAttachment[], metadata?: PromptMetadata) => void
+  /** Replaces the composer text, attachments, review comments and browser references, for revert and redo. */
+  set?: (draft: ComposerDraft) => void
 }
 
 export type ComposerRequest =

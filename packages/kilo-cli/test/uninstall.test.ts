@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test"
 import { mkdir, mkdtemp, readdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { uninstalled } from "../src/commands/uninstall"
 
 // `kilo2 uninstall` is the upstream handler behind the Kilo host, whose updater reports no install method
 // (src/updater.ts). Each test boots the real host entry in a scratch home that holds a kilo2 installation next to a
@@ -318,3 +319,16 @@ function added(before: Record<string, string>, after: Record<string, string>) {
     .filter((file) => !Object.hasOwn(before, file))
     .toSorted()
 }
+
+// The upstream prints "Cancelled" and returns normally after a declined confirmation, so the exit code cannot tell it
+// apart from a completed uninstall. The cache it removes first is the proof.
+test("a declined confirmation does not count as an uninstall", () => {
+  expect(uninstalled({}, { before: true, after: true })).toBeFalse()
+  expect(uninstalled({}, { before: false, after: false })).toBeFalse()
+  expect(uninstalled({}, { before: true, after: false })).toBeTrue()
+})
+
+test("--force never asks and a preview changes nothing", () => {
+  expect(uninstalled({ force: true }, { before: true, after: true })).toBeTrue()
+  expect(uninstalled({ dryRun: true }, { before: true, after: true })).toBeTrue()
+})

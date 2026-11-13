@@ -20,6 +20,7 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
+import { Location } from "@opencode/core/location"
 import { VerbosityPlugin } from "@opencode/core/plugin/verbosity"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
@@ -28,6 +29,7 @@ import { SessionModelTransport } from "@opencode/core/session/model-transport"
 import { WebSocketConstructor } from "@opencode/core/effect/websocket-constructor"
 import { Agent } from "@opencode/schema/agent"
 import { Document, Event, Info } from "@opencode/schema/config"
+import { ConfigExperimental } from "@opencode/schema/config/experimental"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
 import { Global } from "@opencode/util/global"
@@ -36,6 +38,7 @@ import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
 import { KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
+import { KiloGatewayAccounts } from "../src/gateway/accounts"
 import { GatewayOptions } from "../src/gateway/options"
 import { KiloGatewayModel } from "../../kilo-cli/src/gateway-model"
 
@@ -87,9 +90,21 @@ const addPlugin = Effect.fn(function* () {
   return host
 })
 
+const setImageGeneration = (image_generate: ConfigExperimental.Info["image_generate"]) =>
+  Effect.gen(function* () {
+    const config = yield* Config.Test
+    yield* config.setEntries([
+      new Document({
+        type: "document",
+        info: new Info({ experimental: new ConfigExperimental.Info({ image_generate }) }),
+      }),
+    ])
+    const bus = yield* Bus.Service
+    yield* bus.publish(Event.Updated, {})
+  })
+
 const oauth = (metadata: Record<string, unknown>) =>
   Credential.OAuth.make({ type: "oauth", methodID, access: "token", refresh: "token", expires: 0, metadata })
-
 function eventually<A, E>(effect: Effect.Effect<A, E>, predicate: (value: A) => boolean, remaining = 1000) {
   return Effect.gen(function* (): Effect.fn.Return<A, E | Error> {
     const value = yield* effect
@@ -238,6 +253,57 @@ describe("KiloGatewayPlugin", () => {
               id: Model.ID.make("kilo-auto/small"),
               settings: { kiloCredentials: false },
             })
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("registers Gateway image models only while image generation is enabled", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+          Effect.gen(function* () {
+            // A tool-capable model that also outputs images stays a chat model; the image copy would replace it by id.
+            const models = backend.state.models as unknown as { data: Array<Record<string, unknown>> }
+            models.data.push({
+              id: "test/chat-image",
+              name: "Chat Image",
+              context_length: 1000,
+              max_completion_tokens: 100,
+              supported_parameters: ["tools"],
+              architecture: { input_modalities: ["text"], output_modalities: ["text", "image"] },
+              isFree: false,
+            })
+            yield* addPlugin()
+            const catalog = yield* Model.Service
+            // The setting is unset, so the image models stay out of the provider even though the catalog has them.
+            yield* eventually(catalog.available(), (items) => items.some((item) => item.id === Model.ID.make("kilo-auto/frontier")))
+            expect(yield* catalog.available(["image"])).toEqual([])
+
+            yield* setImageGeneration(true)
+            const imageModels = yield* eventually(catalog.available(["image"]), (items) => items.length > 0)
+            const image = imageModels.find((item) => item.id === Model.ID.make("google/gemini-2.5-flash-image"))
+            expect(image).toMatchObject({
+              providerID: kilo,
+              type: "image",
+              package: "@kilocode/gateway-images",
+              capabilities: { tools: false, input: ["text", "image"], output: ["text", "image"] },
+            })
+            // A model that is also in the chat catalog is not registered twice.
+            expect(imageModels.map((item) => item.id)).not.toContain(Model.ID.make("test/chat-image"))
+            const chat = yield* catalog.available()
+            expect(chat.map((item) => item.id)).toContain(Model.ID.make("test/chat-image"))
+            expect(chat.map((item) => item.id)).not.toContain(Model.ID.make("google/gemini-2.5-flash-image"))
+            // The provider default stays the chat model from the catalog.
+            expect(yield* catalog.default()).toMatchObject({
+              providerID: kilo,
+              id: Model.ID.make("kilo-auto/frontier"),
+            })
+
+            yield* setImageGeneration(false)
+            expect(yield* eventually(catalog.available(["image"]), (items) => items.length === 0)).toEqual([])
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -1022,7 +1088,7 @@ describe("KiloGatewayPlugin", () => {
   ]) {
     for (const reasoning of [true, false]) {
       it.live(
-        `uses explicit ${dialect.provider} variants over reasoning_options with reasoning capability ${reasoning}`,
+        `uses explicit ${dialect.provider} variants without reasoning_options with reasoning capability ${reasoning}`,
         () =>
           Effect.acquireUseRelease(
             Effect.sync(() => {
@@ -1057,7 +1123,6 @@ describe("KiloGatewayPlugin", () => {
                         supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
                         opencode: {
                           ai_sdk_provider: dialect.provider,
-                          reasoning_options: [{ type: "effort", values: ["medium"] }],
                           variants: {
                             default: shared,
                             "": shared,
@@ -1142,34 +1207,61 @@ describe("KiloGatewayPlugin", () => {
   }
 
   it.live(
-    "uses reasoning_options when explicit variants are empty and keeps non-reasoning models without variants",
+    "uses reasoning_options over legacy variants and keeps non-reasoning models without variants",
     () =>
       Effect.acquireUseRelease(
         Effect.sync(() => fixture()),
         (backend) =>
           withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
             Effect.gen(function* () {
+              const legacy = { low: { reasoning: { effort: "low" } }, custom: { reasoning: { effort: "high" } } }
               backend.state.models = {
-                data: [true, false].map((reasoning) => ({
-                  id: `test/empty-variants-${reasoning}`,
-                  name: "Empty explicit variants",
-                  context_length: 128000,
-                  supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
-                  opencode: {
-                    ai_sdk_provider: "openai-compatible",
-                    variants: {},
-                    reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+                data: [
+                  ...[true, false].flatMap((reasoning) =>
+                    [{}, legacy].map((variants, index) => ({
+                      id: `test/options-${reasoning}-${index}`,
+                      name: "Reasoning options",
+                      context_length: 128000,
+                      supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                      opencode: {
+                        ai_sdk_provider: "openai-compatible",
+                        variants,
+                        reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+                      },
+                    })),
+                  ),
+                  {
+                    id: "test/always-on",
+                    name: "Always-on reasoning",
+                    context_length: 128000,
+                    supported_parameters: ["tools", "reasoning"],
+                    opencode: { ai_sdk_provider: "openai-compatible", variants: legacy, reasoning_options: [] },
                   },
-                })),
+                  ...[true, false].map((reasoning) => ({
+                    id: `test/heuristic-${reasoning}`,
+                    name: "Neither field",
+                    context_length: 128000,
+                    supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                    opencode: { ai_sdk_provider: "openai-compatible" },
+                  })),
+                ],
               }
               yield* addPlugin()
               const models = yield* Model.Service
+              for (const index of [0, 1]) {
+                expect(
+                  (yield* models.get(kilo, Model.ID.make(`test/options-true-${index}`)))?.variants.map(
+                    (variant) => variant.id,
+                  ),
+                ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("high")])
+                expect((yield* models.get(kilo, Model.ID.make(`test/options-false-${index}`)))?.variants).toEqual([])
+              }
+              // `[]` means reasoning is always on, so legacy variants must not reintroduce a picker.
+              expect((yield* models.get(kilo, Model.ID.make("test/always-on")))?.variants).toEqual([])
               expect(
-                (yield* models.get(kilo, Model.ID.make("test/empty-variants-true")))?.variants.map(
-                  (variant) => variant.id,
-                ),
-              ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("high")])
-              expect((yield* models.get(kilo, Model.ID.make("test/empty-variants-false")))?.variants).toEqual([])
+                (yield* models.get(kilo, Model.ID.make("test/heuristic-true")))?.variants.map((variant) => variant.id),
+              ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("medium"), Model.VariantID.make("high")])
+              expect((yield* models.get(kilo, Model.ID.make("test/heuristic-false")))?.variants).toEqual([])
             }),
           ),
         (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -1519,6 +1611,79 @@ describe("KiloGatewayPlugin", () => {
           (backend) => Effect.sync(() => backend[Symbol.dispose]()),
         ),
     )
+
+  // A team catalog is never stored and takes sequential profile, modes and models requests. The server answers 503
+  // when Location plugins take longer than 5 seconds to activate, so a slow Kilo API must not hold the activation.
+  it.live("does not hold the activation for a slow team catalog, and loads it in the background", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID,
+              label: "team",
+              value: oauth({ server: backend.url, organizationID: "selected", email: "a@example.test" }),
+            })
+            // Four sequential requests, so the catalog outlives FIRST_CATALOG_WAIT.
+            backend.state.delay = 1_500
+            const started = performance.now()
+            yield* addPlugin()
+            // Activation stops waiting for the catalog, but it does wait for it until FIRST_CATALOG_WAIT.
+            const elapsed = performance.now() - started
+            expect(elapsed).toBeGreaterThanOrEqual(2_000)
+            expect(elapsed).toBeLessThan(5_000)
+            // Codebase indexing reads this reader once, right after the gateway plugin starts, so the account must be
+            // there even though the catalog it comes from has not landed yet.
+            const location = yield* Location.Service
+            expect(KiloGatewayAccounts.get(location.directory)).toMatchObject({
+              server: backend.url,
+              organizationID: "selected",
+            })
+            const models = yield* Model.Service
+            const kiloModels = Effect.map(models.available(), (list) =>
+              list.filter((item) => item.providerID === kilo).map((item) => String(item.id)),
+            )
+            expect(yield* kiloModels).toEqual([])
+            expect(yield* eventually(kiloModels, (list) => list.length > 0, 15_000)).toEqual([
+              "anthropic/claude-sonnet-4.6",
+              "kilo-auto/small",
+            ])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  // The common case: the catalog settles inside the wait, so activation returns with it and nothing loads later.
+  it.live("does not wait longer than the catalog it is waiting for", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID,
+              label: "team",
+              value: oauth({ server: backend.url, organizationID: "selected", email: "a@example.test" }),
+            })
+            backend.state.delay = 100
+            const started = performance.now()
+            yield* addPlugin()
+            expect(performance.now() - started).toBeLessThan(1_900)
+            const models = yield* Model.Service
+            expect(
+              (yield* models.available())
+                .filter((item) => item.providerID === kilo)
+                .map((item) => String(item.id)),
+            ).toEqual(["anthropic/claude-sonnet-4.6", "kilo-auto/small"])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
 
   it.live("keeps the stored default with the stored catalog when the Kilo API is down", () =>
     Effect.acquireUseRelease(
@@ -2212,12 +2377,10 @@ describe("KiloGatewayPlugin", () => {
                   .pipe(Effect.flip),
               ).toMatchObject({ type: "failed" })
               expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: null })
-              for (const method of ["models.images", "models.transcriptions", "models.embeddings", "autocomplete.fimTarget", "autocomplete.editTarget"])
+              for (const method of ["models.images", "models.transcriptions", "models.embeddings", "autocomplete.fimTarget"])
                 expect(yield* rpc.call("kilocode.gateway", method, {}).pipe(Effect.flip)).toMatchObject({ type: "unauthorized" })
               expect(yield* rpc.call("kilocode.gateway", "autocomplete.fimTarget", { provider: "mistral", model: "codestral-2508" }))
                 .toMatchObject({ provider: "mistral" })
-              expect(yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", { provider: "inception", model: "mercury-next-edit" }))
-                .toMatchObject({ provider: "inception" })
               expect(backend.requests).toEqual([])
               expect(yield* host.storage.get("organization:env")).toEqual({ organizationID: "selected" })
             }),
@@ -2596,16 +2759,6 @@ describe("KiloGatewayPlugin", () => {
                   provider: "kilo",
                   model: "mistralai/codestral-2508",
                   url: `${backend.url}/api/gateway/v1/fim/completions`,
-                })
-                expect(
-                  yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", {
-                    provider: "kilo",
-                    model: "inception/mercury-next-edit",
-                  }),
-                ).toEqual({
-                  provider: "kilo",
-                  model: "inception/mercury-edit-2",
-                  url: `${backend.url}/api/gateway/v1/edit/completions`,
                 })
               }),
           ),
