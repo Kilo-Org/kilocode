@@ -1,6 +1,7 @@
 import { SessionStore } from "@opencode/core/session/store"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Effect, type Scope } from "effect"
+import { resolveSessionMentions } from "./mention"
 import { makeTool, type Runtime } from "./tool"
 
 // The recall tool on the public plugin API. The v1 tool read the session and message tables directly; v2 exposes
@@ -36,5 +37,7 @@ export const KiloRecallPlugin = define<SessionStore.Service | Scope.Scope>({
       permission: { assert: (input) => ctx.permission.assert(input) },
     }
     yield* ctx.tool.transform((editor) => editor.add(makeTool(runtime)))
+    // An `@`-mentioned past chat attaches its transcript, read from the same store as the recall tool.
+    yield* ctx.session.hook("prompt", (event) => resolveSessionMentions(runtime, event))
   }),
 })

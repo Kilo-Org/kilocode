@@ -47,7 +47,11 @@ import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatS
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
+import { openSubagent } from "../src/v2/open-subagent"
+import { SessionActionsRow } from "../src/v2/session-actions-row"
+import { createWorktreeTransfer } from "../src/v2/worktree-transfer"
 import { createComposerQueue } from "../src/v2/composer"
+import { createPlanOpener } from "../src/v2/open-plan"
 import type { ToWebview } from "../../src/protocol"
 import type { ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
@@ -162,6 +166,7 @@ import { ReviewCommentActionsContext, type ReviewCommentActions } from "../src/c
 import { openPRComment } from "../src/utils/pr-review"
 import type { ReviewAppendHandler } from "../src/v2/append-ready"
 import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
+import { injectedMetadata } from "../../src/shared/injected-prompt"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -223,6 +228,8 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  // Agent Manager owns worktree creation and movement, so its chat row reports transfer progress from the host.
+  const transfer = createWorktreeTransfer({ project: activeProjectId })
   const repoDefaultBranch = () => repoDetectedBranch() ?? "main"
 
   const DEFAULT_SIDEBAR_WIDTH = 260
@@ -515,6 +522,7 @@ const AgentManagerContent: Component = () => {
     restore: () => restoreSession(),
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
+  /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
   const focusOnDraftChange = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
@@ -807,16 +815,16 @@ const AgentManagerContent: Component = () => {
   })
   // Past-chat mentions use the loaded session lists plus the host catalog, so a worktree whose store is not shown yet
   // still offers its sessions.
-  const mentionSessions = createMemo(() => {
-    const known = new Map<string, { id: string; title: string; updated: number }>()
-    const add = (info: { id: string; title?: string; time: { updated: number } }) => {
-      if (info.title) known.set(info.id, { id: info.id, title: info.title, updated: info.time.updated })
-    }
-    for (const info of sessions.sessions()) add(info)
-    for (const info of projectSessionsLive()[currentProjectId() ?? ""] ?? []) add(info)
-    return [...known.values()].toSorted((a, b) => b.updated - a.updated)
-  })
   const { references, dialogRefs } = createMentionRefs(vscode, registry.active, projectSessionsLive.current, selection)
+  // `@git-changes` in a worktree diffs against the branch the worktree was created from, on its remote when it has one.
+  const gitTarget = () => {
+    const id = selection()
+    if (!id || id === LOCAL) return undefined
+    const worktree = worktrees().find((item) => item.id === id)
+    if (!worktree) return undefined
+    const base = worktree.remote ? `${worktree.remote}/${worktree.parentBranch}` : worktree.parentBranch
+    return { directory: worktree.path, base }
+  }
   const historySessionIds = createMemo(() => {
     const pid = historyProject()
     if (!pid) return undefined
@@ -1269,20 +1277,55 @@ const AgentManagerContent: Component = () => {
       ),
     ).then((results) => results.flat())
   }
+  // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
+  const openToolFile = (filePath: string, line?: number, column?: number, sessionID?: string) => {
+    const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
+    if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
+    to({ type: "agentManager.openFile", sessionId, filePath, line, column })
+  }
   const toolActions: ToolActions = {
-    openFile: (filePath, line, column, sessionID) => {
-      // Tool paths are raw model strings, so the resolver needs the session to pick the worktree or local root.
-      const sessionId = sessionID ?? sessions.currentSessionID() ?? selection() ?? LOCAL
-      if (isMarkdownPath(filePath) && documentInspector.open(filePath, sessionId, line, column)) return
-      to({ type: "agentManager.openFile", sessionId, filePath, line, column })
-    },
+    openFile: openToolFile,
     validateFiles,
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {
       if (!focusExistingSession(id)) to({ type: "agentManager.openSessionLocally", sessionId: id })
     },
+    // A subagent opens in the inspector beside its parent chat.
+    openSubagent: (sessionID, title) =>
+      openSubagent({
+        sessionID,
+        title,
+        parentSessionID: sessions.currentSessionID(),
+        surface: "inspector",
+        post: to,
+      }),
   }
+
+  // A completed open_plan call opens its plan file once its session is the visible one. Plan calls from inactive
+  // sessions stay deferred until that session is selected.
+  const planOpener = createPlanOpener(
+    () => sessions.currentSessionID(),
+    (plan) => openToolFile(plan.path, undefined, undefined, plan.sessionID),
+  )
+  createEffect(() => planOpener.flush(sessions.currentSessionID()))
+  createEffect(() => {
+    for (const directory of directories.sessionDirectories()) {
+      const store = panel.store(directory)
+      onCleanup(
+        store.data.on("session.tool.input.started", (event) =>
+          planOpener.started(event.data.sessionID, event.data.id, event.data.name),
+        ),
+      )
+      onCleanup(
+        store.data.on("session.tool.success", (event) =>
+          planOpener.completed(event.data.sessionID, event.data.id, event.data.metadata),
+        ),
+      )
+      onCleanup(store.data.on("session.tool.failed", (event) => planOpener.failed(event.data.sessionID, event.data.id)))
+      onCleanup(store.data.on("session.deleted", (event) => planOpener.forget(event.data.sessionID)))
+    }
+  })
 
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
@@ -1331,6 +1374,19 @@ const AgentManagerContent: Component = () => {
       selectSession: (sessionID) => sessions.selectSession(sessionID),
       setReviewActive,
     })
+  // The plan handoff creates a new session on the server and asks the client to show it. Select the new
+  // session in its worktree so the Agent Manager leaves the plan tab for the Code session.
+  createEffect(() => {
+    for (const directory of directories.sessionDirectories()) {
+      const store = panel.store(directory)
+      onCleanup(
+        store.data.on("tui.session.select", (event) => {
+          if (event.location && event.location.directory !== directory) return
+          selectSessionTab(event.data.sessionID, false)
+        }),
+      )
+    }
+  })
   const handleNewTabForCurrentSelection = () =>
     newTabForSelection({
       selection: selection(),
@@ -1552,7 +1608,10 @@ const AgentManagerContent: Component = () => {
     selection,
     registry,
     activePR,
+    sidePanel,
     nav: () => buildProjectNavEntries(projectList(), projectStates()),
+    activeProjectId,
+    activity,
   })
   const intro = createIntro({
     hints: hints.list,
@@ -1735,12 +1794,54 @@ const AgentManagerContent: Component = () => {
             providers={appSession.providers()}
             agents={appSession.agents()}
             commands={appSession.commands()}
-            sessions={mentionSessions()}
           />
         </SpeechToTextStatusProvider>
       </V2Scope>
     ))
   }
+  // The worktree actions above the composer, as the sidebar shows them. The chat is the shared SessionView, so the
+  // row only differs in where it starts a worktree.
+  const showChanges = () => {
+    closeHistory()
+    setReviewActive(false)
+    panels.open(SidePanel.Diff)
+  }
+  const sessionActions = (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => {
+    const id = sessions.currentSessionID()
+    const movable = selection() === LOCAL && !readOnly() && !!id && localSessionIDs().includes(id) && !isPending(id)
+    const stats = selection() === LOCAL ? localStats() : worktreeStats()[selection() ?? ""]
+    return (
+      <SessionActionsRow
+        hasMessages={hasMessages}
+        branch={isGitRepo() ? transfer.branch() : undefined}
+        onNewWorktree={handleCreateWorktree}
+        onNewWorktreeFromBranch={(branch) => {
+          if (!loaded()) return
+          expandSidebar()
+          to({ type: "agentManager.createWorktree", baseBranch: branch })
+        }}
+        onConfigureWorktree={() => showNewWorktreeDialog()}
+        onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
+        moving={transfer.transferring()}
+        moveDetail={transfer.detail()}
+        stats={stats}
+        onShowChanges={showChanges}
+        todos={todos}
+        agents={agents}
+      />
+    )
+  }
+  // The workspace branch changes with a checkout or a project switch, and the row's worktree actions follow it.
+  createEffect(
+    on(
+      activeProjectId,
+      () => {
+        transfer.clear()
+        transfer.request()
+      },
+      { defer: true },
+    ),
+  )
   // The keyboard action updates the selected worktree in the session the user is reading, with its model and agent.
   const update = () => {
     const worktreeId = selection()
@@ -1922,6 +2023,10 @@ const AgentManagerContent: Component = () => {
           setSelection: (id) => setSelection(id),
           evictLocal,
           selectSession: (id) => sessions.selectSession(id),
+          remember: (session) => {
+            const directory = session.location?.directory
+            if (directory) panel.store(directory).data.session.remember(session)
+          },
           requestChatFocus,
         })
         return
@@ -2022,7 +2127,12 @@ const AgentManagerContent: Component = () => {
         return
       }
       if (message.type !== "startPrompt") return
-      composerQueue.push({ type: "submit", text: message.text, items: message.items ?? [] })
+      composerQueue.push({
+        type: "submit",
+        text: message.text,
+        items: message.items ?? [],
+        metadata: message.injectedTitle ? injectedMetadata(message.injectedTitle) : undefined,
+      })
     })
 
     onCleanup(() => {
@@ -2215,6 +2325,13 @@ const AgentManagerContent: Component = () => {
                     onSession={handleSessionCreated}
                     actions={toolActions}
                     onShowHistory={() => openHistory()}
+                    row={sessionActions}
+                    rowWhenEmpty={!!transfer.branch()}
+                    onNewSession={handleNewTabForCurrentSelection}
+                    worktree={!!selection() && selection() !== LOCAL}
+                    manager={hints.manager}
+                    focusOnDraftChange={focusOnDraftChange}
+                    onFocusChange={focusCtl.prompt}
                     empty={intro.render}
                     onAppendReady={(append) => (promptAppend = append)}
                     onReviewAppendReady={(append) => (promptReviewAppend = append)}
@@ -2222,9 +2339,13 @@ const AgentManagerContent: Component = () => {
                     onReferenceReady={(add) => (promptReference = add)}
                     onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
                     onViewTurnChanges={openTurnChanges}
-                    onForkSession={handleForkSession}
                     onForkMessage={handleForkSession}
                     onMissing={(id) => handleCloseTab(id)}
+                    worktrees={references}
+                    git={isGitRepo}
+                    gitTarget={gitTarget}
+                    terminalContext={() => selection() ?? undefined}
+                    resolveEmbeddedTerminal={resolveTerminal}
                     onPrompted={(sessionId, text, model) =>
                       to({
                         type: "agentManager.promptSent",

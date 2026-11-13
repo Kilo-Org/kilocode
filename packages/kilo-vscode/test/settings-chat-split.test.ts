@@ -41,6 +41,8 @@ function makeScope(input: { chat: boolean }) {
         return []
       },
       authStatus: async () => undefined,
+      events: { on: () => () => {} },
+      pending: async () => ({ sessions: [] }),
     }),
   } as unknown as OpenCodeClient
   const [status] = createSignal<Status>("connected")
@@ -52,6 +54,7 @@ function makeScope(input: { chat: boolean }) {
       event: events(),
       directory: "/workspace",
       bindings: () => ({}),
+      selection: () => false,
       chat: input.chat,
       onCommand: () => {},
       open: () => {},

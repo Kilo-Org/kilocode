@@ -1,10 +1,18 @@
 // One session laid out like main's ChatView: task header, transcript, docks and prompt. The sidebar shows one at a
 // time; the Agent Manager shows one per selected tab, each in the store of its directory.
-import type { FileDiffInfo, JsonValue, ModelRef } from "@opencode/client"
+import { mediaHashFromUri, type FileDiffInfo, type JsonValue, type ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
-import { createEffect, createMemo, on, onCleanup, onMount, Show, type JSX } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
+import { REVERT_ERROR_CODE } from "../../../src/shared/revert-error"
+import type { MentionFile } from "../hooks/context-mention-utils"
+import type { GitChangesTarget } from "../hooks/useGitChangesContext"
+import type { WorktreeReference } from "../utils/prompt-mention-drop"
+import { parseCommandModel } from "../components/settings/agent-behaviour/command-model"
+import { useLanguage } from "../context/language"
+import { focusPrompt } from "../utils/tab-navigation"
 import { useModelPreferences } from "../context/model-preferences"
 import { useWorkStyleOptional } from "../context/work-style"
 import { getVSCodeAPI } from "../context/vscode"
@@ -12,23 +20,34 @@ import { movePromptHistory } from "../hooks/usePromptHistory"
 import { kiloSettings } from "./kilo-settings"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { SessionDock } from "../components/chat/SessionDockWorking"
-import type { AppendHandler, ReferenceHandler, ReviewAppendHandler } from "./append-ready"
+import type { AppendHandler, ReferenceHandler, ReplyHandler, ReviewAppendHandler } from "./append-ready"
 import type { ComposerHandle } from "./composer"
-import { toPromptFiles } from "./prompt-attachments"
+import { promptFiles } from "./prompt-attachments"
 import { useV2 } from "./client"
 import { useDisplaySettings } from "./display-settings"
+import { ErrorBanner } from "./error-banner"
 import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
-import { PromptInput } from "./prompt"
-import { QuestionDock } from "./question"
+import { PromptInput, setPromptDraft } from "./prompt"
+import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
+import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
+import type { ManagerContext } from "./shortcut-hint"
+import { settledLoader, startingLoader } from "./session-loading"
 import { createAutoApprove } from "./auto-approve"
 import { createSandbox } from "./sandbox"
+import { createBackgroundJobs } from "./background-jobs"
 import { createWorking } from "./working"
+import { createGoal } from "./goal"
 import { createPending } from "./pending"
-import { steerInterrupts, type SendMode } from "./pending-actions"
+import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
+import { mergeCatalog, type SlashEntry } from "./slash"
+import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { createSlashCatalog } from "./slash-catalog"
+import { dispatchSlash } from "./slash-dispatch"
+import { TranscriptSearchProvider } from "./transcript-search"
 
 export function SessionView(props: {
   session: string | undefined
@@ -41,12 +60,23 @@ export function SessionView(props: {
   onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
-  /** The row above the dock; receives whether the session has messages and the todo element it trails. */
-  row?: (hasMessages: boolean, todos: JSX.Element) => JSX.Element
+  /** True for a session in an Agent Manager worktree, which can run /review worktree. */
+  worktree?: boolean
+  /** Opens a new session draft; the /new slash action is listed only when set. */
+  onNewSession?: () => void
+  /**
+   * The row above the dock; receives whether the session has messages, the todo element it trails and the background
+   * agent stack it leads.
+   */
+  row?: (hasMessages: boolean, todos: JSX.Element, agents: JSX.Element) => JSX.Element
+  /** Shows the row before the first message too. */
+  rowWhenEmpty?: boolean
   /** Replaces the welcome screen of an empty session. */
   empty?: () => JSX.Element
   /** Read-only sessions show the transcript without docks and prompt. */
   readOnly?: boolean
+  /** Whether the Command Palette search toggle targets this view; the Agent Manager's sub-agent inspector turns it off. */
+  searchCommand?: boolean
   /** Rendered above the task header, for the sidebar's session tab strip. */
   tabStrip?: JSX.Element
   /** Opens the proposed changes of an edit permission request. */
@@ -61,16 +91,33 @@ export function SessionView(props: {
   onComposerReady?: (composer: ComposerHandle | undefined) => void
   /** Receives each prompt the server admitted, with the model it runs on. */
   onPrompted?: (sessionID: string, text: string, model: ModelRef | undefined) => void
-  /** Forks the open session; the header shows the action when set. */
-  onForkSession?: (sessionID: string) => void
   /** Forks the session before a user message; each message shows the action when set. */
   onForkMessage?: (sessionID: string, messageID: string) => void
   /** Receives a session the server does not have (deleted, or from another database) instead of an error card. */
   onMissing?: (sessionID: string) => void
   /** Opens the files changed by one turn. */
   onViewTurnChanges?: (sessionID: string, turnID: string) => void
+  /** Agent Manager worktrees the composer's `@` menu can reference. */
+  worktrees?: Accessor<WorktreeReference[]>
+  /** Whether the composer's `@` menu offers Git changes. */
+  git?: () => boolean
+  /** What `@git-changes` diffs in this view. */
+  gitTarget?: () => GitChangesTarget | undefined
+  /** The Agent Manager worktree, or `local`, whose terminal `@terminal` reads. */
+  terminalContext?: () => string | undefined
+  /** Reads the focused Agent Manager terminal for `@terminal`. */
+  resolveEmbeddedTerminal?: (context?: string) => Promise<string | undefined>
+  /** Another session tab is open, so the prompt suggests switching tabs. */
+  tabs?: boolean
+  /** Agent Manager state for the prompt shortcut hint; the sidebar passes nothing. */
+  manager?: () => ManagerContext | undefined
+  /** Whether a composer mounted for a switched draft takes focus, as v1's draft-change effect did. */
+  focusOnDraftChange?: () => boolean
+  /** Receives each focus and blur of the composer, so the Agent Manager restores the prompt on return. */
+  onFocusChange?: (focused: boolean) => void
 }) {
   const v2 = useV2()
+  const language = useLanguage()
   const session = () => props.session
   const work = useWorkStyleOptional()
   // Display layouts and the reasoning mode are Kilo-only config keys, so the host reads them. Every surface that
@@ -87,26 +134,15 @@ export function SessionView(props: {
   const draftKey = () => props.draftKey ?? session() ?? "new"
 
   // Subagent cards read the child session's tools from the same store as the open session. Load a child's message
-  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a session
-  // tree releases every child loaded from it, so a long-lived view does not keep every expanded child transcript.
+  // history when its card first asks for it; later tool events update the loaded messages in place. Leaving a view
+  // releases the session it showed and the children it loaded, so a long-lived view keeps no expanded child transcript.
   const children = createChildSessions({ data: v2.data, report: v2.report })
   const childSessions: ToolChildSession = {
     tools: (sessionID) => childTools(v2.data.session.message.list(sessionID)),
     running: (sessionID) => v2.data.session.status(sessionID) === "running",
     load: children.load,
   }
-  let previousSession: string | undefined
-  createEffect(
-    on(
-      session,
-      (id) => {
-        const previous = previousSession
-        previousSession = id
-        children.switchTo(id, previous)
-      },
-      { defer: true },
-    ),
-  )
+  createEffect(on(session, (id, previous) => children.switchTo(id, previous), { defer: true }))
   createEffect(
     on(
       v2.connection.status,
@@ -130,16 +166,34 @@ export function SessionView(props: {
     return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
   })
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
-  const forms = () => family().flatMap((id) => v2.data.session.form.list(id) ?? [])
+  const forms = () => formsOf(session())
+  // The same reads for a named session, for a send that outlives the tab it came from.
+  function formsOf(id: string | undefined) {
+    if (!id) return []
+    return [id, ...v2.data.session.family(id).filter((item) => item !== id)].flatMap(
+      (member) => v2.data.session.form.list(member) ?? [],
+    )
+  }
 
+  // The session-start loader lasts until the first transcript page lands. createData reports loading only for pages it
+  // adds, and an already loaded transcript must stay instant, so the view that starts the first request tracks it. A
+  // newer request owns the loader, so the settle of a superseded one cannot clear it.
+  const [starting, setStarting] = createSignal<string>()
+  let attempt = 0
   // Load again after a reconnect too: createData drops its loaded state while disconnected. Same as the TUI session
   // route (packages/tui/src/routes/session/index.tsx).
   createEffect(
     on([session, v2.connection.status] as const, ([id, status]) => {
       if (!id || status !== "connected") return
+      const run = ++attempt
+      const loaded = v2.data.session.message.startLoaded(id)
+      const messages = v2.data.session.message.sync(id)
+      setStarting((value) => startingLoader(value, { session: id, loaded }))
+      const settle = () => setStarting((value) => settledLoader(value, { session: id, run, attempt }))
+      void messages.then(settle, settle)
       void Promise.all([
         v2.data.session.sync(id, { children: true }),
-        v2.data.session.message.sync(id),
+        messages,
         v2.data.session.pending.sync(id),
       ]).catch((err: unknown) => {
         // A session created here is known before the server has it; only a session nobody created is missing.
@@ -169,10 +223,8 @@ export function SessionView(props: {
     ),
   )
 
-  const running = () => {
-    const id = session()
-    return !!id && v2.data.session.status(id) === "running"
-  }
+  const runningOf = (id: string | undefined) => !!id && v2.data.session.status(id) === "running"
+  const running = () => runningOf(session())
 
   // Questions do not block the prompt, as in v1: a pending question is dismissed when the user sends instead.
   // Only a permission blocks sending, and the composer stays writable so typing remains possible.
@@ -204,9 +256,100 @@ export function SessionView(props: {
       if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
     })
   const working = createWorking(session)
+  const goal = createGoal(session, (id) => selection.commit(id, selection.draft(id)))
+  // Subagent jobs feed the dock's agent stack and the stop and "continue in background" actions of subagent cards. A
+  // read-only view has no dock and offers neither action.
+  const jobs = createBackgroundJobs({ session })
+  const actions = createMemo<ToolActions>(() =>
+    props.readOnly ? props.actions : { ...props.actions, stopSession: jobs.cancel, backgroundSession: jobs.promote },
+  )
   let scrollToBottom: (() => void) | undefined
   // The open composer's append function. Edit takes a pending prompt back into it.
   let composer: AppendHandler | undefined
+  let composerHandle: ComposerHandle | undefined
+  // The sidebar and the Agent Manager reuse this view across tabs, so revert state is kept per session: a prompt,
+  // command or compaction waits for the latest revert of its own session, as v1 waited for its checkpoint chain.
+  const reverts = createRevertQueue()
+  const applyDraft = (key: string, next: ComposerDraft) => {
+    setPromptDraft(key, next)
+    if (draftKey() === key) composerHandle?.set?.(next)
+  }
+  const reportRevertError = () =>
+    showToast({
+      variant: "error",
+      title: language.t("common.requestFailed"),
+      description: language.t(REVERT_ERROR_CODE),
+    })
+  // Revert and redo stay out of the way of live work: a running or admitted turn, a pending permission or question,
+  // and a background subagent that can still write files would all race the workspace restore.
+  const revertBlocked = () => {
+    const id = session()
+    return (
+      running() ||
+      reverts.busy(id) ||
+      working.submitting() ||
+      dockBlocked() ||
+      jobs.active() ||
+      (!!id && v2.data.session.pending.list(id).length > 0)
+    )
+  }
+  // The restored prompt goes to the reverted session's own draft, which is keyed by its ID, so switching tabs while
+  // the revert runs keeps it for that tab instead of dropping it.
+  const mutateRevert = (sessionID: string, run: () => Promise<ComposerDraft | undefined>) => {
+    if (props.readOnly || revertBlocked()) return
+    void reverts
+      .run(
+        sessionID,
+        () =>
+          run().then((draft) => {
+            getVSCodeAPI().postMessage({ type: "requestGitChangesStats" } satisfies ToHost as never)
+            return draft
+          }),
+        (draft) => {
+          if (draft) applyDraft(sessionID, draft)
+        },
+      )
+      ?.catch(reportRevertError)
+  }
+  const revertMessage = (sessionID: string, messageID: string) =>
+    mutateRevert(sessionID, async () => {
+      const target = v2.data.session.message
+        .list(sessionID)
+        .find((item) => item.type === "user" && item.id === messageID)
+      const draft =
+        target?.type === "user"
+          ? await restoredDraft(target, (uri) => {
+              const hash = mediaHashFromUri(uri)
+              if (!hash) return Promise.resolve(undefined)
+              return v2.api.experimental.media.get({ hash }).catch(() => undefined)
+            })
+          : undefined
+      const staged = await v2.api.session.revert.stage({ sessionID, messageID })
+      const current = v2.data.session.get(sessionID)
+      if (current) v2.data.session.remember({ ...current, revert: staged })
+      return draft
+    })
+  const redoAll = () => {
+    const id = session()
+    if (!id) return
+    mutateRevert(id, async () => {
+      await v2.api.session.revert.clear({ sessionID: id })
+      const current = v2.data.session.get(id)
+      if (current) v2.data.session.remember({ ...current, revert: undefined })
+      return EMPTY_DRAFT
+    })
+  }
+  const redo = () => {
+    const id = session()
+    if (!id) return
+    const target = redoTarget(v2.data.session.message.list(id), v2.data.session.get(id)?.revert)
+    // No target means the transcript has not loaded yet, so Redo must not fall through to Redo All and drop the revert.
+    if (!target) return
+    if (target === "all") return redoAll()
+    revertMessage(id, target.next)
+  }
+  // The transcript quotes and comments through the composer, so it exists only while the composer does.
+  const [reply, setReply] = createSignal<ReplyHandler>()
   const pending = createPending({
     session,
     readOnly: () => !!props.readOnly,
@@ -220,23 +363,38 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
-  const send = async (
-    text: string,
-    mode: SendMode = "steer",
-    input?: { items?: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
-  ) => {
+  // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
+  // question is dismissed, and a send that should stop the running model call stops it.
+  const begin = async (mode: SendMode) => {
+    // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
+    // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
     const key = draftKey()
+    const existing = session()
+    reverts.sent(existing)
+    await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
-    const seed = session() ? undefined : await sandbox.metadata()
-    const id = session() ?? selection.create(seed)
+    const seed = existing ? undefined : await sandbox.metadata()
+    const id = existing ?? selection.create(seed)
+    if (existing) selection.ensure(id)
     const gate = selection.gate(id)
-    // A prompt with a pending switch waits for it, so the attribution has to be read after that switch settles.
-    // Without one the selection is current, and it must be read before onSession changes the session identity.
-    const model = gate ? undefined : selection.model()
-    // A pending question is dismissed when the user sends instead.
-    const questions = forms()
+    // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
+    // Read both before onSession changes the session identity. The active selection belongs to the active tab, so it
+    // only describes this send while that tab is still open; otherwise the pinned session's own selection applies.
+    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
+    const binding = sendBinding({
+      pinned: existing,
+      active: session(),
+      running: runningOf(id),
+      goalActive: !!goal.active(),
+      steerInterrupts: steerInterrupts(v2.data.session.message.list(id), waiting),
+      mode,
+    })
+    const model = binding.same ? selection.model() : selection.selected(id)
+    const draft = selection.draft(id)
+    // A pending question of this session is dismissed when the user sends instead.
+    const questions = formsOf(id)
     props.onSession(id, key)
     // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
     const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
@@ -247,36 +405,148 @@ export function SessionView(props: {
     // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
     // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
     // and the stop would then end that answer. The partial response stays in the transcript and the run continues
-    // with the prompt. A failed stop still sends the prompt as a steer.
-    const waiting = new Set(v2.data.session.pending.list(id).map((item) => item.id))
-    const interrupt =
-      running() && (mode === "now" || (mode === "steer" && steerInterrupts(v2.data.session.message.list(id), waiting)))
-    if (interrupt) await v2.api.session.interrupt({ sessionID: id, resume: true }).catch((err: unknown) => v2.report(err))
+    // with the prompt. A failed stop still sends the prompt as a steer. Sending a prompt never cancels a running
+    // compaction either way: `now` still stops the model call and running tools, but the checkpoint finishes first
+    // and the prompt follows it. Only Stop itself, and Escape with it, may cancel a compaction.
+    // The goal plugin pauses a goal whose run the user interrupts, so with an active goal a steer waits for the next
+    // step boundary instead of stopping the model call: a new message takes priority, then the goal continues, as in
+    // v1. Stop and "stop and send" still stop the run and pause the goal.
+    if (binding.interrupt) await v2.api.session.interrupt(promptInterrupt(id)).catch((err: unknown) => v2.report(err))
+    return { id, gate, model, draft }
+  }
+
+  // The prompt is admitted on the server; the Most used group counts sent prompts per model, as v1.
+  const prompted = (id: string, text: string, used: ModelRef | undefined) => {
+    if (used) preferences?.recordUsage(used.providerID, used.id)
+    props.onPrompted?.(id, text, used)
+    return true
+  }
+
+  const send = async (
+    text: string,
+    mode: SendMode = "steer",
+    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
+  ) => {
+    const { id, gate, model, draft } = await begin(mode)
+    const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
         sessionID: id,
         text,
+        // A pending switch, such as an agent change, fails the prompt instead of running under another agent.
         gate,
+        // The draft commits after earlier prompts are admitted, as the TUI; a failed switch fails the prompt.
+        prepare: () => selection.commit(id, draft),
         metadata: input?.metadata,
-        files: input?.items?.length ? toPromptFiles(input.items) : undefined,
+        files,
         delivery: mode === "queue" ? "queue" : "steer",
       })
-      .then(() => {
-        const used = gate ? selection.attributed(id) : model
-        // The Most used group counts sent prompts per model, as v1.
-        if (used) preferences?.recordUsage(used.providerID, used.id)
-        props.onPrompted?.(id, text, used)
-        return true
-      })
+      .then(() => prompted(id, text, model))
       .catch((err: unknown) => {
         v2.report(err)
         return false
       })
   }
 
+  // Server commands and skills of the slash menu, from the cache of this location.
+  const catalog = createSlashCatalog({
+    command: v2.data.location.command,
+    skill: v2.data.location.skill,
+    on: v2.data.on,
+    report: v2.report,
+  })
+  onCleanup(catalog.dispose)
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status === "connected" && !props.readOnly) void catalog.load()
+    }),
+  )
+  // The selectors listen for these events, so a slash action opens the same picker as a click.
+  const picker = (name: string) => () => window.dispatchEvent(new CustomEvent(name))
+  // Compaction runs on the composer's selection, as the TUI: an uncommitted draft switches the session first.
+  // Compaction commits a staged revert, so it waits for the revert of that session to settle first.
+  const compact = (id: string) =>
+    void reverts
+      .settled(id)
+      .then(() => v2.data.session.compact({ sessionID: id, model: selection.draft(id) }))
+      .catch(v2.report)
+  const handlers = (): SlashHandlers => {
+    const id = session()
+    const start = props.onNewSession
+    return {
+      // The new tab remounts the composer that had focus, so the focus moves to the new composer after it mounts.
+      new: start
+        ? () => {
+            start()
+            requestAnimationFrame(focusPrompt)
+          }
+        : undefined,
+      sessions: props.onShowHistory,
+      models: picker("openModelPicker"),
+      agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
+      variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
+      compact: id ? () => compact(id) : undefined,
+      caffeinate: () =>
+        getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
+      help: () => v2.open("https://kilo.ai/docs"),
+      marketplace: () => getVSCodeAPI().postMessage({ type: "openMarketplace" } satisfies ToHost as never),
+      settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
+      reload: () => void v2.api.location.reload().catch(v2.report),
+    }
+  }
+  const slashEntries = createMemo(() =>
+    mergeCatalog({
+      actions: slashActions(handlers(), language.t),
+      commands: catalog.commands(),
+      nested: reviewScopes(catalog.commands(), props.worktree === true),
+      skills: catalog.skills(),
+    }),
+  )
+
+  const runSlash = async (
+    entry: SlashEntry,
+    args: string,
+    mode: SendMode,
+    items: PromptAttachment[],
+    mentions: MentionFile[] = [],
+  ) => {
+    const { id, gate, model } = await begin(mode)
+    const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
+    // A command with its own model runs on that model, which the server switches the session to.
+    const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined
+    return dispatchSlash(
+      {
+        entry,
+        args,
+        files: promptFiles(items, mentions),
+        delivery: mode === "queue" ? "queue" : "steer",
+      },
+      {
+        session: async () => {
+          await selection.created(id)
+          await gate
+          return id
+        },
+        selected: (sessionID) => selection.selected(sessionID),
+        switchModel: (input) => v2.api.session.switchModel(input),
+        command: (input) => v2.api.session.command(input),
+        prompt: (input) => v2.data.session.prompt(input),
+      },
+    )
+      .then(() => prompted(id, text, own ? { providerID: own.providerID, id: own.modelID } : model))
+      .catch((err: unknown) => {
+        v2.report(err)
+        return false
+      })
+  }
+
+  // The goal plugin pauses an active goal when the user interrupts its run. Between runs, for example while it waits on
+  // background work, there is no run to interrupt, so Stop pauses the goal itself.
   const stop = () => {
     const id = session()
-    if (id) void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
+    if (!id) return
+    if (!running() && !working.submitting() && goal.active()) return goal.control("pause")
+    void v2.api.session.interrupt({ sessionID: id }).catch(v2.report)
   }
 
   // Escape interrupts the running turn, as v1's ChatView did. A question dock, popover or selector that handles
@@ -286,7 +556,7 @@ export function SessionView(props: {
     if (props.readOnly) return
     const handler = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return
-      if (!running() && !working.submitting()) return
+      if (!running() && !working.submitting() && !goal.active()) return
       event.preventDefault()
       stop()
     }
@@ -295,89 +565,114 @@ export function SessionView(props: {
   })
 
   return (
-    <div class="chat-view">
-      {props.tabStrip}
-      <Show when={session()} keyed>
-        {(id) => (
-          <TaskHeader
-            sessionID={id}
-            onFork={props.onForkSession ? () => props.onForkSession?.(id) : undefined}
-          />
-        )}
-      </Show>
-      <div class="chat-messages-wrapper">
-        <ToolChildSessionProvider value={childSessions}>
-          <div class="chat-messages">
-            <MessageList
-              session={session()}
-              actions={props.actions}
-              selection={selection}
-              onSelectSession={(id) => props.actions.openSession?.(id)}
-              onShowHistory={props.onShowHistory}
-              onForkMessage={running() ? undefined : props.onForkMessage}
-              empty={props.empty}
-              onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-              onViewTurnChanges={props.onViewTurnChanges}
-              pending={pending}
+    <TranscriptSearchProvider>
+      <div class="chat-view">
+        {props.tabStrip}
+        <Show when={session()} keyed>
+          {(id) => (
+            <TaskHeader
+              sessionID={id}
+              readonly={props.readOnly}
+              searchCommand={props.searchCommand}
+              onCompact={() => compact(id)}
             />
-          </div>
-        </ToolChildSessionProvider>
-      </div>
-      <Show when={!props.readOnly}>
-        <div class="chat-input">
-          <Show when={v2.handshake() || v2.error()}>
-            <div class="error-card" role="alert" data-component="v2-error">
-              <span>{v2.handshake() || v2.error()}</span>
-              <button class="error-card-dismiss" onClick={() => v2.setError("")}>
-                x
-              </button>
-            </div>
-          </Show>
-          <Show when={permissions()[0]} keyed>
-            {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
-          </Show>
-          <Show when={forms()[0]} keyed>
-            {(form) => <QuestionDock form={form} />}
-          </Show>
-          <SessionDock
-            session={session()}
-            blocked={dockBlocked()}
-            actions={(todos) => props.row?.(hasMessages(), todos)}
-            hasActions={hasMessages() && !!props.row}
-            status={working.status()}
-            submitting={working.submitting()}
-            timing={working.timing()}
-            text={working.text()}
-            retry={working.retry()}
-            onCancel={stop}
-            onScrollToBottom={() => scrollToBottom?.()}
-          />
-          <Show when={draftKey()} keyed>
-            {(key) => (
-              <PromptInput
-                draftKey={key}
+          )}
+        </Show>
+        <div class="chat-messages-wrapper">
+          <ToolChildSessionProvider value={childSessions}>
+            <div class="chat-messages">
+              <MessageList
                 session={session()}
-                running={running()}
-                disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
-                blocked={blocked()}
-                questioning={questioning()}
-                onSend={send}
-                onStop={stop}
-                onAppendReady={(append) => {
-                  composer = append
-                  props.onAppendReady?.(append)
-                }}
-                onReviewAppendReady={props.onReviewAppendReady}
-                onReferenceReady={props.onReferenceReady}
-                onComposerReady={props.onComposerReady}
-                selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
-                autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
-                sandbox={sandboxControl}
+                starting={starting()}
+                actions={actions()}
+                selection={selection}
+                onSelectSession={(id) => props.actions.openSession?.(id)}
+                onShowHistory={props.onShowHistory}
+                onForkMessage={running() ? undefined : props.onForkMessage}
+                onRevertMessage={props.readOnly ? undefined : revertMessage}
+                revertDisabled={revertBlocked()}
+                onRedo={redo}
+                onRedoAll={redoAll}
+                empty={props.empty}
+                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                onViewTurnChanges={props.onViewTurnChanges}
+                pending={pending}
+                reply={props.readOnly ? undefined : reply()}
+                question={() => (props.readOnly ? undefined : forms()[0])}
               />
-            )}
-          </Show>
+            </div>
+          </ToolChildSessionProvider>
         </div>
-      </Show>
-    </div>
+        <Show when={!props.readOnly}>
+          <div class="chat-input">
+            <Show when={v2.handshake() ?? v2.failure()}>
+              {(failure) => <ErrorBanner failure={failure()} onDismiss={v2.handshake() ? undefined : v2.clearError} />}
+            </Show>
+            <Show when={permissions()[0]} keyed>
+              {(request) => <PermissionDock request={request} onPreview={props.onPreviewEdit} />}
+            </Show>
+            <SessionDock
+              session={session()}
+              jobs={jobs}
+              onOpenSession={(id, title) =>
+                props.actions.openSubagent ? props.actions.openSubagent(id, title) : props.actions.openSession?.(id)
+              }
+              blocked={dockBlocked()}
+              actions={(todos, agents) => props.row?.(hasMessages(), todos, agents)}
+              hasActions={!!props.row && (hasMessages() || !!props.rowWhenEmpty)}
+              status={working.status()}
+              submitting={working.submitting()}
+              timing={working.timing()}
+              text={working.text()}
+              retry={working.retry()}
+              onCancel={stop}
+              onScrollToBottom={() => scrollToBottom?.()}
+              goal={goal}
+              connected={v2.connection.status() === "connected"}
+            />
+            <Show when={draftKey()} keyed>
+              {(key) => (
+                <PromptInput
+                  draftKey={key}
+                  session={session()}
+                  // An active goal keeps working between its runs, so the composer offers Stop as main did.
+                  running={running() || goal.active()}
+                  disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
+                  blocked={blocked()}
+                  questioning={questioning()}
+                  onSend={send}
+                  onStop={stop}
+                  onAppendReady={(append) => {
+                    composer = append
+                    props.onAppendReady?.(append)
+                  }}
+                  onReviewAppendReady={props.onReviewAppendReady}
+                  onReplyReady={setReply}
+                  onReferenceReady={props.onReferenceReady}
+                  onComposerReady={(handle) => {
+                    composerHandle = handle
+                    props.onComposerReady?.(handle)
+                  }}
+                  slash={{ entries: slashEntries, run: runSlash }}
+                  tabs={props.tabs}
+                  manager={props.manager}
+                  focusOnDraftChange={props.focusOnDraftChange}
+                  onFocusChange={props.onFocusChange}
+                  selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
+                  autoApprove={{ enabled: autoApprove.enabled(), onToggle: autoApprove.toggle }}
+                  sandbox={sandboxControl}
+                  worktrees={props.worktrees}
+                  git={props.git}
+                  gitTarget={props.gitTarget}
+                  terminalContext={props.terminalContext}
+                  resolveEmbeddedTerminal={props.resolveEmbeddedTerminal}
+                  onOpenFile={(path) => props.actions.openFile?.(path, undefined, undefined, session())}
+                />
+              )}
+            </Show>
+          </div>
+        </Show>
+      </div>
+    </TranscriptSearchProvider>
   )
 }

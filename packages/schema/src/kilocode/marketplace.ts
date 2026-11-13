@@ -17,7 +17,7 @@ const Failure = {
   unsupported: portable(Schema.Undefined),
 }
 
-export const Kind = Schema.Literals(["skill", "mcp", "agent"])
+export const Kind = Schema.Literals(["skill", "mcp", "agent", "plugin"])
 export type Kind = typeof Kind.Type
 
 /** Install into the global config directory or the opened project. */
@@ -60,6 +60,10 @@ export const AgentContent = Schema.Struct({
 })
 export type AgentContent = typeof AgentContent.Type
 
+/** A plugin package specifier: an npm package with an optional version or tag, or a `git:` spec. */
+export const PluginContent = Schema.Struct({ spec: Schema.String })
+export type PluginContent = typeof PluginContent.Type
+
 export const Item = Schema.Struct({
   registry: Schema.String,
   kind: Kind,
@@ -76,18 +80,22 @@ export const Item = Schema.Struct({
   options: Schema.Array(InstallOption),
   /** Present only for `kind: "agent"`; what an install writes. */
   agent: optional(AgentContent),
+  /** Present only for `kind: "plugin"`; the spec written into the scope's `plugins` array. */
+  plugin: optional(PluginContent),
 })
 export type Item = typeof Item.Type
 
 /**
  * Owned resources are located from the current scope, never from stored paths: a skill tree is
- * `<skills root>/<id>`, an agent is `<agents root>/<id>.md`, and an MCP entry is found by server name in the
- * scope's native config files. During recovery both previous and planned contents may be owned.
+ * `<skills root>/<id>`, an agent is `<agents root>/<id>.md`, an MCP entry is found by server name, and a plugin
+ * entry by package identity in the scope's native config files. During recovery both previous and planned
+ * contents may be owned.
  */
 export const Resource = Schema.Union([
   Schema.Struct({ id: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
   Schema.Struct({ server: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
   Schema.Struct({ agent: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
+  Schema.Struct({ plugin: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
 ])
 export type Resource = typeof Resource.Type
 
@@ -100,9 +108,14 @@ export const Installed = Schema.Struct({
   id: Schema.String,
   scope: Scope,
   project: optional(Schema.String),
-  /** MCP config file relative to the scope root, so records survive moving the project. */
+  /** The install option the record was written with, so a repair can preselect it. */
+  option: optional(Schema.String),
+  /**
+   * The native config file this installation wrote, relative to the scope root: an MCP `servers` entry or the
+   * `plugins` entry. Kept relative so a record survives moving the project.
+   */
   config: optional(Schema.String),
-  /** Native mcp.servers key, used for status and sign-in handoff. */
+  /** Native mcp.servers key, used for status and sign-in handoff. Plugins have no server key. */
   server: optional(Schema.String),
   resources: optional(Schema.Array(Resource)),
   /** Intent persisted before mutations, recoverable by retry or uninstall. */

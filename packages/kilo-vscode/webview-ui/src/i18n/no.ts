@@ -57,7 +57,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Fullført (rapportert av modellen)",
+  "session.goal.complete": "Fullført",
   "session.goal.blocked": "Blokkert",
   "session.goal.restart": "Start mål på nytt",
   ...anacondaDesktopDict,
@@ -317,6 +317,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.noChanges": "Ingen endringer.",
   "ui.permission.reject": "Avvis",
+  "ui.permission.allowAllSites": "Tillat alle nettsteder",
   "ui.permission.feedbackPlaceholder": "Fortell Kilo hva den skal gjøre annerledes",
   "ui.permission.feedbackHint": "Enter for å avvise, Esc for å avbryte",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
@@ -1416,6 +1417,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
+  "task.backgroundAgents.promoteFailed": "Denne agenten kunne ikke fortsette i bakgrunnen. Den kan allerede være ferdig.",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",
@@ -1502,6 +1504,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systemnettleser",
   "settings.experimental.browserLinks.integrated": "Integrert nettleser",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "chat.reply.toolbar": "Merket tekst",
+  "chat.reply.quote": "Siter",
+  "chat.reply.quoteHint": "Siter i svaret ditt",
+  "chat.reply.commentHint": "Kommenter denne delen",
+  "chat.reply.copy": "Kopier",
+  "chat.reply.sendHint": "Send denne kommentaren til Kilo nå",
+  "chat.reply.commentLater": "Lagre til neste melding",
+  "chat.reply.count": "Svar ({{count}})",
+  "chat.reply.sendAll": "Send alle",
+  "chat.reply.showInChat": "Vis i chatten",
   "browserTab.noSession":
     "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",
   "browserTab.disabled": "Den integrerte nettleseren er deaktivert. Aktiver den i Kilo-innstillinger > Eksperimentelt.",

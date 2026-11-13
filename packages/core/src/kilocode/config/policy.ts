@@ -4,6 +4,7 @@ import { Config } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { ConfigModel } from "@opencode/schema/config/model"
 import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import { KiloPagesRpc } from "@opencode/schema/kilocode/pages"
 import { optional } from "@opencode/schema/schema"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
@@ -106,6 +107,7 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
     .annotate({ description: "Configuration for AI-generated commit messages" }),
   // kilo_port(indexing:fe813c19ebaf) kilo_port(indexing:987c9e6c9e85) kilo_port(indexing:854fbb30ce6c)
   indexing: KiloIndexingRpc.Config.pipe(optional),
+  pages: KiloPagesRpc.Config.pipe(optional),
 }) {}
 
 // The recognized top-level keys: the full v2 schema without the derived `workflow_models` (built from model-only
@@ -118,6 +120,7 @@ const privacy = Schema.Struct({ privacy_mode: Schema.optional(Schema.Boolean) })
 const sync = Schema.Struct({ session_sync: Schema.optional(Schema.Boolean) })
 const commit = Schema.Struct({ commit_message: Schema.optional(Schema.Struct({ prompt: Schema.optional(Schema.String) })) })
 const indexing = Schema.Struct({ indexing: Schema.optional(KiloIndexingRpc.Config) })
+const pages = Schema.Struct({ pages: Schema.optional(KiloPagesRpc.Config) })
 const sandboxSetting = Schema.Struct({ sandbox: Schema.optional(Sandbox) })
 const decodeModel = Schema.decodeUnknownOption(ConfigModel.Selection)
 
@@ -255,6 +258,13 @@ export function parse(
       kind: "invalid",
       message: "ignored invalid indexing; expected the codebase indexing settings object",
     })
+  const pagesField = Schema.decodeUnknownOption(pages)(input)
+  if (Option.isNone(pagesField))
+    report?.({
+      path: ["pages"],
+      kind: "invalid",
+      message: "ignored invalid pages; expected an object with optional enabled and destination (pages or pages-dev)",
+    })
   const sandboxField = Schema.decodeUnknownOption(sandboxSetting)(input)
   if (Option.isNone(sandboxField))
     report?.({
@@ -273,7 +283,9 @@ export function parse(
           ...Option.getOrElse(message, () => ({})),
           ...Option.getOrElse(synchronization, () => ({})),
           ...Option.getOrElse(indexingField, () => ({})),
+          ...Option.getOrElse(pagesField, () => ({})),
           ...Option.getOrElse(sandboxField, () => ({})),
+          ...compactionSettings(input, normalized, report),
           ...displaySettings(input, report),
           ...decodedSettings,
           workflow_models: models && Object.keys(models).length ? models : undefined,
@@ -281,6 +293,35 @@ export function parse(
       ),
     ),
   )
+}
+
+/**
+ * A v1 `compaction.threshold_percent` becomes the v2 `buffer`: the share of the window kept free before automatic
+ * compaction. An explicit v2 `buffer` (or its `reserved` alias, which normalization folds into `buffer`) wins, because
+ * it is the later spelling of the same setting.
+ */
+function compactionSettings(
+  input: unknown,
+  normalized: Readonly<Record<string, unknown>>,
+  report?: (diagnostic: ConfigNormalize.Diagnostic) => void,
+) {
+  if (!record(input) || !record(input.compaction)) return {}
+  if (!("threshold_percent" in input.compaction)) return {}
+  const native = record(normalized.compaction) ? normalized.compaction : {}
+  if (native.buffer !== undefined) return {}
+  const percent = input.compaction.threshold_percent
+  if (percent === null) return {}
+  if (typeof percent !== "number" || !Number.isFinite(percent) || percent <= 0 || percent > 100) {
+    report?.({
+      path: ["compaction", "threshold_percent"],
+      kind: "invalid",
+      message: "ignored invalid compaction.threshold_percent; expected a percentage from 1 to 100",
+    })
+    return {}
+  }
+  const reserved = 100 - percent
+  // The buffer percentage accepts 1 to 99, so a fractional limit above 99 keeps the smallest valid reserve instead.
+  return { compaction: { ...native, buffer: reserved === 0 ? 0 : reserved < 1 ? "1%" : `${reserved}%` } }
 }
 
 /** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */
@@ -377,6 +418,17 @@ export function indexingConfig(entries: readonly Config.Entry[]) {
       }),
     ) as KiloIndexingRpc.Config
   }, undefined)
+}
+
+/** The `pages` key of the effective entries: for each field the last document that sets it wins. */
+export function pagesConfig(entries: readonly Config.Entry[]) {
+  return entries.reduce<{ enabled?: boolean; destination?: KiloPagesRpc.Destination }>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.pages) return value
+    return {
+      enabled: entry.info.pages.enabled ?? value.enabled,
+      destination: entry.info.pages.destination ?? value.destination,
+    }
+  }, {})
 }
 
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))

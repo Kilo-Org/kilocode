@@ -5,6 +5,7 @@ import { ContentPart, useGrowIn, type ToolActions } from "@kilocode/kilo-ui/mess
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
+import { ErrorDetails } from "@kilocode/kilo-ui/error-details"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
@@ -17,6 +18,7 @@ import type { TimelineHighlight } from "../utils/timeline/highlight"
 import { partKey, timelinePart } from "../utils/timeline/timeline-parts"
 import { useV2 } from "./client"
 import { displaySettings } from "./display-settings"
+import { readableMessage } from "./error"
 import { tokenThroughputVisible } from "./kilo-settings"
 import { mcpServerFromError } from "./mcp-error"
 import { formatTokenThroughput, type TurnMetadata } from "./message-status"
@@ -27,8 +29,12 @@ export function AssistantMessage(props: {
   message: SessionMessageAssistant
   session: string
   actions?: ToolActions
+  /** Instruction files one read loaded, by read tool part ID. */
+  instructionFiles?: (partID: string) => readonly string[] | undefined
   /** The task-timeline bar under the pointer or keyboard focus, if any. */
   highlight?: () => TimelineHighlight | undefined
+  /** Whether the current transcript search match is in this row. */
+  searchActive?: boolean
   /** The message content rendered by this row. A large message is split across several rows. */
   parts?: SessionMessageAssistant["content"]
   /** Index of the first rendered content item in the message. */
@@ -129,6 +135,7 @@ export function AssistantMessage(props: {
       data-session={props.session}
       data-row-key={props.rowKey}
       data-live={!done() ? "" : undefined}
+      data-search-active={props.searchActive ? "" : undefined}
     >
       <div class="vscode-session-turn-assistant">
         <For each={parts()}>
@@ -191,6 +198,7 @@ export function AssistantMessage(props: {
                         defaultOpen={item.type === "tool" ? defaultOpen(item.name) : undefined}
                         reasoningDisplay={displaySettings().reasoningDisplay}
                         actions={props.actions}
+                        loadedFiles={item.type === "tool" ? props.instructionFiles?.(item.id) : undefined}
                         errorAction={errorAction}
                       />
                     )}
@@ -238,7 +246,7 @@ export function ErrorCard(props: { error: { message: string } }) {
     <Card variant="error" class="error-card" role="alert">
       <div class="error-card-body">
         <Icon name="warning" size="small" />
-        <div class="error-card-message">{props.error.message}</div>
+        <div class="error-card-message">{readableMessage(props.error, language.t)}</div>
       </div>
       <Collapsible variant="ghost">
         <Collapsible.Trigger class="error-details-trigger">
@@ -246,7 +254,7 @@ export function ErrorCard(props: { error: { message: string } }) {
           <Collapsible.Arrow />
         </Collapsible.Trigger>
         <Collapsible.Content>
-          <pre>{JSON.stringify(props.error, null, 2)}</pre>
+          <ErrorDetails error={props.error} />
         </Collapsible.Content>
       </Collapsible>
     </Card>

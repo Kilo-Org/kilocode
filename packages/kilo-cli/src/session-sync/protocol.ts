@@ -177,9 +177,11 @@ export function reconstructMessage(
   }
   ordered.sort((a, b) => a.ordinal - b.ordinal)
   const { parts: _, ...envelope } = value
+  // Inline content left on a split row follows its part rows, as the native reader returns it.
+  const inline = Array.isArray(value.message.content) ? value.message.content : []
   return {
     complete: true,
-    value: { ...envelope, message: { ...value.message, content: ordered.map((part) => part.part) } },
+    value: { ...envelope, message: { ...value.message, content: [...ordered.map((part) => part.part), ...inline] } },
   }
 }
 export const loopback = (hostname: string) =>

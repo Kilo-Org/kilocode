@@ -44,6 +44,13 @@ const description = (shell?: string) =>
   ].join(" ")
 
 export const Input = Schema.Struct({
+  // kilocode_change start - optional model-written summary shown instead of the raw command in the tool card.
+  // It comes first: models write arguments in schema order, so the card can show it before the command streams.
+  description: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Recommended: a clear, concise description of what this command does in 5-10 words, for the tool card. Omit it only when the command already says what it does.",
+  }),
+  // kilocode_change end
   command: Schema.String.annotate({ description: "Shell command string to execute" }),
   workdir: Schema.optionalKey(Schema.String).annotate({
     description:
@@ -84,7 +91,7 @@ const resultMessages = (output: Output) => {
   return [...(output.output ? [output.output] : []), ...(notice ? [notice] : [])]
 }
 
-const toolResult = (output: Output) => {
+const toolResult = (output: Output, description?: string) => { // kilocode_change - carries the optional description
   return {
     output,
     content: resultMessages(output).map((text) => ({ type: "text" as const, text })),
@@ -92,6 +99,7 @@ const toolResult = (output: Output) => {
       status: output.status,
       ...ShellResult.metadata(output),
       ...(output.shellID !== undefined ? { shellID: output.shellID } : {}),
+      ...(description ? { description } : {}), // kilocode_change - keep the summary for clients without the input
     },
   }
 }
@@ -117,11 +125,6 @@ export const Plugin = {
     const permission = yield* Permission.Service
 
     const prepare = Effect.fn("ShellTool.prepare")(function* (invocation: ShellCreateBefore, context: Tool.Context) {
-      const source = {
-        type: "tool" as const,
-        messageID: context.messageID,
-        id: context.id,
-      }
       const target = yield* access.resolve({ path: invocation.cwd, kind: "directory" })
       invocation.cwd = target.absolute
       const timeout = invocation.timeout
@@ -138,9 +141,7 @@ export const Plugin = {
           action: name,
           resources: parsed.commands.map((command) => command.resource),
           save: parsed.commands.map((command) => command.save),
-          sessionID: context.sessionID,
-          agent: context.agent,
-          source,
+          ...Permission.invocation(context),
         })
       // Approval can outlive the directory, so validate immediately before spawning.
       const workdir = yield* Environment.typeFollowing(environment.files, target.absolute).pipe(
@@ -159,6 +160,7 @@ export const Plugin = {
         id: string,
         shellID: string,
         command: string,
+        description: string | undefined, // kilocode_change
         settled: Deferred.Deferred<Output>,
       ) {
         const info = (yield* jobs.wait({ id })).info
@@ -172,7 +174,7 @@ export const Plugin = {
         yield* sessions.synthetic({
           ...(info.notificationID ? { id: info.notificationID } : {}),
           sessionID,
-          description: command,
+          description: description ?? command, // kilocode_change - prefer the model's description over the raw command
           ...ShellResult.notification({
             jobID: id,
             shellID,
@@ -281,6 +283,9 @@ export const Plugin = {
                 recovery: {
                   kind: "shell",
                   sessionID: context.sessionID,
+                  // kilocode_change start - carry the summary so the restart notice matches the completion notice
+                  ...(input.description ? { description: input.description } : {}),
+                  // kilocode_change end
                   shellID: info.id,
                   command: info.command,
                 },
@@ -289,7 +294,7 @@ export const Plugin = {
 
               if (input.background === true) {
                 yield* jobs.background(job.id)
-                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
                 yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
@@ -299,7 +304,7 @@ export const Plugin = {
                 .pipe(Effect.onInterrupt(() => jobs.cancel(job.id).pipe(Effect.ignore)))
               if (result?.type === "backgrounded") {
                 yield* shell.timeout(info.id, 0)
-                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
                 yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
@@ -310,7 +315,7 @@ export const Plugin = {
 
               return yield* Deferred.await(settled).pipe(Effect.ensuring(stop)) // kilocode_change
             }).pipe(
-              Effect.map(toolResult),
+              Effect.map((output) => toolResult(output, input.description)), // kilocode_change
               Effect.mapError(
                 (error) => new ToolFailure({ message: `Unable to execute command: ${input.command}`, error }),
               ),

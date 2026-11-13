@@ -397,11 +397,12 @@ describe("FileWatcher subscription", () => {
   // exercised without a real filesystem subscription.
   function createFakeBackend() {
     let onEvents: ((events: readonly FileWatchEvent[]) => void) | undefined
+    let onError: ((error: Error) => void) | undefined
     let subscribed = 0
     let unsubscribed = 0
     let failNext = 0
     let lastIgnore: readonly string[] = []
-    const subscribe: FileWatchSubscribe = async (_directory, cb, ignore) => {
+    const subscribe: FileWatchSubscribe = async (_directory, cb, ignore, error) => {
       subscribed += 1
       lastIgnore = ignore
       if (failNext > 0) {
@@ -409,6 +410,7 @@ describe("FileWatcher subscription", () => {
         throw new Error("subscribe failed")
       }
       onEvents = cb
+      onError = error
       return {
         unsubscribe: async () => {
           unsubscribed += 1
@@ -418,6 +420,7 @@ describe("FileWatcher subscription", () => {
     return {
       subscribe,
       emit: (events: FileWatchEvent[]) => onEvents?.(events),
+      fail: (error = new Error("poll failed")) => onError?.(error),
       failOnce: () => {
         failNext = 1
       },
@@ -470,6 +473,7 @@ describe("FileWatcher subscription", () => {
     const { root, watcher, accumulated } = await makeWatcher(backend.subscribe)
     await watcher.initialize()
     expect(backend.subscribed).toBe(1)
+    expect(watcher.watching).toBe(true)
 
     const created = path.join(root, "created.ts")
     const changed = path.join(root, "changed.ts")
@@ -639,8 +643,27 @@ describe("FileWatcher subscription", () => {
     // Must not throw — the watcher is optional, so the full scan still runs.
     await watcher.initialize()
     expect(backend.subscribed).toBe(1)
+    expect(watcher.watching).toBe(false)
     await watcher.shutdown()
     expect(backend.unsubscribed).toBe(0)
+  })
+
+  test("a backend error drops the subscription and reports it", async () => {
+    const backend = createFakeBackend()
+    const { watcher } = await makeWatcher(backend.subscribe)
+    const stopped: Error[] = []
+    watcher.onDidStop.on((error) => stopped.push(error))
+
+    await watcher.initialize()
+    expect(watcher.watching).toBe(true)
+
+    const failure = new Error("Unable to poll: Interrupted system call")
+    backend.fail(failure)
+
+    expect(watcher.watching).toBe(false)
+    expect(stopped).toEqual([failure])
+    await watcher.shutdown()
+    expect(backend.unsubscribed).toBe(1)
   })
 
   test("shutdown unsubscribes the watcher", async () => {

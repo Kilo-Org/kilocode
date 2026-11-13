@@ -1,22 +1,24 @@
-import { emptyInputJsonSchema, type ToolDefinition } from "@opencode/ai/effect"
+import { emptyInputJsonSchema, ToolFailure, type ToolDefinition } from "@opencode/ai/effect"
 import { isRecord } from "@opencode/util/record"
 import { Tool } from "@opencode/schema/tool"
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from "@standard-schema/spec"
-import { Cache, Effect, JsonPointer, JsonSchema, Schema, SchemaIssue, SchemaRepresentation } from "effect"
+import { Effect, JsonPointer, JsonSchema, Result, Schema, SchemaIssue, SchemaRepresentation } from "effect"
 import { $ZodType, toJSONSchema } from "zod/v4/core"
+import { KiloZodFormat } from "../kilocode/tool/zod-format.js" // kilocode_change(tool-schema-format)
 
 const formatEffectIssues = SchemaIssue.makeFormatterStandardSchemaV1()
 
-const jsonSchemas = Effect.runSync(
-  Cache.make<JsonSchema.JsonSchema, Schema.Codec<unknown> | undefined>({
-    capacity: 100,
-    lookup: (schema) =>
-      Effect.try({
-        try: () => jsonSchema(schema),
-        catch: () => undefined,
-      }).pipe(Effect.orElseSucceed(() => undefined)),
-  }),
-)
+// Codecs for raw JSON Schema inputs (mostly MCP tools), built once per schema object; schemas are not edited after
+// registration. Not an Effect `Cache`: each entry keeps its lookup fiber, which keeps the caller's stack frames and
+// through them the `Effect.fn` closures over its Location's services, so evicted Locations stayed alive.
+const jsonSchemas = new WeakMap<object, Schema.Codec<unknown> | undefined>()
+
+const codecFor = (schema: JsonSchema.JsonSchema) => {
+  if (jsonSchemas.has(schema)) return jsonSchemas.get(schema)
+  const codec = Result.try(() => jsonSchema(schema)).pipe(Result.getOrUndefined)
+  jsonSchemas.set(schema, codec)
+  return codec
+}
 
 export const definition = (tool: Tool.Info<any, any>): ToolDefinition => ({
   type: "tool",
@@ -74,7 +76,7 @@ const validateInput = (
 ): Effect.Effect<StandardSchemaV1.Result<unknown>> => {
   if (isStandardSchema(schema)) return validateStandard(schema, value)
   return Effect.gen(function* () {
-    const codec = Schema.isSchema(schema) ? schema : yield* Cache.get(jsonSchemas, schema)
+    const codec = Schema.isSchema(schema) ? schema : codecFor(schema)
     if (codec === undefined) return { value }
     return yield* Schema.decodeUnknownEffect(codec)(value, { errors: "all" }).pipe(
       Effect.match({
@@ -166,8 +168,12 @@ const outputJsonSchema = (schema: Tool.ValueSchema<any>): JsonSchema.JsonSchema 
 }
 
 const standardJsonSchema = (schema: StandardSchemaV1<any, any>, io: "input" | "output"): JsonSchema.JsonSchema => {
-  if (isStandardJSONSchema(schema)) return schema["~standard"].jsonSchema[io]({ target: "draft-2020-12" })
-  if (schema instanceof $ZodType) return toJSONSchema(schema, { target: "draft-2020-12", io })
+  // kilocode_change start - tool-schema-format: drop Zod 4.6 non-standard formats
+  if (isStandardJSONSchema(schema))
+    return schema["~standard"].jsonSchema[io]({ target: "draft-2020-12", ...KiloZodFormat.options(schema) })
+  if (schema instanceof $ZodType)
+    return toJSONSchema(schema, { target: "draft-2020-12", io, override: KiloZodFormat.override })
+  // kilocode_change end
   throw new Error(`Schema vendor "${schema["~standard"].vendor}" does not support JSON Schema conversion`)
 }
 
@@ -284,9 +290,13 @@ export const stringify = (value: unknown) => {
   }
 }
 
-export const normalizedName = (tool: Tool.Info) => tool.name.replace(/[^a-zA-Z0-9_-]/g, "_")
+export const normalizedName = (tool: Pick<Tool.Info, "name">) => tool.name.replace(/[^a-zA-Z0-9_-]/g, "_")
 
-export const effectiveName = (tool: Tool.Info) =>
+export const effectiveName = (tool: Pick<Tool.Info, "name" | "options">) =>
   tool.options?.namespace === undefined
     ? normalizedName(tool)
     : `${tool.options.namespace.replaceAll(".", "_")}_${normalizedName(tool)}`
+
+/** For `Effect.mapError`: keep a `ToolFailure` as is, wrap anything else with `message`. */
+export const toolFailure = (message: string) => (error: unknown) =>
+  error instanceof ToolFailure ? error : new ToolFailure({ message, error })

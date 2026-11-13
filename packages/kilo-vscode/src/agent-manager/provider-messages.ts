@@ -67,6 +67,10 @@ export interface MessageHost {
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
   ) => Promise<void>
+  continueInWorktree: (
+    sessionId: string,
+    progress: (status: string, detail?: string, error?: string) => void,
+  ) => Promise<void>
   configureSetupScript: () => Promise<void>
   sendRepoInfo: () => Promise<void>
   sendDiffBranches: (sessionId: string, scope?: string, projectId?: string) => Promise<void>
@@ -79,6 +83,7 @@ export interface MessageHost {
   trackOpenSessions: (sessionIds: string[]) => void
   trackVisibleSession: (sessionId: string | null) => void
   setCaffeination: (enabled: boolean) => Promise<void>
+  toggleCaffeination: () => Promise<void>
   postCaffeination: () => void
   setReviewMarkdownRender: (value: boolean) => Promise<void>
 }
@@ -165,10 +170,10 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     }
     return true
   }
-  if (m.type === "continueInWorktree") {
-    void host.continueFromSidebar(m.sessionId, (status, detail, error) => {
+  if (m.type === "agentManager.continueInWorktree") {
+    void host.continueInWorktree(m.sessionId, (status, detail, error) => {
       host.log(`continueInWorktree: ${status}${detail ? ` ${detail}` : ""}${error ? ` (${error})` : ""}`)
-      if (error) host.post({ type: "error", message: error })
+      host.post({ type: "continueInWorktreeProgress", status, detail, error })
     })
     return true
   }
@@ -207,6 +212,10 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
   }
   if (m.type === "agentManager.setCaffeination") {
     await host.setCaffeination(m.enabled)
+    return true
+  }
+  if (m.type === "agentManager.toggleCaffeination") {
+    await host.toggleCaffeination()
     return true
   }
   return false

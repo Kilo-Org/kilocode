@@ -43,8 +43,11 @@
     "onStartupFinished",
     "onWebviewPanel:kilo-code.v2.settingsPanel",
     "onWebviewPanel:kilo-code.v2.profilePanel",
+    "onWebviewPanel:kilo-code.v2.marketplacePanel",
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
-    "onWebviewPanel:kilo-code.v2.documentsPanel"
+    "onWebviewPanel:kilo-code.v2.documentsPanel",
+    "onWebviewPanel:kilo-code.v2.subagentPanel",
+    "onWebviewPanel:kilo-code.v2.DiffViewerPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -144,6 +147,19 @@
             "فارسی"
           ]
         },
+        "kilo-code.v2.chat.sendWhileRunning": {
+          "type": "string",
+          "enum": [
+            "steer",
+            "queue"
+          ],
+          "enumDescriptions": [
+            "Enter steers the running turn: the message reaches the agent after the current step. Alt+Enter queues it.",
+            "Enter queues the message for after the turn. Alt+Enter steers the running turn."
+          ],
+          "default": "steer",
+          "markdownDescription": "What Enter does when you send a message while the agent works. Alt+Enter does the other, and Cmd+Enter (Ctrl+Enter) stops the agent and sends."
+        },
         "kilo-code.v2.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,
@@ -175,7 +191,7 @@
         "kilo-code.v2.showShortcutHints": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Show keyboard shortcuts in the empty Agent Manager session view."
+          "markdownDescription": "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to queue a prompt, add selected code, review changes, or open another worktree."
         },
         "kilo-code.v2.showAutoApprovalReason": {
           "type": "boolean",
@@ -273,19 +289,11 @@
           "type": "string",
           "enum": [
             "mistralai/codestral-2508",
-            "inception/mercury-edit-2",
-            "inception/mercury-next-edit",
-            "codestral-2508",
-            "mercury-edit-2",
-            "mercury-next-edit"
+            "codestral-2508"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+            "Codestral via your connected Mistral provider API key"
           ],
           "markdownDescription": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
         },
@@ -293,13 +301,11 @@
           "type": "string",
           "enum": [
             "kilo",
-            "mistral",
-            "inception"
+            "mistral"
           ],
           "enumDescriptions": [
             "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "Use autocomplete models through your connected Mistral provider API key"
           ],
           "markdownDescription": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },
@@ -410,10 +416,21 @@
         "icon": "$(history)"
       },
       {
+        "command": "kilo-code.v2.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code (v2)"
+      },
+      {
         "command": "kilo-code.v2.profile",
         "title": "Profile",
         "category": "Kilo Code (v2)",
         "icon": "$(account)"
+      },
+      {
+        "command": "kilo-code.v2.marketplace",
+        "title": "Marketplace",
+        "category": "Kilo Code (v2)",
+        "icon": "$(extensions)"
       },
       {
         "command": "kilo-code.v2.showOpenTabs",
@@ -789,6 +806,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
       },
       {
+        "command": "kilo-code.v2.agentManager.search",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel' && !terminalFocus"
+      },
+      {
         "command": "kilo-code.v2.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
@@ -960,9 +983,14 @@
           "group": "navigation@3"
         },
         {
-          "command": "kilo-code.v2.settings",
+          "command": "kilo-code.v2.marketplace",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@4"
+        },
+        {
+          "command": "kilo-code.v2.settings",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation@5"
         }
       ],
       "scm/title": [
@@ -1048,10 +1076,11 @@
     "snapshot:install": "bun script/snapshot.ts install",
     "extension": "bun script/launch.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p webview-ui",
-    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui/src packages/kilo-vscode/webview-ui/agent-manager packages/kilo-vscode/webview-ui/diff-viewer packages/kilo-vscode/webview-ui/documents packages/kilo-vscode/webview-ui/diff-virtual packages/kilo-vscode/webview-ui/settings packages/kilo-vscode/script packages/kilo-vscode/test",
-    "test": "bun test"
+    "lint": "cd ../.. && oxlint --config .oxlintrc.json packages/kilo-vscode/src packages/kilo-vscode/webview-ui packages/kilo-vscode/script packages/kilo-vscode/test",
+    "test": "bun test --timeout 30000"
   },
   "dependencies": {
+    "@kilocode/caffeination": "workspace:*",
     "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
@@ -1079,6 +1108,7 @@
     "jsonc-parser": "3.3.1",
     "lru-cache": "11.5.2",
     "marked": "catalog:",
+    "minimatch": "10.2.6",
     "playwright-core": "1.57.0",
     "quick-lru": "7.3.0",
     "simple-git": "4.0.2",

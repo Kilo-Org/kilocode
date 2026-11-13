@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Завершено (по сообщению модели)",
+  "session.goal.complete": "Завершено",
   "session.goal.blocked": "Заблокировано",
   "session.goal.restart": "Перезапустить цель",
   ...anacondaDesktopDict,
@@ -308,6 +308,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.noChanges": "Изменений нет.",
   "ui.permission.reject": "Отклонить",
+  "ui.permission.allowAllSites": "Разрешить все сайты",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
   "ui.permission.feedbackHint": "Enter для отклонения, Esc для отмены",
   "ui.permission.doomLoop.prompt":
@@ -1418,6 +1419,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Открыть всех фоновых агентов",
   "task.backgroundAgents.cancel": "Остановить",
   "task.backgroundAgents.continueInBackground": "Продолжить в фоне",
+  "task.backgroundAgents.promoteFailed": "Этот агент не смог продолжить работу в фоне. Возможно, он уже завершился.",
   "task.backgroundAgents.waiting": "Фоновому агенту требуется ваш ввод",
   "task.backgroundAgents.needsInput": "Требуется ввод",
   "task.backgroundAgents.clearFinished": "Очистить завершённые",
@@ -1504,6 +1506,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Системный браузер",
   "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "chat.reply.toolbar": "Выделенный текст",
+  "chat.reply.quote": "Цитировать",
+  "chat.reply.quoteHint": "Цитировать в ответе",
+  "chat.reply.commentHint": "Прокомментировать этот фрагмент",
+  "chat.reply.copy": "Копировать",
+  "chat.reply.sendHint": "Отправить этот комментарий в Kilo сейчас",
+  "chat.reply.commentLater": "Сохранить для следующего сообщения",
+  "chat.reply.count": "Ответы ({{count}})",
+  "chat.reply.sendAll": "Отправить все",
+  "chat.reply.showInChat": "Показать в чате",
   "browserTab.noSession":
     "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
   "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",

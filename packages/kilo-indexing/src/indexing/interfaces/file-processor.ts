@@ -40,6 +40,9 @@ export interface IFileWatcher extends Disposable {
   setOverlay?(overlay?: WorktreeOverlay): void
   shutdown?(): Promise<void>
 
+  /** False when no live subscription exists, so the index stops changing until the next scan. */
+  readonly watching: boolean
+
   readonly onDidStartBatchProcessing: Emitter<string[]>
   readonly onBatchProgressUpdate: Emitter<{
     processedInBatch: number
@@ -47,6 +50,9 @@ export interface IFileWatcher extends Disposable {
     currentFile?: string
   }>
   readonly onDidFinishBatchProcessing: Emitter<BatchProcessingSummary>
+
+  /** Fires when a live subscription fails, so incremental updates stopped after the scan. */
+  readonly onDidStop: Emitter<Error>
 
   processFile(filePath: string): Promise<FileProcessingResult>
 }

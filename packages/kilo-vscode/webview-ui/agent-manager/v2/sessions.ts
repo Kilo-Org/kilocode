@@ -4,7 +4,7 @@
 import type { SessionInfo } from "@opencode/client"
 import { createMemo, createSignal } from "solid-js"
 import type { V2 } from "../../src/v2/scope"
-import { activityOf, sessionActivity, type Activity } from "./activity"
+import { activityOf, sessionActivity, type Activity, type Outcome } from "./activity"
 import { key, type PanelData } from "./panel-data"
 
 export function createSessions(input: {
@@ -72,12 +72,13 @@ export function createSessions(input: {
     setCurrentSessionID: setCurrent,
     selectSession: (sessionID: string) => setCurrent(sessionID),
     clearCurrentSession: () => setCurrent(undefined),
-    activityFor(sessionID: string, info?: Pick<SessionInfo, "outcome" | "time">): Activity {
+    activityFor(sessionID: string, info?: Outcome): Activity {
       const item = scope(sessionID)
       if (!item) return info ? activityOf(info) : "idle"
-      const live = sessionActivity(item.data, sessionID, connected())
+      const live = sessionActivity(item.data, sessionID, connected(), item.scheduled(sessionID))
       // Without a loaded session record the store only knows live events; the host catalog keeps the finished state.
-      return live === "idle" && info ? activityOf(info) : live
+      // A loaded record already decided the outcome, including a staged revert that the catalog may not know yet.
+      return live === "idle" && info && !item.data.session.get(sessionID) ? activityOf(info) : live
     },
     isSubmitting(sessionID: string) {
       const item = scope(sessionID)

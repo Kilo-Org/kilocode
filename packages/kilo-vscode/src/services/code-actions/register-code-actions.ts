@@ -21,7 +21,7 @@ export function registerCodeActions(context: ExtensionContext, target: ChatTarge
         endLine: String(ctx.endLine),
         userInput: "",
       })
-      await target.prompt(prompt, [selectionAttachment(ctx)])
+      await target.prompt(prompt, [selectionAttachment(ctx)], "Explain selected code")
     }),
 
     commands.registerCommand("kilo-code.v2.fixCode", async () => {
@@ -38,7 +38,7 @@ export function registerCodeActions(context: ExtensionContext, target: ChatTarge
         })),
         userInput: "",
       })
-      await target.prompt(prompt, [selectionAttachment(ctx)])
+      await target.prompt(prompt, [selectionAttachment(ctx)], "Fix code problems")
     }),
 
     commands.registerCommand("kilo-code.v2.improveCode", async () => {
@@ -50,10 +50,17 @@ export function registerCodeActions(context: ExtensionContext, target: ChatTarge
         endLine: String(ctx.endLine),
         userInput: "",
       })
-      await target.prompt(prompt, [selectionAttachment(ctx)])
+      await target.prompt(prompt, [selectionAttachment(ctx)], "Improve selected code")
     }),
 
     commands.registerCommand("kilo-code.v2.focusChatInput", () => target.focus()),
+
+    // Command Palette only — no keybinding. A keybinding would need to route
+    // through VS Code's keybinding-to-focused-webview forwarding, which does
+    // not reliably reach a webview whose own input already has focus;
+    // invoking straight from the palette sidesteps that path. Toggles: the
+    // webview closes the search bar itself if it is already open.
+    commands.registerCommand("kilo-code.v2.toggleChatSearch", () => target.search()),
 
     commands.registerCommand("kilo-code.v2.generateTerminalCommand", async () => {
       const input = await window.showInputBox({
@@ -61,7 +68,7 @@ export function registerCodeActions(context: ExtensionContext, target: ChatTarge
         placeHolder: "e.g., find all .ts files modified in the last 24 hours",
       })
       if (!input) return
-      await target.prompt("Generate a terminal command: " + input)
+      await target.prompt("Generate a terminal command: " + input, undefined, "Generate terminal command")
     }),
   )
 }

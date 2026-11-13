@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Ukończony (według modelu)",
+  "session.goal.complete": "Ukończony",
   "session.goal.blocked": "Zablokowany",
   "session.goal.restart": "Uruchom cel ponownie",
   ...anacondaDesktopDict,
@@ -312,6 +312,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.noChanges": "Brak zmian.",
   "ui.permission.reject": "Odrzuć",
+  "ui.permission.allowAllSites": "Zezwalaj na wszystkie witryny",
   "ui.permission.feedbackPlaceholder": "Powiedz Kilo, co zrobić inaczej",
   "ui.permission.feedbackHint": "Enter, aby odrzucić, Esc, aby anulować",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
@@ -1426,6 +1427,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Otwórz wszystkich agentów w tle",
   "task.backgroundAgents.cancel": "Zatrzymaj",
   "task.backgroundAgents.continueInBackground": "Kontynuuj w tle",
+  "task.backgroundAgents.promoteFailed": "Ten agent nie mógł kontynuować w tle. Mógł już zakończyć pracę.",
   "task.backgroundAgents.waiting": "Agent w tle potrzebuje danych wejściowych",
   "task.backgroundAgents.needsInput": "Wymagane dane wejściowe",
   "task.backgroundAgents.clearFinished": "Wyczyść ukończone",
@@ -1512,6 +1514,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Przeglądarka systemowa",
   "settings.experimental.browserLinks.integrated": "Zintegrowana przeglądarka",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "chat.reply.toolbar": "Zaznaczony tekst",
+  "chat.reply.quote": "Cytuj",
+  "chat.reply.quoteHint": "Zacytuj w odpowiedzi",
+  "chat.reply.commentHint": "Skomentuj ten fragment",
+  "chat.reply.copy": "Kopiuj",
+  "chat.reply.sendHint": "Wyślij ten komentarz do Kilo teraz",
+  "chat.reply.commentLater": "Zapisz na następną wiadomość",
+  "chat.reply.count": "Odpowiedzi ({{count}})",
+  "chat.reply.sendAll": "Wyślij wszystko",
+  "chat.reply.showInChat": "Pokaż w czacie",
   "browserTab.noSession":
     "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",
   "browserTab.disabled": "Zintegrowana przeglądarka jest wyłączona. Włącz ją w Ustawieniach Kilo > Eksperymentalne.",

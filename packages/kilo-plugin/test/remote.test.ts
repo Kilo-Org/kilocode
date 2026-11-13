@@ -12,7 +12,7 @@ const it = testEffect(PluginTestLayer)
 it.live("remote RPCs bind the authenticated workspace and explicitly attach restored sessions", () =>
   Effect.gen(function* () {
     const plugin = yield* Plugin.Service
-    const host = yield* PluginHost.make(plugin)
+    const host = yield* PluginHost.make(plugin, "test")
     const rpc = yield* Rpc.Service
     let enabled = false
     const status = () => Effect.succeed({ enabled, connected: true })
@@ -58,7 +58,7 @@ it.live("remote RPCs bind the authenticated workspace and explicitly attach rest
 it.live("remote RPC errors keep the named contract and service failure payload", () =>
   Effect.gen(function* () {
     const plugin = yield* Plugin.Service
-    const host = yield* PluginHost.make(plugin)
+    const host = yield* PluginHost.make(plugin, "test")
     const rpc = yield* Rpc.Service
     const fail = () => Effect.fail({ code: "signed_out", message: "Sign in to enable remote control" })
     yield* KiloRemote.plugin.effect(host).pipe(

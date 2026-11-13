@@ -1,22 +1,24 @@
 #!/usr/bin/env bun
 
-// The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.2.5): the same layers and the
+// The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.2.6): the same layers and the
 // upstream command handlers, with Kilo's composition added: KILO_* environment translation and the `kilo2` app
 // directory (./env, imported first), Kilo's app name, and a serve handler (./serve) that gives the server the Kilo
 // plugins and service overrides (./host). Every server the CLI starts (background service, standalone, stdio) runs this entry with `serve`.
 // Keep it in step with the upstream file; the differences are marked "Kilo:".
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
-import { getErrorReported } from "effect/Runtime"
+import { defaultTeardown, getErrorReported } from "effect/Runtime"
+import { Command } from "effect/cli"
 import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Observability } from "@opencode/util/observability"
 import { KiloUpdater } from "./updater"
+import { KiloPluginNpm } from "./plugin-npm"
 import { OPENCODE_CHANNEL, OPENCODE_LOCAL, OPENCODE_VERSION } from "@opencode/cli/version"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
-import { KiloTheme } from "./theme"
+import { KiloCliConfig } from "./cli-config"
 import { Npm } from "@opencode/util/npm"
 import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
@@ -24,8 +26,10 @@ import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { ShutdownDeadline } from "@opencode/cli/shutdown-deadline"
 import { KiloApp } from "./app"
 import { AutoCommand } from "./auto/auto"
+import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
+import { KiloServiceCommands } from "./service/service"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -50,12 +54,31 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
 }
 
 // Kilo-owned commands alongside the upstream commands.
-const KiloCommands = { ...Commands, commands: { ...Commands.commands, auto: AutoCommand, sync: SyncCommand, remote: RemoteCommand } }
+const KiloCommands = {
+  ...Commands,
+  commands: {
+    ...Commands.commands,
+    // Kilo: `daemon` aliases the upstream `service` group, so `daemon status|stop|restart` manage the native service.
+    service: {
+      ...Commands.commands.service,
+      spec: Commands.commands.service.spec.pipe(Command.withAlias("daemon")),
+      // Kilo: `install` and `uninstall` manage the OS login unit that starts the background server.
+      commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
+    },
+    auto: AutoCommand,
+    import: ImportCommand,
+    sync: SyncCommand,
+    remote: RemoteCommand,
+  },
+}
+
+let terminated = false
 
 const Handlers = Runtime.handlers(KiloCommands, {
   $: () => import("@opencode/cli/commands/handlers/default"),
   upgrade: () => import("./upgrade"),
-  uninstall: () => import("@opencode/cli/commands/handlers/uninstall"),
+  // Kilo: the wrapper removes the login unit before the upstream uninstall.
+  uninstall: () => import("./commands/uninstall"),
   acp: () => import("@opencode/cli/commands/handlers/acp"),
   api: () => import("@opencode/cli/commands/handlers/api"),
   auth: {
@@ -92,7 +115,8 @@ const Handlers = Runtime.handlers(KiloCommands, {
   pair: () => import("@opencode/cli/commands/handlers/pair"),
   reload: () => import("@opencode/cli/commands/handlers/reload"),
   session: {
-    list: () => import("@opencode/cli/commands/handlers/session/list"),
+    // Kilo: the mirror adds the scheduled-wakeup status field. kilo_port(wakeup:9d6803e786ab)
+    list: () => import("./commands/session-list"),
     delete: () => import("@opencode/cli/commands/handlers/session/delete"),
     export: () => import("@opencode/cli/commands/handlers/session/export"),
     import: () => import("@opencode/cli/commands/handlers/session/import"),
@@ -100,11 +124,16 @@ const Handlers = Runtime.handlers(KiloCommands, {
   service: {
     start: () => import("@opencode/cli/commands/handlers/service/start"),
     restart: () => import("@opencode/cli/commands/handlers/service/restart"),
-    status: () => import("@opencode/cli/commands/handlers/service/status"),
-    stop: () => import("@opencode/cli/commands/handlers/service/stop"),
+    // Kilo: the wrapper adds the login unit state.
+    status: () => import("./service/status"),
+    // Kilo: the wrapper stops the login unit first, so its restart policy cannot start the server again.
+    stop: () => import("./service/stop"),
     get: () => import("@opencode/cli/commands/handlers/service/get"),
     set: () => import("@opencode/cli/commands/handlers/service/set"),
     unset: () => import("@opencode/cli/commands/handlers/service/unset"),
+    // Kilo: the OS login unit.
+    install: () => import("./service/install"),
+    uninstall: () => import("./service/uninstall"),
   },
   // Kilo: the server gets the Kilo plugins and service overrides.
   serve: () => import("./serve"),
@@ -116,6 +145,10 @@ const Handlers = Runtime.handlers(KiloCommands, {
     disable: () => import("./sync/disable"),
     status: () => import("./sync/status"),
     flush: () => import("./sync/flush"),
+  },
+  // Kilo: manual import of an earlier Kilo installation.
+  import: {
+    v1: () => import("./import/v1"),
   },
   // Kilo: custom auto routers.
   auto: {
@@ -132,6 +165,10 @@ Effect.gen(function* () {
   yield* Heap.listen
   yield* CpuProfile.listen
   yield* ShutdownDeadline.install()
+  // runMain reports every signal interruption as 130; remember a SIGTERM so the exit code is 143.
+  process.once("SIGTERM", () => {
+    terminated = true
+  })
   const runFork = Effect.runForkWith(yield* Effect.context<never>())
   const uncaughtException = (cause: Error, origin: "uncaughtException" | "unhandledRejection") => {
     runFork(Effect.logError("uncaught exception", { cause, origin }))
@@ -162,7 +199,7 @@ Effect.gen(function* () {
     }).pipe(Effect.andThen(Effect.failCause(cause))),
   ),
   Effect.annotateLogs({ role: "cli" }),
-  Effect.provide(KiloTheme.layer),
+  Effect.provide(KiloCliConfig.layer),
   Effect.provide(KiloUpdater.layer),
   Effect.provide(
     LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, Npm.node, EffectFlock.node]), {
@@ -172,6 +209,8 @@ Effect.gen(function* () {
         Global.node.replace(
           Global.layerWith(process.env.OPENCODE_CONFIG_DIR ? { config: process.env.OPENCODE_CONFIG_DIR } : {}),
         ),
+        // Kilo: the TUI resolves configured plugin targets itself, so a `git:` spec must not reach npm there.
+        Npm.node.replace(KiloPluginNpm.node),
       ],
     }),
   ),
@@ -187,7 +226,6 @@ Effect.gen(function* () {
   ),
   Effect.provide(NodeServices.layer),
   Effect.scoped,
-  Effect.tap(() => Effect.sync(() => process.exit(process.exitCode ?? 0))),
   // runMain's default reporter logs the fatal cause to stdout. Write it to stderr instead: the
   // desktop and `Service.ensure` only capture stderr from `serve --service`, so this is the only
   // channel through which a startup failure's reason reaches the user.
@@ -198,5 +236,16 @@ Effect.gen(function* () {
       process.stderr.write(Cause.pretty(cause) + "\n")
     }),
   ),
-  NodeRuntime.runMain({ disableErrorReporting: true }),
+  NodeRuntime.runMain({
+    disableErrorReporting: true,
+    teardown: (exit) =>
+      defaultTeardown(exit, (code) => {
+        // Commands report failures through process.exitCode.
+        const status = code === 0 ? (process.exitCode ?? 0) : code === 130 && terminated ? 143 : code
+        // process.exit drops output still queued for a pipe; ending the streams waits for it.
+        void Promise.all(
+          [process.stdout, process.stderr].map((stream) => new Promise<void>((resolve) => stream.end(() => resolve()))),
+        ).then(() => process.exit(status))
+      }),
+  }),
 )

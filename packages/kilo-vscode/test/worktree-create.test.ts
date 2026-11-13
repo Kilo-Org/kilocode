@@ -56,4 +56,43 @@ describe("createWorktreeOnDisk", () => {
     })
     expect(logs.some((line) => line.includes("This repository has no commits yet."))).toBe(true)
   })
+
+  it("starts from an explicit base branch over the configured default", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-base-"))
+    tempDirs.push(root)
+    const git = (...args: string[]) => {
+      const result = Bun.spawnSync(["git", "-C", root, "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
+        stdout: "pipe",
+        stderr: "pipe",
+      })
+      if (result.exitCode !== 0) throw new Error(result.stderr.toString("utf8"))
+      return result.stdout.toString("utf8").trim()
+    }
+    git("init", "-b", "main")
+    git("commit", "--allow-empty", "-m", "main")
+    git("branch", "release/1.0")
+    git("checkout", "release/1.0")
+    git("commit", "--allow-empty", "-m", "release")
+    git("checkout", "main")
+    const release = git("rev-parse", "release/1.0")
+
+    const added: Array<{ parentBranch?: string }> = []
+    const state = {
+      getDefaultBaseBranch: () => "main",
+      addWorktree: (wt: { parentBranch?: string }) => (added.push(wt), { id: "wt-1", ...wt }),
+    }
+    const ctx = {
+      getWorktreeManager: () => new WorktreeManager(root, () => {}),
+      getStateManager: () => state,
+      postToWebview: () => {},
+      pushState: () => {},
+      log: () => {},
+    } as unknown as CreateWorktreeOnDiskContext
+
+    const value = await createWorktreeOnDisk(ctx, { baseBranch: "release/1.0", branchName: "release-fix" })
+
+    expect(value?.result.parentBranch).toBe("release/1.0")
+    expect(added[0]?.parentBranch).toBe("release/1.0")
+    expect(git("-C", value!.result.path, "rev-parse", "HEAD")).toBe(release)
+  }, 60_000)
 })

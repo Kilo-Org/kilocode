@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完了（モデルによる報告）",
+  "session.goal.complete": "完了",
   "session.goal.blocked": "ブロック中",
   "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.noChanges": "変更はありません。",
   "ui.permission.reject": "拒否",
+  "ui.permission.allowAllSites": "すべてのサイトを許可",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
   "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
@@ -1412,6 +1413,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
+  "task.backgroundAgents.promoteFailed": "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.clearFinished": "完了済みを消去",
@@ -1498,6 +1500,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "システムブラウザー",
   "settings.experimental.browserLinks.integrated": "統合ブラウザー",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "chat.reply.toolbar": "選択したテキスト",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "返信で引用する",
+  "chat.reply.commentHint": "この箇所にコメント",
+  "chat.reply.copy": "コピー",
+  "chat.reply.sendHint": "このコメントを今すぐ Kilo に送信",
+  "chat.reply.commentLater": "次のメッセージ用に保存",
+  "chat.reply.count": "返信 ({{count}})",
+  "chat.reply.sendAll": "すべて送信",
+  "chat.reply.showInChat": "チャットで表示",
   "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
   "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }

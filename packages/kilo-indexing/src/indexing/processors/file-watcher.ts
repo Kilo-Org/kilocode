@@ -41,10 +41,9 @@ import type { WorktreeOverlay } from "../worktree-overlay"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
+import loadParcelWatcherBinding from "./watcher-binding"
 
 const log = Log.create({ service: "file-watcher" })
-
-declare const KILO_LIBC: string | undefined
 
 export interface FileWatchEvent {
   path: string
@@ -60,6 +59,7 @@ export type FileWatchSubscribe = (
   directory: string,
   onEvents: (events: readonly FileWatchEvent[]) => void,
   ignore: readonly string[],
+  onError: (error: Error) => void,
 ) => Promise<FileWatchSubscription>
 
 function watcherBackend(): ParcelWatcher.BackendType | undefined {
@@ -73,12 +73,9 @@ let parcelModule: typeof import("@parcel/watcher") | null | undefined
 function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
   if (parcelModule !== undefined) return parcelModule ?? undefined
   try {
-    // The platform binding stays a dynamic require so bun-compiled multi-platform
-    // binaries resolve the right prebuild at runtime (mirrors @kilocode/core).
-    const libc = typeof KILO_LIBC === "undefined" ? undefined : KILO_LIBC
-    const suffix = process.platform === "linux" ? `-${libc || "glibc"}` : ""
-    const binding = require(`@parcel/watcher-${process.platform}-${process.arch}${suffix}`)
-    parcelModule = createWrapper(binding) as typeof import("@parcel/watcher")
+    // The binding module is replaced by a static require of the platform package in a compiled build, so
+    // bun-compiled multi-platform binaries resolve the right prebuild at runtime (mirrors @kilocode/core).
+    parcelModule = createWrapper(loadParcelWatcherBinding()) as typeof import("@parcel/watcher")
   } catch {
     // Single loading path: degrade cleanly when the native binding is unavailable
     // (no @parcel/watcher main-package fallback), exactly like the core watcher.
@@ -138,7 +135,7 @@ function realWorkspace(directory: string) {
   }
 }
 
-const parcelSubscribe: FileWatchSubscribe = (directory, onEvents, ignore) => {
+const parcelSubscribe: FileWatchSubscribe = (directory, onEvents, ignore, onError) => {
   const parcel = loadParcelWatcher()
   if (!parcel) {
     return Promise.reject(new Error("native file watcher backend (@parcel/watcher) is unavailable"))
@@ -147,7 +144,8 @@ const parcelSubscribe: FileWatchSubscribe = (directory, onEvents, ignore) => {
     directory,
     (error, events) => {
       if (error) {
-        log.error("file watcher reported an error", { workspacePath: directory, err: error })
+        // The native backend reports a failure instead of events; forward it so the watcher drops the subscription.
+        onError(error)
         return
       }
       onEvents(events)
@@ -181,8 +179,14 @@ export class FileWatcher implements IFileWatcher {
     currentFile?: string
   }>()
   public readonly onDidFinishBatchProcessing = new Emitter<BatchProcessingSummary>()
+  public readonly onDidStop = new Emitter<Error>()
 
   private realWorkspacePath?: string
+
+  /** Whether a live subscription feeds incremental updates. False means the scan is the last word on the index. */
+  get watching(): boolean {
+    return this.subscription !== undefined
+  }
 
   // @parcel/watcher reports "update" where the pipeline expects "change".
   private readonly onWatchEvents = (events: readonly FileWatchEvent[]): void => {
@@ -191,6 +195,24 @@ export class FileWatcher implements IFileWatcher {
         event.type === "create" ? "create" : event.type === "delete" ? "delete" : "change"
       this.handleFileEvent(this.workspaceSpelling(event.path), type, true)
     }
+  }
+
+  // A reported backend error ends the subscription: the native backend stops delivering events (an interrupted poll,
+  // for one), so the index would silently freeze while the status still said it was up to date. Drop it and tell the
+  // orchestrator, which surfaces the loss and lets the next start subscribe again.
+  private readonly onWatchError = (error: Error): void => {
+    log.error("file watcher reported an error", { workspacePath: this.workspacePath, err: error })
+    const subscription = this.subscription
+    // A subscriber that never became the live one (superseded, or torn down by shutdown) has nothing to lose.
+    if (!subscription) return
+    this.subscription = undefined
+    this.ready = undefined
+    void subscription
+      .unsubscribe()
+      .catch((err) =>
+        log.error("failed to unsubscribe the errored file watcher", { err, workspacePath: this.workspacePath }),
+      )
+    this.onDidStop.fire(error)
   }
 
   // The native watcher reports real paths (macOS reports /private/tmp for /tmp). A workspace opened through a
@@ -278,7 +300,7 @@ export class FileWatcher implements IFileWatcher {
     const ignore = [...new Set([...watcherIgnoreGlobs(), ...(this.ignoreInstance?.watchIgnoreGlobs?.() ?? [])])]
     this.realWorkspacePath = realWorkspace(this.workspacePath)
 
-    const ready = this.subscribeFn(this.workspacePath, this.onWatchEvents, ignore).then(
+    const ready = this.subscribeFn(this.workspacePath, this.onWatchEvents, ignore, this.onWatchError).then(
       (subscription) => {
         // If shutdown()/dispose() cleared this.ready, or a newer initialize()
         // superseded us while subscribing, don't store this subscription — it
@@ -364,6 +386,7 @@ export class FileWatcher implements IFileWatcher {
     this.onDidStartBatchProcessing.dispose()
     this.onBatchProgressUpdate.dispose()
     this.onDidFinishBatchProcessing.dispose()
+    this.onDidStop.dispose()
     this.accumulatedEvents.clear()
     this.ready = undefined
   }

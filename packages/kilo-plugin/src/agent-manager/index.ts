@@ -1,3 +1,4 @@
+import type { Context } from "@opencode/plugin/effect/plugin"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
 import { KiloAgentManagerRpc } from "@opencode/schema/kilocode/agent-manager"
@@ -10,6 +11,19 @@ import { installPermission } from "./permission"
 import { createService, type Emit } from "./service"
 import { SnapshotCleanup } from "./snapshot"
 import { makeTools, type Runtime } from "./tool"
+
+/**
+ * The Agent Manager RPC is answered by the VS Code extension. A session without that host must not advertise the tool,
+ * because a call would wait for the RPC until it times out and fails. The models tool reads the local catalog, so it
+ * stays registered in every client.
+ */
+export function register(ctx: Pick<Context, "tool">, tools: ReturnType<typeof makeTools>) {
+  const host = process.env.KILO_AGENT_MANAGER_HOST === "1"
+  return ctx.tool.transform((editor) => {
+    if (host) editor.add(tools.agentManager)
+    editor.add(tools.models)
+  })
+}
 
 // The Agent Manager plugin: the `kilocode.agent-manager` RPC that the VS Code extension answers, the two model-facing
 // tools that ask it, the state-file guard on the mutation tools, and the side-effect permission hardening.
@@ -105,10 +119,7 @@ export const KiloAgentManagerPlugin = define<FSUtil.Service | Global.Service | S
     }
 
     const tools = makeTools(runtime)
-    yield* ctx.tool.transform((editor) => {
-      editor.add(tools.agentManager)
-      editor.add(tools.models)
-    })
+    yield* register(ctx, tools)
     yield* installPermission(ctx)
     yield* guard(ctx)
     yield* Effect.addFinalizer(() => manager.dispose)

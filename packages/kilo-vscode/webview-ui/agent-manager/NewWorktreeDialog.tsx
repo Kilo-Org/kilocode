@@ -7,7 +7,6 @@ import type {
   BranchInfo,
   ModelAllocation,
 } from "../src/types/messages/agent-manager"
-import type { SessionSearchItem } from "../src/utils/prompt-mention-drop"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -25,6 +24,7 @@ import { useLanguage } from "../src/context/language"
 import { useModelPreferences } from "../src/context/model-preferences"
 import { configuredModel, initialModel } from "../src/v2/model-default"
 import { kiloTeam } from "../src/v2/kilo-models"
+import { failureMessage } from "../src/v2/kilo-catalog"
 import { useBridge } from "./v2/vscode"
 import { convertToMentionPath, insertPathMentions } from "../src/utils/path-mentions"
 import { isEnterKeyCommitNotIme } from "../src/utils/ime-enter"
@@ -35,6 +35,8 @@ import { createDialogPreferences, DEFAULT_VARIANT, type ModelSelection } from ".
 import { createDialogCommandMenu } from "./dialog-commands"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
 import { useWorktreeMention, segmentMentionText, type MentionResult } from "./worktree-mention"
+import { SessionMentionPicker } from "../src/components/chat/SessionMentionPicker"
+import { WorktreeMentionPicker } from "../src/components/chat/WorktreeMentionPicker"
 import type { ModeRouter } from "./mode-router"
 import { WorktreeOrigin } from "./WorktreeOrigin"
 import { validBranch } from "./new-worktree-branch"
@@ -51,6 +53,7 @@ import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { useSpeechStatus } from "../src/components/speech-to-text/status"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { insertSpacedText } from "../src/v2/prompt-speech"
+import { formatRelativeDate } from "../src/utils/date"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -90,30 +93,48 @@ function restoreAgent(value: string | undefined, list: AgentInfo[], base: string
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
+/**
+ * One row of the dialog's `@` menu. Only the three worktree-independent
+ * references plus past-chat matches can appear here.
+ */
 function MentionRow(props: { item: MentionResult }) {
   const { t } = useLanguage()
-  if (props.item.type === "session") {
+  const item = props.item
+  if (item.type === "model")
     return (
       <>
-        <Icon name="history" size="small" />
-        <span class="file-mention-name">{props.item.session.title}</span>
-        <Show when={props.item.session.worktreeName}>
-          <span class="file-mention-dir">{props.item.session.worktreeName}</span>
-        </Show>
+        <Icon name="models" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
       </>
     )
-  }
-  return (
-    <>
-      <Icon name={props.item.type === "worktrees" ? "branch" : "history"} size="small" />
-      <span class="file-mention-name">
-        {props.item.type === "worktrees" ? t("prompt.worktrees.title") : props.item.label}
-      </span>
-      <Show when={"description" in props.item}>
-        <span class="file-mention-dir">{"description" in props.item ? props.item.description : ""}</span>
-      </Show>
-    </>
-  )
+  if (item.type === "past-chats")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "worktrees")
+    return (
+      <>
+        <Icon name="branch" class="file-mention-icon" />
+        <span class="file-mention-name">{t("prompt.worktrees.title")}</span>
+        <span class="file-mention-dir">{t("prompt.worktrees.search")}</span>
+      </>
+    )
+  if (item.type === "session")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.session.title}</span>
+        <span class="file-mention-dir">
+          {item.session.worktreeName ?? formatRelativeDate(new Date(item.session.updated).toISOString())}
+        </span>
+      </>
+    )
+  return null
 }
 
 const branchCache = new Map<string, { branches: BranchInfo[]; detected: string }>()
@@ -143,8 +164,6 @@ export const NewWorktreeDialog: Component<{
   providers: ProviderInfo[]
   agents: AgentInfo[]
   commands: CommandInfo[]
-  /** Sessions the panel already loaded, offered as past-chat mentions. */
-  sessions: SessionSearchItem[]
 }> = (props) => {
   const language = useLanguage()
   const { t } = language
@@ -184,19 +203,28 @@ export const NewWorktreeDialog: Component<{
   const initialAgent = restoreAgent(saved.agent, props.agents, props.agents[0]?.id ?? "")
   const serverDefault = createDefaultModel(props.store)
   const modelPreferences = useModelPreferences()
-  void props.store.data.location.config.sync().catch(() => undefined)
-  // The same precedence as the sidebar composer (v1 resolveModelSelection): agent model, configured model, team
-  // default, the most recent pick, then the server default.
+  void Promise.all([props.store.data.location.model.sync(), props.store.data.location.config.sync()]).catch(
+    () => undefined,
+  )
+  // Shares the composer's precedence: pick for this agent, agent model, configured model, most recent pick, then the
+  // team or Kilo Auto Free fallback. The server default stands in while the account is unknown, and a known account
+  // waits for the preferences before falling back.
   const defaultFor = (agent: string) =>
     initialModel({
+      pick: modelPreferences?.pick(agent),
       agent: props.agents.find((item) => item.id === agent)?.model ?? undefined,
       configured: configuredModel(props.store.data.location.config.list()),
       team: kiloTeam(props.store.kiloModels()),
+      loaded: modelPreferences?.loaded() ?? true,
       recents: modelPreferences?.recents() ?? [],
+      models: props.models,
+      serverDefault: serverDefault(),
       valid: (ref) =>
         props.models.some((item) => item.enabled && item.providerID === ref.providerID && item.id === ref.id),
-      fallback: serverDefault(),
     })
+  // v1 waited for the provider catalog before it chose: until the account and the recents are known, no Kilo choice
+  // is trusted and no fallback is shown.
+  const ready = () => kiloTeam(props.store.kiloModels()) !== undefined
   const preferences = createDialogPreferences({
     saved,
     agent: initialAgent,
@@ -213,6 +241,7 @@ export const NewWorktreeDialog: Component<{
         return chosen.variant
       return modelPreferences?.variant(agent, model.providerID, model.modelID) || undefined
     },
+    ready,
     valid: (value) =>
       props.models.some(
         (model) => model.enabled && model.providerID === value.providerID && model.id === value.modelID,
@@ -221,6 +250,15 @@ export const NewWorktreeDialog: Component<{
       props.models
         .find((model) => model.providerID === value.providerID && model.id === value.modelID)
         ?.variants.map((variant) => variant.id) ?? [],
+    // Every pick here is remembered for the next dialog and composer of that agent, and pushed to the shared recents.
+    // An effort change only remembers the effort, so it cannot rewrite the recents with a model the user never picked.
+    rememberPick: (agent, model, variant) => {
+      modelPreferences?.rememberPick(agent, model.providerID, model.modelID)
+      modelPreferences?.rememberVariant(agent, model.providerID, model.modelID, variant)
+    },
+    rememberEffort: (agent, model, variant) => {
+      modelPreferences?.rememberVariant(agent, model.providerID, model.modelID, variant)
+    },
   })
   const { selection, model, agent, variants, effectiveVariant, selectAgent, selectModel, selectVariant } = preferences
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
@@ -365,10 +403,19 @@ export const NewWorktreeDialog: Component<{
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  // Past chats are searched across the worktree family of the project the dialog creates in.
   const mention = useWorktreeMention(
+    vscode,
     () => props.worktrees?.() ?? [],
-    () => props.sessions,
+    () => props.store.directory,
   )
+  // Picking the `@` model entry opens the model selector mounted hidden below, keyed to its own trigger. The mention
+  // closes first because the selector owns its open state afterwards.
+  createEffect(() => {
+    if (!mention.modelPicker()) return
+    mention.closeMention()
+    window.dispatchEvent(new CustomEvent("openModelPicker", { detail: { source: WORKTREE_MENTION_MODEL_TRIGGER } }))
+  })
   let highlightRef: HTMLDivElement | undefined
   const mentionSegments = createMemo(() => segmentMentionText(prompt(), mention.highlightTokens()))
   const syncHighlight = () => {
@@ -427,8 +474,14 @@ export const NewWorktreeDialog: Component<{
   const total = () => (compareMode() ? totalAllocations(modelAllocations()) : versions())
   const submissionMode = () => (compareMode() ? "compare_models" : versions() > 1 ? "multiple_versions" : "single")
 
+  // Mention files keep their name and span, so the new session's transcript highlights each mention in place.
   const resolveFiles = (text: string | undefined) => {
-    const mentionFiles = text ? mention.parseAttachments(text) : []
+    const mentionFiles = (text ? mention.parseAttachments(text) : []).map((file) => ({
+      mime: "text/plain",
+      url: file.uri,
+      name: file.name,
+      mention: file.mention,
+    }))
     const imgFiles = imageAttach.images().map((img) => ({ mime: img.mime, url: img.dataUrl }))
     const files = [...mentionFiles, ...imgFiles]
     return files.length > 0 ? files : undefined
@@ -704,76 +757,85 @@ export const NewWorktreeDialog: Component<{
   )
 
   const renderMention = () => (
-    <Show when={mention.showMention()}>
-      <div class="file-mention-dropdown am-mention-dropdown" data-component="popover-content">
-        <Show
-          when={!mention.sessionPicker()}
-          fallback={
-            <div class="file-mention-list">
-              <For each={mention.sessionCandidates()}>
-                {(session) => (
-                  <div
-                    class="file-mention-item"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      if (textareaRef) mention.selectSession(session, textareaRef, setPromptValue, restorePrompt)
-                    }}
-                  >
-                    <Icon name="history" size="small" />
-                    <span class="file-mention-name">{session.title}</span>
-                  </div>
-                )}
-              </For>
-            </div>
-          }
-        >
+    <>
+      <div class="mention-model-anchor" aria-hidden="true">
+        <ModelSelectorBase
+          models={props.models}
+          providers={props.providers}
+          gateway={props.store.kiloModels().entries}
+          value={null}
+          trigger={WORKTREE_MENTION_MODEL_TRIGGER}
+          collapsed
+          placement="top-start"
+          portal={false}
+          deferDismiss
+          onSelect={(providerID, modelID) => {
+            if (providerID && modelID) mention.selectModelReference(providerID, modelID)
+          }}
+          onCancel={() => {
+            mention.closeMention()
+            restorePrompt()
+          }}
+        />
+      </div>
+      <Show when={mention.showMention()}>
+        <div class="file-mention-dropdown am-mention-dropdown" data-component="popover-content">
           <Show
-            when={!mention.worktreePicker()}
+            when={!mention.sessionPicker()}
             fallback={
-              <div class="file-mention-list">
-                <For each={mention.worktreeCandidates()}>
-                  {(worktree) => (
-                    <div
-                      class="file-mention-item"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        if (textareaRef) mention.selectWorktree(worktree, textareaRef, setPromptValue, restorePrompt)
-                      }}
-                    >
-                      <Icon name="branch" size="small" />
-                      <span class="file-mention-name">{worktree.name}</span>
-                      <span class="file-mention-dir">{worktree.branch}</span>
-                    </div>
-                  )}
-                </For>
-              </div>
+              <SessionMentionPicker
+                sessions={mention.sessionCandidates()}
+                onSelect={(picked) => {
+                  if (textareaRef) mention.selectSession(picked, textareaRef, setPromptValue, restorePrompt)
+                }}
+                onClose={() => {
+                  mention.closeMention()
+                  restorePrompt()
+                }}
+              />
             }
           >
             <Show
-              when={mention.mentionResults().length > 0}
-              fallback={<div class="file-mention-empty">No mentions found</div>}
+              when={!mention.worktreePicker()}
+              fallback={
+                <WorktreeMentionPicker
+                  worktrees={mention.worktreeCandidates()}
+                  onSelect={(picked) => {
+                    if (textareaRef) mention.selectWorktree(picked, textareaRef, setPromptValue, restorePrompt)
+                  }}
+                  onClose={() => {
+                    mention.closeMention()
+                    restorePrompt()
+                  }}
+                />
+              }
             >
-              <For each={mention.mentionResults()}>
-                {(item, index) => (
-                  <div
-                    class="file-mention-item"
-                    data-type={item.type}
-                    classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      if (textareaRef) mention.selectMention(item, textareaRef, setPromptValue, restorePrompt)
-                    }}
-                    onMouseEnter={() => mention.setMentionIndex(index())}
-                  >
-                    <MentionRow item={item} />
-                  </div>
-                )}
-              </For>
+              <Show
+                when={mention.mentionResults().length > 0}
+                fallback={<div class="file-mention-empty">No mentions found</div>}
+              >
+                <For each={mention.mentionResults()}>
+                  {(item, index) => (
+                    <div
+                      class="file-mention-item"
+                      data-type={item.type}
+                      classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        if (textareaRef) mention.selectMention(item, textareaRef, setPromptValue, restorePrompt)
+                      }}
+                      onMouseEnter={() => mention.setMentionIndex(index())}
+                    >
+                      <MentionRow item={item} />
+                    </div>
+                  )}
+                </For>
+              </Show>
             </Show>
           </Show>
-        </Show>
-      </div>
-    </Show>
+        </div>
+      </Show>
+    </>
   )
 
   return (
@@ -959,6 +1021,8 @@ export const NewWorktreeDialog: Component<{
                         gateway={props.store.kiloModels().entries}
                         value={model()}
                         descriptionRenderer={ModelDescription}
+                        // The same reason the sidebar composer shows when the Kilo catalog leaves no usable model.
+                        failure={failureMessage(t, props.store.kiloFailure())}
                         onSelect={selectModel}
                         onPick={restorePrompt}
                         onCancel={restorePrompt}

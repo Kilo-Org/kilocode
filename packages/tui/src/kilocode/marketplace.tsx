@@ -22,7 +22,7 @@ type Context = Plugin.Context & {
   cancel: () => void
   signIn: (id: string) => Promise<void>
 }
-type Tab = "all" | "installed" | "agents" | "skills" | "mcps"
+type Tab = "all" | "installed" | "agents" | "skills" | "mcps" | "plugins"
 type BrowserState = { tab: Tab; query: string; selected?: string }
 type Entry = { item?: Item; record?: Installed }
 type Choice = Entry & { details: boolean; records: readonly Installed[] }
@@ -33,12 +33,14 @@ const tabs: { id: Tab; title: string }[] = [
   { id: "agents", title: "Agents" },
   { id: "skills", title: "Skills" },
   { id: "mcps", title: "MCPs" },
+  { id: "plugins", title: "Plugins" },
 ]
 
 const kinds = [
   { kind: "agent", title: "Agents" },
   { kind: "skill", title: "Skills" },
   { kind: "mcp", title: "MCPs" },
+  { kind: "plugin", title: "Plugins" },
 ] as const
 
 export default Plugin.define({
@@ -349,7 +351,7 @@ export function DialogMarketplace(props: {
               </For>
             </box>
           }
-          placeholder="Search agents, skills and MCPs..."
+          placeholder="Search agents, skills, MCPs and plugins..."
           options={options()}
           skipFilter
           preserveSelection
@@ -491,6 +493,7 @@ function entryDetails(entry: Entry, records: readonly Installed[]) {
           ...(item.agent?.permissions ?? []).map(
             (rule) => `Permission: ${rule.effect} ${rule.action} ${rule.resource}`,
           ),
+          ...(item.plugin?.spec ? [`Package: ${item.plugin.spec}`] : []),
           ...item.options.map(
             (option) =>
               `Install option: ${option.name}${option.description ? ` - ${option.description}` : ""}${option.prerequisites.length ? ` (needs ${option.prerequisites.join(", ")})` : ""}`,
@@ -636,6 +639,18 @@ async function act(context: Context, item: Item, installed: readonly Installed[]
       title: `Install ${item.name} (${choice.scope})?`,
       message:
         "Skills contain instructions and supporting files. Review the source before installing. Reinstall replaces owned content with the current catalog entry; it is not version management.",
+      label: { confirm: "Install" },
+    })
+    if (!confirmed || context.signal.aborted) return
+  }
+  if (item.kind === "plugin") {
+    const confirmed = await context.ui.dialog.confirm({
+      title: `Install ${item.name} (${choice.scope})?`,
+      message: [
+        `Package: ${item.plugin?.spec ?? item.id}`,
+        "Plugins run code with full permissions. They can read and change your files, run commands, and use your credentials and network. Only install plugins you trust.",
+        "Reinstall replaces owned content with the current catalog entry; it is not version management.",
+      ].join("\n"),
       label: { confirm: "Install" },
     })
     if (!confirmed || context.signal.aborted) return
@@ -894,7 +909,9 @@ function resourceLabels(record: Pick<Installed, "resources">) {
       ? [{ kind: "Skill", id: resource.id }]
       : "agent" in resource
         ? [{ kind: "Agent", id: resource.agent }]
-        : [{ kind: "MCP server", id: resource.server }],
+        : "plugin" in resource
+          ? [{ kind: "Plugin", id: resource.plugin }]
+          : [{ kind: "MCP server", id: resource.server }],
   )
 }
 

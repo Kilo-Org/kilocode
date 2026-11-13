@@ -4,30 +4,83 @@ import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
+import { KiloBrandingStructural } from "../src/branding/structural"
 import { compileDefine } from "./fixtures/compile-define"
 import { repo, run, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
-for (const [file, replacements] of Object.entries(KiloBranding.replacements)) {
-  test(`brands only the selected text in ${file}`, async () => {
+test("every structural target is an intercepted file", () => {
+  // A structural transform only runs for files the loader intercepts, so each
+  // structural key must appear in the interception list or it silently no-ops.
+  for (const key of KiloBrandingStructural.keys) expect(KiloBranding.files).toContain(key)
+})
+
+for (const file of KiloBranding.files) {
+  test(`rebrands ${file} without touching @opencode specifiers`, async () => {
     const filename = path.join(repo, "packages", file)
     const original = await Bun.file(filename).text()
     const branded = KiloBranding.transform(filename, original)
-    for (const [from, to] of replacements) {
-      expect(branded).toContain(to)
-      expect(branded.split(from).length - 1).toBe(
-        (original.replaceAll("\r\n", "\n").split(from).length - 1) * (to.split(from).length - 1),
-      )
-    }
+    // Every intercepted file has something to rebrand, so the pipeline must
+    // change it, and it must never rewrite an @opencode import specifier.
+    expect(branded).not.toBe(original.replaceAll("\r\n", "\n"))
     expect(branded.match(/@opencode\/[\w/.-]+/g)).toEqual(original.match(/@opencode\/[\w/.-]+/g))
   })
 }
+
+test("brands the built-in tool namespace to kilo", async () => {
+  for (const file of [
+    "core/src/tool/plugin/opencode.ts",
+    "core/src/tool/plugin/artifact.ts",
+    "core/src/tool/plugin/schedule.ts",
+    "core/src/tool/plugin/mcp-resource.ts",
+  ]) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    expect(branded).not.toContain('namespace: "opencode"')
+    expect(branded).toContain('namespace: "kilo"')
+  }
+})
+
+test("brands the namespace of the tools a schedule check may not call", async () => {
+  const filename = path.join(repo, "packages/core/src/schedule/check.ts")
+  const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+  expect(branded).not.toContain('"opencode.')
+  expect(branded).toContain('"kilo.session_move"')
+})
 
 test("does not rewrite the upstream theme registry", async () => {
   const filename = path.join(repo, "packages/tui/src/theme/index.ts")
   const original = await Bun.file(filename).text()
   expect(KiloBranding.transform(filename, original)).toBe(original)
+})
+
+test("no core prompt template names OpenCode", async () => {
+  const files = Array.from(new Bun.Glob("core/src/**/*.txt").scanSync(path.join(repo, "packages"))).filter(
+    // The models.dev snapshot is provider data, not a prompt.
+    (file) => !file.replaceAll("\\", "/").endsWith("models-dev/snapshot.txt"),
+  )
+  expect(files.length).toBeGreaterThan(0)
+  for (const file of files) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    // The ${OPENCODE_TOOL_GUIDANCE} token is replaced by SessionSystemPrompt.render, not prose.
+    expect(branded.replaceAll("${OPENCODE_TOOL_GUIDANCE}", ""), file).not.toMatch(/opencode/i)
+  }
+})
+
+test("brands the lowercase prompt names to Kilo and the tool namespace, not the kilo2 command", async () => {
+  // Without their structural transform or override, the command rule turns these lowercase `opencode`
+  // tokens into `kilo2`, which the no-OpenCode check above and the audit both accept.
+  for (const [file, expected] of [
+    ["core/src/plugin/command/schedule.txt", "the `kilo` namespace"],
+    ["core/src/plugin/system-prompt/trinity.txt", "You are Kilo, an interactive"],
+  ] as const) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    expect(branded, file).toContain(expected)
+    expect(branded, file).not.toContain("kilo2")
+  }
 })
 
 test("does not rewrite CLI or ACP executable selection", async () => {
@@ -46,7 +99,7 @@ test("does not rewrite CLI or ACP executable selection", async () => {
 })
 
 test("branding is independent of LF or CRLF checkouts", async () => {
-  for (const file of Object.keys(KiloBranding.replacements)) {
+  for (const file of KiloBranding.files) {
     const filename = path.join(repo, "packages", file)
     const lf = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
     const crlf = lf.replaceAll("\n", "\r\n")
@@ -91,9 +144,41 @@ test("config hints name a file that the Kilo host reads and writes", async () =>
   }
 })
 
-test("fails clearly if an upstream text anchor changes", () => {
-  expect(() => KiloBranding.transform("/repo/packages/tui/src/util/error.ts", "changed")).toThrow(
+test("fails loudly when a structural anchor drifts", () => {
+  expect(() => KiloBranding.transform("/repo/packages/tui/src/util/presentation.ts", "changed")).toThrow(
     "Kilo branding no longer matches",
+  )
+})
+
+test("fails loudly when upstream adds an occurrence a structural anchor would over-match", async () => {
+  // The guard is a count, not just presence: a newly introduced occurrence of a
+  // repeated anchor (here the 3x `theme.text.base, true` in logo.tsx) must throw
+  // rather than be rewritten silently by replaceAll.
+  const filename = path.join(repo, "packages/tui/src/component/logo.tsx")
+  const source = (await Bun.file(filename).text()).replace(
+    "theme.text.base, true",
+    "theme.text.base, true\n      renderLine(line, theme.text.base, true)",
+  )
+  expect(() => KiloBranding.transform(filename, source)).toThrow("Kilo branding no longer matches")
+})
+
+test("fails loudly when a semantic override anchor drifts", () => {
+  // acp/service.ts is an override file but not a structural one, so this hits the
+  // override presence guard, not structural.apply.
+  expect(() => KiloBranding.transform("/repo/packages/cli/src/acp/service.ts", "changed")).toThrow(
+    "Kilo branding no longer matches",
+  )
+})
+
+test("brands user-visible text dynamically instead of failing on an unknown anchor", () => {
+  // A text-only module whose wording no longer matches any specific anchor is
+  // not an error: the rule engine brands what it recognizes and leaves the rest
+  // for the branding audit, rather than throwing like the old exact list.
+  expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", 'const help = "Restart opencode now"')).toBe(
+    'const help = "Restart kilo2 now"',
+  )
+  expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", 'const ok = "nothing to rebrand"')).toBe(
+    'const ok = "nothing to rebrand"',
   )
 })
 
@@ -175,7 +260,11 @@ function checkPages(output: string, hosted: boolean) {
     modelError: string
     update: string
     updateSession: string
+    prompt: string
   }
+  // Proves the .txt loader branch runs in the source and compiled paths, not only KiloBranding.transform.
+  expect(pages.prompt).toContain(`running in ${hosted ? "Kilo" : "OpenCode"}, a coding agent harness`)
+  expect(pages.prompt).not.toContain(`running in ${hosted ? "OpenCode" : "Kilo"}`)
   for (const output of [pages.update, pages.updateSession]) {
     const text = Bun.stripANSI(output)
     expect(text).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)

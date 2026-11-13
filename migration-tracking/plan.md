@@ -30,7 +30,7 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 - [#15171](https://github.com/Kilo-Org/kilocode/issues/15171) Foundation: the Kilo host, plugin and RPC scaffolding, and the v2 CI lane.
 - [#15020](https://github.com/Kilo-Org/kilocode/issues/15020) Upstream sync: merge tooling and regular syncs from `upstream/dev`, with the shared-patch checks.
 - [#14991](https://github.com/Kilo-Org/kilocode/issues/14991) Kilo Gateway, login and enterprise: the Gateway as the only source of Kilo models, accounts, teams and Kilo request identity, as a Kilo-owned layer.
-- [#15298](https://github.com/Kilo-Org/kilocode/issues/15298) Identity, branding and store: v2 runs as Kilo, with its own `kilo2` store that never touches v1 files. Open: TUI `.opencode` themes and plugins.
+- [#15298](https://github.com/Kilo-Org/kilocode/issues/15298) Identity, branding and store: v2 runs as Kilo, with its own `kilo2` store that never touches v1 files.
 - [#15299](https://github.com/Kilo-Org/kilocode/issues/15299) Config and settings: `kilo2.json` and `.kilo2` discovery, key mapping, managed policy, a settings RPC that owns reload, and the server extension surface. Open: system and MDM config names.
 - [#15300](https://github.com/Kilo-Org/kilocode/issues/15300) Session policy and snapshots: offline network wait, overflow and compaction thresholds, snapshot policy and retention, transcript recall.
 - [#15301](https://github.com/Kilo-Org/kilocode/issues/15301) Agents, modes and plan: the Kilo agents, mode reminders, the agent builder, the Plan workflow and Plan-to-Code handoff, the review policy. Open: Plan storage.
@@ -43,16 +43,17 @@ The technical rules (direction, placement, clients, identity, behavioral referen
 ### M2 Public CLI preview
 
 - [#15307](https://github.com/Kilo-Org/kilocode/issues/15307) MCP and marketplace: Kilo's MCP additions (OAuth, auth-failure surfacing, `git:` sources) and the marketplace for MCP servers, skills, modes and plugins.
+  - Plan: [plans/mcp-marketplace.md](plans/mcp-marketplace.md).
 - [#15308](https://github.com/Kilo-Org/kilocode/issues/15308) Memory and indexing: the memory engine and tools, codebase indexing and `semantic_search`.
 - [#15309](https://github.com/Kilo-Org/kilocode/issues/15309) Sandbox: shell, MCP and PTY confinement with network relay on macOS and Linux.
 - [#15310](https://github.com/Kilo-Org/kilocode/issues/15310) Agent coordination and worktrees: background subagents, wakeups and cron, goals, the shared agent board, background processes, worktrees and the Agent Manager control plane.
-- [#15311](https://github.com/Kilo-Org/kilocode/issues/15311) Distribution, updater and signing: a signed `kilo2` that installs beside v1, updates and rolls back, and the release pipeline. Open: updater distribution identity.
+- [#15311](https://github.com/Kilo-Org/kilocode/issues/15311) Distribution, updater and signing: a signed `kilo2` that installs beside v1, updates and rolls back, and the release pipeline. Open: updater distribution identity (the open `installation` cells of the progress map).
 - [#15312](https://github.com/Kilo-Org/kilocode/issues/15312) Remote sessions: `kilo remote` over the Kilo relay.
 - [#15313](https://github.com/Kilo-Org/kilocode/issues/15313) Sharing: individual share, unshare and fork-from-share, and a public viewer for v2 sessions.
 
 ### M3 VS Code on v2
 
-- [#15314](https://github.com/Kilo-Org/kilocode/issues/15314) Editor services and FIM: the FIM and next-edit producer and the generation endpoints (enhance prompt, commit message, branch name). FIM gates VS Code.
+- [#15314](https://github.com/Kilo-Org/kilocode/issues/15314) Editor services and FIM: the FIM producer and the generation endpoints (enhance prompt, commit message, branch name). FIM gates VS Code.
 - [#15315](https://github.com/Kilo-Org/kilocode/issues/15315) VS Code client: a new package on `origin/v2`, the v1 UI ported onto `@opencode/client` plus Kilo RPCs.
 
 ### M4 Cutover

@@ -14,25 +14,28 @@ const steps = [
   {
     route: "anthropic/route-tool",
     cost: 0.125,
-    usage: { cost: 0.9, cost_details: { upstream_inference_cost: "0.125" } },
-    gateway: { marketCost: 0.75 },
+    usage: { cost: 0.125, is_byok: false, cost_details: { upstream_inference_cost: 0.9 } },
     tool: true,
   },
-  { route: "openai/route-answer", cost: 0.25, gateway: { marketCost: "0.25", cost: 99, gatewayCost: 88 } },
-  { route: "google/route-free", cost: 0, gateway: { marketCost: 0, cost: 99 } },
+  { route: "openai/route-answer", cost: 0.25, usage: { cost: 0.25, is_byok: false } },
+  { route: "google/route-free", cost: 0, usage: { cost: 0, is_byok: false } },
   {
     route: "deepseek/route-byok",
-    cost: 0,
-    usage: { cost: 0.7, cost_details: { upstream_inference_cost: 0 } },
-    gateway: { marketCost: 0.6 },
+    cost: 0.0625,
+    usage: { cost: 0, is_byok: true, cost_details: { upstream_inference_cost: 0.0625 } },
   },
   { route: "mistral/route-fallback", cost: 0.0116 },
 ]
-const title = { route: "openai/route-title", cost: 0.375, usage: { cost: "0.375" }, text: "Gateway usage fixture" }
+const title = {
+  route: "openai/route-title",
+  cost: 0.375,
+  usage: { cost: 0.375, is_byok: false },
+  text: "Gateway usage fixture",
+}
 const compaction = {
   route: "anthropic/route-summary",
   cost: 0.0625,
-  usage: { cost: 5, cost_details: { upstream_inference_cost: "0.0625" } },
+  usage: { cost: 0.0625, is_byok: false, cost_details: { upstream_inference_cost: 5 } },
   text: "## Objective\nVerify Gateway usage.\n\n## Next Move\n1. Continue testing.",
 }
 
@@ -154,20 +157,19 @@ test.each(["anthropic", "openai"] as const)(
   "settles native %s Gateway responses and counts child usage exactly once",
   async (dialect) => {
     const replies = [
-      { route: `${dialect}/market`, cost: 0.1875, gateway: { marketCost: "0.1875" } },
+      { route: `${dialect}/charge`, cost: 0.1875, usage: { cost: 0.1875, is_byok: false } },
       {
-        route: `${dialect}/upstream`,
+        route: `${dialect}/byok`,
         cost: 0.0625,
-        usage: { cost: 9, cost_details: { upstream_inference_cost: "0.0625" } },
-        gateway: { marketCost: 5 },
+        usage: { cost: 0, is_byok: true, cost_details: { upstream_inference_cost: 0.0625 } },
       },
-      { route: `${dialect}/child`, cost: 0.03125, gateway: { marketCost: "0.03125" } },
+      { route: `${dialect}/child`, cost: 0.03125, usage: { cost: 0.03125, is_byok: false } },
     ]
     using backend = gateway(dialect, replies)
     await isolated(backend.url, async (directory) => {
       await server(directory, ":memory:", async (client) => {
         const parent = await client.session.create({ title: "Native usage", location: { directory }, model: auto })
-        for (const text of ["Use market pricing.", "Use upstream pricing."]) {
+        for (const text of ["Use the Kilo charge.", "Use a BYOK route."]) {
           await client.session.prompt({ sessionID: parent.id, text })
           await client.session.wait({ sessionID: parent.id })
         }
@@ -223,7 +225,10 @@ test.each(["anthropic", "openai"] as const)(
 // One server serves several clients. Each root session carries its client product in the session metadata, and a
 // child session uses the product of its root, also when its own metadata is different.
 test("sets X-KILOCODE-FEATURE from the root session platform, else the process feature", async () => {
-  using backend = gateway("openrouter", Array.from({ length: 8 }, (_, index) => ({ route: `route/${index}`, cost: 0 })))
+  using backend = gateway(
+    "openrouter",
+    Array.from({ length: 8 }, (_, index) => ({ route: `route/${index}`, cost: 0 })),
+  )
   await isolated(backend.url, async (directory) => {
     // The process value, which `isolated` restores afterwards.
     process.env.KILOCODE_FEATURE = "cloud-agent"
@@ -250,12 +255,36 @@ test("sets X-KILOCODE-FEATURE from the root session platform, else the process f
       // Root sessions also send a title request, which carries the same feature as the step.
       expect(
         backend.requests.every(
-          (request) => request.feature === backend.requests.find((item) => item.sessionID === request.sessionID)?.feature,
+          (request) =>
+            request.feature === backend.requests.find((item) => item.sessionID === request.sessionID)?.feature,
         ),
       ).toBeTrue()
     })
   })
 }, 30_000)
+
+// The Gateway tells the v2 line from v1 by the inference User-Agent, and the v1 attribution set arrives without the
+// upstream OpenCode request identity, on every dialect.
+test.each(["openrouter", "anthropic", "openai"] as const)(
+  "identifies the Kilo line in the %s User-Agent and keeps the v1 request identity",
+  async (dialect) => {
+    using backend = gateway(dialect)
+    await isolated(backend.url, async (directory) => {
+      await server(directory, ":memory:", async (client) => {
+        const session = await client.session.create({ location: { directory }, model: auto })
+        await client.session.prompt({ sessionID: session.id, text: "Say hello." })
+        await client.session.wait({ sessionID: session.id })
+        expect(backend.requests.length).toBeGreaterThan(0)
+        for (const request of backend.requests) {
+          expect(request.userAgent?.startsWith("Kilo-Code/v2/")).toBeTrue()
+          expect(request.opencodeHeaders).toEqual([])
+          expect(request.sessionID).toBe(session.id)
+        }
+      })
+    })
+  },
+  30_000,
+)
 
 async function isolated(url: string, body: (directory: string) => Promise<void>) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-gateway-usage-"))
@@ -335,7 +364,6 @@ function gateway(
     route: string
     cost: number
     usage?: object
-    gateway?: object
     tool?: boolean
     text?: string
   }[] = [...steps, title, compaction],
@@ -345,6 +373,8 @@ function gateway(
     messages: { role: string; content: unknown }[]
     sessionID: string | null
     feature: string | null
+    userAgent: string | null
+    opencodeHeaders: string[]
     pathname: string
   }[] = []
   const server = Bun.serve({
@@ -379,6 +409,8 @@ function gateway(
         pathname,
         sessionID: request.headers.get("x-kilocode-taskid"),
         feature: request.headers.get("x-kilocode-feature"),
+        userAgent: request.headers.get("user-agent"),
+        opencodeHeaders: [...request.headers.keys()].filter((name) => name.startsWith("x-opencode-")),
       })
       const response = responses[index]
       if (!response) return new Response("Unexpected model request", { status: 500 })
@@ -389,7 +421,6 @@ function gateway(
           gateway: {
             routing: { canonicalSlug: response.route },
             generationId: `generation-${index}`,
-            ...response.gateway,
           },
         },
       }
@@ -471,7 +502,7 @@ function gateway(
         // Routing arrives before usage, and may differ from the transport's model field.
         {
           model: "transport/alias",
-          provider_metadata: { gateway: { routing: { canonicalSlug: response.route }, ...response.gateway } },
+          provider_metadata: { gateway: { routing: { canonicalSlug: response.route } } },
           choices: [],
         },
         ...(response.tool

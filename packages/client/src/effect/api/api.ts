@@ -39,6 +39,7 @@ import type { OpenCodeEvent } from "@opencode/protocol/groups/event"
 import type { Pty } from "@opencode/schema/pty"
 import type { Schedule } from "@opencode/schema/schedule"
 import type { Artifact } from "@opencode/schema/artifact"
+import type { Job } from "@opencode/schema/job"
 import type { Reference } from "@opencode/schema/reference"
 import type { Worktree } from "@opencode/schema/worktree"
 import type { Vcs } from "@opencode/schema/vcs"
@@ -326,7 +327,11 @@ export type SessionGenerateOperation<E = never> = (
   input: SessionGenerateInput,
 ) => Effect.Effect<SessionGenerateOutput, E>
 
-export type SessionInterruptInput = { readonly sessionID: Session.ID; readonly resume?: boolean | undefined }
+export type SessionInterruptInput = {
+  readonly sessionID: Session.ID
+  readonly resume?: boolean | undefined
+  readonly steer?: boolean | undefined
+}
 export type SessionInterruptOutput = { readonly interrupted: boolean }
 export type SessionInterruptOperation<E = never> = (
   input: SessionInterruptInput,
@@ -2493,6 +2498,17 @@ export type ExperimentalArtifactsDeleteOperation<E = never> = (
   input: ExperimentalArtifactsDeleteInput,
 ) => Effect.Effect<ExperimentalArtifactsDeleteOutput, E>
 
+export type ExperimentalJobListInput = {
+  readonly sessionID?: Session.ID | undefined
+  readonly kind?: Job.Kind | undefined
+  readonly status?: Job.Status | undefined
+  readonly descendants?: boolean | undefined
+}
+export type ExperimentalJobListOutput = ReadonlyArray<Job.Info>
+export type ExperimentalJobListOperation<E = never> = (
+  input?: ExperimentalJobListInput,
+) => Effect.Effect<ExperimentalJobListOutput, E>
+
 export interface ExperimentalApi<E = never> {
   readonly persistentPty: {
     readonly read: ExperimentalPersistentPtyReadOperation<E>
@@ -2522,6 +2538,7 @@ export interface ExperimentalApi<E = never> {
     readonly update: ExperimentalArtifactsUpdateOperation<E>
     readonly delete: ExperimentalArtifactsDeleteOperation<E>
   }
+  readonly job: { readonly list: ExperimentalJobListOperation<E> }
 }
 
 export type ShellListInput = { readonly location?: { readonly directory?: string | undefined } | undefined }

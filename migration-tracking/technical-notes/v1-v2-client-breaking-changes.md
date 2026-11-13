@@ -138,7 +138,7 @@ Settings are read-only on v2 until a Kilo settings RPC exists. It replaces the v
 | kilo.profile | `GET /kilo/profile` | kilocode.gateway.profile, balance, kiloPass | Three RPC calls; v1 returned one combined object |
 | kilo.organization.set | `POST /kilo/organization` `{ organizationId }` | kilocode.gateway.organization.set | Body `{ "input": { "organizationID": ... } }`. The RPC event `rpc.kilocode.gateway.organization` follows |
 | kilo.fim | `POST /kilo/fim` (SSE response) | needs Kilo RPC | FIM producer: [#15314]. `kilocode.gateway.autocomplete.fimTarget` exists and returns the target only |
-| kilo.edit | `POST /kilo/edit` | needs Kilo RPC | Next-edit producer: [#15314]. `kilocode.gateway.autocomplete.editTarget` returns the target only |
+| kilo.edit | `POST /kilo/edit` | removed | Next Edit and the Mercury models are retired; v2 has no replacement |
 | kilo.cloudSessions | `GET /kilo/cloud-sessions` | needs Kilo RPC | Cloud session import: [#15306] |
 | kilo.cloud.session.get | `GET /kilo/cloud/session/{id}` | needs Kilo RPC | [#15306] |
 | kilo.cloud.session.import | `POST /kilo/cloud/session/import` | needs Kilo RPC | [#15306] |
@@ -227,6 +227,10 @@ Settings are read-only on v2 until a Kilo settings RPC exists. It replaces the v
 | Total | 129 |
 
 The rows that need a Kilo RPC, here and in the raw routes, name the feature epic that adds each one. The v2 extension shows no control for them until the feature lands; it does not stub them. The reference adapter on `vscode-v2-boot` turned these features off with 17 flags (`src/features.ts`: marketplace, notebook, agentManager, sessionBoard, sessionImport, retention, providerUsage, autocomplete, cloudSessions, suggestions, remote, sandboxNetwork, anacondaDesktop, commitMessage, configRemoval, memory, indexing) and logged every unmapped call once (`unmapped` set in `v2/client.ts`). The native extension has neither: a feature is absent until it is built on its v2 operation.
+
+## Daemon and the port range
+
+v1 had `kilo daemon start|status|stop|restart` over a detached `kilo serve` child, and it warned when `--port` was outside the recommended daemon discovery range. v2 has no v1 daemon port range and no daemon discovery. `kilo2 daemon status|stop|restart` is an alias of `kilo2 service`, which manages the native background service. A fixed port comes from `kilo2 service set port <port>`; the service records its endpoint, so no client scans a range. Decision: do not carry the v1 port warning.
 
 ## Mismatches and how a v2-native client handles them
 

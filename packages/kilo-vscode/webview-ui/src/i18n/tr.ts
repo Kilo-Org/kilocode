@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Tamamlandı (model bildirdi)",
+  "session.goal.complete": "Tamamlandı",
   "session.goal.blocked": "Engellendi",
   "session.goal.restart": "Hedefi yeniden başlat",
   ...anacondaDesktopDict,
@@ -309,6 +309,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.noChanges": "Değişiklik yok.",
   "ui.permission.reject": "Reddet",
+  "ui.permission.allowAllSites": "Tüm sitelere izin ver",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
   "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
@@ -1390,6 +1391,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
+  "task.backgroundAgents.promoteFailed": "Bu ajan arka planda devam edemedi. Zaten bitmiş olabilir.",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
@@ -1522,6 +1524,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
   "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "chat.reply.toolbar": "Seçili metin",
+  "chat.reply.quote": "Alıntıla",
+  "chat.reply.quoteHint": "Yanıtında alıntıla",
+  "chat.reply.commentHint": "Bu bölümü yorumla",
+  "chat.reply.copy": "Kopyala",
+  "chat.reply.sendHint": "Bu yorumu şimdi Kilo'ya gönder",
+  "chat.reply.commentLater": "Sonraki mesajın için kaydet",
+  "chat.reply.count": "Yanıtlar ({{count}})",
+  "chat.reply.sendAll": "Tümünü gönder",
+  "chat.reply.showInChat": "Sohbette göster",
   "browserTab.noSession":
     "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
   "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",

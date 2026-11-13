@@ -3,7 +3,7 @@
 // tool files, display settings, cost alerts) are handled by the shared webview wiring.
 import { Uri, ViewColumn, commands, window, type ExtensionContext, type WebviewPanel } from "vscode"
 import { composerState, wire } from "../chat"
-import { promptKeybindings, watchKeybindings } from "../prompt-keybindings"
+import { promptKeybindings, promptSelection, watchPromptContext } from "../prompt-keybindings"
 import type { ToHost, ToWebview } from "../protocol"
 import type { Manager } from "../server"
 import type { Disposable, PanelContext } from "./host"
@@ -89,6 +89,16 @@ export function createPanel(input: {
           sideTerminal(item.target === "sideTerminal")
           return true
         }
+        // `@terminal` reads the panel's own terminal tabs in the webview. It asks here only when the selection has
+        // none, and the panel has no VS Code terminal to fall back to.
+        if (message.type === "requestTerminalContext") {
+          void panel.webview.postMessage({
+            type: "terminalContextError",
+            requestId: message.requestId,
+            error: "No terminal is associated with this session",
+          } satisfies ToWebview)
+          return true
+        }
         // Focus can return straight to the side terminal, so the panel reports its current focus target again.
         if (item.type === "webviewFocusChanged") {
           if (item.focused === true) chatFocus.gained("agentManager")
@@ -107,10 +117,11 @@ export function createPanel(input: {
       if (!state.ready) return void state.queued.push(message)
       void panel.webview.postMessage(message)
     }
-    const keybindings = () => queue({ type: "keybindings", bindings: promptKeybindings(input.context) })
+    const keybindings = () =>
+      queue({ type: "keybindings", bindings: promptKeybindings(input.context), selection: promptSelection() })
     keybindings()
     queue({ type: "webviewActiveChanged", active: panel.visible })
-    const watcher = watchKeybindings(input.context, keybindings)
+    const watcher = watchPromptContext(input.context, keybindings)
     const visibility = panel.onDidChangeViewState((event) => {
       queue({ type: "webviewActiveChanged", active: event.webviewPanel.visible })
       if (event.webviewPanel.visible) composerState(input.context).forEach(queue)

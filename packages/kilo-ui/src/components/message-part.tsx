@@ -32,6 +32,7 @@ import { Accordion } from "./accordion"
 import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
 import { Card } from "./card"
+import { ChartTool } from "./chart"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
 import { DiffChanges } from "./diff-changes"
 import { ExecuteTool } from "./execute-tool"
@@ -40,6 +41,7 @@ import { Icon, type IconProps } from "./icon"
 import { IconButton } from "./icon-button"
 import { ImagePreview } from "./image-preview"
 import { Markdown } from "./markdown"
+import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 import { ReasoningContent } from "./reasoning-content"
 import type { ReasoningDisplay } from "./reasoning-open"
 import { normalize } from "./session-diff"
@@ -49,7 +51,8 @@ import { TextShimmer } from "./text-shimmer"
 import { ToolApprovalProvider, resolveToolApproval } from "./tool-approval"
 import { useToolChildSession } from "./tool-child-session"
 import { readToolOpen, toolOpenKey } from "./tool-open-state"
-import { busy, createThrottledValue, STREAMING_TEXT_RENDER_THROTTLE_MS, TEXT_RENDER_THROTTLE_MS } from "./tool-utils"
+import { inputChanges, streamedTool, streamInterval, type ChangeCount } from "./tool-stream"
+import { busy, createSmoothText, createThrottledValue } from "./tool-utils"
 import { Tooltip } from "./tooltip"
 
 export { ToolApprovalProvider, resolveToolApproval, ToolApprovalVisibilityProvider } from "./tool-approval"
@@ -74,6 +77,14 @@ export type ToolActions = {
   /** Opens several changed files at once, for a patch that changes more than one. */
   openDiffs?: (diffs: ToolActionDiff[]) => void
   openSession?: (sessionID: string) => void
+  /** Opens a subagent session where the client shows subagents, such as an editor tab or an inspector. */
+  openSubagent?: (sessionID: string, title?: string) => void
+  /** Where `openSubagent` shows the subagent, for the open control's label. Defaults to a panel. */
+  subagentTarget?: "tab" | "panel"
+  /** Stops a running subagent session and every session it started. */
+  stopSession?: (sessionID: string) => void
+  /** Continues a running foreground subagent in the background, so the parent's tool call returns at once. */
+  backgroundSession?: (sessionID: string) => void
 }
 
 export type ContentPartProps = {
@@ -97,6 +108,8 @@ export type ContentPartProps = {
   forceOpen?: boolean
   /** A recovery action for a failed tool call, such as a link to the settings that own the failure. */
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
+  /** Instruction files the read loaded beside this message. */
+  loadedFiles?: readonly string[]
 }
 
 export function ContentPart(props: ContentPartProps) {
@@ -137,6 +150,7 @@ export function ContentPart(props: ContentPartProps) {
             actions={props.actions}
             hideDetails={props.hideDetails}
             forceOpen={props.forceOpen}
+            loadedFiles={props.loadedFiles}
             errorAction={props.errorAction}
           />
         )}
@@ -297,9 +311,9 @@ function TextContent(props: {
       () => flush(),
     ),
   )
-  const text = createThrottledValue(
+  const text = createSmoothText(
     () => props.text.trim(),
-    () => (props.streaming ? STREAMING_TEXT_RENDER_THROTTLE_MS : TEXT_RENDER_THROTTLE_MS),
+    () => !!props.streaming,
   )
   const copy = async () => {
     await clipboard.write(props.text.trim())
@@ -336,13 +350,20 @@ function TextContent(props: {
     openPathLink(link)
   }
 
+  // VS Code listens for link clicks on the webview window and opens every anchor in the system browser. Claim the
+  // events we handle so a link opens either in the Integrated Browser or externally, never in both.
+  const claim = (event: MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
   const click = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) return
     const fileLink = event.target.closest(".file-link[data-file-path]")
     if (fileLink) {
       const path = fileLink.getAttribute("data-file-path")
       if (!path) return
-      event.preventDefault()
+      claim(event)
       props.actions?.openFile?.(
         path,
         position(fileLink, "data-file-line"),
@@ -354,7 +375,7 @@ function TextContent(props: {
     // The renderer keeps the parsed path of a file link in data attributes, because the sanitizer drops `file:` hrefs.
     const pathLink = event.target.closest("a.file-path-link[data-file-path]")
     if (pathLink) {
-      event.preventDefault()
+      claim(event)
       openPathLink(pathLink)
       return
     }
@@ -363,12 +384,12 @@ function TextContent(props: {
     if (!href) return
     const file = extractFilePathFromHref(href)
     if (file) {
-      event.preventDefault()
+      claim(event)
       openValidated(file.path, file.line, file.column)
       return
     }
     if (!props.open || !/^https?:\/\//i.test(href)) return
-    event.preventDefault()
+    claim(event)
     // Shift-click asks for the system browser even when the host routes links into the Integrated Browser.
     props.open(href, event.shiftKey)
   }
@@ -418,15 +439,19 @@ export type ToolProps = {
   partID: string
   output: string
   status: string
+  /** Provisional additions and deletions from a streamed edit, write, or patch input; the final diff replaces them. */
+  liveChanges?: ChangeCount
   /** When the call was created, started running and finished. */
   time?: SessionMessageAssistantTool["time"]
   attachments: ToolFileContent[]
   directory?: string
-  openUrl?: (uri: string) => void
+  openUrl?: (uri: string, external?: boolean) => void
   defaultOpen?: boolean
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  /** Instruction files the read loaded, already resolved by the client. */
+  loadedFiles?: readonly string[]
 }
 
 const renderers: Record<string, Component<ToolProps>> = {}
@@ -449,6 +474,7 @@ function ToolContent(props: {
   actions?: ToolActions
   hideDetails?: boolean
   forceOpen?: boolean
+  loadedFiles?: readonly string[]
   errorAction?: (error: { type: string; message: string }) => JSX.Element | undefined
 }) {
   const i18n = useI18n()
@@ -457,9 +483,28 @@ function ToolContent(props: {
     const value = state()
     return "metadata" in value ? (value.metadata ?? {}) : {}
   }
+  // Parsing the accumulated input is linear in its size, so the stream throttles
+  // and widens its interval as the input grows.
+  const raw = () => {
+    const value = state()
+    return value.status === "streaming" ? value.input : ""
+  }
+  const streamText = createThrottledValue(raw, () => streamInterval(raw().length))
+  const streamed = createMemo(() => {
+    const value = state()
+    if (value.status !== "streaming") return undefined
+    return streamedTool(props.item.name, streamText())
+  })
   const input = (): Record<string, unknown> => {
     const value = state()
-    return value.status === "streaming" ? {} : value.input
+    if (value.status !== "streaming") return value.input
+    return streamed()?.input ?? {}
+  }
+  const liveChanges = (): ChangeCount | undefined => {
+    const value = state()
+    if (value.status === "streaming") return streamed()?.changes
+    if (value.status === "running") return inputChanges(props.item.name, value.input)
+    return undefined
   }
   const attachments = () => {
     const value = state()
@@ -488,6 +533,7 @@ function ToolContent(props: {
                 partID={props.item.id}
                 output={toolOutput(props.item)}
                 status={state().status === "streaming" ? "pending" : state().status}
+                liveChanges={liveChanges()}
                 time={props.item.time}
                 attachments={attachments()}
                 directory={props.directory}
@@ -496,6 +542,7 @@ function ToolContent(props: {
                 actions={props.actions}
                 hideDetails={props.hideDetails}
                 forceOpen={props.forceOpen}
+                loadedFiles={props.loadedFiles}
               />
             </ToolApprovalProvider>
           }
@@ -643,6 +690,20 @@ ToolRegistry.register({
             />
           }
         />
+        <Show when={props.loadedFiles?.length}>
+          <For each={props.loadedFiles}>
+            {(file) => (
+              <div
+                data-component="tool-loaded-file"
+                classList={{ clickable: !!props.actions?.openFile }}
+                onClick={props.actions?.openFile ? () => props.actions?.openFile?.(file) : undefined}
+              >
+                <Icon name="enter" size="small" />
+                <span>{`${i18n.t("ui.tool.loaded")} ${relativizeProjectPath(file, props.directory)}`}</span>
+              </div>
+            )}
+          </For>
+        </Show>
         <Show when={images().length}>
           <div data-slot="tool-read-images">
             <For each={images()}>
@@ -801,7 +862,8 @@ ToolRegistry.register({
                     onClick={(event) => {
                       if (!props.openUrl) return
                       event.preventDefault()
-                      props.openUrl(url)
+                      event.stopPropagation()
+                      props.openUrl(url, event.shiftKey)
                     }}
                   >
                     {url}
@@ -852,7 +914,7 @@ function childToolInfo(
       return {
         icon: "console",
         title: i18n.t("ui.tool.shell"),
-        subtitle: string(input.description) || string(input.command) || undefined,
+        subtitle: shellCommandSummary(string(input.description), string(input.command)) || undefined,
       }
     case "edit":
       return {
@@ -883,6 +945,30 @@ function childToolInfo(
     default:
       return { icon: "mcp", title: tool }
   }
+}
+
+// A command usually starts with `cd <absolute worktree> &&`, which on its own identifies nothing in a
+// collapsed row. Prefer the model's description; otherwise drop that prefix and show the real command.
+function shellCommandSummary(description: string, command: string) {
+  const summary = description.trim()
+  if (summary) return summary
+  const line =
+    command
+      .trim()
+      .split("\n")
+      .find((text) => text.trim())
+      ?.trim() ?? ""
+  const stripped = stripWorkdirPrefixes(line)
+  return stripped || line
+}
+
+// Agents chain the prefix (`cd /a && cd packages/core && bun test`), so peel every one. A line that is only
+// the prefix keeps its text rather than leaving the row without a title.
+function stripWorkdirPrefixes(line: string) {
+  const prefix = /^cd\s+(?:'[^']*'|"[^"]*"|\S+)\s*(?:&&|;)\s*/
+  let rest = line
+  while (prefix.test(rest)) rest = rest.replace(prefix, "")
+  return rest.trim()
 }
 
 // A completed foreground child wraps its final text; a background start returns the model instruction instead.
@@ -935,6 +1021,10 @@ ToolRegistry.register({
     createEffect(() => {
       const id = childID()
       if (!id || !open()) return
+      // Read the tools so a removed child history (an inspector release, a released tree) asks to be loaded again.
+      // Without the read, a card whose cached transcript disappeared keeps its empty list and stays on the
+      // "Starting..." placeholder for the rest of the run.
+      if (child?.tools(id).length) return
       child?.load(id)
     })
     const change = (value: boolean) => {
@@ -946,12 +1036,22 @@ ToolRegistry.register({
       if (id && child?.running(id)) return "running" as const
       return taskStatus(props.status)
     }
-    const canOpen = () => !!childID() && !!props.actions?.openSession
+    const canOpen = () => !!childID() && !!(props.actions?.openSubagent ?? props.actions?.openSession)
+    const canStop = () => !!childID() && avatar() === "running" && !!props.actions?.stopSession
+    const canBackground = () =>
+      !!childID() && props.status === "running" && !background() && !!props.actions?.backgroundSession
+    const act = (action: ((sessionID: string) => void) | undefined) => (event: MouseEvent) => {
+      const id = childID()
+      if (!id || !action) return
+      event.preventDefault()
+      event.stopPropagation()
+      action(id)
+    }
     const navigate = () => {
       const id = childID()
-      const action = props.actions?.openSession
-      if (!id || !action) return
-      action(id)
+      if (!id) return
+      if (props.actions?.openSubagent) return props.actions.openSubagent(id, description() || undefined)
+      props.actions?.openSession?.(id)
     }
     const openChild = (event: MouseEvent) => {
       if (!canOpen()) return
@@ -983,13 +1083,36 @@ ToolRegistry.register({
             <TextShimmer text={label()} active={busy(props.status)} />
           </span>
           <Show when={detail()}>{(text) => <span data-slot="basic-tool-tool-subtitle">{text()}</span>}</Show>
-          <Show when={background()}>
-            <span data-slot="task-tool-background">{i18n.t("task.backgroundAgents.untitled")}</span>
-          </Show>
           {approvalLine()}
         </div>
+        <Show when={canStop()}>
+          <span
+            data-slot="task-tool-action"
+            data-action="stop"
+            title={i18n.t("task.stop")}
+            aria-label={i18n.t("task.stop")}
+            onClick={act(props.actions?.stopSession)}
+          >
+            <Icon name="stop" size="small" />
+          </span>
+        </Show>
+        <Show when={canBackground()}>
+          <span
+            data-slot="task-tool-action"
+            data-action="background"
+            title={i18n.t("task.backgroundAgents.continueInBackground")}
+            aria-label={i18n.t("task.backgroundAgents.continueInBackground")}
+            onClick={act(props.actions?.backgroundSession)}
+          >
+            <Icon name="arrow-down-to-line" size="small" />
+          </span>
+        </Show>
         <Show when={canOpen()}>
-          <span data-slot="task-tool-open" title={`${i18n.t("task.open.panel")} (Cmd/Ctrl+Enter)`} onClick={openChild}>
+          <span
+            data-slot="task-tool-open"
+            title={`${i18n.t(props.actions?.subagentTarget === "tab" ? "task.open.tab" : "task.open.panel")} (Cmd/Ctrl+Enter)`}
+            onClick={openChild}
+          >
             <Icon name="square-arrow-top-right" size="small" />
           </span>
         </Show>
@@ -1068,12 +1191,18 @@ ToolRegistry.register({
               <span data-slot="basic-tool-tool-title">
                 <TextShimmer text={i18n.t("ui.tool.shell")} active={busy(props.status)} />
               </span>
-              {/* The shell tool has no description input, so its first command line is the visible summary. */}
-              <Show when={string(props.input.command).trim().split("\n")[0]}>
-                {(command) => (
-                  <span data-component="shell-submessage">
+              {/* Prefer the model's description, then the copy stored with the result; a bare command can be
+                  just a `cd` prefix. `dir="auto"` keeps commands LTR and lets an RTL summary read correctly. */}
+              <Show
+                when={shellCommandSummary(
+                  string(props.input.description) || string(props.metadata.description),
+                  string(props.input.command),
+                )}
+              >
+                {(summary) => (
+                  <span data-component="shell-submessage" dir="auto">
                     <span data-slot="basic-tool-tool-subtitle">
-                      <span data-slot="shell-submessage-value">{command()}</span>
+                      <span data-slot="shell-submessage-value">{summary()}</span>
                     </span>
                   </span>
                 )}
@@ -1107,9 +1236,10 @@ function ToolFileAccordion(props: {
       multiple
       data-scope="apply-patch"
       style={{ "--sticky-accordion-offset": "37px" }}
-      defaultValue={[props.path || "tool-file"]}
+      defaultValue={["tool-file"]}
     >
-      <Accordion.Item value={props.path || "tool-file"}>
+      {/* Not keyed by path: it changes from the input path to the result path on completion, which would collapse the item. */}
+      <Accordion.Item value="tool-file">
         <StickyAccordionHeader>
           <Accordion.Trigger>
             <div data-slot="apply-patch-trigger-content">
@@ -1167,6 +1297,8 @@ function FileTitle(props: {
   directory?: string
   changes?: FileDiffInfo
   onOpen?: (event: MouseEvent) => void
+  /** Shown when the path is not known yet, such as a file written before its path streams. */
+  fallback?: JSX.Element
 }) {
   return (
     <div data-slot="message-part-title-area">
@@ -1175,6 +1307,7 @@ function FileTitle(props: {
           <TextShimmer text={props.title} active={props.pending} />
         </span>
         <ToolFileMeta path={props.path} directory={props.directory} changes={props.changes} onOpen={props.onOpen} />
+        <Show when={!props.path}>{props.fallback}</Show>
       </div>
     </div>
   )
@@ -1227,6 +1360,8 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => diff()?.file || string(props.input.path)
+    const live = () => (busy(props.status) ? props.liveChanges : undefined)
+    const changes = () => diff() ?? live()
     // A plain function, not `createMemo`: a memo parses the patch with Pierre
     // on render, even while the card stays collapsed. Only the deferred body
     // and the diff action read it.
@@ -1276,8 +1411,9 @@ ToolRegistry.register({
                 pending={busy(props.status)}
                 path={path()}
                 directory={props.directory}
-                changes={diff()}
+                changes={changes()}
                 onOpen={props.actions?.openFile ? openFile : undefined}
+                fallback={<Show when={live()}>{(counts) => <DiffChanges changes={counts()} />}</Show>}
               />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={openDiff} />
@@ -1313,6 +1449,8 @@ ToolRegistry.register({
     const component = useFileComponent()
     const diff = () => fileDiffs(props.metadata.files)[0]
     const path = () => string(props.input.path)
+    const live = () => (busy(props.status) ? props.liveChanges : undefined)
+    const changes = () => diff() ?? live()
     // A write that leaves the file as it was has an empty diff: show only the header.
     const unchanged = () => {
       const file = diff()
@@ -1361,8 +1499,9 @@ ToolRegistry.register({
                 pending={busy(props.status)}
                 path={path()}
                 directory={props.directory}
-                changes={diff()}
+                changes={changes()}
                 onOpen={props.actions?.openFile ? openFile : undefined}
+                fallback={<Show when={live()}>{(counts) => <DiffChanges changes={counts()} />}</Show>}
               />
               <ToolFileOpenAction when={!!props.actions?.openFile && !!path()} onClick={openFile} />
               <ToolDiffAction when={canOpenDiff()} onClick={handleOpenDiffClick} />
@@ -1416,6 +1555,8 @@ ToolRegistry.register({
     const component = useFileComponent()
     const list = createMemo(() => fileDiffs(props.metadata.files))
     const single = () => (list().length === 1 ? list()[0] : undefined)
+    // Before the final per-file diffs arrive, one provisional count covers the whole patch text.
+    const live = () => (list().length || !busy(props.status) ? undefined : props.liveChanges)
     const [expanded, setExpanded] = createSignal<string[]>([])
     const [seeded, setSeeded] = createSignal(false)
     createEffect(() => {
@@ -1524,6 +1665,13 @@ ToolRegistry.register({
                     <div data-slot="message-part-tool-changes">
                       <DiffChanges changes={list()} />
                     </div>
+                  </Show>
+                  <Show when={live()}>
+                    {(changes) => (
+                      <div data-slot="message-part-tool-changes">
+                        <DiffChanges changes={changes()} />
+                      </div>
+                    )}
                   </Show>
                 </div>
               </div>
@@ -1788,6 +1936,9 @@ ToolRegistry.register({
   },
 })
 
+// The chart tool result is a Chart.js config that its own card draws.
+ToolRegistry.register({ name: "chart", render: ChartTool })
+
 /** One control of a pending user message, for example to queue, steer or delete it. */
 export type UserMessagePendingAction = {
   key: string
@@ -1803,6 +1954,63 @@ export type UserMessagePending = {
   actions: readonly UserMessagePendingAction[]
 }
 
+type UserFile = NonNullable<SessionMessageUser["files"]>[number]
+
+/**
+ * The text of a user message with its `@` mentions highlighted. A workspace file mention opens the file and a past
+ * chat mention opens that session; terminal, git changes and worktree mentions are highlighted only. A path mention
+ * without a span (an older message) is found by its shape and opens as a file.
+ */
+function HighlightedText(props: {
+  text: string
+  files: UserFile[]
+  agents: ReadonlyArray<{ mention?: { text: string; start: number; end: number } }>
+  onOpenFile?: (path: string) => void
+  onOpenSession?: (sessionID: string) => void
+}) {
+  const segments = createMemo(() => buildHighlightedTextSegments(props.text, props.files, props.agents))
+  const action = (segment: HighlightSegment) => {
+    if (segment.type !== "file") return undefined
+    const path = segment.text.replace(/^@/, "")
+    const file = props.files.find((item) => item.mention?.text === segment.text)
+    const uri = file?.source.type === "uri" ? file.source.uri : undefined
+    const session = props.onOpenSession
+    if (uri?.startsWith("session:") && session) return () => session(uri.slice("session:".length))
+    const open = props.onOpenFile
+    if ((!file || uri?.startsWith("file:")) && open && path) return () => open(path)
+    return undefined
+  }
+  return (
+    <For each={segments()}>
+      {(segment) => {
+        const run = action(segment)
+        return (
+          <span
+            data-highlight={segment.type}
+            data-clickable={run ? "" : undefined}
+            role={run ? "link" : undefined}
+            tabIndex={run ? 0 : undefined}
+            onKeyDown={(event) => {
+              if (!run || (event.key !== "Enter" && event.key !== " ")) return
+              event.preventDefault()
+              event.stopPropagation()
+              run()
+            }}
+            onClick={(event) => {
+              if (!run) return
+              event.preventDefault()
+              event.stopPropagation()
+              run()
+            }}
+          >
+            {segment.text}
+          </span>
+        )
+      }}
+    </For>
+  )
+}
+
 export function UserMessageDisplay(props: {
   message: SessionMessageUser
   copyLabel?: string
@@ -1810,18 +2018,31 @@ export function UserMessageDisplay(props: {
   copyText?: string
   /** Content shown in the bubble above the text, for example Integrated Browser element references. */
   header?: JSX.Element
+  /** Content shown inside the bubble above the text, for example the label of a prompt Kilo composed. */
+  bubbleHeader?: JSX.Element
   /** Shows a fork action beside Copy, for surfaces that can fork the session from this message. */
   onFork?: () => void
+  /** Shows a revert action beside Copy, for surfaces that can rewind the session to this message. */
+  onRevert?: () => void
+  revertDisabled?: boolean
   /** Dims the message and shows its delivery status and controls in place of the time, fork and copy actions. */
   pending?: UserMessagePending
   /** Opens an image attachment outside the webview. Return false to keep the in-page preview for that image. */
   onOpenImage?: (uri: string, name: string | undefined) => boolean
+  /** Opens the file an `@` mention in the text names. */
+  onOpenFile?: (path: string) => void
+  /** Opens the past chat an `@` mention in the text references. */
+  onOpenSession?: (sessionID: string) => void
 }) {
   const i18n = useI18n()
   const clipboard = useClipboard()
   const dialog = useDialog()
   const [copied, setCopied] = createSignal(false)
-  const files = () => props.message.files ?? []
+  // A text file an `@` mention attached shows as the highlighted mention in the text, not as a separate chip.
+  const inline = (file: UserFile) =>
+    !!file.mention?.text && !file.mime.startsWith("image/") && file.mime !== "application/pdf"
+  const files = () => (props.message.files ?? []).filter((file) => !inline(file))
+  const mentions = () => (props.message.files ?? []).filter(inline)
   const stamp = () =>
     new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }).format(new Date(props.message.time.created))
   const copy = async () => {
@@ -1884,15 +2105,33 @@ export function UserMessageDisplay(props: {
           </For>
         </div>
       </Show>
-      <Show when={props.message.text || props.header}>
+      <Show when={props.message.text || props.header || props.bubbleHeader}>
         <div data-slot="user-message-body">
           {props.header}
-          <Show when={props.message.text}>
+          <Show when={props.message.text || props.bubbleHeader}>
             <div data-slot="user-message-text" dir="auto" data-queued={props.pending ? "" : undefined}>
+              {props.bubbleHeader}
               {/* The clamp sits on an inner box: on the padded bubble, the hidden lines would show in its padding. */}
-              <Show when={props.pending && !expanded()} fallback={props.message.text}>
+              <Show
+                when={props.pending && !expanded()}
+                fallback={
+                  <HighlightedText
+                    text={props.message.text}
+                    files={mentions()}
+                    agents={props.message.agents ?? []}
+                    onOpenFile={props.onOpenFile}
+                    onOpenSession={props.onOpenSession}
+                  />
+                }
+              >
                 <span ref={textRef} data-slot="user-message-clamp">
-                  {props.message.text}
+                  <HighlightedText
+                    text={props.message.text}
+                    files={mentions()}
+                    agents={props.message.agents ?? []}
+                    onOpenFile={props.onOpenFile}
+                    onOpenSession={props.onOpenSession}
+                  />
                 </span>
               </Show>
             </div>
@@ -1960,6 +2199,23 @@ export function UserMessageDisplay(props: {
                   props.onFork?.()
                 }}
                 aria-label={i18n.t("ui.message.forkMessage")}
+              />
+            </Tooltip>
+          </Show>
+          <Show when={props.onRevert && !props.pending}>
+            <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
+              <IconButton
+                data-slot="user-message-revert"
+                icon="arrow-left"
+                size="normal"
+                variant="ghost"
+                disabled={props.revertDisabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  props.onRevert?.()
+                }}
+                aria-label={i18n.t("ui.message.revertMessage")}
               />
             </Tooltip>
           </Show>

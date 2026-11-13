@@ -53,7 +53,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "مكتمل (حسب تقرير النموذج)",
+  "session.goal.complete": "مكتمل",
   "session.goal.blocked": "محظور",
   "session.goal.restart": "إعادة بدء الهدف",
   ...anacondaDesktopDict,
@@ -303,6 +303,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.noChanges": "لا توجد تغييرات.",
   "ui.permission.reject": "رفض",
+  "ui.permission.allowAllSites": "السماح لجميع المواقع",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
   "ui.permission.feedbackHint": "Enter للرفض، Esc للإلغاء",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
@@ -1386,6 +1387,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "فتح جميع الوكلاء الخلفيين",
   "task.backgroundAgents.cancel": "إيقاف",
   "task.backgroundAgents.continueInBackground": "متابعة في الخلفية",
+  "task.backgroundAgents.promoteFailed": "تعذّر على هذا الوكيل المتابعة في الخلفية. ربما انتهى بالفعل.",
   "task.backgroundAgents.waiting": "وكيل خلفي يحتاج إلى إدخالك",
   "task.backgroundAgents.needsInput": "الإدخال مطلوب",
   "task.backgroundAgents.clearFinished": "مسح المكتمل",
@@ -1471,6 +1473,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "متصفح النظام",
   "settings.experimental.browserLinks.integrated": "المتصفح المدمج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "chat.reply.toolbar": "النص المحدد",
+  "chat.reply.quote": "اقتباس",
+  "chat.reply.quoteHint": "اقتبس في ردك",
+  "chat.reply.commentHint": "علّق على هذا المقطع",
+  "chat.reply.copy": "نسخ",
+  "chat.reply.sendHint": "أرسل هذا التعليق إلى Kilo الآن",
+  "chat.reply.commentLater": "حفظ لرسالتك التالية",
+  "chat.reply.count": "الردود ({{count}})",
+  "chat.reply.sendAll": "إرسال الكل",
+  "chat.reply.showInChat": "عرض في الدردشة",
   "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
   "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",
 }

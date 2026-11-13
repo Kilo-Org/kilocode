@@ -7,7 +7,7 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiffInfo } from "@opencode/client"
+import type { FileDiffInfo, SessionInfo } from "@opencode/client"
 import type { BrowserElement } from "../services/browser-automation"
 import type { BrowserCursor, BrowserFrame, BrowserInteraction, BrowserViewIdentity, BrowserViewport } from "../shared/browser-stream"
 import type { DiffImage } from "../diff/types"
@@ -17,6 +17,7 @@ import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { OrphanDirectory, WorktreeHealth } from "./worktree-reconcile"
 import type { RunStatus } from "./run/manager"
+import type { InitialFile } from "./multi-version"
 import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { ProjectSessionView } from "./project/session-view"
@@ -310,6 +311,7 @@ interface SessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+  session: SessionInfo
 }
 
 interface SessionClosedMessage {
@@ -351,7 +353,7 @@ interface SendInitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 interface BranchesMessage {
@@ -570,8 +572,16 @@ interface RunStatusMessage extends RunStatus {
   projectId?: string
 }
 
+interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
+  | ContinueInWorktreeProgressMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserFrameMessage
@@ -839,7 +849,7 @@ interface CreateMultiVersionIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
   baseBranch?: string
   branchName?: string
   modelAllocations?: Array<{ providerID: string; modelID: string; count: number; variant?: string }>
@@ -1050,6 +1060,10 @@ interface SetCaffeinationIn {
   enabled: boolean
 }
 
+interface ToggleCaffeinationIn {
+  type: "agentManager.toggleCaffeination"
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -1188,7 +1202,7 @@ interface AbortIn {
 }
 
 interface ContinueInWorktreeIn {
-  type: "continueInWorktree"
+  type: "agentManager.continueInWorktree"
   sessionId: string
 }
 
@@ -1411,6 +1425,7 @@ export type AgentManagerInMessage =
   | PromptSentIn
   | RequestCaffeinationIn
   | SetCaffeinationIn
+  | ToggleCaffeinationIn
   | OpenFileIn
   | CopyFilePathIn
   | RequestDocumentIn

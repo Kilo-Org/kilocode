@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Terminé (signalé par le modèle)",
+  "session.goal.complete": "Terminé",
   "session.goal.blocked": "Bloqué",
   "session.goal.restart": "Relancer l'objectif",
   ...anacondaDesktopDict,
@@ -314,6 +314,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.noChanges": "Aucune modification.",
   "ui.permission.reject": "Rejeter",
+  "ui.permission.allowAllSites": "Autoriser tous les sites",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
   "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
@@ -1459,6 +1460,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Ouvrir tous les agents en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
+  "task.backgroundAgents.promoteFailed": "Cet agent n'a pas pu continuer en arrière-plan. Il est peut-être déjà terminé.",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
   "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
@@ -1545,6 +1547,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navigateur système",
   "settings.experimental.browserLinks.integrated": "Navigateur intégré",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
+  "chat.reply.toolbar": "Texte sélectionné",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citer dans votre réponse",
+  "chat.reply.commentHint": "Commenter ce passage",
+  "chat.reply.copy": "Copier",
+  "chat.reply.sendHint": "Envoyer ce commentaire à Kilo maintenant",
+  "chat.reply.commentLater": "Enregistrer pour votre prochain message",
+  "chat.reply.count": "Réponses ({{count}})",
+  "chat.reply.sendAll": "Tout envoyer",
+  "chat.reply.showInChat": "Afficher dans le chat",
   "browserTab.noSession":
     "Ouvrez le navigateur depuis une session pour prévisualiser une application locale ou une page HTTPS publique.",
   "browserTab.disabled": "Le navigateur intégré est désactivé. Activez-le dans Paramètres Kilo > Expérimental.",

@@ -55,6 +55,17 @@ export type {
 
 export type { SessionInfo }
 
+/**
+ * A file the first prompt of a new worktree attaches. An `@` mention keeps its name and span, so the transcript
+ * highlights it.
+ */
+export type InitialFile = {
+  mime: string
+  url: string
+  name?: string
+  mention?: { start: number; end: number; text: string }
+}
+
 export interface ProjectSessionInfo extends SessionInfo {
   worktreeId: string | null
 }
@@ -285,6 +296,7 @@ export interface AgentManagerSessionForkedMessage {
   sessionId: string
   forkedFromId: string
   worktreeId?: string
+  session: SessionInfo
 }
 
 export interface AgentManagerWorktreeActivityMessage {
@@ -688,6 +700,14 @@ export interface AgentManagerWorktreeStatsMessage {
   stats: WorktreeGitStats[]
 }
 
+/** Progress of a session moved into a new worktree, shown in the session actions row. */
+export interface ContinueInWorktreeProgressMessage {
+  type: "continueInWorktreeProgress"
+  status: string
+  detail?: string
+  error?: string
+}
+
 /** Local workspace git stats push. */
 export interface AgentManagerLocalStatsMessage {
   type: "agentManager.localStats"
@@ -748,7 +768,7 @@ export interface AgentManagerSendInitialMessage {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
 }
 
 /** Host request for the focused element, so prompts can be routed to the panel. */
@@ -757,6 +777,7 @@ export interface AgentManagerFocusContextRequestedMessage {
 }
 
 export type AgentManagerExtensionMessage =
+  | ContinueInWorktreeProgressMessage
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserFrameMessage
@@ -821,6 +842,12 @@ export type AgentManagerExtensionMessage =
 // ---------------------------------------------------------------------------
 // Webview to extension
 // ---------------------------------------------------------------------------
+
+/** Move the open session into a new worktree; progress arrives as ContinueInWorktreeProgressMessage. */
+export interface ContinueInWorktreeRequest {
+  type: "agentManager.continueInWorktree"
+  sessionId: string
+}
 
 /** Create a new worktree with an auto-created first session. */
 export interface CreateWorktreeRequest {
@@ -1157,7 +1184,7 @@ export interface CreateMultiVersionRequest {
   providerID?: string
   modelID?: string
   agent?: string
-  files?: Array<{ mime: string; url: string }>
+  files?: InitialFile[]
   baseBranch?: string
   branchName?: string
   /** Per-version model allocations for multi-model comparison mode. */
@@ -1206,6 +1233,10 @@ export interface RequestCaffeinationMessage {
 export interface SetCaffeinationRequest {
   type: "agentManager.setCaffeination"
   enabled: boolean
+}
+
+export interface ToggleCaffeinationRequest {
+  type: "agentManager.toggleCaffeination"
 }
 
 /** Persist the review diff style preference. */
@@ -1431,6 +1462,7 @@ export interface MoveSectionRequest {
 }
 
 export type AgentManagerWebviewMessage =
+  | ContinueInWorktreeRequest
   | BrowserRequestMessage
   | AgentManagerOpenExternalRequest
   | BaseUpdateRequest
@@ -1491,6 +1523,7 @@ export type AgentManagerWebviewMessage =
   | SetSidebarCollapsedRequest
   | RequestCaffeinationMessage
   | SetCaffeinationRequest
+  | ToggleCaffeinationRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
   | RequestBranchesMessage

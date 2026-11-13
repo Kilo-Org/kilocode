@@ -29,17 +29,6 @@ const env = {
   KILOCODE_EDITOR_NAME: undefined,
   KILOCODE_VERSION: undefined,
   MISTRAL_API_KEY: undefined,
-  INCEPTION_API_KEY: undefined,
-}
-const edit = {
-  currentFilePath: "src/index.ts",
-  currentFileContent: "export const value = 1\n",
-  cursorLine: 0,
-  cursorCharacter: 0,
-  editableRegionStartLine: 0,
-  editableRegionEndLine: 0,
-  recentlyViewedSnippets: [],
-  editDiffHistory: [],
 }
 
 const addPlugin = Effect.fn(function* () {
@@ -52,13 +41,13 @@ const addPlugin = Effect.fn(function* () {
     })
     editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
   })
-  const host = yield* PluginHost.make(yield* Plugin.Service)
+  const host = yield* PluginHost.make(yield* Plugin.Service, "test")
   yield* KiloPlugin.effect(host)
   yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
 })
 
 describe("Kilo Gateway autocomplete RPC", () => {
-  it.live("sends FIM and Next Edit requests with the Kilo token, team and autocomplete feature header", () =>
+  it.live("sends FIM requests with the Kilo token, team and autocomplete feature header", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
       (backend) =>
@@ -76,13 +65,6 @@ describe("Kilo Gateway autocomplete RPC", () => {
                 temperature: 0.2,
               }),
             ).toEqual({ text: "fixture completion", cost: 0.0001, inputTokens: 5, outputTokens: 2 })
-            expect(
-              yield* rpc.call("kilocode.gateway", "autocomplete.edit", {
-                ...edit,
-                provider: "kilo",
-                model: "inception/mercury-next-edit",
-              }),
-            ).toEqual({ content: "fixture edit", usage: { prompt_tokens: 7, completion_tokens: 3 } })
 
             expect(backend.state.autocompleteRequests).toEqual([
               {
@@ -97,16 +79,10 @@ describe("Kilo Gateway autocomplete RPC", () => {
                   stream: true,
                 },
               },
-              {
-                path: "/api/gateway/v1/edit/completions",
-                feature: "autocomplete",
-                body: expect.objectContaining({ model: "inception/mercury-edit-2", max_tokens: 512 }),
-              },
             ])
             const sent = backend.requests.filter((request) => request.path.endsWith("/completions"))
             expect(sent).toEqual([
               { method: "POST", path: "/api/gateway/v1/fim/completions", authorization: "Bearer env-token", organizationID: "selected" },
-              { method: "POST", path: "/api/gateway/v1/edit/completions", authorization: "Bearer env-token", organizationID: "selected" },
             ])
           }),
         ),
@@ -114,7 +90,7 @@ describe("Kilo Gateway autocomplete RPC", () => {
     ),
   )
 
-  it.live("reports the upstream status and rejects Next Edit for FIM models", () =>
+  it.live("reports the upstream status", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
       (backend) =>
@@ -126,16 +102,7 @@ describe("Kilo Gateway autocomplete RPC", () => {
             expect(
               yield* rpc.call("kilocode.gateway", "autocomplete.fim", { prefix: "", suffix: "" }).pipe(Effect.flip),
             ).toMatchObject({ type: "request", message: "FIM request failed: 402 fim failed", data: { status: 402 } })
-            backend.state.editStatus = 429
-            expect(
-              yield* rpc.call("kilocode.gateway", "autocomplete.edit", { ...edit }).pipe(Effect.flip),
-            ).toMatchObject({ type: "request", data: { status: 429 } })
-            expect(
-              yield* rpc
-                .call("kilocode.gateway", "autocomplete.edit", { ...edit, provider: "kilo", model: "mistralai/codestral-2508" })
-                .pipe(Effect.flip),
-            ).toMatchObject({ type: "request", data: { status: 400 } })
-            expect(backend.state.autocompleteRequests).toHaveLength(2)
+            expect(backend.state.autocompleteRequests).toHaveLength(1)
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -154,18 +121,10 @@ describe("Kilo Gateway autocomplete RPC", () => {
               yield* rpc.call("kilocode.gateway", "autocomplete.fim", { prefix: "", suffix: "" }).pipe(Effect.flip),
             ).toMatchObject({ type: "unauthorized", message: "Not authenticated with Kilo Gateway" })
             expect(
-              yield* rpc.call("kilocode.gateway", "autocomplete.edit", { ...edit }).pipe(Effect.flip),
-            ).toMatchObject({ type: "unauthorized", message: "Not authenticated with Kilo Gateway" })
-            expect(
               yield* rpc
                 .call("kilocode.gateway", "autocomplete.fim", { prefix: "", suffix: "", provider: "mistral", model: "codestral-2508" })
                 .pipe(Effect.flip),
             ).toMatchObject({ type: "unauthorized", message: "Missing mistral provider API key" })
-            expect(
-              yield* rpc
-                .call("kilocode.gateway", "autocomplete.edit", { ...edit, provider: "inception", model: "mercury-next-edit" })
-                .pipe(Effect.flip),
-            ).toMatchObject({ type: "unauthorized", message: "Missing inception provider API key" })
             expect(backend.state.autocompleteRequests).toEqual([])
           }),
         ),
@@ -219,7 +178,7 @@ describe("Kilo Gateway autocomplete RPC", () => {
       (backend) =>
         withEnv({ ...env, KILO_API_KEY: `${backend.url}/api/organizations/first:secret`, KILO_ORG_ID: "selected" }, () =>
           Effect.gen(function* () {
-            const host = yield* PluginHost.make(yield* Plugin.Service)
+            const host = yield* PluginHost.make(yield* Plugin.Service, "test")
             yield* host.storage.set("organization:env", { organizationID: "selected" })
             yield* addPlugin()
             const rpc = yield* Rpc.Service

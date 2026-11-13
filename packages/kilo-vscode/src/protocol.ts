@@ -113,6 +113,19 @@ export type SpeechToTextStatus = {
   readonly catalogError?: string
 }
 
+/**
+ * Worktree actions of the sidebar chat. The host routes them to the Agent Manager provider, which owns worktree
+ * creation and movement.
+ */
+export type SidebarWorktree =
+  | { type: "agentManager.continueInWorktree"; sessionId: string }
+  | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string }
+  | { type: "agentManager.requestRepoInfo" }
+  | { type: "openAdvancedWorktree" }
+
+/** Toggles Keep Awake from the composer slash menu. The Agent Manager provider owns the state. */
+export type AgentManagerCaffeination = { type: "agentManager.toggleCaffeination" }
+
 export type ToHost =
   | Request
   | BrowserTab
@@ -123,6 +136,9 @@ export type ToHost =
   | Settings
   | Speech
   | Indexing
+  | SidebarWorktree
+  | AgentManagerCaffeination
+  | Mention
   | ({ type: "openSettingsTab" } & SettingsNavigation)
   | { type: "settingsReady" }
   | { type: "settingsTabChanged"; tab: string }
@@ -140,21 +156,21 @@ export type BrowserTab =
   | { type: "browserTab.openExternal"; url: string }
   | { type: "browserTab.reference"; sessionId: string; reference: BrowserReference }
   | BrowserScopeMessage<"browserTab.state">
-  | BrowserScopeMessage<"browserTab.open"> & { url: string }
+  | (BrowserScopeMessage<"browserTab.open"> & { url: string })
   | BrowserScopeMessage<"browserTab.refresh">
   | BrowserScopeMessage<"browserTab.back">
   | BrowserScopeMessage<"browserTab.forward">
   | BrowserScopeMessage<"browserTab.close">
-  | BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" }
-  | BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean }
-  | BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string }
-  | BrowserScopeMessage<"browserTab.viewport"> & {
+  | (BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" })
+  | (BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean })
+  | (BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string })
+  | (BrowserScopeMessage<"browserTab.viewport"> & {
       browserId: string
       navigation: number
       viewport: BrowserViewport
-    }
-  | BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction }
-  | BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number }
+    })
+  | (BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction })
+  | (BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number })
 
 export type BrowserScopeMessage<Type extends string> = {
   type: Type
@@ -207,6 +223,41 @@ export type BrowserInspectionPayload = BrowserScopeMessage<"browserTab.inspectio
 export type BrowserFramePayload = BrowserScopeMessage<"browserTab.frame"> & BrowserFrame
 export type BrowserCursorPayload = BrowserScopeMessage<"browserTab.cursor"> & BrowserCursor
 export type BrowserDevtoolsPayload = BrowserScopeMessage<"browserTab.devtools"> & { browserId: string; url: string }
+/**
+ * The host side of the composer's `@` mentions. `directory` is the directory of the session the composer belongs to,
+ * so an Agent Manager worktree searches its own tree. `sessionID` is left out of the past-chat results.
+ */
+export type Mention =
+  | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string; directory?: string }
+  | { type: "requestSessionSearch"; requestId: string; sessionID?: string; directory?: string }
+  | { type: "requestFilePicker"; requestId: string }
+  /** `agentManagerContext` names the Agent Manager worktree or `local`; the panel has no VS Code terminal of its own. */
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string; agentManagerContext?: string }
+  /** `base` diffs an Agent Manager worktree against its base branch; without it the host resolves the target. */
+  | { type: "requestGitChangesContext"; requestId: string; directory?: string; base?: string }
+
+/** A file search result of the `@` menu. */
+export type FileSearchItem = {
+  path: string
+  type: "file" | "folder" | "opened-file"
+  /** Owning workspace folder name, set only when the workspace has more than one folder. */
+  root?: string
+  /**
+   * Path within the owning folder, set only when `path` is absolute. The webview ranks the whole `@` menu again, and
+   * scoring an absolute path there would let the filesystem prefix match on every entry under that folder.
+   */
+  relative?: string
+}
+
+/** A past chat the `@` menu can reference. */
+export type SessionSearchItem = {
+  id: string
+  title: string
+  updated: number
+  /** Name of the worktree the session runs in, when listed across the worktree family. */
+  worktreeName?: string
+}
+
 /** Codebase indexing consent and project list. The consent itself is machine-local in globalState. */
 export type Indexing =
   | { type: "requestIndexingSettings"; projectId?: string }
@@ -255,6 +306,7 @@ export type Ui =
   | { type: "saveImage"; dataUrl: string; filename: string }
   | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
+  | { type: "openMarketplace" }
   | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
   | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
   | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
@@ -264,6 +316,13 @@ export type Ui =
   | { type: "openChanges"; sessionID?: string; turnID?: string }
   /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
   | { type: "requestGitChangesStats" }
+  /** Opens a subagent session in its own read-only editor tab. */
+  | ({ type: "openSubagent" } & SubagentTarget)
+  /** Closes a subagent editor tab and shows its parent session in the sidebar. */
+  | { type: "subagentBack" }
+
+/** A subagent session an editor tab shows: the child session, its title and the session that started it. */
+export type SubagentTarget = { sessionID: string; title?: string; parentSessionID?: string }
 
 export type ModelPreferenceRef = { providerID: string; modelID: string }
 export type ModelUsageMap = Record<string, { count: number; lastUsed: number }>
@@ -288,7 +347,7 @@ export type ModelPreferenceMessage =
 
 /** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
 export type BrowserOut =
-  | BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean }
+  | (BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean })
   | BrowserStatePayload
   | BrowserFramePayload
   | BrowserCursorPayload
@@ -396,6 +455,7 @@ export type ToWebview =
       name:
         | "newSession"
         | "history"
+        | "focusSearch"
         | "cycleAgentMode"
         | "cyclePreviousAgentMode"
         | "showOpenTabs"
@@ -405,10 +465,12 @@ export type ToWebview =
     }
   /** Adds context chips to the composer and focuses it. */
   | { type: "appendContext"; items: PromptAttachment[] }
-  /** Sends a prompt in the open session at once, without touching the draft. */
-  | { type: "startPrompt"; text: string; items?: PromptAttachment[] }
+  /** Sends a prompt in the open session at once, without touching the draft. `injectedTitle` labels a prompt Kilo composed. */
+  | { type: "startPrompt"; text: string; items?: PromptAttachment[]; injectedTitle?: string }
+  /** Shows a session in the sidebar, for example the parent of a closed subagent tab. */
+  | { type: "openSession"; sessionID: string }
   | ({ type: "navigate" } & SettingsNavigation)
-  | { type: "keybindings"; bindings: Record<string, string> }
+  | { type: "keybindings"; bindings: Record<string, string>; selection: boolean }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "modelPreferencesLoaded"; value: ModelPreferences }
@@ -458,6 +520,19 @@ export type ToWebview =
   | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
   /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
   | { type: "gitChangesStats"; stats?: GitChangesStats }
+  /** Replies to the `@` mention requests, matched by `requestId`. */
+  | { type: "fileSearchResult"; requestId: string; paths: string[]; items?: FileSearchItem[]; dir: string }
+  | { type: "sessionSearchResult"; requestId: string; sessions: SessionSearchItem[] }
+  /** `path` is empty when the dialog was cancelled. */
+  | { type: "filePickerResult"; requestId: string; path: string }
+  | { type: "terminalContextResult"; requestId: string; content: string; truncated: boolean }
+  | { type: "terminalContextError"; requestId: string; error: string }
+  | { type: "gitChangesContextResult"; requestId: string; content: string; truncated: boolean }
+  | { type: "gitChangesContextError"; requestId: string; error: string }
+  /** The current branch of the workspace, for the sidebar New Worktree menu. Absent outside a git repository. */
+  | { type: "agentManager.repoInfo"; branch?: string }
+  /** Progress of a sidebar conversation moving into a worktree. */
+  | { type: "continueInWorktreeProgress"; status: string; detail?: string; error?: string }
   | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
   | { type: "speechToTextStarted"; requestId: string }
   | { type: "speechToTextResult"; requestId: string; text: string }

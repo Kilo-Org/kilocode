@@ -3731,6 +3731,9 @@ body.am-wt-dragging-active * {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Stretch the ghost wrapper to the prompt area. Its percentage height does not
+     resolve against the flexed wrapper, which left the textarea bottom-aligned. */
+  align-items: stretch;
 }
 
 /* While any inline (non-portaled) selector popover is open, let it escape the
@@ -3760,7 +3763,8 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-dialog .am-prompt-input-ghost-wrapper {
-  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .am-nv-dialog [class~="prompt-input-hint"] {
@@ -3777,6 +3781,14 @@ body.am-wt-dragging-active * {
   height: 100%;
   max-height: none;
   overflow-y: auto;
+}
+
+/* The container is sized by adjustHeight, as in v1. A content-sized textarea
+   grows past it while adjustHeight measures, which resets its scroll to the top
+   and leaves the caret below the visible text. */
+.am-nv-dialog .am-prompt-input:not(:placeholder-shown) {
+  field-sizing: fixed;
+  height: 100%;
 }
 
 .am-nv-config-label {
@@ -6213,32 +6225,16 @@ body.vscode-high-contrast-light {
   background: transparent;
 }
 
-.am-subagent-header {
+/* The tab strip is the panel's only chrome row: the inspector strip sits where
+   a title header used to, so the transcript starts one row higher. The close
+   action stays on the far edge, away from the tab close buttons. */
+.am-subagent-close {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  height: 32px;
-  padding: 0 4px 0 8px;
+  align-self: center;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-weak-base);
-  background: var(--surface-base);
-}
-
-.am-subagent-heading {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 6px;
-  color: var(--text-base);
-  font-size: var(--font-size-small);
-  font-weight: 600;
-}
-
-.am-subagent-count {
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-10);
-  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  padding-left: 4px;
 }
 
 .am-subagent-chat {

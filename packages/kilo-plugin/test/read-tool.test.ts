@@ -4,12 +4,14 @@ import path from "path"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
+import { Image } from "@opencode/core/image"
 import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
 import { Project } from "@opencode/core/project"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Session } from "@opencode/core/session"
 import { SessionInstructions } from "@opencode/core/session/instructions"
+import { Skill } from "@opencode/core/skill"
 import { Tool } from "@opencode/core/tool"
 import { ReadTool } from "@opencode/core/tool/plugin/read"
 import { ReadToolFileSystem } from "@opencode/core/tool/read-filesystem"
@@ -34,7 +36,17 @@ const node = makeLocationNode({
       yield* registerToolPlugin(KiloRead.KiloReadPlugin)
     }),
   ),
-  deps: [Tool.node, ReadToolFileSystem.node, FileAccess.node, SessionInstructions.node, FSUtil.node, Location.node],
+  deps: [
+    Tool.node,
+    ReadToolFileSystem.node,
+    FileAccess.node,
+    Image.node,
+    Permission.node,
+    Skill.node,
+    SessionInstructions.node,
+    FSUtil.node,
+    Location.node,
+  ],
 })
 
 const withTool = <A, E, R>(directory: string, body: (registry: Tool.Interface) => Effect.Effect<A, E, R>) => {

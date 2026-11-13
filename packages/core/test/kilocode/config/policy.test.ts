@@ -162,6 +162,21 @@ test("privacy mode is on when any effective document sets privacy_mode to true",
   expect(KiloConfigPolicy.privacyMode([new Document({ type: "document", info: new Info({}) })])).toBe(false)
 })
 
+test("pages config merges per field, and the last document that sets a field wins", () => {
+  const document = (pages?: { enabled?: boolean; destination?: "pages" | "pages-dev" }) =>
+    new Document({ type: "document", info: new KiloConfigPolicy.Info({ pages }) })
+  expect(KiloConfigPolicy.pagesConfig([])).toEqual({})
+  expect(KiloConfigPolicy.pagesConfig([document(), document({})])).toEqual({ enabled: undefined, destination: undefined })
+  // A nearer document that sets only the destination does not reset enabled.
+  expect(KiloConfigPolicy.pagesConfig([document({ enabled: true }), document({ destination: "pages-dev" })])).toEqual({
+    enabled: true,
+    destination: "pages-dev",
+  })
+  expect(
+    KiloConfigPolicy.pagesConfig([document({ enabled: true, destination: "pages-dev" }), document({ enabled: false, destination: "pages" })]),
+  ).toEqual({ enabled: false, destination: "pages" })
+})
+
 test("the display layouts are Kilo settings, and an invalid layout is ignored", () => {
   const valid = {
     terminal_command_display: "collapsed",
@@ -184,4 +199,47 @@ test("the display layouts are Kilo settings, and an invalid layout is ignored", 
   expect(parsed?.terminal_command_display).toBeUndefined()
   expect(parsed?.code_edit_display).toBe("expanded")
   expect(parsed?.shell).toBe("valid")
+})
+
+test("a v1 compaction threshold becomes the v2 buffer, keeping the native keys", () => {
+  const input = { compaction: { threshold_percent: 80, auto: false, preserve_recent_tokens: 9000 } }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject({
+    compaction: { buffer: "20%", auto: false, keep: { tokens: 9000 } },
+  })
+  expect(KiloConfigPolicy.parse({ compaction: { threshold_percent: 100 } }, {})).toMatchObject({
+    compaction: { buffer: 0 },
+  })
+})
+
+test("an explicit v2 compaction buffer wins over the v1 threshold", () => {
+  const input = { compaction: { threshold_percent: 80, buffer: "10%" } }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(input, normalized.encoded)).toMatchObject({ compaction: { buffer: "10%" } })
+
+  const reserved = { compaction: { threshold_percent: 80, reserved: 12000 } }
+  const folded = ConfigNormalize.normalize(reserved)
+  if (folded.type !== "normalized") throw new Error("expected canonical normalization")
+  expect(KiloConfigPolicy.parse(reserved, folded.encoded)).toMatchObject({ compaction: { buffer: 12000 } })
+})
+
+test("an invalid compaction threshold is ignored with a diagnostic and keeps the other settings", () => {
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const input = { compaction: { threshold_percent: 0, auto: false }, shell: "valid" }
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.shell).toBe("valid")
+  expect(parsed?.compaction).toMatchObject({ auto: false })
+  expect(parsed?.compaction?.buffer).toBeUndefined()
+  expect(diagnostics).toEqual([
+    {
+      kind: "invalid",
+      path: ["compaction", "threshold_percent"],
+      message: "ignored invalid compaction.threshold_percent; expected a percentage from 1 to 100",
+    },
+  ])
+  expect(KiloConfigPolicy.parse({ compaction: { threshold_percent: null } }, {})?.compaction?.buffer).toBeUndefined()
 })

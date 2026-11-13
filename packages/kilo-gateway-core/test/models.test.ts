@@ -52,12 +52,27 @@ describe("KiloModels", () => {
     })
   })
 
+  test("lists image-output models apart from the chat catalog", async () => {
+    using backend = fixture()
+    const result = await Effect.runPromise(KiloModels.get({ server: backend.url, token: "token" }))
+    expect(result.models.map((model) => model.id)).not.toContain("google/gemini-2.5-flash-image")
+    expect(result.imageModels.map((model) => model.id)).toEqual(["google/gemini-2.5-flash-image"])
+    expect(result.imageModels[0]).toMatchObject({
+      id: "google/gemini-2.5-flash-image",
+      name: "Gemini 2.5 Flash Image",
+      description: "Image generation model",
+      capabilities: { input: ["text", "image"], output: ["text", "image"] },
+      limit: { context: 64000 },
+    })
+  })
+
   test("filters the anonymous catalog to isFree === true only", async () => {
     using backend = fixture()
     const result = await Effect.runPromise(KiloModels.get({ server: backend.url }))
     expect(result.anonymous).toBe(true)
     expect(result.models.map((model) => model.id)).toEqual(["kilo-auto/free", "kilo-auto/small"])
     expect(result.models.every((model) => model.free)).toBe(true)
+    expect(result.imageModels).toEqual([])
   })
 
   test("retains an explicit empty token without exposing paid anonymous models", async () => {
@@ -330,9 +345,8 @@ describe("KiloDefaults", () => {
     ).toBe("anthropic/claude-sonnet-4.6")
     backend.state.defaultsStatus = 500
     expect(await Effect.runPromise(KiloDefaults.get({ server: backend.url }))).toBe("kilo-auto/free")
-    expect(await Effect.runPromise(KiloDefaults.get({ server: backend.url, token: "token" }))).toBe(
-      "kilo-auto/frontier",
-    )
+    // v1 `api/constants.ts`: the signed-in fallback is the free router too.
+    expect(await Effect.runPromise(KiloDefaults.get({ server: backend.url, token: "token" }))).toBe("kilo-auto/free")
   })
 
   for (const defaults of [

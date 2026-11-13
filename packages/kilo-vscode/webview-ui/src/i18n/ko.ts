@@ -58,7 +58,7 @@ export const anacondaDesktopDict = {
 type Keys = keyof typeof en
 
 export const dict = {
-  "session.goal.complete": "완료 (모델 보고)",
+  "session.goal.complete": "완료",
   "session.goal.blocked": "차단됨",
   "session.goal.restart": "목표 다시 시작",
   ...anacondaDesktopDict,
@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.noChanges": "변경 사항이 없습니다.",
   "ui.permission.reject": "거부",
+  "ui.permission.allowAllSites": "모든 사이트 허용",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
   "ui.permission.feedbackHint": "Enter로 거부, Esc로 취소",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
@@ -1395,6 +1396,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
+  "task.backgroundAgents.promoteFailed": "이 에이전트를 백그라운드에서 계속할 수 없습니다. 이미 완료되었을 수 있습니다.",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",
@@ -1481,6 +1483,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "시스템 브라우저",
   "settings.experimental.browserLinks.integrated": "통합 브라우저",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
+  "chat.reply.toolbar": "선택한 텍스트",
+  "chat.reply.quote": "인용",
+  "chat.reply.quoteHint": "답변에서 인용하기",
+  "chat.reply.commentHint": "이 부분에 댓글 달기",
+  "chat.reply.copy": "복사",
+  "chat.reply.sendHint": "이 댓글을 지금 Kilo에 보내기",
+  "chat.reply.commentLater": "다음 메시지로 저장",
+  "chat.reply.count": "답글 ({{count}})",
+  "chat.reply.sendAll": "모두 보내기",
+  "chat.reply.showInChat": "채팅에서 보기",
   "browserTab.noSession": "세션에서 브라우저를 열어 로컬 애플리케이션이나 공개 HTTPS 페이지를 미리 보세요.",
   "browserTab.disabled": "통합 브라우저가 비활성화되어 있습니다. Kilo 설정 > 실험에서 활성화하세요.",
 }

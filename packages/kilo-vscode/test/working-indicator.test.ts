@@ -29,6 +29,11 @@ describe("working indicator state", () => {
     expect(showsWorking("running", false, true)).toBe(false)
   })
 
+  test("an active goal keeps working between its runs, unless the row is blocked", () => {
+    expect(showsWorking("idle", false, false, true)).toBe(true)
+    expect(showsWorking("idle", false, true, true)).toBe(false)
+  })
+
   test("tracks elapsed time only with a clock and an active turn", () => {
     expect(tracksElapsed("idle", true, timing)).toBe(true)
     expect(tracksElapsed("running", false, { active: 5000 })).toBe(true)

@@ -25,6 +25,8 @@ export type ProviderCompaction = { type: "summary" } | { type: "native" }
 
 export type ProviderCacheTTL = `${number}${"ms" | "s" | "m" | "h" | "d"}`
 
+export type ProviderCacheWarming = boolean | { interval?: "auto" | (string & {}); duration?: string }
+
 export type ProviderTransport = "http" | "websocket"
 
 export type ProviderEncoding = "zstd" | "gzip" | "none"
@@ -351,6 +353,10 @@ export type ArtifactID = string
 
 export type ArtifactTime = { created: number; updated: number }
 
+export type JobStatus = "running" | "completed" | "error" | "cancelled"
+
+export type JobTime = { started: number; completed?: number }
+
 export type ReferenceGitSource = { type: "git"; repository: string; branch?: string }
 
 export type VcsBranch = { current?: string; default?: string }
@@ -401,7 +407,7 @@ export type LocationPublicInfo = {
 
 export type ModelRef = { id: string; providerID: ProviderID; variant?: string }
 
-export type ProviderCache = { ttl?: ProviderCacheTTL }
+export type ProviderCache = { ttl?: ProviderCacheTTL; warming?: ProviderCacheWarming }
 
 export type ModelVariantSettings = { compaction?: ProviderCompaction; encoding?: ProviderEncoding } & {
   [x: string]: any
@@ -465,6 +471,7 @@ export type SessionRevert = {
   partID?: string
   snapshot?: SnapshotID
   files?: Array<FileDiffInfo>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
 }
 
 export type GenerateImageOutput2 = { type: "image"; data: PromptBase64; mime: string; name?: string }
@@ -771,6 +778,7 @@ export type IntegrationAttempt = {
   url: string
   instructions: string
   mode: "auto" | "code"
+  paste?: true
   time: { created: number; expires: number }
 }
 
@@ -940,6 +948,40 @@ export type ArtifactInfo = {
   entry: string
   url: string
   time: ArtifactTime
+}
+
+export type JobShell = {
+  kind: "shell"
+  id: string
+  sessionID: SessionID
+  status: JobStatus
+  title?: string
+  time: JobTime
+  shellID: string
+  command: string
+}
+
+export type JobSubagent = {
+  kind: "subagent"
+  id: string
+  sessionID: SessionID
+  status: JobStatus
+  title?: string
+  time: JobTime
+  childSessionID: SessionID
+  agent: string
+  description: string
+}
+
+export type JobImage = {
+  kind: "image"
+  id: string
+  sessionID: SessionID
+  status: JobStatus
+  title?: string
+  time: JobTime
+  path: string
+  model: string
 }
 
 export type VcsInfo = { provider?: string; branch: VcsBranch }
@@ -2199,6 +2241,8 @@ export type ScheduleWhen = ScheduleWhenIn | ScheduleWhenAt | ScheduleWhenEvery |
 
 export type ArtifactContent = { info: ArtifactInfo; files: { [x: string]: string } }
 
+export type JobInfo = JobShell | JobSubagent | JobImage
+
 export type SessionInboxMove = {
   id: SessionMessageID
   sessionID: SessionID
@@ -2353,6 +2397,7 @@ export type ConfigEntry =
             | "mcp.use"
             | "skill.use"
             | "plugin.use"
+            | "websearch.use"
           resource: string
           effect: "allow" | "deny"
         }>
@@ -2412,6 +2457,7 @@ export type ConfigEntry =
                   codemode?: boolean
                   timeout?: { startup?: number; catalog?: number; execution?: number }
                   protocol?: McpProtocol
+                  pool?: boolean
                 }
               | {
                   type: "remote"
@@ -2431,6 +2477,7 @@ export type ConfigEntry =
                   codemode?: boolean
                   timeout?: { startup?: number; catalog?: number; execution?: number }
                   protocol?: McpProtocol
+                  pool?: boolean
                 }
           }
         }
@@ -2456,7 +2503,7 @@ export type ConfigEntry =
         websearch?: false | { provider: "random" | WebSearchID }
         plugins?: Array<string | { package: string; options?: { [x: string]: JsonValue } }>
         worktree?: ConfigWorktree
-        warming?: boolean | { prompt?: string; interval?: string; duration?: string }
+        warming?: boolean | { prompt?: string; interval?: "auto" | (string & {}); duration?: string }
         providers?: {
           [x: string]: {
             canonical?: ProviderID
@@ -2507,12 +2554,15 @@ export type ConfigEntry =
         }
         experimental?: {
           portable_shell_scanner?: boolean
+          all_flags?: boolean
           todo?: boolean
           background_compaction?: boolean
           media_blob?: boolean
-          image_generate?: boolean | { model?: string | { providerID: string; model: string; variant?: string } }
           schedules?: boolean
           artifacts?: boolean
+          part_rows?: boolean
+          codemode_vm?: boolean
+          image_generate?: boolean | { model?: string | { providerID: string; model: string; variant?: string } }
           subagent_depth?: number
           location_idle_timeout?: string | false
           policies?: Array<{
@@ -2524,6 +2574,7 @@ export type ConfigEntry =
               | "mcp.use"
               | "skill.use"
               | "plugin.use"
+              | "websearch.use"
             resource: string
             effect: "allow" | "deny"
           }>
@@ -3482,7 +3533,11 @@ export type SessionGenerateInput = { readonly sessionID: string; readonly prompt
 
 export type SessionGenerateOutput = SessionGenerateResponse["data"]
 
-export type SessionInterruptInput = { readonly sessionID: string; readonly resume?: boolean | undefined }
+export type SessionInterruptInput = {
+  readonly sessionID: string
+  readonly resume?: boolean | undefined
+  readonly steer?: boolean | undefined
+}
 
 export type SessionInterruptOutput = SessionInterruptResponse
 
@@ -3804,6 +3859,7 @@ export type ExperimentalSessionImportInput = {
         readonly moved?: boolean
         readonly more?: true
       }>
+      readonly workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
     }
     readonly location: { readonly directory: string }
   }
@@ -4072,6 +4128,7 @@ export type ExperimentalMcpAddInput = {
         readonly codemode?: boolean
         readonly timeout?: { readonly startup?: number; readonly catalog?: number; readonly execution?: number }
         readonly protocol?: "legacy" | "auto" | "2026-07-28"
+        readonly pool?: boolean
       }
     | {
         readonly type: "remote"
@@ -4091,6 +4148,7 @@ export type ExperimentalMcpAddInput = {
         readonly codemode?: boolean
         readonly timeout?: { readonly startup?: number; readonly catalog?: number; readonly execution?: number }
         readonly protocol?: "legacy" | "auto" | "2026-07-28"
+        readonly pool?: boolean
       }
 }
 
@@ -4652,6 +4710,15 @@ export type ExperimentalArtifactsViewInput = {
 }
 
 export type ExperimentalArtifactsViewOutput = globalThis.Uint8Array
+
+export type ExperimentalJobListInput = {
+  readonly sessionID?: string | undefined
+  readonly kind?: ("shell" | "subagent" | "image") | undefined
+  readonly status?: ("running" | "completed" | "error" | "cancelled") | undefined
+  readonly descendants?: boolean | undefined
+}
+
+export type ExperimentalJobListOutput = { data: Array<JobInfo> }["data"]
 
 export type ShellListInput = { readonly location?: { readonly directory?: string | undefined } | undefined }
 

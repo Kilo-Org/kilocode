@@ -16,7 +16,7 @@ import path from "node:path"
 const MAX_LINES: Record<string, number> = {
   "webview-ui/src/components/settings/ProviderConnectDialog.tsx": 750,
   "webview-ui/src/components/settings/ProvidersTab.tsx": 700,
-  "webview-ui/src/components/settings/PermissionEditor.tsx": 600,
+  "webview-ui/src/components/settings/PermissionEditor.tsx": 493,
   "webview-ui/src/v2/question.tsx": 550,
   // The v2 base added the custom provider models feature on ed11618cb62; cap is the merged baseline rounded up.
   "webview-ui/src/components/settings/CustomProviderDialog.tsx": 950,

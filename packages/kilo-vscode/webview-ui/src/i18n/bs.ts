@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Završeno (prema modelu)",
+  "session.goal.complete": "Završeno",
   "session.goal.blocked": "Blokirano",
   "session.goal.restart": "Ponovo pokreni cilj",
   ...anacondaDesktopDict,
@@ -311,6 +311,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.noChanges": "Nema promjena.",
   "ui.permission.reject": "Odbij",
+  "ui.permission.allowAllSites": "Dozvoli sve stranice",
   "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",
   "ui.permission.feedbackHint": "Enter za odbijanje, Esc za otkazivanje",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
@@ -1424,6 +1425,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Otvori sve agente u pozadini",
   "task.backgroundAgents.cancel": "Zaustavi",
   "task.backgroundAgents.continueInBackground": "Nastavi u pozadini",
+  "task.backgroundAgents.promoteFailed": "Ovaj agent nije mogao nastaviti u pozadini. Možda je već završio.",
   "task.backgroundAgents.waiting": "Agent u pozadini treba vaš unos",
   "task.backgroundAgents.needsInput": "Potreban unos",
   "task.backgroundAgents.clearFinished": "Obriši završene",
@@ -1510,6 +1512,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Sistemski preglednik",
   "settings.experimental.browserLinks.integrated": "Integrirani preglednik",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "chat.reply.toolbar": "Odabrani tekst",
+  "chat.reply.quote": "Citiraj",
+  "chat.reply.quoteHint": "Citiraj u svom odgovoru",
+  "chat.reply.commentHint": "Komentariši ovaj dio",
+  "chat.reply.copy": "Kopiraj",
+  "chat.reply.sendHint": "Pošalji ovaj komentar Kilu sada",
+  "chat.reply.commentLater": "Sačuvaj za sljedeću poruku",
+  "chat.reply.count": "Odgovori ({{count}})",
+  "chat.reply.sendAll": "Pošalji sve",
+  "chat.reply.showInChat": "Prikaži u chatu",
   "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
   "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",
 }

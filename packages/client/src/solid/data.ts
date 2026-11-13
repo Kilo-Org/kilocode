@@ -1247,7 +1247,9 @@ export function createData(config: CreateDataInput) {
           (store.session.pending[event.data.sessionID] ?? []).filter((item) => item.id < event.data.to),
         )
         message.update(event.data.sessionID, (draft, index) => {
-          const position = draft.findIndex((item) => item.id >= event.data.to)
+          // kilocode_change start - session-revert: cut at the boundary's position; a queued prompt keeps its admission ID, so it can sort before steps delivered ahead of it
+          const position = index.get(event.data.to) ?? draft.findIndex((item) => item.id >= event.data.to)
+          // kilocode_change end
           if (position === -1) return
           for (const item of draft.splice(position)) index.delete(item.id)
         })
@@ -1870,10 +1872,17 @@ export function createData(config: CreateDataInput) {
               (item) => !ids.has(item.id) && (outbox.has(item.id) || admitted.has(item.id)),
             )
             const messages = local.length === 0 ? fetched : [...fetched, ...local]
+            // The transcript only holds delivered input, so a pending row it contains missed its
+            // inbox.delivered event (and maybe its enqueued echo) while the event stream was down.
+            const delivered = [...admitted].filter((id) => ids.has(id))
             batch(() => {
               // kilocode_change start - session-history
               markStart(sessionID, response.data.length < limit)
               // kilocode_change end
+              delivered.forEach((id) => {
+                outbox.delete(id)
+                removePending(sessionID, id)
+              })
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
               setStore("session", "messageCursor", sessionID, response.cursor.next ?? undefined)

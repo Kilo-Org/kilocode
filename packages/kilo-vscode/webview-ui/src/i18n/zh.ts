@@ -55,7 +55,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完成（模型报告）",
+  "session.goal.complete": "完成",
   "session.goal.blocked": "受阻",
   "session.goal.restart": "重新开始目标",
   ...anacondaDesktopDict,
@@ -295,6 +295,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.noChanges": "无更改。",
   "ui.permission.reject": "拒绝",
+  "ui.permission.allowAllSites": "允许所有网站",
   "ui.permission.feedbackPlaceholder": "告诉 Kilo 应该如何修改",
   "ui.permission.feedbackHint": "按 Enter 拒绝，按 Esc 取消",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
@@ -1340,6 +1341,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "打开所有后台智能体",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "在后台继续",
+  "task.backgroundAgents.promoteFailed": "此代理无法在后台继续。它可能已经完成。",
   "task.backgroundAgents.waiting": "后台智能体需要你的输入",
   "task.backgroundAgents.needsInput": "需要输入",
   "task.backgroundAgents.clearFinished": "清除已完成",
@@ -1421,6 +1423,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "系统浏览器",
   "settings.experimental.browserLinks.integrated": "集成浏览器",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "chat.reply.toolbar": "选中的文本",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "在回复中引用",
+  "chat.reply.commentHint": "评论此段",
+  "chat.reply.copy": "复制",
+  "chat.reply.sendHint": "立即将此评论发送给 Kilo",
+  "chat.reply.commentLater": "保存到下次消息",
+  "chat.reply.count": "回复 ({{count}})",
+  "chat.reply.sendAll": "全部发送",
+  "chat.reply.showInChat": "在聊天中显示",
   "browserTab.noSession": "从会话中打开浏览器以预览本地应用或公共 HTTPS 页面。",
   "browserTab.disabled": "集成浏览器已禁用。请在 Kilo 设置 > 实验性中启用。",
 } satisfies Partial<Record<Keys, string>>

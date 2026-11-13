@@ -109,7 +109,7 @@ describe("openai message conversion", () => {
   })
 
   test("drops unsupported parts and keeps an empty content string", () => {
-    expect(GatewayRouters.openaiMessages([Message.user([{ type: "reasoning", text: "x" }])])).toEqual([
+    expect(GatewayRouters.openaiMessages([Message.user([Message.media(Media.from({ type: "base64", data: "AAAA", mediaType: "audio/basic" }))])])).toEqual([
       { role: "user", content: "" },
     ])
   })

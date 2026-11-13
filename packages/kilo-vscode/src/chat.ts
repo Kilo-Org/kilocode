@@ -10,6 +10,7 @@ import {
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode"
+import { getErrorMessage } from "./agent-manager/errors"
 import { notifyHostAutoApprove, setHostAutoApprove } from "./agent-manager/provider-auto-approve"
 import type { SettingsHandler } from "./agent-manager/project/settings"
 import type { GitChanges } from "./git-changes"
@@ -36,7 +37,7 @@ import {
   writeKiloSettings,
 } from "./settings-host"
 import { resolveKiloProfile } from "./settings-paths"
-import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
+import { promptKeybindings, promptSelection, watchPromptContext } from "./prompt-keybindings"
 import { readDisplaySettings } from "./display-settings"
 import { workStyleHost } from "./work-style-host"
 import { SANDBOX_DEFAULT_KEY, SandboxPreference } from "./services/sandbox-preference"
@@ -48,6 +49,7 @@ import { documentExists, isMarkdownPath } from "./documents/document-reader"
 import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
+import { createMentionHost, isMentionRequest } from "./kilo-provider/mention-requests"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -55,9 +57,23 @@ const VIEW_SETTING_KEYS: Record<View, ReadonlySet<string>> = {
   chat: new Set(["showTaskTimeline", "indexing.showButtonWhenDisabled"]),
   settings: new Set(),
   profile: new Set(),
+  marketplace: new Set(),
   agentManager: new Set(["showTaskTimeline", "agentManager.pushFixes"]),
   documents: new Set(),
   diffViewer: new Set(),
+  subagent: new Set(["showTaskTimeline"]),
+}
+
+/** The Agent Manager worktree actions of the sidebar chat. */
+export type ChatWorktree = {
+  /** Moves a conversation into a new worktree, reporting each step. */
+  continue: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>
+  /** Creates a worktree, then opens the Agent Manager. */
+  create: (baseBranch?: string, branchName?: string) => Promise<void>
+  /** Opens the Agent Manager worktree dialog. */
+  advanced: () => Promise<void>
+  /** The current branch of the workspace, for the New Worktree menu. */
+  branch: () => Promise<string | undefined>
 }
 
 export function chat(input: {
@@ -73,6 +89,8 @@ export function chat(input: {
   changes?: ChangesTab
   /** Creates the working tree stats source of this view, pushing each change to `onStats`. */
   gitStats?: (onStats: (stats?: GitChangesStats) => void) => GitChanges
+  /** The Agent Manager worktree actions of the sidebar chat. */
+  worktree?: ChatWorktree
 }) {
   // This host owns the persisted auto-approve flag, and the Agent Manager sweep reads it. Record it at activation, so
   // the sweep works before any webview resolves.
@@ -131,13 +149,12 @@ export function chat(input: {
         // A hidden webview may not receive the reset notification.
         if (view.visible) syncState()
       })
-      // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
-      // user's keybindings.json changes.
-      const keybindings = watchKeybindings(
-        input.context,
-        () => void send({ type: "keybindings", bindings: promptKeybindings(input.context) }),
-      )
-      void send({ type: "keybindings", bindings: promptKeybindings(input.context) })
+      // The prompt hint names one shortcut at a time, so send the labels and whether an editor selection exists on
+      // load and whenever either changes.
+      const context = () =>
+        void send({ type: "keybindings", bindings: promptKeybindings(input.context), selection: promptSelection() })
+      const keybindings = watchPromptContext(input.context, context)
+      context()
       view.onDidDispose(() => {
         surface.dispose()
         stats?.dispose()
@@ -183,6 +200,8 @@ export function wire(input: {
   changes?: ChangesTab
   /** Reads the working tree change counts of the Changes button. */
   gitStats?: () => Promise<GitChangesStats | undefined>
+  /** The Agent Manager worktree actions of the sidebar chat. */
+  worktree?: ChatWorktree
   /** Called on every message from the webview, before it is handled. */
   onMessage?: () => void
   /** Receives focus changes of the chat sidebar webview. */
@@ -225,6 +244,8 @@ export function wire(input: {
     log: (message, error) => console.error(`Kilo indexing: ${message}`, error),
   })
   const detachIndexing = indexing.attach(post)
+  // The composer's `@` menu: file and past-chat search, the file picker, terminal output and git changes.
+  const mentions = createMentionHost({ server: input.server, directory: input.directory, post })
   // The composer state is shared: a change in one open view shows in the others, for example the sidebar and the
   // Agent Manager side by side.
   const others = (message: ToWebview) => surfaces.forEach((target) => target !== post && target(message))
@@ -443,9 +464,24 @@ export function wire(input: {
         .then((stats) => post({ type: "gitChangesStats", stats }))
       return true
     }
+    if (routeWorktreeMessage(message, input.worktree, post)) return true
     // The Kilo Gateway sign-in runs in the Profile panel, as main opens its Profile tab.
     if (message.type === "openProfile") {
       void commands.executeCommand("kilo-code.v2.profile")
+      return true
+    }
+    if (message.type === "openMarketplace") {
+      void commands.executeCommand("kilo-code.v2.marketplace")
+      return true
+    }
+    // A subagent opens in its own editor tab, in the directory store of the view that showed it.
+    if (message.type === "openSubagent") {
+      void commands.executeCommand("kilo-code.v2.openSubagent", {
+        sessionID: message.sessionID,
+        title: message.title,
+        parentSessionID: message.parentSessionID,
+        directory: input.directory,
+      })
       return true
     }
     if (message.type === "requestIndexingSettings") {
@@ -466,6 +502,7 @@ export function wire(input: {
       return
     }
     if (input.handle?.(message) || speech.handle(message)) return
+    if (isMentionRequest(message)) return mentions.handle(message)
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "sidebar.session") return setSidebarSession(message.sessionId)
     if (message.type === "trackCostSession") return input.trackCostSession?.(message.sessionID)
@@ -494,6 +531,14 @@ export function wire(input: {
     if (handleLeafMessage(message)) return
   })
   const uri = (...parts: string[]) => webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
+  // The rail follows the physical workbench edge. Text direction must not move it
+  // between chat and code, and only the sidebar view has an edge to follow.
+  const sidebar =
+    input.view === "chat"
+      ? workspace.getConfiguration("workbench").get<string>("sideBar.location") === "right"
+        ? "right"
+        : "left"
+      : undefined
   webview.html = html({
     csp: webview.cspSource,
     script: uri("dist", `${ENTRY[input.view]}.js`),
@@ -506,6 +551,7 @@ export function wire(input: {
     language: env.language,
     version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
+    sidebar,
     settings: readKiloSettings(),
     globals: input.globals,
   })
@@ -541,15 +587,17 @@ export function composerState(context: ExtensionContext): ToWebview[] {
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
 const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const NAMESPACE = "kilo-code.v2"
-// The sidebar and the Agent Manager load their own bundles; the Settings and Profile panels share a third one that
-// does not carry the chat transcript or its rich content.
+// The sidebar and the Agent Manager load their own bundles; the Settings, Profile and Marketplace panels share a third
+// one that does not carry the chat transcript or its rich content.
 const ENTRY = {
   chat: "webview",
   settings: "settings",
   profile: "settings",
+  marketplace: "settings",
   agentManager: "agent-manager",
   documents: "documents",
   diffViewer: "diff-viewer",
+  subagent: "webview",
 } as const
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
@@ -565,12 +613,15 @@ export function html(input: {
   language: string
   version: string
   view?: View
+  /** Physical workbench edge of the sidebar view; editor panels have none. */
+  sidebar?: "left" | "right"
   settings: Record<string, unknown>
   globals?: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
-  // The Settings and Profile panels load an ES module that imports its lazy tab chunks from the webview origin.
-  const module = input.view === "settings" || input.view === "profile"
+  // The Settings, Profile and Marketplace panels load an ES module that imports its lazy tab chunks from the webview
+  // origin.
+  const module = input.view === "settings" || input.view === "profile" || input.view === "marketplace"
   const policy = [
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
@@ -599,7 +650,7 @@ export function html(input: {
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
     .join(" ")
   return `<!DOCTYPE html>
-<html lang="${escape(input.language)}" data-theme="kilo-vscode">
+<html lang="${escape(input.language)}" data-theme="kilo-vscode" data-sidebar="${input.sidebar ?? ""}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -617,7 +668,7 @@ export function html(input: {
     }
   }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "documents" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  body { background-color: ${input.view === "settings" || input.view === "profile" || input.view === "marketplace" || input.view === "documents" || input.view === "subagent" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
   .container { height: 100vh; }
 </style>
@@ -634,7 +685,48 @@ function escape(text: string) {
   return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-type View = "chat" | "settings" | "profile" | "agentManager" | "documents" | "diffViewer"
+/** Routes the sidebar worktree actions to the Agent Manager worktree hooks. */
+export function routeWorktreeMessage(
+  message: ToHost,
+  worktree: ChatWorktree | undefined,
+  post: (message: ToWebview) => void,
+): boolean {
+  if (message.type === "agentManager.requestRepoInfo") {
+    void (worktree?.branch() ?? Promise.resolve(undefined))
+      .catch(() => undefined)
+      .then((branch) => post({ type: "agentManager.repoInfo", branch }))
+    return true
+  }
+  if (message.type === "agentManager.continueInWorktree") {
+    if (!worktree) {
+      post({ type: "continueInWorktreeProgress", status: "error", error: "Continue in Worktree is not available" })
+      return true
+    }
+    void worktree
+      .continue(message.sessionId, (status, detail, error) =>
+        post({ type: "continueInWorktreeProgress", status, detail, error }),
+      )
+      .catch((error: unknown) =>
+        post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) }),
+      )
+    return true
+  }
+  if (message.type === "agentManager.createWorktree") {
+    void worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
+      post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) })
+    })
+    return true
+  }
+  if (message.type === "openAdvancedWorktree") {
+    void worktree?.advanced().catch((error: unknown) => {
+      post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) })
+    })
+    return true
+  }
+  return false
+}
+
+type View = "chat" | "settings" | "profile" | "marketplace" | "agentManager" | "documents" | "diffViewer" | "subagent"
 
 /** The Changes editor tab: the session, working tree and turn diffs with review comments. */
 export type ChangesTab = {

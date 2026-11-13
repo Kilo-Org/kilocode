@@ -13,7 +13,6 @@ import { AgentPlugin } from "@opencode/core/plugin/agent"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { SystemPart } from "@opencode/ai/effect"
-import { PlanPlugin } from "@opencode/core/plugin/plan"
 import { Provider } from "@opencode/core/provider"
 import { Document, Event } from "@opencode/schema/config"
 import { IntegrationID } from "@opencode/schema/integration-id"
@@ -100,9 +99,8 @@ const setup = Effect.fn(function* (info: KiloConfigPolicy.Info, managedPrivacy =
     ])
   })
   const plugins = yield* Plugin.Service
-  const host = yield* PluginHost.make(plugins)
+  const host = yield* PluginHost.make(plugins, "test")
   yield* AgentPlugin.Plugin.effect(host)
-  yield* PlanPlugin.Plugin.effect(host)
   yield* KiloAgentPlugin.Plugin.effect(host)
   yield* KiloGatewayPlugin.effect(host)
   yield* ConfigAgentPlugin.Plugin.effect(host)

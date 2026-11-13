@@ -58,7 +58,7 @@ export function createKiloModelPicker(input: {
       models: models(),
       providers: providers(),
       gateway: metadata(),
-      favorites: input.connected() ? local.model.favorite() : [],
+      favorites: local.model.favorite(),
       recents: local.model.recent(),
       connected: input.connected(),
       showExtra: input.showExtra(),

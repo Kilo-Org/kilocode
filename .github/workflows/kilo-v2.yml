@@ -351,8 +351,9 @@ jobs:
 
   progress-comment:
     name: migration progress comment
-    # Same-repository pull requests only: a fork PR gets a read-only token and cannot comment.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    # Same-repository feature pull requests only: a fork PR gets a read-only token and cannot comment,
+    # and the map bot PR's own body already carries the delta.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'progress-map-update'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -377,9 +378,10 @@ jobs:
         env:
           REPO: ${{ github.repository }}
         run: |
-          # Both maps are generated here, because PRs do not commit the map and a base branch can carry a stale one.
+          # Both maps are generated with the PR's script so counting-rule changes compare like with like,
+          # while each checkout supplies its own features.json, dispositions.json and tracked files.
           git worktree add --detach ../base HEAD^1
-          bun ../base/script/upstream/progress.ts
+          bun script/upstream/progress.ts --root ../base
           cp ../base/migration-tracking/progress/progress.json base.json
           bun script/upstream/progress.ts
           git diff -U0 --no-color HEAD^1 HEAD > pr.diff
@@ -480,12 +482,13 @@ jobs:
         working-directory: packages/kilo-plugin
         run: bun test
 
-      - name: Test the Kilo Flows plugin
-        working-directory: packages/kilo-flows-plugin
-        run: bun test
-
       # The Kilo host suite is the slowest one in CI. `check-test` shards it on Linux and Windows through its
       # `test:ci` task, so this job no longer runs it a second time.
+
+      # Hard-fails when a user-visible OpenCode string (CLI/TUI/OAuth, core prompts) or the opencode tool namespace is not rebranded.
+      - name: Audit branding coverage
+        working-directory: packages/kilo-cli
+        run: bun run branding:audit
 
       - name: Typecheck the VS Code extension
         working-directory: packages/kilo-vscode

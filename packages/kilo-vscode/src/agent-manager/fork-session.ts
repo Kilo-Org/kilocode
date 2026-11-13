@@ -2,6 +2,8 @@ import type { OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { recordForkHandoff } from "./fork-handoff"
+import { canonicalizePath, samePath } from "./project/paths"
+import { moveSession } from "./session-move"
 
 export interface ForkContext {
   client: () => Promise<OpenCodeClient>
@@ -40,16 +42,11 @@ export async function forkSession(
     return ctx.state.getWorktree(worktreeId)?.path ?? ctx.directory
   })()
 
-  let forked: SessionInfo
-  try {
-    forked = await client.session.fork(
-      { sessionID: sessionId, ...(messageId ? { before: messageId } : {}) },
-    )
-    if (directory) await client.session.move({ sessionID: forked.id, directory })
-  } catch (error) {
+  const forked = await forkInto(client, sessionId, directory, messageId).catch((error: unknown) => {
     ctx.postError(`Failed to fork session: ${getErrorMessage(error)}`)
-    return null
-  }
+    return undefined
+  })
+  if (!forked) return null
 
   if (worktreeId && ctx.state) {
     ctx.state.addSession(forked.id, worktreeId)
@@ -64,4 +61,34 @@ export async function forkSession(
   ctx.notifyForked(forked, sessionId, worktreeId)
   ctx.log(`Forked session ${sessionId} → ${forked.id}${worktreeId ? ` in worktree ${worktreeId}` : ""}`)
   return null
+}
+
+/** Forks the session into the directory and returns the fork with its final location. */
+export async function forkInto(
+  client: OpenCodeClient,
+  sessionId: string,
+  directory: string | undefined,
+  messageId: string | undefined,
+): Promise<SessionInfo> {
+  const forked = await client.session
+    .fork({ sessionID: sessionId, ...(messageId ? { before: messageId } : {}) })
+    .catch(async (error: unknown) => {
+      if (!forkEmpty(error)) throw error
+      // An empty source has no boundary to copy, so its fork is a new session with the same settings.
+      const source = await client.session.get({ sessionID: sessionId })
+      return client.session.create({
+        ...(directory ? { location: { directory } } : {}),
+        ...(source.title ? { title: source.title } : {}),
+        ...(source.agent ? { agent: source.agent } : {}),
+        ...(source.model ? { model: source.model } : {}),
+        ...(source.metadata ? { metadata: source.metadata } : {}),
+      })
+    })
+  if (!directory || samePath(canonicalizePath(forked.location.directory), canonicalizePath(directory))) return forked
+  return moveSession(client, forked, directory)
+}
+
+/** True when the server rejects the fork because the source has no messages. */
+function forkEmpty(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "kind" in error && error.kind === "empty_session"
 }

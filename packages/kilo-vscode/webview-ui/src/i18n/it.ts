@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Completato (segnalato dal modello)",
+  "session.goal.complete": "Completato",
   "session.goal.blocked": "Bloccato",
   "session.goal.restart": "Riavvia obiettivo",
   ...anacondaDesktopDict,
@@ -235,6 +235,7 @@ export const dict = {
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.noChanges": "Nessuna modifica.",
   "ui.permission.reject": "Rifiuta",
+  "ui.permission.allowAllSites": "Consenti tutti i siti",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
   "ui.permission.feedbackHint": "Enter per rifiutare, Esc per annullare",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
@@ -1267,6 +1268,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Apri tutti gli agenti in background",
   "task.backgroundAgents.cancel": "Arresta",
   "task.backgroundAgents.continueInBackground": "Continua in background",
+  "task.backgroundAgents.promoteFailed": "Questo agente non ha potuto continuare in background. Potrebbe aver già finito.",
   "task.backgroundAgents.waiting": "Un agente in background richiede il tuo input",
   "task.backgroundAgents.needsInput": "Input richiesto",
   "task.backgroundAgents.clearFinished": "Cancella completati",
@@ -1490,6 +1492,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Browser di sistema",
   "settings.experimental.browserLinks.integrated": "Browser integrato",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
+  "chat.reply.toolbar": "Testo selezionato",
+  "chat.reply.quote": "Cita",
+  "chat.reply.quoteHint": "Cita nella tua risposta",
+  "chat.reply.commentHint": "Commenta questo passaggio",
+  "chat.reply.copy": "Copia",
+  "chat.reply.sendHint": "Invia subito questo commento a Kilo",
+  "chat.reply.commentLater": "Salva per il prossimo messaggio",
+  "chat.reply.count": "Risposte ({{count}})",
+  "chat.reply.sendAll": "Invia tutto",
+  "chat.reply.showInChat": "Mostra nella chat",
   "browserTab.noSession":
     "Apri il browser da una sessione per visualizzare in anteprima un'applicazione locale o una pagina HTTPS pubblica.",
   "browserTab.disabled": "Il browser integrato è disabilitato. Abilitalo in Impostazioni Kilo > Sperimentale.",
