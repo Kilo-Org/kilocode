@@ -107,7 +107,16 @@ const setup = (retention?: { enabled?: boolean; maxAgeDays?: number }) =>
     const rpc = (yield* Rpc.Service.pipe(Effect.provide(services))).client(KiloRetentionRpc.Definition)
     const config = yield* Config.Service.pipe(Effect.provide(services))
     const exists = (id: SessionID) => store.get(id).pipe(Effect.map((row) => row !== undefined))
-    return { sessions, store, rpc, create, exists, first, config }
+    const database = yield* Database.Service
+    // Ages every session that exists so far. A TestClock jump of weeks would fire every periodic timer in the graph
+    // for the whole span, which is slow and leaves sessions unable to run afterwards.
+    const age = (days: number) =>
+      database.db
+        .update(SessionTable)
+        .set({ time_updated: Date.now() - days * DAY })
+        .run()
+        .pipe(Effect.orDie)
+    return { sessions, store, rpc, create, exists, first, config, age }
   })
 
 /** A reply that streams only after `gate` opens, so the session stays active until then. */
@@ -115,8 +124,7 @@ const held = (gate: Deferred.Deferred<void>, text: string) =>
   Stream.fromEffect(Deferred.await(gate)).pipe(Stream.flatMap(() => Stream.fromIterable(TestLLM.text(text, text))))
 
 describe("kilocode.retention", () => {
-  // Sessions are stamped with the clock of the fiber that writes them, so the TestClock ages them for real.
-  it.effect("deletes expired session trees and skips active ones", () =>
+  it.live("deletes expired session trees and skips active ones", () =>
     Effect.gen(function* () {
       const env = yield* setup({ enabled: true, maxAgeDays: 30 })
       const old = yield* env.create({ title: "Old" })
@@ -133,7 +141,8 @@ describe("kilocode.retention", () => {
       // An execution claim is what another backend on the machine writes while it runs a session.
       yield* env.store.claim(claimed.id)
 
-      yield* TestClock.adjust(`${31 * DAY} millis`)
+      yield* env.age(31)
+      const started = Date.now()
       const fresh = yield* env.create({ title: "Fresh" })
       const fork = yield* env.create({ parentID: resumed.id, title: "Fresh fork" })
       expect([...(yield* env.sessions.active)]).toContain(running.id)
@@ -141,8 +150,8 @@ describe("kilocode.retention", () => {
       const status = yield* env.rpc.run({})
       expect(status.policy).toEqual({ enabled: true, maxAgeDays: 30 })
       expect(status.progress).toBeUndefined()
+      expect(status.last?.at).toBeGreaterThanOrEqual(started)
       expect(status.last).toMatchObject({
-        at: 31 * DAY,
         // The anchor from setup is old too, and has no activity.
         scanned: 8,
         deleted: 3,
@@ -163,7 +172,7 @@ describe("kilocode.retention", () => {
     }),
   )
 
-  it.effect("keeps an old chat while one of its subagents is running", () =>
+  it.live("keeps an old chat while one of its subagents is running", () =>
     Effect.gen(function* () {
       const env = yield* setup({ enabled: true, maxAgeDays: 30 })
       const parent = yield* env.create({ title: "Old chat" })
@@ -173,7 +182,7 @@ describe("kilocode.retention", () => {
       yield* llm.push(held(gate, "busy"))
       yield* env.sessions.prompt({ sessionID: child.id, text: "Work" })
       yield* llm.wait(1)
-      yield* TestClock.adjust(`${31 * DAY} millis`)
+      yield* env.age(31)
 
       const status = yield* env.rpc.run({})
       // Only the idle anchor from setup goes; the chat and its running subagent stay.
@@ -185,10 +194,10 @@ describe("kilocode.retention", () => {
     }),
   )
 
-  it.effect("a disabled policy never deletes, even when forced", () =>
+  it.live("a disabled policy never deletes, even when forced", () =>
     Effect.gen(function* () {
       const env = yield* setup({ maxAgeDays: 1 })
-      yield* TestClock.adjust(`${2 * DAY} millis`)
+      yield* env.age(2)
       const forced = yield* env.rpc.run({ force: true })
       expect(forced).toEqual({ policy: { enabled: false, maxAgeDays: 1 } })
       expect(yield* env.rpc.run({})).toEqual(forced)
@@ -196,10 +205,10 @@ describe("kilocode.retention", () => {
     }),
   )
 
-  it.effect("an absent policy uses the defaults and stays off", () =>
+  it.live("an absent policy uses the defaults and stays off", () =>
     Effect.gen(function* () {
       const env = yield* setup()
-      yield* TestClock.adjust(`${60 * DAY} millis`)
+      yield* env.age(60)
       expect(yield* env.rpc.run({ force: true })).toEqual({ policy: { enabled: false, maxAgeDays: 30 } })
       expect(yield* env.exists(env.first.id)).toBe(true)
     }),
@@ -230,7 +239,7 @@ describe("kilocode.retention", () => {
   const gated = Effect.gen(function* () {
     const env = yield* setup({ enabled: true, maxAgeDays: 30 })
     const roots = yield* Effect.forEach([1, 2, 3], (index) => env.create({ title: `Old ${index}` }))
-    yield* TestClock.adjust(`${31 * DAY} millis`)
+    yield* env.age(31)
     const real = KiloSessionRetention.deps({
       store: env.store,
       sessions: env.sessions,
@@ -255,7 +264,7 @@ describe("kilocode.retention", () => {
     return { env, deps, roots, reached, release, removed, engine: KiloRetention.make(), scope: yield* Scope.Scope }
   })
 
-  it.effect("cancel stops a pass mid-flight and records the partial result", () =>
+  it.live("cancel stops a pass mid-flight and records the partial result", () =>
     Effect.gen(function* () {
       const pass = yield* gated
       const running = yield* pass.engine.run(pass.deps, {}, pass.scope).pipe(Effect.forkChild({ startImmediately: true }))
@@ -285,64 +294,31 @@ describe("kilocode.retention", () => {
     }),
   )
 
-  // Live clock: a session cannot start running after a TestClock jump of days in this graph, so the fixture ages the
-  // sessions by their stored update time instead.
   it.live("skips a session that starts running while the pass is under way", () =>
     Effect.gen(function* () {
-      const env = yield* setup({ enabled: true, maxAgeDays: 30 })
-      const roots = yield* Effect.forEach([1, 2, 3], (index) => env.create({ title: `Old ${index}` }))
-      const database = yield* Database.Service
-      yield* database.db
-        .update(SessionTable)
-        .set({ time_updated: Date.now() - 40 * DAY })
-        .run()
-        .pipe(Effect.orDie)
-      const real = KiloSessionRetention.deps({
-        store: env.store,
-        sessions: env.sessions,
-        config: env.config,
-        storage: PluginHost.storage(yield* KV.Service, "kilocode.retention.test"),
-      })
-      const reached = yield* Deferred.make<void>()
-      const release = yield* Deferred.make<void>()
-      const removed: SessionID[] = []
-      const deps: KiloRetention.Deps = {
-        ...real,
-        remove: (sessionID) =>
-          Effect.gen(function* () {
-            removed.push(sessionID)
-            if (removed.length === 2) {
-              yield* Deferred.succeed(reached, undefined)
-              yield* Deferred.await(release)
-            }
-            yield* real.remove(sessionID)
-          }),
-      }
-      const engine = KiloRetention.make()
-      const running = yield* engine
-        .run(deps, {}, yield* Scope.Scope)
-        .pipe(Effect.forkChild({ startImmediately: true }))
-      yield* Deferred.await(reached)
+      const pass = yield* gated
+      const running = yield* pass.engine.run(pass.deps, {}, pass.scope).pipe(Effect.forkChild({ startImmediately: true }))
+      yield* Deferred.await(pass.reached)
 
       // The user reopens the last expired chat after the scan selected it, before its turn to be removed.
-      const late = roots[2]
+      const late = pass.roots[2]
       const gate = yield* Deferred.make<void>()
       const llm = yield* TestLLM.Test
       yield* llm.push(held(gate, "resumed"))
-      yield* env.sessions.prompt({ sessionID: late.id, text: "Back to this" })
+      yield* pass.env.sessions.prompt({ sessionID: late.id, text: "Back to this" })
       yield* llm.wait(1)
-      yield* Deferred.succeed(release, undefined)
+      yield* Deferred.succeed(pass.release, undefined)
 
-      const status = yield* Fiber.join(running).pipe(Effect.timeout("10 seconds"))
+      const status = yield* Fiber.join(running)
       expect(status.last).toMatchObject({ scanned: 4, deleted: 3, skippedActive: 1, failed: 0 })
-      expect(removed).not.toContain(late.id)
-      expect(yield* env.exists(late.id)).toBe(true)
-      expect([...(yield* env.sessions.active)]).toContain(late.id)
+      expect(pass.removed).not.toContain(late.id)
+      expect(yield* pass.env.exists(late.id)).toBe(true)
+      expect([...(yield* pass.env.sessions.active)]).toContain(late.id)
       yield* Deferred.succeed(gate, undefined)
     }),
   )
 
-  it.effect("status shows live progress, and a run while a pass is in flight joins it", () =>
+  it.live("status shows live progress, and a run while a pass is in flight joins it", () =>
     Effect.gen(function* () {
       const pass = yield* gated
       const first = yield* pass.engine.run(pass.deps, {}, pass.scope).pipe(Effect.forkChild({ startImmediately: true }))
