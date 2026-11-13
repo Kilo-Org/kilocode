@@ -313,6 +313,19 @@ object UiStyle {
 
     /** Theme-aware colors and color math used by multiple UI surfaces. */
     object Colors {
+        /** Stable palette order and theme-aware defaults for section accents and color actions. */
+        @Suppress("MagicNumber")
+        val sections: Map<String, Color> = linkedMapOf(
+            "red" to JBColor.namedColor("Kilo.Section.red", JBColor(0xDB3B4B, 0xCD3131)),
+            "orange" to JBColor.namedColor("Kilo.Section.orange", JBColor(0xE66D17, 0xD18616)),
+            "yellow" to JBColor.namedColor("Kilo.Section.yellow", JBColor(0xC27D04, 0xE5E510)),
+            "green" to JBColor.namedColor("Kilo.Section.green", JBColor(0x208A3C, 0x0DBC79)),
+            "cyan" to JBColor.namedColor("Kilo.Section.cyan", JBColor(0x0098BA, 0x11A8CD)),
+            "blue" to JBColor.namedColor("Kilo.Section.blue", JBColor(0x3574F0, 0x58A6FF)),
+            "purple" to JBColor.namedColor("Kilo.Section.purple", JBColor(0x834DF0, 0xB180D7)),
+            "magenta" to JBColor.namedColor("Kilo.Section.magenta", JBColor(0xAD31B0, 0xBC3FBC)),
+        )
+
         fun bg(): Color = UIUtil.getPanelBackground()
 
         fun fg(): Color = UIUtil.getLabelForeground()
