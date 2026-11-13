@@ -338,48 +338,93 @@ async function resumeCreated(
  * Deletes a Flow only after its exact name is typed, so a stray key cannot remove a scheduled task. Sessions and
  * worktrees are kept unless `clean` is set, which removes the clean worktrees past runs left behind.
  */
-export async function deleteFlow(context: PeriodicContext, open: Open, flow: KiloFlowRpc.Info, clean: boolean) {
+export async function deleteFlow(context: PeriodicContext, open: Open, flow: KiloFlowRpc.Info) {
   if (flow.reference.type !== "managed") return
   const flowID = flow.reference.flowID
   const back = { key: flowID, detail: true }
+  const worktrees = flow.execution.mode === "fresh" && flow.execution.worktree === "new"
   context.ui.dialog.clear()
-  const typed = await context.ui.dialog.prompt({
+  // Cancel is first and preselected, so a stray Enter never deletes; deleting needs a deliberate choice.
+  const choice = await context.ui.dialog.select({
     title: `Delete ${flow.name}?`,
-    description: clean
-      ? "Type the Flow's name to delete it and remove its clean run worktrees. Sessions are kept. Esc cancels."
-      : "Type the Flow's name to delete it and its run records. Sessions and worktrees are kept. Esc cancels.",
-    value: "",
+    current: "cancel",
+    options: [
+      { title: "Cancel", value: "cancel" as const, description: "Keep the Flow" },
+      {
+        title: "Delete Flow",
+        value: "flow" as const,
+        description: "Remove the Flow, its schedule and run records. Run sessions and worktrees are kept.",
+      },
+      ...(worktrees
+        ? [
+            {
+              title: "Delete Flow and clean worktrees",
+              value: "worktrees" as const,
+              description: "Also remove the run worktrees without changes. Run sessions are kept.",
+            },
+          ]
+        : []),
+      {
+        title: worktrees ? "Delete Flow, run sessions and worktrees" : "Delete Flow and run sessions",
+        value: "all" as const,
+        description: worktrees
+          ? "Also delete every run session and the run worktrees without changes. The source session is kept."
+          : "Also delete every run session. The source session is kept.",
+      },
+    ],
   })
-  if (typed === undefined) return open(back)
-  if (typed.trim() !== flow.name.trim()) {
-    context.ui.toast.show({
-      variant: "warning",
-      title: "Flow not deleted",
-      message: `The name did not match "${flow.name}".`,
+  if (choice === undefined || choice === "cancel") return open(back)
+  if (choice === "all") {
+    const confirmed = await context.ui.dialog.confirm({
+      title: `Delete all run sessions of ${flow.name}?`,
+      message: "Their transcripts are removed permanently. This cannot be undone.",
     })
-    return open(back)
+    if (!confirmed) return open(back)
   }
   const removed = await context.client
     .rpc(KiloFlowRpc.Definition)
-    .remove(clean ? { flowID, deleteWorktrees: true } : { flowID }, options(context))
+    .remove(
+      {
+        flowID,
+        ...(choice === "worktrees" || (choice === "all" && worktrees) ? { deleteWorktrees: true } : {}),
+        ...(choice === "all" ? { deleteSessions: true } : {}),
+      },
+      options(context),
+    )
     .catch((cause: unknown) => {
       context.ui.toast.show({ variant: "error", title: "Delete failed", message: errorMessage(cause) })
       return undefined
     })
   if (!removed) return open(back)
-  const count = removed.removedWorktrees?.length ?? 0
+  reportRemoval(context, flow.name, removed)
+  open({})
+}
+
+function reportRemoval(context: PeriodicContext, name: string, removed: KiloFlowRpc.RemoveOutput) {
+  const sessions = removed.removedSessions?.length ?? 0
+  const worktrees = removed.removedWorktrees?.length ?? 0
+  const parts = [
+    ...(sessions === 0 ? [] : [`${sessions} run session${sessions === 1 ? "" : "s"}`]),
+    ...(worktrees === 0 ? [] : [`${worktrees} worktree${worktrees === 1 ? "" : "s"}`]),
+  ]
   context.ui.toast.show({
     variant: "success",
-    message: `Deleted ${flow.name}.${count === 0 ? "" : ` Removed ${count} worktree${count === 1 ? "" : "s"}.`}`,
+    message: `Deleted ${name}.${parts.length === 0 ? "" : ` Removed ${parts.join(" and ")}.`}`,
   })
-  const kept = removed.keptWorktrees ?? []
-  if (kept.length > 0)
+  const keptWorktrees = removed.keptWorktrees ?? []
+  if (keptWorktrees.length > 0)
     context.ui.toast.show({
       variant: "warning",
-      title: `Kept ${kept.length} worktree${kept.length === 1 ? "" : "s"} with changes`,
-      message: kept.join("\n"),
+      title: `Kept ${keptWorktrees.length} worktree${keptWorktrees.length === 1 ? "" : "s"} with changes`,
+      message: keptWorktrees.join("\n"),
     })
-  open({})
+  const keptSessions = removed.keptSessions ?? []
+  if (keptSessions.length > 0)
+    context.ui.toast.show({
+      variant: "warning",
+      title: `Couldn't delete ${keptSessions.length} run session${keptSessions.length === 1 ? "" : "s"}`,
+      message: keptSessions.join("\n"),
+    })
 }
 
 /**

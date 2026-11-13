@@ -239,7 +239,7 @@ export const KiloFlowPlugin = define({
         editor.add({
           name: "flow_delete",
           description:
-            "Delete a managed local Flow: stops its active run, removes its schedule and run records, and keeps the run Sessions. With deleteWorktrees, also deletes the worktrees its runs created; a worktree with changes is kept.",
+            "Delete a managed local Flow: stops its active run and removes its schedule and run records. Run Sessions and worktrees are kept unless asked: deleteSessions also deletes the run Sessions (never the source Session), and deleteWorktrees also deletes the worktrees its runs created; a worktree with changes is kept.",
           input: KiloFlowRpc.RemoveInput,
           output: KiloFlowRpc.RemoveOutput,
           options: { codemode: true },
@@ -251,6 +251,10 @@ export const KiloFlowPlugin = define({
                 output,
                 content: [
                   `Deleted Flow ${input.flowID}.`,
+                  ...(output.removedSessions?.length ? [`Deleted run Sessions: ${output.removedSessions.join(", ")}`] : []),
+                  ...(output.keptSessions?.length
+                    ? [`Run Sessions that could not be deleted: ${output.keptSessions.join(", ")}`]
+                    : []),
                   ...(output.removedWorktrees?.length ? [`Deleted worktrees: ${output.removedWorktrees.join(", ")}`] : []),
                   ...(output.keptWorktrees?.length
                     ? [`Kept worktrees with changes or that could not be removed: ${output.keptWorktrees.join(", ")}`]
@@ -725,12 +729,13 @@ function remove(
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
     const lock = flowLock(runtime, record.id)
-    const worktrees = yield* lock.withPermit(
+    const { worktrees, sessions } = yield* lock.withPermit(
       Effect.gen(function* () {
         const active = yield* reconcileFlowActive(ctx, record.id)
         if (active?.sessionID) yield* ctx.session.interrupt({ sessionID: active.sessionID }).pipe(Effect.ignore)
-        // Read the run worktrees before the run records go away.
+        // Read the run worktrees and Sessions before the run records go away.
         const worktrees = input.deleteWorktrees ? yield* runWorktrees(ctx, record) : []
+        const sessions = input.deleteSessions ? yield* runSessions(ctx, record) : []
         if (record.scheduleID)
           yield* schedules.remove(record.scheduleID).pipe(
             Effect.catchTag("Schedule.NotFoundError", () => Effect.void),
@@ -746,31 +751,90 @@ function remove(
           { discard: true },
         )
         yield* removeRuns(ctx, record.id)
-        return worktrees
+        return { worktrees, sessions }
       }),
     )
     if (runtime.locks.get(record.id) === lock) runtime.locks.delete(record.id)
     yield* notify(runtime, record, "removed")
+    // Sessions go before worktrees: a run Session may live in the worktree being removed. A Session that cannot be
+    // removed is reported, never a reason to fail the delete of a Flow that is already gone.
+    const sessionResults = yield* Effect.forEach(sessions, (sessionID) =>
+      ctx.session.remove({ sessionID }).pipe(
+        Effect.as({ sessionID, removed: true }),
+        Effect.catchCause(() => Effect.succeed({ sessionID, removed: false })),
+      ),
+    )
+    const sessionOutput =
+      sessions.length === 0
+        ? {}
+        : {
+            removedSessions: sessionResults.filter((result) => result.removed).map((result) => result.sessionID),
+            keptSessions: sessionResults.filter((result) => !result.removed).map((result) => result.sessionID),
+          }
+    const projectID = record.context.projectID
+    // Without force, git refuses to remove a worktree with changes, so a refusal keeps the user's work.
+    const worktreeResults =
+      projectID === undefined
+        ? []
+        : yield* Effect.forEach(worktrees, (directory) =>
+            ctx.worktree.remove({ projectID, directory, force: false }).pipe(
+              Effect.as({ directory, removed: true }),
+              Effect.catchCause(() => Effect.succeed({ directory, removed: false })),
+            ),
+          )
+    const worktreeOutput =
+      worktreeResults.length === 0
+        ? {}
+        : {
+            removedWorktrees: worktreeResults.filter((result) => result.removed).map((result) => result.directory),
+            keptWorktrees: worktreeResults.filter((result) => !result.removed).map((result) => result.directory),
+          }
     yield* Effect.logInfo("Flow removed", {
       flowID: record.id,
       projectID: authorizedProjectID,
       name: record.name,
       deleteWorktrees: input.deleteWorktrees === true,
+      deleteSessions: input.deleteSessions === true,
+      removedSessions: sessionOutput.removedSessions?.length ?? 0,
+      removedWorktrees: worktreeOutput.removedWorktrees?.length ?? 0,
     })
-    const projectID = record.context.projectID
-    if (!projectID || worktrees.length === 0) return {}
-    // Without force, git refuses to remove a worktree with changes, so a refusal keeps the user's work.
-    const results = yield* Effect.forEach(worktrees, (directory) =>
-      ctx.worktree.remove({ projectID, directory, force: false }).pipe(
-        Effect.as({ directory, removed: true }),
-        Effect.catchCause(() => Effect.succeed({ directory, removed: false })),
-      ),
-    )
-    return {
-      removedWorktrees: results.filter((result) => result.removed).map((result) => result.directory),
-      keptWorktrees: results.filter((result) => !result.removed).map((result) => result.directory),
-    }
+    return { ...sessionOutput, ...worktreeOutput }
   })
+}
+
+/**
+ * The run Sessions of a Flow, never its source Session. Retained run records name recent ones; every run Session also
+ * carries the Flow in its metadata, so a project scan finds the runs whose records retention already pruned.
+ */
+function runSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
+  return Effect.gen(function* () {
+    const stored = yield* runs(ctx, [record.id])
+    const recorded = stored.runs.flatMap((run) => (run.sessionID ? [run.sessionID] : []))
+    const scanned = yield* flowSessions(ctx, record)
+    return [...new Set([...recorded, ...scanned])].filter((sessionID) => sessionID !== record.execution.sourceSessionID)
+  })
+}
+
+/** Project Sessions whose Flow metadata names this Flow, read page by page. */
+function flowSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
+  const projectID = record.context.projectID
+  if (!projectID) return Effect.succeed<Session.ID[]>([])
+  const page = (
+    cursor: Session.ListCursor | undefined,
+    found: Session.ID[],
+  ): Effect.Effect<Session.ID[], never> =>
+    ctx.session.list({ project: projectID, limit: 200, ...(cursor ? { cursor } : {}) }).pipe(
+      Effect.flatMap((output) => {
+        const matched = output.data.flatMap((session) =>
+          Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))?.flowID === record.id ? [session.id] : [],
+        )
+        const next = output.cursor.next
+        return next && output.data.length > 0 ? page(next, [...found, ...matched]) : Effect.succeed([...found, ...matched])
+      }),
+      // A failed scan still deletes the recorded run Sessions; it only misses older ones.
+      Effect.catchCause(() => Effect.succeed(found)),
+    )
+  return page(undefined, [])
 }
 
 /**

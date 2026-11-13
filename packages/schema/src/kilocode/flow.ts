@@ -304,12 +304,19 @@ export const RemoveInput = Schema.Struct({
   deleteWorktrees: Schema.Boolean.pipe(optional).annotate({
     description: "Also delete the worktrees created by the Flow's retained runs. A worktree with changes is kept.",
   }),
+  deleteSessions: Schema.Boolean.pipe(optional).annotate({
+    description:
+      "Also delete the Flow's run Sessions, including runs whose records retention already pruned. The source Session is never deleted.",
+  }),
 }).annotate({ identifier: "KiloFlow.RemoveInput" })
 export type RemoveInput = typeof RemoveInput.Type
 
 export const RemoveOutput = Schema.Struct({
   removedWorktrees: Schema.Array(AbsolutePath).pipe(optional),
   keptWorktrees: Schema.Array(AbsolutePath).pipe(optional),
+  removedSessions: Schema.Array(SessionID).pipe(optional),
+  /** Run Sessions that could not be deleted; the Flow itself is still removed. */
+  keptSessions: Schema.Array(SessionID).pipe(optional),
 }).annotate({ identifier: "KiloFlow.RemoveOutput" })
 export type RemoveOutput = typeof RemoveOutput.Type
 

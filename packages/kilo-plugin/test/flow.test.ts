@@ -435,6 +435,69 @@ it.live("drops the lock of a create that fails before its Flow exists", () =>
   }),
 )
 
+it.live("deletes a Flow's run Sessions only when asked, never its source Session", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
+    const flowDelete = (yield* tools.list()).find((tool) => tool.id === "flow_delete")
+    if (!flowCreate || !flowDelete) return yield* Effect.die("Expected flow_create and flow_delete")
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const call = (id: string) => ({
+      sessionID: source.id,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make(id),
+      progress: () => Effect.void,
+    })
+    const make = (name: string, requestID: string) =>
+      flowCreate.execute(
+        { name, when: { every: "1 day" as const, tz: "UTC" }, prompt: "Check", worktree: "reuse" as const, permissions: [], requestID },
+        call(`call_create_${requestID}`),
+      )
+    const runSession = (flowID: KiloFlowRpc.ID, title: string) =>
+      context.session.create({
+        title,
+        agent: Agent.ID.make("build"),
+        model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+        metadata: { "kilocode.flow": { flowID, runID: KiloFlowRpc.RunID.create() } },
+      })
+    const exists = (sessionID: Session.ID) =>
+      context.session.get({ sessionID }).pipe(
+        Effect.as(true),
+        Effect.catchCause(() => Effect.succeed(false)),
+      )
+
+    // A run Session whose record retention pruned is still found through its metadata; the source Session is kept.
+    const kept = yield* make("Keep sessions", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    if (kept.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const keptRun = yield* runSession(kept.output.reference.flowID, "Kept run")
+    yield* flowDelete.execute({ flowID: kept.output.reference.flowID }, call("call_delete_plain"))
+    expect(yield* exists(keptRun.id)).toBeTrue()
+
+    const removed = yield* make("Remove sessions", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    if (removed.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const flowID = removed.output.reference.flowID
+    const first = yield* runSession(flowID, "Run 1")
+    const second = yield* runSession(flowID, "Run 2")
+    const other = yield* runSession(KiloFlowRpc.ID.make("flw_other"), "Other Flow's run")
+    const deleted = yield* flowDelete.execute({ flowID, deleteSessions: true }, call("call_delete_sessions"))
+    expect([...(deleted.output?.removedSessions ?? [])].toSorted()).toEqual([first.id, second.id].toSorted())
+    expect(deleted.output?.keptSessions).toEqual([])
+    expect(yield* exists(first.id)).toBeFalse()
+    expect(yield* exists(second.id)).toBeFalse()
+    expect(yield* exists(other.id)).toBeTrue()
+    expect(yield* exists(source.id)).toBeTrue()
+  }),
+)
+
 it.live("returns the existing Flow when a create is retried with the same request id", () =>
   Effect.gen(function* () {
     backingSchedules.clear()

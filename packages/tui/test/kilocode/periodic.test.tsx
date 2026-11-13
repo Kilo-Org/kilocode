@@ -3,6 +3,7 @@ import { Plugin } from "@opencode/plugin/tui"
 import type { KeymapCommand } from "@opencode/plugin/tui/context"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Project } from "@opencode/schema/project"
+import { Session } from "@opencode/schema/session"
 import { AbsolutePath } from "@opencode/schema/schema"
 import { RGBA } from "@opentui/core"
 import { testRender } from "@opentui/solid"
@@ -408,7 +409,6 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
       "e",
       "space",
       "d",
-      "w",
       "v",
     ])
   } finally {
@@ -656,7 +656,7 @@ test("falls back to Session navigation when tabs are unavailable", async () => {
 
 test("runs, disables, enables, and offers deletion from a managed Flow's details", async () => {
   const commands: KeymapCommand[] = []
-  const deleted: [string, boolean][] = []
+  const deleted: string[] = []
   const active = flow({ id: "flw_control", name: "Controlled", status: "active", managed: true, worktree: "new" })
   const fake = context({
     commands,
@@ -675,8 +675,8 @@ test("runs, disables, enables, and offers deletion from a managed Flow's details
           create: () => {},
           edit: () => {},
           repair: () => {},
-          delete: (flow, clean) => {
-            deleted.push([flow.name, clean])
+          delete: (flow) => {
+            deleted.push(flow.name)
           },
         }}
       />
@@ -689,12 +689,7 @@ test("runs, disables, enables, and offers deletion from a managed Flow's details
     command(commands, "return").run()
     await app.waitForFrame((frame) => frame.includes("Disable") && frame.includes("Run now"))
     command(commands, "d").run()
-    expect(deleted).toEqual([["Controlled", false]])
-    command(commands, "w").run()
-    expect(deleted).toEqual([
-      ["Controlled", false],
-      ["Controlled", true],
-    ])
+    expect(deleted).toEqual(["Controlled"])
     command(commands, "space").run()
     await app.waitForFrame((frame) => frame.includes("Disabled Controlled"))
     command(commands, "space").run()
@@ -754,7 +749,35 @@ test("a late run result leaves the history of the Flow opened since", async () =
   }
 })
 
-test("deletes a Flow only after its name is typed and reports kept worktrees", async () => {
+test("deleting preselects Cancel, so a stray Enter keeps the Flow", async () => {
+  const active = flow({ id: "flw_keep", name: "Keep", status: "active", managed: true, worktree: "new" })
+  const fake = context({})
+  const opened: unknown[] = []
+  await deleteFlow(fake.context, (initial) => opened.push(initial), active)
+  const asked = fake.selects.find((select) => select.title === "Delete Keep?")
+  expect(asked?.current).toBe("cancel")
+  expect(asked?.options.map((option) => option.value)).toEqual(["cancel", "flow", "worktrees", "all"])
+  expect(fake.methods()).not.toContain("remove")
+  expect(opened).toEqual([{ key: "flw_keep", detail: true }])
+})
+
+test("deletes only the Flow, keeping its run sessions and worktrees", async () => {
+  const active = flow({ id: "flw_plain", name: "Plain", status: "active", managed: true })
+  const fake = context({ script: { selects: { "Delete Plain?": "flow" } } })
+  const opened: unknown[] = []
+  await deleteFlow(fake.context, (initial) => opened.push(initial), active)
+  // A Flow that reuses its directory has no worktrees to offer cleaning.
+  expect(fake.selects.find((select) => select.title === "Delete Plain?")?.options.map((option) => option.value)).toEqual([
+    "cancel",
+    "flow",
+    "all",
+  ])
+  expect(fake.calls.find((call) => call.method === "remove")?.input).toEqual({ flowID: "flw_plain" })
+  expect(fake.toasts).toContainEqual({ variant: "success", message: "Deleted Plain." })
+  expect(opened).toEqual([{}])
+})
+
+test("cleans the run worktrees and reports the ones kept with changes", async () => {
   const active = flow({ id: "flw_clean", name: "Clean", status: "active", managed: true, worktree: "new" })
   const fake = context({
     handlers: {
@@ -764,48 +787,65 @@ test("deletes a Flow only after its name is typed and reports kept worktrees", a
           keptWorktrees: [AbsolutePath.make("/tmp/kilo/flw_clean-2")],
         }),
     },
-    script: { prompts: { "Delete Clean?": "Clean" } },
+    script: { selects: { "Delete Clean?": "worktrees" } },
   })
-  const opened: unknown[] = []
-  await deleteFlow(fake.context, (initial) => opened.push(initial), active, true)
+  await deleteFlow(fake.context, () => undefined, active)
   expect(fake.calls.find((call) => call.method === "remove")?.input).toEqual({
     flowID: "flw_clean",
     deleteWorktrees: true,
   })
-  expect(fake.toasts).toContainEqual({
-    variant: "success",
-    message: "Deleted Clean. Removed 1 worktree.",
-  })
+  expect(fake.toasts).toContainEqual({ variant: "success", message: "Deleted Clean. Removed 1 worktree." })
   expect(fake.toasts).toContainEqual({
     variant: "warning",
     title: "Kept 1 worktree with changes",
     message: "/tmp/kilo/flw_clean-2",
   })
-  expect(opened).toEqual([{}])
 })
 
-test("keeps a Flow when the typed name does not match", async () => {
-  const active = flow({ id: "flw_keep", name: "Keep", status: "active", managed: true })
-  const fake = context({ script: { prompts: { "Delete Keep?": "Kep" } } })
+test("deletes run sessions only after a second confirmation", async () => {
+  const active = flow({ id: "flw_all", name: "All", status: "active", managed: true, worktree: "new" })
+  const declined = context({ script: { selects: { "Delete All?": "all" }, confirm: false } })
   const opened: unknown[] = []
-  await deleteFlow(fake.context, (initial) => opened.push(initial), active, false)
-  expect(fake.methods()).not.toContain("remove")
+  await deleteFlow(declined.context, (initial) => opened.push(initial), active)
+  expect(declined.methods()).not.toContain("remove")
+  expect(opened).toEqual([{ key: "flw_all", detail: true }])
+
+  const fake = context({
+    handlers: {
+      remove: () =>
+        Promise.resolve({
+          removedSessions: [Session.ID.make("ses_run_1"), Session.ID.make("ses_run_2")],
+          keptSessions: [Session.ID.make("ses_run_3")],
+          removedWorktrees: [AbsolutePath.make("/tmp/kilo/flw_all-1")],
+        }),
+    },
+    script: { selects: { "Delete All?": "all" } },
+  })
+  await deleteFlow(fake.context, () => undefined, active)
+  expect(fake.calls.find((call) => call.method === "remove")?.input).toEqual({
+    flowID: "flw_all",
+    deleteWorktrees: true,
+    deleteSessions: true,
+  })
+  expect(fake.toasts).toContainEqual({
+    variant: "success",
+    message: "Deleted All. Removed 2 run sessions and 1 worktree.",
+  })
   expect(fake.toasts).toContainEqual({
     variant: "warning",
-    title: "Flow not deleted",
-    message: 'The name did not match "Keep".',
+    title: "Couldn't delete 1 run session",
+    message: "ses_run_3",
   })
-  expect(opened).toEqual([{ key: "flw_keep", detail: true }])
 })
 
 test("keeps a Flow and reports a failed delete", async () => {
   const active = flow({ id: "flw_removed", name: "Removed elsewhere", status: "active", managed: true })
   const fake = context({
     handlers: { remove: () => Promise.reject(new Error("Flow does not exist")) },
-    script: { prompts: { "Delete Removed elsewhere?": "Removed elsewhere" } },
+    script: { selects: { "Delete Removed elsewhere?": "flow" } },
   })
   const opened: unknown[] = []
-  await deleteFlow(fake.context, (initial) => opened.push(initial), active, false)
+  await deleteFlow(fake.context, (initial) => opened.push(initial), active)
   expect(fake.toasts).toContainEqual({
     variant: "error",
     title: "Delete failed",

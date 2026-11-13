@@ -32,7 +32,7 @@ export type Actions = {
   readonly create: (selected: string | undefined) => void
   readonly edit: (flow: KiloFlowRpc.Info) => void
   readonly repair: (flow: KiloFlowRpc.Info) => void
-  readonly delete: (flow: KiloFlowRpc.Info, clean: boolean) => void
+  readonly delete: (flow: KiloFlowRpc.Info) => void
 }
 
 /** `changed` events keep the open dialog current; this refresh only covers an event missed while disconnected. */
@@ -81,12 +81,6 @@ export function FlowsDialog(props: {
   const detail = createMemo(() => flows().find((flow) => key(flow) === detailKey()))
   const warning = createMemo(() => (!stale() ? result()?.warnings[0] : undefined))
   const run = createMemo(() => runs()?.find((item) => item.id === selectedRun()))
-  // Only runs in a new worktree leave one behind; an edit can change the choice, so earlier runs count too.
-  const cleanable = createMemo(() => {
-    const flow = detail()
-    if (flow?.execution.mode === "fresh" && flow.execution.worktree === "new") return true
-    return (runs() ?? []).some((item) => item.worktree === "new")
-  })
   const banners = createMemo(() => Number(stale()) + Number(notice() !== undefined) + Number(warning() !== undefined))
   const availableHeight = createMemo(() => dimensions().height - Math.floor(dimensions().height / 4))
   const listHeight = createMemo(() => Math.max(1, Math.min(15, availableHeight() - 6 - banners() * 2)))
@@ -459,18 +453,7 @@ export function FlowsDialog(props: {
         enabled: () => props.actions !== undefined && !changing() && detail()?.reference.type === "managed",
         run: () => {
           const flow = detail()
-          if (flow) props.actions?.delete(flow, false)
-        },
-      },
-      {
-        bind: "w",
-        title: "Delete Flow and clean its worktrees",
-        group: "Periodic",
-        enabled: () =>
-          props.actions !== undefined && !changing() && cleanable() && detail()?.reference.type === "managed",
-        run: () => {
-          const flow = detail()
-          if (flow) props.actions?.delete(flow, true)
+          if (flow) props.actions?.delete(flow)
         },
       },
       {
@@ -855,24 +838,13 @@ export function FlowsDialog(props: {
                 </Show>
                 <Show when={props.actions}>
                   {(actions) => (
-                    <>
-                      <Action
-                        label="Delete"
-                        shortcut="d"
-                        theme={theme()}
-                        disabled={changing()}
-                        onTrigger={() => actions().delete(flow(), false)}
-                      />
-                      <Show when={cleanable()}>
-                        <Action
-                          label="Delete and clean worktrees"
-                          shortcut="w"
-                          theme={theme()}
-                          disabled={changing()}
-                          onTrigger={() => actions().delete(flow(), true)}
-                        />
-                      </Show>
-                    </>
+                    <Action
+                      label="Delete"
+                      shortcut="d"
+                      theme={theme()}
+                      disabled={changing()}
+                      onTrigger={() => actions().delete(flow())}
+                    />
                   )}
                 </Show>
                 <Show when={flow().latestRun?.sessionID}>
@@ -1109,7 +1081,7 @@ export default Plugin.define({
       create: (selected) => void createFlow(context, open, { key: selected }).catch(fail),
       edit: (flow) => void editFlow(context, open, flow).catch(fail),
       repair: (flow) => void createFlow(context, open, { key: key(flow), detail: true }, flow).catch(fail),
-      delete: (flow, clean) => void deleteFlow(context, open, flow, clean).catch(fail),
+      delete: (flow) => void deleteFlow(context, open, flow).catch(fail),
     }
     const unregister = context.ui.slot({
       append: "app",
