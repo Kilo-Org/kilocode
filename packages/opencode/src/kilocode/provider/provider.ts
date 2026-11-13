@@ -16,6 +16,7 @@ import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
+import { isK2, effortVariants } from "./ifm-k2"
 import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
 import type { Config } from "@/config/config"
@@ -107,6 +108,7 @@ type Generate = (model: Provider.Model) => Variants
 
 export function customProviderVariants(model: Provider.Model, npm: unknown, generate: Generate): Variants {
   if (model.variants && Object.keys(model.variants).length > 0) return model.variants
+  if (model.api.npm === "@ai-sdk/openai-compatible" && isK2(model.api.id)) return effortVariants()
 
   const supported = typeof npm === "string" && CUSTOM_PROVIDER_PACKAGES.has(npm) && model.api.npm === npm
   const variants = generate(model)
@@ -419,4 +421,62 @@ export function wrapFirstByte(res: Response, ms: number, ctl: AbortController) {
     status: res.status,
     statusText: res.statusText,
   })
+}
+
+// ---------------------------------------------------------------------------
+// Request body normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * The AI SDK serializes assistant tool-call messages without visible text as
+ * `content: null`, and multi-part messages (e.g. the VS Code extension appends
+ * environment details as a second text part) as a `content` array. Strict
+ * OpenAI-compatible APIs (e.g. MBZUAI IFM, text content only) reject both with
+ * a 400 on `messages.content`. Rewrites null to "" on assistant tool-call
+ * messages and flattens all-text content arrays to their text; content arrays
+ * carrying non-text parts (e.g. image_url) are passed through so vision
+ * providers keep their images. Every other byte of the body is untouched.
+ */
+type ToolCallMsg = { role?: string; content?: unknown; tool_calls?: unknown }
+type ContentPart = { type?: unknown; text?: unknown }
+
+function isChatBody(value: unknown): value is { messages?: ToolCallMsg[] } {
+  return typeof value === "object" && value !== null
+}
+
+function isContentParts(value: unknown): value is ContentPart[] {
+  return Array.isArray(value)
+}
+
+function flattenParts(parts: ContentPart[]): string {
+  return parts
+    .filter((part) => part.type === "text")
+    .map((part) => (typeof part.text === "string" ? part.text : ""))
+    .join("\n")
+}
+
+export function normalizeToolCallBody(body: string): string {
+  if (!body.includes('"tool_calls"') && !body.includes('"content":[')) return body
+  const parsed: unknown = (() => {
+    try {
+      return JSON.parse(body)
+    } catch {
+      return undefined
+    }
+  })()
+  if (!isChatBody(parsed)) return body
+  const msgs = parsed.messages
+  if (!Array.isArray(msgs)) return body
+  for (const msg of msgs) {
+    if (isContentParts(msg.content) && msg.content.every((part) => part.type === "text")) {
+      msg.content = flattenParts(msg.content)
+    } else if (msg.role === "assistant" && Array.isArray(msg.tool_calls) && msg.content === null) {
+      msg.content = ""
+    }
+  }
+  return JSON.stringify(parsed)
+}
+
+export function normalizeToolCallContent(body: BodyInit | null | undefined): BodyInit | null | undefined {
+  return typeof body === "string" ? normalizeToolCallBody(body) : body
 }

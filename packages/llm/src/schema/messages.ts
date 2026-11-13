@@ -1,7 +1,7 @@
 import { Schema, SchemaGetter } from "effect" // kilocode_change
 import { ToolContent, ToolFileContent, ToolTextContent } from "@opencode-ai/schema/llm"
 import { JsonSchema, MessageRole, ProviderMetadata } from "./ids"
-import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions } from "./options"
+import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions, RateLimit } from "./options"
 import { isRecord } from "../utils/record"
 
 const systemPartSchema = Schema.Struct({
@@ -273,6 +273,7 @@ export class LLMRequest extends Schema.Class<LLMRequest>("LLM.Request")({
   http: Schema.optional(HttpOptions),
   responseFormat: Schema.optional(ResponseFormat),
   cache: Schema.optional(CachePolicy),
+  rateLimit: Schema.optional(RateLimit),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }) {}
 
@@ -291,6 +292,7 @@ export namespace LLMRequest {
     http: request.http,
     responseFormat: request.responseFormat,
     cache: request.cache,
+    rateLimit: request.rateLimit,
     metadata: request.metadata,
   })
 

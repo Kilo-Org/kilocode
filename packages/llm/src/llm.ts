@@ -3,6 +3,7 @@ import { LLMClient } from "./route/client"
 import {
   GenerationOptions,
   HttpOptions,
+  RateLimit, // kilocode_change
   InvalidProviderOutputReason,
   LLMError,
   LLMEvent,
@@ -40,6 +41,7 @@ export type RequestInput = Omit<
   readonly generation?: GenerationOptions.Input
   readonly providerOptions?: ConstructorParameters<typeof LLMRequest>[0]["providerOptions"]
   readonly http?: HttpOptions.Input
+  readonly rateLimit?: RateLimit.Input // kilocode_change
 }
 
 export const generate = LLMClient.generate
@@ -60,6 +62,7 @@ export const request = (input: RequestInput) => {
     generation: requestGeneration,
     providerOptions: requestProviderOptions,
     http: requestHttp,
+    rateLimit: requestRateLimit, // kilocode_change
     ...rest
   } = input
   return new LLMRequest({
@@ -71,6 +74,7 @@ export const request = (input: RequestInput) => {
     generation: requestGeneration === undefined ? undefined : GenerationOptions.make(requestGeneration),
     providerOptions: requestProviderOptions,
     http: requestHttp === undefined ? undefined : HttpOptions.make(requestHttp),
+    rateLimit: requestRateLimit === undefined ? undefined : RateLimit.make(requestRateLimit), // kilocode_change
   })
 }
 
