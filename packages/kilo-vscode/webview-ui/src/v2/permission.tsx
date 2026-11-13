@@ -8,6 +8,7 @@ import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { PermissionDiff } from "./permission-diff"
 import { allowBroader, displayResource, widerRule } from "./permission-rules"
+import { memoryPermissionDetail } from "./memory-tool-info"
 
 /** v2 permission actions whose existing label key has another name. */
 const LABELS: Record<string, string> = {
@@ -38,6 +39,8 @@ export function PermissionDock(props: {
     const value = props.request.metadata?.description
     return typeof value === "string" ? value : undefined
   }
+  // Memory requests carry the text that would be saved, or the query, in their metadata.
+  const memory = () => memoryPermissionDetail(props.request.action, props.request.metadata)
   // Edit and write requests carry the proposed change as `metadata.files`.
   const files = () => {
     const value = props.request.metadata?.files
@@ -104,6 +107,13 @@ export function PermissionDock(props: {
               )}
             </Show>
             <Show when={props.request.message}>
+              {(text) => (
+                <div data-slot="permission-hint" data-wrap>
+                  {text()}
+                </div>
+              )}
+            </Show>
+            <Show when={memory()}>
               {(text) => (
                 <div data-slot="permission-hint" data-wrap>
                   {text()}

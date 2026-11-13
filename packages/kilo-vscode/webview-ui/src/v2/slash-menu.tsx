@@ -33,7 +33,7 @@ export function createSlashMenu(entries: Accessor<SlashEntry[]>, pick?: (entry: 
       replace(rest.trimStart(), 0)
       return
     }
-    if (entry.kind === "action" && !hasChildren(entries(), entry)) {
+    if (entry.kind === "action" && !entry.input && !hasChildren(entries(), entry)) {
       close()
       replace(rest, 0)
       entry.run()

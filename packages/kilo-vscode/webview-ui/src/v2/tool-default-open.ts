@@ -30,6 +30,8 @@ const BUILTIN_NON_MCP_TOOLS = new Set([
   "chart",
   "codesearch",
   "semantic_search",
+  "kilo_memory_recall",
+  "kilo_memory_save",
   "subagent",
   "task",
   "todowrite",

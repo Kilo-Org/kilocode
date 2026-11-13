@@ -107,7 +107,7 @@ Other upstream keys: `share` (`manual`, `auto`, `disabled`), `update` (`disable`
 
 `permissions` is an ordered array of `{ action, resource, effect }`; `effect` is `allow`, `ask` or `deny`, and the last matching rule wins, so put broad rules first. Unmatched actions ask. A `deny` on `resource: "*"` also hides the tool from the model. Top-level rules apply to every agent; an agent's own rules come after them and win.
 
-Actions are tool names: `read`, `edit` (covers write and patch), `shell`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `subagent`, `question`, `todowrite`, `external_directory`, `execute`, and Kilo's `semantic_search`, `browser_open`, `recall`, `board_read`, `board_post`, `agent_manager`, `sandbox_escalation`. MCP tools use `<server>_<tool>` (`github_*` matches a whole server). v1's `bash` is `shell`, `task` is `subagent`. When converting a v1 `permission` map, move the catch-all `"*"` rule first. `~` expands in `read`, `edit` and `external_directory` resources only.
+Actions are tool names: `read`, `edit` (covers write and patch), `shell`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `subagent`, `question`, `todowrite`, `external_directory`, `execute`, and Kilo's `semantic_search`, `browser_open`, `recall`, `kilo_memory_recall`, `kilo_memory_save`, `board_read`, `board_post`, `agent_manager`, `sandbox_escalation`. MCP tools use `<server>_<tool>` (`github_*` matches a whole server). v1's `bash` is `shell`, `task` is `subagent`. When converting a v1 `permission` map, move the catch-all `"*"` rule first. `~` expands in `read`, `edit` and `external_directory` resources only.
 
 `policies` is a separate firewall that only allows or denies, and anything unmatched is allowed. Its actions are `provider.use`, `tool.use`, `mcp.use`, `skill.use`, `plugin.use`, `integration.connect`, `integration.use` and `websearch.use`. Managed policy outranks user and project. v1 `disabled_providers` and `enabled_providers` become `provider.use` rules:
 
@@ -158,12 +158,13 @@ Kilo adds these top-level keys to `kilo2.json`:
 | `hide_prompt_training_models` | Hides Gateway models that may train on prompts and denies provider data collection. |
 | `shared_agent_board` | Default on. Gives a session and its subagents `board_read` and `board_post`. |
 | `commit_message` | `{ "prompt": "..." }` replaces the commit-message prompt. |
+| `memory_model` | `provider/model` for automatic project memory saves; the session model when unset. |
 | `reasoning_display` | `expanded`, `preview` or `headline` (`auto_collapse_reasoning` is deprecated). |
 | `terminal_command_display`, `code_edit_display`, `mcp_tool_display`, `code_mode_display` | `expanded` or `collapsed`, for the VS Code chat. |
 
-`retention`, `web_search`, `subagent_model`, `subagent_variant`, `subagent_variant_overrides` and `memory_model` are accepted but not applied yet in this version; say so rather than promising an effect.
+`retention`, `web_search`, `subagent_model`, `subagent_variant` and `subagent_variant_overrides` are accepted but not applied yet in this version; say so rather than promising an effect.
 
-Some tools exist only in the VS Code extension: `browser_open`, the notebook tools and `agent_manager`. `subagent` runs child sessions in the background by default; pass `background: false` to wait for the result inline. `kilo_local_recall` searches earlier sessions of the project. The marketplace (VS Code, `/marketplace`) installs skills, agents and MCP servers into the global or project config.
+Some tools exist only in the VS Code extension: `browser_open`, the notebook tools and `agent_manager`. `subagent` runs child sessions in the background by default; pass `background: false` to wait for the result inline. `kilo_local_recall` searches earlier sessions of the project. Project memory (`/memory on`) adds `kilo_memory_recall` and `kilo_memory_save`; both ask for permission by default. The marketplace (VS Code, `/marketplace`) installs skills, agents and MCP servers into the global or project config.
 
 ## Environment variables
 

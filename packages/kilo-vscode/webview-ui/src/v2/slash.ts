@@ -9,7 +9,12 @@ export type SlashEntry = {
   /** Other words that find the entry, for example "clear" for /new. */
   hints: string[]
 } & (
-  | { kind: "action"; run: () => void }
+  | {
+      kind: "action"
+      run: () => void
+      /** The action needs text after its name, so selecting it writes it into the draft instead of running it. */
+      input?: boolean
+    }
   /** `args` leads the text of a nested entry, for example "staged" for /review staged. */
   | { kind: "command"; command: CommandInfo; args?: string }
   | { kind: "skill"; skill: SkillInfo }

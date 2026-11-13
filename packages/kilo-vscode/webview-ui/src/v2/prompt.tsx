@@ -27,6 +27,7 @@ import { useSpeechStatus } from "../components/speech-to-text/status"
 import { useSpeechToText } from "../components/speech-to-text/useSpeechToText"
 import { useLanguage } from "../context/language"
 import { useIndexing } from "../context/indexing"
+import { useMemory } from "../context/memory"
 import { useVSCode } from "../context/vscode"
 import {
   hasPopup,
@@ -81,6 +82,7 @@ import { other, sendMode, sendShortcuts, type SendMode } from "./pending-actions
 import { PromptHint } from "./prompt-hint"
 import { recommend, type ManagerContext } from "./shortcut-hint"
 import { parseSlash, type SlashEntry } from "./slash"
+import { memoryRest, parseMemoryCommand, runMemoryCommand } from "./memory-command"
 import { createSlashMenu, SlashMenu } from "./slash-menu"
 import { GoalHeader } from "../components/chat/goal/GoalHeader"
 
@@ -236,6 +238,7 @@ export function PromptInput(props: {
   const v2 = useV2()
   const language = useLanguage()
   const indexing = useIndexing()
+  const memory = useMemory()
   const [text, setText] = createSignal(promptDrafts.get(props.draftKey))
   const [browsers, setBrowsers] = createSignal(props.draftKey ? (references.get(props.draftKey) ?? []) : [])
   const keep = (key: string | undefined, list: BrowserReference[]) => {
@@ -957,8 +960,35 @@ export function PromptInput(props: {
     focusInput()
   }
 
+  // `/memory` and `/mem` run in the webview, as v1: the draft keeps only the text a no-argument command left over.
+  const runMemory = () => {
+    if (!memory || speech.active() || comments().length > 0 || browsers().length > 0) return false
+    const draft = paste.plainText(text()).trim()
+    const parsed = parseMemoryCommand(draft)
+    if (!parsed) return false
+    if (props.disabled) return true
+    const result = runMemoryCommand(parsed, {
+      memory: { enabled: () => memory.status()?.state.enabled, show: memory.show, run: memory.run },
+      sessionID: props.session,
+      t: language.t,
+      toast: showToast,
+    })
+    if (result === "help") {
+      const value = "/memory "
+      replaceDraft(value, value.length)
+      slash.input(value, value.length)
+      return true
+    }
+    if (!result) return true
+    history.append(draft, props.draftKey)
+    slash.close()
+    replaceDraft(memoryRest(parsed), 0)
+    return true
+  }
+
   const send = (mode: SendMode = "steer") => {
     if (enterGoal()) return
+    if (!goalMode() && runMemory()) return
     if (!goalMode() && runAction()) return
     if (!canSend()) return
     if (speech.state() === "recording") {

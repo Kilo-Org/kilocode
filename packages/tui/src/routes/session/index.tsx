@@ -135,6 +135,7 @@ import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
 import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 import { BoardTool, boardTools } from "../../kilocode/board-tool" // kilocode_change(board)
+import { MemoryTool, memoryTools } from "../../kilocode/memory-tool" // kilocode_change(memory)
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -2651,6 +2652,11 @@ function ToolPart(props: { part: SessionMessageAssistantTool; images?: boolean }
       {/* kilocode_change start - board: Kilo Swarm board tools */}
       <Match when={boardTools.has(props.part.name)}>
         <BoardTool {...toolprops} block={BlockTool} />
+      </Match>
+      {/* kilocode_change end */}
+      {/* kilocode_change start - memory: Kilo memory tools */}
+      <Match when={memoryTools.has(props.part.name)}>
+        <MemoryTool {...toolprops} inline={InlineTool} />
       </Match>
       {/* kilocode_change end */}
       <Match when={true}>

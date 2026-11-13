@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@kilocode/caffeination": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/latex": "workspace:*",

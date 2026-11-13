@@ -44,7 +44,9 @@ import { createGoal } from "./goal"
 import { createPending } from "./pending"
 import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
-import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { memoryCommands, reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { parseMemoryCommand, runMemoryCommand } from "./memory-command"
+import { useMemory } from "../context/memory"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
@@ -494,9 +496,24 @@ export function SessionView(props: {
       reload: () => void v2.api.location.reload().catch(v2.report),
     }
   }
+  // The `/memory` children run like a typed command; the composer runs a typed `/memory ...` draft itself.
+  const memory = useMemory()
+  const memoryRun = () => {
+    if (!memory || props.readOnly) return undefined
+    return (command: string) => {
+      const parsed = parseMemoryCommand(`/memory ${command}`)
+      if (!parsed) return
+      runMemoryCommand(parsed, {
+        memory: { enabled: () => memory.status()?.state.enabled, show: memory.show, run: memory.run },
+        sessionID: session(),
+        t: language.t,
+        toast: showToast,
+      })
+    }
+  }
   const slashEntries = createMemo(() =>
     mergeCatalog({
-      actions: slashActions(handlers(), language.t),
+      actions: [...slashActions(handlers(), language.t), ...memoryCommands(memoryRun(), language.t)],
       commands: catalog.commands(),
       nested: reviewScopes(catalog.commands(), props.worktree === true),
       skills: catalog.skills(),
