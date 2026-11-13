@@ -49,6 +49,16 @@ Lists all providers. For each provider you can:
 
 When you toggle a provider off, all models it offers become unavailable to team members. Re-enabling the provider restores access to all its models.
 
+### Bulk actions
+
+The **Models** and **Providers** tabs share a toolbar that combines **Search**, **Show enabled only**, and bulk actions.
+
+- **Show enabled only** filters the list without changing access.
+- **Enable all shown (N)** and **Disable all shown (N)** apply to every entry currently shown, where **N** is the number of entries the action will change. Unavailable entries and entries already in the target state are skipped, and entries you filter out keep their existing state.
+- The actions are disabled when there is nothing to change or when you do not have permission to edit.
+
+Bulk actions are useful for onboarding a whole provider at once or blocking a group of models that share a data policy. As with single toggles, save your changes to apply them.
+
 ### Saving Changes
 
 A status bar appears at the bottom of the page whenever you have unsaved changes on the **Models** or **Providers** tab. Click **Save** to apply your changes, or **Cancel** to discard them. Changes take effect immediately for all team members once saved.
@@ -77,7 +87,7 @@ Use filters to find the models or providers you want to block:
 | Filter | Tab | Description |
 |---|---|---|
 | **Search** | Models & Providers | Filter by name, ID, or provider slug |
-| **Enabled only** | Models & Providers | Show only currently allowed items |
+| **Show enabled only** | Models & Providers | Show only currently allowed items |
 | **Trains on data** | Providers | Filter by whether the provider trains on user prompts |
 | **Retains prompts** | Providers | Filter by whether the provider retains user prompts |
 | **Location** | Providers | Filter by provider headquarters or datacenter country |

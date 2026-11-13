@@ -176,6 +176,7 @@ class MockCliServer : AutoCloseable {
     // Session REST responses
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
+    @Volatile var recentGate: CountDownLatch? = null
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionFork = """{"id":"ses_forked","slug":"forked","projectID":"prj_test","directory":"/worktree","title":"Forked Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionForkStatus = 200
@@ -616,6 +617,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path
+                    recentGate?.await()
                     respond(output, recentSessionsStatus, recentSessions)
                 }
                 bare == "/experimental/capabilities" -> {
