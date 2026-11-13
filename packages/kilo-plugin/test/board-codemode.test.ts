@@ -17,7 +17,9 @@ import { host } from "../../core/test/plugin/host"
 import { KiloBoard } from "../src/board"
 import { fixture } from "./board/support"
 
-const it = testEffect(AppNodeBuilder.build(Tool.node, [Location.node.replace(tempLocationLayer)]))
+const it = testEffect(
+  AppNodeBuilder.build(Tool.node, [Config.node.replace(Config.testLayer()), Location.node.replace(tempLocationLayer)]),
+)
 
 // The board plugin against the real tool registry: the tools must stay native, because clients render board posts and
 // reads by name, and must also be callable as `tools.board_read` / `tools.board_post` inside `execute`.

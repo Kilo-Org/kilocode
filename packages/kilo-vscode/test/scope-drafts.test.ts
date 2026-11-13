@@ -31,6 +31,7 @@ function makeScope() {
   const event = events()
   const api = {
     session: { list: async () => ({ data: [] }) },
+    plugin: { list: async () => ({ data: [{ id: "kilocode.handshake" }] }) },
     rpc: () => ({
       get: async () => ({ version: "1.2.3" }),
       "catalog.status": async () => ({}),

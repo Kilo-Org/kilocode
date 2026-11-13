@@ -9,6 +9,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // Custom auto routers end to end (ADR 0005, v1 #15183): the host, the Gateway plugin, the session `route` hook, and
 // the `routers.*` RPC methods are real. Only the HTTP peers are local: the Kilo API and routing worker fixture, and
@@ -161,6 +162,8 @@ async function run(
               { preconnect: fetch.preconnect },
             ),
           })
+          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+          yield* loadPlugins(context, directory)
           // Wait for the catalog activation that a real client waits for.
           yield* Effect.promise(() => client.rpc(KiloGatewayRpc.Definition).models({}, { location: { directory } }))
           yield* Effect.promise(() => body(client, directory))

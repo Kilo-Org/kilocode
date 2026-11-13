@@ -150,7 +150,7 @@ const request = (providerID: string, headers: Record<string, string> = built("se
 })
 
 const host = Effect.fn(function* () {
-  return yield* PluginHost.make(yield* Plugin.Service, "test").pipe(Effect.provideService(App.Metadata, App.make(app)))
+  return yield* PluginHost.make(yield* Plugin.Service, "test").pipe(Effect.provideService(App.Service, App.make(app)))
 })
 
 describe("KiloRequestIdentity.Plugin", () => {

@@ -13,7 +13,7 @@ const memoryCredentials = () => {
   const rows = new Map<string, Credential.Info>()
   const unused = () => Effect.die("unused credential method")
   const service = Credential.Service.of({
-    lock: unused,
+    refresh: unused,
     all: unused,
     create: unused,
     activate: unused,

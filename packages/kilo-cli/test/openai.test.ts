@@ -25,7 +25,7 @@ const integrationID = Integration.ID.make("openai")
 
 const add = Effect.fn(function* (plugin: typeof OpenAIPlugin | typeof ChatGPTPlugin | typeof KiloOpenAIPlugin) {
   const host = yield* PluginHost.make(yield* Plugin.Service, plugin.id).pipe(
-    Effect.provideService(App.Metadata, App.make(KiloApp)),
+    Effect.provideService(App.Service, App.make(KiloApp)),
   )
   yield* plugin.effect(host).pipe(
     Effect.provideService(

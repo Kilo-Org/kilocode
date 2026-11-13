@@ -1,3 +1,4 @@
+# kilocode_change - new file: upstream deleted this composite action in v2.2.7, but Kilo's kilo-v2.yml still uses it
 name: "Setup Git Committer"
 description: "Create app token and configure git user"
 inputs:

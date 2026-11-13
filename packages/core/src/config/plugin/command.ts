@@ -5,7 +5,7 @@ import type { Entry } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
 import { AppProcess } from "@opencode/util/process"
 import path from "path"
-import { Effect, Option, Schema } from "effect"
+import { Effect, Result, SchemaIssue, SchemaParser } from "effect"
 import { ChildProcess } from "effect/process"
 import { Agent } from "../../agent.js"
 import { Config } from "../../config.js"
@@ -18,7 +18,8 @@ import { ConfigMarkdown } from "../markdown.js"
 import { ConfigEntryObserver } from "./entry-observer.js"
 import { KiloPromptInjected } from "../../kilocode/session/injected.js" // kilocode_change(injected-prompt) - label an expanded command template in the transcript
 
-const decodeCommand = Schema.decodeUnknownOption(ConfigCommand.Info)
+const decodeCommand = SchemaParser.decodeUnknownResult(ConfigCommand.Info)
+const formatIssue = SchemaIssue.makeFormatterDefault()
 
 export const Plugin = define({
   id: "opencode.config.command",
@@ -130,7 +131,7 @@ function loadDirectory(fs: FSUtil.Interface, directory: string) {
       .pipe(Effect.orElseSucceed(() => [] as string[]))
     return yield* Effect.forEach(files.toSorted(), (filepath) =>
       fs.readFileStringSafe(filepath).pipe(
-        Effect.map((content) => (content === undefined ? undefined : decode(directory, filepath, content))),
+        Effect.flatMap((content) => (content === undefined ? Effect.undefined : decode(directory, filepath, content))),
         Effect.orElseSucceed(() => undefined),
       ),
     ).pipe(
@@ -141,20 +142,30 @@ function loadDirectory(fs: FSUtil.Interface, directory: string) {
   })
 }
 
-function decode(directory: string, filepath: string, content: string) {
+const decode = Effect.fnUntraced(function* (directory: string, filepath: string, content: string) {
   const markdown = ConfigMarkdown.parseOption(content)
-  if (!markdown) return
-  const info = Option.getOrUndefined(decodeCommand({ ...markdown.data, template: markdown.content.trim() }))
-  if (!info) return
+  if (!markdown) {
+    yield* Effect.logWarning("command file skipped", { filepath, reason: "markdown" })
+    return
+  }
+  const info = decodeCommand({ ...markdown.data, template: markdown.content.trim() })
+  if (Result.isFailure(info)) {
+    yield* Effect.logWarning("command file skipped", {
+      filepath,
+      reason: "frontmatter",
+      issue: formatIssue(info.failure),
+    })
+    return
+  }
   return {
     name: path
       .relative(directory, filepath)
       .replaceAll("\\", "/")
       .replace(/^(command|commands)\//, "")
       .replace(/\.md$/, ""),
-    info,
+    info: info.success,
   }
-}
+})
 
 function evaluateTemplate(
   template: string,

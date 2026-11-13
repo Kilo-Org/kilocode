@@ -75,8 +75,8 @@ test("generates on the Gateway chat completions route with an image modality", a
     n: 1,
   })
   expect(response.images).toHaveLength(1)
-  expect(response.image.mediaType).toBe("image/png")
-  expect((response.image.source as { type: string }).type).toBe("base64")
+  expect(response.images[0]!.mediaType).toBe("image/png")
+  expect((response.images[0]!.source as { type: string }).type).toBe("base64")
 })
 
 test("sends input images as chat image parts", async () => {
@@ -128,7 +128,7 @@ test("keeps an https image reference as a URL asset", async () => {
       ),
     ),
   )
-  expect(response.image.source).toMatchObject({
+  expect(response.images[0]!.source).toMatchObject({
     type: "url",
     url: "https://cdn.example.test/generated.png",
   })

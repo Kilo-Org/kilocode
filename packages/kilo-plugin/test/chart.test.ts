@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Location } from "@opencode/core/location"
 import { Project } from "@opencode/core/project"
@@ -120,6 +121,7 @@ function registry(value: string | undefined) {
       }),
     ]),
     [
+      Config.node.replace(Config.testLayer()),
       Location.node.replace(
         Layer.succeed(
           Location.Service,

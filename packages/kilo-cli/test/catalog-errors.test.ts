@@ -3,6 +3,7 @@ import { ModelResolver } from "@opencode/core/model-resolver"
 import { Rpc } from "@opencode/core/rpc"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import { Agent } from "@opencode/schema/agent"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Project } from "@opencode/schema/project"
@@ -33,13 +34,18 @@ const session = Session.Info.make({
 })
 
 // Compile the upstream runner node through the actual host replacement and its declared dependencies.
-const runner = (resolver: Pick<ModelResolver.Interface, "resolve" | "resolveModel">, rpc: Rpc.Interface) =>
+const runner = (
+  resolver: Pick<ModelResolver.Interface, "resolve" | "resolveModel"> & Partial<Pick<ModelResolver.Interface, "fallback">>,
+  rpc: Rpc.Interface,
+) =>
   LayerNode.compile(SessionRunnerModel.node, {
     replacements: [
       ...KiloHost.overrides,
       ModelResolver.node.replace(
         Layer.succeed(ModelResolver.Service, {
-          ...resolver,
+          resolve: resolver.resolve,
+          resolveModel: resolver.resolveModel,
+          fallback: resolver.fallback ?? (() => Effect.undefined),
           resolveImage: () => Effect.undefined,
           resolveDecision: () => Effect.undefined,
         }),
@@ -62,12 +68,15 @@ it.effect("adds catalog diagnostics only for no default or an unavailable select
     })
     yield* Effect.gen(function* () {
       const models = yield* SessionRunnerModel.Service
-      const missing = yield* models.resolve(session, () => Effect.succeed([])).pipe(Effect.flip)
+      const missing = yield* models.resolve(session, () => Effect.succeed([]), { kind: "primary", agent: Agent.ID.make("build") }).pipe(Effect.flip)
       expect(missing).toBeInstanceOf(SessionRunnerModel.ModelNotSelectedError)
       expect(missing.message).toBe(diagnostic)
       for (const providerID of [kilo, Provider.ID.make("azure-cognitive-services")]) {
         const failure = yield* models
-          .resolve({ ...session, model: { providerID, id: Model.ID.make("missing") } }, () => Effect.succeed([]))
+          .resolve({ ...session, model: { providerID, id: Model.ID.make("missing") } }, () => Effect.succeed([]), {
+            kind: "primary",
+            agent: Agent.ID.make("build"),
+          })
           .pipe(Effect.flip)
         expect(failure).toBeInstanceOf(SessionRunnerModel.ModelUnavailableError)
         expect(failure.message).toBe(
@@ -101,24 +110,29 @@ it.effect("does not call the catalog RPC when default or explicit model resoluti
       package: "@opencode/ai/providers/openrouter",
     }
     const resolved = SessionRunnerModel.resolved(yield* ModelResolver.fromCatalogModel(model), model)
+    const variants: (Model.VariantID | undefined)[] = []
     yield* Effect.gen(function* () {
       const models = yield* SessionRunnerModel.Service
-      expect(yield* models.resolve(session, () => Effect.die("Default must not sample availability"))).toBe(resolved)
+      expect(yield* models.resolve(session, () => Effect.die("Default must not sample availability"), { kind: "primary", agent: Agent.ID.make("build") })).toBe(resolved)
       expect(
         yield* models.resolve(
           { ...session, model: { providerID: kilo, id: model.id, variant: Model.VariantID.make("high") } },
           () => Effect.succeed([model]),
+          { kind: "primary", agent: Agent.ID.make("build") },
         ),
       ).toBe(resolved)
       expect(calls).toBe(0)
+      // The default path resolves the agent's fallback model with no variant; the explicit path keeps the session's.
+      expect(variants).toEqual([undefined, Model.VariantID.make("high")])
     }).pipe(
       Effect.provide(
         runner(
           {
             resolve: () => Effect.succeed(resolved),
+            fallback: () => Effect.succeed(model),
             resolveModel: (selected, variant) => {
               expect(selected).toBe(model)
-              expect(variant).toBe(Model.VariantID.make("high"))
+              variants.push(variant)
               return Effect.succeed(resolved)
             },
           },
@@ -146,7 +160,7 @@ it.effect("formats typed failure data without exposing arbitrary RPC messages or
           })
           const error = yield* Effect.gen(function* () {
             const models = yield* SessionRunnerModel.Service
-            return yield* models.resolve(session, () => Effect.succeed([]))
+            return yield* models.resolve(session, () => Effect.succeed([]), { kind: "primary", agent: Agent.ID.make("build") })
           }).pipe(Effect.provide(runner(resolver, rpc)), Effect.flip)
           expect(error.message).toBe(
             `Failed to load the Kilo model catalog (${kind}). Check your connection and credentials.`,
@@ -168,7 +182,7 @@ it.effect("formats typed failure data without exposing arbitrary RPC messages or
     expect(malformed.type).toBe("rpc.invalid_output")
     const error = yield* Effect.gen(function* () {
       const models = yield* SessionRunnerModel.Service
-      return yield* models.resolve(session, () => Effect.succeed([]))
+      return yield* models.resolve(session, () => Effect.succeed([]), { kind: "primary", agent: Agent.ID.make("build") })
     }).pipe(Effect.provide(runner(resolver, rpc)), Effect.flip)
     expect(error.message).toBe(`No model is available for session ${session.id}`)
   }),

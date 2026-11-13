@@ -79,7 +79,7 @@ test("normalizes a non-SSE stream probe for a real server", async () => {
 test("uses the host OAuth client identity and keeps the upstream default", async () => {
   const unused = () => Effect.die("unused credential method")
   const credentials = Credential.Service.of({
-    lock: unused,
+    refresh: unused,
     all: unused,
     create: unused,
     activate: unused,

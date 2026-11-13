@@ -9,6 +9,7 @@ import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
   const deadline = performance.now() + 20_000
@@ -71,6 +72,7 @@ test("installs and removes a plugin from the catalog through the RPC client", as
               KiloHost.overrides,
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
+          yield* loadPlugins(context, directory)
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))

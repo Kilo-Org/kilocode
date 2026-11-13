@@ -1,6 +1,7 @@
 import { OpenCode } from "@opencode/client"
 import { Service } from "@opencode/client/effect/service"
 import { UI } from "@opencode/cli/run/ui"
+import { waitForPlugins } from "@opencode/cli/services/plugin-startup"
 import { ServerConnection } from "@opencode/cli/services/server-connection"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
@@ -23,7 +24,9 @@ export const connect = Effect.fn("kilo.sync.connect")(function* (input: {
   })
   const client = OpenCode.make({ baseUrl: server.endpoint.url, headers: Service.headers(server.endpoint) })
   const options = { location: { directory } }
-  // RPC awaits plugin activation without loading the model catalog or requiring provider authentication.
+  // The server answers `rpc.unavailable` until the Location's plugins are registered, so give a cold Location its
+  // first activation before the handshake.
+  yield* waitForPlugins(client, directory)
   yield* call(() => client.rpc(KiloHandshakeRpc.Definition).get({}, options))
   return {
     directory,
