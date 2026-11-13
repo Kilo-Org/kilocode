@@ -1519,7 +1519,7 @@ export const layer = Layer.effect(
         // kilocode_change end
       },
       Effect.catchTag("NotFoundError", Effect.die),
-      (work, input) => drain.track(input.sessionID, work), // kilocode_change
+      (work, input) => drain.track(input.sessionID, work, "prompt"), // kilocode_change
     )
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {

@@ -68,7 +68,7 @@ export const layer = Layer.effect(
         }),
         onBusy: status.set(sessionID, { type: "busy" }),
         onInterrupt,
-        lease: KiloSessionTurn.hold(sessionID, drain.hold(sessionID)), // kilocode_change
+        lease: KiloSessionTurn.hold(sessionID, drain.hold(sessionID, "runner")), // kilocode_change
       })
       data.runners.set(sessionID, next)
       return next
@@ -108,6 +108,7 @@ export const layer = Layer.effect(
         Effect.gen(function* () {
           return yield* (yield* runner(sessionID, onInterrupt)).ensureRunning(work, valid)
         }),
+        "loop",
       ) // kilocode_change
     })
 
@@ -124,6 +125,7 @@ export const layer = Layer.effect(
             .startShell(work, ready)
             .pipe(Effect.catchTag("RunnerBusy", () => Effect.fail(busyError(sessionID))))
         }),
+        "shell",
       )
     })
     // kilocode_change end

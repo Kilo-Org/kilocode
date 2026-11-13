@@ -341,7 +341,7 @@ export const TaskTool = Tool.define(
             if (notified) return
             notified = true
             const owner = yield* Scope.fork(scope, "parallel")
-            const release = yield* drain.hold(ctx.sessionID)
+            const release = yield* drain.hold(ctx.sessionID, `background ${jobID}`)
             yield* Scope.addFinalizer(owner, Effect.sync(release))
             yield* background.wait({ id: jobID }).pipe(
               Effect.flatMap((result) => {
@@ -539,7 +539,7 @@ export const TaskTool = Tool.define(
         }),
       ),
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
-        drain.track(ctx.sessionID, run(params, ctx).pipe(Effect.scoped)).pipe(Effect.orDie),
+        drain.track(ctx.sessionID, run(params, ctx).pipe(Effect.scoped), "task").pipe(Effect.orDie),
     }
     // kilocode_change end
   }),
