@@ -355,7 +355,7 @@ export function activate(context: ExtensionContext) {
     },
   })
   const marketplacePanel = marketplace({ context, server, directory })
-  const chatTarget = createChatTarget({ view, agentManager })
+  const chatTarget = createChatTarget({ view, agentManager, chatPanel: () => editorChat.lastFocused() })
   registerCodeActions(context, chatTarget)
   registerTerminalActions(context, chatTarget)
   context.subscriptions.push(

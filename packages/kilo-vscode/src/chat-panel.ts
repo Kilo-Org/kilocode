@@ -36,6 +36,8 @@ type Entry = {
 /** The chat editor tab a shared chat command acts on. */
 export type ChatPanelSurface = {
   post(message: ToWebview): void
+  /** Reveals the tab and focuses its composer. */
+  focus(): void
 }
 
 export function chatPanels(input: {
@@ -52,7 +54,7 @@ export function chatPanels(input: {
   documents?: () => DocumentViewerProvider | undefined
 }) {
   const entries = new Set<Entry>()
-  const state: { focused?: Entry } = {}
+  const state: { focused?: Entry; last?: Entry } = {}
   const serializer = window.registerWebviewPanelSerializer(CHAT_PANEL_TYPE, {
     deserializeWebviewPanel: async (panel, value) => {
       const target = restoredTarget(value)
@@ -76,18 +78,32 @@ export function chatPanels(input: {
     return true
   }
 
-  /** The tab the user focused last, for the commands the sidebar and an editor tab share. */
+  const tabSurface = (entry: Entry): ChatPanelSurface => ({
+    post: entry.post,
+    focus: () => {
+      entry.panel.reveal(ViewColumn.Active)
+      entry.post({ type: "command", name: "focusPrompt" })
+    },
+  })
+
+  /** The tab that currently has DOM focus, for the shared chat shortcuts. */
   const focused = (): ChatPanelSurface | undefined => {
     const entry = state.focused
-    return entry?.focused ? { post: entry.post } : undefined
+    return entry?.focused ? tabSurface(entry) : undefined
   }
+
+  /** The tab the user worked in last, for code actions after focus moved to the editor. */
+  const lastFocus = (): ChatPanelSurface | undefined => (state.last ? tabSurface(state.last) : undefined)
 
   const syncFocus = () => {
     void commands.executeCommand("setContext", CHAT_PANEL_FOCUSED, [...entries].some((entry) => entry.focused))
   }
   const setFocused = (entry: Entry, focused: boolean) => {
     entry.focused = focused
-    if (focused) state.focused = entry
+    if (focused) {
+      state.focused = entry
+      state.last = entry
+    }
     if (!focused && state.focused === entry) state.focused = undefined
     syncFocus()
   }
@@ -113,6 +129,7 @@ export function chatPanels(input: {
     has,
     post,
     focused,
+    lastFocused: lastFocus,
     dispose: () => {
       serializer.dispose()
       for (const entry of [...entries]) entry.panel.dispose()
@@ -175,6 +192,8 @@ export function chatPanels(input: {
       surface.dispose()
       entries.delete(entry)
       setFocused(entry, false)
+      if (state.last === entry) state.last = state.focused
+      if (!state.last) chatFocus.closed("chatPanel")
     })
     return panel
   }

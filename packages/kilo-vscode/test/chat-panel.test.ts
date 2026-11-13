@@ -5,6 +5,7 @@ import * as vscode from "vscode"
 import type { ToHost } from "../src/protocol"
 import { sidebarSession } from "../src/browser-tab/sidebar-session"
 import { CHAT_PANEL_FOCUSED, CHAT_PANEL_TYPE, chatPanels, restoredTarget, sessionArgument } from "../src/chat-panel"
+import { chatFocus } from "../src/services/code-actions/target"
 import type { Manager } from "../src/server"
 
 const ROOT = join(import.meta.dir, "..")
@@ -102,6 +103,7 @@ describe("chat panels", () => {
     window.createWebviewPanel = original.create
     window.registerWebviewPanelSerializer = original.serializer
     commands.executeCommand = originalExecute
+    chatFocus.closed("chatPanel")
   })
 
   const create = () => chatPanels({ context, server, directory: "/tmp/project" })
@@ -216,6 +218,26 @@ describe("chat panels", () => {
     expect(panels.post("ses_other", { type: "appendContext", items: [] })).toBe(false)
     expect(state.created[1]?.panel.sent).toContainEqual({ type: "browserReference", reference })
     expect(state.created[0]?.panel.sent).toEqual([])
+  })
+
+  it("keeps the last focused tab for code actions and forgets it when it closes", () => {
+    const panels = create()
+    panels.open("ses_a")
+    const panel = state.created[0]?.panel
+
+    panel?.receive({ type: "webviewFocusChanged", focused: true })
+    panel?.receive({ type: "webviewFocusChanged", focused: false })
+    expect(panels.focused()).toBeUndefined()
+    expect(panels.lastFocused()).toBeDefined()
+    expect(chatFocus.surface()).toBe("chatPanel")
+
+    panels.lastFocused()?.focus()
+    expect(panel?.reveals).toBe(1)
+    expect(panel?.sent).toContainEqual({ type: "command", name: "focusPrompt" })
+
+    panel?.dispose()
+    expect(panels.lastFocused()).toBeUndefined()
+    expect(chatFocus.surface()).toBeUndefined()
   })
 
   it("moves the focused surface to the last focused tab", () => {

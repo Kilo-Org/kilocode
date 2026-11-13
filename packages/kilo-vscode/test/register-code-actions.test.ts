@@ -33,11 +33,13 @@ function dataUrlText(uri: string) {
   return Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64").toString("utf8")
 }
 
-function setup(options: { agentActive?: boolean; agentReady?: boolean } = {}) {
+function setup(options: { agentActive?: boolean; agentReady?: boolean; chatPanel?: boolean } = {}) {
   const handlers = new Map<string, Command>()
   const executed: string[][] = []
   const posts: unknown[] = []
   const agentPosts: unknown[] = []
+  const panelPosts: unknown[] = []
+  const panelFocuses: string[] = []
   const waits: string[] = []
   const context = { subscriptions: [] as Array<{ dispose(): void }> } as unknown as ExtensionContext
 
@@ -66,11 +68,17 @@ function setup(options: { agentActive?: boolean; agentReady?: boolean } = {}) {
     },
   }
 
-  const target = createChatTarget({ view, agentManager: agent })
+  const chatPanel = options.chatPanel
+    ? () => ({
+        post: (message: unknown) => panelPosts.push(message),
+        focus: () => panelFocuses.push("focus"),
+      })
+    : undefined
+  const target = createChatTarget({ view, agentManager: agent, chatPanel })
   registerCodeActions(context, target)
   registerTerminalActions(context, target)
 
-  return { handlers, executed, posts, agentPosts, waits }
+  return { handlers, executed, posts, agentPosts, panelPosts, panelFocuses, waits }
 }
 
 function selectCode() {
@@ -86,6 +94,7 @@ function selectCode() {
 afterEach(() => {
   chatFocus.closed("sidebar")
   chatFocus.closed("agentManager")
+  chatFocus.closed("chatPanel")
   api.commands.registerCommand = original.register
   api.commands.executeCommand = original.execute
   api.window.activeTextEditor = original.editor
@@ -155,6 +164,47 @@ describe("registerCodeActions", () => {
     expect(state.posts).toEqual([])
     expect(state.agentPosts).toHaveLength(1)
     expect((state.agentPosts[0] as { type: string }).type).toBe("appendContext")
+  })
+
+  it("adds the selection to the chat tab focused last, even while the Agent Manager is active", async () => {
+    const state = setup({ agentActive: true, chatPanel: true })
+    chatFocus.gained("chatPanel")
+    selectCode()
+
+    await state.handlers.get("kilo-code.v2.addToContext")?.()
+
+    expect(state.panelFocuses).toEqual(["focus"])
+    expect(state.panelPosts).toHaveLength(1)
+    expect((state.panelPosts[0] as { type: string }).type).toBe("appendContext")
+    expect(state.posts).toEqual([])
+    expect(state.agentPosts).toEqual([])
+    expect(state.executed).toEqual([])
+  })
+
+  it("sends the explain prompt to the chat tab focused last", async () => {
+    const state = setup({ agentActive: true, chatPanel: true })
+    chatFocus.gained("chatPanel")
+    selectCode()
+
+    await state.handlers.get("kilo-code.v2.explainCode")?.()
+
+    expect(state.panelFocuses).toEqual(["focus"])
+    expect((state.panelPosts[0] as { type: string }).type).toBe("startPrompt")
+    expect(state.posts).toEqual([])
+    expect(state.agentPosts).toEqual([])
+  })
+
+  it("focuses and searches the chat tab focused last", async () => {
+    const state = setup({ agentActive: true, chatPanel: true })
+    chatFocus.gained("chatPanel")
+
+    await state.handlers.get("kilo-code.v2.focusChatInput")?.()
+    await state.handlers.get("kilo-code.v2.toggleChatSearch")?.()
+
+    expect(state.panelFocuses).toEqual(["focus", "focus"])
+    expect(state.panelPosts).toEqual([{ type: "command", name: "focusSearch" }])
+    expect(state.posts).toEqual([])
+    expect(state.agentPosts).toEqual([])
   })
 
   it("adds the selection to the Agent Manager focused last, while the editor is active", async () => {
