@@ -782,6 +782,41 @@ export class WorktreeStateManager {
     }
   }
 
+  /**
+   * Adds the v1 sessions created since `since` that this state does not have yet, with their worktrees, after
+   * `kilo2 import v1` brought those sessions into the v2 store. A v1 worktree whose directory is gone is skipped
+   * with its sessions, and so is a session `exists` does not find in the store: earlier v2 builds wrote their own
+   * sessions to the v1 file. Returns the number of sessions added.
+   */
+  async importLegacySessions(since: number, exists: (id: string) => Promise<boolean>): Promise<number> {
+    const content = await fs.promises
+      .readFile(path.join(this.root, KILO_DIR, STATE_FILE), "utf-8")
+      .catch(() => undefined)
+    if (!content) return 0
+    const data = JSON.parse(content) as StateFile
+    const candidates = Object.entries(data.sessions ?? {})
+      .filter(
+        ([id, session]) => !this.sessions.has(id) && !this.closed.has(id) && Date.parse(session.createdAt) >= since,
+      )
+      .map(([id, session]) => ({
+        id,
+        session,
+        worktree: session.worktreeId ? data.worktrees?.[session.worktreeId] : undefined,
+      }))
+      .filter((entry) => !entry.session.worktreeId || (entry.worktree && fs.existsSync(entry.worktree.path)))
+    const found = await Promise.all(candidates.map((entry) => exists(entry.id)))
+    const added = candidates.filter((_, index) => found[index])
+    for (const entry of added) {
+      const target = entry.worktree ? this.restoreWorktree(entry.worktree) : undefined
+      this.sessions.set(entry.id, { id: entry.id, worktreeId: target?.id ?? null, createdAt: entry.session.createdAt })
+    }
+    if (added.length > 0) {
+      this.log(`Imported ${added.length} Kilo v1 sessions from ${KILO_DIR}/${STATE_FILE}`)
+      await this.save()
+    }
+    return added.length
+  }
+
   async prepareRecovery(): Promise<boolean> {
     if (!this.loadFailed) return true
     const stamp = new Date().toISOString().replace(/[:.]/g, "-")

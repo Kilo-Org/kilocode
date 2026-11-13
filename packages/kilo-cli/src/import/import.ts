@@ -6,7 +6,7 @@ export const ImportCommand = Spec.make("import", {
   commands: [
     Spec.make("v1", {
       description:
-        "Import the Kilo v1 sessions into a new kilo2 session store. The v1 store is only read and stays as it is.",
+        "Import the Kilo v1 sessions into the kilo2 session store. A new store gets the v1 store; an existing one gets the v1 sessions it does not have yet. The v1 store is only read and stays as it is.",
       params: {
         from: Flag.String("from").pipe(
           Flag.withDescription(
@@ -19,6 +19,12 @@ export const ImportCommand = Spec.make("import", {
             "Import only the sessions updated since this time, plus their parent and child sessions: a duration such as 14d, 2w or 36h, or a date such as 2026-10-27 (default: the full store)",
           ),
           Flag.optional,
+        ),
+        config: Flag.Boolean("config").pipe(
+          Flag.withDescription(
+            "Also copy the Kilo v1 global config (kilo.json, skills, agents, commands, modes, rules, AGENTS.md) into the kilo2 config directory, without overwriting kilo2 files",
+          ),
+          Flag.withDefault(false),
         ),
       },
     }),
