@@ -1,5 +1,7 @@
 import { describe, it, expect } from "bun:test"
-import { clean, INSTRUCTION } from "../../src/kilocode/enhance-prompt"
+import { HEADER_PROVIDER_ROUTING } from "@kilocode/kilo-gateway"
+import { clean, headers, INSTRUCTION } from "../../src/kilocode/enhance-prompt"
+import type { Provider } from "../../src/provider/provider"
 
 describe("enhance-prompt", () => {
   describe("instruction", () => {
@@ -56,6 +58,24 @@ describe("enhance-prompt", () => {
 
     it("does not strip mismatched quotes", () => {
       expect(clean("\"hello world'")).toBe("\"hello world'")
+    })
+  })
+
+  describe("headers", () => {
+    const routing = { order: ["gmicloud/fp8"], only: ["gmicloud/fp8"], allow_fallbacks: false }
+    const model = (npm: string) => ({ providerID: "kilo", api: { npm } }) as unknown as Provider.Model
+    const decode = (result: Record<string, string>) => {
+      const raw = result[HEADER_PROVIDER_ROUTING]
+      return raw === undefined ? undefined : JSON.parse(decodeURIComponent(raw))
+    }
+
+    it("carries the model's routing to the gateway on every transport", () => {
+      expect(decode(headers(model("@kilocode/kilo-gateway"), { provider: routing }))).toEqual(routing)
+    })
+
+    it("omits routing for other providers and models without it", () => {
+      expect(decode(headers(model("@ai-sdk/openai"), { provider: routing }))).toBeUndefined()
+      expect(decode(headers(model("@kilocode/kilo-gateway"), {}))).toBeUndefined()
     })
   })
 })
