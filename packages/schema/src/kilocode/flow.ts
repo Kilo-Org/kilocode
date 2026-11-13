@@ -121,9 +121,14 @@ export const Reference = Schema.Union([ManagedReference, NativeScheduleReference
 )
 export type Reference = typeof Reference.Type
 
+export const HealthReason = Schema.Literals(["directory-missing"]).annotate({
+  identifier: "KiloFlow.HealthReason",
+})
+export type HealthReason = typeof HealthReason.Type
+
 export const Health = Schema.Union([
   Schema.Struct({ status: Schema.tag("healthy") }),
-  Schema.Struct({ status: Schema.tag("error"), message: Schema.String }),
+  Schema.Struct({ status: Schema.tag("error"), message: Schema.String, reason: HealthReason.pipe(optional) }),
 ]).pipe(Schema.toTaggedUnion("status"), Schema.annotate({ identifier: "KiloFlow.Health" }))
 export type Health = typeof Health.Type
 

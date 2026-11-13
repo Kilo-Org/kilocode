@@ -906,7 +906,8 @@ async function recentSessions(context: PeriodicContext) {
 
 async function fromSession(context: PeriodicContext, sessionID: string, timezone?: string): Promise<Draft> {
   await context.data.session.message.sync(sessionID).catch(() => undefined)
-  const zone = timezone && Option.isSome(DateTime.zoneMakeNamed(timezone)) ? timezone : undefined
+  const trimmed = timezone?.trim()
+  const zone = trimmed && Option.isSome(DateTime.zoneMakeNamed(trimmed)) ? trimmed : undefined
   return {
     prompt: (
       context.data.session.message

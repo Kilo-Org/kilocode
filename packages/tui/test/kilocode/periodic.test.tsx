@@ -62,6 +62,7 @@ const flow = (input: {
   managed?: boolean
   next?: number
   error?: string
+  reason?: KiloFlowRpc.HealthReason
   run?: KiloFlowRpc.RunStatus
   prompt?: string
   action?: "prompt" | "hook"
@@ -94,7 +95,9 @@ const flow = (input: {
     status: input.status,
     ...(input.next === undefined ? {} : { nextRunAt: input.next }),
     ...(input.run ? { latestRun: run(input.id, input.run) } : {}),
-    health: input.error ? { status: "error", message: input.error } : { status: "healthy" },
+    health: input.error
+      ? { status: "error", message: input.error, ...(input.reason ? { reason: input.reason } : {}) }
+      : { status: "healthy" },
     time: { created: 1, updated: 2 },
   })
 }
@@ -426,6 +429,14 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
                 Promise.resolve(
                   output([
                     flow({ id: "sch_completed", name: "Completed", status: "completed" }),
+                    flow({
+                      id: "flw_done_missing",
+                      name: "Finished",
+                      status: "completed",
+                      managed: true,
+                      error: "Flow directory /workspace no longer exists",
+                      reason: "directory-missing",
+                    }),
                     flow({ id: "sch_later", name: "Later", status: "active", next: 300 }),
                     flow({
                       id: "flw_missing",
@@ -433,6 +444,7 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
                       status: "paused",
                       managed: true,
                       error: "Flow directory /workspace no longer exists",
+                      reason: "directory-missing",
                     }),
                     flow({ id: "sch_error", name: "Broken", status: "error", error: "Session missing" }),
                     flow({ id: "sch_earlier", name: "Earlier", status: "active", next: 200 }),
@@ -448,16 +460,19 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
   )
   try {
     populated.renderer.start()
-    await populated.waitForFrame((frame) => frame.includes("Completed"))
+    await populated.waitForFrame((frame) => frame.includes("Finished"))
     const frame = populated.captureCharFrame()
     const rowIndex = (name: string) =>
       frame.split("\n").findIndex((line) => line.includes(`› ${name} ·`) || line.includes(`  ${name} ·`))
-    const names = ["Broken", "Missing", "Earlier", "Later", "Paused", "Completed"]
-    expect(names.map(rowIndex)).toEqual([...names.map(rowIndex)].toSorted((left, right) => left - right))
+    const names = ["Broken", "Missing", "Earlier", "Later", "Paused", "Completed", "Finished"]
+    const indices = names.map(rowIndex)
+    expect(indices.every((index) => index >= 0)).toBeTrue()
+    expect(indices).toEqual([...indices].toSorted((left, right) => left - right))
     expect(frame).toContain("Paused · directory missing")
+    expect(frame).not.toContain("Completed · directory missing")
     expect(frame).toContain("Every 1 hour")
     expect(frame).toContain("schedule")
-    expect(frame).toContain("6 tasks")
+    expect(frame).toContain("7 tasks")
     expect(frame).not.toContain("/workspace")
     const spans = populated.captureSpans().lines.flatMap((line) => line.spans)
     const selected = spans.find((span) => span.text.includes("Broken"))
@@ -472,6 +487,8 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
 
 test("fits short terminals, scrolls details, shows retention on empty runs, and restores the selected row", async () => {
   const commands: KeymapCommand[] = []
+  let runsCalls = 0
+  const reload = Promise.withResolvers<KiloFlowRpc.RunsOutput>()
   const flows = Array.from({ length: 20 }, (_, index) =>
     flow({
       id: `flw_${index.toString().padStart(2, "0")}`,
@@ -485,16 +502,18 @@ test("fits short terminals, scrolls details, shows retention on empty runs, and 
         : {}),
     }),
   )
-  const app = await testRender(
-    () => (
-      <FlowsDialog
-        context={
-          context({ commands, handlers: { list: () => Promise.resolve(output(flows)) } }).context
-        }
-      />
-    ),
-    { width: 88, height: 24 },
-  )
+  const fake = context({
+    commands,
+    handlers: {
+      list: () => Promise.resolve(output(flows)),
+      runs: () => {
+        runsCalls++
+        if (runsCalls === 1) return Promise.resolve({ runs: [], warnings: [] })
+        return reload.promise
+      },
+    },
+  })
+  const app = await testRender(() => <FlowsDialog context={fake.context} />, { width: 88, height: 24 })
   try {
     app.renderer.start()
     await app.waitForFrame((frame) => frame.includes("20 tasks"))
@@ -502,11 +521,19 @@ test("fits short terminals, scrolls details, shows retention on empty runs, and 
     await app.waitForFrame((frame) => frame.includes("› Flow 16"))
     command(commands, "return").run()
     await app.waitForFrame((frame) => frame.includes("Periodic / Flow 16") && frame.includes("Disable"))
+    // Wait for the initial runs load to settle and flush before checking that retention is below the fold.
+    await Bun.sleep(15)
+    expect(runsCalls).toBe(1)
     expect(app.captureCharFrame()).not.toContain("The latest 20 runs")
     command(commands, "pagedown").run()
     await app.waitForFrame(
       (frame) => frame.includes("No runs yet.") && frame.includes("The latest 20 runs and 20 skipped runs are kept."),
     )
+    // A background runs reload keeps the retention copy mounted without flickering.
+    command(commands, "ctrl+r").run()
+    await app.waitForFrame(() => runsCalls === 2)
+    expect(app.captureCharFrame()).toContain("The latest 20 runs and 20 skipped runs are kept.")
+    reload.resolve({ runs: [], warnings: [] })
     command(commands, "escape").run()
     await app.waitForFrame((frame) => frame.includes("› Flow 16") && frame.includes("20 tasks"))
   } finally {
@@ -1215,11 +1242,18 @@ test("defaults the wizard time zone from the loaded inventory before the system 
   }
 
   const fake = context({ script: { selects: { Permissions: "done" } } })
-  await createFlow(fake.context, () => undefined, {}, undefined, "Europe/Berlin")
+  await createFlow(fake.context, () => undefined, {}, undefined, " Europe/Berlin ")
   expect(fake.prompts.find((prompt) => prompt.title.includes("Time zone"))?.value).toBe("Europe/Berlin")
   expect(fake.calls.find((call) => call.method === "create")?.input).toMatchObject({
     when: { tz: "Europe/Berlin" },
   })
+
+  const systemZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  for (const invalid of ["Not/A_Zone", "   "]) {
+    const fallback = context({ script: { selects: { Permissions: "done" } } })
+    await createFlow(fallback.context, () => undefined, {}, undefined, invalid)
+    expect(fallback.prompts.find((prompt) => prompt.title.includes("Time zone"))?.value).toBe(systemZone)
+  }
 })
 
 test("lists the baseline as fixed rows and the additional grants as editable rows", async () => {

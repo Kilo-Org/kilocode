@@ -788,7 +788,7 @@ export function FlowsDialog(props: {
                         )
                       }}
                     </For>
-                    <Show when={!runsLoading() && !runsError()}>
+                    <Show when={runs() !== undefined && !runsError()}>
                       <text fg={theme().text.muted} wrapMode="word" marginTop={1}>
                         {RETENTION}
                       </text>
@@ -916,7 +916,7 @@ function Action(props: {
 const rank: Record<KiloFlowRpc.Status, number> = { error: 0, active: 1, paused: 2, completed: 3 }
 
 function priority(flow: KiloFlowRpc.Info) {
-  if (broken(flow) || flow.health.status === "error") return rank.error
+  if (flow.status !== "completed" && flow.health.status === "error") return rank.error
   return rank[flow.status] ?? rank.error
 }
 
@@ -929,15 +929,16 @@ function compare(left: KiloFlowRpc.Info, right: KiloFlowRpc.Info) {
 }
 
 function problem(flow: KiloFlowRpc.Info) {
-  if (flow.status === "error" || flow.health.status !== "error") return undefined
-  if (/^Flow directory .+ no longer exists$/u.test(flow.health.message)) return "directory missing"
+  if (flow.status === "error" || flow.status === "completed" || flow.health.status !== "error") return undefined
+  if (flow.health.reason === "directory-missing" || /^Flow directory .+ no longer exists$/su.test(flow.health.message))
+    return "directory missing"
   return "error"
 }
 
 function timezone(flows: readonly KiloFlowRpc.Info[] | undefined) {
   const managed = flows?.find((flow) => flow.reference.type === "managed" && flow.trigger.timezone.trim().length > 0)
-  if (managed) return managed.trigger.timezone
-  return flows?.find((flow) => flow.trigger.timezone.trim().length > 0)?.trigger.timezone
+  if (managed) return managed.trigger.timezone.trim()
+  return flows?.find((flow) => flow.trigger.timezone.trim().length > 0)?.trigger.timezone.trim()
 }
 
 /**
