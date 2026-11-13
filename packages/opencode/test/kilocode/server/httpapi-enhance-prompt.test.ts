@@ -100,6 +100,28 @@ test("enhance-prompt returns the provider error message when the model call fail
   }
 }, 60_000)
 
+// An internal failure, such as a model that does not resolve, keeps the generic 500 path.
+test("enhance-prompt returns a server error when the model does not resolve", async () => {
+  Flag.KILO_SERVER_PASSWORD = undefined
+  const provider = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: () => new Response(null, { status: 500 }) })
+  await using tmp = await tmpdir({
+    config: { ...config(provider.url), model: "test/missing-model", small_model: "test/missing-model" },
+  })
+  const listener = await Server.listen({ hostname: "127.0.0.1", port: 0 })
+
+  try {
+    const response = await fetch(new URL("/enhance-prompt", listener.url), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-kilo-directory": tmp.path },
+      body: JSON.stringify({ text: "draft prompt" }),
+    })
+    expect(response.status).toBe(500)
+  } finally {
+    await listener.stop(true)
+    await provider.stop(true)
+  }
+}, 60_000)
+
 // A dropped TCP socket, not a clean fetch abort, must still stop the model call.
 test("enhance-prompt aborts the model call when the client socket drops", async () => {
   Flag.KILO_SERVER_PASSWORD = undefined

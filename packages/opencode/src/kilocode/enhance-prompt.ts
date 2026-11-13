@@ -34,6 +34,11 @@ export function reason(providerID: ProviderV2.ID, err: unknown) {
   return String(last)
 }
 
+/** A failed model call, carrying the provider's reason. Other failures stay internal errors. */
+export class EnhancePromptProviderError extends Error {
+  override readonly name = "EnhancePromptProviderError"
+}
+
 /**
  * Lightweight prompt enhancement that mirrors the legacy singleCompletionHandler.
  * Calls generateText directly with a prompt-rewrite system instruction, no agent identity,
@@ -70,7 +75,7 @@ export async function enhancePrompt(text: string, signal?: AbortSignal): Promise
     messages: [{ role: "user" as const, content: `Draft prompt to enhance, not answer:\n\n${text}` }],
   }).catch((err: unknown) => {
     if (!signal?.aborted) log.error("failed", { err })
-    throw new Error(reason(resolved.model.providerID, err), { cause: err })
+    throw new EnhancePromptProviderError(reason(resolved.model.providerID, err), { cause: err })
   })
 
   log.info("enhanced", { length: result.text.length })
