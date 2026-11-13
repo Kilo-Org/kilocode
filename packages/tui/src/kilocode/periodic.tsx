@@ -29,7 +29,7 @@ type Notice = { readonly message: string; readonly variant: "success" | "error" 
 
 /** The wizards the dialog starts. Each closes `/periodic` and reopens it when done. */
 export type Actions = {
-  readonly create: (selected: string | undefined) => void
+  readonly create: (selected: string | undefined, timezone?: string) => void
   readonly edit: (flow: KiloFlowRpc.Info) => void
   readonly repair: (flow: KiloFlowRpc.Info) => void
   readonly delete: (flow: KiloFlowRpc.Info) => void
@@ -425,7 +425,7 @@ export function FlowsDialog(props: {
         enabled: () => !detail() && props.actions !== undefined,
         run: () => {
           const flow = flows()[selected()]
-          props.actions?.create(flow && key(flow))
+          props.actions?.create(flow && key(flow), timezone(result()?.flows))
         },
       },
       {
@@ -596,6 +596,16 @@ export function FlowsDialog(props: {
                       <span style={{ fg: active() ? foreground() : statusColor(flow.status, theme()) }}>
                         {capitalize(flow.status)}
                       </span>
+                      <Show when={problem(flow)}>
+                        {(label) => (
+                          <>
+                            <span style={{ fg: secondary() }}>{" · "}</span>
+                            <span style={{ fg: active() ? foreground() : theme().text.feedback.error.base }}>
+                              {label()}
+                            </span>
+                          </>
+                        )}
+                      </Show>
                       <Show when={flow.nextRunAt === undefined ? undefined : flow.nextRunAt}>
                         {(next) => <span style={{ fg: secondary() }}>{` · next ${date(next())}`}</span>}
                       </Show>
@@ -778,7 +788,7 @@ export function FlowsDialog(props: {
                         )
                       }}
                     </For>
-                    <Show when={(runs()?.length ?? 0) > 0}>
+                    <Show when={!runsLoading() && !runsError()}>
                       <text fg={theme().text.muted} wrapMode="word" marginTop={1}>
                         {RETENTION}
                       </text>
@@ -905,12 +915,29 @@ function Action(props: {
 
 const rank: Record<KiloFlowRpc.Status, number> = { error: 0, active: 1, paused: 2, completed: 3 }
 
+function priority(flow: KiloFlowRpc.Info) {
+  if (broken(flow) || flow.health.status === "error") return rank.error
+  return rank[flow.status] ?? rank.error
+}
+
 function compare(left: KiloFlowRpc.Info, right: KiloFlowRpc.Info) {
-  const ordered = (rank[left.status] ?? rank.error) - (rank[right.status] ?? rank.error)
+  const ordered = priority(left) - priority(right)
   if (ordered !== 0) return ordered
-  if (left.status === "active" && right.status === "active")
+  if (priority(left) === rank.active)
     return (left.nextRunAt ?? Number.POSITIVE_INFINITY) - (right.nextRunAt ?? Number.POSITIVE_INFINITY)
   return left.name.localeCompare(right.name)
+}
+
+function problem(flow: KiloFlowRpc.Info) {
+  if (flow.status === "error" || flow.health.status !== "error") return undefined
+  if (/^Flow directory .+ no longer exists$/u.test(flow.health.message)) return "directory missing"
+  return "error"
+}
+
+function timezone(flows: readonly KiloFlowRpc.Info[] | undefined) {
+  const managed = flows?.find((flow) => flow.reference.type === "managed" && flow.trigger.timezone.trim().length > 0)
+  if (managed) return managed.trigger.timezone
+  return flows?.find((flow) => flow.trigger.timezone.trim().length > 0)?.trigger.timezone
 }
 
 /**
@@ -1078,7 +1105,7 @@ export default Plugin.define({
     ]
     const fail = (cause: unknown) => context.ui.toast.show({ variant: "error", message: errorMessage(cause) })
     const actions: Actions = {
-      create: (selected) => void createFlow(context, open, { key: selected }).catch(fail),
+      create: (selected, zone) => void createFlow(context, open, { key: selected }, undefined, zone).catch(fail),
       edit: (flow) => void editFlow(context, open, flow).catch(fail),
       repair: (flow) => void createFlow(context, open, { key: key(flow), detail: true }, flow).catch(fail),
       delete: (flow) => void deleteFlow(context, open, flow).catch(fail),

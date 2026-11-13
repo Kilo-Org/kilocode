@@ -68,6 +68,7 @@ const flow = (input: {
   worktree?: "reuse" | "new"
   permissions?: KiloFlowRpc.PermissionGrant[]
   ends?: { times?: number; after?: string; at?: string }
+  timezone?: string
 }) => {
   const managed = input.managed ?? input.run !== undefined
   return Schema.decodeUnknownSync(KiloFlowRpc.Info)({
@@ -76,7 +77,7 @@ const flow = (input: {
       : { type: "native-schedule", scheduleID: input.id, ...(input.action ? { action: input.action } : {}) },
     name: input.name,
     authority: { type: "local" },
-    trigger: { type: "time", when: { type: "every", every: "1 hour" }, timezone: "UTC" },
+    trigger: { type: "time", when: { type: "every", every: "1 hour" }, timezone: input.timezone ?? "UTC" },
     execution: managed
       ? { type: "local", mode: "fresh", sourceSessionID: "ses_tui", worktree: input.worktree ?? "reuse" }
       : { type: "local", mode: "session-reuse", sessionID: "ses_tui" },
@@ -426,6 +427,13 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
                   output([
                     flow({ id: "sch_completed", name: "Completed", status: "completed" }),
                     flow({ id: "sch_later", name: "Later", status: "active", next: 300 }),
+                    flow({
+                      id: "flw_missing",
+                      name: "Missing",
+                      status: "paused",
+                      managed: true,
+                      error: "Flow directory /workspace no longer exists",
+                    }),
                     flow({ id: "sch_error", name: "Broken", status: "error", error: "Session missing" }),
                     flow({ id: "sch_earlier", name: "Earlier", status: "active", next: 200 }),
                     flow({ id: "sch_paused", name: "Paused", status: "paused" }),
@@ -442,26 +450,27 @@ test("shows loading, empty, and sorted single-line summaries", async () => {
     populated.renderer.start()
     await populated.waitForFrame((frame) => frame.includes("Completed"))
     const frame = populated.captureCharFrame()
-    const names = ["Broken", "Earlier", "Later", "Paused", "Completed"]
-    expect(names.map((name) => frame.indexOf(name))).toEqual(
-      [...names.map((name) => frame.indexOf(name))].toSorted((left, right) => left - right),
-    )
+    const rowIndex = (name: string) =>
+      frame.split("\n").findIndex((line) => line.includes(`› ${name} ·`) || line.includes(`  ${name} ·`))
+    const names = ["Broken", "Missing", "Earlier", "Later", "Paused", "Completed"]
+    expect(names.map(rowIndex)).toEqual([...names.map(rowIndex)].toSorted((left, right) => left - right))
+    expect(frame).toContain("Paused · directory missing")
     expect(frame).toContain("Every 1 hour")
     expect(frame).toContain("schedule")
-    expect(frame).toContain("5 tasks")
+    expect(frame).toContain("6 tasks")
     expect(frame).not.toContain("/workspace")
-    const selected = populated
-      .captureSpans()
-      .lines.flatMap((line) => line.spans)
-      .find((span) => span.text.includes("Broken"))
+    const spans = populated.captureSpans().lines.flatMap((line) => line.spans)
+    const selected = spans.find((span) => span.text.includes("Broken"))
     expect(selected?.fg.equals(selectedText)).toBeTrue()
     expect(selected?.fg.equals(selected?.bg)).toBeFalse()
+    const missing = spans.find((span) => span.text.includes("directory missing"))
+    expect(missing?.fg.equals(errorText)).toBeTrue()
   } finally {
     populated.renderer.destroy()
   }
 })
 
-test("fits short terminals, scrolls details, and restores the selected row", async () => {
+test("fits short terminals, scrolls details, shows retention on empty runs, and restores the selected row", async () => {
   const commands: KeymapCommand[] = []
   const flows = Array.from({ length: 20 }, (_, index) =>
     flow({
@@ -472,7 +481,6 @@ test("fits short terminals, scrolls details, and restores the selected row", asy
       ...(index === 16
         ? {
             prompt: "Inspect every item in this deliberately long unattended task. ".repeat(10),
-            error: "Health marker at the end of details",
           }
         : {}),
     }),
@@ -494,9 +502,11 @@ test("fits short terminals, scrolls details, and restores the selected row", asy
     await app.waitForFrame((frame) => frame.includes("› Flow 16"))
     command(commands, "return").run()
     await app.waitForFrame((frame) => frame.includes("Periodic / Flow 16") && frame.includes("Disable"))
-    expect(app.captureCharFrame()).not.toContain("Health marker at the end of details")
+    expect(app.captureCharFrame()).not.toContain("The latest 20 runs")
     command(commands, "pagedown").run()
-    await app.waitForFrame((frame) => frame.includes("Health marker at the end of details"))
+    await app.waitForFrame(
+      (frame) => frame.includes("No runs yet.") && frame.includes("The latest 20 runs and 20 skipped runs are kept."),
+    )
     command(commands, "escape").run()
     await app.waitForFrame((frame) => frame.includes("› Flow 16") && frame.includes("20 tasks"))
   } finally {
@@ -1124,6 +1134,92 @@ test("creates a Flow from the current session through the wizard", async () => {
   expect(fake.cleared.length).toBeGreaterThan(0)
   expect(fake.toasts.some((toast) => toast.message.includes("Approve the Flow's permissions"))).toBeTrue()
   expect(opened).toEqual([{ key: "flw_created" }])
+})
+
+test("defaults the wizard time zone from the loaded inventory before the system zone", async () => {
+  const managedCommands: KeymapCommand[] = []
+  const captured: Array<{ selected: string | undefined; timezone: string | undefined }> = []
+  const managedDialog = await testRender(
+    () => (
+      <FlowsDialog
+        context={
+          context({
+            commands: managedCommands,
+            handlers: {
+              list: () =>
+                Promise.resolve(
+                  output([
+                    flow({ id: "sch_native", name: "Native", status: "active", timezone: "America/Detroit" }),
+                    flow({ id: "flw_berlin", name: "Berlin", status: "active", managed: true, timezone: "Europe/Berlin" }),
+                  ]),
+                ),
+            },
+          }).context
+        }
+        actions={{
+          create: (selected, timezone) => {
+            captured.push({ selected, timezone })
+          },
+          edit: () => {},
+          repair: () => {},
+          delete: () => {},
+        }}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    managedDialog.renderer.start()
+    await managedDialog.waitForFrame((frame) => frame.includes("Berlin"))
+    command(managedCommands, "n").run()
+    expect(captured).toEqual([{ selected: "sch_native", timezone: "Europe/Berlin" }])
+  } finally {
+    managedDialog.renderer.destroy()
+  }
+
+  const scheduleCommands: KeymapCommand[] = []
+  const scheduleCaptured: Array<string | undefined> = []
+  const scheduleDialog = await testRender(
+    () => (
+      <FlowsDialog
+        context={
+          context({
+            commands: scheduleCommands,
+            handlers: {
+              list: () =>
+                Promise.resolve(
+                  output([flow({ id: "sch_detroit", name: "Detroit", status: "active", timezone: "America/Detroit" })]),
+                ),
+            },
+          }).context
+        }
+        actions={{
+          create: (_selected, timezone) => {
+            scheduleCaptured.push(timezone)
+          },
+          edit: () => {},
+          repair: () => {},
+          delete: () => {},
+        }}
+      />
+    ),
+    { width: 88, height: 24 },
+  )
+  try {
+    scheduleDialog.renderer.start()
+    await scheduleDialog.waitForFrame((frame) => frame.includes("Detroit"))
+    command(scheduleCommands, "n").run()
+    expect(scheduleCaptured).toEqual(["America/Detroit"])
+  } finally {
+    scheduleDialog.renderer.destroy()
+  }
+
+  const fake = context({ script: { selects: { Permissions: "done" } } })
+  await createFlow(fake.context, () => undefined, {}, undefined, "Europe/Berlin")
+  expect(fake.prompts.find((prompt) => prompt.title.includes("Time zone"))?.value).toBe("Europe/Berlin")
+  expect(fake.calls.find((call) => call.method === "create")?.input).toMatchObject({
+    when: { tz: "Europe/Berlin" },
+  })
 })
 
 test("lists the baseline as fixed rows and the additional grants as editable rows", async () => {
