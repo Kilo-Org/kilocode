@@ -23,6 +23,8 @@ import type {
   PRTimelineItem,
   ReviewerState,
 } from "./pr-types"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
 import { PRReactions } from "./PRReactions"
 import { PRCommentForm } from "./PRCommentForm"
 import { PRDescription } from "./PRDescription"
@@ -60,7 +62,7 @@ interface CardProps {
   dismissed: boolean
   activeTerminalId?: string
   onToggleOpen: () => void
-  onSend: () => void
+  onSend: (send: SendIntent) => void
   onDismiss: () => void
   onOpenUrl?: () => void
   reactionError?: string
@@ -71,6 +73,10 @@ interface CardProps {
 
 function PRConversationCard(props: CardProps) {
   const { t } = useLanguage()
+  const sendLabel = () =>
+    props.sent
+      ? t("agentManager.pr.comment.sent")
+      : t(props.activeTerminalId ? "agentManager.pr.comment.sendToTerminal" : "agentManager.pr.fixWithKilo")
 
   return (
     <div class="am-pr-comment" classList={{ "am-pr-comment-open": props.open }} data-thread-id={props.comment.id}>
@@ -129,11 +135,16 @@ function PRConversationCard(props: CardProps) {
         <PRCommentBody comment={props.comment} target={props.comment.kind === "issue" ? props : undefined} />
         <Show when={props.reactionError}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
         <div class="am-pr-comment-actions am-pr-row">
-          <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
-            {props.sent
-              ? t("agentManager.pr.comment.sent")
-              : t(props.activeTerminalId ? "agentManager.pr.comment.sendToTerminal" : "agentManager.pr.fixWithKilo")}
-          </Button>
+          <SendHint title={sendLabel()} alternate={!props.activeTerminalId}>
+            <Button
+              variant="primary"
+              size="small"
+              disabled={props.sent}
+              onClick={(event: MouseEvent) => props.onSend(clickSend(event))}
+            >
+              {sendLabel()}
+            </Button>
+          </SendHint>
           <Button variant="secondary" size="small" class="am-pr-comment-btn" onClick={props.onDismiss}>
             {props.dismissed ? t("agentManager.pr.conversation.restore") : t("agentManager.pr.conversation.dismiss")}
           </Button>
@@ -363,9 +374,16 @@ export function PRConversation(props: Props) {
   }
 
   const actionable = createMemo(() => actionableConversation(props.items, state()))
+  const sendAllLabel = () =>
+    t(
+      props.activeTerminalId
+        ? "agentManager.pr.conversation.sendAllToTerminal"
+        : "agentManager.pr.conversation.sendAll",
+      { count: Math.min(actionable().length, SEND_LIMIT) },
+    )
 
-  function send(ids: string[]) {
-    sendConversation(props.worktreeId, props.items, ids, state(), props.activeTerminalId)
+  function send(ids: string[], intent: SendIntent) {
+    sendConversation(props.worktreeId, props.items, ids, state(), props.activeTerminalId, intent)
   }
 
   const earlier = () => {
@@ -385,14 +403,16 @@ export function PRConversation(props: Props) {
         />
         <Show when={open()}>
           <Show when={actionable().length > 1}>
-            <Button variant="primary" size="small" class="am-pr-comment-send-all" onClick={() => send(actionable())}>
-              {t(
-                props.activeTerminalId
-                  ? "agentManager.pr.conversation.sendAllToTerminal"
-                  : "agentManager.pr.conversation.sendAll",
-                { count: Math.min(actionable().length, SEND_LIMIT) },
-              )}
-            </Button>
+            <SendHint title={sendAllLabel()} alternate={!props.activeTerminalId}>
+              <Button
+                variant="primary"
+                size="small"
+                class="am-pr-comment-send-all"
+                onClick={(event: MouseEvent) => send(actionable(), clickSend(event))}
+              >
+                {sendAllLabel()}
+              </Button>
+            </SendHint>
           </Show>
           <Show when={props.description}>
             {(body) => <PRDescription body={body()} author={props.author} createdAt={props.createdAt} />}
@@ -422,7 +442,7 @@ export function PRConversation(props: Props) {
                                 dismissed={dismissed(id)}
                                 activeTerminalId={props.activeTerminalId}
                                 onToggleOpen={() => toggleOpen(comment())}
-                                onSend={() => send([id])}
+                                onSend={(intent) => send([id], intent)}
                                 onDismiss={() => toggleDismiss(comment())}
                                 reactionError={reactions.error(id)}
                                 reactions={reactions.list(id, comment().reactions)}

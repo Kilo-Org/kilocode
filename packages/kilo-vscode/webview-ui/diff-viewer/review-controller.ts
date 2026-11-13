@@ -42,6 +42,9 @@ import { treeOrder } from "./file-tree-utils"
 import { isDiffExpandable, shouldVirtualizeDiff } from "./diff-open-policy"
 import { isMarkdownFile } from "./MarkdownDiffView"
 import { createReactionController } from "../agent-manager/pr/pr-comment-state"
+import { clickSend, type SendIntent } from "../../src/shared/prompt-send"
+import { runningDelivery } from "../src/v2/kilo-settings"
+import { other } from "../src/v2/pending-actions"
 import type { PRTarget } from "../../src/shared/pr-comment-actions"
 
 type Props = {
@@ -176,9 +179,16 @@ export function createReviewController(props: Props) {
     props.focus()
   }
 
-  const sendComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+  const sendComment = (
+    file: string,
+    side: AnnotationSide,
+    line: number,
+    text: string,
+    selectedText: string,
+    send: SendIntent,
+  ) => {
     const comment = { id: `c-${++nextId}-${Date.now()}`, file, side, line, comment: text, selectedText }
-    if (!sendReviewComments([comment], props.activeTerminalId())) return
+    if (!sendReviewComments([comment], props.activeTerminalId(), send)) return
     props.preserveScroll(() => {
       setDraft(null)
       draftMeta = null
@@ -251,7 +261,8 @@ export function createReviewController(props: Props) {
       completeRemoteDraft,
       onDestination: setPreferredDestination,
       mount: props.commentForm?.(),
-      labels: labels(props.label),
+      labels: labels(props.label, other(runningDelivery())),
+      sendToChatTitle: () => labels(props.label, other(runningDelivery())).sendToChat,
       activeTerminalId: props.activeTerminalId,
     })
 
@@ -267,10 +278,10 @@ export function createReviewController(props: Props) {
     })
   }
 
-  const sendAllToChat = () => {
+  const sendAllToChat = (send: SendIntent = "enter") => {
     const comments = props.comments()
     if (comments.length === 0) return
-    if (!sendReviewComments(comments, props.activeTerminalId())) return
+    if (!sendReviewComments(comments, props.activeTerminalId(), send)) return
     props.preserveScroll(() => props.setComments([]))
     props.onSendAll?.()
   }
@@ -313,9 +324,9 @@ export function createReviewController(props: Props) {
     }
   }
 
-  const sendAllClick = () => {
+  const sendAllClick = (event: MouseEvent) => {
     props.onSendClick?.()
-    sendAllToChat()
+    sendAllToChat(clickSend(event))
   }
 
   return {
@@ -496,7 +507,7 @@ export function createReviewView(
     if (keepsNativeFocus(event.target) || props.canComment === false || !comments().length) return
     event.preventDefault()
     event.stopPropagation()
-    review.sendAllToChat()
+    review.sendAllToChat(clickSend(event))
   }
   return {
     open,

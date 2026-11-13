@@ -147,7 +147,11 @@ async function handleWorktree(m: AgentManagerInMessage, ctx: ProjectContext, hos
     return true
   }
   if (m.type === "agentManager.updateFromBase") {
-    await handleBaseUpdate(m, ctx, host.lifecycle, pushFixes())
+    const preferred =
+      vscode.workspace.getConfiguration("kilo-code.v2").get<string>("chat.sendWhileRunning") === "queue"
+        ? "queue"
+        : "steer"
+    await handleBaseUpdate(m, ctx, host.lifecycle, pushFixes(), preferred)
     return true
   }
   return false

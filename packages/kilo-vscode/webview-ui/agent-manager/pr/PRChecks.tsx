@@ -11,6 +11,8 @@ import { counts, expands, groups } from "./pr-check-groups"
 import { SectionHeading } from "./SectionHeading"
 import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
+import { clickSend } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
 import { checkFeedback } from "./pr-check-feedback"
 import { pushFixes } from "./pr-push-fixes"
 import { commentState, patchCommentState } from "./pr-comment-state"
@@ -61,11 +63,13 @@ export function PRChecks(props: {
   )
   const groupOpen = (bucket: CheckBucket) => state()?.checkGroups[bucket] ?? localGroups()[bucket] ?? expands(bucket)
   const statusLabel = (status: CheckStatus) => t(`agentManager.pr.checks.status.${status}`)
-  const send = () => {
+  const send = (event: MouseEvent) => {
     const item = feedback()
     if (!item) return
-    sendReviewComments([item], props.activeTerminalId)
+    sendReviewComments([item], props.activeTerminalId, clickSend(event))
   }
+  const fixLabel = () =>
+    t(props.activeTerminalId ? "agentManager.pr.checks.terminal" : "agentManager.pr.checks.fix")
   const toggleOpen = () => {
     const next = !open()
     if (props.worktreeId) patchCommentState(props.worktreeId, () => ({ checksOpen: next }))
@@ -92,9 +96,11 @@ export function PRChecks(props: {
         />
         <Show when={open()}>
           <Show when={feedback()}>
-            <Button variant="primary" size="small" class="am-pr-checks-fix" onClick={send}>
-              {t(props.activeTerminalId ? "agentManager.pr.checks.terminal" : "agentManager.pr.checks.fix")}
-            </Button>
+            <SendHint title={fixLabel()} alternate={!props.activeTerminalId}>
+              <Button variant="primary" size="small" class="am-pr-checks-fix" onClick={send}>
+                {fixLabel()}
+              </Button>
+            </SendHint>
           </Show>
           <div
             class="am-pr-panel-checks am-pr-col"

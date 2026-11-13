@@ -215,6 +215,7 @@ export const dict = {
   "prompt.action.continue": "Fortsett",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.send.recording": "Transkriber og send",
+  "prompt.action.click": "klikk",
   "prompt.action.stop": "Stopp",
   "prompt.action.stop.background": "Stopp hovedagenten. Bakgrunnsagenter fortsetter å kjøre.",
   "prompt.agents.show": "Vis bakgrunnsagenter",

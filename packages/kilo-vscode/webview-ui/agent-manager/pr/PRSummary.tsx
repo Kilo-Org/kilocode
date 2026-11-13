@@ -8,6 +8,8 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { PRStatus } from "../../src/types/messages/agent-manager"
 import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
+import { clickSend } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
 import { PRAvatar } from "./PRAvatar"
 import { PRMerge } from "./PRMerge"
 import { checkFeedback } from "./pr-check-feedback"
@@ -39,7 +41,7 @@ interface Row {
   status: string
   target?: JumpTarget
   /** Secondary marks lower-confidence feedback, like general discussion. */
-  action?: { label: string; run: () => void; variant?: "primary" | "secondary" }
+  action?: { label: string; run: (event: MouseEvent) => void; variant?: "primary" | "secondary" }
   avatars?: Array<{ login: string; avatar?: string }>
 }
 
@@ -76,7 +78,7 @@ export function PRSummary(props: PRSummaryProps) {
       action: feedback
         ? {
             label: t(terminal ? "agentManager.pr.checks.terminal" : "agentManager.pr.checks.fix"),
-            run: () => sendReviewComments([feedback], terminal),
+            run: (event) => sendReviewComments([feedback], terminal, clickSend(event)),
           }
         : undefined,
     }
@@ -134,7 +136,7 @@ export function PRSummary(props: PRSummaryProps) {
               label: t(terminal ? "agentManager.pr.comment.sendAllToTerminal" : "agentManager.pr.fixWithKiloCount", {
                 count: Math.min(unsent.length, SEND_LIMIT),
               }),
-              run: () => sendThreads(props.worktreeId, value.comments, unsent, state(), terminal),
+              run: (event) => sendThreads(props.worktreeId, value.comments, unsent, state(), terminal, clickSend(event)),
             }
           : undefined,
     }
@@ -161,7 +163,7 @@ export function PRSummary(props: PRSummaryProps) {
                 terminal ? "agentManager.pr.conversation.sendAllToTerminal" : "agentManager.pr.conversation.sendAll",
                 { count: Math.min(ids.length, SEND_LIMIT) },
               ),
-              run: () => sendConversation(props.worktreeId, value, ids, state(), terminal),
+              run: (event) => sendConversation(props.worktreeId, value, ids, state(), terminal, clickSend(event)),
               variant: "secondary",
             }
           : undefined,
@@ -217,14 +219,16 @@ export function PRSummary(props: PRSummaryProps) {
                   <span class="am-pr-summary-actions am-pr-row">
                     <Show when={row.action}>
                       {(action) => (
-                        <Button
-                          variant={action().variant ?? "primary"}
-                          size="small"
-                          class="am-pr-summary-fix"
-                          onClick={action().run}
-                        >
-                          {action().label}
-                        </Button>
+                        <SendHint title={action().label} alternate={!props.activeTerminalId}>
+                          <Button
+                            variant={action().variant ?? "primary"}
+                            size="small"
+                            class="am-pr-summary-fix"
+                            onClick={action().run}
+                          >
+                            {action().label}
+                          </Button>
+                        </SendHint>
                       )}
                     </Show>
                     <Show when={row.target && props.onJump ? row.target : undefined}>

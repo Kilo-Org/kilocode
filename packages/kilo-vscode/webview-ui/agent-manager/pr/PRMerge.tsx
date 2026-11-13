@@ -3,7 +3,9 @@ import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Show, For, createEffect, createSignal, onCleanup } from "solid-js"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import { useLanguage } from "../../src/context/language"
+import { SendHint } from "../../src/v2/send-hint"
 import { useBridge } from "../v2/vscode"
 import type { PRMergeMethod, PRStatus } from "../../src/types/messages/agent-manager"
 import type { PRMergeRequest } from "../../../src/shared/pr-comment-actions"
@@ -134,7 +136,7 @@ export function PRMerge(props: Props) {
   const confirm = () => {
     setConfirming(true)
   }
-  const fix = () => baseUpdate(props.worktreeId, props.projectId, props.baseTarget)
+  const fix = (send: SendIntent = "enter") => baseUpdate(props.worktreeId, props.projectId, props.baseTarget, send)
   const statusLabel = () => {
     if (merge()?.mergeable === "conflicting") return t("agentManager.pr.merge.conflicts")
     if (state() === "behind") return t("agentManager.pr.merge.behind")
@@ -282,9 +284,16 @@ export function PRMerge(props: Props) {
               </Show>
             </div>
             <Show when={merge()?.mergeable === "conflicting"}>
-              <Button variant="primary" size="small" disabled={pending()} onClick={fix}>
-                {t("agentManager.pr.merge.fix")}
-              </Button>
+              <SendHint title={t("agentManager.pr.merge.fix")}>
+                <Button
+                  variant="primary"
+                  size="small"
+                  disabled={pending()}
+                  onClick={(event: MouseEvent) => fix(clickSend(event))}
+                >
+                  {t("agentManager.pr.merge.fix")}
+                </Button>
+              </SendHint>
             </Show>
             <Show when={merge()?.mergeable !== "conflicting" && state() === "behind"}>
               <Button variant="primary" size="small" disabled={pending()} onClick={update}>

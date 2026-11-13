@@ -66,15 +66,15 @@ describe("review comment drafts", () => {
   })
 
   it("takes an untargeted batch for the composer and marks it handled", () => {
-    const detail = { comments: [local()], autoSend: true }
+    const detail = { comments: [local()], send: "enter" as const }
     expect(takeReviewCommentsForPromptBatch(detail)).toEqual([local()])
     expect(detail).toHaveProperty("handled", true)
     expect(takeReviewCommentsForPromptBatch(detail)).toBeUndefined()
   })
 
   it("leaves a terminal-targeted batch to the terminal", () => {
-    expect(takeReviewCommentsForPromptBatch({ comments: [local()], autoSend: true, targetTerminalId: "t-1" })).toBe(
-      undefined,
-    )
+    expect(
+      takeReviewCommentsForPromptBatch({ comments: [local()], send: "alternate", targetTerminalId: "t-1" }),
+    ).toBe(undefined)
   })
 })

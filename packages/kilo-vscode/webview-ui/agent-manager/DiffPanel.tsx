@@ -267,6 +267,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               onSendChat={sendAllClick}
               onSendGithub={sendAllToGithub}
               keybind={sendAllKeybind()}
+              terminal={!!props.activeTerminalId}
             />
           </div>
         </Show>

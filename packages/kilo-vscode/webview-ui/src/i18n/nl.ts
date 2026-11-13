@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.continue": "Doorgaan",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
+  "prompt.action.click": "klik",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
   "prompt.agents.show": "Achtergrondagenten tonen",

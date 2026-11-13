@@ -9,6 +9,7 @@ import type { PRStatus } from "../agent-manager/types"
 import { wire, type ChangesTab } from "../chat"
 import { thread } from "../shared/pr-review"
 import { isHttpsUrl, type PRReviewCommentData, type ReviewCommentEntry } from "../shared/review-comments"
+import type { SendIntent } from "../shared/prompt-send"
 import { appendOutput, getWorkspaceRoot, openRelativeFile } from "../review-utils"
 import { getDiffMarkdownRender, getUserDiffStyle, setDiffMarkdownRender, setUserDiffStyle } from "../review-settings"
 import type { Manager } from "../server"
@@ -20,7 +21,7 @@ import type { DiffSourceCatalog } from "./sources/catalog"
 import { turnSourceId } from "./sources/turn"
 import { WORKSPACE_SOURCE_ID } from "./sources/worktree"
 
-type CommentHandler = (comments: ReviewCommentEntry[], autoSend: boolean) => void
+type CommentHandler = (comments: ReviewCommentEntry[], send: SendIntent) => void
 type OpenArgs = {
   sessionId?: string
   turnId?: string
@@ -394,7 +395,8 @@ export class DiffViewerProvider implements vscode.Disposable, ChangesTab {
       void this.activate(msg.id, this.openGeneration, false)
     },
     "diffViewer.sendComments": (msg) => {
-      if (Array.isArray(msg.comments)) this.input.onComments(msg.comments as ReviewCommentEntry[], !!msg.autoSend)
+      if (Array.isArray(msg.comments))
+        this.input.onComments(msg.comments as ReviewCommentEntry[], msg.send === "alternate" ? "alternate" : "enter")
     },
     "agentManager.copyToClipboard": (msg) => {
       if (typeof msg.text === "string") void vscode.env.clipboard.writeText(msg.text)

@@ -1,4 +1,7 @@
 import type { AnnotationSide, DiffLineAnnotation } from "@pierre/diffs"
+import { clickSend, type SendIntent } from "../../src/shared/prompt-send"
+import type { Delivery } from "../src/v2/pending-actions"
+import { alternateClickKey, sendHintText } from "../src/v2/send-hint-text"
 import type { ReviewCommentEntry, WorktreeFileDiff } from "../src/types/messages/agent-manager"
 import { extractLines, formatReviewCommentsMarkdown, type ReviewComment } from "./review-comments"
 
@@ -22,7 +25,8 @@ export interface CommentFormActions {
   body: string
   onBodyChange: (body: string) => void
   onSave: (body: string, selectedText: string) => void
-  onSend: (body: string, selectedText: string) => void
+  /** `send` is Enter's send for the form's action, or ⌥↵'s for an Option-click. */
+  onSend: (body: string, selectedText: string, send: SendIntent) => void
   onGithubSuccess: () => void
   onCancel: () => void
   onDestination: (value: "local" | "github") => void
@@ -34,7 +38,7 @@ export type CommentFormMount = (
   actions: CommentFormActions,
 ) => (() => void) | undefined
 
-export function labels(t: (key: string, params?: UiI18nParams) => string): AnnotationLabels {
+export function labels(t: (key: string, params?: UiI18nParams) => string, alternate: Delivery): AnnotationLabels {
   return {
     commentOnLine: (line) => t("agentManager.review.commentOnLine", { line }),
     editCommentOnLine: (line) => t("agentManager.review.editCommentOnLine", { line }),
@@ -43,7 +47,12 @@ export function labels(t: (key: string, params?: UiI18nParams) => string): Annot
     comment: t("agentManager.review.commentAction"),
     send: t("prompt.action.send"),
     save: t("common.save"),
-    sendToChat: t("agentManager.review.sendToChat"),
+    sendToChat: sendHintText({
+      action: t("agentManager.review.sendToChat"),
+      click: alternateClickKey(t),
+      alternate,
+      t,
+    }),
     edit: t("common.edit"),
     delete: t("common.delete"),
   }
@@ -97,7 +106,15 @@ interface AnnotationHandlers {
   editing: string | null
   setEditing: (id: string | null) => void
   addComment: (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => void
-  sendComment: (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => void
+  /** `send` is Enter's send for the form's action, or ⌥↵'s for an Option-click. */
+  sendComment: (
+    file: string,
+    side: AnnotationSide,
+    line: number,
+    text: string,
+    selectedText: string,
+    send: SendIntent,
+  ) => void
   updateComment: (id: string, text: string) => void
   deleteComment: (id: string) => void
   cancelDraft: () => void
@@ -106,6 +123,7 @@ interface AnnotationHandlers {
   onDestination?: (value: "local" | "github") => void
   mount?: CommentFormMount
   labels: AnnotationLabels
+  sendToChatTitle?: () => string
   activeTerminalId: () => string | undefined
 }
 
@@ -149,14 +167,24 @@ function makeIcon(pathData: string): SVGSVGElement {
   return svg
 }
 
-function makeActionButton(title: string, icon: SVGSVGElement, action: () => void): HTMLButtonElement {
+function makeActionButton(
+  title: string,
+  icon: SVGSVGElement,
+  action: (event: MouseEvent) => void,
+  refreshTitle?: () => string,
+): HTMLButtonElement {
   const button = document.createElement("button")
   button.className = "am-annotation-icon-btn"
   button.title = title
   button.appendChild(icon)
+  if (refreshTitle) {
+    button.addEventListener("pointerenter", () => {
+      button.title = refreshTitle()
+    })
+  }
   button.addEventListener("click", (event) => {
     event.stopPropagation()
-    action()
+    action(event)
   })
   return button
 }
@@ -166,14 +194,19 @@ export const APPEND_REVIEW_COMMENTS = "agentManager.appendReviewComments"
 
 export interface AppendReviewCommentsDetail {
   comments: ReviewCommentEntry[]
-  autoSend: boolean
+  /** The send a click asked for: Enter's delivery, or ⌥↵'s for an Option-click. */
+  send: SendIntent
   targetTerminalId?: string
   /** Set by the consumer that took the batch, so exactly one consumer appends it. */
   handled?: boolean
 }
 
-export function sendReviewComments(comments: ReviewCommentEntry[], activeTerminalId?: string): boolean {
-  const detail: AppendReviewCommentsDetail = { comments, autoSend: true, targetTerminalId: activeTerminalId }
+export function sendReviewComments(
+  comments: ReviewCommentEntry[],
+  activeTerminalId?: string,
+  send: SendIntent = "enter",
+): boolean {
+  const detail: AppendReviewCommentsDetail = { comments, send, targetTerminalId: activeTerminalId }
   window.dispatchEvent(new CustomEvent<AppendReviewCommentsDetail>(APPEND_REVIEW_COMMENTS, { detail }))
   return detail.handled === true
 }
@@ -316,7 +349,8 @@ export function buildReviewAnnotation(
           meta.text = body
         },
         onSave: (body, selected) => handlers.addComment(meta.file, meta.side, meta.line, body.trim(), selected),
-        onSend: (body, selected) => handlers.sendComment(meta.file, meta.side, meta.line, body.trim(), selected),
+        onSend: (body, selected, send) =>
+          handlers.sendComment(meta.file, meta.side, meta.line, body.trim(), selected, send),
         onGithubSuccess: () => handlers.completeRemoteDraft?.(meta),
         onCancel: handlers.cancelDraft,
         onDestination: (value) => {
@@ -360,6 +394,12 @@ export function buildReviewAnnotation(
     sendButton.className = "am-annotation-btn am-annotation-btn-submit"
     sendButton.textContent = handlers.labels.send
     sendButton.title = handlers.labels.sendToChat
+    if (handlers.sendToChatTitle) {
+      const refresh = handlers.sendToChatTitle
+      sendButton.addEventListener("pointerenter", () => {
+        sendButton.title = refresh()
+      })
+    }
 
     const update = () => {
       const disabled = textarea.value.trim().length === 0
@@ -386,13 +426,13 @@ export function buildReviewAnnotation(
       handlers.addComment(meta.file, meta.side, meta.line, text, selected)
     }
 
-    const send = () => {
+    const send = (event: MouseEvent) => {
       const text = textarea.value.trim()
       if (!text) return
       const diff = handlers.diffs.find((item) => item.file === meta.file)
       const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
       const selected = extractLines(content, meta.line, meta.endLine ?? meta.line)
-      handlers.sendComment(meta.file, meta.side, meta.line, text, selected)
+      handlers.sendComment(meta.file, meta.side, meta.line, text, selected, clickSend(event))
     }
 
     cancelButton.addEventListener("click", (event) => {
@@ -407,7 +447,7 @@ export function buildReviewAnnotation(
 
     sendButton.addEventListener("click", (event) => {
       event.stopPropagation()
-      send()
+      send(event)
     })
 
     textarea.addEventListener("keydown", (event) => {
@@ -419,6 +459,15 @@ export function buildReviewAnnotation(
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
         event.stopPropagation()
+        if (event.altKey) {
+          const text = textarea.value.trim()
+          if (!text) return
+          const diff = handlers.diffs.find((item) => item.file === meta.file)
+          const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
+          const selected = extractLines(content, meta.line, meta.endLine ?? meta.line)
+          handlers.sendComment(meta.file, meta.side, meta.line, text, selected, "alternate")
+          return
+        }
         submit()
       }
     })
@@ -510,10 +559,15 @@ function buildSavedAnnotation(meta: AnnotationMeta, handlers: AnnotationHandlers
   actions.className = "am-annotation-comment-actions"
 
   actions.appendChild(
-    makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      if (!sendReviewComments([comment], handlers.activeTerminalId())) return
-      handlers.deleteComment(comment.id)
-    }),
+    makeActionButton(
+      handlers.labels.sendToChat,
+      makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"),
+      (event) => {
+        if (!sendReviewComments([comment], handlers.activeTerminalId(), clickSend(event))) return
+        handlers.deleteComment(comment.id)
+      },
+      handlers.sendToChatTitle,
+    ),
   )
 
   actions.appendChild(

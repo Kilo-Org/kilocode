@@ -9,7 +9,7 @@ import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
-import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages/agent-manager"
@@ -25,6 +25,10 @@ import {
   type ReviewDraft,
 } from "../diff-viewer/review-annotations"
 import { getFilename, lineCount } from "../diff-viewer/review-comments"
+import { clickSend, type SendIntent } from "../../src/shared/prompt-send"
+import { runningDelivery } from "../src/v2/kilo-settings"
+import { other } from "../src/v2/pending-actions"
+import { SendHint } from "../src/v2/send-hint"
 import { useLanguage } from "../src/context/language"
 
 export interface DocumentPanelProps {
@@ -77,13 +81,13 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.isContentEditable
 }
 
-function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: () => void): void {
+function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: (intent: SendIntent) => void): void {
   if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return
   if (isEditableTarget(event.target)) return
   if (comments.length === 0) return
   event.preventDefault()
   event.stopPropagation()
-  send()
+  send(clickSend(event))
 }
 
 // Cmd/Ctrl+A inside the panel otherwise selects the whole webview DOM
@@ -163,10 +167,18 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     composer.draft = null
     focusRoot()
   }
-  const sendComment = (path: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+  const sendComment = (
+    path: string,
+    side: AnnotationSide,
+    line: number,
+    text: string,
+    selectedText: string,
+    send: SendIntent,
+  ) => {
     const sent = sendReviewComments(
       [{ id: `doc-${++nextId}-${Date.now()}`, file: path, side, line, comment: text, selectedText }],
       props.activeTerminalId,
+      send,
     )
     if (!sent) return
     setDraft(null)
@@ -212,7 +224,8 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
       updateComment,
       deleteComment,
       cancelDraft,
-      labels: labels(t),
+      labels: labels(t, other(runningDelivery())),
+      sendToChatTitle: () => labels(t, other(runningDelivery())).sendToChat,
       activeTerminalId: () => props.activeTerminalId,
     })
   const gutter = (range: SelectedLineRange) => {
@@ -223,9 +236,9 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
     composer.draft = draftMeta
     setDraft(next)
   }
-  const sendAll = () => {
+  const sendAll = (send: SendIntent = "enter") => {
     if (props.comments.length === 0) return
-    if (!sendReviewComments(props.comments, props.activeTerminalId)) return
+    if (!sendReviewComments(props.comments, props.activeTerminalId, send)) return
     updateComments([])
     if (props.onSendAll) props.onSendAll()
     else focusRoot()
@@ -429,11 +442,16 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           <span class="am-diff-comments-count">
             {t("agentManager.documents.comments", { count: props.comments.length })}
           </span>
-          <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={sendAllKeybind(t)} placement="top">
-            <Button variant="primary" size="small" onClick={sendAll}>
+          <SendHint
+            title={t("agentManager.review.sendAllToChat")}
+            keybind={sendAllKeybind(t)}
+            alternate={!props.activeTerminalId}
+            placement="top"
+          >
+            <Button variant="primary" size="small" onClick={(event: MouseEvent) => sendAll(clickSend(event))}>
               {t("agentManager.review.sendAllToChat")}
             </Button>
-          </TooltipKeybind>
+          </SendHint>
         </div>
       </Show>
     </section>

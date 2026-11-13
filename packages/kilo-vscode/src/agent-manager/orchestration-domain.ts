@@ -378,7 +378,14 @@ function fieldOptions(field: FormField): string {
   return labels.length ? ` (options: ${labels.join(", ")})` : ""
 }
 
-async function blocked(input: Target, dir: string, name: string, questions?: "dismiss"): Promise<string | undefined> {
+async function blocked(
+  input: Target,
+  dir: string,
+  name: string,
+  questions?: "dismiss",
+  delivery?: "steer" | "queue",
+): Promise<string | undefined> {
+  if (delivery === "queue") return undefined
   const [perms, forms] = await Promise.all([
     input.client.permission.request.list({ location: { directory: dir } }).catch(() => undefined),
     input.client.form.list({ location: { directory: dir } }).catch(() => undefined),
@@ -434,11 +441,12 @@ export async function prompt(input: {
   model?: { providerID: string; modelID: string }
   variant?: string
   agent?: string
+  delivery?: "steer" | "queue"
   metadata?: { [key: string]: JsonValue }
 }): Promise<void> {
   if (input.signal?.aborted) return
   const target = await locate(input)
-  const blocker = await blocked(input, target.dir, target.name, input.questions)
+  const blocker = await blocked(input, target.dir, target.name, input.questions, input.delivery)
   if (blocker) throw new OrchestrationError("unavailable_session", blocker)
   if (input.signal?.aborted) return
   if (input.agent) await input.client.session.switchAgent({ sessionID: input.sessionID, agent: input.agent })
@@ -454,6 +462,7 @@ export async function prompt(input: {
   await input.client.session.prompt({
     sessionID: input.sessionID,
     text: input.text,
+    ...(input.delivery ? { delivery: input.delivery } : {}),
     ...(input.metadata ? { metadata: input.metadata } : {}),
   })
 }

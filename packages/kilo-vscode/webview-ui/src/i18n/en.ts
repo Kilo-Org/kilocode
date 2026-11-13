@@ -215,6 +215,7 @@ export const dict = {
   "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
+  "prompt.action.click": "click",
   "prompt.action.steer": "Steer this turn",
   "prompt.action.queue": "Queue for after this turn",
   "prompt.action.stopAndSend": "Stop and send",

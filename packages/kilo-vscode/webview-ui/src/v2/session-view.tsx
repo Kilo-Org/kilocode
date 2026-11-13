@@ -365,7 +365,7 @@ export function SessionView(props: {
     session,
     readOnly: () => !!props.readOnly,
     running,
-    edit: (text) => composer?.(text, false),
+    edit: (text) => composer?.(text),
   })
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
   // A memo, so the actions row rebuilds only when this flips.
@@ -410,8 +410,10 @@ export function SessionView(props: {
     // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
     const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
     if (key !== id && scopedHistory) movePromptHistory(key, id)
-    for (const form of questions) {
-      void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
+    if (mode !== "queue") {
+      for (const form of questions) {
+        void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
+      }
     }
     // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
     // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
@@ -648,6 +650,7 @@ export function SessionView(props: {
                   session={session()}
                   // An active goal keeps working between its runs, so the composer offers Stop as main did.
                   running={running() || goal.active()}
+                  submitting={working.submitting()}
                   disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
                   blocked={blocked()}
                   questioning={questioning()}

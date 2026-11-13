@@ -786,9 +786,15 @@
 }
 
 .am-pr-comment-send-all,
-.am-pr-checks-fix {
+.am-pr-checks-fix,
+[data-component="tooltip-trigger"]:has(> .am-pr-comment-send-all),
+[data-component="tooltip-trigger"]:has(> .am-pr-checks-fix) {
   margin-top: 6px;
   align-self: flex-start;
+}
+
+[data-component="tooltip-trigger"] > :is(.am-pr-comment-send-all, .am-pr-checks-fix) {
+  margin-top: 0;
 }
 
 .am-pr-comment-done-group {

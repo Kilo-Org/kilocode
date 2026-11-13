@@ -212,6 +212,7 @@ export const dict = {
   "prompt.action.continue": "Fortsæt",
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
   "prompt.action.send.recording": "Transskriber og send",
+  "prompt.action.click": "klik",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Stop hovedagenten. Baggrundsagenter kører videre.",
   "prompt.agents.show": "Vis baggrundsagenter",

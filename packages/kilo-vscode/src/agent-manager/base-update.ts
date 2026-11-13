@@ -6,6 +6,7 @@ import { prompt } from "./orchestration-domain"
 import { startSession } from "./mcp-warmup"
 import { fetchRunningSessions } from "../session-status"
 import { injectedMetadata } from "../shared/injected-prompt"
+import { intentDelivery, type Delivery } from "../shared/prompt-send"
 
 import type { BaseUpdateRequest } from "./types"
 
@@ -38,6 +39,7 @@ export async function handleBaseUpdate(
   ctx: ProjectContext,
   host: Host,
   push = false,
+  preferred: Delivery = "steer",
 ): Promise<null> {
   const state = ctx.peekState()
   const worktree = state?.getWorktree(msg.worktreeId)
@@ -50,7 +52,7 @@ export async function handleBaseUpdate(
   try {
     const generation = ctx.generation
     const client = await host.client()
-    const target = await (async () => {
+    const { target, running } = await (async () => {
       const running = await fetchRunningSessions(client)
       const sessions = state.getSessions(worktree.id)
       const selected = msg.sessionId ? state.getSession(msg.sessionId) : undefined
@@ -60,7 +62,7 @@ export async function handleBaseUpdate(
       const id = selected?.id ?? sessions.find((session) => busy.includes(session.id))?.id ?? sessions.at(0)?.id
       if (busy.some((item) => item !== id))
         throw new Error("Another session in this worktree is busy. Wait for it to finish.")
-      return id
+      return { target: id, running }
     })()
     const current = () => {
       if (!ctx.isCurrent(generation) || state.getWorktree(worktree.id) !== worktree)
@@ -94,6 +96,7 @@ export async function handleBaseUpdate(
       })())
     current()
     if (state.getSession(id)?.worktreeId !== worktree.id) throw new Error("The target session changed worktrees.")
+    const delivery = intentDelivery(msg.send ?? "enter", running.has(id), preferred)
     await prompt({
       client,
       root: ctx.root,
@@ -101,10 +104,11 @@ export async function handleBaseUpdate(
       sessionID: id,
       text: baseUpdatePrompt(worktree, push),
       metadata: injectedMetadata(`Update from ${worktree.parentBranch}`),
-      questions: "dismiss",
+      questions: delivery === "queue" ? undefined : "dismiss",
       model: msg.model,
       variant: msg.variant,
       agent: msg.agent,
+      delivery,
     })
   } catch (err) {
     host.log("Update from base failed:", err)

@@ -247,6 +247,7 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
         worktreeId={target()?.worktreeId}
         prNumber={target()?.prNumber}
         prUrl={target()?.prUrl}
+        activeTerminalId={options.activeTerminalId()}
         applySuggestions={options.applySuggestions?.()}
         comment={comment()}
         resolved={props.item.pending()?.resolved ?? comment().resolved}
@@ -272,9 +273,9 @@ export function createRemoteCommentController(options: Options): RemoteCommentCo
               }
             : undefined
         }
-        onSend={() => {
+        onSend={(send) => {
           const value = comment()
-          if (!sendPRComment(value, options.activeTerminalId(), () => props.item.setSent(true))) return
+          if (!sendPRComment(value, options.activeTerminalId(), () => props.item.setSent(true), send)) return
           options.onSendClick?.()
         }}
         onOpenFile={

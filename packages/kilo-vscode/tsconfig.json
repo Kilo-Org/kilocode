@@ -31,6 +31,10 @@
     "test/fixtures/prompt-rail-render.tsx",
     "test/fixtures/prompt-toolbar-flicker.tsx",
     "test/fixtures/revert-banner-render.tsx",
-    "test/fixtures/settings-search-focus.tsx"
+    "test/fixtures/settings-search-focus.tsx",
+    "test/fixtures/send-hint-render.tsx",
+    "test/fixtures/pr-comment-hint-render.tsx",
+    "test/fixtures/prompt-send-intent-render.tsx",
+    "test/fixtures/transcript-reply-intent-render.tsx"
   ]
 }

@@ -4,13 +4,17 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useLanguage } from "../../src/context/language"
+import { isEnterKeyCommitNotIme } from "../../src/utils/ime-enter"
+import { isMac } from "../../src/v2/pending-actions"
 import { useBridge } from "../v2/vscode"
 import { PRCommentMarkdown } from "./PRCommentMarkdown"
 import type { PRCommentRequest, PRTarget } from "../../../src/shared/pr-comment-actions"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
 import { reviewRequest } from "./pr-review-request"
 
 interface Draft {
@@ -51,7 +55,7 @@ type Props = {
       onBodyChange?: (body: string) => void
       onDestinationChange?: (value: "local" | "github") => void
       onSave: (body: string, selectedText: string) => void
-      onSendKilo: (body: string, selectedText: string) => void
+      onSendKilo: (body: string, selectedText: string, send: SendIntent) => void
       onGithubSuccess: () => void
       onCancel: () => void
     }
@@ -104,6 +108,7 @@ const decisions = [
 // eslint-disable-next-line complexity
 export function PRCommentForm(props: Props) {
   const { t } = useLanguage()
+  const mac = isMac()
   const vscode = useBridge()
   let editor: HTMLInputElement | undefined
   // The discriminated union does not narrow inside JSX callbacks, so read the
@@ -199,9 +204,9 @@ export function PRCommentForm(props: Props) {
     patch({ open: false })
   }
 
-  function sendKilo() {
+  function sendKilo(send: SendIntent) {
     if (props.action !== "diff" || !ready()) return
-    props.onSendKilo(state().body, props.selectedText)
+    props.onSendKilo(state().body, props.selectedText, send)
     patch({ body: "", open: false, preview: false, sent: "line" })
   }
 
@@ -242,9 +247,9 @@ export function PRCommentForm(props: Props) {
     })
   }
 
-  function sendPrimary() {
+  function sendPrimary(event: MouseEvent) {
     if (destination() === "github") sendGithub()
-    else sendKilo()
+    else sendKilo(clickSend(event))
   }
 
   function submit(deleting = false) {
@@ -449,10 +454,10 @@ export function PRCommentForm(props: Props) {
                   if (props.action === "line" || props.action === "diff") props.onBodyChange?.(body)
                 }}
                 onKeyDown={(event: KeyboardEvent) => {
-                  if (event.isComposing || event.keyCode === 229) return
+                  if (!isEnterKeyCommitNotIme(event)) return
                   if (props.action === "diff") {
-                    if (event.key !== "Enter" || event.shiftKey) return
-                    // Cmd/Ctrl+Enter saves the comment. Plain Enter sends it to Kilo,
+                    if (event.shiftKey) return
+                    // Cmd/Ctrl+Enter saves the comment. Enter and ⌥↵ send it to Kilo,
                     // and GitHub is never published from the keyboard.
                     if (event.ctrlKey || event.metaKey) {
                       event.preventDefault()
@@ -461,10 +466,9 @@ export function PRCommentForm(props: Props) {
                     }
                     if (destination() === "github") return
                     event.preventDefault()
-                    sendKilo()
+                    sendKilo(clickSend(event))
                     return
                   }
-                  if (event.key !== "Enter") return
                   if (event.ctrlKey || event.metaKey) {
                     event.preventDefault()
                     submit()
@@ -482,9 +486,11 @@ export function PRCommentForm(props: Props) {
             </Show>
             <Show when={props.action === "diff"}>
               <div class="am-pr-comment-actions am-pr-row" data-slot="comment-actions">
-                <Button data-action="save" variant="secondary" size="small" disabled={!ready()} onClick={saveLocal}>
-                  {t("common.save")}
-                </Button>
+                <TooltipKeybind title={t("chat.reply.commentLater")} keybind={mac ? "⌘↵" : "Ctrl+Enter"}>
+                  <Button data-action="save" variant="secondary" size="small" disabled={!ready()} onClick={saveLocal}>
+                    {t("common.save")}
+                  </Button>
+                </TooltipKeybind>
                 <Button
                   data-action="cancel"
                   variant="secondary"
@@ -510,35 +516,48 @@ export function PRCommentForm(props: Props) {
                 <Show
                   when={github()}
                   fallback={
-                    <Button
-                      data-action="send-kilo"
-                      variant="primary"
-                      size="small"
-                      disabled={!ready()}
-                      onClick={sendKilo}
+                    <SendHint
+                      title={t("diffViewer.comment.sendToKilo")}
+                      keybind={mac ? "↵" : "Enter"}
+                      alternateKeybind={mac ? "⌥↵" : "Alt+Enter"}
                     >
-                      {t("diffViewer.comment.sendToKilo")}
-                    </Button>
+                      <Button
+                        data-action="send-kilo"
+                        variant="primary"
+                        size="small"
+                        disabled={!ready()}
+                        onClick={(event: MouseEvent) => sendKilo(clickSend(event))}
+                      >
+                        {t("diffViewer.comment.sendToKilo")}
+                      </Button>
+                    </SendHint>
                   }
                 >
                   {(pr) => (
                     <div class="am-split-button" data-variant="primary" data-disabled={!ready() ? "" : undefined}>
-                      <Button
-                        data-action="send-primary"
-                        data-destination={destination()}
-                        variant="primary"
-                        size="small"
-                        disabled={!ready() || (destination() === "github" && pr().closed)}
-                        aria-busy={!!state().pending}
-                        onClick={sendPrimary}
+                      <SendHint
+                        title={t("diffViewer.comment.sendToKilo")}
+                        keybind={mac ? "↵" : "Enter"}
+                        alternateKeybind={mac ? "⌥↵" : "Alt+Enter"}
+                        inactive={destination() === "github"}
                       >
-                        <Show when={state().pending}>
-                          <Spinner class="am-pr-comment-spinner" />
-                        </Show>
-                        {destination() === "github"
-                          ? t("diffViewer.comment.sendToGithub", { number: pr().prNumber })
-                          : t("diffViewer.comment.sendToKilo")}
-                      </Button>
+                        <Button
+                          data-action="send-primary"
+                          data-destination={destination()}
+                          variant="primary"
+                          size="small"
+                          disabled={!ready() || (destination() === "github" && pr().closed)}
+                          aria-busy={!!state().pending}
+                          onClick={sendPrimary}
+                        >
+                          <Show when={state().pending}>
+                            <Spinner class="am-pr-comment-spinner" />
+                          </Show>
+                          {destination() === "github"
+                            ? t("diffViewer.comment.sendToGithub", { number: pr().prNumber })
+                            : t("diffViewer.comment.sendToKilo")}
+                        </Button>
+                      </SendHint>
                       <DropdownMenu gutter={4} placement="bottom-end">
                         <DropdownMenu.Trigger
                           class="am-split-arrow"

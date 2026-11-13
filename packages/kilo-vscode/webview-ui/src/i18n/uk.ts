@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.continue": "Продовжити",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.send.recording": "Транскрибувати та надіслати",
+  "prompt.action.click": "клік",
   "prompt.action.stop": "Зупинити",
   "prompt.action.stop.background": "Зупинити головного агента. Фонові агенти продовжать роботу.",
   "prompt.agents.show": "Показати фонових агентів",

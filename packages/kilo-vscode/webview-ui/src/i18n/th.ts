@@ -211,6 +211,7 @@ export const dict = {
   "prompt.action.continue": "ดำเนินการต่อ",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
+  "prompt.action.click": "คลิก",
   "prompt.action.stop": "หยุด",
   "prompt.action.stop.background": "หยุดเอเจนต์หลัก เอเจนต์เบื้องหลังจะยังคงทำงานต่อ",
   "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
