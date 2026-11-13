@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, expect, test } from "bun:test"
-import { mkdir, mkdtemp, readdir, realpath, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, realpath, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { uninstalled } from "../src/commands/uninstall"
+import { KiloLoginService } from "../src/service/login"
+import { fakeSupervisor, prependPath } from "./fixtures/login-supervisor"
 
 // `kilo2 uninstall` is the upstream handler behind the Kilo host, whose updater reports no install method
 // (src/updater.ts). Each test boots the real host entry in a scratch home that holds a kilo2 installation next to a
@@ -146,6 +148,68 @@ test("a forced run stops the kilo2 service and removes the kilo2 cache, and noth
   expect(added(before, after).filter((file) => !boot.artifacts.includes(file))).toEqual([])
 }, 60_000)
 
+const unit = KiloLoginService.unit({
+  platform: process.platform,
+  home: "/tmp",
+  log: "/tmp/log",
+  config: "/tmp/config",
+  uid: process.getuid?.() ?? 0,
+  app: "kilo2",
+  channel: "local",
+})
+
+test.skipIf(unit === undefined)(
+  "a dry run previews removing an installed login unit, and a forced run removes it",
+  async () => {
+    const expected = unit!
+    await using install = await seed()
+    const app = path.join(install.root, "app")
+    await mkdir(app, { recursive: true })
+    const executable = path.join(app, process.platform === "win32" ? "kilo2.exe" : "kilo2")
+    await writeFile(executable, "#!/bin/sh\n", { mode: 0o755 })
+
+    const setup = await host(install, "service", "install", "--command", executable)
+    expect(setup.code, setup.output).toBe(0)
+    const baseline = (await install.calls()).length
+    const before = Object.fromEntries(
+      Object.entries(await snapshot(install.home)).filter(([file]) => !boot.artifacts.includes(file)),
+    )
+
+    const preview = await host(install, "uninstall", "--dry-run")
+    expect(preview.code, preview.output).toBe(0)
+    expect(Bun.stripANSI(preview.output)).toContain(`Would remove the login unit ${expected.name} (${expected.kind})`)
+    await untouched(install, before)
+    const dry = (await install.calls()).slice(baseline)
+    expect(
+      dry.some(
+        (call) => call.includes("bootout") || call.includes("disable") || call.includes("/Delete"),
+      ),
+    ).toBeFalse()
+
+    const forced = await host(install, "uninstall", "--force")
+    expect(forced.code, forced.output).toBe(0)
+    expect(Bun.stripANSI(forced.output)).toContain(`Removed the login unit ${expected.name} (${expected.kind})`)
+    await Promise.race([install.service.exited, Bun.sleep(10_000)])
+    expect(install.running()).toEqual({ service: false, decoy: true })
+
+    const removed = (await install.calls()).slice(baseline + dry.length)
+    if (expected.kind === "launchd") {
+      expect(removed.some((call) => call.at(0) === "launchctl" && call.at(1) === "bootout")).toBeTrue()
+    }
+    if (expected.kind === "systemd") {
+      expect(removed.some((call) => call.at(0) === "systemctl" && call.includes("disable"))).toBeTrue()
+    }
+    if (expected.kind === "schtasks") {
+      expect(removed).toContainEqual(["schtasks", "/Delete", "/F", "/TN", expected.name])
+    }
+
+    const status = await host(install, "service", "status")
+    expect(status.code, status.output).toBe(0)
+    expect(Bun.stripANSI(status.output)).toContain("login: not installed")
+  },
+  60_000,
+)
+
 // A scratch home with a kilo2, a Kilo v1 and an OpenCode installation, each with a registered background service.
 // The services are idle processes of this test behind a stub that answers no health request, so stopping one only
 // signals a process the test owns.
@@ -218,15 +282,17 @@ async function seed() {
   }
   await Promise.all(Object.entries(files).map(([file, content]) => Bun.write(path.join(home, file), content)))
   await mkdir(path.join(root, "tmp"))
+  const sup = await fakeSupervisor(root)
   const owned = stack.move()
   return {
     root,
     home,
     service,
     requests,
+    calls: sup.calls,
     cache: path.join(home, ".cache/kilo2"),
     registration: path.join(home, ".local/state/kilo2/service-local.json"),
-    env: environment(root),
+    env: prependPath(environment(root), sup.bin),
     running: () => ({
       service: service.exitCode === null && !service.signalCode,
       decoy: decoy.exitCode === null && !decoy.signalCode,

@@ -12,13 +12,19 @@ const exists = (file: string) =>
     () => false,
   )
 
-/** Records every command and answers from `exitCodes`, keyed by the command and its first argument. */
-function recorder(exitCodes: Record<string, number> = {}) {
+/** Records every command and answers from `exitCodes` and `stdout`, keyed by full command or first argument. */
+function recorder(exitCodes: Record<string, number> = {}, stdout: Record<string, string> = {}) {
   const calls: string[][] = []
   const run: KiloLoginService.Run = (command, args) =>
     Effect.sync(() => {
       calls.push([command, ...args])
-      return { exitCode: exitCodes[`${command} ${args[0]}`] ?? 0, stderr: "denied by policy\n" }
+      const full = `${command} ${args.join(" ")}`
+      const head = `${command} ${args.at(0) ?? ""}`
+      return {
+        exitCode: exitCodes[full] ?? exitCodes[head] ?? 0,
+        stdout: stdout[full] ?? stdout[head] ?? "",
+        stderr: "denied by policy\n",
+      }
     })
   return { calls, run }
 }
@@ -285,7 +291,7 @@ test("installs and uninstalls the systemd user unit", async () => {
   }, "linux")
 })
 
-test("installs, finds and deletes the Windows logon task", async () => {
+test("installs, starts, finds and deletes the Windows logon task", async () => {
   await withHome(async (target) => {
     const missing = recorder({ "schtasks /Query": 1 })
     expect((await provided(KiloLoginService.status(target, missing.run))).installed).toBeFalse()
@@ -295,13 +301,17 @@ test("installs, finds and deletes the Windows logon task", async () => {
       ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
     ])
 
-    const { calls, run: runner } = recorder()
+    const recorded = recorder()
     await provided(
-      KiloLoginService.install(target, { command: ["C:\\Kilo\\kilo.exe", "serve", "--service"], path: undefined }, runner),
+      KiloLoginService.install(
+        target,
+        { command: ["C:\\Kilo\\kilo.exe", "serve", "--service"], path: undefined },
+        recorded.run,
+      ),
     )
-    expect(await provided(KiloLoginService.stop(target, runner))).toEqual({ stopped: false })
-    await provided(KiloLoginService.uninstall(target, runner))
-    expect(calls).toEqual([
+    expect(await provided(KiloLoginService.stop(target, recorded.run))).toEqual({ stopped: false })
+    await provided(KiloLoginService.uninstall(target, recorded.run))
+    expect(recorded.calls).toEqual([
       [
         "schtasks",
         "/Create",
@@ -315,9 +325,62 @@ test("installs, finds and deletes the Windows logon task", async () => {
         "/TR",
         '"C:\\Kilo\\kilo.exe" serve --service',
       ],
+      ["schtasks", "/Run", "/TN", "Kilo kilo2 latest"],
       ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
       ["schtasks", "/Delete", "/F", "/TN", "Kilo kilo2 latest"],
     ])
+  }, "win32")
+})
+
+test("reports a stale Windows logon task when its recorded executable is gone", async () => {
+  await withHome(async (target) => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-login-win-stale-"))
+    try {
+      const executable = path.join(dir, "kilo&2.exe")
+      await writeFile(executable, "binary")
+      const escaped = executable.replaceAll("&", "&amp;")
+      const xml = [
+        `<?xml version="1.0" encoding="UTF-16"?>`,
+        `<Task version="1.2">`,
+        `  <Actions Context="Author">`,
+        `    <Exec>`,
+        `      <Command>&quot;${escaped}&quot;</Command>`,
+        `      <Arguments>serve --service</Arguments>`,
+        `    </Exec>`,
+        `  </Actions>`,
+        `</Task>`,
+      ].join("\r\n")
+      const recorded = recorder({}, { "schtasks /Query /TN Kilo kilo2 latest /XML": xml })
+
+      const active = await provided(KiloLoginService.status(target, recorded.run))
+      expect(active).toEqual({
+        kind: "schtasks",
+        name: "Kilo kilo2 latest",
+        installed: true,
+        stale: false,
+      })
+      expect(recorded.calls).toEqual([
+        ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
+        ["schtasks", "/Query", "/TN", "Kilo kilo2 latest", "/XML"],
+      ])
+
+      await rm(executable)
+      const stale = await provided(KiloLoginService.status(target, recorded.run))
+      expect(stale).toMatchObject({ installed: true, stale: true })
+      expect(KiloLoginService.describe(stale)).toBe(
+        "login: stale (schtasks, Kilo kilo2 latest), run `kilo2 service install` again",
+      )
+
+      const unquoted = recorder(
+        {},
+        {
+          "schtasks /Query /TN Kilo kilo2 latest /XML": `<Task><Actions><Exec><Command>${escaped}</Command></Exec></Actions></Task>`,
+        },
+      )
+      expect((await provided(KiloLoginService.status(target, unquoted.run))).stale).toBeTrue()
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   }, "win32")
 })
 
