@@ -44,7 +44,7 @@ The most durable approach is to have the agent write an `environment.yml` into t
 
 ## Working with the agent
 
-The agent can create environments and install, update, or remove packages for you. It asks you to approve each change and shows the channels it will use. It won't install packages from local files or from URL or local-path channels. When you're signed in, the agent prefers Anaconda's channels (`defaults` or your organization's channels) and uses `conda-forge` only when a package isn't available there.
+The agent can create environments and install, update, or remove packages for you. It asks you to approve each change and shows the channels it will use. Each request names the environment conda will change; for a clone, it shows both **Clone from** and **New environment**. It won't install packages from local files or from URL or local-path channels. When you're signed in, the agent prefers Anaconda's channels (`defaults` or your organization's channels) and uses `conda-forge` only when a package isn't available there.
 
 The agent can also add or remove conda channels for you, but only named channels (such as `defaults` or `conda-forge`). Because a channel change affects every later install, Kilo Desktop asks you each time: **Allow adding a conda channel?** or **Allow removing a conda channel?**, with the channel listed under **Channels**. Choose **Allow once** or **Reject** — there's no **Always allow** for channel changes. A warning appears when the channel isn't `main`, `defaults`, or `conda-forge`, and when a new channel would take priority over all your existing ones. Approved changes update your user conda settings (`~/.condarc`). If no channels are configured and you haven't named one, the agent asks whether to use Anaconda's `defaults` channel before it continues. It doesn't pick a channel on its own.
 
@@ -58,7 +58,7 @@ The page lists your conda environments by **name** and **prefix** (the full path
 
 ## Create a conda environment
 
-Click **New environment**, then select **Create New** to open the Create environment dialog.
+Click **New environment**, then select **Create new** to open the Create environment dialog.
 
 On the Create environment page, configure your environment:
 
@@ -66,13 +66,13 @@ On the Create environment page, configure your environment:
 - **Name** — the environment's name.
 - **Python version** — a specific version, or **Latest**.
 
-As you type, Kilo checks that the name and location are available and that you can write there. **Create Environment** stays disabled until the check passes. If an environment already exists at that path, or you don't have permission, the dialog tells you.
+As you type, Kilo checks that the name and location are available and that you can write there. **Create environment** stays disabled until the check passes. If an environment already exists at that path, or you don't have permission, the dialog tells you.
 
-Under **Select packages**, search the list and check the packages to include. Each package has a version dropdown (defaulting to **latest**), and your choices collect in the **Selected Packages** panel. Use the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control to choose where packages come from (see [Choose a channel](#choose-a-channel)). Select **Create Environment** to build it.
+Search the packages list (**Search packages**) and check the packages to include. Each package has a version dropdown (defaulting to **latest**), and your choices collect in the **Selected packages** panel. Use the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control to choose where packages come from (see [Choose a channel](#choose-a-channel)). Select **Create environment** to build it.
 
 ## Import from a file
 
-Click **New environment**, then select **Import file** to open the Import from file dialog. Navigate to or drop a conda environment file (`.yml` or `.yaml`). Optionally set a **name override** to use instead of the name declared in the file.
+Click **New environment**, then select **Import file** to open the Import from file dialog. Navigate to or drop a conda environment file (`.yml` or `.yaml`). Optionally set a **Name override** to use instead of the name declared in the file.
 
 ## Work with a conda environment's packages
 
@@ -80,15 +80,15 @@ Selecting an environment opens its detail view. The header shows the environment
 
 ### Update packages
 
-When newer versions are available, an **Update** button appears. Click the **Update** button to open the Update dialog. From there, you can update all packages at once, or filter the table down to just the packages that you want to update. A **Dependency changes** panel previews what the update pulls in and flags any **dependency conflict** it can't resolve, so you can adjust your selection and try again. Turn on **Back up before updating** to clone the environment first, so you can roll back if needed.
+When newer versions are available, an **Update *N* packages** button appears. Click it to open the Update dialog. From there, you can update all packages at once, or filter the table down to just the packages that you want to update. A **Dependency changes** panel previews what the update pulls in and flags any **Dependency conflict** it can't resolve, so you can adjust your selection and try again. Turn on **Back up before updating** to clone the environment first, so you can roll back if needed.
 
-Alternatively, on the packages table on the environment's details page, you can click the {% svgIcon src="/docs/img/desktop/ellipsis.svg" /%} actions menu on a package's row to **Update** or **Remove** just that one. **Update** is unavailable when a package is already at the latest available version.
+Alternatively, on the packages table on the environment's details page, you can click the {% svgIcon src="/docs/img/desktop/ellipsis.svg" /%} actions menu on a package's row to **Update…** or **Remove** just that one. **Update…** is unavailable when a package is already at the latest available version.
 
 ### Add packages
 
-From an open environment, select **+ Add Packages** to open the Add Packages dialog. Search for a package, and for each result pick a version (defaulting to **latest**). Your selections and their dependencies are added to the **Selected packages** list, and the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control sets where packages come from (see [Choose a channel](#choose-a-channel)).
+From an open environment, select **Add packages** to open the Add packages dialog. Search for a package, and for each result pick a version (defaulting to **latest**). Your selections and their dependencies are added to the **Selected packages** list, and the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control sets where packages come from (see [Choose a channel](#choose-a-channel)).
 
-Before anything is applied, the **Dependency changes** panel previews the dependency changes the solver will make — packages that will be upgraded, downgraded, added, removed, or rebuilt — so there are no surprises. **Install** stays disabled until the solver finds a working set of packages for your current selection and channels; changing either re-checks it. Select **Install** to apply the changes. A long-running install can be sent to **Run in background** so you can keep working while it finishes.
+Before anything is applied, the **Dependency changes** panel previews the dependency changes the solver will make — packages that will be upgraded, downgraded, added, removed, or rebuilt — so there are no surprises. The install button stays disabled until the solver finds a working set of packages for your current selection and channels; changing either re-checks it. Select **Install *N* packages** to apply the changes. A long-running install can be sent to **Run in background** so you can keep working while it finishes.
 
 ## Choose a channel
 

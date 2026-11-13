@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "Install Kilo Desktop and complete first-time setup, including optional dependencies for git and local model features."
+description: "Install and update Kilo Desktop, including optional dependencies for git and local model features."
 ---
 
 # Installation
@@ -24,7 +24,14 @@ Some capabilities rely on tools already installed on your system:
 
 - **Git integration** uses your system `git` (version 2.17 or newer). Install git to review changes and switch branches from a chat. See [Git integration](/docs/desktop/features/git).
 - **Conda environments** and **local inference** use a conda runtime that the app provisions for you. See [Conda environments](/docs/desktop/features/environments).
-- **Local inference** also needs a model file in **GGUF format** (`.gguf`) that you provide. Import one from the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings. See [Local inference](/docs/desktop/features/local-inference).
+- **Local inference** also needs a model file in **GGUF format** (`.gguf`). Download one from the model catalog or import your own in the [Local Model Server](/docs/desktop/settings/ai#local-model-server) settings. See [Local inference](/docs/desktop/features/local-inference).
+
+## Updates
+
+Kilo Desktop checks for updates on its own, and you can check anytime with **Check for updates** in [Settings → About](/docs/desktop/settings/general#about).
+
+- **macOS and Windows** — updates download in the background. When one is ready, select **Restart to update** in the sidebar or in **About** to install it.
+- **Linux** — Kilo Desktop checks for updates but doesn't install them. When one is available, the sidebar shows **Update available** and **About** shows a **Download** button that opens the new `.deb` package in your browser. Install it with your package manager.
 
 ## After installing
 
