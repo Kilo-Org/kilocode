@@ -10,6 +10,11 @@ export function patchCodeTokens(
   tokens: MarkdownToken[],
   createSpan: (token: MarkdownToken) => HTMLElement,
 ) {
+  // The progressive highlighter rewrites a block with one line element per line and keeps the line breaks between them
+  // as text nodes. Those are not our token spans, so drop them before patching or they stay as blank lines.
+  for (const node of [...code.childNodes]) {
+    if (node.nodeType !== Node.ELEMENT_NODE) node.remove()
+  }
   const spans = [...code.children]
   tokens.forEach((token, index) => {
     const span = spans[index]
