@@ -225,6 +225,31 @@ export namespace MemoryCapture {
             })
           ).handle
         : undefined
+    // One consolidation model call; a failure is reported once and returned as a reason, never raised.
+    const invoke = (system: string, body: string) =>
+      Effect.tryPromise({
+        try: () =>
+          input.model.run({
+            handle: model!,
+            sessionID: input.sessionID,
+            system,
+            prompt: body,
+            timeoutMs: state.capture.timeoutMs,
+            signal,
+          }),
+        catch: (error) => error,
+      }).pipe(
+        Effect.map((result) => ({ ok: true as const, result })),
+        Effect.catch((err: unknown) =>
+          Effect.gen(function* () {
+            if (signal.aborted) return { ok: false as const, reason: "cancelled" }
+            const raw = errorReason(err)
+            const reason = MemoryRedact.text(guardReason(err) ?? raw)
+            yield* fail(reason, raw)
+            return { ok: false as const, reason }
+          }),
+        ),
+      )
     const digestEffect = digestDue
       ? Effect.gen(function* () {
           const body = cap(
@@ -237,29 +262,7 @@ export namespace MemoryCapture {
             ]),
             state.limits.maxConsolidationInputBytes,
           )
-          const result = yield* Effect.tryPromise({
-            try: () =>
-              input.model.run({
-                handle: model!,
-                sessionID: input.sessionID,
-                system: digestPrompt,
-                prompt: body,
-                timeoutMs: state.capture.timeoutMs,
-                signal,
-              }),
-            catch: (error) => error,
-          }).pipe(
-            Effect.map((result) => ({ ok: true as const, result })),
-            Effect.catch((err: unknown) =>
-              Effect.gen(function* () {
-                if (signal.aborted) return { ok: false as const, reason: "cancelled" }
-                const raw = errorReason(err)
-                const reason = MemoryRedact.text(guardReason(err) ?? raw)
-                yield* fail(reason, raw)
-                return { ok: false as const, reason }
-              }),
-            ),
-          )
+          const result = yield* invoke(digestPrompt, body)
           if (!result.ok) {
             return {
               topic: "",
@@ -357,29 +360,7 @@ export namespace MemoryCapture {
             ]),
             state.limits.maxConsolidationInputBytes,
           )
-          const result = yield* Effect.tryPromise({
-            try: () =>
-              input.model.run({
-                handle: model!,
-                sessionID: input.sessionID,
-                system: typedPrompt,
-                prompt: body,
-                timeoutMs: state.capture.timeoutMs,
-                signal,
-              }),
-            catch: (error) => error,
-          }).pipe(
-            Effect.map((result) => ({ ok: true as const, result })),
-            Effect.catch((err: unknown) =>
-              Effect.gen(function* () {
-                if (signal.aborted) return { ok: false as const, reason: "cancelled" }
-                const raw = errorReason(err)
-                const reason = MemoryRedact.text(guardReason(err) ?? raw)
-                yield* fail(reason, raw)
-                return { ok: false as const, reason }
-              }),
-            ),
-          )
+          const result = yield* invoke(typedPrompt, body)
           if (!result.ok) {
             return {
               ops: [] as MemoryOperations.Op[],
