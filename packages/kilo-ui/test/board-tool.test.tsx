@@ -88,6 +88,7 @@ test("a board read renders every returned message as an inline event", async () 
   expect(card.host.querySelector(".board-route-sender")?.textContent).toBe("Inspect publish timeout")
   expect(card.host.querySelector(".board-route-recipient")?.textContent).toBe("Release investigation")
   expect(card.host.textContent).toContain("Timeout fixed.")
+  expect(card.host.textContent).toContain("More messages are available.")
 })
 
 test("a streaming board post shows the route its session store already knows", async () => {
