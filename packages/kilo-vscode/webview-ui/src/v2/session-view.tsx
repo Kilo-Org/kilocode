@@ -32,6 +32,7 @@ import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { PromptInput, setPromptDraft } from "./prompt"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
+import { createDraftSends } from "./draft-sends"
 import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
@@ -376,27 +377,18 @@ export function SessionView(props: {
 
   // A draft has no session id until its first send creates one, so two sends that race on that draft would each
   // create a session. Each draft's sends queue behind the previous one, so a later send adopts the created session.
-  const draftSends = new Map<string, Promise<unknown>>()
+  const draftSends = createDraftSends()
   const begin = (mode: SendMode) => {
-    // The send is bound to the draft it was pressed in, not the tab it lands on after an earlier send settles it.
+    // The send stays bound to the session and draft it was pressed in, not the tab it lands on after an earlier send.
     const key = draftKey()
-    const previous = draftSends.get(key) ?? Promise.resolve()
-    const current = previous.catch(() => undefined).then(() => beginSend(key, mode))
-    draftSends.set(key, current)
-    void current
-      .catch(() => undefined)
-      .then(() => {
-        if (draftSends.get(key) === current) draftSends.delete(key)
-      })
-    return current
+    return draftSends.run(key, session(), (existing) => beginSend(key, existing, mode))
   }
 
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
-  const beginSend = async (key: string, mode: SendMode) => {
-    // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
-    // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
-    const existing = session()
+  const beginSend = async (key: string, existing: string | undefined, mode: SendMode) => {
+    // A workspace restore can take a while and a send may wait behind an earlier one, so the session and draft come
+    // from the press. Reading them here would send this text into the tab the user switched to.
     reverts.sent(existing)
     await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
