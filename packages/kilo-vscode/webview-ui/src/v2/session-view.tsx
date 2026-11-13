@@ -3,6 +3,8 @@
 import { mediaHashFromUri, type FileDiffInfo, type JsonValue, type ModelRef } from "@opencode/client"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
+import { BoardSessionsProvider } from "@kilocode/kilo-ui/context/board-navigation"
 import { ToolChildSessionProvider, type ToolChildSession } from "@kilocode/kilo-ui/tool-child-session"
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js"
 import type { PromptAttachment, ToHost } from "../../../src/protocol"
@@ -142,6 +144,12 @@ export function SessionView(props: {
     running: (sessionID) => v2.data.session.status(sessionID) === "running",
     load: children.load,
   }
+  // A board post shows its route from the first frame, so the card resolves member titles in the same store.
+  const boardSessions = (id: string) =>
+    [id, ...v2.data.session.family(id)].flatMap((item) => {
+      const info = v2.data.session.get(item)
+      return info ? [{ id: info.id, parentID: info.parentID, title: info.title }] : []
+    })
   createEffect(on(session, (id, previous) => children.switchTo(id, previous), { defer: true }))
   createEffect(
     on(
@@ -164,6 +172,12 @@ export function SessionView(props: {
     const id = session()
     if (!id) return []
     return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
+  })
+  // Sibling-aware identicons for every subagent this session spawned, as the v1 transcript provided.
+  const siblings = createMemo(() => {
+    const id = session()
+    if (!id) return []
+    return v2.data.session.family(id).filter((item) => item !== id && v2.data.session.get(item)?.parentID === id)
   })
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
   const forms = () => formsOf(session())
@@ -579,29 +593,33 @@ export function SessionView(props: {
           )}
         </Show>
         <div class="chat-messages-wrapper">
-          <ToolChildSessionProvider value={childSessions}>
-            <div class="chat-messages">
-              <MessageList
-                session={session()}
-                starting={starting()}
-                actions={actions()}
-                selection={selection}
-                onSelectSession={(id) => props.actions.openSession?.(id)}
-                onShowHistory={props.onShowHistory}
-                onForkMessage={running() ? undefined : props.onForkMessage}
-                onRevertMessage={props.readOnly ? undefined : revertMessage}
-                revertDisabled={revertBlocked()}
-                onRedo={redo}
-                onRedoAll={redoAll}
-                empty={props.empty}
-                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
-                onViewTurnChanges={props.onViewTurnChanges}
-                pending={pending}
-                reply={props.readOnly ? undefined : reply()}
-                question={() => (props.readOnly ? undefined : forms()[0])}
-              />
-            </div>
-          </ToolChildSessionProvider>
+          <BoardSessionsProvider sessions={boardSessions}>
+            <ToolChildSessionProvider value={childSessions}>
+              <AgentAvatarPalette ids={siblings()}>
+                <div class="chat-messages">
+                  <MessageList
+                    session={session()}
+                    starting={starting()}
+                    actions={actions()}
+                    selection={selection}
+                    onSelectSession={(id) => props.actions.openSession?.(id)}
+                    onShowHistory={props.onShowHistory}
+                    onForkMessage={running() ? undefined : props.onForkMessage}
+                    onRevertMessage={props.readOnly ? undefined : revertMessage}
+                    revertDisabled={revertBlocked()}
+                    onRedo={redo}
+                    onRedoAll={redoAll}
+                    empty={props.empty}
+                    onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+                    onViewTurnChanges={props.onViewTurnChanges}
+                    pending={pending}
+                    reply={props.readOnly ? undefined : reply()}
+                    question={() => (props.readOnly ? undefined : forms()[0])}
+                  />
+                </div>
+              </AgentAvatarPalette>
+            </ToolChildSessionProvider>
+          </BoardSessionsProvider>
         </div>
         <Show when={!props.readOnly}>
           <div class="chat-input">
