@@ -3,7 +3,6 @@ import * as vscode from "vscode"
 import { wire } from "../src/chat"
 import type { ToHost, ToWebview } from "../src/protocol"
 import type { Manager } from "../src/server"
-
 // Each webview opens its own event stream. Two wires must not share a bridge, a request map or a stream: otherwise a
 // chunk for one tab would reach the other, and both tabs start their request ids at 1.
 const encoder = new TextEncoder()
@@ -47,10 +46,13 @@ const chunks = (sent: ToWebview[]) =>
   sent.flatMap((message) => (message.type === "chunk" ? [new TextDecoder().decode(message.data)] : []))
 
 let upstream: ReturnType<typeof Bun.serve> | undefined
+const workspace = vscode.workspace as unknown as { isTrusted?: boolean }
+const originalTrusted = workspace.isTrusted
 
 afterEach(() => {
   upstream?.stop(true)
   upstream = undefined
+  workspace.isTrusted = originalTrusted
 })
 
 describe("chat panel event streams", () => {
@@ -110,5 +112,29 @@ describe("chat panel event streams", () => {
     expect(chunks(b.sent)).toEqual(["data: ses_b\n\n"])
     expect(a.sent.some((message) => message.type === "error")).toBe(false)
     expect(b.sent.some((message) => message.type === "error")).toBe(false)
+  })
+
+  test("a chat tab opens a web link for the session it shows", () => {
+    workspace.isTrusted = true
+    const opened: Array<[string, string]> = []
+    const web = fakeWebview()
+    const surface = wire({
+      context,
+      server: { get: () => Promise.reject(new Error("no server in this test")) } as unknown as Manager,
+      directory: "/repo",
+      webview: web.webview as never,
+      view: "chat",
+      surface: "editor",
+      sessionID: "ses_a",
+      session: () => "ses_tab",
+      openBrowser: (session, url) => {
+        opened.push([session, url])
+        return true
+      },
+    })
+
+    web.receive({ type: "open", url: "https://kilo.ai/docs" })
+    surface.dispose()
+    expect(opened).toEqual([["ses_tab", "https://kilo.ai/docs"]])
   })
 })

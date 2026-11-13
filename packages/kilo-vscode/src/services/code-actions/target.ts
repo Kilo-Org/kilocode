@@ -21,7 +21,7 @@ export type ChatTarget = {
   search(): Promise<void>
 }
 
-type Surface = "sidebar" | "agentManager"
+type Surface = "sidebar" | "agentManager" | "chatPanel"
 
 // The chat the user focused last. Selecting code moves focus to the editor, so context added from there goes back to
 // that chat instead of whichever panel is active now. A surface is forgotten only when it closes.
@@ -34,6 +34,8 @@ export const chatFocus = {
   closed(surface: Surface) {
     if (lastFocused === surface) lastFocused = undefined
   },
+  /** The chat surface that last had DOM focus, for host paths that act on it such as browser references. */
+  surface: () => lastFocused,
 }
 
 export function createChatTarget(input: { view: ChatView; agentManager: AgentPanel }): ChatTarget {

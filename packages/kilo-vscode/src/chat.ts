@@ -195,6 +195,8 @@ export function wire(input: {
   surface?: "editor" | "sidebar"
   /** The session a chat editor tab starts on; the sidebar restores its own local tabs instead. */
   sessionID?: string
+  /** The live session of this surface, for links and the Integrated Browser. The sidebar reports its own. */
+  session?: () => string | undefined
   trackCostSession?: (sessionID: string) => void
   /** Directory for a saved image, when the view follows a session in another directory. */
   saveImageDirectory?: () => string | undefined
@@ -230,7 +232,7 @@ export function wire(input: {
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
     open: (url, external) => {
-      const session = sidebarSession()
+      const session = input.session ? input.session() : sidebarSession()
       // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
       void openBrowserLink(
         url,

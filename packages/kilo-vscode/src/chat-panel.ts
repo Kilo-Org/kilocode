@@ -1,15 +1,19 @@
 // Chat editor tabs: one tab per session, plus tabs in new-session mode, each with its own webview, relay bridge and
 // event stream. Opening a session that already has a tab reveals it, and the serializer reattaches every tab to the
 // session it shows after a window reload. The tab state is the webview's own state, so each tab restores itself.
-import { Uri, ViewColumn, window, type ExtensionContext, type WebviewPanel } from "vscode"
+import { commands, Uri, ViewColumn, window, type ExtensionContext, type WebviewPanel } from "vscode"
 import { wire, type ChangesTab, type ChatWorktree } from "./chat"
 import type { DocumentViewerProvider } from "./DocumentViewerProvider"
 import type { GitChanges } from "./git-changes"
-import type { GitChangesStats } from "./protocol"
+import type { GitChangesStats, ToWebview } from "./protocol"
 import type { Manager } from "./server"
+import { chatFocus } from "./services/code-actions/target"
 import type { ToolDiff } from "./tool-diff"
 
 export const CHAT_PANEL_TYPE = "kilo-code.v2.chatPanel"
+
+/** Context key for the focused chat editor tab, which the shared chat keybindings match. */
+export const CHAT_PANEL_FOCUSED = "kilo-code.v2.chatPanelFocused"
 
 const TITLE = "Kilo Code"
 
@@ -24,7 +28,14 @@ type Entry = {
   panel: WebviewPanel
   /** The session the tab shows, updated when the webview switches to another one. */
   sessionID?: string
+  post: (message: ToWebview) => void
   dispose: () => void
+  focused: boolean
+}
+
+/** The chat editor tab a shared chat command acts on. */
+export type ChatPanelSurface = {
+  post(message: ToWebview): void
 }
 
 export function chatPanels(input: {
@@ -41,9 +52,10 @@ export function chatPanels(input: {
   documents?: () => DocumentViewerProvider | undefined
 }) {
   const entries = new Set<Entry>()
+  const state: { focused?: Entry } = {}
   const serializer = window.registerWebviewPanelSerializer(CHAT_PANEL_TYPE, {
-    deserializeWebviewPanel: async (panel, state) => {
-      const target = restoredTarget(state)
+    deserializeWebviewPanel: async (panel, value) => {
+      const target = restoredTarget(value)
       // A tab from before this state existed, or one whose session another tab already shows, has nothing to show.
       if (!target || find(target.sessionID)) return panel.dispose()
       attach(panel, target)
@@ -52,6 +64,33 @@ export function chatPanels(input: {
 
   const find = (sessionID: string | undefined) =>
     sessionID === undefined ? undefined : [...entries].find((entry) => entry.sessionID === sessionID)
+
+  /** True when a tab shows the session, so host paths such as the Integrated Browser can claim it. */
+  const has = (sessionID: string) => find(sessionID) !== undefined
+
+  /** Posts a host message to the tab that shows the session. */
+  const post = (sessionID: string, message: ToWebview) => {
+    const entry = find(sessionID)
+    if (!entry) return false
+    entry.post(message)
+    return true
+  }
+
+  /** The tab the user focused last, for the commands the sidebar and an editor tab share. */
+  const focused = (): ChatPanelSurface | undefined => {
+    const entry = state.focused
+    return entry?.focused ? { post: entry.post } : undefined
+  }
+
+  const syncFocus = () => {
+    void commands.executeCommand("setContext", CHAT_PANEL_FOCUSED, [...entries].some((entry) => entry.focused))
+  }
+  const setFocused = (entry: Entry, focused: boolean) => {
+    entry.focused = focused
+    if (focused) state.focused = entry
+    if (!focused && state.focused === entry) state.focused = undefined
+    syncFocus()
+  }
 
   /** Opens a tab on the session, revealing the tab that already shows it; a session-less call opens a new tab. */
   const open = (sessionID?: string) => {
@@ -71,6 +110,9 @@ export function chatPanels(input: {
 
   return {
     open,
+    has,
+    post,
+    focused,
     dispose: () => {
       serializer.dispose()
       for (const entry of [...entries]) entry.panel.dispose()
@@ -92,6 +134,8 @@ export function chatPanels(input: {
       view: "chat",
       surface: "editor",
       sessionID: target.sessionID,
+      // The tab's session changes as the user switches its local tabs; links must follow the live one.
+      session: () => entry.sessionID,
       trackCostSession: input.trackCostSession,
       diff: input.diff,
       changes: input.changes,
@@ -100,26 +144,37 @@ export function chatPanels(input: {
       openBrowser: input.openBrowser,
       documents: input.documents,
       handle: (message) => {
-        // The tab reports the session it shows. Keep it for dedupe and the next reveal; the tab writes the same value
-        // into its own state, which is what a reload restores from. The sidebar's global session is its own.
+        // The tab reports the session it shows. Keep it for dedupe, links and the next reveal; the tab writes the same
+        // value into its own state, which is what a reload restores from. The sidebar's global session is its own.
         if (message.type === "sidebar.session") {
           entry.sessionID = message.sessionId
           return true
         }
-        // The sidebar owns the focus context and the code-action target; an editor tab leaves both alone.
-        return message.type === "webviewFocusChanged"
+        // The tab reports its focus so the shared chat shortcuts reach the focused surface.
+        if (message.type === "webviewFocusChanged") {
+          const focused = message.focused === true
+          setFocused(entry, focused)
+          if (focused) chatFocus.gained("chatPanel")
+          return true
+        }
+        return false
       },
     })
-    const entry: Entry = { panel, sessionID: target.sessionID, dispose: surface.dispose }
+    const entry: Entry = { panel, sessionID: target.sessionID, post: surface.post, dispose: surface.dispose, focused: false }
     stats = input.gitStats?.((value) => surface.post({ type: "gitChangesStats", stats: value }))
     stats?.setVisible(panel.visible)
-    const visibility = panel.onDidChangeViewState(() => stats?.setVisible(panel.visible))
+    const visibility = panel.onDidChangeViewState(() => {
+      stats?.setVisible(panel.visible)
+      // A hidden tab cannot own the chat shortcuts, even when its webview missed the blur.
+      if (!panel.visible) setFocused(entry, false)
+    })
     entries.add(entry)
     panel.onDidDispose(() => {
       visibility.dispose()
       stats?.dispose()
       surface.dispose()
       entries.delete(entry)
+      setFocused(entry, false)
     })
     return panel
   }

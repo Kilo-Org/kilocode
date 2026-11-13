@@ -46,6 +46,7 @@ import {
   registerCodeActions,
   registerTerminalActions,
 } from "./services/code-actions"
+import { chatFocus } from "./services/code-actions/target"
 import { NotebookBroker, notebookToolsEnabled } from "./services/notebook"
 import { marketplace } from "./marketplace-panel"
 import { profile } from "./profile-panel"
@@ -55,7 +56,7 @@ import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
-import { gitChanges } from "./git-changes"
+import { createSharedGitStats } from "./git-changes"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
@@ -250,6 +251,8 @@ export function activate(context: ExtensionContext) {
     advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
     branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
   }
+  // One working-tree poller serves the sidebar and every chat tab, so the same directory is not polled once per view.
+  const gitStats = createSharedGitStats({ directory })
   // The chat editor tabs share the sidebar's host actions, each with its own webview, relay bridge and event stream.
   const editorChat = chatPanels({
     context,
@@ -258,7 +261,7 @@ export function activate(context: ExtensionContext) {
     trackCostSession: alerts.track,
     diff: diffs,
     changes,
-    gitStats: (onStats) => gitChanges({ directory, onStats }),
+    gitStats,
     worktree,
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
@@ -270,7 +273,7 @@ export function activate(context: ExtensionContext) {
     trackCostSession: alerts.track,
     diff: diffs,
     changes,
-    gitStats: (onStats) => gitChanges({ directory, onStats }),
+    gitStats,
     worktree,
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
@@ -317,12 +320,19 @@ export function activate(context: ExtensionContext) {
         )
         return answer === allow
       },
-      reference: (_sessionId, value: BrowserReference) =>
-        void view.post({ type: "browserReference", reference: value }),
+      // A browser reference belongs to the chat surface that opened the browser: a focused chat editor tab first,
+      // then the sidebar. The sidebar filters references for sessions it no longer shows.
+      reference: (sessionId, value: BrowserReference) => {
+        const message = { type: "browserReference", reference: value } as const
+        if (chatFocus.surface() === "chatPanel" && editorChat.post(sessionId, message)) return
+        void view.post(message)
+      },
       log: (...args) => output.appendLine(`Browser tab: ${args.map((item) => String(item)).join(" ")}`),
     },
   )
-  setEditorTabs((sessionId) => browserTab?.has(sessionId) === true)
+  // The tab serves the session the sidebar shows, a chat editor tab's session, and keeps serving a session whose tab
+  // is still open.
+  setEditorTabs((sessionId) => browserTab?.has(sessionId) === true || editorChat.has(sessionId))
   context.subscriptions.push({ dispose: () => browserTab?.dispose() })
   // The Settings panel edits Agent Manager project settings through the provider's shared handler, so it is created
   // after the provider and receives a lazy getter.
@@ -360,9 +370,12 @@ export function activate(context: ExtensionContext) {
   void clearLegacyTerminalDestination().catch((error: unknown) =>
     output.appendLine(`Terminal destination cleanup failed: ${String(error)}`),
   )
-  // The cycle keybindings act on the focused composer: the Agent Manager panel when it is active, else the sidebar.
-  // The panel receives an action, so an open dialog handles it before the session behind the dialog.
+  // The cycle keybindings act on the focused composer: a chat editor tab, the Agent Manager panel when it is
+  // active, else the sidebar. The panel receives an action, so an open dialog handles it before the session behind
+  // the dialog.
   const cycle = async (name: "cycleAgentMode" | "cyclePreviousAgentMode") => {
+    const tab = editorChat.focused()
+    if (tab) return tab.post({ type: "command", name })
     if (agentManager.isActive()) return agentManager.postMessage({ type: "action", action: name })
     await commands.executeCommand("kilo-code.v2.chat.focus")
     await view.post({ type: "command", name })
@@ -423,16 +436,19 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand("kilo-code.v2.openSubagent", (target?: SubagentPanelTarget) => {
       if (target?.sessionID) subagents.open(target)
     }),
-    // One shortcut pair serves the sidebar and the Agent Manager. The sidebar focus state is more precise than
-    // `isActive`, which stays true while the panel is the selected editor tab but the sidebar has focus.
+    // One shortcut pair serves the sidebar, a chat editor tab and the Agent Manager. The DOM focus state is more
+    // precise than `isActive`, which stays true while the panel is the selected editor tab but another surface has
+    // focus.
     commands.registerCommand("kilo-code.v2.agentManager.previousTab", () => {
-      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive(), editorChat.focused() !== undefined)
       if (target === "sidebar") return void view.post({ type: "command", name: "tabPrevious" })
+      if (target === "chatPanel") return editorChat.focused()?.post({ type: "command", name: "tabPrevious" })
       if (target === "agentManager") return agentAction("tabPrevious")
     }),
     commands.registerCommand("kilo-code.v2.agentManager.nextTab", () => {
-      const target = tabShortcutTarget(view.focused(), agentManager.isActive())
+      const target = tabShortcutTarget(view.focused(), agentManager.isActive(), editorChat.focused() !== undefined)
       if (target === "sidebar") return void view.post({ type: "command", name: "tabNext" })
+      if (target === "chatPanel") return editorChat.focused()?.post({ type: "command", name: "tabNext" })
       if (target === "agentManager") return agentAction("tabNext")
     }),
     // The switcher only exists in the sidebar, so the command always opens it there.

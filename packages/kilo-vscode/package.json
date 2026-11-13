@@ -732,13 +732,13 @@
         "command": "kilo-code.v2.cycleAgentMode",
         "key": "ctrl+.",
         "mac": "cmd+.",
-        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+        "when": "kilo-code.v2.sidebarFocused || kilo-code.v2.chatPanelFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
-        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+        "when": "kilo-code.v2.sidebarFocused || kilo-code.v2.chatPanelFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.settingsSearch",
@@ -789,13 +789,13 @@
         "command": "kilo-code.v2.agentManager.previousTab",
         "key": "ctrl+alt+left",
         "mac": "cmd+alt+left",
-        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+        "when": "kilo-code.v2.sidebarFocused || kilo-code.v2.chatPanelFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
-        "when": "kilo-code.v2.sidebarFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
+        "when": "kilo-code.v2.sidebarFocused || kilo-code.v2.chatPanelFocused || activeWebviewPanelId == 'kilo-code.v2.agentManagerPanel'"
       },
       {
         "command": "kilo-code.v2.agentManager.previousTerminal",

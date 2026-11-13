@@ -4,7 +4,7 @@ import { join } from "node:path"
 import * as vscode from "vscode"
 import type { ToHost } from "../src/protocol"
 import { sidebarSession } from "../src/browser-tab/sidebar-session"
-import { CHAT_PANEL_TYPE, chatPanels, restoredTarget } from "../src/chat-panel"
+import { CHAT_PANEL_FOCUSED, CHAT_PANEL_TYPE, chatPanels, restoredTarget } from "../src/chat-panel"
 import type { Manager } from "../src/server"
 
 const ROOT = join(import.meta.dir, "..")
@@ -15,12 +15,14 @@ const original = { create: window.createWebviewPanel, serializer: window.registe
 function fakePanel() {
   const disposers: Array<() => void> = []
   const receivers: Array<(message: ToHost) => void> = []
+  const sent: unknown[] = []
   const panel = {
     reveals: 0,
     disposed: false,
     title: "",
     visible: true,
     iconPath: undefined as unknown,
+    sent,
     webview: {
       options: {},
       html: "",
@@ -29,7 +31,10 @@ function fakePanel() {
         receivers.push(callback)
         return { dispose: () => undefined }
       },
-      postMessage: async () => true,
+      postMessage: async (message: unknown) => {
+        sent.push(message)
+        return true
+      },
       asWebviewUri: (uri: unknown) => uri,
     },
     receive: (message: ToHost) => receivers.forEach((callback) => callback(message)),
@@ -65,12 +70,20 @@ describe("chat panels", () => {
     created: { type: string; title: string; options: unknown; panel: ReturnType<typeof fakePanel> }[]
     restore?: (panel: unknown, value: unknown) => Promise<void>
     unregistered: number
-  } = { created: [], unregistered: 0 }
+    commands: unknown[][]
+  } = { created: [], unregistered: 0, commands: [] }
+
+  const commands = vscode.commands as unknown as Record<string, unknown>
+  const originalExecute = commands.executeCommand
 
   beforeEach(() => {
     state.created = []
     state.restore = undefined
     state.unregistered = 0
+    state.commands = []
+    commands.executeCommand = async (...args: unknown[]) => {
+      state.commands.push(args)
+    }
     window.createWebviewPanel = (type: string, title: string, _column: unknown, options: unknown) => {
       const panel = fakePanel()
       state.created.push({ type, title, options, panel })
@@ -88,6 +101,7 @@ describe("chat panels", () => {
   afterEach(() => {
     window.createWebviewPanel = original.create
     window.registerWebviewPanelSerializer = original.serializer
+    commands.executeCommand = originalExecute
   })
 
   const create = () => chatPanels({ context, server, directory: "/tmp/project" })
@@ -175,6 +189,51 @@ describe("chat panels", () => {
     expect(state.created.map((entry) => entry.panel.disposed)).toEqual([true, true])
     expect(state.unregistered).toBe(1)
   })
+
+  it("reports focus for the shared chat shortcuts and clears it on blur", () => {
+    const panels = create()
+    panels.open("ses_a")
+    const panel = state.created[0]?.panel
+
+    panel?.receive({ type: "webviewFocusChanged", focused: true })
+    expect(panels.focused()).toBeDefined()
+    expect(state.commands).toContainEqual(["setContext", CHAT_PANEL_FOCUSED, true])
+
+    panel?.receive({ type: "webviewFocusChanged", focused: false })
+    expect(panels.focused()).toBeUndefined()
+    expect(state.commands).toContainEqual(["setContext", CHAT_PANEL_FOCUSED, false])
+  })
+
+  it("routes host messages by session and claims the session for the browser", () => {
+    const panels = create()
+    panels.open("ses_a")
+    panels.open("ses_b")
+    const reference = { id: "ref", sessionId: "ses_b", selector: "#main" }
+
+    expect(panels.has("ses_a")).toBe(true)
+    expect(panels.has("ses_other")).toBe(false)
+    expect(panels.post("ses_b", { type: "browserReference", reference })).toBe(true)
+    expect(panels.post("ses_other", { type: "appendContext", items: [] })).toBe(false)
+    expect(state.created[1]?.panel.sent).toContainEqual({ type: "browserReference", reference })
+    expect(state.created[0]?.panel.sent).toEqual([])
+  })
+
+  it("moves the focused surface to the last focused tab", () => {
+    const panels = create()
+    panels.open("ses_a")
+    panels.open("ses_b")
+    const first = state.created[0]?.panel
+    const second = state.created[1]?.panel
+
+    first?.receive({ type: "webviewFocusChanged", focused: true })
+    second?.receive({ type: "webviewFocusChanged", focused: true })
+    panels.focused()?.post({ type: "command", name: "cycleAgentMode" })
+    expect(second?.sent).toContainEqual({ type: "command", name: "cycleAgentMode" })
+    expect(first?.sent).toEqual([])
+
+    second?.receive({ type: "webviewFocusChanged", focused: false })
+    expect(panels.focused()).toBeUndefined()
+  })
 })
 
 describe("restored chat target", () => {
@@ -201,6 +260,7 @@ describe("chat panel manifest", () => {
       contributes: {
         commands: Array<{ command: string; title: string; category: string; icon?: unknown }>
         menus: { "view/title": Array<{ command: string; when: string; group: string }> }
+        keybindings: Array<{ command: string; when: string }>
       }
     }
     expect(manifest.activationEvents).toContain(`onWebviewPanel:${CHAT_PANEL_TYPE}`)
@@ -214,5 +274,20 @@ describe("chat panel manifest", () => {
       when: "view == kilo-code.v2.chat",
       group: "navigation@6",
     })
+  })
+
+  it("routes the shared chat shortcuts to a focused chat tab", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      contributes: { keybindings: Array<{ command: string; when: string }> }
+    }
+    for (const command of [
+      "kilo-code.v2.cycleAgentMode",
+      "kilo-code.v2.cyclePreviousAgentMode",
+      "kilo-code.v2.agentManager.previousTab",
+      "kilo-code.v2.agentManager.nextTab",
+    ]) {
+      const binding = manifest.contributes.keybindings.find((entry) => entry.command === command)
+      expect(binding?.when).toContain(CHAT_PANEL_FOCUSED)
+    }
   })
 })
