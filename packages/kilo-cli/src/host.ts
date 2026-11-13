@@ -202,6 +202,7 @@ export const overrides: LayerNode.Replacements = [
         oauth: McpClientMetadata.oauth,
         fetch: (base, endpoint) => KiloMcpRefresh.transient(PagesAuth.wrap(KiloSseProbe.probe(base, endpoint))),
         authFailure,
+        transient: KiloMcpRefresh.isTransient,
       },
     }),
   ),

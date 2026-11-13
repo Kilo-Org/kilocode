@@ -236,6 +236,11 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       ? `${describe(error)}: ${lastError}`
       : describe(error)
 
+  // kilocode_change start - host classification of a failure that will pass, such as a token refresh that could
+  // not reach its authorization server. Omitting the hook keeps upstream's own rule.
+  const transient = (error: unknown) => options.host?.transient?.(error) === true || isTransient(error)
+  // kilocode_change end
+
   // Two more attempts, 250 ms and 1 s later, while the failure is transient and the deadline has not passed.
   const retrying = <A, E>(what: string, effect: Effect.Effect<A, E>, deadline = Infinity) =>
     Effect.retry(
@@ -243,7 +248,7 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       Schedule.max([Schedule.exponential("250 millis", 4), Schedule.recurs(2)]).pipe(
         Schedule.setInputType<E>(),
         Schedule.while(({ input, now, duration }) =>
-          !isTransient(input) || now + Duration.toMillis(duration) >= deadline
+          !transient(input) || now + Duration.toMillis(duration) >= deadline
             ? Effect.succeed(false)
             : Effect.logWarning(`retrying ${what}`, { server, error: describe(input) }).pipe(Effect.as(true)),
         ),
@@ -572,7 +577,8 @@ export const connect = Effect.fnUntraced(function* (options: ConnectOptions) {
       server,
       message: `${error.message}; the server supports ${error.supported.join(", ")}. Set "protocol" for this server to one of those or to "legacy".`,
     })
-  return yield* new ConnectError({ server, message: explain(error), answered: !repeats(error) })
+  // kilocode_change - a host-transient failure was not answered by the server, so it is never a refusal
+  return yield* new ConnectError({ server, message: explain(error), answered: !repeats(error) && !transient(error) })
 })
 
 // Connecting again would fail the same way: the server could not be spawned or reached, did not answer in
