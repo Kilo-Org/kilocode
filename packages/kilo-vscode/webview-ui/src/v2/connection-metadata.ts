@@ -8,13 +8,9 @@ import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { toFailure, type Failure } from "./error"
 import { catalogEvent, createKiloCatalog } from "./kilo-catalog"
 import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
+import { pluginsListed } from "./plugin-inventory"
 
 type Connection = ReturnType<typeof createClientConnection>
-
-// How often and how long the handshake waits for the plugins of a cold Location. A local Location lists its plugins
-// in well under a second; the limit only ends the wait on a server that never lists any.
-const PLUGIN_POLL = 100
-const PLUGIN_WAIT = 30_000
 
 export type ConnectionMetadata = ReturnType<typeof createConnectionMetadata>
 
@@ -47,23 +43,11 @@ export function createConnectionMetadata(input: {
         })
   const state = { handshake: 0 }
 
-  // The server answers `rpc.unavailable` for a Kilo RPC until the Location's plugins are registered, which is also the
-  // answer of a server without the Kilo handshake. An empty plugin inventory means the Location is still activating,
-  // so wait for it; a server without the inventory endpoint fails the read and goes on to the handshake.
-  const plugins = async (read: number, dir: string) => {
-    const deadline = Date.now() + PLUGIN_WAIT
-    while (read === state.handshake && Date.now() < deadline) {
-      const listed = await input.api.plugin.list({ location: { directory: dir } }).then(
-        (result) => result.data.length > 0,
-        () => true,
-      )
-      if (listed) return
-      await new Promise((resolve) => setTimeout(resolve, PLUGIN_POLL))
-    }
-  }
+  // A Location that is still activating answers the handshake like a server without it, so the read waits for the
+  // plugins of the Location first.
   const readHandshake = (dir: string) => {
     const read = ++state.handshake
-    void plugins(read, dir)
+    void pluginsListed({ api: input.api, directory: dir, active: () => read === state.handshake })
       .then(() => {
         if (read !== state.handshake) return
         return input.api
