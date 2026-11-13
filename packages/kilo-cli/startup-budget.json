@@ -30,6 +30,7 @@
     "kilocode.subagent-background": 10,
     "kilocode.recall": 10,
     "kilocode.indexing": 30,
+    "kilocode.pages": 10,
     "kilocode.review": 10,
     "kilocode.plan": 10,
     "kilocode.goal": 10,
