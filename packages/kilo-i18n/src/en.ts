@@ -167,4 +167,17 @@ export const dict = {
   "ui.tool.chart": "Chart",
   "ui.tool.chart.invalid": "Invalid chart config — must include type and data",
   "ui.tool.chart.failed": "Failed to render chart",
+
+  // Attention notifications: the VS Code notification and the native OS toast the extension host shows
+  "attention.done": "Kilo task completed.",
+  "attention.question": "Kilo needs your input.",
+  "attention.permission": "Kilo needs permission.",
+  "attention.error": "Kilo task stopped due to an error.",
+  "attention.show": "Show",
+  "attention.workspace": "Workspace",
+  "attention.session": "Session",
+  "attention.test": "This is a test notification from Kilo Code.",
+  "attention.unsupported": "OS notifications aren't supported on this platform.",
+  "attention.identity":
+    "Could not determine this editor's notification identity, so native notifications are unavailable. VS Code notifications still work.",
 }

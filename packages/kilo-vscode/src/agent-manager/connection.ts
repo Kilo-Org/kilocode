@@ -97,6 +97,8 @@ export function createAgentManagerConnection(input: { server: Manager; reconnect
       state.visible = new Set(sessionIDs)
       added.forEach((id) => void mark(id))
     },
+    /** True when the panel shows this session to the user. */
+    viewing: (sessionID: string) => state.visible.has(sessionID),
     started(server: Server) {
       state.server = server
       state.events?.abort()

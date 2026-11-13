@@ -7,6 +7,8 @@ import path from "node:path"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import type { SettingsHandler } from "./agent-manager/project/settings"
+import { testOSNotification } from "./attention/os"
+import { playSound, resolveSoundID, soundDirectory } from "./attention/sound"
 import { applyConfigEdits, configWriteQueue, isKiloConfigFile } from "./config-file-edit"
 import { configPolicy, type PolicyDocument } from "./config-policy"
 import { fetchCustomProviderModels } from "./custom-provider-models"
@@ -32,6 +34,10 @@ export const KILO_SETTING_KEYS = [
   "showTaskTimeline",
   "showShortcutHints",
   "showAutoApprovalReason",
+  "attention.enabled",
+  "attention.notifications",
+  "attention.OSNotifications",
+  "attention.sound",
   "maxCost",
   "claudeCodeCompat",
   "extraCaCerts",
@@ -79,6 +85,7 @@ export async function writeKiloSettings(values: Record<string, unknown>) {
   for (const [key, value] of Object.entries(values)) {
     if (!(KILO_SETTING_KEYS as readonly string[]).includes(key)) continue
     if (key.startsWith("autocomplete.") && !validAutocompleteSetting(key.slice("autocomplete.".length), value)) continue
+    if (key === "attention.sound" && value !== null && resolveSoundID(value) !== value) continue
     await config.update(key, value === null ? undefined : value, true)
   }
 }
@@ -333,6 +340,14 @@ export function settingsHost(input: {
     }
     if (message.type === "openFile") {
       void openConfigFile(message.path)
+      return true
+    }
+    if (message.type === "attentionTestSound") {
+      void playSound("default", resolveSoundID(message.sound), soundDirectory(input.context.extensionPath))
+      return true
+    }
+    if (message.type === "attentionTestOS") {
+      void testOSNotification().then((result) => input.post({ type: "attentionTestOSResult", ...result }))
       return true
     }
     if (message.type === "openVSCodeSettings") {

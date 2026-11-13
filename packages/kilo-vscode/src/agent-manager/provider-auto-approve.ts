@@ -78,6 +78,11 @@ export function notifyHostAutoApprove() {
   listeners.forEach((listener) => listener())
 }
 
+/** True when the host sweep answers this request as it arrives, so it never waits on the user. */
+export function hostAutoApproves(request: PermissionRequest): boolean {
+  return shouldApprove(request, hostState?.enabled() ?? false, new Set())
+}
+
 export function onHostAutoApproveChange(listener: () => void) {
   listeners.add(listener)
   return () => void listeners.delete(listener)
