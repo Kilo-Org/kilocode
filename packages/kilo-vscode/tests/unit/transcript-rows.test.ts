@@ -289,6 +289,65 @@ describe("transcriptRows", () => {
     })
   })
 
+  it("sums every assistant step in a prompt without including other prompts", () => {
+    const u1 = user("u1", { time: { created: 1_000 } })
+    const a1 = assistant("a1", "u1", { finish: "tool-calls", cost: 0.0123 })
+    const a2 = assistant("a2", "u1", {
+      finish: "stop",
+      cost: 0.0678,
+      time: { created: 1_600, completed: 3_600 },
+    })
+    const u2 = user("u2", { time: { created: 4_000 } })
+    const a3 = assistant("a3", "u2", {
+      finish: "stop",
+      cost: 0.5,
+      time: { created: 4_100, completed: 5_000 },
+    })
+    const rows = transcriptRows(
+      messageTurns([u1, a1, a2, u2, a3]),
+      lookup({ a1: [part("p1", "a1")], a2: [part("p2", "a2")], a3: [part("p3", "a3")] }),
+    )
+    const timings = rows.flatMap((row) => (row.type === "assistant" && row.timing ? [row.timing] : []))
+
+    expect(timings).toHaveLength(2)
+    expect(timings.at(0)).toMatchObject({ completedAt: 3_600, durationMs: 2_600 })
+    expect(timings.at(0)?.cost).toBeCloseTo(0.0801)
+    expect(timings.at(1)).toEqual({ completedAt: 5_000, durationMs: 1_000, cost: 0.5 })
+  })
+
+  it.each([0, undefined])("keeps a reported cost of %s distinct from an unavailable cost", (cost) => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1", { finish: "stop", cost, time: { created: 1, completed: 2 } })
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: [part("p1", "a1")] }))
+    const row = rows.find((row) => row.type === "assistant")
+
+    expect(row?.timing?.cost).toBe(cost)
+  })
+
+  it("omits an incomplete cost when an earlier step has no reported cost", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1", { finish: "tool-calls" })
+    const a2 = assistant("a2", "u1", { finish: "stop", cost: 0.5, time: { created: 1, completed: 2 } })
+    const rows = transcriptRows(messageTurns([u1, a1, a2]), lookup({ a2: [part("p2", "a2")] }))
+    const row = rows.find((row) => row.type === "assistant" && row.copy === "p2" && row.parts.length > 0)
+
+    expect(row?.timing).toMatchObject({ completedAt: 2, durationMs: 1 })
+    expect(row?.timing?.cost).toBeUndefined()
+  })
+
+  it("updates the copy row when an earlier step's cost changes", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1", { finish: "tool-calls", cost: 0.1 })
+    const a2 = assistant("a2", "u1", { finish: "stop", cost: 0.2, time: { created: 1, completed: 2 } })
+    const parts = lookup({ a2: [part("p2", "a2")] })
+    const before = transcriptRows(messageTurns([u1, a1, a2]), parts)
+    const after = transcriptRows(messageTurns([u1, { ...a1, cost: 0.5 }, a2]), parts, {}, before)
+    const row = after.find((row) => row.type === "assistant" && row.parts.length > 0)
+
+    expect(row?.timing?.cost).toBeCloseTo(0.7)
+    expect(row).not.toBe(before.find((row) => row.type === "assistant" && row.parts.length > 0))
+  })
+
   it("keeps timing on the copy row when non-text parts follow in a later chunk", () => {
     const u1 = user("u1", { time: { created: 1_000 } })
     const a1 = assistant("a1", "u1", { finish: "stop", time: { created: 1_500, completed: 3_500 } })
