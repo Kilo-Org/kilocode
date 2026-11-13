@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 138,
-    "markedLines": 2366,
+    "markedLines": 2380,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -175,7 +175,7 @@
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
-      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. The optional host `transient` predicate also marks a failure that will pass, such as a token refresh that could not reach its authorization server, so the connect may retry it and `answered` stays false for it: a pooled server must not be recorded as refusing the shared connection because of an outage. Omitting the hooks preserves upstream behavior."
+      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. The optional host `transient` predicate also marks a failure that will pass, such as a token refresh that could not reach its authorization server, so the connect may retry it and `answered` stays false for it: a pooled server must not be recorded as refusing the shared connection because of an outage. Omitting the hooks preserves upstream behavior. The exact 14-line growth raises only the markedLines budget from 2366 to 2380; file and unmarked-line budgets are unchanged."
     },
     "packages/core/src/mcp/connection.ts": {
       "rung": 3,
