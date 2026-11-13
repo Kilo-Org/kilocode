@@ -61,13 +61,16 @@ test("edits made while enhancing are kept when the result arrives", async ({ pag
   await expect(page.getByRole("button", { name: "Enhance prompt", exact: true })).toBeEnabled()
 })
 
+// The live region holds only the status text; its Retry and Dismiss buttons are siblings.
+const statusBar = (page: Page) => page.locator(".prompt-enhance-status")
+
 test("a failed enhancement keeps the draft and can be retried", async ({ page }) => {
   const api = await host(page)
   const input = await open(page)
   await input.pressSequentially("Original draft")
   await page.getByRole("button", { name: "Enhance prompt", exact: true }).click()
   const first = (await api.sent()).at(0)?.requestId
-  await api.reply({ type: "enhancePromptError", requestId: first, error: "Network error" })
+  await api.reply({ type: "enhancePromptError", requestId: first, reason: "failed", error: "Network error" })
   await expect(input).toHaveValue("Original draft")
 
   await page.getByRole("button", { name: "Enhance prompt", exact: true }).click()
@@ -112,9 +115,9 @@ test("a failed enhancement shows the error, the request id, and a retry action",
   await expect(status).toContainText(`Request ${first}`)
   await expect(input).toHaveValue("Original draft")
 
-  await status.getByRole("button", { name: "Retry", exact: true }).click()
+  await statusBar(page).getByRole("button", { name: "Retry", exact: true }).click()
   const second = (await api.sent()).at(-1)
-  expect(second).toEqual({ type: "enhancePrompt", text: "Original draft", requestId: second?.requestId })
+  expect(second).toEqual({ type: "enhancePrompt", text: "Original draft", requestId: expect.any(String) })
   expect(second?.requestId).not.toBe(first)
   await expect(status).toBeHidden()
 })
@@ -145,6 +148,6 @@ test("a stopped enhancement says why it stopped and can be dismissed", async ({ 
   await input.pressSequentially(" with my edits")
   await expect(status).toContainText("Enhance stopped because the draft changed.")
 
-  await status.getByRole("button", { name: "Dismiss", exact: true }).click()
+  await statusBar(page).getByRole("button", { name: "Dismiss", exact: true }).click()
   await expect(status).toBeHidden()
 })

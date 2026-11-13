@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, spyOn } from "bun:test"
 import { EnhanceRequests } from "../../src/kilo-provider/enhance-prompt"
 
 type Reply = (signal: AbortSignal) => Promise<{ data: { text: string } }>
@@ -39,6 +39,19 @@ describe("EnhanceRequests", () => {
     await flush()
 
     expect(state.posted).toEqual([{ type: "enhancePromptResult", text: "Enhanced", requestId: "enhance-1" }])
+  })
+
+  it("clears the timeout timer when a request finishes early", async () => {
+    const cleared = spyOn(globalThis, "clearTimeout")
+    try {
+      const state = setup()
+      state.requests.start(client(async () => ({ data: { text: "Enhanced" } })).value, "Draft", "enhance-1")
+      await flush()
+
+      expect(cleared).toHaveBeenCalled()
+    } finally {
+      cleared.mockRestore()
+    }
   })
 
   it("aborts a cancelled request and reports nothing", async () => {

@@ -27,17 +27,19 @@ export class EnhanceRequests {
       return
     }
     const abort = new AbortController()
-    const timer = AbortSignal.timeout(this.timeout)
+    // A plain timer, unlike AbortSignal.timeout, can be cleared as soon as the request ends.
+    const timer = new AbortController()
+    const timeout = setTimeout(() => timer.abort(), this.timeout)
     this.active.set(id, abort)
     void client.enhancePrompt
-      .enhance({ text }, { throwOnError: true, signal: AbortSignal.any([abort.signal, timer]) })
+      .enhance({ text }, { throwOnError: true, signal: AbortSignal.any([abort.signal, timer.signal]) })
       .then(({ data }) => {
         if (abort.signal.aborted) return
         this.post({ type: "enhancePromptResult", text: data.text, requestId: id })
       })
       .catch((err: unknown) => {
         if (abort.signal.aborted) return
-        if (timer.aborted) {
+        if (timer.signal.aborted) {
           const error = `No reply after ${this.timeout / 1000} s`
           console.error(`[Kilo New] KiloProvider: Enhance prompt ${id} timed out:`, error)
           this.post({ type: "enhancePromptError", error, reason: "timeout", requestId: id })
@@ -48,6 +50,7 @@ export class EnhanceRequests {
         this.post({ type: "enhancePromptError", error, reason: "failed", requestId: id })
       })
       .finally(() => {
+        clearTimeout(timeout)
         if (this.active.get(id) === abort) this.active.delete(id)
       })
   }

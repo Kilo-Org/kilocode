@@ -19,9 +19,10 @@ export const EnhanceStatus: Component<{
   const text = () => language.t(`prompt.enhance.status.${props.state.kind}`, { error: props.state.error ?? "" })
   const alert = () => props.state.kind === "failed" || props.state.kind === "timeout"
   return (
-    <div class="prompt-enhance-status" data-kind={props.state.kind} role={alert() ? "alert" : "status"}>
+    <div class="prompt-enhance-status" data-kind={props.state.kind}>
       <Icon name={icons[props.state.kind]} size="small" />
-      <div class="prompt-enhance-status-text">
+      {/* Only the text is the live region, so an update does not announce the buttons again. */}
+      <div class="prompt-enhance-status-text" role={alert() ? "alert" : "status"}>
         <span>{text()}</span>
         <span class="prompt-enhance-status-id">
           {language.t("prompt.enhance.status.request", { id: props.state.id })}
