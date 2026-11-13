@@ -34,6 +34,11 @@ export function markdownBlockKey(owner: string, cacheKey: string | undefined, in
   return `${owner}:${cacheKey ? `${cacheKey}:${index}:${mode}` : `block:${index}`}`
 }
 
+// A complete highlight releases its key's state, so a block that is highlighted again (a settled message whose text
+// still grows while the reveal drains) starts without one. A per-key count would then repeat the generation the DOM
+// already shows, and the renderer would append the new tokens to the old spans instead of replacing them.
+let generations = 0
+
 export function applyMarkdownWorkerResponse(
   state: MarkdownWorkerState | undefined,
   response: Extract<MarkdownWorkerResponse, { type: "highlight" }>,
@@ -41,7 +46,7 @@ export function applyMarkdownWorkerResponse(
   if (state && response.id <= state.id) return state
   return {
     id: response.id,
-    generation: (state?.generation ?? 0) + (response.reset ? 1 : 0),
+    generation: response.reset || !state ? ++generations : state.generation,
     stable: response.reset ? response.stable : [...(state?.stable ?? []), ...response.stable],
     unstable: response.unstable,
   }
