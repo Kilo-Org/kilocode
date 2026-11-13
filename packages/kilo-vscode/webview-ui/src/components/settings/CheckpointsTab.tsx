@@ -66,7 +66,7 @@ const CheckpointsTab: Component = () => {
       active: String(run.skippedActive),
       seconds: String(Math.max(0.1, Math.round(run.durationMs / 100) / 10)),
     })
-    return run.cancelled ? `${text} — ${language.t("settings.autoCleanup.lastRun.cancelled")}` : text
+    return run.cancelled ? `${text} (${language.t("settings.autoCleanup.lastRun.cancelled")})` : text
   }
 
   const progressText = () => {
