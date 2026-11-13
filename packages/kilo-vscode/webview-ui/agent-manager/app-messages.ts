@@ -81,7 +81,7 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   appendOrder: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string) => void
   evictLocal: (id: string) => void
-  placeLocal: (id: string) => void
+  focusLocal: (id: string) => void
   applyDraft: (worktreeId: string, sessionId: string) => void
   selectSession: (id: string) => void
   requestChatFocus: (force?: boolean) => void
@@ -90,10 +90,7 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   deps.saveTabMemory()
   // The host files a session that runs outside every worktree under Local, where it reads from the root store.
   if (msg.worktreeId === LOCAL) {
-    deps.placeLocal(msg.sessionId)
-    deps.setSelection(LOCAL)
-    deps.selectSession(msg.sessionId)
-    deps.requestChatFocus(true)
+    deps.focusLocal(msg.sessionId)
     return
   }
   deps.appendOrder(msg.worktreeId, msg.sessionId)

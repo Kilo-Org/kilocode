@@ -24,12 +24,16 @@ export function createSessions(input: {
 
   // The owning store of each loaded session. The map changes only when a session appears, disappears, or moves, so a
   // session record update does not invalidate every scope lookup.
+  // A copy in another store still names the session's directory, and only that directory's store receives its
+  // events, so the session belongs to that store even before it loaded the session itself.
   const owners = createMemo<Map<string, V2>>((previous) => {
     const next = new Map<string, V2>()
+    const homes = new Map(stores().map((item) => [item.directory, item]))
     for (const item of stores())
       for (const info of item.data.session.list()) {
-        const existing = next.get(info.id)
-        if (!existing || owns(item, info)) next.set(info.id, item)
+        const home = homes.get(key(info.location.directory))
+        if (home) next.set(info.id, home)
+        else if (!next.has(info.id)) next.set(info.id, item)
       }
     if (previous.size === next.size) {
       let same = true

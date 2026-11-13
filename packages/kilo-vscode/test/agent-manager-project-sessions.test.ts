@@ -48,6 +48,7 @@ function fakeState() {
     getActiveTarget: () => undefined,
     getSession: () => undefined,
     getWorktree: (id: string) => worktrees.find((item) => item.id === id),
+    findWorktreeByPath: (directory: string) => worktrees.find((item) => item.path === directory),
     flush: async () => {},
   } as unknown as WorktreeStateManager
 }

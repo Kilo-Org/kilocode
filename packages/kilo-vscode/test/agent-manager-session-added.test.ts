@@ -11,7 +11,7 @@ const record = () => {
       appendOrder: (worktreeId: string, sessionId: string) => calls.push(`order:${worktreeId}:${sessionId}`),
       setSelection: (id: string) => calls.push(`select:${id}`),
       evictLocal: (id: string) => calls.push(`evict:${id}`),
-      placeLocal: (id: string) => calls.push(`local:${id}`),
+      focusLocal: (id: string) => calls.push(`local:${id}`),
       applyDraft: (worktreeId: string, sessionId: string) => calls.push(`draft:${worktreeId}:${sessionId}`),
       selectSession: (id: string) => calls.push(`session:${id}`),
       requestChatFocus: () => calls.push("focus"),
@@ -37,7 +37,7 @@ describe("applySessionAdded", () => {
     applySessionAdded({ type: "agentManager.sessionAdded", sessionId: "s", worktreeId: "local" }, test.deps)
 
     expect(test.calls).toContain("local:s")
-    expect(test.calls).toContain("select:local")
+    expect(test.calls).not.toContain("select:local")
     expect(test.calls).not.toContain("evict:s")
     expect(test.calls).not.toContain("order:local:s")
   })

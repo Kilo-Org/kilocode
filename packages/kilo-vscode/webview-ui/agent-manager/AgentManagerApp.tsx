@@ -43,7 +43,15 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useLanguage } from "../src/context/language"
 import { fallbackFontSize } from "../src/v2/kilo-settings"
-import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatSearch, sessionOwner } from "./navigate"
+import {
+  LOCAL,
+  canOpenRootSession,
+  isKnownRootSession,
+  adjacentHint,
+  focusChatSearch,
+  sessionOwner,
+  showsSession,
+} from "./navigate"
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
@@ -297,7 +305,7 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     const id = appSession.sessions.currentSessionID()
     if (!id) return
-    const directory = directories.directoryOf(id)
+    const directory = appSession.sessions.scope(id)?.directory ?? directories.directoryOf(id)
     if (directory) panel.show([directory])
   })
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
@@ -868,14 +876,24 @@ const AgentManagerContent: Component = () => {
     title: () => t("agentManager.session.newSession"),
     directory: () => directories.root(currentProjectId()) ?? "",
   })
+  // The directory a session runs in decides its worktree. Both the live stores and the host catalog carry it, so a
+  // session that is not loaded in a store still resolves to the worktree that owns it.
+  const ownerOf = (sid: string) => {
+    const pid = currentProjectId()
+    const catalog = (pid ? projectSessionsLive()[pid] : undefined) ?? []
+    return sessionOwner(sid, [...sessions.sessions(), ...catalog], worktrees())
+  }
   // The host may not have stamped a freshly created worktree session yet, but its tab is already in the order.
   const sessionsForWorktree = (id: string) => {
     const order = worktreeTabOrder()[id] ?? []
     const list = worktreeSessions(id, managedSessions(), sessions.sessions(), order)
     const known = new Set(list.map((session) => session.id))
+    // The tab order also names sessions the host has not filed yet, such as one just created here. A session that
+    // runs in another directory is not a tab of this worktree, even when a stale order still lists it.
     const extra = order.flatMap((sessionID) => {
       const session = sessions.get(sessionID)
-      return session && !known.has(sessionID) && isKnownRootSession(session) ? [session] : []
+      if (!session || known.has(sessionID) || !isKnownRootSession(session)) return []
+      return showsSession(id, ownerOf(sessionID)) ? [session] : []
     })
     return extra.length > 0 ? applyTabOrder([...list, ...extra], order) : list
   }
@@ -1027,23 +1045,30 @@ const AgentManagerContent: Component = () => {
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId), ids)
     requestChatFocus()
   }
-  // The directory a session runs in decides its worktree. Both the live stores and the host catalog carry it, so a
-  // session that is not loaded in a store still resolves to the worktree that owns it.
-  const ownerOf = (sid: string) => {
-    const pid = currentProjectId()
-    const catalog = (pid ? projectSessionsLive()[pid] : undefined) ?? []
-    return sessionOwner(sid, [...sessions.sessions(), ...catalog], worktrees())
+  // The session the chat shows. A worktree reads from the store of its own directory, so it never shows a session
+  // that runs elsewhere: setup progress or a stale host entry can select a worktree while the current session belongs
+  // to Local or another worktree, and that session would render without ever receiving its events.
+  const shownSession = createMemo(() => {
+    const id = sessions.currentSessionID()
+    if (!id || isPending(id)) return undefined
+    return showsSession(selection(), ownerOf(id)) ? id : undefined
+  })
+  const draftTab = () => {
+    const id = sessions.currentSessionID()
+    return id && isPending(id) ? id : activePendingId()
   }
-  // Opens a session that no worktree tracks in the worktree its directory belongs to: adopting it into the selected
-  // worktree would point that worktree at a session the server runs elsewhere, and its prompts would never reach the
-  // transcript. A session in the project root returns false so the caller opens it locally.
-  const addSessionToCurrentWorktree = (sid: string) => {
+  // Opens a session that no worktree tracks in the worktree its directory belongs to, whichever context is selected:
+  // filing it under another worktree would point that worktree at a session the server runs elsewhere, and its
+  // prompts would never reach the transcript. Returns false for a session of the project root, so the caller opens it
+  // locally.
+  const openInWorktree = (sid: string) => {
     const sel = selection()
-    if (!sel || sel === LOCAL || !canOpenRootSession(sid, sessions.sessions())) return false
+    if (!canOpenRootSession(sid, sessions.sessions())) return false
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
     const owner = ownerOf(sid)
     if (owner === null) return false
+    if (owner === undefined && (!sel || sel === LOCAL)) return false
     saveTabMemory()
     closeHistory()
     setReviewActive(false)
@@ -1585,7 +1610,7 @@ const AgentManagerContent: Component = () => {
     to({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
   }
   const selectChatSession = (id: string) => {
-    if (addSessionToCurrentWorktree(id)) return
+    if (openInWorktree(id)) return
     if (localSessionIDs().includes(id)) {
       sessions.selectSession(id)
       if (selection() === null) setSelection(LOCAL)
@@ -2016,7 +2041,7 @@ const AgentManagerContent: Component = () => {
           appendOrder: appendToTabOrder,
           setSelection: (id) => setSelection(id),
           evictLocal,
-          placeLocal: (id) => placeLocal(id, activePendingId(), activePendingId() ?? sessions.currentSessionID()),
+          focusLocal: (id) => focusLocalSession(id, true),
           applyDraft: (worktreeId, sessionId) => drafts.apply(worktreeId, sessionId),
           selectSession: (id) => sessions.selectSession(id),
           requestChatFocus,
@@ -2254,7 +2279,7 @@ const AgentManagerContent: Component = () => {
       sessionIds={historySessionIds}
       worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
       onSelectSession={(id) => {
-        if (addSessionToCurrentWorktree(id)) return
+        if (openInWorktree(id)) return
         closeHistory()
         if (localSessionIDs().includes(id)) {
           saveTabMemory()
@@ -2325,12 +2350,8 @@ const AgentManagerContent: Component = () => {
               <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
                 <SpeechToTextStatusProvider>
                   <SessionView
-                    session={
-                      sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                        ? sessions.currentSessionID()
-                        : undefined
-                    }
-                    draftKey={sessions.currentSessionID() ?? activePendingId()}
+                    session={shownSession()}
+                    draftKey={shownSession() ?? draftTab()}
                     readOnly={readOnly()}
                     onSession={handleSessionCreated}
                     actions={toolActions}

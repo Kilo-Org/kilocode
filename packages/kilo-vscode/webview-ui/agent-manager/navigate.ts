@@ -41,6 +41,16 @@ export function sessionOwner(
   return worktrees.find((worktree) => trimPath(worktree.path) === directory)?.id ?? null
 }
 
+/**
+ * Whether the selected context may show a session with this owner. A worktree reads from the store of its own
+ * directory, so it never shows a session that runs elsewhere; Local reads from the session's own store. An unloaded
+ * session (`undefined` owner) is shown until its directory is known.
+ */
+export function showsSession(selection: string | null, owner: string | null | undefined): boolean {
+  if (!selection || selection === LOCAL || owner === undefined) return true
+  return owner === selection
+}
+
 function trimPath(directory: string) {
   return directory.length > 1 ? directory.replace(/[\\/]+$/, "") : directory
 }
