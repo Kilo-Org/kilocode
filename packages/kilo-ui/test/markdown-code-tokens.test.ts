@@ -45,9 +45,12 @@ test("a block highlighted again after its state was released replaces the render
     unstable: [],
   })
 
+  // The element is kept, so only a generation that differs from the rendered one can force the replace.
+  const code = document.createElement("code")
+  expect(second.generation).not.toBe(first.generation)
   expect(
-    shouldResetCodeTokens(rendered(first, "```bash\nkilo2 --for"), {
-      code: document.createElement("code"),
+    shouldResetCodeTokens(rendered(first, "```bash\nkilo2 --for", code), {
+      code,
       language: "bash",
       generation: second.generation,
       stableCount: second.stable.length,
