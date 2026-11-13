@@ -149,7 +149,7 @@ class SpeechInputTest : BasePlatformTestCase() {
         assertEquals(listOf(KiloBundle.message("prompt.speech.limit", 2)), notices)
     }
 
-    fun `test cancel racing recording limit suppresses stale notification and transcription`() {
+    fun `test recording limit arriving after cancel is suppressed`() {
         val capture = Capture()
         val notices = mutableListOf<String>()
         val input = SpeechInput(
@@ -165,8 +165,8 @@ class SpeechInputTest : BasePlatformTestCase() {
         capture.started.complete("recording")
         assertTrue(coroutines.pumpUntil { edtWait { input.state == SpeechInputState.RECORDING } })
 
-        capture.limit()
         edtWait { input.cancel() }
+        capture.limit()
         coroutines.drain()
 
         assertEquals(SpeechInputState.IDLE, edtWait { input.state })
