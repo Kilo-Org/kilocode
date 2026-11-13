@@ -801,6 +801,7 @@ function updateCodeBlock(
     code.className = `language-${block.language}`
     const previous = renderedCodeTokens.get(next)
     const reset = shouldResetCodeTokens(previous, {
+      code,
       language: block.language,
       generation: block.generation,
       stableCount: block.stable.length,
@@ -823,6 +824,7 @@ function updateCodeBlock(
     }
     // kilocode_change end
     renderedCodeTokens.set(next, {
+      code,
       language: block.language,
       generation: block.generation,
       stableCount: block.stable.length,
@@ -845,6 +847,7 @@ function updateCodeBlock(
   wrapper.appendChild(createCopyButton(labels))
   next.appendChild(wrapper)
   renderedCodeTokens.set(next, {
+    code: codeElement,
     language: block.language,
     generation: block.generation,
     stableCount: block.stable.length,
