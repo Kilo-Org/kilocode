@@ -75,7 +75,7 @@ export namespace BoardStore {
   export type Message = typeof Message.Type
 
   export type Execution = {
-    state: "running" | "busy" | "retry" | "offline" | "completed" | "error" | "cancelled" | "unknown"
+    state: "running" | "busy" | "retry" | "offline" | "waiting" | "completed" | "error" | "cancelled" | "unknown" // kilocode_change - added "waiting" for sessions blocked on a permission prompt (#33)
     updated?: number
   }
 
@@ -655,7 +655,7 @@ export namespace BoardStore {
   }
 
   function available(state: Execution["state"]) {
-    return state === "running" || state === "busy" || state === "retry" || state === "offline"
+    return state === "running" || state === "busy" || state === "retry" || state === "offline" || state === "waiting" // kilocode_change - a session blocked on a permission prompt is still active (#33)
   }
 
   export const availability = Effect.fn("BoardStore.availability")(function* (input: {
