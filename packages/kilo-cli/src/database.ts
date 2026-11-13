@@ -168,6 +168,34 @@ export async function importV1(input: {
 }
 
 /**
+ * Imports the Kilo v1 store at `store` into the existing kilo2 store at `file`, and returns the number of sessions it
+ * added. The window is converted into a private store beside `file` first, so a failed conversion leaves `file` as it
+ * is. Sessions `file` already holds are kept as they are, so running it again only adds new sessions.
+ */
+export async function mergeV1(input: {
+  readonly store: string
+  readonly file: string
+  readonly data: string
+  readonly since?: number
+  readonly progress?: (done: number, total: number) => void
+}) {
+  const scratch = `${input.file}.${process.pid}.import`
+  try {
+    const { KiloV1Store } = await import("./v1-store")
+    await copy(input.store, scratch, {
+      since: input.since,
+      check: (copy) => KiloV1Store.convert(copy, { data: input.data, progress: input.progress }),
+    })
+    const { merge } = await import("./import/merge")
+    return merge(scratch, input.file)
+  } finally {
+    for (const suffix of ["", "-wal", "-shm", "-journal"])
+      if (!remove(`${scratch}${suffix}`))
+        console.error(`kilo2: could not remove ${scratch}${suffix}. Delete it by hand.`)
+  }
+}
+
+/**
  * A lock whose owner has not reported progress for this long is stale: its process is stuck, or it died and its PID now
  * belongs to another process. The owner touches the lock with every progress line, about every two seconds.
  */

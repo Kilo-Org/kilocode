@@ -53,6 +53,7 @@ import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
+import { importV1 } from "./import-v1"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
@@ -449,6 +450,54 @@ export function activate(context: ExtensionContext) {
     ),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
+    commands.registerCommand("kilo-code.v2.importV1", async () => {
+      const found = serverCommand()
+      if (!found) return void window.showErrorMessage(l10n.t("No Kilo v2 server found."))
+      const picked = await window.showQuickPick(
+        [
+          { label: l10n.t("Last 2 weeks"), days: 14 },
+          { label: l10n.t("Last week"), days: 7 },
+          { label: l10n.t("Last 4 weeks"), days: 28 },
+          { label: l10n.t("Last 3 months"), days: 90 },
+        ],
+        { placeHolder: l10n.t("Import Kilo v1 sessions, Agent Manager sessions and global config from") },
+      )
+      if (!picked) return
+      const result = await window.withProgress(
+        { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…") },
+        async () => {
+          const run = await importV1({
+            command: found,
+            cwd: directory,
+            env: process.env,
+            days: picked.days,
+            log: (text) => output.append(text),
+          })
+          if (!run.ok) return { ...run, sessions: 0 }
+          // The CLI imported every v1 session updated in the window, which includes every session created in it.
+          const sessions = await agentManager
+            .importLegacySessions(Date.now() - picked.days * 86_400_000)
+            .catch((error: unknown) => {
+              output.appendLine(`Agent Manager v1 import failed: ${String(error)}`)
+              return 0
+            })
+          return { ...run, sessions }
+        },
+      )
+      const lines = result.output.split("\n")
+      if (!result.ok) {
+        const show = l10n.t("Show Output")
+        const choice = await window.showErrorMessage(lines.at(-1) || l10n.t("The Kilo v1 import failed."), show)
+        if (choice === show) output.show()
+        return
+      }
+      void window.showInformationMessage(
+        [
+          ...lines.filter((line) => line.startsWith("Imported") || line.startsWith("Copied")),
+          l10n.t("Agent Manager: {0} sessions added.", result.sessions),
+        ].join(" "),
+      )
+    }),
     commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab?.openFor(sidebarSession())),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
     // server. The next request starts one with the current settings.

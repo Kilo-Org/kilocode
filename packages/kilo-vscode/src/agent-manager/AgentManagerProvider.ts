@@ -961,6 +961,27 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     pushEmptyState(this.stateHost())
   }
 
+  /** Adds the v1 Agent Manager sessions created since `since` to the workspace and known projects after `kilo2 import v1`. */
+  public async importLegacySessions(since: number): Promise<number> {
+    this.contexts.pinned()
+    const counts = await Promise.all(
+      [...this.contexts.values()].map(async (ctx) => {
+        const init = await initContextState(ctx, (...args) => this.log(...args), { warm: false })
+        if (!init.ok) return 0
+        const client = await this.client()
+        const added = await ctx.stateManager().importLegacySessions(since, (sessionID) =>
+          client.session.get({ sessionID }).then(
+            () => true,
+            () => false,
+          ),
+        )
+        if (added > 0 && this.contexts.active()?.id === ctx.id) this.pushState(ctx)
+        return added
+      }),
+    )
+    return counts.reduce((sum, count) => sum + count, 0)
+  }
+
   public get lifecycleHost(): LifecycleHost {
     return lifecycleHost(this.hostSource())
   }
