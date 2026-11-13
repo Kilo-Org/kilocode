@@ -10,6 +10,8 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
@@ -21,11 +23,15 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -35,6 +41,7 @@ class KiloSessionRpcApiImplTest {
     private val mock = MockCliServer()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val apps = mutableListOf<KiloBackendAppService>()
+    private val timeout = 10_000L
 
     @AfterTest
     fun tearDown() = runBlocking {
@@ -52,6 +59,39 @@ class KiloSessionRpcApiImplTest {
         app.connect()
         withTimeout(10_000) {
             app.appState.first { it is KiloAppState.Ready }
+        }
+    }
+
+    @Test
+    fun `recent leaves caller dispatcher free while status and session responses wait`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+        val status = CountDownLatch(1)
+        val response = CountDownLatch(1)
+        mock.statusGate = status
+        mock.recentGate = response
+        val gates = listOf("/session/status" to status, "/experimental/session" to response)
+        val counts = gates.associate { (path, _) -> path to (mock.requestCount(path) + 1) }
+
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher().use { dispatcher ->
+            val call = async(dispatcher) { api.recent("/test", 5) }
+            try {
+                for ((path, gate) in gates) {
+                    assertTrue(mock.awaitRequestCount(path, counts.getValue(path), timeout), "Request did not reach $path")
+                    val progress = CountDownLatch(1)
+                    launch(dispatcher) { progress.countDown() }
+                    assertTrue(progress.await(timeout, TimeUnit.MILLISECONDS), "Caller dispatcher blocked while waiting for $path")
+                    assertFalse(call.isCompleted, "Recent sessions completed before releasing $path")
+                    gate.countDown()
+                }
+                assertTrue(withTimeout(timeout) { call.await() }.sessions.isEmpty())
+            } finally {
+                status.countDown()
+                response.countDown()
+                call.cancelAndJoin()
+            }
         }
     }
 

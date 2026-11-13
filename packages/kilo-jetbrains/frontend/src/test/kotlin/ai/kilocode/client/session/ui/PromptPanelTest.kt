@@ -516,6 +516,83 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
     }
 
+    fun `test prompt edits after editor recreation dispose the original highlights`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        realize(panel, 260, 400)
+        panel.setText("/new ${MentionAction.GIT_CHANGES.token} ")
+        val before = field.getEditor(false)!!
+        val highlights = before.markupModel.allHighlighters.toList()
+        assertEquals(2, highlights.size)
+
+        field.setDocument(field.document)
+        val editor = field.getEditor(false)!!
+        assertNotSame(before, editor)
+        assertSame(before.document, editor.document)
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(editor.document.textLength, "pasted text")
+        }
+
+        assertTrue(highlights.none { it.isValid })
+        assertEquals(2, editor.markupModel.allHighlighters.size)
+        assertTrue(spans(field).contains("/new" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans(field).contains(MentionAction.GIT_CHANGES.token to DefaultLanguageHighlighterColors.METADATA))
+    }
+
+    fun `test prompt highlights exist before the first edit`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        panel.setText("/new ${MentionAction.GIT_CHANGES.token} ")
+
+        realize(panel, 260, 400)
+
+        assertEquals(2, field.getEditor(false)!!.markupModel.allHighlighters.size)
+        assertTrue(spans(field).contains("/new" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans(field).contains(MentionAction.GIT_CHANGES.token to DefaultLanguageHighlighterColors.METADATA))
+    }
+
+    fun `test prompt highlighters and editors stay bounded across recreation`() {
+        val baseline = EditorFactory.getInstance().allEditors.size
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        panel.setText("/new ${MentionAction.GIT_CHANGES.token} ")
+        val root = realize(panel, 260, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val count = components(panel).size
+
+        repeat(100) { index ->
+            val before = field.getEditor(false)!!
+            val highlights = before.markupModel.allHighlighters.toList()
+            if (index % 2 == 0) field.setDocument(field.document)
+            if (index % 2 != 0) field.isEnabled = !field.isEnabled
+            UIUtil.dispatchAllInvocationEvents()
+            val editor = field.getEditor(false)!!
+            assertNotSame(before, editor)
+            assertSame(before.document, editor.document)
+            assertTrue(before.isDisposed)
+            assertTrue(highlights.none { it.isValid })
+            assertEquals(2, editor.markupModel.allHighlighters.size)
+            repeat(2) {
+                WriteCommandAction.runWriteCommandAction(project) {
+                    editor.document.insertString(editor.document.textLength, "x")
+                }
+                panel.refreshHighlights()
+                assertSame(editor, field.getEditor(false))
+                assertEquals(2, editor.markupModel.allHighlighters.size)
+            }
+            assertSame(field, panel.defaultFocusedComponent)
+            assertEquals(count, components(panel).size)
+            assertEquals(baseline + 1, EditorFactory.getInstance().allEditors.size)
+        }
+
+        val highlights = field.getEditor(false)!!.markupModel.allHighlighters.toList()
+        root.removeNotify()
+        roots.remove(root)
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(highlights.none { it.isValid })
+        assertEquals(baseline, EditorFactory.getInstance().allEditors.size)
+    }
+
     fun `test prompt editor does not expose file editor for platform undo`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField

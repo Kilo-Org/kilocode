@@ -3,16 +3,26 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.agentManager.SidePanelKeys
 import ai.kilocode.client.agentManager.SidePanelMode
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceIcons
+import ai.kilocode.client.plugin.KiloBundle
+import com.intellij.codeInsight.hint.HintUtil
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.impl.ActionButtonWithText
 import com.intellij.openapi.util.JDOMUtil
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import javax.swing.JLabel
+import javax.swing.SwingConstants
+import javax.swing.UIManager
 
 @Suppress("UnstableApiUsage")
 class AgentManagerAddActionTest : BasePlatformTestCase() {
@@ -80,6 +90,31 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
         assertEquals("Move tasks between local and Cloud anytime.", hint)
     }
 
+    fun `test popup hint fits on one line without clipping`() {
+        val offset = UIManager.get("Popup.Advertiser.fontSizeOffset")
+        try {
+            for (value in listOf(0, -8)) {
+                UIManager.put("Popup.Advertiser.fontSizeOffset", value)
+                val popup = AgentManagerAddAction().popup(DataContext.EMPTY_CONTEXT)
+                Disposer.register(testRootDisposable, popup)
+                val content = popup.content
+                val footer = (content.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH) as JLabel
+                val hint = HintUtil.createAdComponent(KiloBundle.message("agentManager.add.hint"),
+                    JBUI.CurrentTheme.Advertiser.border(), SwingConstants.LEFT)
+
+                content.size = content.preferredSize
+                content.doLayout()
+
+                assertTrue(footer.text.startsWith("<html>"))
+                assertFalse(footer.text.contains("<div"))
+                assertEquals(hint.preferredSize.height, footer.preferredSize.height)
+                assertTrue(footer.width >= hint.preferredSize.width)
+            }
+        } finally {
+            UIManager.put("Popup.Advertiser.fontSizeOffset", offset)
+        }
+    }
+
     fun `test add group items carry branch and cloud icons`() {
         val children = AgentManagerAddAction().getChildren(null)
 
@@ -87,15 +122,27 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
         assertSame(HostedWorkspaceIcons.cloud, children[1].templatePresentation.icon)
     }
 
-    fun `test add group offers local and cloud only`() {
+    fun `test add group offers section after local and cloud with a separator`() {
         val action = AgentManagerAddAction()
+        val children = action.getChildren(null)
 
         assertTrue(action.isPopup)
         assertTrue(action.templatePresentation.isPerformGroup)
+        assertEquals(4, children.size)
+        assertInstanceOf(children[2], Separator::class.java)
         assertEquals(
-            listOf("Local Worktree Task", "Cloud Task"),
-            action.getChildren(null).map { it.templatePresentation.text },
+            listOf("Local Worktree Task", "Cloud Task", "New Section"),
+            children.filterNot { it is Separator }.map { it.templatePresentation.text },
         )
+    }
+
+    fun `test new section action disabled without worktree panel`() {
+        val action = AgentManagerAddAction().getChildren(null).last()
+        val event = event(action, mode = SidePanelMode.AGENT_MANAGER)
+
+        ActionUtil.updateAction(action, event)
+
+        assertFalse(event.presentation.isEnabled)
     }
 
     fun `test unified Add group replaces the standalone cloud actions`() {
@@ -111,7 +158,7 @@ class AgentManagerAddActionTest : BasePlatformTestCase() {
     }
 
     private fun event(
-        action: AgentManagerAddAction,
+        action: AnAction,
         mode: SidePanelMode? = null,
         ui: ActionUiKind = ActionUiKind.NONE,
     ): AnActionEvent {
