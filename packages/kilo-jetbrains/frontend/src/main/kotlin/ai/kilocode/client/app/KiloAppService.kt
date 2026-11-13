@@ -18,6 +18,8 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import ai.kilocode.client.settings.KiloLogSettingsService
@@ -52,6 +54,7 @@ class KiloAppService internal constructor(
     companion object {
         private val LOG = KiloLog.create(KiloAppService::class.java)
         private val init = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
+        private const val DEFAULT_SPEECH_MODEL = "openai/whisper-1"
     }
 
     private val started = AtomicBoolean(false)
@@ -136,6 +139,18 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("health check failed", e)
         null
+    }
+
+    suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> =
+        call { transcriptionModels(directory) }
+
+    suspend fun transcribe(directory: String?, data: ByteArray): String {
+        val models = transcriptionModels(directory)
+        val model = models.firstOrNull { it.id == DEFAULT_SPEECH_MODEL } ?: models.firstOrNull()
+            ?: error("No speech-to-text models are available")
+        return call {
+            transcribe(directory, SpeechRequestDto(data = data, model = model.id)).text
+        }
     }
 
     suspend fun retry() {

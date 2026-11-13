@@ -22,6 +22,9 @@ import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.RetentionConfigDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
+import ai.kilocode.rpc.dto.SpeechResultDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
 import kotlinx.coroutines.CompletableDeferred
@@ -66,6 +69,10 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var configUpdateError: Exception? = null
     var configUpdateReturnStale = false
     var afterConfig: (suspend (ConfigPatchDto) -> Unit)? = null
+    var speechModels = listOf(SpeechModelDto("openai/whisper-1", "Whisper"))
+    var speechResult = SpeechResultDto("transcript")
+    val speechDirectories = mutableListOf<String?>()
+    val speechRequests = mutableListOf<SpeechRequestDto>()
 
     var connected = false
         private set
@@ -89,6 +96,19 @@ class FakeAppRpcApi : KiloAppRpcApi {
     override suspend fun health(): HealthDto {
         assertNotEdt("health")
         return health
+    }
+
+    override suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> {
+        assertNotEdt("transcriptionModels")
+        speechDirectories.add(directory)
+        return speechModels
+    }
+
+    override suspend fun transcribe(directory: String?, request: SpeechRequestDto): SpeechResultDto {
+        assertNotEdt("transcribe")
+        speechDirectories.add(directory)
+        speechRequests.add(request)
+        return speechResult
     }
 
     override suspend fun cliVersion(): String {

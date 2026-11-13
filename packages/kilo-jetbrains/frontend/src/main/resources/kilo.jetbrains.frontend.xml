@@ -310,6 +310,12 @@
                                first-keystroke="control ENTER"/>
         </action>
 
+        <action id="Kilo.SpeechInput"
+                class="ai.kilocode.client.actions.SpeechInputAction">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control K"/>
+        </action>
+
         <action id="Kilo.SubmitDialog"
                 class="ai.kilocode.client.actions.SubmitDialogAction"
                 text="Submit Dialog"

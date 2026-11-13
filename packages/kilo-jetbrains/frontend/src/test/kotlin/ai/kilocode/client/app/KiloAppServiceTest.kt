@@ -6,6 +6,8 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechResultDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +58,23 @@ class KiloAppServiceTest : BasePlatformTestCase() {
         withTimeout(5_000) {
             while (!done()) yield()
         }
+    }
+
+    fun `test transcription selects preferred model and forwards WAV bytes`() = runBlocking(Dispatchers.Default) {
+        rpc.speechModels = listOf(
+            SpeechModelDto("other/model", "Other"),
+            SpeechModelDto("openai/whisper-1", "Whisper"),
+        )
+        rpc.speechResult = SpeechResultDto("dictated prompt")
+
+        val result = app.transcribe("/repo", byteArrayOf(4, 5, 6))
+
+        assertEquals("dictated prompt", result)
+        assertEquals(listOf("/repo", "/repo"), rpc.speechDirectories)
+        val request = rpc.speechRequests.single()
+        assertEquals("openai/whisper-1", request.model)
+        assertEquals("wav", request.format)
+        assertTrue(request.data.contentEquals(byteArrayOf(4, 5, 6)))
     }
 
     fun `test fetchCoreInfoAsync dedupes in flight requests`() = runBlocking(Dispatchers.Default) {
