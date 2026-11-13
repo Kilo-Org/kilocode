@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { PermissionRequest } from "@opencode/client"
-import { createAutoApproveController, shouldApprove } from "../webview-ui/src/v2/auto-approve-policy"
+import { createAutoApproveController, shouldApprove } from "../src/agent-manager/provider-auto-approve"
 
 function request(id: string, metadata?: Record<string, unknown>): PermissionRequest {
   return { id, sessionID: "ses_1", action: "bash", resources: ["ls"], metadata } as PermissionRequest
@@ -38,6 +38,24 @@ describe("auto-approve controller", () => {
     controller.approve([request("a"), request("b")])
 
     expect(replies).toEqual(["a", "b"])
+  })
+
+  test("stops approving requests after auto-approve is reset", () => {
+    const replies: string[] = []
+    const controller = createAutoApproveController((item) => {
+      replies.push(item.id)
+      return Promise.resolve()
+    })
+
+    controller.setEnabled(true)
+    controller.approve([request("before")])
+    controller.setEnabled(false)
+    controller.approve([request("after")])
+    expect(replies).toEqual(["before"])
+
+    controller.setEnabled(true)
+    controller.approve([request("after")])
+    expect(replies).toEqual(["before", "after"])
   })
 
   test("retries a request whose reply failed", async () => {

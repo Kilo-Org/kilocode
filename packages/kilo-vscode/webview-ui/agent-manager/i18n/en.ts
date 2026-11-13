@@ -153,6 +153,10 @@ export const dict = {
   "agentManager.hoverCard.commits": "Commits",
 
   "agentManager.session.new": "New session",
+  "agentManager.history.title": "Open sessions",
+  "agentManager.history.back": "Back",
+  "agentManager.sidebar.resize": "Resize the sidebar",
+  "agentManager.review.resize": "Resize the inspector",
   "agentManager.session.untitled": "Untitled",
   "agentManager.session.newSession": "New Session",
   "agentManager.session.openInWorktree": "Open in worktree",
@@ -169,7 +173,6 @@ export const dict = {
   "agentManager.tab.unpin": "Unpin",
   "agentManager.tab.pinned": "Pinned",
   "agentManager.tab.terminal": "Terminal",
-  "agentManager.tab.openTerminal": "Open Terminal",
   "agentManager.tab.newOptions": "More new-tab options",
   "agentManager.sidebarSearch.label": "Search worktrees and sessions",
   "agentManager.sidebarSearch.scope": "Searches the local workspace, local sessions, worktrees, and their sessions",
@@ -187,9 +190,6 @@ export const dict = {
   "agentManager.terminal.connectionError": "terminal connection error",
   "agentManager.terminal.empty": "No terminal here yet",
   "agentManager.terminal.start": "Start terminal",
-  "agentManager.terminal.destination": "Choose what the terminal button opens",
-  "agentManager.terminal.openInVscode": "VS Code terminal",
-  "agentManager.terminal.openInPanel": "Agent Manager panel",
   "agentManager.terminal.errorTitle": "Terminal error",
   "agentManager.error.title": "Agent Manager error",
 

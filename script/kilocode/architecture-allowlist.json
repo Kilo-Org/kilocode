@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kilo Architecture Ratchet Allowlist",
+  "description": "Baseline exception list for Kilo-owned domain architecture boundaries and state ratchets on the v2 package layout. Upstream-owned shared opencode files are exempt to prevent upstream merge conflicts. As Kilo legacy sites are refactored into clean Effect layers, decrement counts or remove entries to lock in progress.",
+  "rules": {
+    "core-directionality": {
+      "description": "Forbidden imports in packages/schema/src, packages/core/src, packages/protocol/src, and packages/client/src. Target: domain packages depend only in the allowed direction.",
+      "allowed": {}
+    },
+    "kilo-gateway-core-isolation": {
+      "description": "Imports from @opencode/* in packages/kilo-gateway-core/src. Target: Kilo logic packages stay independent of @opencode/*.",
+      "allowed": {}
+    },
+    "kilo-instance-state": {
+      "description": "Legacy InstanceState.make usages in Kilo-owned code (packages/kilo-*/src/**, packages/*/src/kilocode/**). Target: encapsulate in scoped Effect Services in packages/core.",
+      "allowed": {}
+    },
+    "kilo-database-constructors": {
+      "description": "Direct new Database() / new DatabaseSync() instantiations in Kilo-owned code. Target: all persistence routes through core Database.Service.",
+      "allowed": {
+        "packages/kilo-cli/src/database.ts": {
+          "count": 1,
+          "owner": "kilo-cli",
+          "reason": "One-time copy of an earlier build's database file before the server starts. It counts sessions in the candidate files read-only to pick the copy source; Database.Service does not exist yet and would run migrations on the old file. The copy itself opens the source through packages/kilo-cli/src/sqlite-readonly.ts. Remove with the legacy copy."
+        },
+        "packages/kilo-cli/src/sqlite-readonly.ts": {
+          "count": 2,
+          "owner": "kilo-cli",
+          "reason": "Read-only opens of a Kilo v1 store or an earlier kilo2 store before any server starts: the import v1 source, the copy of an earlier build, and the startup guard that refuses a v1 store. One open reads a store in use with locks; the other is an immutable open for a store at rest, which creates no file beside it. Database.Service would run migrations on these files, which must stay as they are."
+        }
+      }
+    },
+    "kilo-tool-process-env": {
+      "description": "Direct process.env reads in Kilo-owned tools. Target: pass configuration explicitly via Tool.Context or Env.Service.",
+      "allowed": {}
+    },
+    "kilo-httpapi-handlers": {
+      "description": "Raw OS or process operations in Kilo-owned HTTP handler files. Target: delegate to domain Effect services.",
+      "allowed": {}
+    }
+  }
+}

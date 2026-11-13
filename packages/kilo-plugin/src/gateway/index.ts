@@ -2,6 +2,7 @@
 import {
   KiloAccount,
   KiloAutocomplete,
+  KiloCredential,
   KiloDefaults,
   KiloDevice,
   KiloErrors,
@@ -15,6 +16,7 @@ import {
   KiloRequests,
   KiloServer,
   KiloStream,
+  KiloTranscription,
   KiloTrpc,
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
@@ -31,16 +33,19 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import type { Entry } from "@opencode/schema/config"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
+import { KiloGatewayAccounts } from "./accounts"
 import { createHash, randomUUID } from "node:crypto"
-import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
+import { Clock, Duration, Effect, Fiber, Latch, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
 import { GatewayRouters } from "./routers.js"
+import { KiloSessionSync } from "../session-sync"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
@@ -50,8 +55,20 @@ const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")
 const REFRESH_INTERVAL = Duration.minutes(5)
 const MAX_SNAPSHOTS = 10
+// How long activation waits for the first Kilo catalog. The server answers 503 when a Location's plugins take longer
+// than 5 seconds to activate, and a team catalog takes several sequential Kilo API requests.
+export const FIRST_CATALOG_WAIT = Duration.seconds(2)
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "[::1]", "::1"])
 const IS_TEST_RUNNER = /\.test\.[cm]?[jt]sx?$/.test(process.argv[1] ?? "")
+// Upstream OpenCode request identity from `packages/core/src/session/model-request.ts`. The Gateway attributes through
+// the X-KILOCODE-* headers, which v1 sent without these, so they are removed at the last boundary.
+const UPSTREAM_REQUEST_HEADERS = [
+  "x-opencode-session-id",
+  "x-opencode-parent-session-id",
+  "x-opencode-project",
+  "x-opencode-session",
+  "x-opencode-client",
+]
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
 const Metadata = Schema.Struct({
@@ -72,7 +89,11 @@ const decodeSelection = Schema.decodeUnknownOption(Schema.Struct({ organizationI
 // The last good catalog of one personal or anonymous scope: its models and its default model.
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
-    Schema.Struct({ models: Schema.Array(Schema.Unknown), defaultModelID: Schema.optional(Schema.String) }),
+    Schema.Struct({
+      models: Schema.Array(Schema.Unknown),
+      imageModels: Schema.Array(Schema.Unknown).pipe(Schema.optional),
+      defaultModelID: Schema.optional(Schema.String),
+    }),
   ),
 )
 // Published on the global bus (`{ global: true }`), so plugin instances of other locations also reload.
@@ -86,6 +107,8 @@ const OrganizationEvent = Bus.ephemeral({
 
 interface Snapshot {
   readonly models: readonly KiloModels.Model[]
+  /** Image-only models kept with the chat models they share a catalog with. */
+  readonly imageModels?: readonly KiloModels.Model[]
   readonly defaultModelID?: string
 }
 
@@ -95,6 +118,8 @@ interface CatalogState {
   readonly connection?: ConnectionInfo
   readonly envActive: boolean
   readonly models: readonly KiloModels.Model[]
+  /** The image-output models of the same catalog, registered on the provider as `image` models. */
+  readonly imageModels: readonly KiloModels.Model[]
   readonly defaultModelID?: string
   readonly failed: boolean
   readonly failure?: KiloModels.Failure
@@ -107,10 +132,16 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
     const global = yield* Global.Service
+    const sessionSync = yield* Effect.serviceOption(KiloSessionSync.Service)
+    let reportedOrganization: string | null | undefined
+    let reportedToken: string | undefined
     const configService = yield* Effect.serviceOption(Config.Service)
     if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
     const config = configService.value
     let policy = yield* KiloConfigPolicy.get(config)
+    // Kilo image models are opt-in: an unset setting must not turn the upstream image tool on (and its tool
+    // definition into every request) for users who never asked for image generation.
+    let imageGeneration = imageGenerationEnabled(yield* config.entries())
     const scope = yield* Scope.Scope
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
@@ -120,6 +151,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let catalog: CatalogState = {
       envActive: false,
       models: [],
+      imageModels: [],
       failed: false,
       anonymous: true,
     }
@@ -131,6 +163,21 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let cachedProjectID: string | null | undefined
     let cachedMachineID: string | null | undefined
     let organizationModes: readonly KiloModes.OrganizationMode[] = []
+    // The `catalog` event publishes only a changed reason, so a retry that fails the same way stays quiet. Clients
+    // read the current reason with `catalog.status`. The emitter exists once the RPC is registered, and the first
+    // publish after the registration always emits.
+    let emitCatalog: ((status: KiloGatewayRpc.CatalogStatus) => Effect.Effect<void, unknown>) | undefined
+    let publishedCatalog = ""
+    const publishCatalog = Effect.suspend(() => {
+      const status = catalogStatus(catalog)
+      const key = JSON.stringify(status)
+      if (!emitCatalog || key === publishedCatalog) return Effect.void
+      publishedCatalog = key
+      return emitCatalog(status).pipe(Effect.catch(() => Effect.void))
+    })
+
+    // The catalog has settled for the current account: the Gateway published it, so `KiloGatewayAccounts.get` is stable.
+    const settled = publishCatalog.pipe(Effect.andThen(Effect.sync(() => KiloGatewayAccounts.changed(ctx.location.directory))))
 
     const getProjectID = Effect.gen(function* () {
       if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
@@ -206,6 +253,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         if (Option.isNone(storedSelection)) yield* ctx.storage.set(key, legacy.value)
         yield* ctx.storage.remove("organization:env")
       }
+      const activeOrganization = account
+        ? account.organizationID
+        : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null
+      if (activeOrganization !== reportedOrganization || account?.token !== reportedToken) {
+        reportedOrganization = undefined
+        reportedToken = undefined
+        if (Option.isSome(sessionSync))
+          yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID: undefined })
+      }
       return {
         server: KiloServer.apiBase(configuredServer),
         gateway: configuredServer,
@@ -269,6 +325,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         if (!decoded || decoded.models.length === 0) return undefined
         const snapshot: Snapshot = {
           models: decoded.models as readonly KiloModels.Model[],
+          imageModels: (decoded.imageModels ?? []) as readonly KiloModels.Model[],
           defaultModelID: decoded.defaultModelID,
         }
         lastGood.set(key, snapshot)
@@ -298,8 +355,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
-          failure: { kind: "unauthorized" },
+          failure: { kind: "unauthenticated" },
           anonymous: true,
         }
         return
@@ -307,7 +365,16 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
       // A scoped token cannot select another team (or Personal), even if the profile belongs to both teams.
       if (current && !KiloAccount.compatible(current)) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          imageModels: [],
+          failed: true,
+          failure: { kind: "scope_conflict" },
+          anonymous: false,
+        }
         return
       }
 
@@ -326,6 +393,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: false,
           anonymous: token === undefined,
           skippedOfflineTest: true,
@@ -333,27 +401,44 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; unauthorized: boolean } = token
-        ? yield* KiloProfile.get(api, token).pipe(
-            Effect.map((profile) => ({ profile: Option.some(profile), unauthorized: false })),
-            Effect.catch((error) =>
-              Effect.succeed({ profile: Option.none<KiloProfile.Info>(), unauthorized: error.message === "Invalid token" }),
-            ),
-          )
-        : { profile: Option.none<KiloProfile.Info>(), unauthorized: false }
+      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; failure?: KiloProfile.ProfileError["reason"] } =
+        token
+          ? yield* KiloProfile.get(api, token).pipe(
+              Effect.map((profile) => ({ profile: Option.some(profile) })),
+              Effect.catch((error) => Effect.succeed({ profile: Option.none<KiloProfile.Info>(), failure: error.reason })),
+            )
+          : { profile: Option.none<KiloProfile.Info>() }
       const profile = fetchedProfile.profile
       if (targetEpoch !== epoch) return
-// An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
+      // An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
       // fallback to the anonymous free catalog rather than hiding free models from an expired credential.
-      if (token && !organizationID && Option.isNone(profile) && !fetchedProfile.unauthorized) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+      if (token && !organizationID && fetchedProfile.failure && fetchedProfile.failure.kind !== "unauthorized") {
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          imageModels: [],
+          failed: true,
+          failure: fetchedProfile.failure,
+          anonymous: false,
+        }
         return
       }
       // A key login can have no saved organization. Team-only accounts must not request a personal catalog.
       if (current && !organizationID && Option.isSome(profile) && profile.value.hasPersonalAccount === false) {
         organizationID = KiloProfile.defaultOrganizationID(profile.value)
         if (resolved.personalSelected || !organizationID) {
-          catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+          catalog = {
+            account: current,
+            connection,
+            envActive,
+            models: [],
+            imageModels: [],
+            failed: true,
+            failure: { kind: "personal_unavailable" },
+            anonymous: false,
+          }
           return
         }
         current = { ...current, organizationID }
@@ -369,8 +454,19 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         KiloModes.clearCache()
         organizationModes = []
         yield* ctx.agent.reload()
-        catalog = { account: current, connection, envActive, models: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
+        catalog = { account: current, connection, envActive, models: [], imageModels: [], failed: true, failure: { kind: "organization_missing" }, anonymous: false }
         return
+      }
+
+      // A null local selection is provisional until the profile confirms Personal is available or
+      // resolves the default team. Never enroll under Personal before this decision is complete.
+      if (
+        current && Option.isSome(profile) && Option.isSome(sessionSync) &&
+        (organizationID !== reportedOrganization || current.token !== reportedToken)
+      ) {
+        reportedOrganization = organizationID
+        reportedToken = current.token
+        yield* sessionSync.value.organization({ directory: ctx.location.directory, organizationID })
       }
 
       // Organization agents share the same resolved account as the catalog. Errors and empty responses
@@ -414,7 +510,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           ? undefined
           : snapshotKey(base, fetched.success.anonymous ? undefined : token)
         if (writeKey && models.length > 0) {
-          yield* saveSnapshot(writeKey, { models, defaultModelID: resolvedDefault })
+          yield* saveSnapshot(writeKey, {
+            models,
+            imageModels: fetched.success.imageModels,
+            defaultModelID: resolvedDefault,
+          })
         }
         if (targetEpoch !== epoch) return
         catalog = {
@@ -422,6 +522,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models,
+          imageModels: fetched.success.imageModels,
           defaultModelID: resolvedDefault,
           failed: false,
           anonymous: fetched.success.anonymous,
@@ -439,6 +540,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: fetched.failure,
           anonymous: false,
@@ -457,6 +559,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: stored.models,
+          imageModels: stored.imageModels ?? [],
           // The stored default belongs to the stored models. `KiloDefaults.get` answers its static fallback when the
           // Kilo API is down, so it must not replace the stored default.
           defaultModelID: stored.defaultModelID ?? defaultModelID,
@@ -469,6 +572,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           connection,
           envActive,
           models: [],
+          imageModels: [],
           failed: true,
           failure: fetched.failure,
           anonymous: token === undefined,
@@ -487,7 +591,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             Effect.gen(function* () {
               if (targetEpoch !== epoch) return
               yield* loadCatalog(targetEpoch, attempt + 1)
-              if (targetEpoch === epoch) yield* ctx.provider.reload()
+              if (targetEpoch !== epoch) return
+              yield* ctx.provider.reload()
+              yield* settled
             }),
           ),
         ),
@@ -517,8 +623,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         (previous.account?.organizationID ?? previous.organizationID ?? null) !== resolved.organizationID ||
         JSON.stringify(previous.connection) !== JSON.stringify(resolved.connection)
       ) {
-        catalog = { envActive: false, models: [], failed: true, anonymous: true }
+        catalog = { envActive: false, models: [], imageModels: [], failed: true, anonymous: true }
         yield* ctx.provider.reload()
+        yield* publishCatalog
       }
       if (targetEpoch !== epoch) return
       server = resolved.server
@@ -528,19 +635,51 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const nextPolicy = yield* KiloConfigPolicy.get(config)
       if (targetEpoch !== epoch) return
       policy = nextPolicy
+      imageGeneration = imageGenerationEnabled(yield* config.entries())
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(
-          Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
+          Effect.andThen(
+            Effect.suspend(() =>
+              targetEpoch === epoch ? ctx.provider.reload().pipe(Effect.andThen(settled)) : Effect.void,
+            ),
+          ),
         ),
       )
     })
 
     yield* ctx.integration.transform((editor) => editor.method.update(device(() => server)))
 
+    // The first start (no stored catalog) and team scope, which fails closed, wait for the catalog, but only for
+    // FIRST_CATALOG_WAIT: the server answers 503 when the plugins of a Location take longer than 5 seconds to
+    // activate, and a team catalog takes several sequential Kilo API requests. A slower catalog keeps loading in the
+    // plugin scope and reloads the provider once it lands, as a retry does.
+    // The load signals a latch instead of being joined, so a slow one is not interrupted with the activation that
+    // stops waiting for it.
+    const awaitFirstCatalog = Effect.fnUntraced(function* (targetEpoch: number) {
+      const settled = yield* Latch.make(false)
+      yield* lock.withPermit(loadCatalog(targetEpoch, 0)).pipe(Effect.ensuring(settled.open), Effect.forkIn(scope))
+      const loaded = yield* settled.await.pipe(Effect.timeoutOption(FIRST_CATALOG_WAIT))
+      // The provider transform below reads a catalog that settled in time. One that lands later would be invisible,
+      // whether it carries chat or image models, so reload the provider, as a retry does. A failed load has no models
+      // to publish; its retry reloads on success.
+      if (Option.isSome(loaded)) return
+      yield* settled.await.pipe(
+        Effect.andThen(
+          Effect.suspend(() =>
+            !catalog.failed && targetEpoch === epoch
+              ? ctx.provider.reload().pipe(Effect.andThen(publishCatalog))
+              : Effect.void,
+          ),
+        ),
+        Effect.catch(() => Effect.void),
+        Effect.forkIn(scope),
+      )
+    })
+
     // A later start in a personal or anonymous scope with a stored catalog for that exact scope starts with it, so
     // activation does not wait for the network. The fresh catalog loads in the plugin scope and reloads the provider
-    // once, as a retry does. The first start (no stored catalog) and team scope, which fails closed, wait for it.
+    // once, as a retry does.
     const start = yield* resolveCurrentAccount
     server = start.server
     gateway = start.gateway
@@ -553,12 +692,28 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         connection: start.connection,
         envActive: start.envActive,
         models: stored.models,
+        imageModels: stored.imageModels ?? [],
         defaultModelID: stored.defaultModelID,
         failed: false,
         anonymous: start.account?.token === undefined,
       }
+    } else {
+      // Activation can return before the catalog lands, but the account reader below is registered before that and read
+      // once by the plugins that start after this one (codebase indexing), so publish the resolved account first.
+      catalog = {
+        account: start.account,
+        connection: start.connection,
+        envActive: start.envActive,
+        models: [],
+        imageModels: [],
+        failed: false,
+        anonymous: start.account?.token === undefined,
+      }
     }
-    yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
+    yield* stored ? Effect.forkIn(reload, scope) : awaitFirstCatalog(++epoch)
+    // Other Kilo plugins of this Location read the account; it is published above, before the first catalog can land.
+    const unregister = KiloGatewayAccounts.register(ctx.location.directory, activeAccount)
+    yield* Effect.addFinalizer(() => Effect.sync(unregister))
 
     // v1 loaded organization modes above built-ins and below local agent definitions. This transform
     // occupies that same pre-config position; replay restores built-ins when a mode is removed.
@@ -648,9 +803,23 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           settings,
           headers: mergedHeaders,
         },
-        models: catalog.models
-          .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
-          .map((item) => toModelInfo(item, baseURL, mergedHeaders, Boolean(catalog.account))),
+        models: [
+          ...catalog.models
+            .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
+            .map((item) => toModelInfo(item, baseURL, mergedHeaders, Boolean(catalog.account))),
+          // Kilo image models are registered only when image generation is enabled: the upstream image tool turns
+          // itself on whenever an image model exists, so registering them by default would add the tool definition to
+          // every request for users who never opted in. A model that is also a chat model stays a chat model: the
+          // provider registry keys models by id, so the image copy would replace it and remove it from the chat catalog.
+          ...catalog.imageModels
+            .filter(
+              (item) =>
+                imageGeneration &&
+                !catalog.models.some((chat) => chat.id === item.id) &&
+                (!policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true),
+            )
+            .map((item) => toImageModelInfo(item, baseURL, mergedHeaders)),
+        ],
         ...(sourceConnection ? { sourceConnection } : {}),
       })
     })
@@ -662,10 +831,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         }
         return
       }
-      if (
-        catalog.defaultModelID &&
-        models.list(id).some((model) => model.id === Model.ID.make(catalog.defaultModelID!))
-      ) {
+      // The default is a chat model: the provider also registers image models, which cannot serve a session.
+      const chat = () => models.list(id).filter((model) => (model.type ?? "chat") === "chat")
+      if (catalog.defaultModelID && chat().some((model) => model.id === Model.ID.make(catalog.defaultModelID!))) {
         models.default.set(id, Model.ID.make(catalog.defaultModelID))
         return
       }
@@ -674,7 +842,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         !catalog.models.some((model) => model.id === catalog.defaultModelID && model.mayTrainOnYourPrompts === true)
       )
         return
-      const allowed = models.list(id).find((model) => model.enabled !== false && model.status === "active")
+      const allowed = chat().find((model) => model.enabled !== false && model.status === "active")
       if (allowed) models.default.set(id, allowed.id)
     })
 
@@ -759,6 +927,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           if (catalog.failed) throw new Error("Unable to retrieve Kilo model catalog")
           const headers = new Headers(event.request.headers)
           headers.delete("x-api-key")
+          UPSTREAM_REQUEST_HEADERS.forEach((name) => headers.delete(name))
           const token = catalog.anonymous
             ? KiloAccount.ANONYMOUS_KEY
             : catalog.account?.token ?? KiloAccount.ANONYMOUS_KEY
@@ -830,8 +999,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           }
         : undefined
     }
+    // Routers pick a chat model for a session; the provider also registers image models, which are not candidates.
     const catalogModels = ctx.model.list().pipe(
-      Effect.map((result) => result.data),
+      Effect.map((result) => result.data.filter((model) => (model.type ?? "chat") === "chat")),
       Effect.orElseSucceed(() => []),
     )
     const clientRoutes = new Map<string, { provider: string; model: string }>()
@@ -865,7 +1035,34 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }),
     )
 
-    yield* ctx.rpc
+    // The key for an autocomplete request stays in this process: the Kilo token of the active scope, or the stored
+    // key of a direct provider with its environment variable as fallback.
+    const autocompleteCredential = (provider: KiloAutocomplete.AutocompleteProviderID) =>
+      Effect.gen(function* () {
+        if (provider === "kilo") {
+          if (!scopeCompatible()) return { ok: false as const, message: "Organization conflicts with the Kilo token scope" }
+          const account = activeAccount()
+          if (!account) return { ok: false as const, message: "Not authenticated with Kilo Gateway" }
+          return {
+            ok: true as const,
+            key: account.token,
+            headers: {
+              ...KiloHeaders.provider({ version: ctx.app.version, organizationID: account.organizationID }),
+              [KiloHeaders.HEADER_FEATURE]: "autocomplete",
+            },
+          }
+        }
+        const connection = yield* ctx.integration.connection.active(provider)
+        const credential = connection
+          ? yield* ctx.integration.connection.resolve(connection).pipe(Effect.orElseSucceed(() => undefined))
+          : undefined
+        const key =
+          (credential?.type === "key" ? credential.key : undefined) ??
+          KiloAutocomplete.DIRECT_PROVIDER_ENV[provider].map((name) => process.env[name]).find(Boolean)
+        if (!key) return { ok: false as const, message: `Missing ${provider} provider API key` }
+        return { ok: true as const, key, headers: {} }
+      })
+    const registration = yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         ...GatewayRouters.handlers({
           account: routerAccount,
@@ -884,10 +1081,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         authStatus: () =>
           Effect.sync(() => {
             const account = scopeCompatible() ? catalog.account : undefined
+            const organizationID = account?.organizationID ?? catalog.organizationID ?? null
             return {
               authenticated: Boolean(account?.token),
-              organizationID: account?.organizationID ?? catalog.organizationID ?? null,
+              organizationID,
               server: catalog.account?.server ?? server,
+              ...(account?.token && organizationID === null
+                ? { identity: snapshotKey(account.server ?? server, account.token) }
+                : {}),
             }
           }),
         profile: (_input, context) =>
@@ -1044,22 +1245,66 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               version: ctx.app.version,
             }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo embedding models")))
           }),
+        "audio.transcriptions": (input, context) =>
+          Effect.gen(function* () {
+            if (!scopeCompatible()) return yield* Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            const account = catalog.account
+            if (!account?.token) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTranscription.transcribe(
+              {
+                server: account.baseURL ?? gateway,
+                token: account.token,
+                organizationID: account.organizationID,
+                version: ctx.app.version,
+              },
+              input,
+            ).pipe(
+              Effect.mapError((failure) =>
+                context.error(
+                  failure.kind === "unauthorized" ? "unauthorized" : "failed",
+                  failure.status ? `Speech to text failed with status ${failure.status}` : "Speech to text failed",
+                ),
+              ),
+            )
+          }),
         "autocomplete.fimTarget": (input, context) =>
           Effect.suspend(() => {
             const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
             if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
             return Effect.succeed(target)
           }),
-        "autocomplete.editTarget": (input, context) =>
-          Effect.suspend(() => {
-            const target = KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
-            if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
-            return Effect.succeed(target)
+        "catalog.status": () => Effect.sync(() => catalogStatus(catalog)),
+        "autocomplete.fim": (input, context) =>
+          Effect.gen(function* () {
+            const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            const credential = yield* autocompleteCredential(target.provider)
+            if (!credential.ok) return yield* Effect.fail(context.error("unauthorized", credential.message))
+            return yield* Effect.tryPromise({
+              try: (signal) =>
+                KiloAutocomplete.requestFim({
+                  target,
+                  key: credential.key,
+                  headers: credential.headers,
+                  signal,
+                  prefix: input.prefix,
+                  suffix: input.suffix,
+                  maxTokens: input.maxTokens,
+                  temperature: input.temperature,
+                }),
+              catch: (error) =>
+                error instanceof KiloAutocomplete.AutocompleteRequestError
+                  ? context.error("request", error.message, { status: error.status })
+                  : context.error("failed", error instanceof Error ? error.message : String(error)),
+            })
           }),
         "session.metadata": (input) =>
           Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })
       .pipe(Effect.orDie)
+    // The first publish announces the reason of a new plugin instance, for example after a location reload, so
+    // clients of the previous instance read it again.
+    emitCatalog = (status) => registration.events.emit("catalog", status)
+    yield* settled
 
     yield* ctx.event.subscribe().pipe(
       Stream.filter(
@@ -1081,6 +1326,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     }
   }),
 })
+
+// The public reason drops the retry delay, so only a changed kind or status is a change. A failed catalog without a
+// reason is a changed scope that is still loading.
+function catalogStatus(catalog: CatalogState): KiloGatewayRpc.CatalogStatus {
+  if (!catalog.failed || !catalog.failure) return { failure: null }
+  const failure = catalog.failure
+  return { failure: { kind: failure.kind, ...(failure.status === undefined ? {} : { status: failure.status }) } }
+}
 
 function isLoopback(server: string): boolean {
   if (!URL.canParse(server)) return false
@@ -1160,9 +1413,13 @@ function toModelInfo(
   }
   return {
     ...base,
-    // kilo_port(gateway:59f57027c538) Explicit backend variants take precedence, including custom names/options.
-    variants:
-      source.variants && Object.keys(source.variants).length > 0
+    // kilo_port(gateway:59f57027c538) The Gateway's reasoning_options win; its `variants` are the legacy v1
+    // shape, so they only apply when reasoning_options is absent (e.g. admin-authored custom LLM variants).
+    variants: source.reasoningOptions
+      ? source.reasoning
+        ? Variant.resolve(base, source.reasoningOptions)
+        : []
+      : source.variants && Object.keys(source.variants).length > 0
         ? Object.entries(source.variants)
             // The native picker owns "default"; empty IDs cannot select a variant.
             .filter(([name]) => name !== "" && name !== "default")
@@ -1171,8 +1428,37 @@ function toModelInfo(
               settings: GatewayOptions.lower(source.aiSDKProvider, options),
             }))
         : source.reasoning
-          ? Variant.resolve(base, source.reasoningOptions)
+          ? Variant.resolve(base)
           : [],
+  }
+}
+
+function toImageModelInfo(source: KiloModels.Model, baseURL: string, headers: Record<string, string>): Model.Info {
+  const modelID = Model.ID.make(source.id)
+  return {
+    id: modelID,
+    modelID,
+    providerID: id,
+    type: "image",
+    name: source.name,
+    ...(source.family ? { family: Model.Family.make(source.family) } : {}),
+    // The Kilo host builds these models itself (the Gateway serves images on chat completions), so the package marks
+    // them for the host resolver instead of naming an AI package.
+    package: "@kilocode/gateway-images",
+    settings: { baseURL },
+    headers: { ...headers },
+    capabilities: {
+      tools: false,
+      input: [...source.capabilities.input],
+      output: [...source.capabilities.output],
+    },
+    variants: [],
+    time: { released: 0 },
+    // The Gateway prices an image, which the token cost model cannot express; models.dev drops per-image prices too.
+    cost: [],
+    status: "active",
+    enabled: true,
+    limit: { context: source.limit.context, output: source.limit.output },
   }
 }
 
@@ -1214,11 +1500,22 @@ function organizationKey(
 }
 
 function credentialInput(credential: Credential.Value): KiloAccount.Input | undefined {
-  if (credential.type === "external") return undefined
+  const token = KiloCredential.token(credential)
+  if (token === undefined) return undefined
   const metadata = Option.getOrUndefined(decodeMetadata(credential.metadata ?? {}))
   return {
-    token: credential.type === "oauth" ? credential.access : credential.key,
+    token,
     server: metadata?.server,
     organizationID: metadata?.organizationID,
   }
+}
+
+/** `experimental.image_generate` is on only when a document sets it to `true` or a `{ model }` object. */
+function imageGenerationEnabled(entries: readonly Entry[]): boolean {
+  const document = entries.findLast(
+    (entry): entry is Extract<Entry, { type: "document" }> =>
+      entry.type === "document" && entry.info.experimental?.image_generate !== undefined,
+  )
+  const value = document?.info.experimental?.image_generate
+  return value !== undefined && value !== false
 }

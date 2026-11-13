@@ -33,7 +33,9 @@ on:
       - .github/workflows/kilo-v2-publish.yml
       - packages/kilo-cli/script/build.ts
       - packages/kilo-cli/script/publish.ts
+      - packages/kilo-cli/script/theme-smoke.ts
       - packages/cli/script/postinstall.mjs
+      - script/kilocode/smoke-host.ts
       - script/kilocode/publish-client.ts
       - script/kilocode/client-manifest.ts
       - script/kilocode/release-env.ts
@@ -64,6 +66,17 @@ jobs:
 
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
+
+      # Linux targets compile the bundled Bubblewrap sandbox helper with Zig.
+      - name: Setup Zig for Linux sandbox helpers
+        if: runner.os == 'Linux'
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
 
       # All targets on one runner. Bun cross-compiles, and the build installs the native packages of every target.
       # The version is 0.0.0-v2-<run number>.
@@ -102,7 +115,8 @@ jobs:
           prefix="$(mktemp -d)"
           npm install --prefix "$prefix" --no-audit --no-fund packages/kilo-cli/dist/cli-linux-x64/*.tgz packages/kilo-cli/dist/cli/*.tgz
           test "$("$prefix/node_modules/.bin/kilo2" --version)" = "kilo2 v$KILO_VERSION"
-          test "$("$prefix/node_modules/.bin/kilo" --version)" = "kilo2 v$KILO_VERSION"
+          # v2 must not install a `kilo` command, which would start v2 for v1 users.
+          test ! -e "$prefix/node_modules/.bin/kilo"
         env:
           KILO_VERSION: ${{ steps.version.outputs.version }}
 

@@ -1,0 +1,109 @@
+// A model picker for settings: the shared ModelSelector over the v2 model catalog, plus a variant picker when the
+// selected model has variants. `clearable` adds a clear control that calls `onChange` with undefined.
+import type { ModelInfo } from "@opencode/client"
+import { Component, Show, createMemo } from "solid-js"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { useLanguage } from "../../context/language"
+import { useV2 } from "../../v2/client"
+import { ModelSelectorBase } from "../shared/ModelSelector"
+import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
+
+export interface ModelPickerValue {
+  providerID: string
+  modelID: string
+  variant?: string
+}
+
+export interface ModelPickerProps {
+  value?: ModelPickerValue
+  onChange: (value: ModelPickerValue | undefined) => void
+  clearLabel: string
+  clearable?: boolean
+  blocked?: boolean
+  /** Show the variant picker when the selected model has variants. Defaults to true. */
+  showVariants?: boolean
+  preserveVariantOnReselect?: boolean
+  showUnavailableVariant?: boolean
+  /** The catalog to pick from. Defaults to the location chat catalog, which excludes image models. */
+  models?: () => ModelInfo[] | undefined
+  modelLabel?: string
+  variantLabel?: string
+  clearButtonLabel?: string
+  /** Offer the Gateway small model. Only the small model row sets this, as on v1. */
+  includeAutoSmall?: boolean
+}
+
+const ModelPicker: Component<ModelPickerProps> = (props) => {
+  const v2 = useV2()
+  const language = useLanguage()
+  // A supplied catalog is authoritative: while it loads (undefined), the picker must not fall back to chat models.
+  const models = () => (props.models ? props.models() : v2.data.location.model.list())
+  const providers = () => v2.data.location.provider.list()
+
+  const selected = createMemo(() =>
+    models()?.find((model) => model.providerID === props.value?.providerID && model.id === props.value?.modelID),
+  )
+  const variants = createMemo(() => selected()?.variants.map((variant) => variant.id) ?? [])
+
+  // The row wraps in a narrow panel, so the variant and clear controls move below the model instead of being cut off.
+  return (
+    <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap", "min-width": 0 }}>
+      <div style={{ "min-width": 0, "max-width": "100%" }}>
+        <ModelSelectorBase
+          models={models()}
+          providers={providers()}
+          gateway={v2.kiloModels().entries}
+          placement="bottom-start"
+          value={props.value ? { providerID: props.value.providerID, modelID: props.value.modelID } : null}
+          blocked={props.blocked}
+          includeAutoSmall={props.includeAutoSmall}
+          placeholder={props.clearLabel}
+          // As v1, a clearable setting lists its "Not set" row first in the picker.
+          allowClear={props.clearable}
+          clearLabel={props.clearLabel}
+          label={props.modelLabel}
+          onSelect={(providerID, modelID) => {
+            if (!providerID || !modelID) return props.onChange(undefined)
+            props.onChange(
+              props.preserveVariantOnReselect && props.value?.providerID === providerID && props.value.modelID === modelID
+                ? props.value
+                : { providerID, modelID },
+            )
+          }}
+        />
+      </div>
+      <Show
+        when={
+          props.showVariants !== false &&
+          (variants().length > 0 || (props.showUnavailableVariant && props.value?.variant))
+        }
+      >
+        <ThinkingSelectorBase
+          variants={variants()}
+          value={props.value?.variant}
+          onSelect={(variant) => props.value && props.onChange({ ...props.value, variant })}
+          onClear={() =>
+            props.value && props.onChange({ providerID: props.value.providerID, modelID: props.value.modelID })
+          }
+          allowClear
+          clearLabel={props.clearLabel}
+          placement="bottom-start"
+          globalTrigger={false}
+          blocked={props.blocked}
+          label={props.variantLabel}
+        />
+      </Show>
+      <Show when={props.clearable && props.value}>
+        <IconButton
+          size="small"
+          variant="ghost"
+          icon="close"
+          aria-label={props.clearButtonLabel ?? props.clearLabel}
+          onClick={() => props.onChange(undefined)}
+        />
+      </Show>
+    </div>
+  )
+}
+
+export default ModelPicker

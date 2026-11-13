@@ -1,35 +1,38 @@
-// The v2 sidebar and the Settings panel: main's providers for theme, dialogs, language and rich content, with the v2 data layer.
+// The v2 sidebar: the shared webview providers with the v2 data layer. The Settings and Profile panels have their
+// own entry (`webview-ui/settings`), so this bundle carries only the chat transcript and its content. A subagent
+// editor tab loads the same bundle with the `subagent` view.
 import { Show } from "solid-js"
-import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { Toast } from "@kilocode/kilo-ui/toast"
-import { LanguageProvider } from "../context/language"
-import { RichProvider } from "../context/rich-provider"
-import { VSCodeProvider } from "../context/vscode"
+import { SpeechToTextStatusProvider } from "../components/speech-to-text/status"
+import { NotificationsProvider } from "../context/notifications"
+import { WorkStyleProvider } from "../context/work-style"
+import { IndexingProvider } from "../context/indexing"
+import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { Chat } from "./chat"
 import { V2Provider } from "./client"
-import { SettingsView } from "./settings"
+import { WebviewShell } from "./shell"
+import { SubagentViewer } from "./subagent-viewer"
 import "../styles/chat.css"
 
 export default function App(props: { directory: string; view: string }) {
   return (
-    <ThemeProvider defaultTheme="kilo-vscode">
-      <DialogProvider>
-        <VSCodeProvider>
-          <LanguageProvider vscodeLanguage={() => document.documentElement.lang}>
-            <RichProvider>
-              <V2Provider directory={props.directory}>
+    <WebviewShell>
+      <V2Provider directory={props.directory}>
+        <KiloEmbeddingModelsProvider>
+          <IndexingProvider>
+            <NotificationsProvider>
+              <SpeechToTextStatusProvider>
                 <div class="container">
-                  <Show when={props.view === "settings"} fallback={<Chat />}>
-                    <SettingsView />
-                  </Show>
+                  <WorkStyleProvider>
+                    <Show when={props.view === "subagent"} fallback={<Chat />}>
+                      <SubagentViewer />
+                    </Show>
+                  </WorkStyleProvider>
                 </div>
-              </V2Provider>
-            </RichProvider>
-          </LanguageProvider>
-        </VSCodeProvider>
-        <Toast.Region />
-      </DialogProvider>
-    </ThemeProvider>
+              </SpeechToTextStatusProvider>
+            </NotificationsProvider>
+          </IndexingProvider>
+        </KiloEmbeddingModelsProvider>
+      </V2Provider>
+    </WebviewShell>
   )
 }

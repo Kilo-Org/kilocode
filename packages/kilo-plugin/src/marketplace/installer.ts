@@ -1,18 +1,30 @@
 export * as Installer from "./installer"
 
+import path from "node:path"
+import { Agent, AgentError } from "./agent"
+import { MarketplaceConfig } from "./config"
 import { MarketplaceMcp, McpError } from "./mcp"
+import { PluginConfig, PluginConfigError } from "./plugin-config"
+import { pluginIdentity } from "./plugin-spec"
 import type { Entry } from "./registry"
 import { Skill, SkillError } from "./skill"
 
 export class FetchError extends Error {}
-export type Failure = SkillError | McpError | FetchError
+export type Failure = SkillError | McpError | AgentError | PluginConfigError | FetchError
 
-/** An owned resource at its current absolute location; the stored record keeps only ids and server names. */
+/** An owned resource at its current absolute location; the stored record keeps only ids and names. */
 export type Resource =
   | { readonly path: string; readonly fingerprints?: readonly string[] }
+  | { readonly agent: string; readonly path: string; readonly fingerprints?: readonly string[] }
   | {
       readonly config: string
       readonly server: string
+      readonly target?: string
+      readonly fingerprints?: readonly string[]
+    }
+  | {
+      readonly config: string
+      readonly plugin: string
       readonly target?: string
       readonly fingerprints?: readonly string[]
     }
@@ -28,6 +40,7 @@ export interface Written {
 export async function install(input: {
   entry: Entry
   skills: string
+  agents: string
   config: string
   option?: string
   params?: Readonly<Record<string, string>>
@@ -35,8 +48,10 @@ export async function install(input: {
   beforeWrite?: (intent: Written) => Promise<void>
 }): Promise<Written> {
   const item = input.entry.item
+  if (item.kind === "agent") return agent(input, item)
   const configuration = item.kind === "mcp" ? mcp(input.entry, input.option, input.params ?? {}) : undefined
   const server = configuration?.server
+  const plugin = item.kind === "plugin" ? await pluginEntry(item) : undefined
   if (item.kind === "skill" && !input.entry.archive) throw new SkillError("invalid", `Skill ${item.id} has no archive`)
   const skills = []
   for (const companion of item.kind === "skill"
@@ -44,14 +59,23 @@ export async function install(input: {
     : (input.entry.companions ?? [])) {
     skills.push(await Skill.prepare({ root: input.skills, ...companion, archive: await download(companion.archive) }))
   }
-  const config = server
+  const config: Resource | undefined = server
     ? {
         config: input.config,
         server: MarketplaceMcp.serverName(item.id),
         target: await MarketplaceMcp.resolveFile(input.config),
         fingerprints: [MarketplaceMcp.serverFingerprint(server)],
       }
-    : undefined
+    : plugin
+      ? {
+          config: input.config,
+          plugin: plugin.identity,
+          target: await MarketplaceConfig.resolveFile(input.config),
+          fingerprints: [PluginConfig.entryFingerprint(plugin.spec)],
+        }
+      : undefined
+  const mcpConfig = config && "server" in config ? config : undefined
+  const pluginConfig = config && "plugin" in config ? config : undefined
   const resources: Resource[] = [
     ...skills.map((skill) => ({ path: skill.target, fingerprints: [skill.fingerprint] })),
     ...(config ? [config] : []),
@@ -59,13 +83,7 @@ export async function install(input: {
   if (new Set(resources.map(key)).size !== resources.length)
     throw new SkillError("invalid", "Duplicate install resources")
   const prior = input.previous ? [...active(input.previous), ...(input.previous.pending ?? [])] : []
-  for (const resource of prior.filter((old) =>
-    resources.some(
-      (resource) =>
-        key(old) === key(resource) ||
-        ("config" in old && "config" in resource && old.config === resource.config && old.server === resource.server),
-    ),
-  ))
+  for (const resource of prior.filter((old) => resources.some((resource) => same(old, resource))))
     await checkTarget(resource)
   const allowed = (resource: Resource) =>
     prior.filter((old) => same(old, resource)).flatMap((old) => old.fingerprints ?? [])
@@ -76,13 +94,20 @@ export async function install(input: {
   // Preparation and ownership preflight finish before durable intent and target writes.
   for (const resource of resources) {
     if ("path" in resource) await Skill.preflight(resource.path, accepted(resource))
+    else if ("plugin" in resource)
+      await PluginConfig.preflight({
+        file: resource.config,
+        identity: resource.plugin,
+        fingerprints: accepted(resource),
+      })
     else
       await MarketplaceMcp.preflight({ file: resource.config, name: resource.server, fingerprints: accepted(resource) })
   }
   const pending = prior.filter((old) => !resources.some((resource) => same(old, resource)))
   const written: Written = {
     paths: skills.map((skill) => skill.target),
-    ...(server ? { config: input.config, server: MarketplaceMcp.serverName(item.id) } : {}),
+    ...(config ? { config: input.config } : {}),
+    ...(server ? { server: MarketplaceMcp.serverName(item.id) } : {}),
     resources,
     ...(pending.length ? { pending } : {}),
   }
@@ -102,18 +127,26 @@ export async function install(input: {
       // Never roll back another concurrent install's tree merely because its fingerprint matches.
       if (!existed) created.push(resource)
     }
-    if (server && config) {
+    if (server && mcpConfig) {
       await MarketplaceMcp.write({
         file: input.config,
-        name: config.server,
+        name: mcpConfig.server,
         server,
         replace: true,
-        fingerprints: accepted(config),
+        fingerprints: accepted(mcpConfig),
         secret: configuration?.parameters.some(
           (parameter) => parameter.secret && input.params?.[parameter.key]?.trim(),
         ),
       })
     }
+    if (plugin && pluginConfig)
+      await PluginConfig.write({
+        file: input.config,
+        spec: plugin.spec,
+        identity: plugin.identity,
+        replace: true,
+        fingerprints: accepted(pluginConfig),
+      })
   } catch (error) {
     const results = await Promise.allSettled(created.map(cleanup))
     const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []))
@@ -128,8 +161,69 @@ export async function install(input: {
   return written
 }
 
+async function pluginEntry(item: Entry["item"]) {
+  if (!item.plugin?.spec.trim()) throw new PluginConfigError("invalid_params", `Plugin ${item.id} has no package spec`)
+  const spec = item.plugin.spec.trim()
+  const identity = await pluginIdentity(spec)
+  if (!identity) throw new PluginConfigError("invalid_params", `Plugin ${item.id} has an unreadable package spec`)
+  return { spec, identity }
+}
+
+/**
+ * An agent is one markdown document. Ownership, conflicts and rollback use the shared resource helpers below, so an
+ * agent gets the same recovery and modification protection as a skill tree.
+ */
+async function agent(
+  input: {
+    entry: Entry
+    agents: string
+    previous?: Written & { readonly id: string; readonly recovering?: boolean }
+    beforeWrite?: (intent: Written) => Promise<void>
+  },
+  item: Entry["item"],
+): Promise<Written> {
+  if (!item.agent) throw new AgentError("invalid", `Agent ${item.id} has no content`)
+  const prepared = await Agent.prepare({ root: input.agents, id: item.id, content: item.agent })
+  const resource: Resource = {
+    agent: path.basename(prepared.target, ".md"),
+    path: prepared.target,
+    fingerprints: [prepared.fingerprint],
+  }
+  const prior = input.previous ? [...active(input.previous), ...(input.previous.pending ?? [])] : []
+  const allowed = prior.filter((old) => same(old, resource)).flatMap((old) => old.fingerprints ?? [])
+  const accepted = [...new Set([...allowed, ...(resource.fingerprints ?? [])])]
+  await Agent.preflight(prepared.target, accepted)
+  // This install writes one document, so it replaces nothing else. Every other prior resource (a companion
+  // skill tree, an MCP entry) stays owned instead of being queued for cleanup, which would delete it.
+  const retained = prior.filter((old) => key(old) !== key(resource))
+  const written: Written = { paths: [], resources: [resource, ...retained] }
+  await input.beforeWrite?.({
+    ...written,
+    resources: [{ ...resource, fingerprints: accepted }, ...retained],
+  })
+  const existed = (await resourceFingerprint(resource)) !== undefined
+  try {
+    await Agent.write(prepared, accepted)
+  } catch (error) {
+    // Never roll back another concurrent install's document merely because its fingerprint matches.
+    if (existed) throw error
+    const results = await Promise.allSettled([cleanup(resource)])
+    const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []))
+    if (failures.length)
+      throw new AggregateError(
+        [error, ...failures],
+        `Agent install failed: ${message(error)}; rollback failed: ${failures.map(message).join("; ")}`,
+        { cause: error },
+      )
+    throw error
+  }
+  return written
+}
+
 /** Redact before interpolation, so secrets cannot reach the rendered configuration preview. */
 export function preview(input: { entry: Entry; option?: string; params?: Readonly<Record<string, string>> }) {
+  if (input.entry.item.kind !== "mcp")
+    throw new McpError("invalid_params", "Only MCP servers have a configuration preview")
   const index =
     input.option === undefined ? 0 : input.entry.item.options.findIndex((option) => option.name === input.option)
   const parameters = MarketplaceMcp.parameters(input.entry.item, input.entry.item.options[index])
@@ -157,41 +251,65 @@ function mcp(entry: Entry, option: string | undefined, params: Readonly<Record<s
 }
 
 function key(resource: Resource) {
+  if ("agent" in resource) return JSON.stringify(["agent", resource.path])
+  if ("plugin" in resource) return JSON.stringify(["plugin", resource.target ?? resource.config, resource.plugin])
   return JSON.stringify(
     "path" in resource ? ["path", resource.path] : ["config", resource.target ?? resource.config, resource.server],
   )
 }
 
 function same(left: Resource, right: Resource) {
-  return (
-    key(left) === key(right) ||
-    ("config" in left &&
-      "config" in right &&
-      (!left.target || !right.target) &&
-      left.config === right.config &&
-      left.server === right.server)
-  )
+  if (key(left) === key(right)) return true
+  if (!("config" in left) || !("config" in right)) return false
+  if (left.target && right.target) return false
+  if (left.config !== right.config) return false
+  if ("plugin" in left && "plugin" in right) return left.plugin === right.plugin
+  return "server" in left && "server" in right && left.server === right.server
 }
 
 function active(record: Written & { id: string }): readonly Resource[] {
+  // `paths` carries every resource path, agent documents included. Deducing agents from their id here as well would
+  // yield each one twice, so a rerun would inspect it twice and uninstall would remove it twice.
+  const agentPaths = new Set(
+    (record.resources ?? []).flatMap((owned) => ("agent" in owned ? [owned.path] : [])),
+  )
   // Legacy paths without fingerprints never authorize destroying existing content.
-  return [
-    ...record.paths.map((path) => ({ path })),
-    ...(record.config
+  const resources: Resource[] = [
+    ...record.paths.filter((path) => !agentPaths.has(path)).map((path) => ({ path })),
+    ...(record.resources ?? []).flatMap((owned): Resource[] =>
+      "agent" in owned
+        ? [{ agent: owned.agent, path: path.join(path.dirname(owned.path), `${owned.agent}.md`) }]
+        : "plugin" in owned
+          ? [{ config: owned.config, plugin: owned.plugin }]
+          : [],
+    ),
+    // A plugin record carries its own config resource; its config file must not be read as an MCP server named
+    // after the install id. A legacy MCP record may predate `server`, so the derived name is the fallback.
+    ...(record.config && !(record.resources ?? []).some((resource) => "plugin" in resource)
       ? [{ config: record.config, server: record.server ?? MarketplaceMcp.serverName(record.id) }]
       : []),
-  ].map(
+  ]
+  return resources.map(
     (resource) =>
       record.resources?.find((owned) =>
-        "path" in resource
-          ? "path" in owned && owned.path === resource.path
-          : "config" in owned && owned.config === resource.config && owned.server === resource.server,
+        "agent" in resource
+          ? "agent" in owned && owned.agent === resource.agent
+          : "path" in resource
+            ? "path" in owned && owned.path === resource.path
+            : "plugin" in resource
+              ? "plugin" in owned && owned.plugin === resource.plugin
+              : "server" in owned &&
+                "config" in owned &&
+                owned.config === resource.config &&
+                owned.server === resource.server,
       ) ?? resource,
   )
 }
 
 export async function resourceFingerprint(resource: Resource): Promise<string | undefined> {
   await checkTarget(resource)
+  if ("agent" in resource) return Agent.fingerprint(resource.path)
+  if ("plugin" in resource) return PluginConfig.fingerprint(resource.config, resource.plugin)
   return "path" in resource
     ? Skill.fingerprint(resource.path)
     : MarketplaceMcp.fingerprint(resource.config, resource.server)
@@ -199,6 +317,13 @@ export async function resourceFingerprint(resource: Resource): Promise<string | 
 
 export async function cleanup(resource: Resource) {
   await checkTarget(resource)
+  if ("agent" in resource) return Agent.remove(resource.path, resource.fingerprints)
+  if ("plugin" in resource)
+    return PluginConfig.remove({
+      file: resource.config,
+      identity: resource.plugin,
+      fingerprints: resource.fingerprints,
+    })
   if ("path" in resource) return Skill.remove(resource.path, resource.fingerprints)
   await MarketplaceMcp.remove({ file: resource.config, name: resource.server, fingerprints: resource.fingerprints })
 }
@@ -207,9 +332,9 @@ async function checkTarget(resource: Resource) {
   if (
     "config" in resource &&
     resource.target &&
-    resource.target !== (await MarketplaceMcp.resolveFile(resource.config))
+    resource.target !== (await MarketplaceConfig.resolveFile(resource.config))
   )
-    throw new McpError("conflict", `MCP config target changed since installation: ${resource.config}`)
+    throw new McpError("conflict", `Config target changed since installation: ${resource.config}`)
 }
 
 export async function uninstall(record: Written & { readonly id: string }) {

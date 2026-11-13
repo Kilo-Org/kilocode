@@ -1,6 +1,6 @@
 import type { FileSystem } from "@opencode/core/filesystem"
 import { describe, expect, test } from "bun:test"
-import { AIError, TransportError } from "@opencode/ai"
+import { AIError, TransportError } from "@opencode/ai/effect"
 import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { LayerNode } from "@opencode/util/effect/layer-node"
@@ -20,7 +20,7 @@ import { SessionEvent } from "@opencode/core/session/event"
 import { SessionInbox } from "@opencode/core/session/inbox"
 import { SessionMessage } from "@opencode/core/session/message"
 import { SessionRunner } from "@opencode/core/session/runner/index"
-import { SessionInboxTable, SessionTable } from "@opencode/core/session/sql"
+import { SessionInboxTable, SessionMessageTable, SessionTable } from "@opencode/core/session/sql" // kilocode_change - steer
 import { SessionStore } from "@opencode/core/session/store"
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, LayerMap, Scope } from "effect"
 import { eq } from "drizzle-orm"
@@ -387,7 +387,7 @@ describe("SessionRestart background recovery", () => {
       yield* seedSessions(database, [parent])
       yield* seedSessions(database, [child], { parent_id: parent, time_suspended: Date.now() })
       yield* seedBackground(jobs, parent, [
-        { id: "sh_background_orphan", shellID: "sh_background_orphan", command: "sleep 60" },
+        { id: "sh_background_orphan", shellID: "sh_background_orphan", command: "sleep 60", description: "Waits for the timeout" }, // kilocode_change
       ])
       yield* seedBackground(jobs, child, [{ id: "call-child-shell", shellID: "sh_child_orphan", command: "sleep 30" }])
 
@@ -431,7 +431,7 @@ describe("SessionRestart background recovery", () => {
       expect((yield* store.context(parent)).filter((message) => message.type === "synthetic")).toMatchObject([
         {
           type: "synthetic",
-          description: "sleep 60",
+          description: "Waits for the timeout", // kilocode_change - the recovery summary wins
           text: expect.stringContaining("server restarted"),
           metadata: {
             source: "shell",
@@ -444,6 +444,7 @@ describe("SessionRestart background recovery", () => {
       expect((yield* store.context(child)).filter((message) => message.type === "synthetic")).toMatchObject([
         {
           type: "synthetic",
+          description: "sleep 30", // kilocode_change - without a summary the command is the fallback
           metadata: {
             source: "shell",
             jobID: "call-child-shell",
@@ -536,6 +537,44 @@ describe("SessionRestart background recovery", () => {
         shellID: "sh_completed",
         state: "completed",
       })
+      expect(yield* restarted.pendingBackground).toEqual([])
+    }),
+  )
+
+  it.effect("delivers an image outcome persisted before its notification, and cancels one still running", () =>
+    Effect.gen(function* () {
+      const database = yield* Database.Service
+      const jobs = yield* Job.Service
+      const sessionID = Session.ID.make("ses_background_image")
+      yield* seedSessions(database, [sessionID])
+      const recovery = (path: string) => ({ kind: "image" as const, sessionID, path, model: "test/painter" })
+      yield* jobs.start({
+        id: "image_done",
+        type: "experimental_image_generate",
+        recovery: recovery("/tmp/done.png"),
+        run: Effect.succeed("Image request finished. Saved image: /tmp/done.png (test/painter)."),
+      })
+      yield* jobs.background("image_done")
+      yield* jobs.wait({ id: "image_done" })
+      yield* jobs.start({
+        id: "image_running",
+        type: "experimental_image_generate",
+        recovery: recovery("/tmp/running.png"),
+        run: Effect.never,
+      })
+      yield* jobs.background("image_running")
+
+      const scope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
+      const restarted = yield* Job.make.pipe(Effect.provideService(Scope.Scope, scope))
+      const context = yield* buildExecution(scope, () => Effect.void, undefined, restarted)
+      yield* Context.get(context, SessionRestart.Service).resumeSuspendedSessions
+
+      const inbox = yield* SessionInbox.list(database.db, sessionID)
+      expect(inbox.map((item) => (item.type === "synthetic" ? item.payload.text : undefined)).toSorted()).toEqual([
+        '<image id="image_done" state="completed">\nImage request finished. Saved image: /tmp/done.png (test/painter).\n</image>',
+        '<image id="image_running" state="cancelled">\nImage request for /tmp/running.png was cancelled because the server restarted.\n</image>',
+      ])
       expect(yield* restarted.pendingBackground).toEqual([])
     }),
   )
@@ -1209,6 +1248,64 @@ describe("SessionExecution interrupt continuation", () => {
     }),
   )
 
+  // kilocode_change start - steer: a steered interruption still stops a model call when no checkpoint is running.
+  it.effect("still interrupts a steered model call when no compaction is running", () =>
+    Effect.gen(function* () {
+      const database = yield* Database.Service
+      const sessionID = Session.ID.make("ses_continue_steering")
+      yield* seedSessions(database, [sessionID])
+
+      const draining = yield* Deferred.make<void>()
+      const scope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
+      const context = yield* buildExecution(scope, () =>
+        Deferred.succeed(draining, undefined).pipe(Effect.andThen(Effect.never)),
+      )
+      const execution = Context.get(context, SessionExecution.Service)
+      yield* execution.resume(sessionID).pipe(Effect.forkScoped)
+      yield* Deferred.await(draining)
+
+      // A guard that suppressed every steered interruption would leave the model call running and pass the other case.
+      expect(yield* execution.interrupt(sessionID, { resume: true, steer: true })).toBeTrue()
+      yield* execution.awaitIdle(sessionID)
+      expect(yield* execution.active).toEqual(new Set())
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - steer: a steered interruption leaves a running compaction alone.
+  it.effect("leaves a running compaction alone when a steer interrupts", () =>
+    Effect.gen(function* () {
+      const database = yield* Database.Service
+      const bus = yield* Bus.Service
+      const sessionID = Session.ID.make("ses_continue_compacting")
+      yield* seedSessions(database, [sessionID])
+      // A compaction is durable before its summary request: this is the row a client reads to decide about a steer.
+      yield* bus.publish(SessionEvent.Compaction.Started, { sessionID, reason: "auto" })
+
+      const draining = yield* Deferred.make<void>()
+      const scope = yield* Scope.make()
+      yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void))
+      const context = yield* buildExecution(scope, () =>
+        Deferred.succeed(draining, undefined).pipe(Effect.andThen(Effect.never)),
+      )
+      const execution = Context.get(context, SessionExecution.Service)
+      yield* execution.resume(sessionID).pipe(Effect.forkScoped)
+      yield* Deferred.await(draining)
+
+      // A steer may stop a model call; it never stops the checkpoint being written for the same Session.
+      expect(yield* execution.interrupt(sessionID, { resume: true, steer: true })).toBeFalse()
+      expect(yield* execution.isActive(sessionID)).toBeTrue()
+      expect(yield* compactionStatus(database, sessionID)).toBe("running")
+
+      // The same request from a client that predates the flag is a stop, and a stop still cancels a compaction.
+      expect(yield* execution.interrupt(sessionID, { resume: true })).toBeTrue()
+      yield* execution.awaitIdle(sessionID)
+      expect(yield* execution.active).toEqual(new Set())
+    }),
+  )
+  // kilocode_change end
+
   it.effect("keeps a control item parked behind a queued prompt on continue", () =>
     Effect.gen(function* () {
       const database = yield* Database.Service
@@ -1236,7 +1333,7 @@ describe("SessionExecution interrupt continuation", () => {
 function seedBackground(
   jobs: Job.Interface,
   sessionID: Session.ID,
-  background: ReadonlyArray<{ readonly id: string; readonly shellID: string; readonly command: string }>,
+  background: ReadonlyArray<{ readonly id: string; readonly shellID: string; readonly command: string; readonly description?: string }>, // kilocode_change
 ) {
   return Effect.forEach(
     background,
@@ -1245,7 +1342,7 @@ function seedBackground(
         yield* jobs.start({
           id: job.id,
           type: "shell",
-          recovery: { kind: "shell", sessionID, shellID: job.shellID, command: job.command },
+          recovery: { kind: "shell", sessionID, shellID: job.shellID, command: job.command, ...(job.description ? { description: job.description } : {}) }, // kilocode_change
           run: Effect.never,
         })
         yield* jobs.background(job.id)
@@ -1321,6 +1418,22 @@ function claims(database: Database.Service["Service"]) {
       Effect.map((rows) => Object.fromEntries(rows.map((row) => [row.id, row.claimed !== null]))),
     )
 }
+
+// kilocode_change start - steer
+/** The newest compaction row's status, read as a client would: straight from the projection. */
+function compactionStatus(database: Database.Service["Service"], sessionID: Session.ID) {
+  return database.db
+    .select({ data: SessionMessageTable.data })
+    .from(SessionMessageTable)
+    .where(eq(SessionMessageTable.session_id, sessionID))
+    .all()
+    .pipe(
+      Effect.orDie,
+      Effect.map((rows) => rows.at(-1)?.data as { status?: string } | undefined),
+      Effect.map((data) => data?.status),
+    )
+}
+// kilocode_change end
 
 function attempts(database: Database.Service["Service"], sessionID: Session.ID) {
   return database.db

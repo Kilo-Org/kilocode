@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import type { SessionMessageAssistantReasoning } from "@opencode/client"
 import { useI18n } from "../context/i18n"
@@ -7,15 +7,12 @@ import { Icon } from "./icon"
 import { Markdown } from "./markdown"
 import { reasoningHeading, reasoningSummary } from "./reasoning-heading"
 import { reasoningOpenState, type ReasoningDisplay } from "./reasoning-open"
-import {
-  createThrottledValue,
-  STREAMING_TEXT_RENDER_THROTTLE_MS,
-  TEXT_RENDER_THROTTLE_MS,
-  useCollapsible,
-} from "./tool-utils"
+import { createSmoothText, useCollapsible } from "./tool-utils"
+
+// A line glides into view within this time, however slowly the stream arrives.
+const GLIDE_MAX_MS = 200
 
 const collapsed = new Set<string>()
-const streamed = new Set<string>()
 const opened = new Set<string>()
 
 function remember(set: Set<string>, id: string) {
@@ -34,12 +31,11 @@ export function ReasoningContent(props: {
 }) {
   const i18n = useI18n()
   const done = () => !!props.settled || props.item.time?.completed !== undefined
-  const display = createThrottledValue(
+  const display = createSmoothText(
     () => props.item.text.replace("[REDACTED]", "").trim(),
-    () => (done() ? TEXT_RENDER_THROTTLE_MS : STREAMING_TEXT_RENDER_THROTTLE_MS),
+    () => !done(),
   )
   const view = createMemo(() => reasoningHeading(display(), !done()))
-  if (!done()) remember(streamed, props.id)
   const mode = () => props.mode ?? "expanded"
   const capped = () => mode() === "preview"
   const headline = () => mode() === "headline"
@@ -47,7 +43,6 @@ export function ReasoningContent(props: {
   const derive = () =>
     reasoningOpenState({
       mode: mode(),
-      streamed: streamed.has(props.id),
       userOpened: opened.has(props.id),
       userCollapsed: collapsed.has(props.id),
     })
@@ -85,43 +80,106 @@ export function ReasoningContent(props: {
   const [frame, setFrame] = createSignal<HTMLDivElement>()
   const [viewport, setViewport] = createSignal<HTMLDivElement>()
   const [body, setBody] = createSignal<HTMLDivElement>()
-  const scroll = { away: false, top: 0, frame: undefined as number | undefined }
-  const stop = () => {
-    if (scroll.frame === undefined) return
-    cancelAnimationFrame(scroll.frame)
-    scroll.frame = undefined
-  }
   const [mounted, setMounted] = createSignal(start)
   createEffect(() => {
     if (open()) setMounted(true)
   })
   useCollapsible({ content, body: frame, open, defer: true })
-  const bottom = () => {
-    const node = viewport()
-    return node ? Math.max(0, node.scrollHeight - node.clientHeight) : 0
+  // While the capped preview streams, its content is anchored to the bottom of the box (see message-part.css) and
+  // never scrolls. Each new line is placed where it belongs at once and then glides up from below with a transform
+  // animation. The compositor runs that animation, so the motion stays smooth even when the main thread is busy,
+  // and its speed follows how fast lines arrive, so a steady stream moves at a steady pace.
+  const [follow, setFollow] = createSignal(true)
+  const following = () => capped() && !done() && !manual() && follow()
+  const [pinned, setPinned] = createSignal(following())
+  const glide = {
+    height: 0,
+    cap: 0,
+    grown: 0,
+    rate: 0,
+    offset: 0,
+    duration: 0,
+    anim: undefined as Animation | undefined,
   }
-  const tick = () => {
-    scroll.frame = undefined
+  // The cap comes from the theme stylesheet. Without a real length there is nothing to glide under, so following
+  // stays off instead of translating a box that is not capped and not anchored.
+  const capOf = (node: HTMLElement) => {
+    const value = Number.parseFloat(getComputedStyle(node).maxHeight)
+    return Number.isFinite(value) ? value : 0
+  }
+  const remaining = () => {
+    const anim = glide.anim
+    if (!anim || anim.playState !== "running") return 0
+    return glide.offset * Math.max(0, 1 - Number(anim.currentTime ?? 0) / glide.duration)
+  }
+  const unpin = (wait: boolean) => {
+    const finish = () => {
+      if (following()) return
+      glide.anim?.cancel()
+      glide.anim = undefined
+      setPinned(false)
+      // The box is a scroll viewport again; rest it at the end, where the anchored content was.
+      const node = viewport()
+      if (node) node.scrollTop = node.scrollHeight
+    }
+    const anim = glide.anim
+    if (wait && anim && anim.playState === "running") return void anim.finished.then(finish, finish)
+    finish()
+  }
+  createEffect(
+    on(following, (value) => {
+      if (!value) return unpin(follow())
+      glide.height = body()?.offsetHeight ?? 0
+      const node = viewport()
+      glide.cap = node ? capOf(node) : 0
+      glide.grown = 0
+      glide.rate = 0
+      if (glide.cap) setPinned(true)
+    }),
+  )
+  createResizeObserver(body, (rect) => {
     const node = viewport()
-    if (done() || scroll.away || !node) return
-    const rest = bottom() - node.scrollTop
-    if (Math.abs(rest) < 0.5) {
-      node.scrollTop = bottom()
+    const el = body()
+    if (!capped() || !node || !el) return
+    if (!pinned()) {
+      // The theme stylesheet can land after the first layout, so try the cap again while following is on.
+      if (following() && !glide.cap) {
+        glide.cap = capOf(node)
+        if (glide.cap) setPinned(true)
+      }
+      if (done() && follow()) node.scrollTop = node.scrollHeight
       return
     }
-    node.scrollTop += rest * 0.25
-    scroll.frame = requestAnimationFrame(tick)
-  }
-  createResizeObserver(body, () => {
-    const node = viewport()
-    if (!capped() || scroll.away || !node) return
-    if (!done()) {
-      scroll.frame ??= requestAnimationFrame(tick)
+    if (!glide.height) {
+      glide.height = rect.height
       return
     }
-    node.scrollTop = bottom()
+    const delta = rect.height - glide.height
+    glide.height = rect.height
+    if (!glide.cap) glide.cap = capOf(node)
+    if (!glide.cap) return
+    // Until the content outgrows the box, the box itself grows and nothing needs to move. Overflow above an
+    // anchored box is not scrollable, so `scrollHeight` cannot tell; the box reaching its cap can.
+    if (delta <= 0 || node.offsetHeight < glide.cap - 0.5) return
+    const now = performance.now()
+    const gap = glide.grown ? Math.min(500, Math.max(8, now - glide.grown)) : 0
+    glide.grown = now
+    if (gap) glide.rate = glide.rate ? glide.rate * 0.9 + (delta / gap) * 0.1 : delta / gap
+    const offset = Math.min(node.clientHeight, remaining() + delta)
+    // The measured growth rate keeps the pace steady; the pull drains what is left of a burst.
+    const speed = glide.rate + offset / GLIDE_MAX_MS
+    glide.offset = offset
+    glide.duration = offset / speed
+    glide.anim?.cancel()
+    glide.anim = el.animate([{ transform: `translateY(${offset}px)` }, { transform: "none" }], {
+      duration: glide.duration,
+      easing: "linear",
+    })
+    // Start on this frame's clock instead of pending until the next one, so a glide that is replaced every frame
+    // still advances and `remaining` reads where it really is.
+    glide.anim.startTime = document.timeline.currentTime
   })
-  onCleanup(stop)
+  onCleanup(() => glide.anim?.cancel())
   return (
     <Show when={view().title || view().body}>
       <div
@@ -130,6 +188,7 @@ export function ReasoningContent(props: {
         data-auto-collapse={capped() ? "" : undefined}
         data-headline={headline() ? "" : undefined}
         data-manual={manual() ? "" : undefined}
+        data-follow={pinned() ? "" : undefined}
       >
         <Show
           when={view().body || !done()}
@@ -153,17 +212,17 @@ export function ReasoningContent(props: {
                   <div
                     data-slot="reasoning-content"
                     ref={setViewport}
+                    // The anchored preview cannot scroll, so a wheel or a touch up hands it back to the user as a normal
+                    // scroll viewport. Scrolling back to the end anchors it again.
                     onScroll={(event) => {
+                      if (follow() || done()) return
                       const node = event.currentTarget
-                      if (node.scrollHeight - node.clientHeight - node.scrollTop < 10) scroll.away = false
-                      if (node.scrollTop < scroll.top - 1) scroll.away = true
-                      scroll.top = node.scrollTop
+                      if (node.scrollHeight - node.clientHeight - node.scrollTop < 10) setFollow(true)
                     }}
                     onWheel={(event) => {
-                      if (event.deltaY >= 0) return
-                      scroll.away = true
-                      stop()
+                      if (event.deltaY < 0) setFollow(false)
                     }}
+                    onTouchStart={() => setFollow(false)}
                   >
                     <div data-slot="reasoning-body" ref={setBody}>
                       <Show when={mounted()}>

@@ -132,4 +132,8 @@ export const dict = {
   "ui.message.feedback.helpful": "役に立ちました",
   "ui.message.feedback.notHelpful": "役に立ちませんでした",
   "ui.message.feedback.clearRating": "評価をクリア",
+  // Chart tool card
+  "ui.tool.chart": "グラフ",
+  "ui.tool.chart.invalid": "グラフの設定が無効です — type と data を含める必要があります",
+  "ui.tool.chart.failed": "グラフを描画できませんでした",
 }

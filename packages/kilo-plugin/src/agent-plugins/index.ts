@@ -16,7 +16,7 @@ import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { readdir } from "node:fs/promises"
 import path from "node:path"
 import { Effect, FiberMap, Option, PubSub, Scope, Semaphore, Stream } from "effect"
-import { McpError, MarketplaceMcp, configFile } from "../marketplace/mcp"
+import { MarketplaceConfig } from "../marketplace/config"
 import type { Diagnostic } from "./diagnostic"
 import { KiloExtension } from "./extension"
 import { Install, InstallError } from "./install"
@@ -93,10 +93,10 @@ export const Plugin = define<Global.Service | Scope.Scope>({
       for (const item of directories)
         for (const candidate of KiloConfigFiles.writeCandidates(item, scope === "global")) {
           if ((await Paths.kind(candidate)) !== "file") continue
-          const resolved = await MarketplaceMcp.resolveFile(candidate)
+          const resolved = await MarketplaceConfig.resolveFile(candidate)
           if (
             scope === "project" &&
-            !KiloConfigFiles.writeCandidates(await MarketplaceMcp.resolveFile(item), false).includes(resolved)
+            !KiloConfigFiles.writeCandidates(await MarketplaceConfig.resolveFile(item), false).includes(resolved)
           )
             continue
           files.set(resolved, candidate)
@@ -256,9 +256,9 @@ export const Plugin = define<Global.Service | Scope.Scope>({
               // file of both scopes; disabling writes the scope's config file, as other config writes do.
               const files = input.enabled
                 ? [...(await existing("global")), ...(await existing("project"))]
-                : [await configFile(directory(input.scope), input.scope === "global")]
+                : [await MarketplaceConfig.configFile(directory(input.scope), input.scope === "global")]
               for (const file of files)
-                await MarketplaceMcp.updateValue(file, ["agent_plugins"], (current) =>
+                await MarketplaceConfig.updateValue(file, ["agent_plugins"], (current) =>
                   withDisabled(current, input.name, input.enabled),
                 )
             },
@@ -512,10 +512,7 @@ function resolve(item: string, home: string, directory: string) {
 function failure(cause: unknown, context: RpcCallContext<typeof KiloAgentPluginsRpc.Definition.methods.install>) {
   const message = cause instanceof Error ? cause.message : String(cause)
   if (cause instanceof InstallError) return context.error(cause.reason, message)
-  if (cause instanceof McpError)
-    return context.error(
-      cause.reason === "conflict" ? "conflict" : cause.reason === "invalid_params" ? "invalid" : "write_failed",
-      message,
-    )
+  if (cause instanceof MarketplaceConfig.ConfigError)
+    return context.error(cause.reason === "conflict" ? "conflict" : "invalid", message)
   return context.error("write_failed", message)
 }

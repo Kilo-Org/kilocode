@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Voltooid (gemeld door het model)",
+  "session.goal.complete": "Voltooid",
   "session.goal.blocked": "Geblokkeerd",
   "session.goal.restart": "Doel opnieuw starten",
   ...anacondaDesktopDict,
@@ -269,6 +269,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Verzenden prompt mislukt",
 
   "mcp.status.connected": "verbonden",
+  "mcp.status.pending": "verbinden",
   "mcp.status.failed": "mislukt",
   "mcp.status.needs_auth": "authenticatie vereist",
   "mcp.status.needs_registration": "clientregistratie vereist",
@@ -299,6 +300,9 @@ export const dict = {
   "provider.failure.http": "Providerfout (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Providerfout.",
   "provider.failure.schema": "Onverwacht antwoord van de provider.",
+  "provider.failure.organizationMissing": "Het geselecteerde team is niet meer beschikbaar. Selecteer een ander team.",
+  "provider.failure.scopeConflict": "Het geselecteerde team conflicteert met het team van je Kilo-token.",
+  "provider.failure.personalUnavailable": "Dit account heeft geen persoonlijk account. Selecteer een team.",
 
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
@@ -307,7 +311,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
+  "ui.permission.noChanges": "Geen wijzigingen.",
   "ui.permission.reject": "Weigeren",
+  "ui.permission.allowAllSites": "Alle sites toestaan",
   "ui.permission.feedbackPlaceholder": "Vertel Kilo wat het anders moet doen",
   "ui.permission.feedbackHint": "Enter om te weigeren, Esc om te annuleren",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
@@ -349,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Beoordelen",
   "session.review.filesChanged": "{{count}} bestanden gewijzigd",
+  "session.review.viewTurnChanges": "Wijzigingen van de beurt bekijken",
+  "session.review.turnChangesEmpty": "Geen wijzigingen in deze beurt.",
   "session.review.loadingChanges": "Wijzigingen laden...",
   "session.review.noChanges": "Geen wijzigingen",
 
@@ -703,7 +711,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
   "settings.webTools.title": "Webtools",
-  "settings.webTools.description": "Configureer zoeken op internet en browserautomatisering.",
+  "settings.webTools.description": "Configureer het zoeken op internet.",
   "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
   "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Zoeken op internet",
@@ -856,6 +864,7 @@ export const dict = {
     "Dit bestand is geëxporteerd vanuit een nieuwere versie van Kilo. Sommige instellingen worden mogelijk genegeerd.",
   "settings.aboutKiloCode.importSettings.success":
     "Instellingen geïmporteerd. Controleer de bovenstaande wijzigingen en klik vervolgens op Opslaan.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetrie",
   "settings.aboutKiloCode.telemetry.description":
@@ -1103,12 +1112,15 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "Server-URL",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Bladeren door Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstarttime-out (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalogustime-out (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Uitvoeringstime-out (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
+    "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo2.json of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows zijn aangepaste slash-commando's gedefinieerd in je configuratie. Typ /command-name in de chat om ze aan te roepen. Commando's worden geconfigureerd in opencode.json onder de sectie 'command'.",
+    "Workflows zijn aangepaste opdrachten die in je configuratie of in Markdown-opdrachtbestanden zijn gedefinieerd. Je kunt voor elke workflow een model en een redeneervariant instellen.",
   "settings.agentBehaviour.workflows.empty":
-    "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
+    "Geen aangepaste opdrachten gevonden. Voeg opdrachten toe aan kilo2.json of een Markdown-bestand in .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
   "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1116,10 +1128,12 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Globale modeloverride",
 
   "settings.autoApprove.description":
-    "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+    "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. Bash staat standaard op Vragen.",
   "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
   "settings.autoApprove.maxCost.description":
     "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Toon een niet-blokkerende waarschuwing wanneer de kosten van een sessie dit USD-bedrag bereiken. Laat leeg om dit uit te schakelen.",
   "settings.autoApprove.level.allow": "Toestaan",
   "settings.autoApprove.level.ask": "Vragen",
   "settings.autoApprove.level.deny": "Weigeren",
@@ -1198,6 +1212,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
+  "settings.context.compactionKeep.title": "Recente tokens behouden",
+  "settings.context.compactionKeep.description":
+    "Recente tokens die letterlijk behouden blijven bij het comprimeren van de context. Laat leeg om 15.000 te behouden.",
+  "settings.context.compactionBuffer.title": "Compressiebuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens die vrij blijven onder de contextlimiet voordat er wordt gecomprimeerd. Laat leeg om 15% vrij te houden, minimaal 16.000.",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
@@ -1278,13 +1298,18 @@ export const dict = {
     "Kies of blokken met MCP- en algemene tools standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
+  "settings.display.codeMode.title": "Code Mode-blokken",
+  "settings.display.codeMode.description":
+    "Kies of Code Mode-blokken beginnen met hun tool-aanroepen in een lijst of als één regel. Het script blijft altijd verborgen tot je het opent.",
+  "settings.display.codeMode.expanded": "Uitgeklapt",
+  "settings.display.codeMode.collapsed": "Ingeklapt",
 
   "settings.display.shortcutHints.title": "Sneltoetstips tonen",
   "settings.display.shortcutHints.description":
     "Toon in de lege prompt de sneltoets die past bij wat je nu doet, bijvoorbeeld hoe je geselecteerde code toevoegt of terugkeert naar de prompt.",
   "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
-    "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
     "Toont waarom een tool-aanroep automatisch is goedgekeurd, zoals een overeenkomende machtigingsregel of een agentstandaard.",
@@ -1379,6 +1404,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
+  "task.backgroundAgents.promoteFailed": "Deze agent kon niet op de achtergrond doorgaan. Mogelijk is hij al klaar.",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
   "task.backgroundAgents.clearFinished": "Voltooide wissen",
@@ -1438,6 +1464,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Machtigingen per agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Deze instellingen gelden alleen voor deze aangepaste agent. Wijzig de waarde 'Standaard' in een keuzelijst om een eigen waarde in te stellen, of gebruik 'Pad toevoegen' of 'Commando toevoegen' voor uitzonderingen voor specifieke tools.",
   "settings.agentBehaviour.permissions.title": "Berekende machtigingen",
   "settings.agentBehaviour.permissions.count": "{{count}} regels",
   "settings.agentBehaviour.permissions.effective": "Effectief (wildcard):",
@@ -1458,6 +1487,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Bestanden gewijzigd in je werkboom maar nog niet gestaged, plus niet-gevolgde (nieuwe) bestanden.",
   "diffViewer.source.session.label": "Sessie",
+  "diffViewer.source.turn.tooltip": "Bestanden die Kilo tijdens één beurt heeft gewijzigd.",
+  "diffViewer.source.turn.label": "Beurt",
   "diffViewer.source.session.tooltip":
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
@@ -1505,6 +1536,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systeembrowser",
   "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "chat.reply.toolbar": "Geselecteerde tekst",
+  "chat.reply.quote": "Citeren",
+  "chat.reply.quoteHint": "Citeer in je antwoord",
+  "chat.reply.commentHint": "Deze passage becommentariëren",
+  "chat.reply.copy": "Kopiëren",
+  "chat.reply.sendHint": "Dit commentaar nu naar Kilo sturen",
+  "chat.reply.commentLater": "Bewaren voor je volgende bericht",
+  "chat.reply.count": "Antwoorden ({{count}})",
+  "chat.reply.sendAll": "Alles sturen",
+  "chat.reply.showInChat": "In chat tonen",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
   "browserTab.disabled":

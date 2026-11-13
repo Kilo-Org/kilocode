@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite"
 import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { mkdir, mkdtemp, readdir, realpath, rm } from "node:fs/promises"
@@ -25,8 +26,8 @@ test("a boot without XDG variables keeps everything under the kilo2 directories 
       bin: path.join(expected.cache, "bin"),
       log: path.join(expected.data, "log"),
       repos: path.join(expected.data, "repos"),
-      // Part 1 changes directories only: upstream's file names stay.
-      db: path.join(expected.data, "opencode-local.db"),
+      // The Kilo file name of a run from source (channel `local`), not upstream's.
+      db: path.join(expected.data, "kilo2-local.db"),
     })
     await created(expected)
     expect(await strays(root)).toEqual([])
@@ -51,7 +52,7 @@ test("a boot with XDG variables keeps everything under the kilo2 directories of 
       state: path.join(root, "xdg/state/kilo2"),
       tmp: path.join(root, "tmp/kilo2"),
     }
-    expect(paths).toMatchObject({ ...expected, db: path.join(expected.data, "opencode-local.db") })
+    expect(paths).toMatchObject({ ...expected, db: path.join(expected.data, "kilo2-local.db") })
     await created(expected)
     expect(await strays(root)).toEqual([])
   } finally {
@@ -59,17 +60,162 @@ test("a boot with XDG variables keeps everything under the kilo2 directories of 
   }
 }, 120_000)
 
-test("KILO_CONFIG_DIR still overrides the config directory", async () => {
+// The boot step strips shell newlines from HOME and the XDG bases (cleanEnv) before util/global loads. An
+// XDG_STATE_HOME that is only a newline becomes empty and must be treated as unset: the state directory falls
+// back to the default under HOME, like roots()'s `||`, instead of a relative `kilo2` in the process CWD.
+test("a newline-only XDG_STATE_HOME falls back to the default state directory", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-nl-")))
+  const cwd = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-cwd-")))
+  try {
+    const env = environment(root, { XDG_STATE_HOME: "\n" })
+    await mkdir(env.TMPDIR, { recursive: true })
+    const paths = parse(await cliIn(cwd, env, "debug", "paths"))
+    expect(paths.state).toBe(path.join(root, ".local/state/kilo2"))
+    // No stray relative `kilo2` directory created in the process working directory.
+    expect(await readdir(cwd)).toEqual([])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(cwd, { recursive: true, force: true })
+  }
+}, 60_000)
+
+// A trailing newline on HOME (e.g. `export HOME=$(cmd)`) is stripped before the paths resolve, so they sit under
+// the cleaned HOME instead of a "<home>\n" directory that fails at startup.
+test("a trailing newline on HOME is stripped before the directories resolve", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-home-nl-")))
+  try {
+    const env = environment(root, {})
+    env.HOME = root + "\n"
+    env.USERPROFILE = root + "\n"
+    await mkdir(env.TMPDIR, { recursive: true })
+    const paths = parse(await cli(env, "debug", "paths"))
+    expect(paths.data).toBe(path.join(root, ".local/share/kilo2"))
+    expect(paths.state).toBe(path.join(root, ".local/state/kilo2"))
+    // The reported home is the cleaned value, so `~` expansion and provider credential paths resolve cleanly.
+    expect(paths.home).toBe(root)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 60_000)
+
+// KILO_TEST_HOME is translated to OPENCODE_TEST_HOME (trimmed), which overrides the reported home directory.
+test("KILO_TEST_HOME overrides the reported home directory", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-testhome-")))
+  const testHome = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-th-")))
+  try {
+    const paths = parse(await cli(environment(root, { KILO_TEST_HOME: `  ${testHome}  ` }), "debug", "paths"))
+    expect(paths.home).toBe(testHome)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(testHome, { recursive: true, force: true })
+  }
+}, 60_000)
+
+test("KILO2_CONFIG_DIR overrides the config directory", async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-config-")))
   try {
     const config = path.join(root, "custom-config")
-    const result = await cli(environment(root, { KILO_CONFIG_DIR: config }), "debug", "paths")
+    const result = await cli(environment(root, { KILO2_CONFIG_DIR: config }), "debug", "paths")
     expect(parse(result).config).toBe(config)
     expect(parse(result).data).toBe(path.join(root, ".local/share/kilo2"))
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 }, 60_000)
+
+// A build before the Kilo file names let the upstream server name the database. The first boot copies it to the
+// Kilo file. KILO2_DB still wins.
+test("the first boot copies the database of an earlier build to the Kilo file", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-legacy-")))
+  try {
+    const data = path.join(root, ".local/share/kilo2")
+    await mkdir(data, { recursive: true })
+    const old = new Database(path.join(data, "opencode-local.db"))
+    old.run("CREATE TABLE marker (id TEXT)")
+    old.run("INSERT INTO marker VALUES ('earlier build')")
+    old.close()
+
+    const env = environment(root, {})
+    expect(parse(await cli(env, "debug", "paths")).db).toBe(path.join(data, "kilo2-local.db"))
+    const copy = new Database(path.join(data, "kilo2-local.db"), { readonly: true })
+    expect(copy.query("SELECT id FROM marker").all()).toEqual([{ id: "earlier build" }])
+    copy.close()
+
+    const custom = path.join(root, "custom.db")
+    expect(parse(await cli(environment(root, { KILO2_DB: custom }), "debug", "paths")).db).toBe(custom)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 60_000)
+
+// A v1 user can have KILO_DB, KILO_CONFIG and KILO_CONFIG_DIR set to v1's own storage. v2 ignores them: it keeps its
+// database and config under kilo2, and v1's files stay byte for byte as they were.
+test("v1 storage variables leave v1's database, config and credentials untouched", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-v1-")))
+  try {
+    const data = path.join(root, ".local/share/kilo")
+    const config = path.join(root, ".config/kilo")
+    await mkdir(data, { recursive: true })
+    await mkdir(config, { recursive: true })
+    const v1 = {
+      [path.join(data, "kilo.db")]: "v1 database",
+      [path.join(data, "auth.json")]: JSON.stringify({ kilo: { type: "api", key: "v1-key" } }),
+      [path.join(config, "kilo.json")]: JSON.stringify({ model: "kilo/v1" }),
+    }
+    await Promise.all(Object.entries(v1).map(([file, content]) => Bun.write(file, content)))
+    const listing = async () => [...(await readdir(data)), ...(await readdir(config))].toSorted()
+    const before = await listing()
+
+    const paths = await boot(root, {
+      KILO_DB: path.join(data, "kilo.db"),
+      KILO_CONFIG: path.join(config, "kilo.json"),
+      KILO_CONFIG_DIR: config,
+    })
+
+    expect(paths).toMatchObject({
+      config: path.join(root, ".config/kilo2"),
+      db: path.join(root, ".local/share/kilo2/kilo2-local.db"),
+    })
+    expect(await listing()).toEqual(before)
+    for (const [file, content] of Object.entries(v1)) expect(await Bun.file(file).text()).toBe(content)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 120_000)
+
+// The TUI's local plugins come from the project's `.kilo2/plugins`, as its config does. `plugin list` runs the same
+// discovery as the TUI, in the host process: a plugin in upstream's `.opencode`, or in v1 Kilo's `.kilo` or
+// `.kilocode`, is not listed, and the run writes nothing into the project: no new directory, and no file in the
+// fixture directories that already exist.
+test("plugin list reads the project's local plugins from .kilo2 only", async () => {
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-plugins-")))
+  const project = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-app-dirs-project-")))
+  try {
+    using backend = fixture()
+    const env = environment(root, { KILO_API_URL: backend.url })
+    await mkdir(env.TMPDIR, { recursive: true })
+    await mkdir(path.join(project, ".git"))
+    const names = [".kilo2", ".opencode", ".kilo", ".kilocode"]
+    await Promise.all(
+      names.map((name) =>
+        Bun.write(path.join(project, name, "plugins", `from-${name.slice(1)}`, "tui.ts"), "export default {}\n"),
+      ),
+    )
+    // Every entry of the project, so a write into an existing `.opencode`, `.kilo` or `.kilocode` also shows.
+    const listing = async () => (await readdir(project, { recursive: true })).toSorted()
+    const before = await listing()
+
+    const output = await cliIn(project, env, "plugin", "list", "--standalone")
+
+    expect(output).toContain(path.join(project, ".kilo2", "plugins", "from-kilo2"))
+    for (const name of names.slice(1)) expect(output).not.toContain(path.join(project, name, "plugins"))
+    expect(await listing()).toEqual(before)
+    expect(await strays(root)).toEqual([])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+    await rm(project, { recursive: true, force: true })
+  }
+}, 120_000)
 
 // Runs `debug paths`, a background service lifecycle with one Location boot, and a `serve --stdio` server with one
 // Location boot. Returns the paths the CLI reports.
@@ -94,7 +240,7 @@ async function boot(root: string, xdg: Record<string, string>) {
 function environment(root: string, extra: Record<string, string>) {
   // The test preload isolates XDG for in-process tests; a host boot must not inherit it, or any directory override.
   const inherited = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO)_/.test(key)),
+    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key)),
   )
   return {
     ...inherited,
@@ -109,11 +255,15 @@ function environment(root: string, extra: Record<string, string>) {
   }
 }
 
+// The package directory, so its bunfig.toml preload compiles the TUI modules the CLI imports. The service
+// inherits it.
 async function cli(env: Record<string, string | undefined>, ...args: string[]) {
-  // The package directory, so its bunfig.toml preload compiles the TUI modules the CLI imports. The service
-  // inherits it.
+  return cliIn(path.dirname(import.meta.dir), env, ...args)
+}
+
+async function cliIn(cwd: string, env: Record<string, string | undefined>, ...args: string[]) {
   const child = Bun.spawn([process.execPath, entry, ...args], {
-    cwd: path.dirname(import.meta.dir),
+    cwd,
     env,
     stdout: "pipe",
     stderr: "pipe",
@@ -185,15 +335,18 @@ async function created(expected: Record<string, string>) {
   )
   expect(listed.every((entries) => entries !== undefined)).toBe(true)
   // The boot wrote the database and the log into the kilo2 data directory.
-  expect(await readdir(expected.data)).toEqual(expect.arrayContaining(["opencode-local.db", "log"]))
+  expect(await readdir(expected.data)).toEqual(expect.arrayContaining(["kilo2-local.db", "log"]))
   expect((await readdir(path.join(expected.data, "log"))).some((name) => name.endsWith(".log"))).toBe(true)
 }
 
-// Every directory under the root that is named after the opencode or Kilo v1 app directory.
+// Every directory under the root that is named after the opencode or Kilo v1 app directory, or after their project
+// directories.
 async function strays(root: string) {
   const entries = await readdir(root, { recursive: true, withFileTypes: true })
   return entries
-    .filter((entry) => entry.isDirectory() && (entry.name === "opencode" || entry.name === "kilo"))
+    .filter(
+      (entry) => entry.isDirectory() && ["opencode", "kilo", ".opencode", ".kilo", ".kilocode"].includes(entry.name),
+    )
     .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)))
     .toSorted()
 }

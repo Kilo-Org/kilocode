@@ -86,8 +86,21 @@
   scrollbar-gutter: stable;
 }
 
+/* The prompt rail's column runs from 8px to 24px off the panel edge, and the
+   active and hovered ticks grow across it. The default 16px gutter puts content
+   at 21px, under those ticks. While the rail is visible, 23px plus the half
+   scrollbar offset of .message-list-content starts content at 28px, keeping the
+   same 4px clearance that a resting tick has in v1. */
+.message-list-container[data-prompt-rail="left"] .message-list {
+  padding-left: max(var(--chat-gutter, 16px), 23px);
+}
+
+.message-list-container[data-prompt-rail="right"] .message-list {
+  padding-right: max(var(--chat-gutter, 16px), 23px);
+}
+
 /* Rows that overflow Virtua's container must not change the scroll height
-   before Virtua measures them. See VirtualBox in MessageList.tsx. `clip` does
+   before Virtua measures them. See VirtualBox in v2/messages.tsx. `clip` does
    not create a scroll container, so sticky content keeps working. */
 [data-slot="message-list-virtual"] {
   overflow: visible clip;
@@ -104,19 +117,31 @@
   font-size: var(--kilo-font-size-13);
 }
 
+/* The loader replaces the button while a page loads. Both fill the same slot,
+   so the swap does not move the transcript below it. */
+.message-list-history {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: center;
+  height: 42px;
+}
+
 .message-list-page-loader {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 0 12px;
+  height: 30px;
   color: var(--vscode-descriptionForeground);
   font-size: var(--kilo-font-size-12);
 }
 
 .message-list-load-older {
   display: block;
-  margin: 0 auto 12px;
+  box-sizing: border-box;
+  height: 30px;
+  margin: 0 auto;
   border: 1px solid var(--vscode-button-border, transparent);
   border-radius: 6px;
   background: var(--vscode-button-secondaryBackground);
@@ -153,6 +178,13 @@
   min-height: 100%;
   align-items: center;
   justify-content: center;
+}
+
+/* A pending question keeps `.message-list-content` for its lane, so the welcome
+   screen inside it loses the centering above. Grow it into the free space; it
+   centers its own content. */
+.message-list-content > .message-list-empty {
+  flex: 1;
 }
 
 .message-list-empty {
@@ -500,16 +532,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-.vscode-session-turn-diffs {
+.vscode-session-turn-diffs,
+.vscode-session-turn-changes {
   width: 100%;
 }
 
 /* Treat every chat host as a readable document. User messages, assistant
-   prose, tool calls, diffs, and the composer all share one centered lane. */
-.chat-view .vscode-session-turn-user,
-.chat-view .vscode-session-turn-diffs,
-.chat-view .error-card,
-.chat-view [data-component="tool-part-wrapper"] {
+   prose, tool calls, diffs, and the composer all share one centered lane.
+   The lane belongs to the transcript's own children rather than to each row
+   kind: a row a component adds later (a notice, an error, a tool part) cannot
+   fall out of it by missing a selector here. Nested rows and tool bodies fill
+   the lane, so they need no width of their own. */
+.chat-view .message-list-content > * {
   width: 100%;
   max-width: var(--chat-readable-width);
   margin-inline: auto;
@@ -577,6 +611,9 @@
   margin-block: var(--prompt-gutter) var(--prompt-min-gutter);
 }
 
+/* The startup error and the permission card live in the composer column, so
+   they need the same readable lane as the composer rather than the full width
+   of a wide surface such as Agent Manager. */
 .chat-view .chat-input > .startup-error-banner,
 .chat-view .chat-input > [data-component="permission-shortcuts"] {
   box-sizing: border-box;

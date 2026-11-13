@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Completato (segnalato dal modello)",
+  "session.goal.complete": "Completato",
   "session.goal.blocked": "Bloccato",
   "session.goal.restart": "Riavvia obiettivo",
   ...anacondaDesktopDict,
@@ -212,6 +212,7 @@ export const dict = {
     "Il pulsante 'Migliora prompt' aiuta a migliorare il prompt aggiungendo contesto, chiarimenti o riformulazioni. Scrivi un prompt qui e fai di nuovo clic sul pulsante per vedere come funziona.",
   "prompt.toast.promptSendFailed.title": "Invio prompt non riuscito",
   "mcp.status.connected": "connesso",
+  "mcp.status.pending": "connessione",
   "mcp.status.failed": "non riuscito",
   "mcp.status.needs_auth": "richiede autenticazione",
   "mcp.status.needs_registration": "richiede registrazione client",
@@ -232,7 +233,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Questo esegue l'intero comando senza le restrizioni di filesystem e rete, solo per questo comando. Git deve scrivere in .git, che è di sola lettura nella sandbox e si trova fuori dall'albero di lavoro in un worktree collegato. Le regole di autorizzazione Bash e l'approvazione automatica non approvano mai automaticamente questa richiesta.",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
+  "ui.permission.noChanges": "Nessuna modifica.",
   "ui.permission.reject": "Rifiuta",
+  "ui.permission.allowAllSites": "Consenti tutti i siti",
   "ui.permission.feedbackPlaceholder": "Di' a Kilo cosa fare diversamente",
   "ui.permission.feedbackHint": "Enter per rifiutare, Esc per annullare",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
@@ -273,6 +276,8 @@ export const dict = {
   "ui.approval.outsideWorkspace": "(fuori dall'area di lavoro: {{file}})",
   "session.tab.review": "Revisione",
   "session.review.filesChanged": "{{count}} file modificati",
+  "session.review.viewTurnChanges": "Visualizza le modifiche del turno",
+  "session.review.turnChangesEmpty": "Nessuna modifica in questo turno.",
   "session.review.loadingChanges": "Caricamento modifiche...",
   "session.review.noChanges": "Nessuna modifica",
   "session.messages.loadingEarlier": "Caricamento messaggi precedenti...",
@@ -579,7 +584,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamento agente",
   "settings.autoApprove.title": "Approvazione automatica",
   "settings.webTools.title": "Strumenti web",
-  "settings.webTools.description": "Configura la ricerca web e l'automazione del browser.",
+  "settings.webTools.description": "Configura la ricerca web.",
   "settings.webTools.webSearch.enable": "Abilita per tutti i provider",
   "settings.webTools.browserAutomation": "Automazione del browser",
   "settings.webTools.webSearch.title": "Ricerca web",
@@ -721,6 +726,7 @@ export const dict = {
     "Questo file è stato esportato da una versione più recente di Kilo. Alcune impostazioni potrebbero essere ignorate.",
   "settings.aboutKiloCode.importSettings.success":
     "Impostazioni importate. Controlla le modifiche sopra, poi fai clic su Salva.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
   "settings.aboutKiloCode.telemetry.title": "Telemetria",
   "settings.aboutKiloCode.telemetry.description":
     'La telemetria è controllata dall\'impostazione integrata di VS Code. Per disabilitarla, vai in Impostazioni > Telemetria > Livello telemetria e impostala su "off". Riavvia VS Code per applicare la modifica.',
@@ -951,12 +957,15 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL server",
   "settings.agentBehaviour.addMcp.url.placeholder": "es. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Sfoglia Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Timeout di avvio (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Timeout del catalogo (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Timeout di esecuzione (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Nessun server MCP configurato. Aggiungi server MCP in kilo.jsonc, o chiedi all'agente di aggiungerli per te.",
+    "Nessun server MCP configurato. Aggiungi server MCP in kilo2.json, o chiedi all'agente di aggiungerli per te.",
   "settings.agentBehaviour.workflows.description":
-    "I workflow sono comandi slash personalizzati definiti nella configurazione. Scrivi /nome-comando nella chat per invocarli. I comandi sono configurati in opencode.json nella sezione 'command'.",
+    "I workflow sono comandi personalizzati definiti nella configurazione o nei file Markdown dei comandi. Puoi impostare un modello e una variante di ragionamento per ogni workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Nessun comando personalizzato configurato. Aggiungi comandi a opencode.json per vederli qui.",
+    "Nessun comando personalizzato trovato. Aggiungi comandi a kilo2.json o a un file Markdown in .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Descrizione",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "modello",
@@ -997,6 +1006,9 @@ export const dict = {
     "Questa è una modalità integrata. La sua definizione base non può essere modificata, ma puoi configurare override qui sotto.",
   "settings.agentBehaviour.editMode.promptOverride": "Override prompt personalizzato per questa modalità integrata",
   "settings.agentBehaviour.badge.subagent": "sub-agent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Autorizzazioni per agente",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Queste impostazioni si applicano solo a questo agente personalizzato. Modifica il valore 'Predefinito' di un menu a discesa per impostare un valore personalizzato, oppure usa 'Aggiungi percorso' o 'Aggiungi comando' per le eccezioni specifiche dello strumento.",
   "settings.agentBehaviour.permissions.title": "Autorizzazioni calcolate",
   "settings.agentBehaviour.permissions.count": "{{count}} regole",
   "settings.agentBehaviour.permissions.effective": "Effettive (wildcard):",
@@ -1007,10 +1019,12 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Le regole vengono valutate in ordine: l'ultima regola corrispondente vince. Questo è il set di regole risolto dal backend CLI.",
   "settings.autoApprove.description":
-    "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. doom_loop e external_directory usano Chiedi di default.",
+    "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. Bash usa Chiedi di default.",
   "settings.autoApprove.maxCost.title": "Avviso costo sessione",
   "settings.autoApprove.maxCost.description":
     "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Mostra un avviso non bloccante quando il costo di una sessione raggiunge questo importo in USD. Lascia vuoto per disattivarlo.",
   "settings.autoApprove.level.allow": "Consenti",
   "settings.autoApprove.level.ask": "Chiedi",
   "settings.autoApprove.level.deny": "Nega",
@@ -1082,6 +1096,12 @@ export const dict = {
   "settings.context.compactionModel.useChatModel": "Usa il modello di chat",
   "settings.context.compactionModel.hint":
     "Per scegliere quale modello usare per la compattazione, vedi le impostazioni Modelli.",
+  "settings.context.compactionKeep.title": "Mantieni token recenti",
+  "settings.context.compactionKeep.description":
+    "Token recenti mantenuti testualmente durante la compattazione del contesto. Lascia vuoto per mantenerne 15.000.",
+  "settings.context.compactionBuffer.title": "Buffer di compattazione",
+  "settings.context.compactionBuffer.description":
+    "Token lasciati liberi sotto il limite del contesto prima della compattazione. Lascia vuoto per mantenere il 15% libero, almeno 16.000.",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",
@@ -1159,13 +1179,18 @@ export const dict = {
   "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
   "settings.display.mcpTool.expanded": "Espansi",
   "settings.display.mcpTool.collapsed": "Compressi",
+  "settings.display.codeMode.title": "Blocchi Code Mode",
+  "settings.display.codeMode.description":
+    "Scegli se i blocchi Code Mode iniziano con le chiamate agli strumenti elencate o su una sola riga. Lo script resta sempre nascosto finché non lo apri.",
+  "settings.display.codeMode.expanded": "Espansi",
+  "settings.display.codeMode.collapsed": "Compressi",
 
   "settings.display.shortcutHints.title": "Mostra suggerimenti scorciatoie",
   "settings.display.shortcutHints.description":
     "Mostra nel prompt vuoto la scorciatoia da tastiera adatta a ciò che stai facendo, ad esempio come aggiungere il codice selezionato o tornare al prompt.",
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
     "Mostra perché una chiamata a uno strumento è stata approvata automaticamente, ad esempio una regola di autorizzazione corrispondente o un valore predefinito dell'agente.",
@@ -1243,6 +1268,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Apri tutti gli agenti in background",
   "task.backgroundAgents.cancel": "Arresta",
   "task.backgroundAgents.continueInBackground": "Continua in background",
+  "task.backgroundAgents.promoteFailed": "Questo agente non ha potuto continuare in background. Potrebbe aver già finito.",
   "task.backgroundAgents.waiting": "Un agente in background richiede il tuo input",
   "task.backgroundAgents.needsInput": "Input richiesto",
   "task.backgroundAgents.clearFinished": "Cancella completati",
@@ -1291,6 +1317,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "File modificati nel working tree ma non ancora sottoposti a staging, più file non tracciati (nuovi).",
   "diffViewer.source.session.label": "Sessione",
+  "diffViewer.source.turn.tooltip": "File modificati da Kilo durante un turno.",
+  "diffViewer.source.turn.label": "Turno",
   "diffViewer.source.session.tooltip":
     "File modificati da Kilo durante la sessione corrente, basati su snapshot per turno. Si resetta quando inizi una nuova sessione.",
   "diffViewer.group.session": "Sessione",
@@ -1427,6 +1455,9 @@ export const dict = {
   "provider.failure.http": "Errore del provider (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Errore del provider.",
   "provider.failure.schema": "Risposta imprevista dal provider.",
+  "provider.failure.organizationMissing": "Il team selezionato non è più disponibile. Seleziona un altro team.",
+  "provider.failure.scopeConflict": "Il team selezionato è in conflitto con il team del tuo token Kilo.",
+  "provider.failure.personalUnavailable": "Questo account non ha un account personale. Seleziona un team.",
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale",
@@ -1461,6 +1492,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Browser di sistema",
   "settings.experimental.browserLinks.integrated": "Browser integrato",
   "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
+  "chat.reply.toolbar": "Testo selezionato",
+  "chat.reply.quote": "Cita",
+  "chat.reply.quoteHint": "Cita nella tua risposta",
+  "chat.reply.commentHint": "Commenta questo passaggio",
+  "chat.reply.copy": "Copia",
+  "chat.reply.sendHint": "Invia subito questo commento a Kilo",
+  "chat.reply.commentLater": "Salva per il prossimo messaggio",
+  "chat.reply.count": "Risposte ({{count}})",
+  "chat.reply.sendAll": "Invia tutto",
+  "chat.reply.showInChat": "Mostra nella chat",
   "browserTab.noSession":
     "Apri il browser da una sessione per visualizzare in anteprima un'applicazione locale o una pagina HTTPS pubblica.",
   "browserTab.disabled": "Il browser integrato è disabilitato. Abilitalo in Impostazioni Kilo > Sperimentale.",

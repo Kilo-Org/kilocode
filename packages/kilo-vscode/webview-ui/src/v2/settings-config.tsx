@@ -1,0 +1,281 @@
+// The Settings data layer: live reads over the server config entries (`api.config.get`) and the raw target files the
+// host read. Writes go straight to the host, which owns the files; the v2 server reloads a written file and emits
+// `config.updated`, and `createData` resyncs the config resource, so `value(path)` reads the live merged config.
+// A write keeps a short optimistic value for its path until the resync covers that path, so the control does not
+// flicker while another write is still in flight.
+//
+// Commit timing for the tabs: switches and selects write on change, while text and number fields write on blur or
+// Enter (not on every keystroke), so a partial value is never written.
+import {
+  createContext,
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  onCleanup,
+  useContext,
+  type ParentComponent,
+} from "solid-js"
+import { parse as parseJsonc } from "jsonc-parser/lib/esm/main.js"
+import { unwrap } from "solid-js/store"
+import { showToast } from "@kilocode/kilo-ui/toast"
+import type { ConfigEdit, ConfigFileContent, ConfigPolicy, ToHost, ToWebview } from "../../../src/protocol"
+import { scopeOf } from "../../../src/config-aliases"
+import { getVSCodeAPI, useVSCode } from "../context/vscode"
+import { useLanguage } from "../context/language"
+import { useV2 } from "./client"
+import { mergeConfigDocuments } from "./settings-merge"
+import { createGate, writeScope, type SettingsScope } from "./settings-scope"
+
+export type { SettingsScope }
+
+/** The i18n key of a Kilo VS Code setting is `kilo-code.v2.<key>`. */
+export type KiloSettingKey =
+  | "fontSize"
+  | "language"
+  | "chat.shiftTabCyclesVariant"
+  | "chat.sendWhileRunning"
+  | "showShortcutHints"
+  | "showTokenThroughput"
+  | "showAutoApprovalReason"
+  | "agentManager.autoBranchNaming"
+  | "agentManager.branchPrefix"
+  | "agentManager.worktreePool"
+  | "agentManager.pushFixes"
+  | "maxCost"
+  | "claudeCodeCompat"
+  | "extraCaCerts"
+  | "languageCommitMessage"
+  | "indexing.showButtonWhenDisabled"
+  | "autocomplete.enableAutoTrigger"
+  | "autocomplete.enableSmartInlineTaskKeybinding"
+  | "autocomplete.enableChatAutocomplete"
+  | "autocomplete.provider"
+  | "autocomplete.model"
+  | "integratedBrowser"
+  | "agentManager.browser.useSystemChrome"
+  | "agentManager.browser.openLinksIn"
+  | "browserAutomation.enabled"
+  | "browserAutomation.useSystemChrome"
+  | "browserAutomation.headless"
+  | "experimental.nativeNotebookTools"
+  | "experimental.conversationPromptHistory"
+
+type Json = Record<string, unknown>
+
+interface Optimistic {
+  scope: SettingsScope
+  path: string[]
+  value: unknown
+}
+
+function readPath(source: unknown, path: string[]): unknown {
+  let current: unknown = source
+  for (const key of path) {
+    if (typeof current !== "object" || current === null) return undefined
+    current = (current as Json)[key]
+  }
+  return current
+}
+
+function pathKey(path: string[]): string {
+  return JSON.stringify(path)
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+}
+
+/** A plain copy for `postMessage`: config values can be Solid store proxies, which structured clone rejects. */
+function clone<T>(value: T): T {
+  return value === undefined ? value : (JSON.parse(JSON.stringify(unwrap(value))) as T)
+}
+
+function parseJson(text: string | undefined): Json {
+  if (!text || text.trim().length === 0) return {}
+  const value: unknown = parseJsonc(text, [], { allowTrailingComma: true })
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Json) : {}
+}
+
+/** The values the host inlined into the page. */
+function initialSettings(): Record<string, unknown> {
+  const value = (window as unknown as { KILO_SETTINGS?: Record<string, unknown> }).KILO_SETTINGS
+  return value && typeof value === "object" ? value : {}
+}
+
+export function createSettingsConfig() {
+  const v2 = useV2()
+  const vscode = useVSCode()
+  const language = useLanguage()
+  const post = (message: ToHost) => getVSCodeAPI().postMessage(message as never)
+
+  const [files, setFiles] = createSignal<{ global?: ConfigFileContent; project?: ConfigFileContent }>({})
+  const [policy, setPolicy] = createSignal<ConfigPolicy>()
+  const [settingsValues, setSettingsValues] = createSignal<Record<string, unknown>>(initialSettings())
+  const [optimistic, setOptimistic] = createSignal<Optimistic[]>([])
+  const [inflight, setInflight] = createSignal<{ path: string; token: number }[]>([])
+  const writers = new Map<number, (result: { ok: boolean; error?: string }) => void>()
+  let nextWrite = 1
+  let nextToken = 1
+  const filesReady = createGate()
+
+  const toastError = (message: string) =>
+    showToast({ variant: "error", title: language.t("settings.saveBar.saveFailed"), description: message })
+
+  // Apply one raw document. A write keeps its optimistic value until the merged config covers it, see the effect
+  // below, so a control does not revert while the server is still reloading the file.
+  const applyFile = (scope: SettingsScope, file: ConfigFileContent) => {
+    setFiles((current) => ({ ...current, [scope]: file }))
+  }
+
+  const unsubscribe = vscode.onMessage((raw) => {
+    const message = raw as unknown as ToWebview
+    if (message.type === "configLoaded") {
+      if (message.error) toastError(message.error)
+      applyFile("global", message.global)
+      applyFile("project", message.project)
+      setPolicy(message.policy)
+      filesReady.open()
+      return
+    }
+    if (message.type === "configWritten") {
+      const resolve = writers.get(message.id)
+      writers.delete(message.id)
+      const file = message.file
+      // A write carries the document it wrote, so the panel does not read every config file again for one edit.
+      if (file) applyFile(file.scope, { path: file.path, text: file.text })
+      resolve?.({ ok: message.ok, error: message.error })
+      return
+    }
+    if (message.type === "vscodeSettingsLoaded") setSettingsValues(message.values)
+  })
+  onCleanup(unsubscribe)
+
+  createEffect(
+    on(v2.connection.status, (status) => {
+      if (status !== "connected") return
+      void v2.data.location.config.sync().catch(v2.report)
+    }),
+  )
+  post({ type: "requestVSCodeSettings" })
+  // Read the target files at once, not only after the config list syncs. A failed sync must not leave a no-scope
+  // write waiting forever; the host answers `configLoaded` with the error instead.
+  post({ type: "configRead" })
+
+  const entries = () => v2.data.location.config.list() ?? []
+
+  const merged = createMemo(() => mergeConfigDocuments(entries()))
+
+  const rawConfig = createMemo(() => ({
+    global: parseJson(files()?.global?.text),
+    project: parseJson(files()?.project?.text),
+  }))
+
+  const raw = (scope: SettingsScope) => rawConfig()[scope]
+
+  /** The target file the host resolved for a scope, so the header can open it. */
+  const path = (scope: SettingsScope) => files()?.[scope]?.path
+
+  const source = (path: string[]): SettingsScope | undefined =>
+    scopeOf(path, rawConfig().project, rawConfig().global)
+
+  const optimisticValue = (path: string[]) => {
+    const key = pathKey(path)
+    return [...optimistic()].toReversed().find((item) => pathKey(item.path) === key)
+  }
+
+  const value = (path: string[]) => {
+    const entry = optimisticValue(path)
+    if (entry) return entry.value
+    return readPath(merged(), path)
+  }
+
+  /** True while a write for this path is in flight, so a caller can prefer `value()` over the raw file. */
+  const pending = (path: string[]) => inflight().some((item) => item.path === pathKey(path))
+
+  // Drop an optimistic value once the merged config carries it, or carries a different effective value. A Kilo-only
+  // key never appears in the merged config, so it keeps its optimistic value until the panel reopens.
+  createEffect(
+    on(
+      entries,
+      () => {
+        const current = merged()
+        setOptimistic((list) =>
+          list.filter((item) => {
+            if (pending(item.path)) return true
+            const next = readPath(current, item.path)
+            return next === undefined || sameValue(next, item.value)
+          }),
+        )
+      },
+      { defer: true },
+    ),
+  )
+
+  const write = (scope: SettingsScope, edits: ConfigEdit[]) =>
+    new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      const id = nextWrite++
+      writers.set(id, resolve)
+      post({ type: "configWrite", id, scope, edits })
+    })
+
+  /** Write a value immediately. A VS Code setting passes through `setSetting`. */
+  const set = async (path: string[], value: unknown, scope?: SettingsScope, preserveAliases = false) => {
+    const target = await writeScope(scope, filesReady.wait, () => source(path))
+    const key = pathKey(path)
+    const writeValue = clone(value)
+    setOptimistic((list) => [...list.filter((item) => pathKey(item.path) !== key), { scope: target, path, value: writeValue }])
+    // A token per write keeps `pending` true until every write for the path settles, including both scopes.
+    const token = nextToken++
+    setInflight((list) => [...list, { path: key, token }])
+    let result: { ok: boolean; error?: string }
+    try {
+      result = await write(target, [{ path, value: writeValue, preserveAliases }])
+    } finally {
+      setInflight((list) => list.filter((item) => item.token !== token))
+    }
+    if (!result.ok) {
+      setOptimistic((list) => list.filter((item) => pathKey(item.path) !== key))
+      toastError(result.error ?? language.t("settings.saveBar.saveFailed"))
+    }
+    return result.ok
+  }
+
+  const unset = (path: string[], scope?: SettingsScope) => set(path, undefined, scope)
+
+  const setSetting = (key: KiloSettingKey, value: unknown) => {
+    const writeValue = clone(value ?? null)
+    setSettingsValues((current) => ({ ...current, [key]: writeValue }))
+    post({ type: "updateVSCodeSettings", values: { [key]: writeValue } })
+  }
+
+  return {
+    entries,
+    merged,
+    raw,
+    policy,
+    path,
+    source,
+    value,
+    optimistic: optimisticValue,
+    pending,
+    set,
+    unset,
+    setting: (key: KiloSettingKey) => settingsValues()[key],
+    setSetting,
+  }
+}
+
+export type SettingsConfig = ReturnType<typeof createSettingsConfig>
+
+const Context = createContext<SettingsConfig>()
+
+export const SettingsConfigProvider: ParentComponent = (props) => (
+  <Context.Provider value={createSettingsConfig()}>{props.children}</Context.Provider>
+)
+
+export function useSettingsConfig() {
+  const value = useContext(Context)
+  if (!value) throw new Error("useSettingsConfig must be used inside SettingsConfigProvider")
+  return value
+}

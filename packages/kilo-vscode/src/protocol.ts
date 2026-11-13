@@ -1,5 +1,17 @@
 // Messages between the webview and the extension host. The webview has no server credentials: it sends HTTP
 // requests through the host (`fetch`), and the host streams each response back in order.
+import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
+import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
+import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
+
+import type { BrowserReference } from "./shared/browser-feedback"
+import type {
+  BrowserCursor,
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewIdentity,
+  BrowserViewport,
+} from "./shared/browser-stream"
 
 export type Request = {
   type: "fetch"
@@ -11,7 +23,269 @@ export type Request = {
   body?: string
 }
 
-export type ToHost = Request | { type: "abort"; id: number } | { type: "open"; url: string } | Ui
+/** One config write: `path` is the config key path, `value` undefined removes it. `preserveAliases` keeps v1 keys. */
+export type ConfigEdit = { path: string[]; value?: unknown; preserveAliases?: boolean }
+
+export type ConfigScope = "global" | "project"
+
+export type { ReviewCommentData, ReviewCommentEntry }
+
+/** Working tree change counts against the base, as the v1 Changes button showed them. */
+export type GitChangesStats = { files: number; additions: number; deletions: number }
+
+export type ConfigFileContent = { path: string; text: string }
+
+/**
+ * A single-file diff that the host can render natively. The shape matches `ToolActionDiff` in `@kilocode/kilo-ui`;
+ * it is not imported from there, because the Solid UI package must not enter the Node host typecheck.
+ */
+export type ToolActionDiff = { file: string; patch: string; additions: number; deletions: number }
+
+/**
+ * The effective Kilo policy values that the config API does not carry, because they are Kilo-only fields on the
+ * upstream config schema. `managed` is true when a config document outside the writable global and project files
+ * sets the value, for example a system or MDM document.
+ */
+export type ConfigPolicy = { hidePromptTrainingModels: boolean; managed: boolean }
+
+export type ToolDisplayLayout = "expanded" | "collapsed"
+
+export type ReasoningDisplay = "expanded" | "preview" | "headline"
+
+/**
+ * How the chat starts each kind of tool block and reasoning block. The Kilo config keys are not in the config API, so
+ * the host reads the config documents and sends the effective values, with the same defaults as v1.
+ */
+export type DisplaySettings = {
+  terminalCommandDisplay: ToolDisplayLayout
+  codeEditDisplay: ToolDisplayLayout
+  mcpToolDisplay: ToolDisplayLayout
+  codeModeDisplay: ToolDisplayLayout
+  reasoningDisplay: ReasoningDisplay
+}
+
+export const DISPLAY_DEFAULTS: DisplaySettings = {
+  terminalCommandDisplay: "expanded",
+  codeEditDisplay: "collapsed",
+  mcpToolDisplay: "collapsed",
+  codeModeDisplay: "collapsed",
+  reasoningDisplay: "expanded",
+}
+
+/**
+ * Where the Settings panel should go. `focus` names a row that a subtab renders itself (an MCP server), while
+ * `titleKey` names a row by its i18n key so the panel can scroll to it after the tab renders.
+ */
+export type SettingsNavigation = {
+  tab?: string
+  subtab?: string
+  focus?: string
+  titleKey?: string
+  search?: boolean
+  /** Agent Manager project a project-scoped tab opens for, so the gear preselects it. */
+  projectId?: string
+}
+
+export type SpeechToTextModel = {
+  readonly id: string
+  readonly label: string
+  readonly provider: string
+  readonly verbatim?: boolean
+}
+
+export type SpeechSettingKey = "base_url" | "api_key" | "model"
+
+export type SpeechToTextSettings = {
+  readonly baseUrl?: string
+  readonly apiKey?: string
+  readonly model?: string
+}
+
+/** `enabled` is whether the composer may show the microphone; `signedIn` is the Gateway account state. */
+export type SpeechToTextStatus = {
+  readonly enabled: boolean
+  readonly remote: boolean
+  readonly signedIn: boolean
+  readonly source: "gateway" | "custom"
+  readonly model: string
+  readonly models: SpeechToTextModel[]
+  readonly settings: SpeechToTextSettings
+  readonly catalogError?: string
+}
+
+/**
+ * Worktree actions of the sidebar chat. The host routes them to the Agent Manager provider, which owns worktree
+ * creation and movement.
+ */
+export type SidebarWorktree =
+  | { type: "agentManager.continueInWorktree"; sessionId: string }
+  | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string }
+  | { type: "agentManager.requestRepoInfo" }
+  | { type: "openAdvancedWorktree" }
+
+/** Toggles Keep Awake from the composer slash menu. The Agent Manager provider owns the state. */
+export type AgentManagerCaffeination = { type: "agentManager.toggleCaffeination" }
+
+export type ToHost =
+  | Request
+  | BrowserTab
+  | { type: "sidebar.session"; sessionId?: string }
+  | { type: "abort"; id: number }
+  | { type: "open"; url: string; external?: boolean }
+  | Ui
+  | Settings
+  | Speech
+  | Indexing
+  | SidebarWorktree
+  | AgentManagerCaffeination
+  | Mention
+  | ({ type: "openSettingsTab" } & SettingsNavigation)
+  | { type: "settingsReady" }
+  | { type: "settingsTabChanged"; tab: string }
+  | { type: "requestWorkStyle" }
+  | { type: "applyWorkStyle"; style: WorkStyle }
+  | { type: "setWorkStyle"; style: WorkStyleState }
+
+/**
+ * The editor-tab Integrated Browser. The tab is host-driven: it renders a browser the extension host runs, so every
+ * command and event crosses postMessage. `kind` suffixes match `BrowserControlKind` in the host.
+ */
+export type BrowserTab =
+  | { type: "browserTab.ready" }
+  | { type: "browserTab.openSettings" }
+  | { type: "browserTab.openExternal"; url: string }
+  | { type: "browserTab.reference"; sessionId: string; reference: BrowserReference }
+  | BrowserScopeMessage<"browserTab.state">
+  | (BrowserScopeMessage<"browserTab.open"> & { url: string })
+  | BrowserScopeMessage<"browserTab.refresh">
+  | BrowserScopeMessage<"browserTab.back">
+  | BrowserScopeMessage<"browserTab.forward">
+  | BrowserScopeMessage<"browserTab.close">
+  | (BrowserScopeMessage<"browserTab.devtools"> & { theme: "dark" | "light" })
+  | (BrowserScopeMessage<"browserTab.input"> & BrowserPositionMessage & { click: boolean })
+  | (BrowserScopeMessage<"browserTab.inspect"> & BrowserPositionMessage & { hover: boolean; requestId: string })
+  | (BrowserScopeMessage<"browserTab.viewport"> & {
+      browserId: string
+      navigation: number
+      viewport: BrowserViewport
+    })
+  | (BrowserScopeMessage<"browserTab.interact"> & { identity: BrowserViewIdentity; event: BrowserInteraction })
+  | (BrowserScopeMessage<"browserTab.acknowledge"> & { identity: BrowserViewIdentity; sequence: number })
+
+export type BrowserScopeMessage<Type extends string> = {
+  type: Type
+  sessionId: string
+  projectId?: string
+}
+
+export type BrowserPositionMessage = { x: number; y: number; width: number; height: number }
+
+/** The fields every browser state message carries, so a new field reaches the tab as well as the panel. */
+export type BrowserStatePayload = BrowserScopeMessage<"browserTab.state"> & {
+  browserId: string
+  navigation?: number
+  status: "starting" | "ready" | "loading" | "error" | "closed"
+  inspecting?: boolean
+  url?: string
+  title?: string
+  errors: number
+  logs?: string[]
+  error?: string
+  missing?: "chrome" | "chromium"
+  frameError?: string
+  back?: boolean
+  forward?: boolean
+}
+
+export type BrowserElementPayload = {
+  tag: string
+  id?: string
+  classes?: string
+  text?: string
+  selector?: string
+  rect?: { x: number; y: number; width: number; height: number }
+  hierarchy?: string[]
+  html?: string
+  styles?: { color?: string; backgroundColor?: string }
+  source?: { file: string; line?: number; column?: number }
+}
+
+export type BrowserInspectionPayload = BrowserScopeMessage<"browserTab.inspection"> & {
+  requestId: string
+  url?: string
+  title?: string
+  element?: BrowserElementPayload
+  logs: string[]
+  hover?: boolean
+  error?: string
+}
+
+export type BrowserFramePayload = BrowserScopeMessage<"browserTab.frame"> & BrowserFrame
+export type BrowserCursorPayload = BrowserScopeMessage<"browserTab.cursor"> & BrowserCursor
+export type BrowserDevtoolsPayload = BrowserScopeMessage<"browserTab.devtools"> & { browserId: string; url: string }
+/**
+ * The host side of the composer's `@` mentions. `directory` is the directory of the session the composer belongs to,
+ * so an Agent Manager worktree searches its own tree. `sessionID` is left out of the past-chat results.
+ */
+export type Mention =
+  | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string; directory?: string }
+  | { type: "requestSessionSearch"; requestId: string; sessionID?: string; directory?: string }
+  | { type: "requestFilePicker"; requestId: string }
+  /** `agentManagerContext` names the Agent Manager worktree or `local`; the panel has no VS Code terminal of its own. */
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string; agentManagerContext?: string }
+  /** `base` diffs an Agent Manager worktree against its base branch; without it the host resolves the target. */
+  | { type: "requestGitChangesContext"; requestId: string; directory?: string; base?: string }
+
+/** A file search result of the `@` menu. */
+export type FileSearchItem = {
+  path: string
+  type: "file" | "folder" | "opened-file"
+  /** Owning workspace folder name, set only when the workspace has more than one folder. */
+  root?: string
+  /**
+   * Path within the owning folder, set only when `path` is absolute. The webview ranks the whole `@` menu again, and
+   * scoring an absolute path there would let the filesystem prefix match on every entry under that folder.
+   */
+  relative?: string
+}
+
+/** A past chat the `@` menu can reference. */
+export type SessionSearchItem = {
+  id: string
+  title: string
+  updated: number
+  /** Name of the worktree the session runs in, when listed across the worktree family. */
+  worktreeName?: string
+}
+
+/** Codebase indexing consent and project list. The consent itself is machine-local in globalState. */
+export type Indexing =
+  | { type: "requestIndexingSettings"; projectId?: string }
+  | { type: "setIndexingConsent"; projectId: string; enabled: boolean }
+
+export type IndexingProject = {
+  id: string
+  root: string
+  /** The location the RPC calls target. Omitted for the primary project, which is the server's own location. */
+  directory?: string
+  label: string
+}
+
+export type IndexingSettings = {
+  showButtonWhenDisabled: boolean
+  consent: boolean
+  projects: IndexingProject[]
+  projectId?: string
+}
+
+/** Voice input: the host owns the microphone, the custom endpoint and the Gateway RPC. */
+export type Speech =
+  | { type: "speechToTextPrewarm" }
+  | { type: "speechToTextConfig" }
+  | { type: "speechToTextStart"; requestId: string; model: string; language?: string }
+  | { type: "speechToTextStop"; requestId: string }
+  | { type: "speechToTextCancel"; requestId: string }
+  | { type: "speechToTextSave"; requestId: string; key: SpeechSettingKey; value: string }
 
 /** Messages of the copied v1 UI. The host ignores `webviewFocusChanged` and `setLanguage` for now. */
 export type Ui =
@@ -20,19 +294,256 @@ export type Ui =
   | { type: "persistModelSelectorExpanded"; value: boolean }
   | { type: "requestAutoApproveState" }
   | { type: "persistAutoApproveState"; value: boolean }
+  | { type: "requestSandboxDefault" }
+  | { type: "persistSandboxDefault"; enabled: boolean }
+  | { type: "requestDismissedNotifications" }
+  | { type: "dismissNotification"; notificationId: string }
+  | { type: "syncDismissedNotifications"; ids: string[] }
+  | ModelPreferenceMessage
+  | { type: "trackCostSession"; sessionID: string }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }
+  | { type: "previewImage"; dataUrl: string; filename: string }
   | { type: "openProfile" }
+  | { type: "openMarketplace" }
+  | { type: "openToolFile"; filePath: string; line?: number; column?: number; sessionID?: string }
+  | { type: "openDiffVirtual"; diff: ToolActionDiff; initialDiffStyle?: "unified" | "split" }
+  | { type: "openDiffsVirtual"; diffs: ToolActionDiff[]; initialDiffStyle?: "unified" | "split" }
+  | { type: "requestDisplaySettings" }
+  | { type: "validateFiles"; id: string; sessionID?: string; paths: string[] }
+  /** Opens the Changes editor tab. `turnID` opens the turn scope of that user message instead of the picker. */
+  | { type: "openChanges"; sessionID?: string; turnID?: string }
+  /** Asks for the working tree change counts of the Changes button. The host answers with `gitChangesStats`. */
+  | { type: "requestGitChangesStats" }
+  /** Opens a subagent session in its own read-only editor tab. */
+  | ({ type: "openSubagent" } & SubagentTarget)
+  /** Closes a subagent editor tab and shows its parent session in the sidebar. */
+  | { type: "subagentBack" }
+
+/** A subagent session an editor tab shows: the child session, its title and the session that started it. */
+export type SubagentTarget = { sessionID: string; title?: string; parentSessionID?: string }
+
+export type ModelPreferenceRef = { providerID: string; modelID: string }
+export type ModelUsageMap = Record<string, { count: number; lastUsed: number }>
+
+/**
+ * The shared model picker preferences, as v1: favorites, the recent picks (most recent first), the usage count per
+ * `provider/model` and the remembered reasoning effort per `agent/<agent>/<provider>/<model>` ("" is Default).
+ */
+export type ModelPreferences = {
+  favorites: ModelPreferenceRef[]
+  recents: ModelPreferenceRef[]
+  usage: ModelUsageMap
+  variants: Record<string, string>
+}
+
+export type ModelPreferenceMessage =
+  | { type: "requestModelPreferences" }
+  | ({ type: "toggleFavorite"; action: "add" | "remove" } & ModelPreferenceRef)
+  | { type: "persistRecents"; recents: ModelPreferenceRef[] }
+  | ({ type: "recordModelUsage" } & ModelPreferenceRef)
+  | { type: "persistVariant"; key: string; value: string }
+
+/** Browser replies. The tab frame and cursor carry the stream, the rest carry state or inspection results. */
+export type BrowserOut =
+  | (BrowserScopeMessage<"browserTab.scope"> & { browserAutomation: boolean })
+  | BrowserStatePayload
+  | BrowserFramePayload
+  | BrowserCursorPayload
+  | BrowserInspectionPayload
+  | BrowserDevtoolsPayload
+  | { type: "browserReference"; reference: BrowserReference }
+
+/** Settings panel messages the host handles directly (it reads and writes the config files). */
+export type Settings =
+  | { type: "configRead" }
+  | { type: "configWrite"; id: number; scope: ConfigScope; edits: ConfigEdit[] }
+  | { type: "requestVSCodeSettings" }
+  | { type: "updateVSCodeSettings"; values: Record<string, unknown> }
+  | { type: "openFile"; path: string }
+  | { type: "openVSCodeSettings"; query: string }
+  | { type: "resetAllSettings" }
+  | AgentManagerSettings
+  | FetchCustomProviderModels
+
+/**
+ * The Agent Manager rows of the Settings panel. The project is explicit, because the panel edits a project the
+ * Agent Manager provider owns, not the panel's own directory. `requestId` guards out-of-order replies.
+ */
+export type AgentManagerSettings =
+  | { type: "agentManagerSettings"; projectId?: string; requestId: string }
+  | { type: "agentManagerSettingsBranches"; projectId: string; requestId: string }
+  | { type: "agentManagerSetDefaultBaseBranch"; projectId: string; branch?: string; requestId: string }
+  | { type: "agentManagerConfigureSetupScript"; projectId: string; requestId: string }
+
+/** One Agent Manager project the project-scoped Settings tab can edit. */
+export type AgentManagerSettingsProject = {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  missing: boolean
+  defaultBaseBranch?: string
+  setupScriptPath?: string
+}
+
+/** A branch row of the default base branch picker. */
+export type AgentManagerSettingsBranch = {
+  name: string
+  isLocal: boolean
+  isRemote: boolean
+  isDefault: boolean
+  lastCommitDate?: string
+  isCheckedOut?: boolean
+}
+
+/** The branch and script data of one Agent Manager project. `branches` is absent when the read failed. */
+export type AgentManagerSettingsBranchPayload = {
+  projectId: string
+  branches?: AgentManagerSettingsBranch[]
+  defaultBranch?: string
+  configuredBaseBranch?: string
+  setupScriptPath?: string
+}
+
+/**
+ * Lists the models of a custom provider's OpenAI-compatible base URL. The key is one of: `apiKey` (typed in the
+ * dialog), `env` (the variable name of an `{env:NAME}` key, read from the server environment) or `providerID` (the
+ * stored credential of an existing provider, used only while `baseURL` matches its saved base URL).
+ */
+export type FetchCustomProviderModels = {
+  type: "fetchCustomProviderModels"
+  requestId: string
+  baseURL: string
+  apiKey?: string
+  env?: string
+  providerID?: string
+  headers?: Record<string, string>
+  /** The scope that owns the provider: the host resolves its own config file for `{file:...}` header references. */
+  scope?: "global" | "project"
+}
+
+/**
+ * Context the composer attaches to the next prompt: an editor selection, a file, terminal output or an image. It goes
+ * to the server as a prompt file attachment, so the server reads the file (and slices the line range) itself.
+ */
+export type PromptAttachment = {
+  id: string
+  kind: "selection" | "file" | "terminal" | "image"
+  /** A `file:` URI, with `start` and `end` line query parameters for a range, or a base64 `data:` URL. */
+  uri: string
+  /** Chip text in the composer and attachment name in the transcript, for example `math.ts:3-9`. */
+  name: string
+  /** Extra text the model reads with the attachment, for example the workspace path and line range. */
+  description?: string
+  /** The file a `data:` URL was read from, so the model still sees where it came from. */
+  source?: string
+  /** Workspace path and 1-based line, so the chip can open the source. */
+  path?: string
+  line?: number
+}
 
 export type ToWebview =
+  | BrowserOut
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
-  | { type: "command"; name: "newSession" | "history" | "profile" | "cycleAgentMode" | "cyclePreviousAgentMode" }
-  | { type: "keybindings"; bindings: Record<string, string> }
+  | {
+      type: "command"
+      name:
+        | "newSession"
+        | "history"
+        | "focusSearch"
+        | "cycleAgentMode"
+        | "cyclePreviousAgentMode"
+        | "showOpenTabs"
+        | "tabPrevious"
+        | "tabNext"
+        | "focusPrompt"
+    }
+  /** Adds context chips to the composer and focuses it. */
+  | { type: "appendContext"; items: PromptAttachment[] }
+  /** Sends a prompt in the open session at once, without touching the draft. `injectedTitle` labels a prompt Kilo composed. */
+  | { type: "startPrompt"; text: string; items?: PromptAttachment[]; injectedTitle?: string }
+  /** Shows a session in the sidebar, for example the parent of a closed subagent tab. */
+  | { type: "openSession"; sessionID: string }
+  | ({ type: "navigate" } & SettingsNavigation)
+  | { type: "keybindings"; bindings: Record<string, string>; selection: boolean }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
+  | { type: "modelPreferencesLoaded"; value: ModelPreferences }
   | { type: "autoApproveStateLoaded"; value: boolean }
+  | { type: "workStyleLoaded"; style: WorkStyleState }
+  | { type: "workStyleApplied"; style: WorkStyle }
+  | { type: "workStyleApplyFailed"; message: string; rollbackFailed: boolean }
+  | {
+      type: "sandboxDefaultLoaded"
+      /** The stored preference for new sessions, absent when the user has not chosen a default. */
+      explicit?: boolean
+    }
+  | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
+  | { type: "validateFilesResult"; id: string; existing: string[] }
+  /** Review comments for the composer from the Changes or a document tab. `autoSend` sends an otherwise empty draft. */
+  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
+  | {
+      type: "configLoaded"
+      global: ConfigFileContent
+      project: ConfigFileContent
+      policy?: ConfigPolicy
+      error?: string
+    }
+  | {
+      type: "configWritten"
+      id: number
+      ok: boolean
+      error?: string
+      /** The written document, so the panel updates its raw file without a second read of every config file. */
+      file?: ConfigFileContent & { scope: ConfigScope }
+    }
+  | { type: "vscodeSettingsLoaded"; values: Record<string, unknown> }
+  | { type: "indexingSettingsLoaded"; settings: IndexingSettings }
+  | { type: "indexingStatusLoaded"; status: KiloIndexingRpc.Status; projectId?: string }
+  | {
+      type: "agentManagerSettingsLoaded"
+      requestId: string
+      projectId?: string
+      projects: AgentManagerSettingsProject[]
+    }
+  | ({
+      type: "agentManagerSettingsBranchesLoaded"
+      requestId: string
+      error?: string
+    } & AgentManagerSettingsBranchPayload)
+  | { type: "displaySettingsLoaded"; values: DisplaySettings; error?: string }
+  /** The working tree change counts of the Changes button; absent when the directory is not a git repository. */
+  | { type: "gitChangesStats"; stats?: GitChangesStats }
+  /** Replies to the `@` mention requests, matched by `requestId`. */
+  | { type: "fileSearchResult"; requestId: string; paths: string[]; items?: FileSearchItem[]; dir: string }
+  | { type: "sessionSearchResult"; requestId: string; sessions: SessionSearchItem[] }
+  /** `path` is empty when the dialog was cancelled. */
+  | { type: "filePickerResult"; requestId: string; path: string }
+  | { type: "terminalContextResult"; requestId: string; content: string; truncated: boolean }
+  | { type: "terminalContextError"; requestId: string; error: string }
+  | { type: "gitChangesContextResult"; requestId: string; content: string; truncated: boolean }
+  | { type: "gitChangesContextError"; requestId: string; error: string }
+  /** The current branch of the workspace, for the sidebar New Worktree menu. Absent outside a git repository. */
+  | { type: "agentManager.repoInfo"; branch?: string }
+  /** Progress of a sidebar conversation moving into a worktree. */
+  | { type: "continueInWorktreeProgress"; status: string; detail?: string; error?: string }
+  | { type: "speechToTextConfigLoaded"; status: SpeechToTextStatus }
+  | { type: "speechToTextStarted"; requestId: string }
+  | { type: "speechToTextResult"; requestId: string; text: string }
+  | { type: "speechToTextError"; requestId: string; error: string; code?: string }
+  | { type: "speechToTextCancelled"; requestId: string }
+  | { type: "speechToTextSaved"; requestId: string; ok: boolean; error?: string }
+  /** The reply to `fetchCustomProviderModels`: `models`, or `error` with `auth` set when the server refused the key. */
+  | {
+      type: "customProviderModelsFetched"
+      requestId: string
+      models?: { id: string; name: string }[]
+      error?: string
+      auth?: boolean
+    }

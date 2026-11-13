@@ -1,8 +1,7 @@
-// Mirror of packages/cli/src/commands/handlers/serve.ts (v2.0.30). The only difference: the server gets the Kilo
-// overrides.
+// Mirror of packages/cli/src/commands/handlers/serve.ts (v2.2.6). The only difference: the server gets the Kilo overrides.
 import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
-import { ServerProcess } from "@opencode/cli/server-process"
+import { ServerProcess } from "./server-process"
 import { Effect, Option } from "effect"
 import { KiloHost } from "./host"
 

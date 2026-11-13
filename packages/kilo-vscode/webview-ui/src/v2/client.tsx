@@ -1,84 +1,66 @@
-// The v2 data layer of the webview: `@opencode/client` over the host relay, the event stream and `createData`.
+// The v2 data layer of the sidebar webview: `@opencode/client` over the host relay, the event stream and the data of
+// the workspace directory.
 import { OpenCode, type OpenCodeClient } from "@opencode/client"
-import { createClientConnection, createData } from "@opencode/client/solid"
-import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
-import { createContext, createEffect, createSignal, on, onCleanup, useContext, type ParentComponent } from "solid-js"
+import { createClientConnection } from "@opencode/client/solid"
+import { createContext, createSignal, onCleanup, useContext, type ParentComponent } from "solid-js"
 import type { ToWebview } from "../../../src/protocol"
 import { getVSCodeAPI } from "../context/vscode"
 import { events } from "./events"
+import { createV2Scope, type V2 } from "./scope"
 import { transport } from "./transport"
 
-function create(directory: string) {
+export { message, type V2 } from "./scope"
+
+function create(directory: string, chat: boolean) {
   const vscode = getVSCodeAPI()
   const bridge = transport((message) => vscode.postMessage(message as never))
   const api: OpenCodeClient = OpenCode.make({ baseUrl: "http://kilo.invalid", fetch: bridge.fetch })
   const event = events()
-  const [error, setError] = createSignal("")
-  const [version, setVersion] = createSignal("")
-  const [handshake, setHandshake] = createSignal("")
-  const [loading, setLoading] = createSignal(true)
   const [bindings, setBindings] = createSignal<Record<string, string>>({})
+  const [selection, setSelection] = createSignal(false)
   const commands = new Set<(name: string) => void>()
   const connection = createClientConnection(api, { onEvent: event.emit, pageLifecycle: true })
-  const data = createData({ api: () => api, directory, connection, event, onError: (err) => setError(message(err)) })
 
   const receive = (event: MessageEvent<ToWebview>) => {
     const message = event.data
     if (!message || typeof message !== "object" || !("type" in message)) return
     if (message.type === "command") return commands.forEach((handler) => handler(message.name))
-    if (message.type === "keybindings") return setBindings(message.bindings)
+    if (message.type === "keybindings") {
+      setBindings(message.bindings)
+      setSelection(message.selection)
+      return
+    }
     bridge.receive(message)
   }
   window.addEventListener("message", receive)
   onCleanup(() => window.removeEventListener("message", receive))
   onCleanup(event.clear)
 
-  createEffect(
-    on(connection.status, (status) => {
-      if (status !== "connected") return
-      setLoading(true)
-      void api.session
-        .list({ directory, parentID: null, order: "desc", limit: 50 })
-        .then((response) => response.data.forEach(data.session.remember))
-        .catch((err: unknown) => setError(message(err)))
-        .finally(() => setLoading(false))
-      void api
-        .rpc(KiloHandshakeRpc.Definition)
-        .get({}, { location: { directory } })
-        .then((info) => {
-          setVersion(info.version)
-          setHandshake("")
-        })
-        .catch((err: unknown) => setHandshake(`Not a Kilo v2 server: ${message(err)}`))
-    }),
-  )
-
-  return {
+  return createV2Scope({
     api,
-    data,
-    directory,
     connection,
-    loading,
+    event,
+    directory,
     bindings,
-    version,
-    handshake,
-    error,
-    setError,
-    report: (err: unknown) => setError(message(err)),
-    open: (url: string) => vscode.postMessage({ type: "open", url } as never),
-    onCommand(handler: (name: string) => void) {
+    selection,
+    chat,
+    onCommand(handler) {
       commands.add(handler)
       onCleanup(() => commands.delete(handler))
     },
-  }
+    open: (url, external) => vscode.postMessage({ type: "open", url, external } as never),
+  })
 }
-
-export type V2 = ReturnType<typeof create>
 
 const Context = createContext<V2>()
 
-export const V2Provider: ParentComponent<{ directory: string }> = (props) => (
-  <Context.Provider value={create(props.directory)}>{props.children}</Context.Provider>
+export const V2Provider: ParentComponent<{ directory: string; chat?: boolean }> = (props) => (
+  <Context.Provider value={create(props.directory, props.chat ?? true)}>{props.children}</Context.Provider>
+)
+
+/** Provides an existing directory scope, for example one Agent Manager worktree. */
+export const V2Scope: ParentComponent<{ value: V2 }> = (props) => (
+  <Context.Provider value={props.value}>{props.children}</Context.Provider>
 )
 
 export function useV2() {
@@ -87,8 +69,7 @@ export function useV2() {
   return value
 }
 
-export function message(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "object" && error !== null && "message" in error) return String(error.message)
-  return String(error)
+/** The directory scope when one is provided; a list that spans directories reads each row store instead. */
+export function useV2Optional() {
+  return useContext(Context)
 }

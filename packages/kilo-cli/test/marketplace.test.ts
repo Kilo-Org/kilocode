@@ -14,7 +14,11 @@ import path from "node:path"
 import { KiloHost } from "../src/host"
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
-  const deadline = performance.now() + 10_000
+  // A native watcher converges in well under a second, but the CI runner shares four vCPUs with other test
+  // processes, so a loaded run can take several seconds to deliver the change event. The deadline only
+  // guards against a watcher that never converges, and stays below the suite's 30s timeout so a real
+  // failure reports this message instead of a bare test timeout.
+  const deadline = performance.now() + 20_000
   while (performance.now() < deadline) {
     const value = await read()
     if (ready(value)) return value
@@ -175,7 +179,9 @@ test("lists, installs and removes skills and MCPs through the generated client",
             await expect(rpc.preview(mcp, options)).rejects.toMatchObject({ type: "invalid_params" })
             const server = await rpc.install({ ...mcp, option: "NPX", params: { API_KEY: "secret" } }, options)
             const config = path.join(directory, "kilo2.json")
-            expect(server).toMatchObject({ config, server: "demo-mcp" })
+            expect(server).toMatchObject({ config, server: "demo-mcp", option: "NPX" })
+            // The stored record keeps the method, so a repair can offer the same configuration again.
+            expect((await rpc.installed({}, options)).find((record) => record.id === mcp.id)?.option).toBe("NPX")
             expect(await Bun.file(config).json()).toEqual({
               mcp: {
                 servers: {

@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Tamamlandı (model bildirdi)",
+  "session.goal.complete": "Tamamlandı",
   "session.goal.blocked": "Engellendi",
   "session.goal.restart": "Hedefi yeniden başlat",
   ...anacondaDesktopDict,
@@ -265,6 +265,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Komut gönderilemedi",
 
   "mcp.status.connected": "bağlı",
+  "mcp.status.pending": "bağlanıyor",
   "mcp.status.failed": "başarısız",
   "mcp.status.needs_auth": "kimlik doğrulama gerekli",
   "mcp.status.needs_registration": "istemci kaydı gerekli",
@@ -295,6 +296,9 @@ export const dict = {
   "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
   "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+  "provider.failure.organizationMissing": "Seçilen ekip artık kullanılamıyor. Başka bir ekip seçin.",
+  "provider.failure.scopeConflict": "Seçilen ekip, Kilo belirtecinizin ekibiyle çakışıyor.",
+  "provider.failure.personalUnavailable": "Bu hesabın kişisel hesabı yok. Bir ekip seçin.",
 
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
@@ -303,7 +307,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
+  "ui.permission.noChanges": "Değişiklik yok.",
   "ui.permission.reject": "Reddet",
+  "ui.permission.allowAllSites": "Tüm sitelere izin ver",
   "ui.permission.feedbackPlaceholder": "Kilo'ya farklı ne yapması gerektiğini söyleyin",
   "ui.permission.feedbackHint": "Reddetmek için Enter, iptal için Esc",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
@@ -345,6 +351,8 @@ export const dict = {
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
+  "session.review.viewTurnChanges": "Tur değişikliklerini görüntüle",
+  "session.review.turnChangesEmpty": "Bu turda değişiklik yok.",
   "session.review.loadingChanges": "Değişiklikler yükleniyor...",
   "session.review.noChanges": "Değişiklik yok",
 
@@ -701,7 +709,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Ajan Davranışı",
   "settings.autoApprove.title": "Otomatik Onay",
   "settings.webTools.title": "Web Araçları",
-  "settings.webTools.description": "Web aramasını ve tarayıcı otomasyonunu yapılandırın.",
+  "settings.webTools.description": "Web aramasını yapılandırın.",
   "settings.webTools.webSearch.enable": "Tüm Sağlayıcılar İçin Etkinleştir",
   "settings.webTools.browserAutomation": "Tarayıcı Otomasyonu",
   "settings.webTools.webSearch.title": "Web Araması",
@@ -853,6 +861,7 @@ export const dict = {
     "Bu dosya Kilo'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
   "settings.aboutKiloCode.importSettings.success":
     "Ayarlar içe aktarıldı. Yukarıdaki değişiklikleri gözden geçirin, ardından Kaydet'e tıklayın.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
@@ -1095,12 +1104,15 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "Sunucu URL'si",
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace'e Göz At",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Başlatma zaman aşımı (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalog zaman aşımı (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Yürütme zaman aşımı (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Yapılandırılmış MCP sunucusu yok. kilo.jsonc dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
+    "Yapılandırılmış MCP sunucusu yok. kilo2.json dosyasına MCP sunucuları ekleyin veya ajanın eklemesini isteyin.",
   "settings.agentBehaviour.workflows.description":
-    "İş akışları, yapılandırmanızda tanımlanan özel eğik çizgi komutlarıdır. Çağırmak için sohbette /command-name yazın. Komutlar opencode.json dosyasındaki 'command' bölümünde yapılandırılır.",
+    "İş akışları, yapılandırmanızda veya komut Markdown dosyalarında tanımlanan özel komutlardır. Her iş akışı için bir model ve akıl yürütme varyantı ayarlayabilirsiniz.",
   "settings.agentBehaviour.workflows.empty":
-    "Yapılandırılmış özel komut yok. Burada görmek için opencode.json dosyasına komutlar ekleyin.",
+    "Özel komut bulunamadı. kilo2.json dosyasına veya .kilo2/command içindeki bir Markdown dosyasına komut ekleyin.",
   "settings.agentBehaviour.workflows.detail.description": "Açıklama",
   "settings.agentBehaviour.workflows.detail.template": "Şablon",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1108,10 +1120,12 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Global model geçersiz kılması",
 
   "settings.autoApprove.description":
-    "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",
+    "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. Bash varsayılan olarak Sor'dur.",
   "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
   "settings.autoApprove.maxCost.description":
     "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Bir oturumun maliyeti bu USD tutarına ulaştığında engellemeyen bir uyarı gösterin. Devre dışı bırakmak için boş bırakın.",
   "settings.autoApprove.level.allow": "İzin Ver",
   "settings.autoApprove.level.ask": "Sor",
   "settings.autoApprove.level.deny": "Reddet",
@@ -1186,6 +1200,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
+  "settings.context.compactionKeep.title": "Son Tokenları Koru",
+  "settings.context.compactionKeep.description":
+    "Bağlam sıkıştırılırken kelimesi kelimesine korunan son tokenlar. 15.000 korumak için boş bırakın.",
+  "settings.context.compactionBuffer.title": "Sıkıştırma Tamponu",
+  "settings.context.compactionBuffer.description":
+    "Sıkıştırmadan önce model bağlam sınırının altında boş bırakılan tokenlar. %15 boş bırakmak için boş bırakın, en az 16.000.",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
@@ -1266,13 +1286,18 @@ export const dict = {
     "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
+  "settings.display.codeMode.title": "Code Mode Blokları",
+  "settings.display.codeMode.description":
+    "Code Mode bloklarının araç çağrıları listelenmiş halde mi yoksa tek satır olarak mı başlayacağını seçin. Betik, siz açana kadar her zaman gizli kalır.",
+  "settings.display.codeMode.expanded": "Genişletilmiş",
+  "settings.display.codeMode.collapsed": "Daraltılmış",
 
   "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
   "settings.display.shortcutHints.description":
     "Boş istemde şu anda yaptığınız işe uyan klavye kısayolunu gösterir, örneğin seçili kodu ekleme veya isteme geri dönme.",
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
   "settings.display.autoApprovalReason.description":
     "Bir araç çağrısının neden otomatik olarak onaylandığını gösterir; örneğin eşleşen bir izin kuralı veya aracı varsayılanı.",
@@ -1366,6 +1391,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
+  "task.backgroundAgents.promoteFailed": "Bu ajan arka planda devam edemedi. Zaten bitmiş olabilir.",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
@@ -1426,6 +1452,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
   "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel sistem istemi geçersiz kılma",
   "settings.agentBehaviour.badge.subagent": "alt ajan",
+  "settings.agentBehaviour.perAgentPermissions.title": "Ajan Başına İzinler",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Bu ayarlar yalnızca bu özel ajan için geçerlidir. Bir geçersiz kılma oluşturmak için açılır menüdeki 'Varsayılan' değerini değiştirin veya araca özgü istisnalar için 'Yol ekle' ya da 'Komut ekle' kullanın.",
   "settings.agentBehaviour.permissions.title": "Hesaplanan İzinler",
   "settings.agentBehaviour.permissions.count": "{{count}} kural",
   "settings.agentBehaviour.permissions.effective": "Geçerli (joker karakter):",
@@ -1446,6 +1475,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Çalışma ağacında değiştirilmiş ancak henüz staged edilmemiş dosyalar, artı takip edilmeyen (yeni) dosyalar.",
   "diffViewer.source.session.label": "Oturum",
+  "diffViewer.source.turn.tooltip": "Kilo tarafından bir turda değiştirilen dosyalar.",
+  "diffViewer.source.turn.label": "Tur",
   "diffViewer.source.session.tooltip":
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
@@ -1493,6 +1524,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
   "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "chat.reply.toolbar": "Seçili metin",
+  "chat.reply.quote": "Alıntıla",
+  "chat.reply.quoteHint": "Yanıtında alıntıla",
+  "chat.reply.commentHint": "Bu bölümü yorumla",
+  "chat.reply.copy": "Kopyala",
+  "chat.reply.sendHint": "Bu yorumu şimdi Kilo'ya gönder",
+  "chat.reply.commentLater": "Sonraki mesajın için kaydet",
+  "chat.reply.count": "Yanıtlar ({{count}})",
+  "chat.reply.sendAll": "Tümünü gönder",
+  "chat.reply.showInChat": "Sohbette göster",
   "browserTab.noSession":
     "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
   "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",

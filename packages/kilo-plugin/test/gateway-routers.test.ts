@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Media, Message } from "@opencode/ai"
+import { Media, Message } from "@opencode/ai/effect"
 import { KiloCustomRouter } from "@kilocode/gateway-core"
 import { IntegrationID } from "@opencode/schema/integration-id"
 import { Model } from "@opencode/schema/model"
@@ -109,7 +109,7 @@ describe("openai message conversion", () => {
   })
 
   test("drops unsupported parts and keeps an empty content string", () => {
-    expect(GatewayRouters.openaiMessages([Message.user([{ type: "reasoning", text: "x" }])])).toEqual([
+    expect(GatewayRouters.openaiMessages([Message.user([Message.media(Media.from({ type: "base64", data: "AAAA", mediaType: "audio/basic" }))])])).toEqual([
       { role: "user", content: "" },
     ])
   })

@@ -2,11 +2,8 @@
  * Search for the Kilo Settings panel.
  *
  * Searchable settings are derived from the i18n `*.title` keys plus a small
- * group-to-tab map, so there is no hand-maintained list to keep in sync. Adding
- * a `settings.<group>...title` key that maps to a tab makes that setting
- * searchable automatically; removing the key removes it. Only the rows whose
- * title key does not end in `.title`, and the two model rows rendered outside
- * their group's tab, need an explicit override below.
+ * group-to-tab map. Nested tabs, section headings, and rows rendered outside
+ * their group's tab use explicit targets below.
  *
  * Ranking and highlighting stay free of Solid and DOM imports so they are
  * unit-testable.
@@ -14,6 +11,9 @@
 
 import { dict as en } from "../../i18n/en"
 import { dict as agentManagerEn } from "../../../agent-manager/i18n/en"
+import { createSettingsIndex, escapeRegExp, searchSettingsIndex } from "./settings-search-index"
+export { createSettingsIndex, searchSettingsIndex }
+export type { SettingsSearchIndex } from "./settings-search-index"
 
 export interface SettingsTab {
   id: string
@@ -23,9 +23,16 @@ export interface SettingsTab {
   conditional?: boolean
 }
 
-export interface SettingsEntry {
+export interface SettingsNavigationTarget {
   /** Tab id that renders this setting. */
   tab: string
+  /** Subtab id, when the setting is inside a nested tab. */
+  subtab?: string
+  /** i18n key of the row to reveal, if any. */
+  titleKey?: string
+}
+
+export interface SettingsEntry extends SettingsNavigationTarget {
   /** i18n key of the setting title, also used to locate the row. */
   titleKey: string
   /** Optional override when the description key is not `<titleKey>.description`. */
@@ -99,24 +106,84 @@ const GROUP_TABS: Record<string, string> = {
 const KEY_TAB_OVERRIDES: Record<string, string> = {
   "settings.context.compactionModel.title": "models",
   "settings.autocomplete.model.title": "models",
+  "settings.experimental.browserAutomation.title": "browser",
+  "settings.experimental.browserAutomation.systemChrome.title": "browser",
+  "settings.experimental.browserLinks.title": "browser",
+}
+
+/** Agent Behaviour rows rendered without opening a separate editor or dialog. */
+const AGENT_BEHAVIOUR_SUBTABS: Record<string, string> = {
+  "settings.agentBehaviour.defaultAgent.title": "agents",
+  "settings.agentBehaviour.sendWhileRunning.title": "agents",
+  "settings.agentBehaviour.sharedAgentBoard.title": "agents",
+  "settings.agentBehaviour.claudeCompat.title": "rules",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "mcpServers",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "mcpServers",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "mcpServers",
 }
 
 /** i18n `*.title` keys under a mapped group that are not rendered rows. */
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
   "settings.autoCleanup.defaultRetention.title",
+  "settings.autoCleanup.enable.title",
+  "settings.autoCleanup.lastRun.title",
+  "settings.autoApprove.maxCost.title",
   "settings.webTools.webSearch.title",
+  "settings.experimental.batch.title",
+  "settings.experimental.claudeMigration.title",
+  "settings.experimental.codeMode.title",
+  "settings.experimental.continueOnDeny.title",
+  "settings.experimental.globIncludeIgnored.title",
+  "settings.experimental.imageGenerationModel.title",
+  "settings.experimental.mcpTimeout.title",
+  "settings.experimental.remote.title",
+  "settings.context.compaction.title",
+  "settings.context.prune.title",
+  "settings.context.memory.title",
+  "settings.context.memory.autoSave.title",
+  "settings.context.memory.project.title",
+  "settings.context.memory.storage.title",
   "agentManager.browser.title",
+  // Models keys the v2 Models tab does not render: v2 has no subagent settings.
+  "settings.providers.subagentModel.title",
 ])
 
 /** Searchable rows whose title key does not end in `.title`, or that need a description override. */
 const EXTRA_ENTRIES: SettingsEntry[] = [
+  { tab: "agentBehaviour", subtab: "agents", titleKey: "settings.agentBehaviour.subtab.agents" },
+  { tab: "agentBehaviour", subtab: "mcpServers", titleKey: "settings.agentBehaviour.subtab.mcpServers" },
+  { tab: "agentBehaviour", subtab: "rules", titleKey: "settings.agentBehaviour.subtab.rules" },
+  { tab: "agentBehaviour", subtab: "workflows", titleKey: "settings.agentBehaviour.subtab.workflows" },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.subtab.skills" },
+  {
+    tab: "agentBehaviour",
+    subtab: "rules",
+    titleKey: "settings.agentBehaviour.instructionFiles",
+    descriptionKey: "settings.agentBehaviour.instructionFiles.description",
+  },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.discoveredSkills" },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.skillPaths" },
+  { tab: "agentBehaviour", subtab: "skills", titleKey: "settings.agentBehaviour.skillUrls" },
+  { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.versionInfo" },
+  { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.community" },
+  { tab: "aboutKiloCode", titleKey: "settings.aboutKiloCode.cliServer", keywords: ["status", "connection"] },
+  {
+    tab: "autoApprove",
+    titleKey: "settings.autoApprove.maxCost.title",
+    descriptionKey: "settings.autoApprove.maxCost.v2Description",
+  },
   {
     tab: "browser",
     titleKey: "settings.webTools.webSearch.enable",
     descriptionKey: "settings.webTools.webSearch.description",
   },
   { tab: "notifications", titleKey: "settings.notifications.sounds" },
+  {
+    tab: "commitMessage",
+    titleKey: "settings.commitMessage.language.description",
+    keywords: ["language", "locale"],
+  },
   {
     tab: "agentManager",
     titleKey: "agentManager.worktree.defaultBaseBranch",
@@ -147,8 +214,10 @@ export function deriveSettingsEntries(keys: Iterable<string>): SettingsEntry[] {
     if (!TITLE_KEY.test(key) || seen.has(key) || EXCLUDED_KEYS.has(key) || tabTitles.has(key)) continue
     const tab = tabForKey(key)
     if (!tab) continue
+    const subtab = AGENT_BEHAVIOUR_SUBTABS[key]
+    if (tab === "agentBehaviour" && !subtab) continue
     seen.add(key)
-    entries.push({ tab, titleKey: key })
+    entries.push({ tab, titleKey: key, ...(subtab ? { subtab } : {}) })
   }
   for (const entry of EXTRA_ENTRIES) {
     if (seen.has(entry.titleKey)) continue
@@ -163,9 +232,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = deriveSettingsEntries([
   ...Object.keys(agentManagerEn),
 ])
 
-export interface SettingsSearchResult {
-  /** Tab id to open. */
-  tab: string
+export interface SettingsSearchResult extends SettingsNavigationTarget {
   /** i18n key of the matched title. */
   titleKey: string
   /** i18n key of the matched description, when the entry has one. */
@@ -182,129 +249,13 @@ export interface SettingsSearchResult {
 
 type Translate = (key: string) => string
 
-function descriptionKeyFor(entry: SettingsEntry): string {
-  if (entry.descriptionKey) return entry.descriptionKey
-  return entry.titleKey.endsWith(".title") ? entry.titleKey.replace(/\.title$/, ".description") : ""
-}
-
-/** Resolve a description key, treating a missing translation as absent. */
-function readDescription(key: string, translate: Translate): string | undefined {
-  if (!key) return undefined
-  const text = translate(key)
-  return text === key ? undefined : text
-}
-
-interface QueryToken {
-  raw: string
-  word: RegExp
-}
-
-function scoreToken(token: QueryToken, title: string, keywords: string, description: string, tab: string): number {
-  if (title === token.raw) return 120
-  if (title.startsWith(token.raw)) return 70
-  if (token.word.test(title)) return 50
-  if (title.includes(token.raw)) return 30
-  if (keywords.includes(token.raw)) return 20
-  if (description.includes(token.raw)) return 10
-  if (tab.includes(token.raw)) return 5
-  return 0
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-/**
- * Rank settings and tabs against a free-text query.
- *
- * Every whitespace-separated token must match somewhere (title, keywords,
- * description, or tab name). Token matches in the title score highest so the
- * most relevant settings float to the top. An empty query returns no results.
- *
- * Results are grouped by the tab that owns them, in order of that tab's best
- * match, and stay score-ordered within each group. The grouped list is what the
- * results pane renders, and keyboard selection indexes into this array, so a
- * tab must stay contiguous or Enter could open a different setting than the
- * highlighted one.
- *
- * The index is small (about 120 entries), so this runs synchronously on every
- * keystroke. Regexes and translations are computed once per call to keep it
- * well under a frame.
- */
 export function searchSettings(
   query: string,
   translate: Translate,
   entries: SettingsEntry[] = SETTINGS_ENTRIES,
   tabs: SettingsTab[] = SETTINGS_TABS,
 ): SettingsSearchResult[] {
-  const tokens: QueryToken[] = query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((raw) => ({ raw, word: new RegExp(`\\b${escapeRegExp(raw)}`) }))
-  if (tokens.length === 0) return []
-
-  const tabLabels = new Map<string, string>()
-  for (const tab of tabs) tabLabels.set(tab.id, translate(tab.titleKey).toLowerCase())
-
-  const results: SettingsSearchResult[] = []
-
-  for (const entry of entries) {
-    const tab = entry.tab
-    if (!tabLabels.has(tab)) continue
-    const titleRaw = translate(entry.titleKey)
-    const title = titleRaw.toLowerCase()
-    const descriptionKey = descriptionKeyFor(entry)
-    const descriptionRaw = readDescription(descriptionKey, translate)
-    const description = (descriptionRaw ?? "").toLowerCase()
-    const keywords = (entry.keywords ?? []).join(" ").toLowerCase()
-    const tabLabel = tabLabels.get(tab) ?? ""
-    const haystack = `${title} ${keywords} ${description} ${tabLabel}`
-    const matched = tokens.every((token) => haystack.includes(token.raw))
-    if (!matched) continue
-    const score = tokens.reduce((sum, token) => sum + scoreToken(token, title, keywords, description, tabLabel), 0)
-    results.push({
-      tab,
-      titleKey: entry.titleKey,
-      descriptionKey: descriptionKey || undefined,
-      title: titleRaw,
-      description: descriptionRaw,
-      score,
-      tabOnly: false,
-    })
-  }
-
-  const seen = new Set(results.map((result) => result.tab))
-  for (const tab of tabs) {
-    const label = translate(tab.titleKey)
-    const lower = label.toLowerCase()
-    const keywords = (tab.keywords ?? []).join(" ").toLowerCase()
-    const matched = tokens.every((token) => lower.includes(token.raw) || keywords.includes(token.raw))
-    if (!matched) continue
-    if (seen.has(tab.id)) {
-      const existing = results.find((result) => result.tab === tab.id)
-      if (existing) existing.score += 5
-      continue
-    }
-    results.push({
-      tab: tab.id,
-      titleKey: tab.titleKey,
-      title: label,
-      score: tokens.length * 5,
-      tabOnly: true,
-    })
-  }
-
-  const sorted = results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
-
-  const grouped = new Map<string, SettingsSearchResult[]>()
-  for (const result of sorted) {
-    const list = grouped.get(result.tab)
-    if (list) list.push(result)
-    else grouped.set(result.tab, [result])
-  }
-  return [...grouped.values()].flat()
+  return searchSettingsIndex(createSettingsIndex(entries, tabs, translate), query)
 }
 
 export interface SearchSegment {

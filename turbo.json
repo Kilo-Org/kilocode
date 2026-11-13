@@ -5,7 +5,7 @@
     "bunfig.toml",
     ".npmrc",
     ".github/actions/setup-bun/**",
-    ".github/workflows/test.yml",
+    ".github/workflows/check-test.yml",
     "package.json"
   ],
   "globalEnv": ["CI", "OPENCODE_DISABLE_SHARE"],
@@ -23,6 +23,13 @@
     "typecheck:tsc": {
       "dependsOn": ["transit"]
     },
+    // kilocode_change start - a cache hit must restore core's declarations: otherwise every dependent that misses
+    // rebuilds them into the same directory at once, and one reads a half-written file (TS2306 "is not a module").
+    "@opencode/core#typecheck:tsc": {
+      "dependsOn": ["transit"],
+      "outputs": ["node_modules/.ts-dist/**"]
+    },
+    // kilocode_change end
     "@opencode/cli#typecheck:tsc": {
       "dependsOn": ["transit", "@opencode/core#typecheck:tsc"]
     },
@@ -47,7 +54,7 @@
       "outputs": ["dist/**"]
     },
     // Workspace packages export their sources, so tests never wait for a dependency's build; the build job in
-    // test.yml checks the library builds. No package has a transit script: it runs nothing and only folds every
+    // check-test.yml checks the library builds. No package has a transit script: it runs nothing and only folds every
     // workspace dependency into the test hash.
     "transit": {
       "dependsOn": ["^transit"]
@@ -76,6 +83,13 @@
       "outputs": []
     },
     "@opencode/cli#test:ci": {
+      "dependsOn": ["transit"],
+      "env": ["KILO_TEST_SHARD"],
+      "passThroughEnv": ["KILO_TEST_CONCURRENCY", "KILO_TEST_FILE_TIMEOUT"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/script/kilocode/test/**"],
+      "outputs": []
+    },
+    "@kilocode/kilo-cli#test:ci": {
       "dependsOn": ["transit"],
       "env": ["KILO_TEST_SHARD"],
       "passThroughEnv": ["KILO_TEST_CONCURRENCY", "KILO_TEST_FILE_TIMEOUT"],

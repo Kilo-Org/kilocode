@@ -115,10 +115,13 @@ export const defaultConfig: MergeConfig = {
     "packages/desktop/**",
     "packages/app/**",
     "packages/gui-extensions/**",
+    "packages/gui-plugins/**", // upstream v2.2 name of packages/gui-extensions
     "packages/session-ui/**",
     "packages/storybook/**",
+    "packages/stories/**", // upstream v2.2 name of packages/storybook
     "script/sdk-docs.ts",
     "script/ast-grep/gui-extensions/**",
+    "script/ast-grep/gui-plugins/**", // upstream v2.2 name of script/ast-grep/gui-extensions
     // Hosted opencode.ai platform
     "packages/console/**",
     "packages/enterprise/**",
@@ -129,6 +132,8 @@ export const defaultConfig: MergeConfig = {
     "infra/**",
     "sst.config.ts",
     "salesforce/**",
+    // opencode.ai site Worker: upstream v2.2.6 merged the docs (`services/www`) and `packages/console/app` into it
+    "services/site/**",
     // Upstream VS Code extension (Kilo ships its own)
     "sdks/vscode/**",
     // Upstream's own project config for developing OpenCode: contributor agents, commands, skills, glossaries,

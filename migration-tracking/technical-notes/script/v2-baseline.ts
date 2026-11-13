@@ -4,7 +4,7 @@
 // The base is the release commit that `pinned()` returns (the second parent of the newest
 // `chore(upstream): sync v2.x.y (<sha>)` merge), so the script follows each sync without an edit.
 // Ref verification is offline and always runs. --checks also runs the commands that CI runs on the
-// v2 line (.github/workflows/check.yml, test.yml, kilo-v2.yml) and writes each output to
+// v2 line (.github/workflows/check.yml, check-test.yml, kilo-v2.yml) and writes each output to
 // migration-tracking/technical-notes/baseline/logs (gitignored by the root `logs/` rule).
 //
 // Usage:
@@ -24,22 +24,23 @@ const LOGS = path.join(ROOT, "migration-tracking/technical-notes/baseline/logs")
 process.chdir(ROOT)
 
 // CI order. `gated: false` marks checks CI does not run; the baseline records them, but they do not
-// fail the run. Steps deliberately not mirrored:
+// fail the run. `botOnly: true` marks the map check that CI runs only on the map bot PR; it gates the
+// baseline only when the checkout is the bot branch. Steps deliberately not mirrored:
 // - check.yml `lint:changed`: pull requests only, against the merge's first parent.
-// - test.yml `affected` and `e2e`: disabled on the fork (`if: false`), they test removed packages.
-// - test.yml shards and `--affected`: the baseline runs every package once (core, tui and cli through their
+// - check-test.yml `affected` and `e2e`: disabled on the fork (`if: false`), they test removed packages.
+// - check-test.yml shards and `--affected`: the baseline runs every package once (core, tui and cli through their
 //   own `test` script, which `test:ci` shards in CI), with --force so turbo replays no cached result.
-// - test.yml Windows matrix, JUnit reports and artifact uploads; kilo-v2.yml CLI archive and upload, and
+// - check-test.yml Windows matrix, JUnit reports and artifact uploads; kilo-v2.yml CLI archive and upload, and
 //   `migration progress comment` (posts to the PR). The darwin-arm64 or linux-x64 build of kilo-v2.yml is
 //   the cli-build check on this host.
-// - test.yml Node build: runs only on Node 26 or later, which CI pins (26.4.0).
+// - check-test.yml Node build: runs only on Node 26 or later, which CI pins (26.4.0).
 const CHECKS: Check[] = [
   // .github/actions/setup-bun, used by every job that installs. A plain `bun install` can reorder
   // `patchedDependencies` in bun.lock on this tree; the frozen install fails on a real drift instead.
   { name: "install", cwd: ".", argv: ["bun", "install", "--frozen-lockfile"] },
   // check.yml
   { name: "check", cwd: ".", argv: ["bun", "run", "check"] },
-  // test.yml unit
+  // check-test.yml unit
   { name: "effect-simplification-rules", cwd: ".", argv: ["bun", "run", "test:effect-simplification-rules"] },
   { name: "effect-simplifications", cwd: ".", argv: ["bun", "run", "lint:effect-simplifications"] },
   {
@@ -51,10 +52,9 @@ const CHECKS: Check[] = [
   },
   { name: "codemode-publish-dry-run", cwd: "packages/codemode", argv: ["bun", "run", "script/publish.ts", "--dry-run"] },
   { name: "client-check-generated", cwd: "packages/client", argv: ["bun", "run", "check:generated"] },
-  { name: "www-check-generated", cwd: "services/www", argv: ["bun", "run", "check:generated"] },
-  // test.yml sdk
+  // check-test.yml sdk
   { name: "sdk-verify-package", cwd: ".", argv: ["bun", "turbo", "verify:package", "--filter=@opencode/sdk"] },
-  // test.yml build (the upstream CLI)
+  // check-test.yml build (the upstream CLI)
   { name: "cli-build", cwd: "packages/cli", argv: ["bun", "run", "script/build.ts", "--single", "--skip-install"] },
   {
     name: "cli-binary-version",
@@ -81,7 +81,9 @@ const CHECKS: Check[] = [
   { name: "workflow-allowlist", cwd: ".", argv: ["bun", "script/check-workflows.ts"] },
   { name: "opencode-annotations", cwd: ".", argv: ["bun", "script/check-opencode-annotations.ts"] },
   { name: "shared-patches", cwd: ".", argv: ["bun", "script/check-shared-patches.ts"] },
-  { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target },
+  // Only the map bot PR has freshly generated outputs. On a feature branch or a v2 tip with a pending
+  // bot PR, --check fails by design, so record it without failing the baseline.
+  { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target, botOnly: true },
   { name: "upstream-install", cwd: "script/upstream", argv: ["bun", "install", "--frozen-lockfile"] },
   { name: "upstream-typecheck", cwd: "script/upstream", argv: ["bun", "run", "typecheck"] },
   { name: "upstream-test", cwd: "script/upstream", argv: ["bun", "test"] },
@@ -104,6 +106,8 @@ type Check = {
   isolate?: boolean
   /** A reason to skip on this host, or undefined */
   skip?: () => Promise<string | undefined>
+  /** CI runs this only on the map bot PR; it gates the baseline only on that branch. */
+  botOnly?: boolean
   gated?: boolean
 }
 
@@ -160,6 +164,7 @@ if (unknown.length > 0) {
 await mkdir(LOGS, { recursive: true })
 console.log(`\n# checks (bun ${Bun.version}, node ${await nodeVersion()}, ${process.platform}-${process.arch})`)
 const started = Bun.nanoseconds()
+const botBranch = (await git("rev-parse", "--abbrev-ref", "HEAD")) === "progress-map-update"
 const results = []
 for (const check of CHECKS.filter((check) => !only || only.has(check.name))) {
   const reason = await check.skip?.()
@@ -184,10 +189,11 @@ for (const check of CHECKS.filter((check) => !only || only.has(check.name))) {
   if (home) await rm(home, { recursive: true, force: true })
   await Bun.write(log, `$ ${check.argv.join(" ")}\n(cwd ${check.cwd})\n\n${stdout}${stderr}`)
   const seconds = ((Bun.nanoseconds() - begin) / 1e9).toFixed(1)
-  const gated = check.gated !== false
+  const gated = check.gated !== false && (!check.botOnly || botBranch)
   results.push({ name: check.name, code, gated })
   const status = code === 0 ? "ok  " : gated ? "FAIL" : "red "
-  console.log(`${status} ${check.name.padEnd(28)} ${seconds.padStart(7)}s  ${path.relative(ROOT, log)}${gated ? "" : "  (not run by CI)"}`)
+  const note = gated ? "" : check.botOnly ? "  (bot PR only)" : "  (not run by CI)"
+  console.log(`${status} ${check.name.padEnd(28)} ${seconds.padStart(7)}s  ${path.relative(ROOT, log)}${note}`)
 }
 console.log(`\ntotal ${((Bun.nanoseconds() - started) / 1e9 / 60).toFixed(1)} min`)
 

@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Fuldført (rapporteret af modellen)",
+  "session.goal.complete": "Fuldført",
   "session.goal.blocked": "Blokeret",
   "session.goal.restart": "Genstart mål",
   ...anacondaDesktopDict,
@@ -266,6 +266,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Kunne ikke sende forespørgsel",
 
   "mcp.status.connected": "forbundet",
+  "mcp.status.pending": "forbinder",
   "mcp.status.failed": "mislykkedes",
   "mcp.status.needs_auth": "kræver godkendelse",
   "mcp.status.needs_registration": "kræver klientregistrering",
@@ -296,6 +297,9 @@ export const dict = {
   "provider.failure.http": "Udbyderfejl (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Udbyderfejl.",
   "provider.failure.schema": "Uventet svar fra udbyderen.",
+  "provider.failure.organizationMissing": "Det valgte team er ikke længere tilgængeligt. Vælg et andet team.",
+  "provider.failure.scopeConflict": "Det valgte team er i konflikt med teamet for dit Kilo-token.",
+  "provider.failure.personalUnavailable": "Denne konto har ingen personlig konto. Vælg et team.",
 
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
@@ -304,7 +308,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Dette kører hele kommandoen uden begrænsninger for filsystem og netværk, kun for denne kommando. Git skal skrive til .git, som er skrivebeskyttet i sandkassen og ligger uden for worktreet i et linket worktree. Bash-tilladelsesregler og automatisk godkendelse godkender aldrig denne anmodning automatisk.",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
+  "ui.permission.noChanges": "Ingen ændringer.",
   "ui.permission.reject": "Afvis",
+  "ui.permission.allowAllSites": "Tillad alle websteder",
   "ui.permission.feedbackPlaceholder": "Fortæl Kilo, hvad den skal gøre anderledes",
   "ui.permission.feedbackHint": "Enter for at afvise, Esc for at annullere",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
@@ -346,6 +352,8 @@ export const dict = {
 
   "session.tab.review": "Gennemgang",
   "session.review.filesChanged": "{{count}} Filer ændret",
+  "session.review.viewTurnChanges": "Vis ændringer i turen",
+  "session.review.turnChangesEmpty": "Ingen ændringer i denne tur.",
   "session.review.loadingChanges": "Indlæser ændringer...",
   "session.review.noChanges": "Ingen ændringer",
   "session.messages.loadingEarlier": "Indlæser tidligere beskeder...",
@@ -750,7 +758,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentadfærd",
   "settings.autoApprove.title": "Automatisk godkendelse",
   "settings.webTools.title": "Webværktøjer",
-  "settings.webTools.description": "Konfigurer websøgning og browserautomatisering.",
+  "settings.webTools.description": "Konfigurer websøgning.",
   "settings.webTools.webSearch.enable": "Aktivér for alle udbydere",
   "settings.webTools.browserAutomation": "Browserautomatisering",
   "settings.webTools.webSearch.title": "Websøgning",
@@ -864,6 +872,7 @@ export const dict = {
     "Denne fil blev eksporteret fra en nyere version af Kilo. Nogle indstillinger kan blive ignoreret.",
   "settings.aboutKiloCode.importSettings.success":
     "Indstillinger importeret. Gennemgå ændringerne ovenfor, og klik derefter på Gem.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetri",
   "settings.aboutKiloCode.telemetry.description":
@@ -1053,6 +1062,9 @@ export const dict = {
     "Dette er en indbygget tilstand. Dens grundlæggende definition kan ikke ændres, men du kan konfigurere tilsidesættelser nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-tilsidesættelse for denne indbyggede tilstand",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Tilladelser pr. agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Disse indstillinger gælder kun for denne tilpassede agent. Skift værdien i en rullemenu fra 'Standard' for at oprette en overstyring, eller brug 'Tilføj sti' eller 'Tilføj kommando' til værktøjsspecifikke undtagelser.",
   "settings.agentBehaviour.permissions.title": "Beregnede tilladelser",
   "settings.agentBehaviour.permissions.count": "{{count}} regler",
   "settings.agentBehaviour.permissions.effective": "Gældende (wildcard):",
@@ -1129,12 +1141,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.title": "Nulstil MCP-login",
   "settings.agentBehaviour.mcpResetAuth.confirm": 'Fjern det gemte login for "{{name}}"? Du skal logge ind igen.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Gennemse Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Opstartstimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Katalogtimeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Udførelsestimeout (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
+    "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo2.json, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows er brugerdefinerede slash-kommandoer defineret i din konfiguration. Skriv /command-name i chatten for at aktivere dem. Kommandoer konfigureres i opencode.json under sektionen 'command'.",
+    "Workflows er brugerdefinerede kommandoer, der er defineret i din konfiguration eller i Markdown-kommandofiler. Du kan angive en model og en ræsonneringsvariant for hver workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
+    "Ingen brugerdefinerede kommandoer fundet. Føj kommandoer til kilo2.json eller en Markdown-fil i .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1148,10 +1163,12 @@ export const dict = {
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
-    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+    "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. Bash er som standard indstillet til Spørg.",
   "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
   "settings.autoApprove.maxCost.description":
     "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Vis en advarsel, der ikke blokerer, når en sessions omkostning når dette USD-beløb. Lad feltet være tomt for at deaktivere.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",
@@ -1225,6 +1242,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
+  "settings.context.compactionKeep.title": "Behold nylige tokens",
+  "settings.context.compactionKeep.description":
+    "Nylige tokens, der bevares ordret, når konteksten komprimeres. Lad feltet være tomt for at beholde 15.000.",
+  "settings.context.compactionBuffer.title": "Komprimeringsbuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens, der holdes fri under modelkontekstgrænsen før komprimering. Lad feltet være tomt for at holde 15 % frit, mindst 16.000.",
   "settings.context.prune.title": "Fjern gamle output",
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",
@@ -1302,13 +1325,18 @@ export const dict = {
   "settings.display.mcpTool.description": "Vælg, om MCP- og generiske værktøjsblokke starter foldet ud eller sammen.",
   "settings.display.mcpTool.expanded": "Foldet ud",
   "settings.display.mcpTool.collapsed": "Foldet sammen",
+  "settings.display.codeMode.title": "Code Mode-blokke",
+  "settings.display.codeMode.description":
+    "Vælg, om Code Mode-blokke starter med værktøjskaldene vist i en liste eller som én linje. Scriptet forbliver altid skjult, indtil du åbner det.",
+  "settings.display.codeMode.expanded": "Foldet ud",
+  "settings.display.codeMode.collapsed": "Foldet sammen",
 
   "settings.display.shortcutHints.title": "Vis genvejstips",
   "settings.display.shortcutHints.description":
     "Vis den tastaturgenvej i den tomme prompt, der passer til det, du gør nu, for eksempel hvordan du tilføjer markeret kode eller vender tilbage til prompten.",
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
-    "Vis tekstgenereringshastigheden (tokens/sec) i den seneste assistentbesked og i opgaveoverskriften. Vises som standard; deaktiver denne indstilling for at skjule den efter behov.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
   "settings.display.autoApprovalReason.description":
     "Viser, hvorfor et værktøjskald blev automatisk godkendt, f.eks. en matchende tilladelsesregel eller en agentstandard.",
@@ -1391,6 +1419,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Åbn alle baggrundsagenter",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Fortsæt i baggrunden",
+  "task.backgroundAgents.promoteFailed": "Denne agent kunne ikke fortsætte i baggrunden. Den er måske allerede færdig.",
   "task.backgroundAgents.waiting": "En baggrundsagent har brug for dit input",
   "task.backgroundAgents.needsInput": "Input kræves",
   "task.backgroundAgents.clearFinished": "Ryd færdige",
@@ -1428,6 +1457,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Filer ændret i dit arbejdsbibliotek, men ikke stagede endnu, samt ikke-sporede (nye) filer.",
   "diffViewer.source.session.label": "Session",
+  "diffViewer.source.turn.tooltip": "Filer ændret af Kilo i løbet af en tur.",
+  "diffViewer.source.turn.label": "Tur",
   "diffViewer.source.session.tooltip":
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
@@ -1475,6 +1506,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Systembrowser",
   "settings.experimental.browserLinks.integrated": "Integreret browser",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "chat.reply.toolbar": "Markeret tekst",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citér i dit svar",
+  "chat.reply.commentHint": "Kommentér dette afsnit",
+  "chat.reply.copy": "Kopier",
+  "chat.reply.sendHint": "Send denne kommentar til Kilo nu",
+  "chat.reply.commentLater": "Gem til din næste besked",
+  "chat.reply.count": "Svar ({{count}})",
+  "chat.reply.sendAll": "Send alle",
+  "chat.reply.showInChat": "Vis i chatten",
   "browserTab.noSession":
     "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",
   "browserTab.disabled": "Den integrerede browser er deaktiveret. Aktivér den i Kilo-indstillinger > Eksperimentel.",

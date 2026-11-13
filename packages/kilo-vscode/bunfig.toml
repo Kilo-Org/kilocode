@@ -1,0 +1,2 @@
+[test]
+preload = ["./test/setup/git-env.ts", "./test/setup/vscode-mock.ts"]

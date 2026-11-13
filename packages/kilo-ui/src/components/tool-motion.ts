@@ -168,14 +168,19 @@ export function useToolSize(props: {
       size = next
       width = inline
       const first = prev === undefined
-      const from = first ? (grow ? 0 : undefined) : anim ? node.getBoundingClientRect().height : prev
+      const entering = grow
       grow = false
-      if (from === undefined) return
-      if (reduce() || resized || performance.now() < quiet || toggling()) return stop()
+      if (first && !entering) return
+      if (reduce() || resized || performance.now() < quiet) return stop()
       // Streamed growth arrives a line at a time. Clipping a small step would
       // hide the bottom of the card (for example the approval line) until the
       // animation catches up, so small steps snap and only large reveals glide.
       if (!first && Math.abs(next - prev) < STEP_LIMIT) return stop()
+      // The animation and rect reads below force style and layout. When many
+      // parallel cards settle in one frame, the cheap checks above keep this
+      // observer from doing that once per card.
+      if (toggling()) return stop()
+      const from = first ? 0 : anim ? node.getBoundingClientRect().height : prev
       if (Math.abs(next - from) < 1) return
       run(from, next, first ? props.motion.stagger() * STEP : 0)
     })

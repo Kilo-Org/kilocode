@@ -1,5 +1,14 @@
 import { createEffect, createMemo, createSignal, createUniqueId, on, onCleanup, onMount } from "solid-js"
-import { searchSettings, type SettingsEntry, type SettingsSearchResult, type SettingsTab } from "./settings-search"
+import {
+  createSettingsIndex,
+  SETTINGS_ENTRIES,
+  searchSettingsIndex,
+  type SettingsEntry,
+  type SettingsNavigationTarget,
+  type SettingsSearchResult,
+  type SettingsTab,
+} from "./settings-search"
+import { createDeferredQuery } from "./settings-search-query"
 
 /** Search state, keyboard navigation, and result reveal for the settings page. */
 export function useSettingsSearch(opts: {
@@ -7,31 +16,39 @@ export function useSettingsSearch(opts: {
   /** v2: the indexable rows the v2 Settings view renders. */
   entries?: () => SettingsEntry[]
   translate: (key: string) => string
-  onSelectTab: (tab: string) => void
+  onNavigate: (target: SettingsNavigationTarget) => void
   searchRequest?: () => number | undefined
 }) {
-  const [query, setQuery] = createSignal("")
+  const search = createDeferredQuery()
   const [active, setActive] = createSignal(0)
   const [focusTick, setFocusTick] = createSignal(0)
   const listId = createUniqueId()
 
-  const results = createMemo(() => searchSettings(query(), opts.translate, opts.entries?.(), opts.tabs()))
-  const searching = () => query().trim().length > 0
+  // The translated labels only change with the language or the row catalog, so
+  // typing reuses them instead of normalizing every row on each keystroke.
+  const index = createMemo(() =>
+    createSettingsIndex(opts.entries?.() ?? SETTINGS_ENTRIES, opts.tabs(), opts.translate),
+  )
+  const results = createMemo(() => searchSettingsIndex(index(), search.settled()))
+  const searching = () => search.query().trim().length > 0
   const activeId = () => (results().length > 0 ? `${listId}-${Math.min(active(), results().length - 1)}` : undefined)
 
+  const flush = search.flush
+
   const input = (value: string) => {
-    setQuery(value)
+    search.input(value)
     setActive(0)
   }
 
   const clear = () => {
-    setQuery("")
+    search.clear()
     setActive(0)
   }
 
   const focus = () => setFocusTick((count) => count + 1)
 
   const move = (delta: number) => {
+    flush()
     const total = results().length
     if (total === 0) return
     setActive((current) => (Math.min(current, total - 1) + delta + total) % total)
@@ -56,14 +73,17 @@ export function useSettingsSearch(opts: {
     requestAnimationFrame(() => attempt(0))
   }
 
-  const select = (result: SettingsSearchResult) => {
-    opts.onSelectTab(result.tab)
+  const navigate = (target: SettingsNavigationTarget) => {
+    opts.onNavigate(target)
     clear()
-    if (result.tabOnly) return
-    reveal(opts.translate(result.titleKey))
+    if (target.titleKey) reveal(opts.translate(target.titleKey))
   }
 
+  const select = (result: SettingsSearchResult) =>
+    navigate({ tab: result.tab, subtab: result.subtab, titleKey: result.tabOnly ? undefined : result.titleKey })
+
   const choose = () => {
+    flush()
     const next = results().at(Math.min(active(), results().length - 1))
     if (next) select(next)
   }
@@ -77,6 +97,8 @@ export function useSettingsSearch(opts: {
     ),
   )
 
+  onCleanup(search.dispose)
+
   // Cmd/Ctrl+F opens search, matching the chat search shortcut.
   onMount(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -89,13 +111,17 @@ export function useSettingsSearch(opts: {
   })
 
   return {
-    query,
+    query: search.query,
+    resultsQuery: search.settled,
+    pending: search.pending,
     input,
     clear,
     focus,
     focusTick,
     move,
     choose,
+    navigate,
+    reveal,
     select,
     results,
     searching,

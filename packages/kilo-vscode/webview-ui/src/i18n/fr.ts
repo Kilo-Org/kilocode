@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Terminé (signalé par le modèle)",
+  "session.goal.complete": "Terminé",
   "session.goal.blocked": "Bloqué",
   "session.goal.restart": "Relancer l'objectif",
   ...anacondaDesktopDict,
@@ -270,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Échec de l'envoi du message",
 
   "mcp.status.connected": "connecté",
+  "mcp.status.pending": "connexion",
   "mcp.status.failed": "échoué",
   "mcp.status.needs_auth": "nécessite auth",
   "mcp.status.needs_registration": "nécessite enregistrement client",
@@ -300,6 +301,9 @@ export const dict = {
   "provider.failure.http": "Erreur du fournisseur (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Erreur du fournisseur.",
   "provider.failure.schema": "Réponse inattendue du fournisseur.",
+  "provider.failure.organizationMissing": "L'équipe sélectionnée n'est plus disponible. Sélectionnez une autre équipe.",
+  "provider.failure.scopeConflict": "L'équipe sélectionnée est en conflit avec l'équipe de votre jeton Kilo.",
+  "provider.failure.personalUnavailable": "Ce compte n'a pas de compte personnel. Sélectionnez une équipe.",
 
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
@@ -308,7 +312,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Cette action exécute toute la commande sans les restrictions de système de fichiers et de réseau, pour cette commande uniquement. Git doit écrire dans .git, qui est en lecture seule dans le bac à sable et se trouve hors de l’arborescence de travail pour un worktree lié. Les règles d’autorisation Bash et l’approbation automatique n’approuvent jamais cette demande automatiquement.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
+  "ui.permission.noChanges": "Aucune modification.",
   "ui.permission.reject": "Rejeter",
+  "ui.permission.allowAllSites": "Autoriser tous les sites",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
   "ui.permission.feedbackHint": "Entrée pour rejeter, Échap pour annuler",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
@@ -350,6 +356,8 @@ export const dict = {
 
   "session.tab.review": "Revue",
   "session.review.filesChanged": "{{count}} fichiers modifiés",
+  "session.review.viewTurnChanges": "Afficher les modifications du tour",
+  "session.review.turnChangesEmpty": "Aucune modification dans ce tour.",
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.noChanges": "Aucune modification",
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
@@ -763,7 +771,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportement de l'agent",
   "settings.autoApprove.title": "Approbation automatique",
   "settings.webTools.title": "Outils web",
-  "settings.webTools.description": "Configurez la recherche web et l’automatisation du navigateur.",
+  "settings.webTools.description": "Configurez la recherche web.",
   "settings.webTools.webSearch.enable": "Activer pour tous les fournisseurs",
   "settings.webTools.browserAutomation": "Automatisation du navigateur",
   "settings.webTools.webSearch.title": "Recherche web",
@@ -882,6 +890,7 @@ export const dict = {
     "Ce fichier a été exporté depuis une version plus récente de Kilo. Certains paramètres pourraient être ignorés.",
   "settings.aboutKiloCode.importSettings.success":
     "Paramètres importés. Vérifiez les modifications ci-dessus, puis cliquez sur Enregistrer.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Télémétrie",
   "settings.aboutKiloCode.telemetry.description":
@@ -1080,6 +1089,9 @@ export const dict = {
     "Il s'agit d'un mode intégré. Sa définition de base ne peut pas être modifiée, mais vous pouvez configurer des surcharges ci-dessous.",
   "settings.agentBehaviour.editMode.promptOverride": "Remplacement de prompt personnalisé pour ce mode intégré",
   "settings.agentBehaviour.badge.subagent": "sous-agent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Permissions par agent",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ces paramètres s'appliquent uniquement à cet agent personnalisé. Modifiez la valeur 'Défaut' d'une liste déroulante pour créer un remplacement, ou utilisez 'Ajouter un chemin' ou 'Ajouter une commande' pour les exceptions propres à chaque outil.",
   "settings.agentBehaviour.permissions.title": "Permissions calculées",
   "settings.agentBehaviour.permissions.count": "{{count}} règles",
   "settings.agentBehaviour.permissions.effective": "Effectif (wildcard) :",
@@ -1158,12 +1170,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'Effacer la connexion enregistrée pour "{{name}}" ? Vous devrez vous reconnecter.',
   "settings.agentBehaviour.mcpBrowseMarketplace": "Parcourir le Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Délai de démarrage (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Délai du catalogue (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Délai d'exécution (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
+    "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo2.json ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflows.description":
-    "Les workflows sont des commandes slash personnalisées définies dans votre configuration. Tapez /command-name dans le chat pour les invoquer. Les commandes sont configurées dans opencode.json dans la section 'command'.",
+    "Les workflows sont des commandes personnalisées définies dans votre configuration ou dans des fichiers Markdown de commandes. Vous pouvez définir un modèle et une variante de raisonnement pour chaque workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
+    "Aucune commande personnalisée trouvée. Ajoutez des commandes à kilo2.json ou à un fichier Markdown dans .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
   "settings.agentBehaviour.workflows.model": "modèle",
@@ -1177,10 +1192,12 @@ export const dict = {
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
 
   "settings.autoApprove.description":
-    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
+    "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. Bash est défini sur Demander par défaut.",
   "settings.autoApprove.maxCost.title": "Alerte de coût de session",
   "settings.autoApprove.maxCost.description":
     "Alerter avant de continuer une session lorsque sa dépense dépasse ce montant en USD. Utilisez des dollars entiers ; laissez vide pour désactiver.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Afficher une alerte non bloquante lorsque le coût d'une session atteint ce montant en USD. Laisser vide pour désactiver.",
   "settings.autoApprove.level.allow": "Autoriser",
   "settings.autoApprove.level.ask": "Demander",
   "settings.autoApprove.level.deny": "Refuser",
@@ -1260,6 +1277,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
+  "settings.context.compactionKeep.title": "Conserver les tokens récents",
+  "settings.context.compactionKeep.description":
+    "Tokens récents conservés mot pour mot lors de la compaction du contexte. Laissez vide pour conserver 15 000.",
+  "settings.context.compactionBuffer.title": "Mémoire tampon de compaction",
+  "settings.context.compactionBuffer.description":
+    "Tokens laissés libres sous la limite de contexte avant la compaction. Laissez vide pour garder 15 % libres, au moins 16 000.",
   "settings.context.prune.title": "Élaguer les anciennes sorties",
   "settings.context.prune.description": "Supprimer les anciennes sorties d'outils pendant la compaction",
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",
@@ -1341,13 +1364,18 @@ export const dict = {
     "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
   "settings.display.mcpTool.expanded": "Développés",
   "settings.display.mcpTool.collapsed": "Réduits",
+  "settings.display.codeMode.title": "Blocs Code Mode",
+  "settings.display.codeMode.description":
+    "Choisissez si les blocs Code Mode démarrent avec leurs appels d'outils listés ou sur une seule ligne. Le script reste toujours masqué jusqu'à ce que vous l'ouvriez.",
+  "settings.display.codeMode.expanded": "Développés",
+  "settings.display.codeMode.collapsed": "Réduits",
 
   "settings.display.shortcutHints.title": "Afficher les astuces de raccourcis",
   "settings.display.shortcutHints.description":
     "Affiche dans le prompt vide le raccourci clavier adapté à ce que vous faites, par exemple pour ajouter le code sélectionné ou revenir au prompt.",
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
-    "Afficher la vitesse de génération du texte (tokens/sec) dans le dernier message de l’assistant et dans l’en-tête de la tâche. Affichée par défaut ; désactivez ce paramètre pour la masquer si nécessaire.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Afficher la raison de l'approbation automatique",
   "settings.display.autoApprovalReason.description":
     "Indique pourquoi un appel d'outil a été approuvé automatiquement, par exemple une règle d'autorisation correspondante ou une valeur par défaut d'agent.",
@@ -1432,6 +1460,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Ouvrir tous les agents en arrière-plan",
   "task.backgroundAgents.cancel": "Arrêter",
   "task.backgroundAgents.continueInBackground": "Continuer en arrière-plan",
+  "task.backgroundAgents.promoteFailed": "Cet agent n'a pas pu continuer en arrière-plan. Il est peut-être déjà terminé.",
   "task.backgroundAgents.waiting": "Un agent en arrière-plan attend votre saisie",
   "task.backgroundAgents.needsInput": "Saisie requise",
   "task.backgroundAgents.clearFinished": "Effacer les agents terminés",
@@ -1469,6 +1498,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Fichiers modifiés dans votre arborescence de travail mais pas encore indexés, plus les fichiers non suivis (nouveaux).",
   "diffViewer.source.session.label": "Session",
+  "diffViewer.source.turn.tooltip": "Fichiers modifiés par Kilo pendant un tour.",
+  "diffViewer.source.turn.label": "Tour",
   "diffViewer.source.session.tooltip":
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
@@ -1516,6 +1547,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Navigateur système",
   "settings.experimental.browserLinks.integrated": "Navigateur intégré",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
+  "chat.reply.toolbar": "Texte sélectionné",
+  "chat.reply.quote": "Citer",
+  "chat.reply.quoteHint": "Citer dans votre réponse",
+  "chat.reply.commentHint": "Commenter ce passage",
+  "chat.reply.copy": "Copier",
+  "chat.reply.sendHint": "Envoyer ce commentaire à Kilo maintenant",
+  "chat.reply.commentLater": "Enregistrer pour votre prochain message",
+  "chat.reply.count": "Réponses ({{count}})",
+  "chat.reply.sendAll": "Tout envoyer",
+  "chat.reply.showInChat": "Afficher dans le chat",
   "browserTab.noSession":
     "Ouvrez le navigateur depuis une session pour prévisualiser une application locale ou une page HTTPS publique.",
   "browserTab.disabled": "Le navigateur intégré est désactivé. Activez-le dans Paramètres Kilo > Expérimental.",

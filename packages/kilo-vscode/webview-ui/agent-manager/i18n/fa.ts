@@ -112,6 +112,10 @@ export const dict = {
   "agentManager.hoverCard.commits": "کامیت‌ها",
 
   "agentManager.session.new": "جلسه جدید",
+  "agentManager.history.title": "جلسات باز",
+  "agentManager.history.back": "بازگشت",
+  "agentManager.sidebar.resize": "تغییر اندازه نوار کناری",
+  "agentManager.review.resize": "تغییر اندازه بررسی",
   "agentManager.session.untitled": "بدون عنوان",
   "agentManager.session.newSession": "جلسه جدید",
   "agentManager.session.openInWorktree": "باز کردن در worktree",
@@ -128,7 +132,6 @@ export const dict = {
   "agentManager.tab.unpin": "برداشتن سنجاق",
   "agentManager.tab.pinned": "سنجاق‌شده",
   "agentManager.tab.terminal": "ترمینال",
-  "agentManager.tab.openTerminal": "باز کردن ترمینال",
   "agentManager.tab.newOptions": "گزینه‌های بیشتر برای تب جدید",
   "agentManager.sidebarSearch.label": "جستجوی worktree‌ها و جلسات",
   "agentManager.sidebarSearch.scope": "جستجو در فضای کاری محلی، جلسات محلی، worktree‌ها و جلسات آن‌ها",
@@ -146,9 +149,6 @@ export const dict = {
   "agentManager.terminal.connectionError": "خطای اتصال ترمینال",
   "agentManager.terminal.empty": "هنوز ترمینالی اینجا وجود ندارد",
   "agentManager.terminal.start": "شروع ترمینال",
-  "agentManager.terminal.destination": "انتخاب کنید دکمه ترمینال چه چیزی را باز کند",
-  "agentManager.terminal.openInVscode": "ترمینال VS Code",
-  "agentManager.terminal.openInPanel": "پنل Agent Manager",
   "agentManager.terminal.errorTitle": "خطای ترمینال",
 
   "agentManager.setup.failed": "راه‌اندازی Worktree ناموفق بود",

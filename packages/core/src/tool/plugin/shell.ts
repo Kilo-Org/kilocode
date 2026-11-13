@@ -1,12 +1,11 @@
 export * as ShellTool from "./shell.js"
 
-import { ToolFailure } from "@opencode/ai"
+import { ToolFailure } from "@opencode/ai/effect"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import type { SessionHooks } from "@opencode/plugin/effect/session"
 import type { ShellCreateBefore } from "@opencode/plugin/effect/shell"
 import type { Tool } from "@opencode/schema/tool"
-import { Deferred, Effect, Schema, Scope } from "effect"
-import { Config } from "../../config.js"
+import { Deferred, Duration, Effect, Fiber, Schema, Scope } from "effect" // kilocode_change - Duration, Fiber
 import { Environment } from "../../environment/index.js"
 import { Job } from "../../job.js"
 import { FileAccess } from "../../file-access.js"
@@ -15,7 +14,6 @@ import { NonNegativeInt } from "../../schema.js"
 import { Session } from "../../session.js"
 import { SessionSchema } from "../../session/schema.js"
 import { Shell } from "../../shell.js"
-import { shellParserWasm } from "#shell-parser-wasm"
 import { ShellParse } from "../../shell/parse.js"
 import { ShellSelect } from "../../shell/select.js"
 import { ShellResult } from "../../shell/result.js"
@@ -46,6 +44,13 @@ const description = (shell?: string) =>
   ].join(" ")
 
 export const Input = Schema.Struct({
+  // kilocode_change start - optional model-written summary shown instead of the raw command in the tool card.
+  // It comes first: models write arguments in schema order, so the card can show it before the command streams.
+  description: Schema.optionalKey(Schema.String).annotate({
+    description:
+      "Recommended: a clear, concise description of what this command does in 5-10 words, for the tool card. Omit it only when the command already says what it does.",
+  }),
+  // kilocode_change end
   command: Schema.String.annotate({ description: "Shell command string to execute" }),
   workdir: Schema.optionalKey(Schema.String).annotate({
     description:
@@ -76,12 +81,17 @@ const Output = Schema.Struct({
 
 type Output = typeof Output.Type
 
+// kilocode_change start - live output preview for tool progress while a command runs
+const LIVE_OUTPUT_LIMIT = 30_000
+const LIVE_OUTPUT_INTERVAL = Duration.millis(100)
+// kilocode_change end
+
 const resultMessages = (output: Output) => {
   const notice = output.status === "running" ? BACKGROUND_INSTRUCTION : ShellResult.notice(output)
   return [...(output.output ? [output.output] : []), ...(notice ? [notice] : [])]
 }
 
-const toolResult = (output: Output) => {
+const toolResult = (output: Output, description?: string) => { // kilocode_change - carries the optional description
   return {
     output,
     content: resultMessages(output).map((text) => ({ type: "text" as const, text })),
@@ -89,6 +99,7 @@ const toolResult = (output: Output) => {
       status: output.status,
       ...ShellResult.metadata(output),
       ...(output.shellID !== undefined ? { shellID: output.shellID } : {}),
+      ...(description ? { description } : {}), // kilocode_change - keep the summary for clients without the input
     },
   }
 }
@@ -112,21 +123,12 @@ export const Plugin = {
     const shellSelect = yield* ShellSelect.Service
     const compatibleShell = shellSelect.resolve({ priority: "compat" })
     const permission = yield* Permission.Service
-    const config = yield* Config.Service
 
     const prepare = Effect.fn("ShellTool.prepare")(function* (invocation: ShellCreateBefore, context: Tool.Context) {
-      const source = {
-        type: "tool" as const,
-        messageID: context.messageID,
-        id: context.id,
-      }
       const target = yield* access.resolve({ path: invocation.cwd, kind: "directory" })
       invocation.cwd = target.absolute
       const timeout = invocation.timeout
-      const portable =
-        Config.latest(yield* config.entries(), "experimental")?.portable_shell_scanner ??
-        (shellParserWasm.bash === "" || ctx.app.channel === "local" || ctx.app.channel === "dev")
-      const parsed = yield* ShellParse.scan(invocation.command, invocation.shell, target.absolute, { portable })
+      const parsed = yield* ShellParse.scan(invocation.command, invocation.shell, target.absolute)
       const directories = yield* Effect.forEach(parsed.directories, (directory) =>
         access.resolve({
           path: FileAccess.resolvePath(target.absolute, directory),
@@ -139,9 +141,7 @@ export const Plugin = {
           action: name,
           resources: parsed.commands.map((command) => command.resource),
           save: parsed.commands.map((command) => command.save),
-          sessionID: context.sessionID,
-          agent: context.agent,
-          source,
+          ...Permission.invocation(context),
         })
       // Approval can outlive the directory, so validate immediately before spawning.
       const workdir = yield* Environment.typeFollowing(environment.files, target.absolute).pipe(
@@ -160,6 +160,7 @@ export const Plugin = {
         id: string,
         shellID: string,
         command: string,
+        description: string | undefined, // kilocode_change
         settled: Deferred.Deferred<Output>,
       ) {
         const info = (yield* jobs.wait({ id })).info
@@ -173,7 +174,7 @@ export const Plugin = {
         yield* sessions.synthetic({
           ...(info.notificationID ? { id: info.notificationID } : {}),
           sessionID,
-          description: command,
+          description: description ?? command, // kilocode_change - prefer the model's description over the raw command
           ...ShellResult.notification({
             jobID: id,
             shellID,
@@ -219,6 +220,43 @@ export const Plugin = {
               )
               yield* context.progress({ shellID: info.id })
 
+              // kilocode_change start - stream the current output and running state while the command runs
+              const size = Effect.gen(function* () {
+                return (yield* shell.output(info.id, { cursor: Number.MAX_SAFE_INTEGER })).size
+              })
+              const preview = (bytes: number) =>
+                Effect.gen(function* () {
+                  // Four bytes per character covers any UTF-8 code point, so the window holds at least the limit.
+                  const start = Math.max(0, bytes - LIVE_OUTPUT_LIMIT * 4)
+                  const page = yield* shell.output(info.id, { cursor: start, limit: bytes - start })
+                  const text = start > 0 ? page.output.replace(/^\uFFFD+/, "") : page.output
+                  return text.length <= LIVE_OUTPUT_LIMIT ? text : `...\n\n${text.slice(-LIVE_OUTPUT_LIMIT)}`
+                })
+              const report = (output: string) =>
+                context.progress({ shellID: info.id, output, status: "running" })
+              let seen = yield* size.pipe(Effect.catchTag("Shell.NotFoundError", () => Effect.succeed(0)))
+              let published = yield* preview(seen)
+              yield* report(published)
+              // The child fiber stops on every normal return below; an interrupted or failed call interrupts it
+              // with the tool fiber, so no path leaves it publishing after the call settles.
+              const streamed = yield* Effect.forkChild(
+                Effect.gen(function* () {
+                  while (true) {
+                    yield* Effect.sleep(LIVE_OUTPUT_INTERVAL)
+                    const bytes = yield* size
+                    // The output file is append-only, so an unchanged size means an unchanged preview.
+                    if (bytes === seen) continue
+                    seen = bytes
+                    const output = yield* preview(bytes)
+                    if (output === published) continue
+                    published = output
+                    yield* report(output)
+                  }
+                }).pipe(Effect.catchTag("Shell.NotFoundError", () => Effect.void)),
+              )
+              const stop = Fiber.interrupt(streamed)
+              // kilocode_change end
+
               const settled = yield* Deferred.make<Output>()
               const run = Effect.gen(function* () {
                 const result = yield* shell.result(info)
@@ -245,6 +283,9 @@ export const Plugin = {
                 recovery: {
                   kind: "shell",
                   sessionID: context.sessionID,
+                  // kilocode_change start - carry the summary so the restart notice matches the completion notice
+                  ...(input.description ? { description: input.description } : {}),
+                  // kilocode_change end
                   shellID: info.id,
                   command: info.command,
                 },
@@ -253,7 +294,8 @@ export const Plugin = {
 
               if (input.background === true) {
                 yield* jobs.background(job.id)
-                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
+                yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
 
@@ -262,16 +304,18 @@ export const Plugin = {
                 .pipe(Effect.onInterrupt(() => jobs.cancel(job.id).pipe(Effect.ignore)))
               if (result?.type === "backgrounded") {
                 yield* shell.timeout(info.id, 0)
-                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, settled)
+                yield* notifyWhenDone(context.sessionID, job.id, info.id, info.command, input.description, settled) // kilocode_change
+                yield* stop // kilocode_change
                 return backgroundResult(info.id, info.file)
               }
               if (result?.info.status === "error")
-                return yield* Effect.fail(new Error(result.info.error ?? "Command failed"))
-              if (result?.info.status === "cancelled") return yield* Effect.fail(new Error("Command cancelled"))
+                return yield* stop.pipe(Effect.andThen(Effect.fail(new Error(result.info.error ?? "Command failed")))) // kilocode_change
+              if (result?.info.status === "cancelled") // kilocode_change
+                return yield* stop.pipe(Effect.andThen(Effect.fail(new Error("Command cancelled")))) // kilocode_change
 
-              return yield* Deferred.await(settled)
+              return yield* Deferred.await(settled).pipe(Effect.ensuring(stop)) // kilocode_change
             }).pipe(
-              Effect.map(toolResult),
+              Effect.map((output) => toolResult(output, input.description)), // kilocode_change
               Effect.mapError(
                 (error) => new ToolFailure({ message: `Unable to execute command: ${input.command}`, error }),
               ),

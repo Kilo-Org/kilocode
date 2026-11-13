@@ -53,7 +53,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "เสร็จสมบูรณ์ (โมเดลรายงาน)",
+  "session.goal.complete": "เสร็จสมบูรณ์",
   "session.goal.blocked": "ถูกบล็อก",
   "session.goal.restart": "เริ่มเป้าหมายใหม่",
   ...anacondaDesktopDict,
@@ -264,6 +264,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "ไม่สามารถส่งพร้อมท์",
 
   "mcp.status.connected": "เชื่อมต่อแล้ว",
+  "mcp.status.pending": "กำลังเชื่อมต่อ",
   "mcp.status.failed": "ล้มเหลว",
   "mcp.status.needs_auth": "ต้องการการตรวจสอบสิทธิ์",
   "mcp.status.needs_registration": "ต้องการลงทะเบียนไคลเอนต์",
@@ -294,6 +295,9 @@ export const dict = {
   "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
   "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
   "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
+  "provider.failure.organizationMissing": "ทีมที่เลือกไม่พร้อมใช้งานอีกต่อไป เลือกทีมอื่น",
+  "provider.failure.scopeConflict": "ทีมที่เลือกขัดแย้งกับทีมของโทเค็น Kilo ของคุณ",
+  "provider.failure.personalUnavailable": "บัญชีนี้ไม่มีบัญชีส่วนตัว เลือกทีม",
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
@@ -302,7 +306,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "การดำเนินการนี้จะรันคำสั่งทั้งหมดโดยไม่มีการจำกัดระบบไฟล์และเครือข่าย สำหรับคำสั่งนี้เท่านั้น Git ต้องเขียนลงใน .git ซึ่งเป็นแบบอ่านอย่างเดียวในแซนด์บ็อกซ์ และอยู่นอก worktree สำหรับ worktree ที่เชื่อมโยง กฎอนุญาตของ Bash และการอนุมัติอัตโนมัติจะไม่อนุมัติพร้อมท์นี้โดยอัตโนมัติ",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.noChanges": "ไม่มีการเปลี่ยนแปลง",
   "ui.permission.reject": "ปฏิเสธ",
+  "ui.permission.allowAllSites": "อนุญาตทุกเว็บไซต์",
   "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",
   "ui.permission.feedbackHint": "Enter เพื่อปฏิเสธ, Esc เพื่อยกเลิก",
   "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
@@ -344,6 +350,8 @@ export const dict = {
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
+  "session.review.viewTurnChanges": "ดูการเปลี่ยนแปลงในเทิร์น",
+  "session.review.turnChangesEmpty": "ไม่มีการเปลี่ยนแปลงในเทิร์นนี้",
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
 
@@ -741,7 +749,7 @@ export const dict = {
   "settings.agentBehaviour.title": "พฤติกรรมของเอเจนต์",
   "settings.autoApprove.title": "อนุมัติอัตโนมัติ",
   "settings.webTools.title": "เครื่องมือเว็บ",
-  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บและระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บ",
   "settings.webTools.webSearch.enable": "เปิดใช้สำหรับผู้ให้บริการทั้งหมด",
   "settings.webTools.browserAutomation": "ระบบอัตโนมัติของเบราว์เซอร์",
   "settings.webTools.webSearch.title": "ค้นหาเว็บ",
@@ -851,6 +859,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "ไฟล์นี้ถูกส่งออกจาก Kilo เวอร์ชันใหม่กว่า การตั้งค่าบางรายการอาจถูกข้ามไป",
   "settings.aboutKiloCode.importSettings.success": "นำเข้าการตั้งค่าแล้ว ตรวจสอบการเปลี่ยนแปลงด้านบน จากนั้นคลิกบันทึก",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
@@ -1037,6 +1046,9 @@ export const dict = {
     "นี่คือโหมดในตัว ไม่สามารถเปลี่ยนคำจำกัดความพื้นฐานได้ แต่คุณสามารถกำหนดค่าการแทนที่ได้ที่ด้านล่าง",
   "settings.agentBehaviour.editMode.promptOverride": "การแทนที่ prompt แบบกำหนดเองสำหรับโหมดในตัวนี้",
   "settings.agentBehaviour.badge.subagent": "เอเจนต์ย่อย",
+  "settings.agentBehaviour.perAgentPermissions.title": "สิทธิ์สำหรับแต่ละเอเจนต์",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "การตั้งค่าเหล่านี้ใช้กับเอเจนต์ที่กำหนดเองนี้เท่านั้น เปลี่ยนค่าของรายการดรอปดาวน์จาก 'ค่าเริ่มต้น' เพื่อกำหนดค่าแทน หรือใช้ 'เพิ่มพาธ' หรือ 'เพิ่มคำสั่ง' สำหรับข้อยกเว้นเฉพาะเครื่องมือ",
   "settings.agentBehaviour.permissions.title": "สิทธิ์ที่คำนวณแล้ว",
   "settings.agentBehaviour.permissions.count": "{{count}} กฎ",
   "settings.agentBehaviour.permissions.effective": "มีผล (ไวลด์การ์ด):",
@@ -1114,12 +1126,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     'ล้างข้อมูลการเข้าสู่ระบบที่บันทึกไว้สำหรับ "{{name}}" หรือไม่? คุณจะต้องเข้าสู่ระบบอีกครั้ง',
   "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "หมดเวลาเริ่มต้น (มิลลิวินาที)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "หมดเวลาของแค็ตตาล็อก (มิลลิวินาที)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "หมดเวลาการทำงาน (มิลลิวินาที)",
   "settings.agentBehaviour.mcpEmpty":
-    "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
+    "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo2.json หรือขอให้เอเจนต์เพิ่มให้คุณ",
   "settings.agentBehaviour.workflows.description":
-    "เวิร์กโฟลว์คือคำสั่งสแลชแบบกำหนดเองที่กำหนดไว้ในการตั้งค่าของคุณ พิมพ์ /command-name ในแชทเพื่อเรียกใช้ คำสั่งถูกกำหนดค่าใน opencode.json ภายใต้ส่วน 'command'",
+    "เวิร์กโฟลว์คือคำสั่งแบบกำหนดเองที่กำหนดไว้ในการตั้งค่าของคุณหรือในไฟล์ Markdown ของคำสั่ง คุณสามารถตั้งค่าโมเดลและตัวแปรการให้เหตุผลสำหรับแต่ละเวิร์กโฟลว์",
   "settings.agentBehaviour.workflows.empty":
-    "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
+    "ไม่พบคำสั่งแบบกำหนดเอง เพิ่มคำสั่งใน kilo2.json หรือไฟล์ Markdown ใน .kilo2/command",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
   "settings.agentBehaviour.workflows.model": "โมเดล",
@@ -1133,10 +1148,12 @@ export const dict = {
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
 
   "settings.autoApprove.description":
-    "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",
+    "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน Bash ค่าเริ่มต้นคือถาม",
   "settings.autoApprove.maxCost.title": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
   "settings.autoApprove.maxCost.description":
     "แจ้งเตือนก่อนดำเนินเซสชันต่อหลังจากค่าใช้จ่ายเกินจำนวน USD นี้ ใช้จำนวนดอลลาร์เต็ม; เว้นว่างไว้เพื่อปิดใช้งาน",
+  "settings.autoApprove.maxCost.v2Description":
+    "แสดงการแจ้งเตือนที่ไม่ปิดกั้นเมื่อค่าใช้จ่ายของเซสชันถึงจำนวน USD นี้ เว้นว่างไว้เพื่อปิดใช้งาน",
   "settings.autoApprove.level.allow": "อนุญาต",
   "settings.autoApprove.level.ask": "ถาม",
   "settings.autoApprove.level.deny": "ปฏิเสธ",
@@ -1203,6 +1220,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
+  "settings.context.compactionKeep.title": "เก็บโทเคนล่าสุด",
+  "settings.context.compactionKeep.description":
+    "โทเคนล่าสุดที่เก็บไว้ตามเดิมเมื่อบีบอัดบริบท เว้นว่างเพื่อเก็บ 15,000",
+  "settings.context.compactionBuffer.title": "บัฟเฟอร์การบีบอัด",
+  "settings.context.compactionBuffer.description":
+    "โทเคนที่เว้นว่างไว้ต่ำกว่าขีดจำกัดบริบทของโมเดลก่อนบีบอัด เว้นว่างเพื่อเว้น 15% ว่าง อย่างน้อย 16,000",
   "settings.context.prune.title": "ตัดผลลัพธ์เก่า",
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",
@@ -1277,13 +1300,18 @@ export const dict = {
   "settings.display.mcpTool.description": "เลือกว่าบล็อกเครื่องมือ MCP และเครื่องมือทั่วไปจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
+  "settings.display.codeMode.title": "บล็อก Code Mode",
+  "settings.display.codeMode.description":
+    "เลือกว่าบล็อก Code Mode จะเริ่มต้นด้วยรายการการเรียกใช้เครื่องมือหรือเป็นบรรทัดเดียว สคริปต์จะถูกซ่อนไว้เสมอจนกว่าคุณจะเปิด",
+  "settings.display.codeMode.expanded": "ขยาย",
+  "settings.display.codeMode.collapsed": "ยุบ",
 
   "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
   "settings.display.shortcutHints.description":
     "แสดงปุ่มลัดที่เหมาะกับสิ่งที่คุณทำอยู่ในช่องพรอมต์ที่ว่าง เช่น วิธีเพิ่มโค้ดที่เลือกหรือกลับไปที่พรอมต์",
   "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
-    "แสดงอัตราการสร้างข้อความ (tokens/sec) ในข้อความล่าสุดของผู้ช่วยและส่วนหัวของงาน แสดงโดยค่าเริ่มต้น; ปิดใช้งานการตั้งค่านี้เพื่อซ่อนเมื่อจำเป็น",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "แสดงเหตุผลการอนุมัติอัตโนมัติ",
   "settings.display.autoApprovalReason.description":
     "แสดงสาเหตุที่การเรียกเครื่องมือได้รับการอนุมัติอัตโนมัติ เช่น กฎสิทธิ์ที่ตรงกันหรือค่าเริ่มต้นของเอเจนต์",
@@ -1365,6 +1393,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
+  "task.backgroundAgents.promoteFailed": "เอเจนต์นี้ไม่สามารถทำงานต่อในเบื้องหลังได้ อาจเสร็จสิ้นไปแล้ว",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
   "task.backgroundAgents.clearFinished": "ล้างรายการที่เสร็จแล้ว",
@@ -1402,6 +1431,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "ไฟล์ที่ถูกแก้ไขในแผนผังการทำงานแต่ยังไม่ได้ staged และไฟล์ที่ไม่ได้ติดตาม (ใหม่)",
   "diffViewer.source.session.label": "เซสชัน",
+  "diffViewer.source.turn.tooltip": "ไฟล์ที่ Kilo เปลี่ยนแปลงในหนึ่งเทิร์น",
+  "diffViewer.source.turn.label": "เทิร์น",
   "diffViewer.source.session.tooltip":
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",
@@ -1448,6 +1479,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "เบราว์เซอร์ของระบบ",
   "settings.experimental.browserLinks.integrated": "เบราว์เซอร์ในตัว",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "chat.reply.toolbar": "ข้อความที่เลือก",
+  "chat.reply.quote": "อ้างอิง",
+  "chat.reply.quoteHint": "อ้างอิงในคำตอบของคุณ",
+  "chat.reply.commentHint": "แสดงความคิดเห็นต่อข้อความนี้",
+  "chat.reply.copy": "คัดลอก",
+  "chat.reply.sendHint": "ส่งความคิดเห็นนี้ถึง Kilo ทันที",
+  "chat.reply.commentLater": "บันทึกไว้ใช้ในข้อความถัดไป",
+  "chat.reply.count": "การตอบกลับ ({{count}})",
+  "chat.reply.sendAll": "ส่งทั้งหมด",
+  "chat.reply.showInChat": "แสดงในการแชท",
   "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
   "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
 }

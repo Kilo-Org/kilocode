@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "Завершено (за повідомленням моделі)",
+  "session.goal.complete": "Завершено",
   "session.goal.blocked": "Заблоковано",
   "session.goal.restart": "Перезапустити ціль",
   ...anacondaDesktopDict,
@@ -266,6 +266,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Не вдалося надіслати запит",
 
   "mcp.status.connected": "підключено",
+  "mcp.status.pending": "підключення",
   "mcp.status.failed": "помилка",
   "mcp.status.needs_auth": "потрібна автентифікація",
   "mcp.status.needs_registration": "потрібна реєстрація клієнта",
@@ -298,6 +299,9 @@ export const dict = {
   "provider.failure.http": "Помилка провайдера (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Помилка провайдера.",
   "provider.failure.schema": "Неочікувана відповідь від провайдера.",
+  "provider.failure.organizationMissing": "Вибрана команда більше недоступна. Виберіть іншу команду.",
+  "provider.failure.scopeConflict": "Вибрана команда конфліктує з командою вашого токена Kilo.",
+  "provider.failure.personalUnavailable": "Цей обліковий запис не має особистого облікового запису. Виберіть команду.",
 
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
@@ -306,7 +310,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "Команда повністю виконується без обмежень файлової системи та мережі, лише для цієї команди. Git має записувати в .git, який доступний лише для читання в пісочниці та розташований поза робочим деревом у пов'язаному worktree. Правила дозволів Bash і автоматичне схвалення ніколи не схвалюють цей запит автоматично.",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.noChanges": "Змін немає.",
   "ui.permission.reject": "Відхилити",
+  "ui.permission.allowAllSites": "Дозволити всі сайти",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
   "ui.permission.feedbackHint": "Enter для відхилення, Esc для скасування",
   "ui.permission.doomLoop.prompt":
@@ -349,6 +355,8 @@ export const dict = {
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",
+  "session.review.viewTurnChanges": "Переглянути зміни за хід",
+  "session.review.turnChangesEmpty": "У цьому ході немає змін.",
   "session.review.loadingChanges": "Завантаження змін...",
   "session.review.noChanges": "Змін немає",
 
@@ -702,7 +710,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
   "settings.webTools.title": "Вебінструменти",
-  "settings.webTools.description": "Налаштуйте вебпошук і автоматизацію браузера.",
+  "settings.webTools.description": "Налаштуйте вебпошук.",
   "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
   "settings.webTools.browserAutomation": "Автоматизація браузера",
   "settings.webTools.webSearch.title": "Вебпошук",
@@ -853,6 +861,7 @@ export const dict = {
     "Цей файл було експортовано з новішої версії Kilo. Деякі налаштування можуть бути проігноровані.",
   "settings.aboutKiloCode.importSettings.success":
     "Налаштування імпортовано. Перегляньте зміни вище, потім натисніть Зберегти.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Телеметрія",
   "settings.aboutKiloCode.telemetry.description":
@@ -1094,12 +1103,15 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL сервера",
   "settings.agentBehaviour.addMcp.url.placeholder": "напр. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Переглянути Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Час очікування запуску (мс)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Час очікування каталогу (мс)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Час очікування виконання (мс)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo.jsonc або попросіть агента додати їх.",
+    "MCP-серверів не налаштовано. Додайте MCP-сервери до kilo2.json або попросіть агента додати їх.",
   "settings.agentBehaviour.workflows.description":
-    "Робочі процеси — це власні команди з косою рискою, визначені у вашій конфігурації. Введіть /назва-команди в чаті, щоб викликати їх. Команди налаштовуються в розділі 'command' файлу opencode.json.",
+    "Робочі процеси це власні команди, визначені у вашій конфігурації або у файлах Markdown з командами. Для кожного робочого процесу можна задати модель і варіант міркування.",
   "settings.agentBehaviour.workflows.empty":
-    "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
+    "Власних команд не знайдено. Додайте команди до kilo2.json або до файлу Markdown у .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
   "settings.agentBehaviour.workflows.model": "модель",
@@ -1107,10 +1119,12 @@ export const dict = {
   "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
-    "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+    "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. Bash за замовчуванням — Запитувати.",
   "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
   "settings.autoApprove.maxCost.description":
     "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Показувати неблокувальне попередження, коли вартість сесії досягає цієї суми в USD. Залиште порожнім, щоб вимкнути.",
   "settings.autoApprove.level.allow": "Дозволити",
   "settings.autoApprove.level.ask": "Запитувати",
   "settings.autoApprove.level.deny": "Відхилити",
@@ -1186,6 +1200,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
+  "settings.context.compactionKeep.title": "Зберігати останні токени",
+  "settings.context.compactionKeep.description":
+    "Останні токени, що зберігаються дослівно під час стиснення контексту. Залиште порожнім, щоб зберігати 15 000.",
+  "settings.context.compactionBuffer.title": "Буфер стиснення",
+  "settings.context.compactionBuffer.description":
+    "Токени, які залишаються вільними нижче ліміту контексту перед стисненням. Залиште порожнім, щоб залишати 15% вільними, щонайменше 16 000.",
   "settings.context.prune.title": "Очищати старі виводи",
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
@@ -1265,13 +1285,18 @@ export const dict = {
     "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
   "settings.display.mcpTool.expanded": "Розгорнуті",
   "settings.display.mcpTool.collapsed": "Згорнуті",
+  "settings.display.codeMode.title": "Блоки Code Mode",
+  "settings.display.codeMode.description":
+    "Виберіть, чи блоки Code Mode починаються зі списку викликів інструментів, чи з одного рядка. Скрипт завжди залишається прихованим, доки ви його не відкриєте.",
+  "settings.display.codeMode.expanded": "Розгорнуті",
+  "settings.display.codeMode.collapsed": "Згорнуті",
 
   "settings.display.shortcutHints.title": "Показувати підказки клавіш",
   "settings.display.shortcutHints.description":
     "Показувати в порожньому полі запиту сполучення клавіш, що відповідає поточній дії, наприклад як додати виділений код або повернутися до запиту.",
   "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
-    "Показувати швидкість генерації тексту (tokens/sec) в останньому повідомленні асистента та в заголовку завдання. Показується за замовчуванням; вимкніть цей параметр, щоб за потреби її приховати.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
   "settings.display.autoApprovalReason.description":
     "Показує, чому виклик інструмента схвалено автоматично, наприклад через відповідне правило дозволів або стандартне значення агента.",
@@ -1365,6 +1390,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
   "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
+  "task.backgroundAgents.promoteFailed": "Цей агент не зміг продовжити роботу у фоні. Можливо, він уже завершився.",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
   "task.backgroundAgents.clearFinished": "Очистити завершені",
@@ -1426,6 +1452,9 @@ export const dict = {
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
   "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.perAgentPermissions.title": "Дозволи для кожного агента",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "Ці налаштування застосовуються лише до цього користувацького агента. Змініть значення 'За замовчуванням' у розкривному списку, щоб створити перевизначення, або скористайтеся кнопками 'Додати шлях' чи 'Додати команду' для винятків окремих інструментів.",
   "settings.agentBehaviour.permissions.title": "Обчислені дозволи",
   "settings.agentBehaviour.permissions.count": "{{count}} правил",
   "settings.agentBehaviour.permissions.effective": "Ефективні (шаблон):",
@@ -1446,6 +1475,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "Файли, змінені в робочому дереві, але ще не підготовлені, плюс невідстежувані (нові) файли.",
   "diffViewer.source.session.label": "Сесія",
+  "diffViewer.source.turn.tooltip": "Файли, змінені Kilo за один хід.",
+  "diffViewer.source.turn.label": "Хід",
   "diffViewer.source.session.tooltip":
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
@@ -1493,6 +1524,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "Системний браузер",
   "settings.experimental.browserLinks.integrated": "Вбудований браузер",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "chat.reply.toolbar": "Виділений текст",
+  "chat.reply.quote": "Цитувати",
+  "chat.reply.quoteHint": "Цитувати у відповіді",
+  "chat.reply.commentHint": "Прокоментувати цей фрагмент",
+  "chat.reply.copy": "Копіювати",
+  "chat.reply.sendHint": "Надіслати цей коментар до Kilo зараз",
+  "chat.reply.commentLater": "Зберегти для наступного повідомлення",
+  "chat.reply.count": "Відповіді ({{count}})",
+  "chat.reply.sendAll": "Надіслати все",
+  "chat.reply.showInChat": "Показати в чаті",
   "browserTab.noSession":
     "Відкрийте браузер із сеансу, щоб переглянути локальний застосунок або загальнодоступну HTTPS-сторінку.",
   "browserTab.disabled": "Вбудований браузер вимкнено. Увімкніть його в Налаштуваннях Kilo > Експериментальні.",

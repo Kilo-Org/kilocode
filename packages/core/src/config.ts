@@ -17,6 +17,10 @@ import { ConfigVariable } from "./config/variable.js"
 import { ConfigNormalize } from "./config/normalize.js"
 import { ConfigDiscovery } from "./config/discovery.js"
 import { ConfigWatch } from "./config/watch.js"
+import { ConfigIntegration } from "./config/integration.js"
+import { ConfigManaged } from "./config/managed.js"
+import { ManagedPolicy } from "./managed-policy.js"
+import { Connection } from "@opencode/schema/connection"
 import { WellKnown } from "./wellknown.js"
 import { AppProcess } from "@opencode/util/process"
 import { ChildProcess } from "effect/process"
@@ -40,8 +44,20 @@ export interface Interface {
    * source files they parse and rebuild their own state.
    */
   readonly changes: () => Stream.Stream<Watcher.Update>
+  readonly commandDocuments?: (entries: readonly Entry[], documents: { commands: Info["commands"] }[]) => { commands: Info["commands"] }[] // kilocode_change(workflow-model) seam - host command document composition
+  readonly commandMetadata?: boolean // kilocode_change(workflow-model) seam - optional command metadata
   /** Updates supported global config fields while preserving unrelated JSONC content. */
   readonly update?: (patch: Patch) => Effect.Effect<void, FSUtil.Error>
+  readonly reload?: () => Effect.Effect<void> // kilocode_change(indexing) seam - re-read config sources after a host write, also without a file watcher
+  /**
+   * Replaces, or clears with `undefined`, the document an integration connection contributes. It loads right after
+   * managed policies: its settings layer below remote, user, and project config, while its policies outrank theirs.
+   * Changing it reloads config like any other source.
+   */
+  readonly integration?: (
+    integrationID: ConfigIntegration.Document["integrationID"],
+    document: ConfigIntegration.Document | undefined,
+  ) => Effect.Effect<void>
 }
 
 export const Options = Schema.Struct({
@@ -79,13 +95,23 @@ export const testLayer = (
   Layer.effectContext(
     Effect.gen(function* () {
       const entries = yield* Ref.make(initial)
+      const integrations = yield* Ref.make(new Map<string, ConfigIntegration.Document>())
       const updates = yield* PubSub.unbounded<Watcher.Update>()
       const service = Test.of({
-        entries: () => Ref.get(entries),
+        entries: () =>
+          Effect.all([Ref.get(integrations), Ref.get(entries)]).pipe(
+            Effect.map(([documents, entries]) => [...documents.values(), ...entries]),
+          ),
         compatibility: () => Effect.succeed(compatibility),
         changes: () => Stream.fromPubSub(updates),
         setEntries: (next) => Ref.set(entries, next),
         emitChange: (update) => PubSub.publish(updates, update).pipe(Effect.asVoid),
+        integration: (integrationID, document) =>
+          Ref.update(integrations, (current) => {
+            const next = new Map(current)
+            next.delete(integrationID)
+            return document ? next.set(integrationID, document) : next
+          }),
       })
       return Context.empty().pipe(Context.add(Service, service), Context.add(Test, service))
     }),
@@ -104,6 +130,9 @@ export const layer = (options?: Options) =>
       const wellknown = yield* WellKnown.Service
       const processes = yield* AppProcess.Service
       const layout = yield* ConfigDiscovery.LayoutService // kilocode_change(config) seam
+      const integrations = new Map<string, ConfigIntegration.Document>()
+      // Integrations set their documents from outside this layer, so their reloads run with its services.
+      const context = yield* Effect.context<FSUtil.Service | Global.Service | Location.Service | ConfigDiscovery.LayoutService>() // kilocode_change(config) seam - discovery reads the host layout
       const reloadLock = Semaphore.makeUnsafe(1)
       const updateLock = Semaphore.makeUnsafe(1)
       const decodeOptions = { errors: "all", onExcessProperty: "ignore" } as const
@@ -121,7 +150,7 @@ export const layer = (options?: Options) =>
           return
         }
         // kilocode_change start - config seam: host decoders share the normalization diagnostic pipeline
-        const normalized = ConfigNormalize.normalize(input)
+        const normalized = ConfigNormalize.normalize(layout.normalize?.(input) ?? input)
         const result = { ...normalized, diagnostics: [...normalized.diagnostics] }
         const info = result.type === "rejected"
           ? undefined
@@ -180,7 +209,15 @@ export const layer = (options?: Options) =>
             env: variables,
           }).pipe(
             Effect.flatMap((text) => parseInfo(text, entry.origin)),
-            Effect.map((info) => (info ? new Document({ type: "document", info }) : undefined)),
+            Effect.map((info) =>
+              info
+                ? new ConfigIntegration.WellKnownDocument({
+                    type: "document",
+                    info,
+                    integrationID: entry.integrationID,
+                  })
+                : undefined,
+            ),
           ),
         ).pipe(Effect.map((documents) => documents.filter((document) => document !== undefined)))
       })
@@ -193,7 +230,28 @@ export const layer = (options?: Options) =>
               Effect.logWarning("failed to discover wellknown config", { error }).pipe(Effect.as([] as const)),
             ),
           )
-        return yield* Effect.forEach(entries, loadWellknownEntry).pipe(Effect.map((documents) => documents.flat()))
+        return yield* Effect.forEach(entries, (entry) =>
+          loadWellknownEntry(entry).pipe(
+            Effect.map((documents) => ({ integrationID: entry.integrationID, documents })),
+          ),
+        )
+      })
+
+      // `integration.use` decides whether an integration may supply anything. Only managed policies can withhold the
+      // documents an integration delivers, so a project file can never strip the Console document carrying org policy.
+      // A withheld document keeps its policies, so denying an integration never lifts the restrictions it carries.
+      const supplies = Effect.fnUntraced(function* (
+        lockdown: ReturnType<typeof ManagedPolicy.statements>,
+        integrationID: string,
+        connection?: Connection.Info,
+      ) {
+        const stored =
+          connection?.type === "credential" ? yield* credentials.get(Credential.ID.make(connection.id)) : undefined
+        const resource = ManagedPolicy.integrationResource(
+          integrationID,
+          stored ? ManagedPolicy.account(stored.value) : undefined,
+        )
+        return ManagedPolicy.decision(lockdown, "integration.use", resource) !== "deny"
       })
 
       const loadPreferences = Effect.fn("Config.loadPreferences")(function* (plist: AbsolutePath) {
@@ -263,7 +321,7 @@ export const layer = (options?: Options) =>
           .flatMap((entry) =>
             entry.type === "document" && entry.info.policies
               ? [
-                  new Document({
+                  new ConfigManaged.Document({
                     type: "document",
                     path: entry.path,
                     info: new Info({ policies: entry.info.policies }),
@@ -273,10 +331,12 @@ export const layer = (options?: Options) =>
           )
           .toReversed()
         const managedSettings = managed.map((entry) =>
-          entry.type === "document" && entry.info.policies
-            ? new Document({ ...entry, info: layout.parse?.(entry.info, { ...entry.info, policies: undefined }) ?? new Info({ ...entry.info, policies: undefined }) }) // kilocode_change(config) seam - preserve host settings when splitting policies
+          entry.type === "document"
+            ? new ConfigManaged.Document({ ...entry, info: layout.parse?.(entry.info, { ...entry.info, policies: undefined }) ?? new Info({ ...entry.info, policies: undefined }) }) // kilocode_change(config) seam - preserve host settings when splitting policies
             : entry,
         )
+        // Integration documents load right after managed policies: every remote, user, and project layer overrides
+        // their settings, and since policies evaluate earliest-loaded first, only managed policies outrank theirs.
         // Global entries sit below explicit and direct files; project directories rank above them.
         const globalSupplementary = sources.global ? yield* loadDirectory(sources.global).pipe(Effect.orDie) : []
         const projectSupplementary = yield* Effect.forEach(
@@ -286,9 +346,35 @@ export const layer = (options?: Options) =>
           Effect.orDie,
           Effect.map((entries) => entries.flat()),
         )
+        const lockdown = ManagedPolicy.statements(managedPolicies)
+        const integrated = yield* Effect.forEach(integrations.values(), (document) =>
+          supplies(lockdown, document.integrationID, document.connection).pipe(
+            Effect.map((allowed) =>
+              allowed
+                ? document
+                : new ConfigIntegration.Document({ ...document, info: new Info({ policies: document.info.policies }) }),
+            ),
+          ),
+        )
+        const wellknownDocuments = yield* Effect.forEach(yield* loadWellknown().pipe(Effect.orDie), (entry) =>
+          supplies(lockdown, entry.integrationID).pipe(
+            Effect.map((allowed) =>
+              allowed
+                ? entry.documents
+                : entry.documents.map(
+                    (document) =>
+                      new ConfigIntegration.WellKnownDocument({
+                        ...document,
+                        info: new Info({ policies: document.info.policies }),
+                      }),
+                  ),
+            ),
+          ),
+        )
         return [
           ...managedPolicies,
-          ...(yield* loadWellknown().pipe(Effect.orDie)),
+          ...integrated,
+          ...wellknownDocuments.flat(),
           ...globalSupplementary,
           ...explicit,
           ...direct,
@@ -420,7 +506,19 @@ export const layer = (options?: Options) =>
             agents: Effect.filter(sources.agents, fs.isDir),
           }),
         changes: () => Stream.fromPubSub(updates),
+        commandDocuments: (entries, documents) => layout.commandDocuments?.(entries, documents) ?? documents, // kilocode_change(workflow-model) seam - host command document composition
+        commandMetadata: layout.commandMetadata, // kilocode_change(workflow-model) seam - optional command metadata
         update,
+        reload: () => reload().pipe(Effect.provide(context), Effect.catchCause((cause) => Effect.logError("failed to reload config", { cause }))), // kilocode_change(indexing) seam
+        integration: Effect.fn("Config.integration")(function* (integrationID, document) {
+          if (isDeepStrictEqual(integrations.get(integrationID), document)) return
+          integrations.delete(integrationID)
+          if (document) integrations.set(integrationID, document)
+          yield* reload().pipe(
+            Effect.provide(context),
+            Effect.catchCause((cause) => Effect.logError("failed to reload config", { cause })),
+          )
+        }),
       })
     }),
   )

@@ -6,6 +6,7 @@ import { Database } from "../database/database.js"
 import { Job } from "../job.js"
 import { Instance } from "../instance/service.js"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
+import { SessionCompaction } from "./compaction.js" // kilocode_change - steer: running-compaction guard
 import { SessionEvent } from "./event.js"
 import { SessionRunCoordinator } from "./run-coordinator.js"
 import { SessionRunner } from "./runner/index.js"
@@ -33,6 +34,7 @@ export interface Interface {
     sessionID: SessionSchema.ID,
     options?: {
       readonly resume?: boolean
+      readonly steer?: boolean // kilocode_change - steer: never cancels a running compaction
     },
   ) => Effect.Effect<boolean>
   /** Resolves once this process owns no active execution for the Session. Returns immediately when idle and never starts work. */
@@ -86,11 +88,12 @@ export const layer = Layer.effect(
       force: boolean,
       continuation?: SessionRunner.Continuation,
       promotable: SessionInbox.Promotable = "input",
+      stepped = false,
     ): Effect.fn.Return<void, SessionRunner.RunError> {
       const session = yield* store.get(sessionID)
       if (!session) return yield* Effect.die(new Error(`Session not found: ${sessionID}`))
       const result = yield* SessionRunner.Service.use((runner) =>
-        runner.drain({ sessionID, force, continuation, promotable }),
+        runner.drain({ sessionID, force, continuation, promotable, stepped }),
       ).pipe(
         instances.provide(session),
         Effect.tapCause((cause) =>
@@ -101,8 +104,8 @@ export const layer = Layer.effect(
       )
       return yield* SessionRunner.DrainResult.$match(result, {
         Complete: () => Effect.void,
-        Moved: (result) => drain(sessionID, false, result.continuation, promotable),
-        Reloaded: (result) => drain(sessionID, result.force, result.continuation, promotable),
+        Moved: (result) => drain(sessionID, false, result.continuation, promotable, result.stepped),
+        Reloaded: (result) => drain(sessionID, result.force, result.continuation, promotable, result.stepped),
       })
     })
     const coordinator = yield* SessionRunCoordinator.make<SessionSchema.ID, SessionRunner.RunError, InterruptReason>({
@@ -149,7 +152,12 @@ export const layer = Layer.effect(
       isActive: coordinator.isActive,
       interrupt: (sessionID, options) =>
         Effect.gen(function* () {
-          const interrupted = yield* coordinator.interrupt(sessionID, "user")
+          // kilocode_change start - steer: stop the model call, never the checkpoint being written. A compaction is
+          // all-or-nothing and its summary may already be paid for; the caller admits the prompt anyway, so the
+          // boundary after the compaction delivers it. An interruption without `steer` still cancels one.
+          const compacting = options?.steer === true && (yield* SessionCompaction.running(db, sessionID))
+          const interrupted = compacting ? false : yield* coordinator.interrupt(sessionID, "user")
+          // kilocode_change end
           if (!options?.resume) return interrupted
           // Resume steering input and between-turn control work from the interrupted
           // intent. Queued next-turn prompts stay parked: a steer-scoped drain never

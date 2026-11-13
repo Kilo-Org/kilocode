@@ -211,6 +211,7 @@ describe("MCP files", () => {
             payloads: ['{"url":"https://example.com/mcp","headers":{"Authorization":"{{VALUE}}"}}'],
           },
           skills: path.join(directory, "skills"),
+          agents: path.join(directory, "agents"),
           config,
           params: { VALUE: metadata.value },
         })
@@ -236,6 +237,7 @@ describe("MCP files", () => {
         payloads: ['{"command":"node","args":["{{VALUE}}"]}'],
       },
       skills: path.join(directory, "skills"),
+      agents: path.join(directory, "agents"),
       config,
       params: { VALUE: "private-value" },
     })
@@ -264,6 +266,7 @@ describe("MCP files", () => {
       const written = await Installer.install({
         entry: mcpEntry,
         skills: path.join(directory, "skills"),
+        agents: path.join(directory, "agents"),
         config,
         beforeWrite: async (intent) => {
           expect(intent.config).toBe(config)
@@ -429,7 +432,7 @@ describe("MCP files", () => {
       await fs.symlink(changed, config)
       await expect(Installer.cleanup(resource)).rejects.toMatchObject({
         reason: "conflict",
-        message: `MCP config target changed since installation: ${config}`,
+        message: `Config target changed since installation: ${config}`,
       })
       expect(await fs.readFile(original, "utf8")).toBe(content)
       expect(await fs.readFile(changed, "utf8")).toBe(content)
@@ -564,6 +567,7 @@ describe("MCP companion lifecycle", () => {
     using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "config.json")
     const entry = { ...mcpEntry, companions: [{ id: "guide", archive: server.url.href }] }
     await Bun.write(config, '{"mcp":{"servers":{"demo":{"type":"local","command":["foreign"]}}}}')
@@ -572,6 +576,7 @@ describe("MCP companion lifecycle", () => {
       Installer.install({
         entry,
         skills,
+        agents,
         config,
         beforeWrite: async () => {
           calls++
@@ -586,6 +591,7 @@ describe("MCP companion lifecycle", () => {
       Installer.install({
         entry,
         skills,
+        agents,
         config,
         beforeWrite: async (intent) => {
           calls++
@@ -607,9 +613,10 @@ describe("MCP companion lifecycle", () => {
     })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "config.json")
     const entry = skillEntry(server.url.href)
-    const first = await Installer.install({ entry, skills, config })
+    const first = await Installer.install({ entry, skills, agents, config })
     const previous = {
       registry: "kilo",
       kind: "skill" as const,
@@ -623,6 +630,7 @@ describe("MCP companion lifecycle", () => {
     const final = await Installer.install({
       entry,
       skills,
+      agents,
       config,
       previous,
       beforeWrite: async (written) => {
@@ -641,6 +649,7 @@ describe("MCP companion lifecycle", () => {
   test("uninstall settles active and pending cleanup, preserving modified resources", async () => {
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "config.json")
     const broken = path.join(directory, "broken.json")
     const archive = await new Bun.Archive({ "SKILL.md": "original" }).bytes()
@@ -648,6 +657,7 @@ describe("MCP companion lifecycle", () => {
     const written = await Installer.install({
       entry: { ...mcpEntry, companions: [{ id: "guide", archive: server.url.href }] },
       skills,
+      agents,
       config,
     })
     await Bun.write(broken, "{ malformed")
@@ -667,8 +677,9 @@ describe("MCP companion lifecycle", () => {
   test("MCP replacement checkpoints both versions and refuses changed entries", async () => {
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "config.json")
-    const first = await Installer.install({ entry: mcpEntry, skills, config })
+    const first = await Installer.install({ entry: mcpEntry, skills, agents, config })
     const previous = {
       registry: "kilo",
       kind: "mcp" as const,
@@ -681,6 +692,7 @@ describe("MCP companion lifecycle", () => {
     const written = await Installer.install({
       entry: { ...mcpEntry, payloads: ['{"command":"changed"}'] },
       skills,
+      agents,
       config,
       previous,
       beforeWrite: async (intent) => {
@@ -699,6 +711,7 @@ describe("MCP companion lifecycle", () => {
       Installer.install({
         entry: mcpEntry,
         skills,
+        agents,
         config,
         previous: { ...previous, ...written },
         beforeWrite: async () => {
@@ -714,10 +727,12 @@ describe("MCP companion lifecycle", () => {
     using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "config.json")
     const first = await Installer.install({
       entry: { ...mcpEntry, companions: [{ id: "owned", archive: server.url.href }] },
       skills,
+      agents,
       config,
     })
     const previous = {
@@ -732,6 +747,7 @@ describe("MCP companion lifecycle", () => {
       Installer.install({
         entry: { ...mcpEntry, companions: ["owned", "new-a", "new-b"].map((id) => ({ id, archive: server.url.href })) },
         skills,
+        agents,
         config,
         previous,
         beforeWrite: async () => {
@@ -748,6 +764,7 @@ describe("MCP companion lifecycle", () => {
     using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const original = new Error("config write failed")
     let intent: Installer.Written | undefined
     using failure = spyOn(MarketplaceMcp, "write").mockImplementation(async () => {
@@ -757,6 +774,7 @@ describe("MCP companion lifecycle", () => {
     const error = await Installer.install({
       entry: { ...mcpEntry, companions: ["new-a", "new-b"].map((id) => ({ id, archive: server.url.href })) },
       skills,
+      agents,
       config: path.join(directory, "config.json"),
       beforeWrite: async (written) => {
         intent = written
@@ -782,25 +800,26 @@ describe("MCP companion lifecycle", () => {
     })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "config.json")
     const entry = { ...mcpEntry, companions: [{ id: "guide", archive: server.url.href }] }
-    const first = await Installer.install({ entry, skills, config })
+    const first = await Installer.install({ entry, skills, agents, config })
     // Ownership is lost (a reset database): the same install adopts identical files and entry.
-    const adopted = await Installer.install({ entry, skills, config })
+    const adopted = await Installer.install({ entry, skills, agents, config })
     expect(adopted.resources).toEqual(first.resources)
     expect(await Installer.inspect({ id: "demo", ...adopted })).toEqual({ status: "ready", warnings: [] })
     await Installer.uninstall({ id: "demo", ...adopted })
     expect(await fs.readdir(skills)).toEqual([])
     expect((await Bun.file(config).json()).mcp.servers).toEqual({})
     // Divergent skill content without ownership remains protected and untouched.
-    await Installer.install({ entry, skills, config })
+    await Installer.install({ entry, skills, agents, config })
     content = "newer"
-    await expect(Installer.install({ entry, skills, config })).rejects.toMatchObject({ reason: "conflict" })
+    await expect(Installer.install({ entry, skills, agents, config })).rejects.toMatchObject({ reason: "conflict" })
     expect(await Bun.file(path.join(skills, "guide", "SKILL.md")).text()).toBe("guide")
     // Divergent MCP entry without ownership remains protected and untouched.
     content = "guide"
     await Bun.write(config, '{"mcp":{"servers":{"demo":{"type":"local","command":["user-edited"]}}}}')
-    await expect(Installer.install({ entry, skills, config })).rejects.toMatchObject({ reason: "conflict" })
+    await expect(Installer.install({ entry, skills, agents, config })).rejects.toMatchObject({ reason: "conflict" })
     expect((await Bun.file(config).json()).mcp.servers.demo.command).toEqual(["user-edited"])
   })
   test("bounds streamed downloads, rejects oversized headers and wraps broken bodies", async () => {
@@ -824,6 +843,7 @@ describe("MCP companion lifecycle", () => {
       Installer.install({
         entry: skillEntry(server.url.href),
         skills: path.join(directory, "skills"),
+        agents: path.join(directory, "agents"),
         config: path.join(directory, "config.json"),
       }),
     ).rejects.toBeInstanceOf(Installer.FetchError)
@@ -849,6 +869,7 @@ describe("MCP companion lifecycle", () => {
           Installer.install({
             entry: skillEntry(`http://127.0.0.1:${address.port}/${route}`),
             skills: path.join(directory, "skills"),
+            agents: path.join(directory, "agents"),
             config: path.join(directory, "config.json"),
           }),
         ).rejects.toBeInstanceOf(Installer.FetchError)
@@ -866,6 +887,7 @@ describe("MCP companion lifecycle", () => {
     using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const config = path.join(directory, "kilo2.json")
     const entry = {
       ...mcpEntry,
@@ -880,15 +902,15 @@ describe("MCP companion lifecycle", () => {
       payloads: ['{"command":"npx","env":{"TOKEN":"{{TOKEN}}"}}', '{"type":"sse","url":"https://x"}'],
       companions: [{ id: "guide", archive: server.url.href }],
     }
-    await expect(Installer.install({ entry, skills, config, params: {} })).rejects.toMatchObject({
+    await expect(Installer.install({ entry, skills, agents, config, params: {} })).rejects.toMatchObject({
       reason: "invalid_params",
     })
     expect(await fs.readdir(directory)).toEqual([])
-    const written = await Installer.install({ entry, skills, config, option: "Remote", params: { TOKEN: "t" } })
+    const written = await Installer.install({ entry, skills, agents, config, option: "Remote", params: { TOKEN: "t" } })
     expect(written).toMatchObject({ paths: [path.join(skills, "guide")], config, server: "demo" })
     expect(written.resources).toHaveLength(2)
     expect((await Bun.file(config).json()).mcp.servers.demo).toEqual({ type: "remote", url: "https://x" })
-    await expect(Installer.install({ entry, skills, config, params: { TOKEN: "t" } })).rejects.toMatchObject({
+    await expect(Installer.install({ entry, skills, agents, config, params: { TOKEN: "t" } })).rejects.toMatchObject({
       reason: "conflict",
     })
     expect(await fs.readdir(skills)).toEqual(["guide"])
@@ -914,18 +936,21 @@ describe("MCP companion lifecycle", () => {
     })
     const directory = await tmp()
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const first = path.join(directory, "first.json")
     const second = path.join(directory, "second.json")
     const companion = (id: string) => ({ id, archive: new URL(id, server.url).href })
     const written = await Installer.install({
       entry: { ...mcpEntry, companions: [companion("guide"), companion("extra")] },
       skills,
+      agents,
       config: first,
     })
     expect((await fs.readdir(skills)).toSorted()).toEqual(["extra", "guide"])
     const again = await Installer.install({
       entry: { ...mcpEntry, companions: [companion("guide")] },
       skills,
+      agents,
       config: second,
       previous: { id: "demo", ...written },
     })
@@ -947,6 +972,7 @@ describe("MCP companion lifecycle", () => {
     const first = path.join(directory, "first.json")
     const second = path.join(directory, "second.json")
     const skills = path.join(directory, "skills")
+    const agents = path.join(directory, "agents")
     const entry = { ...mcpEntry, payloads: ['{"url":"https://new.example.com"}'] }
     await Bun.write(first, "{ broken")
     const previous = {
@@ -958,11 +984,11 @@ describe("MCP companion lifecycle", () => {
       paths: [],
       config: first,
     }
-    const written = await Installer.install({ entry, skills, config: second, previous })
+    const written = await Installer.install({ entry, skills, agents, config: second, previous })
     expect(written.pending).toEqual([{ config: first, server: "demo" }])
     await expect(Installer.cleanup(written.pending![0])).rejects.toMatchObject({ reason: "invalid_params" })
     expect((await Bun.file(second).json()).mcp.servers.demo.url).toBe("https://new.example.com")
-    const again = await Installer.install({ entry, skills, config: second, previous: { ...previous, ...written } })
+    const again = await Installer.install({ entry, skills, agents, config: second, previous: { ...previous, ...written } })
     expect(again.pending).toEqual(written.pending)
     await expect(Installer.uninstall({ id: "demo", ...again })).rejects.toBeInstanceOf(AggregateError)
     expect((await Bun.file(second).json()).mcp.servers).toEqual({})
@@ -971,14 +997,14 @@ describe("MCP companion lifecycle", () => {
       JSON.stringify({ mcp: { servers: { demo: { type: "remote", url: "https://old.example.com" } } } }),
     )
     await expect(
-      Installer.install({ entry, skills, config: first, previous: { ...previous, ...again } }),
+      Installer.install({ entry, skills, agents, config: first, previous: { ...previous, ...again } }),
     ).rejects.toMatchObject({ reason: "conflict" })
     const owned = {
       ...previous,
       ...again,
       pending: [{ config: first, server: "demo", fingerprints: [(await fingerprint(first, "demo"))!] }],
     }
-    const reclaimed = await Installer.install({ entry, skills, config: first, previous: owned })
+    const reclaimed = await Installer.install({ entry, skills, agents, config: first, previous: owned })
     expect(reclaimed.pending).toEqual(again.resources)
     await Installer.uninstall({ id: "demo", ...reclaimed })
     expect((await Bun.file(first).json()).mcp.servers).toEqual({})

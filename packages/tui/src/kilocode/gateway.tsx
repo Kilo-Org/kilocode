@@ -5,12 +5,32 @@ import { Plugin } from "@opencode/plugin/tui"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createSignal, onMount, Show } from "solid-js"
 import { useClient } from "../context/client"
+import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
-import type { useDialog } from "../ui/dialog"
+import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
+import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
+import { caffeinateLayer } from "./caffeinate"
+import { aboutCommand } from "./dialog-about"
+import { indexingCommand } from "./components/dialog-indexing"
+import { watchIndexingWarnings } from "./indexing-notifications"
+import { privacyMode } from "./pii"
+import { privacyLayer } from "./privacy"
+import { sidebarIndexing } from "./plugins/sidebar-indexing"
 
 type Profile = typeof KiloGatewayRpc.Definition.methods.profile.output.Type
+type Balance = typeof KiloGatewayRpc.Definition.methods.balance.output.Type
+type KiloPass = typeof KiloGatewayRpc.Definition.methods.kiloPass.output.Type
+type Mode = (typeof KiloGatewayRpc.Definition.methods.modes.output.Type)[number]
+
+const USAGE_URL = "https://app.kilo.ai/usage"
+
+/** The account usage page: the team page for an organization, the personal page otherwise. */
+export function usageDetailsUrl(organizationID: string | null | undefined) {
+  if (!organizationID) return USAGE_URL
+  return `https://app.kilo.ai/organizations/${organizationID}/usage-details`
+}
 
 /**
  * The Popular integrations of the connect dialog and their order. Same as v1 `PROVIDER_PRIORITY`, which replaced
@@ -117,6 +137,7 @@ export function accountOptions(profile: Profile, current: string | null) {
 export default Plugin.define({
   id: "kilocode.teams",
   setup(context) {
+    sidebarIndexing(context)
     context.ui.slot({
       append: "app",
       render() {
@@ -141,23 +162,41 @@ export default Plugin.define({
               slash: { name: "profile", aliases: ["me", "whoami", "kilo-account", "balance", "kilo-pass"] },
               run: () => accountStatus(context),
             },
+            aboutCommand(context),
+            indexingCommand(context),
           ],
         }))
+        privacyLayer(context)
+        caffeinateLayer(context)
         return null
       },
     })
+    return watchIndexingWarnings(context)
   },
 })
 
 async function accountStatus(context: Plugin.Context) {
   const rpc = context.client.rpc(KiloGatewayRpc.Definition)
-  const options = { location: { directory: (context.location ?? context.data.location.default()).directory } }
-  const status = await rpc.authStatus({}, options).catch(() => undefined)
+  const location = context.location ?? context.data.location.default()
+  const options = { location: { directory: location.directory } }
+  const [status, privacy] = await Promise.all([
+    rpc.authStatus({}, options).catch(() => undefined),
+    privacyMode(context.client, location),
+  ])
   if (!status?.authenticated) {
     return context.ui.dialog.alert({
       title: "Kilo Gateway (Signed Out)",
       message: `Server: ${status?.server ?? "https://api.kilo.ai"}\nUse /connect to sign in to Kilo Gateway.`,
     })
+  }
+  // In privacy mode the profile loads only after the user agrees to show it.
+  if (privacy) {
+    const confirmed = await context.ui.dialog.confirm({
+      title: "Privacy Mode Enabled",
+      message:
+        "Privacy mode is on. Revealing your profile will display your email, name, balance, and team on screen.",
+    })
+    if (confirmed !== true) return
   }
   const [profile, balance, pass, modes] = await Promise.all([
     rpc.profile({}, options).catch(() => undefined),
@@ -165,23 +204,67 @@ async function accountStatus(context: Plugin.Context) {
     rpc.kiloPass({}, options).catch(() => null),
     rpc.modes({}, options).catch(() => []),
   ])
-  const orgName = profile?.organizationID
-    ? (profile.organizations.find((o) => o.id === profile.organizationID)?.name ?? profile.organizationID)
-    : "Personal Account"
-  const lines = [
-    profile?.name ? `Name: ${profile.name}` : undefined,
-    profile?.email ? `Account: ${profile.email}` : undefined,
-    `Scope: ${orgName}`,
-    balance?.balance != null ? `Balance: $${balance.balance.toFixed(2)}` : undefined,
-    pass
-      ? `Kilo Pass: $${pass.currentPeriodUsageUsd.toFixed(2)} / $${pass.currentPeriodBaseCreditsUsd.toFixed(2)} used`
-      : undefined,
-    modes.length > 0 ? `Team Modes: ${modes.map((m) => m.name).join(", ")}` : undefined,
-  ].filter(Boolean)
-  return context.ui.dialog.alert({
-    title: "Kilo Gateway Account",
-    message: lines.join("\n"),
-  })
+  return context.ui.dialog.show(() => (
+    <DialogKiloProfile profile={profile} balance={balance} pass={pass} modes={modes} />
+  ))
+}
+
+function DialogKiloProfile(props: {
+  profile: Profile | undefined
+  balance: Balance | undefined
+  pass: KiloPass
+  modes: readonly Mode[]
+}) {
+  const dialog = useDialog()
+  const theme = useTheme().surface("dialog")
+  const organization = props.profile?.organizationID
+    ? props.profile.organizations.find((item) => item.id === props.profile?.organizationID)
+    : undefined
+  const team = organization
+    ? organization.role
+      ? `${organization.name} (${organization.role})`
+      : organization.name
+    : "Personal"
+  const balance = () => {
+    const value = props.balance?.balance
+    return value == null ? undefined : `Balance: $${value.toFixed(2)}`
+  }
+  const usage = () => usageDetailsUrl(props.profile?.organizationID)
+
+  Keymap.createLayer(() => ({
+    mode: "modal",
+    commands: [{ bind: "return", title: "Close profile", group: "Dialog", run: () => dialog.clear() }],
+  }))
+
+  return (
+    <DialogLayout
+      header={<DialogHeader title="Kilo Gateway Profile" />}
+      footer={{ actions: { primary: [{ title: "ok", key: "enter", onTrigger: () => dialog.clear() }] } }}
+    >
+      <box>
+        <Show when={props.profile?.name}>{(name) => <text fg={theme.text.base}>Name: {name()}</text>}</Show>
+        <Show when={props.profile?.email}>{(email) => <text fg={theme.text.base}>Account: {email()}</text>}</Show>
+        <text fg={theme.text.base}>Team: {team}</text>
+        <Show when={balance()}>{(line) => <text fg={theme.text.base}>{line()}</text>}</Show>
+        <Show when={props.pass}>
+          {(pass) => (
+            <text fg={theme.text.base}>
+              {`Kilo Pass: $${pass().currentPeriodUsageUsd.toFixed(2)} / $${pass().currentPeriodBaseCreditsUsd.toFixed(2)} used`}
+            </text>
+          )}
+        </Show>
+        <Show when={props.modes.length > 0}>
+          <text fg={theme.text.base}>Team Modes: {props.modes.map((mode) => mode.name).join(", ")}</text>
+        </Show>
+        <box flexDirection="row" marginTop={1}>
+          <text fg={theme.text.muted}>Usage Details: </text>
+          <Link href={usage()} fg={theme.text.action.primary.selected}>
+            {usage()}
+          </Link>
+        </box>
+      </box>
+    </DialogLayout>
+  )
 }
 
 async function teams(context: Plugin.Context) {

@@ -191,6 +191,8 @@ export function fixture() {
         { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
       ],
     } as unknown,
+    audioTranscriptionsStatus: 200,
+    audioTranscriptions: { text: "Make the header sticky" } as unknown,
     embeddingModelsStatus: 200,
     embeddingModels: {
       defaultModel: "mistralai/mistral-embed-2312",
@@ -273,6 +275,13 @@ export function fixture() {
     evalStatus: 200,
     // Request bodies of the custom router routes, in order.
     customRouterBodies: [] as { method: string; path: string; body: unknown }[],
+    // FIM route: the stream chunks it answers with, and the requests it received.
+    fimStatus: 200,
+    fim: [{ choices: [{ text: "fixture completion" }] }, { usage: { prompt_tokens: 5, completion_tokens: 2 }, cost: 0.0001 }] as unknown[],
+    autocompleteRequests: [] as { path: string; body: unknown; feature: string | null }[],
+    // The FIM route never answers and counts the requests whose client went away.
+    fimHang: false,
+    fimAborted: 0,
   }
   const requests: { method: string; path: string; authorization: string | null; organizationID?: string }[] = []
   const server = Bun.serve({
@@ -349,6 +358,25 @@ export function fixture() {
         if (state.modesStatus !== 200) return new Response(null, { status: state.modesStatus })
         return Response.json(state.modes)
       }
+      if (path.endsWith("/fim/completions")) {
+        state.autocompleteRequests.push({
+          path,
+          body: await request.json(),
+          feature: request.headers.get("x-kilocode-feature"),
+        })
+        if (state.fimHang)
+          return new Promise<Response>((_resolve, reject) =>
+            request.signal.addEventListener("abort", () => {
+              state.fimAborted++
+              reject(new Error("aborted"))
+            }),
+          )
+        if (state.fimStatus !== 200) return new Response("fim failed", { status: state.fimStatus })
+        return new Response(
+          [...state.fim.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`), "data: [DONE]\n\n"].join(""),
+          { headers: { "content-type": "text/event-stream" } },
+        )
+      }
       if (path === "/api/users/notifications") {
         if (state.notificationsStatus !== 200) return new Response(null, { status: state.notificationsStatus })
         return Response.json(state.notifications)
@@ -361,6 +389,15 @@ export function fixture() {
         if (state.transcriptionModelsStatus !== 200)
           return new Response(null, { status: state.transcriptionModelsStatus })
         return Response.json(state.transcriptionModels)
+      }
+      if (
+        path === "/api/gateway/audio/transcriptions" ||
+        path === "/api/gateway/v1/audio/transcriptions" ||
+        path === "/api/v1/audio/transcriptions"
+      ) {
+        if (state.audioTranscriptionsStatus !== 200)
+          return new Response(null, { status: state.audioTranscriptionsStatus })
+        return Response.json(state.audioTranscriptions)
       }
       if (
         path === "/api/gateway/embedding-models" ||

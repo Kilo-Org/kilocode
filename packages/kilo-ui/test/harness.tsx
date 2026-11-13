@@ -1,0 +1,74 @@
+import type { JSX, ParentProps } from "solid-js"
+import { render } from "solid-js/web"
+import { File } from "../src/components/file"
+import { ToolRegistry, type ToolProps } from "../src/components/message-part"
+import { DialogProvider } from "../src/context/dialog"
+import { MarkedProvider } from "../src/context/marked"
+import { FileComponentProvider } from "../src/context/file"
+
+export type Mounted = {
+  host: HTMLDivElement
+  dispose: () => void
+}
+
+export function mount(view: () => JSX.Element): Mounted {
+  const host = document.createElement("div")
+  document.body.append(host)
+  const dispose = render(view, host)
+  return {
+    host,
+    dispose() {
+      dispose()
+      host.remove()
+    },
+  }
+}
+
+const defaults: ToolProps = {
+  input: {},
+  metadata: {},
+  tool: "",
+  partID: "part",
+  output: "",
+  status: "completed",
+  attachments: [],
+}
+
+const Providers = (props: ParentProps) => (
+  <DialogProvider>
+    <MarkedProvider>
+      <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
+    </MarkedProvider>
+  </DialogProvider>
+)
+
+export function mountRich(view: () => JSX.Element) {
+  return mount(() => <Providers>{view()}</Providers>)
+}
+
+export function mountTool(name: string, props: Partial<ToolProps> = {}) {
+  const Renderer = ToolRegistry.render(name)
+  if (!Renderer) throw new Error(`No renderer registered for ${name}`)
+  const merged = { ...defaults, ...props, tool: name }
+  return mountRich(() => <Renderer {...merged} />)
+}
+
+export async function waitFor<T>(probe: () => T | null | undefined, timeout = 1000) {
+  const started = Date.now()
+  for (;;) {
+    const value = probe()
+    if (value) return value
+    if (Date.now() - started > timeout) throw new Error("Timed out waiting for the rendered element")
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+}
+
+export function trigger(host: ParentNode) {
+  const element = host.querySelector<HTMLElement>('[data-slot="collapsible-trigger"]')
+  if (!element) throw new Error("Collapsible trigger not found")
+  return element
+}
+
+export function body(host: ParentNode) {
+  return host.querySelector<HTMLElement>('[data-slot="collapsible-content"]')
+}

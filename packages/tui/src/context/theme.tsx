@@ -98,7 +98,7 @@ type Themes = {
   lock(): void
   unlock(): void
   setMode(mode?: "dark" | "light", persist?: boolean): boolean
-  set(theme: string): boolean
+  set(theme: string, persist?: boolean): boolean // kilocode_change(theme-preview)
   afterPaint(): void
   onError(handler: ThemeErrorHandler): () => void
   readonly ready: boolean
@@ -299,12 +299,12 @@ const themeContext = createSimpleContext({
       const sources = available()
       const name = sources[store.active] ? store.active : "opencode"
       try {
-        return loadTheme(sources[name], name, store.mode)
+        return loadTheme(sources[name], name, store.mode, newDesigns())
       } catch (error) {
         if (name === "opencode") throw error
         themeErrors.emit(name, error)
         setStore("active", "opencode")
-        return loadTheme(sources.opencode, "opencode", store.mode)
+        return loadTheme(sources.opencode, "opencode", store.mode, newDesigns())
       }
     })
     const modes = () => selected().modes
@@ -337,17 +337,20 @@ const themeContext = createSimpleContext({
         pin(requested, persist)
         return true
       },
-      set(theme: string) {
+      // kilocode_change start - theme-preview: previews stay in memory until the picker confirms them
+      set(theme: string, persist = true) {
         if (!has(theme)) return false
         setStore("active", theme)
         if (theme === "system") refreshPalette()
-        void configState
-          .update((draft) => {
-            draft.theme = { ...draft.theme, name: theme }
-          })
-          .catch(() => {})
+        if (persist)
+          void configState
+            .update((draft) => {
+              draft.theme = { ...draft.theme, name: theme }
+            })
+            .catch(() => {})
         return true
       },
+      // kilocode_change end
       afterPaint,
       onError: themeErrors.onError,
       get ready() {
@@ -392,8 +395,8 @@ function usablePalette(colors: TerminalColors | undefined): colors is TerminalCo
   )
 }
 
-function loadTheme(source: ThemeDocumentSource, name: string, requested: "dark" | "light") {
-  const document = parseTheme(source, name)
+function loadTheme(source: ThemeDocumentSource, name: string, requested: "dark" | "light", newDesigns: boolean) {
+  const document = parseTheme(source, name, { newDesigns })
   const modes = themeModes(document)
   const mode = modes.includes(requested) ? requested : (modes[0] ?? requested)
   return { modes, mode, theme: resolveThemeDocument(document, mode) }

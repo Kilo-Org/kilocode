@@ -157,3 +157,5 @@ export const node = makeLocationNode({
   layer,
   deps: [FSUtil.node, Global.node, cleanupNode],
 })
+
+export { layer, cleanupNode } // kilocode_change(session-sync) seam - expose native allocation layers

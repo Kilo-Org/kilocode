@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "完了（モデルによる報告）",
+  "session.goal.complete": "完了",
   "session.goal.blocked": "ブロック中",
   "session.goal.restart": "目標を再開",
   ...anacondaDesktopDict,
@@ -267,6 +267,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "プロンプトの送信に失敗しました",
 
   "mcp.status.connected": "接続済み",
+  "mcp.status.pending": "接続中",
   "mcp.status.failed": "失敗",
   "mcp.status.needs_auth": "認証が必要",
   "mcp.status.needs_registration": "クライアント登録が必要",
@@ -297,6 +298,9 @@ export const dict = {
   "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
   "provider.failure.httpNoStatus": "プロバイダーエラー。",
   "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+  "provider.failure.organizationMissing": "選択したチームは利用できなくなりました。別のチームを選択してください。",
+  "provider.failure.scopeConflict": "選択したチームが Kilo トークンのチームと一致しません。",
+  "provider.failure.personalUnavailable": "このアカウントには個人アカウントがありません。チームを選択してください。",
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
@@ -305,7 +309,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.noChanges": "変更はありません。",
   "ui.permission.reject": "拒否",
+  "ui.permission.allowAllSites": "すべてのサイトを許可",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
   "ui.permission.feedbackHint": "Enter で拒否、Esc でキャンセル",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
@@ -347,6 +353,8 @@ export const dict = {
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",
+  "session.review.viewTurnChanges": "ターンの変更を表示",
+  "session.review.turnChangesEmpty": "このターンに変更はありません。",
   "session.review.loadingChanges": "変更を読み込み中...",
   "session.review.noChanges": "変更なし",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
@@ -745,7 +753,7 @@ export const dict = {
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
   "settings.webTools.title": "ウェブツール",
-  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.description": "ウェブ検索を設定します。",
   "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
   "settings.webTools.browserAutomation": "ブラウザ自動化",
   "settings.webTools.webSearch.title": "ウェブ検索",
@@ -860,6 +868,7 @@ export const dict = {
     "このファイルはより新しいバージョンの Kilo からエクスポートされたものです。一部の設定が無視される場合があります。",
   "settings.aboutKiloCode.importSettings.success":
     "設定をインポートしました。上記の変更内容を確認してから、保存をクリックしてください。",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "テレメトリ",
   "settings.aboutKiloCode.telemetry.description":
@@ -1050,6 +1059,9 @@ export const dict = {
     "これは組み込みモードです。基本定義は変更できませんが、以下でオーバーライドを設定できます。",
   "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
   "settings.agentBehaviour.badge.subagent": "サブエージェント",
+  "settings.agentBehaviour.perAgentPermissions.title": "エージェントごとの権限",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "これらの設定はこのカスタムエージェントにのみ適用されます。ドロップダウンの値を「デフォルト」から変更すると上書き設定を作成できます。ツール固有の例外には「パスを追加」または「コマンドを追加」を使用してください。",
   "settings.agentBehaviour.permissions.title": "計算された権限",
   "settings.agentBehaviour.permissions.count": "{{count}} 個のルール",
   "settings.agentBehaviour.permissions.effective": "有効（ワイルドカード）:",
@@ -1126,12 +1138,15 @@ export const dict = {
   "settings.agentBehaviour.mcpResetAuth.confirm":
     '"{{name}}" の保存されたサインイン情報を消去しますか？再度サインインが必要になります。',
   "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "起動タイムアウト (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "カタログタイムアウト (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "実行タイムアウト (ms)",
   "settings.agentBehaviour.mcpEmpty":
-    "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
+    "MCPサーバーが設定されていません。kilo2.jsonでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflows.description":
-    "ワークフローは設定で定義されたカスタムスラッシュコマンドです。チャットで /command-name と入力して呼び出します。コマンドは opencode.json の 'command' セクションで設定します。",
+    "ワークフローは、設定またはコマンドの Markdown ファイルで定義されたカスタムコマンドです。各ワークフローにモデルと推論バリアントを設定できます。",
   "settings.agentBehaviour.workflows.empty":
-    "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
+    "カスタムコマンドが見つかりません。kilo2.json または .kilo2/command の Markdown ファイルにコマンドを追加してください。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
   "settings.agentBehaviour.workflows.model": "モデル",
@@ -1145,10 +1160,12 @@ export const dict = {
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":
-    "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
+    "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。Bash はデフォルトで「確認」になります。",
   "settings.autoApprove.maxCost.title": "セッションコストアラート",
   "settings.autoApprove.maxCost.description":
     "セッションの支出がこの米ドル金額を超えた後、続行する前に警告します。整数のドル額を使用してください。無効にするには空欄にします。",
+  "settings.autoApprove.maxCost.v2Description":
+    "セッションのコストがこの米ドル金額に達したときに、操作を妨げない通知を表示します。無効にするには空欄にします。",
   "settings.autoApprove.level.allow": "許可",
   "settings.autoApprove.level.ask": "確認",
   "settings.autoApprove.level.deny": "拒否",
@@ -1220,6 +1237,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
+  "settings.context.compactionKeep.title": "最近のトークンを保持",
+  "settings.context.compactionKeep.description":
+    "コンテキストの圧縮時にそのまま保持する最近のトークン数。空欄にすると 15,000 を保持します。",
+  "settings.context.compactionBuffer.title": "圧縮バッファー",
+  "settings.context.compactionBuffer.description":
+    "圧縮前にモデルのコンテキスト上限より下で空けておくトークン数。空欄にすると 15%（最低 16,000 トークン）を空けます。",
   "settings.context.prune.title": "古い出力を削除",
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",
@@ -1297,13 +1320,18 @@ export const dict = {
   "settings.display.mcpTool.description": "MCPおよび汎用ツールブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.mcpTool.expanded": "展開",
   "settings.display.mcpTool.collapsed": "折りたたみ",
+  "settings.display.codeMode.title": "Code Mode ブロック",
+  "settings.display.codeMode.description":
+    "Code Mode ブロックを、ツール呼び出しを一覧表示した状態で開始するか 1 行で開始するかを選択します。スクリプトは開くまで常に非表示です。",
+  "settings.display.codeMode.expanded": "展開",
+  "settings.display.codeMode.collapsed": "折りたたみ",
 
   "settings.display.shortcutHints.title": "ショートカットのヒントを表示",
   "settings.display.shortcutHints.description":
     "空のプロンプトに、現在の操作に合ったキーボードショートカットを表示します。例: 選択したコードの追加方法やプロンプトへの戻り方。",
   "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
-    "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（tokens/sec）を表示します。デフォルトで表示され、必要に応じてこの設定を無効にすると非表示にできます。",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
   "settings.display.autoApprovalReason.description":
     "ツール呼び出しが自動承認された理由（一致する権限ルールやエージェントのデフォルトなど）を表示します。",
@@ -1385,6 +1413,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
+  "task.backgroundAgents.promoteFailed": "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.clearFinished": "完了済みを消去",
@@ -1422,6 +1451,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "作業ツリーで変更されたがまだステージングされていないファイルと、追跡されていない（新しい）ファイル。",
   "diffViewer.source.session.label": "セッション",
+  "diffViewer.source.turn.tooltip": "1 回のターンで Kilo が変更したファイル。",
+  "diffViewer.source.turn.label": "ターン",
   "diffViewer.source.session.tooltip":
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",
@@ -1469,6 +1500,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "システムブラウザー",
   "settings.experimental.browserLinks.integrated": "統合ブラウザー",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "chat.reply.toolbar": "選択したテキスト",
+  "chat.reply.quote": "引用",
+  "chat.reply.quoteHint": "返信で引用する",
+  "chat.reply.commentHint": "この箇所にコメント",
+  "chat.reply.copy": "コピー",
+  "chat.reply.sendHint": "このコメントを今すぐ Kilo に送信",
+  "chat.reply.commentLater": "次のメッセージ用に保存",
+  "chat.reply.count": "返信 ({{count}})",
+  "chat.reply.sendAll": "すべて送信",
+  "chat.reply.showInChat": "チャットで表示",
   "browserTab.noSession": "セッションからブラウザを開いて、ローカルアプリまたは公開 HTTPS ページをプレビューします。",
   "browserTab.disabled": "統合ブラウザは無効になっています。Kilo 設定 > 実験的機能で有効にしてください。",
 }

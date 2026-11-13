@@ -1,6 +1,6 @@
 export * as KiloSessionUsage from "./usage.js"
 
-import type { ProviderMetadata, Usage } from "@opencode/ai"
+import type { Usage } from "@opencode/ai/effect"
 import { Money } from "@opencode/schema/money"
 import { sql } from "drizzle-orm"
 
@@ -11,30 +11,13 @@ export const modelID = sql`CASE
   ELSE json_extract(message.data, '$.model.id')
 END`
 
-// The raw usage escape hatch differs by transport; normalized OpenRouter metadata takes precedence.
-export function providerCost(usage: Usage | undefined, providerID?: string, metadata?: ProviderMetadata) {
+// The Kilo Gateway rewrites `usage.cost` to what it charged, on every dialect. When the call ran on the user's own
+// provider key (`is_byok`), the inference cost is `cost_details.upstream_inference_cost` instead.
+export function providerCost(usage: Usage | undefined, providerID?: string) {
   if (providerID !== "kilo") return undefined
-  const raw = Object.values(usage?.providerMetadata ?? {})
-  const openrouter = [record(metadata?.openrouter?.usage), usage?.providerMetadata?.openrouter]
-    .flatMap((value) =>
-      value
-        ? [
-            number(record(value.costDetails)?.upstreamInferenceCost),
-            number(record(value.cost_details)?.upstream_inference_cost),
-            number(value.cost),
-          ]
-        : [],
-    )
-    .find((value) => value !== undefined)
-  if (openrouter !== undefined) return Money.USD.make(Math.max(0, openrouter))
-  const upstream = raw
-    .map((value) => number(record(value.cost_details)?.upstream_inference_cost))
-    .find((value) => value !== undefined)
-  if (upstream !== undefined) return Money.USD.make(Math.max(0, upstream))
-  const market =
-    number(metadata?.gateway?.marketCost) ??
-    raw.map((value) => number(record(value.gateway)?.marketCost)).find((value) => value !== undefined)
-  return market === undefined ? undefined : Money.USD.make(Math.max(0, market))
+  const raw = Object.values(usage?.providerMetadata ?? {}).find((value) => "cost" in value || "is_byok" in value)
+  const cost = raw?.is_byok === true ? record(raw.cost_details)?.upstream_inference_cost : raw?.cost
+  return typeof cost === "number" && Number.isFinite(cost) && cost >= 0 ? Money.USD.make(cost) : undefined
 }
 
 // Persist only response identity. Settled cost and normalized tokens already have durable fields.
@@ -62,10 +45,4 @@ function record(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : undefined
-}
-
-function number(value: unknown) {
-  if (value === undefined || value === null) return undefined
-  const parsed = typeof value === "string" ? Number(value) : value
-  return typeof parsed === "number" && Number.isFinite(parsed) ? parsed : undefined
 }

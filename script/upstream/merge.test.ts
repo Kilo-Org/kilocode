@@ -11,7 +11,7 @@ async function fixture() {
   await r.write("package.json", '{ "name": "fixture", "packageManager": "bun@1.4.2" }\n')
   await r.write(".gitignore", ["tmp/", "", "# Local dev files", "opencode-dev", ""].join("\n"))
   await r.write("src/a.ts", "export const a = 1\n")
-  for (const name of ["check.yml", "test.yml", "deploy.yml"]) await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
+  for (const name of ["check.yml", "check-test.yml", "deploy.yml"]) await r.write(`.github/workflows/${name}`, `name: ${name}\n`)
   await r.release("v2.0.26", "2026-10-08T00:00:00Z")
   await r.git("switch", "-q", "-c", "v2")
   await r.remove(".github/workflows/deploy.yml")
@@ -49,6 +49,21 @@ test("syncs the next release with a merge commit and keeps deleted workflows del
   expect((await r.git("log", "-1", "--format=%P")).split(" ")).toEqual([await r.git("rev-parse", "v2"), release])
   expect(await Bun.file(path.join(r.dir, ".github/workflows/deploy.yml")).exists()).toBe(false)
   expect(await Bun.file(path.join(r.dir, "src/a.ts")).text()).toBe("export const a = 2\n")
+  expect(await r.git("status", "--porcelain")).toBe("")
+})
+
+test("removes upstream files under a dropped package when the merge is clean", async () => {
+  await using r = await fixture()
+  await r.write("packages/session-ui/src/new-machine.ts", "export const machine = 1\n")
+  await r.release("v2.0.27", "2026-10-12T00:00:00Z")
+  await linkUpstream(r)
+  await r.git("switch", "-q", "-c", "sync-v2-0-27", "v2")
+
+  const result = await run(r)
+  expect(result.code).toBe(0)
+  expect(result.output).toContain("Removed 1 skipped file(s)")
+  expect(await Bun.file(path.join(r.dir, "packages/session-ui/src/new-machine.ts")).exists()).toBe(false)
+  expect(await r.git("show", "--name-only", "--format=", "HEAD")).not.toContain("session-ui")
   expect(await r.git("status", "--porcelain")).toBe("")
 })
 

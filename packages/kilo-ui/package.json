@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "type": "module",
   "license": "MIT",
+  "scripts": {
+    "test": "bun --conditions=browser test test"
+  },
   "exports": {
     "./font": "./src/components/font.tsx",
     "./button": "./src/components/button.tsx",
@@ -33,6 +36,7 @@
     "./app-icon": "./src/components/app-icon.tsx",
     "./markdown": "./src/components/markdown.tsx",
     "./keybind": "./src/components/keybind.tsx",
+    "./tool-open-state": "./src/components/tool-open-state.ts",
     "./kilo-pass-meter": "./src/components/kilo-pass-meter.tsx",
     "./popover": "./src/components/popover.tsx",
     "./hover-card": "./src/components/hover-card.tsx",
@@ -64,9 +68,11 @@
     "./file": "./src/components/file.tsx",
     "./motion-spring": "./src/components/motion-spring.tsx",
     "./tool-motion": "./src/components/tool-motion.ts",
+    "./tool-child-session": "./src/components/tool-child-session.tsx",
     "./tool-approval": "./src/components/tool-approval.tsx",
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
+    "./count-up": "./src/components/count-up.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",
     "./text-shimmer": "./src/components/text-shimmer.tsx",
     "./text-strikethrough": "./src/components/text-strikethrough.tsx",
@@ -121,5 +127,12 @@
     "@opencode-ai/ui": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-typescript": "7.27.1",
+    "@happy-dom/global-registrator": "20.8.9",
+    "babel-preset-solid": "1.9.12",
+    "happy-dom": "20.8.9"
+  }
 }

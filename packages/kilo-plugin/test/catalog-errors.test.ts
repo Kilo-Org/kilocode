@@ -45,7 +45,7 @@ for (const scenario of ["http", "network", "schema", "missing-team"] as const) {
               editor.models.set(kilo, [Model.Info.default(kilo, Model.ID.make("models-dev/only"))])
             })
             const plugin = yield* Plugin.Service
-            const host = yield* PluginHost.make(plugin)
+            const host = yield* PluginHost.make(plugin, "test")
             yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
             const rpc = yield* Rpc.Service
             const failure = yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)
@@ -79,5 +79,77 @@ it.effect("catalog failure data validates the public shape and omits an undefine
     for (const invalid of [{ kind: "private-token" }, { kind: "http", status: "503" }, { kind: "http", status: 600 }]) {
       expect(() => Schema.decodeUnknownSync(KiloGatewayRpc.CatalogFailure)(invalid)).toThrow()
     }
+  }),
+)
+
+// Each catalog failure has a typed reason, and `catalog.status` reports the same reason as the `models` error.
+const reasons = [
+  { name: "team 401", env: { KILO_ORG_ID: "selected" }, failure: { kind: "unauthorized", status: 401 } },
+  { name: "missing token", env: { KILO_API_KEY: undefined, KILO_ORG_ID: "selected" }, failure: { kind: "unauthenticated" } },
+  { name: "token scope", env: { KILO_ORG_ID: "selected" }, scopedTo: "first", failure: { kind: "scope_conflict" } },
+  { name: "team-only account", env: {}, failure: { kind: "personal_unavailable" } },
+  { name: "profile outage", env: {}, failure: { kind: "http", status: 500 } },
+] as const
+
+for (const reason of reasons) {
+  it.live(`reports the ${reason.failure.kind} reason for a ${reason.name}`, () =>
+    Effect.gen(function* () {
+      const backend = yield* Effect.acquireRelease(
+        Effect.sync(() => fixture()),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      )
+      if (reason.name === "team 401") backend.state.teamModelsStatus = 401
+      if (reason.name === "team-only account")
+        backend.state.profile = { user: { email: "team@example.test" }, organizations: [], hasPersonalAccount: false }
+      if (reason.name === "profile outage") backend.state.profileStatus = 500
+      yield* withEnv(
+        {
+          KILO_API_URL: backend.url,
+          KILO_AI_GATEWAY_URL: undefined,
+          KILO_API_KEY: "scopedTo" in reason ? `${backend.url}/api/organizations/${reason.scopedTo}:secret` : "token",
+          KILOCODE_TOKEN: undefined,
+          KILO_AUTH_CONTENT: undefined,
+          KILO_ORG_ID: undefined,
+          ...reason.env,
+        },
+        () =>
+          Effect.gen(function* () {
+            const plugin = yield* Plugin.Service
+            const host = yield* PluginHost.make(plugin, "test")
+            yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
+            const rpc = yield* Rpc.Service
+            const client = rpc.client(KiloGatewayRpc.Definition)
+            expect(yield* client.models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: reason.failure })
+            expect(yield* client["catalog.status"]({})).toEqual({ failure: reason.failure })
+          }),
+      )
+    }),
+  )
+}
+
+it.live("reports no reason for a usable catalog", () =>
+  Effect.gen(function* () {
+    const backend = yield* Effect.acquireRelease(
+      Effect.sync(() => fixture()),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    )
+    yield* withEnv(
+      {
+        KILO_API_URL: backend.url,
+        KILO_AI_GATEWAY_URL: undefined,
+        KILO_API_KEY: undefined,
+        KILOCODE_TOKEN: undefined,
+        KILO_AUTH_CONTENT: undefined,
+        KILO_ORG_ID: undefined,
+      },
+      () =>
+        Effect.gen(function* () {
+          const plugin = yield* Plugin.Service
+          const host = yield* PluginHost.make(plugin, "test")
+          yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
+          const rpc = yield* Rpc.Service
+          expect(yield* rpc.client(KiloGatewayRpc.Definition)["catalog.status"]({})).toEqual({ failure: null })
+        }),
+    )
   }),
 )

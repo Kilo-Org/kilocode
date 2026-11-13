@@ -186,8 +186,19 @@ const decodeTranscriptionCatalog = Schema.decodeUnknownOption(TranscriptionCatal
 export { EmbeddingCatalog } from "./embedding-catalog.js"
 const decodeEmbeddingCatalog = Schema.decodeUnknownOption(EmbeddingCatalog)
 
+// `unauthenticated`: a team is selected but no Kilo credential is available. `organization_missing`: the account is no
+// longer a member of the selected team. `scope_conflict`: the token is scoped to another team than the selected one.
+// `personal_unavailable`: the account has no personal account and no team is selected.
 export interface Failure {
-  readonly kind: "unauthorized" | "network" | "schema" | "http" | "organization_missing"
+  readonly kind:
+    | "unauthorized"
+    | "unauthenticated"
+    | "network"
+    | "schema"
+    | "http"
+    | "organization_missing"
+    | "scope_conflict"
+    | "personal_unavailable"
   readonly status?: number
   readonly retryAfter?: number
 }
@@ -201,6 +212,8 @@ export interface Scope {
 
 export interface Result {
   readonly models: readonly Model[]
+  /** The image-output models of the same catalog, which sessions never pick as a chat model. */
+  readonly imageModels: readonly Model[]
   /** Missing credentials or a public retry, not an explicit empty credential. */
   readonly anonymous: boolean
 }
@@ -240,8 +253,11 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
     )
     const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
+    // Decode each entry once, then partition the same list into chat and image models.
+    const entries = parsed.value.data.flatMap((entry) => Option.toArray(decodeRawModel(entry)))
     return {
-      models: catalogModels(parsed.value, !scope.token),
+      models: catalogModelsFrom(entries, !scope.token),
+      imageModels: catalogImageModelsFrom(entries, !scope.token),
       anonymous: scope.token === undefined,
     }
   })
@@ -249,9 +265,31 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
 
 // Validates each entry individually so a single malformed model record does not drop the entire catalog.
 export function catalogModels(response: { readonly data: readonly unknown[] }, anonymous: boolean): Model[] {
-  return response.data
-    .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
+  return catalogModelsFrom(
+    response.data.flatMap((entry) => Option.toArray(decodeRawModel(entry))),
+    anonymous,
+  )
+}
+
+// Models that output an image. A tool-capable model stays a chat model; the Gateway also serves image-only models,
+// which a chat catalog drops and image generation needs.
+export function catalogImageModels(response: { readonly data: readonly unknown[] }, anonymous = false): Model[] {
+  return catalogImageModelsFrom(
+    response.data.flatMap((entry) => Option.toArray(decodeRawModel(entry))),
+    anonymous,
+  )
+}
+
+function catalogModelsFrom(entries: readonly RawModel[], anonymous: boolean): Model[] {
+  return entries
     .filter(supportsTools)
+    .map(toModel)
+    .filter((model) => !anonymous || model.free)
+}
+
+function catalogImageModelsFrom(entries: readonly RawModel[], anonymous: boolean): Model[] {
+  return entries
+    .filter((model) => model.architecture?.output_modalities?.includes("image"))
     .map(toModel)
     .filter((model) => !anonymous || model.free)
 }
@@ -282,16 +320,11 @@ export function imageModels(scope: Scope): Effect.Effect<ImageModel[], Failure> 
     )
     const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
-    return parsed.value.data
-      .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
-      .filter((model) => model.architecture?.output_modalities?.includes("image"))
-      .map((model) => ({
-        id: model.id,
-        name: model.name,
-        ...(typeof model.description === "string" && model.description.trim() !== ""
-          ? { description: model.description.trim() }
-          : {}),
-      }))
+    return catalogImageModels(parsed.value).map((model) => ({
+      id: model.id,
+      name: model.name,
+      ...(model.description ? { description: model.description } : {}),
+    }))
   })
 }
 

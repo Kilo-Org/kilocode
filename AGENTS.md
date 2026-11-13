@@ -9,6 +9,7 @@ This checkout is Kilo-Org/kilocode, a fork of OpenCode. The rules in this sectio
 - **Running the CLI.** Only through `bun dev` (`script/dev-isolated.ts`, isolated profile; `KILO_V2_PROFILE=$(mktemp -d)` for a fresh one). Never `bun run dev:live`, `opencode` or `bun run --cwd packages/cli`: they use the installed OpenCode data and service. This replaces "Live TUI Testing" below, including `dev:live` for TUI stories.
 - **Placement.** Plugin first, then host. Kilo server plugins go into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`); the host (`packages/kilo-cli`) registers them. An edit in a shared upstream file carries a `kilocode_change(<feature>)` marker and an entry in `script/upstream/shared-patches.json`. Load the `v2-migration` and `v2-feature-placement` skills (`.kilo/skills/`) before any migration change.
 - **Direction.** Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never the reverse: a Kilo-owned mirror beats a seam, and a patch never changes an upstream default.
+- **Localization.** Kilo UI copy is a key in `packages/kilo-i18n/src/en.ts` rendered through `t(...)`, never a literal string. A change that adds or edits English copy updates the same key in every other locale in `packages/kilo-i18n/src/` in the same change, following `packages/kilo-i18n/AGENTS.md`; an English-only key or a stale value is an incomplete change. Dictionaries ported from v1 under `packages/kilo-vscode/webview-ui/` follow the same rule. Never hand-translate upstream's `packages/ui/src/i18n/`: upstream syncs those files, and the "English source strings only" rule in `packages/ui/AGENTS.md` applies to upstream copy, not to Kilo dictionaries.
 - **Checks.** `bun run check` from the root; `bun typecheck` and `bun test` from package directories. Never run tests from the root.
 - **Principles.** Before any v2 change, read `migration-tracking/principles.md`; it overrides any other doc.
 - **References.** Plan: `migration-tracking/plan.md`. Live state: issue #15297 and its epics. Procedure: the skills in `.kilo/skills/`. Known upstream failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
@@ -25,6 +26,12 @@ This checkout is Kilo-Org/kilocode, a fork of OpenCode. The rules in this sectio
 - Pass a directory after the script when needed, for example `bun run dev:live /path/to/project`.
 - The script discovers the server with `opencode service status`, injects its private local credential from `opencode service get password`, and uses the `dev` TUI storage channel so tabs and other client-local state match the installed client.
 - Prefer `dev:live` over plain `bun run dev` for this workflow. An implicit managed-service connection may replace the live server when the worktree client version differs; explicit `--server` warns and continues without replacing it.
+
+## Live Desktop Diagnostics
+
+- When attaching Playwright to a running desktop app, use `chromium.connectOverCDP(endpoint, { noDefaults: true })`.
+- Without `noDefaults`, Playwright applies light-mode media emulation during attachment. An app following the system theme then flashes light until the connection closes. The option also preserves the existing focus and other media preferences.
+- Do not emulate a color scheme or reduced-motion preference on the user's live window unless explicitly requested; use an isolated test context for those scenarios.
 
 ## TUI Stories
 
@@ -53,6 +60,8 @@ Use conventional commit-style messages and PR titles: `type(scope): summary`.
 Valid types are `feat`, `fix`, `docs`, `chore`, `refactor`, and `test`. Scopes are optional; use the affected package or area when helpful, e.g. `core`, `opencode`, `tui`, `app`, `desktop`, `sdk`, or `plugin`.
 
 Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributing guide`, `chore(sdk): regenerate types`.
+
+For behavior changes, add the proof to the PR body (`## Proof`, the sections the template calls "How did you verify your code works?" and "Screenshots / recordings"): embed screenshots or a recording with Markdown image syntax (`![label](url)`) and host them outside the repository, never commit them; with no UI or no way to capture one, paste concrete output from a real `bun dev` run (CLI/TUI transcript, captured RPC/HTTP response, or the resulting config diff). <!-- kilocode_change - agents-md: replace upstream desktop beta SVG rule with real PR proof -->
 
 ## Style Guide
 
@@ -177,12 +186,31 @@ const table = sqliteTable("session", {
 })
 ```
 
+### Experimental API
+
+- An experimental endpoint lives at `/api/experimental/<group>/...`, its OpenAPI identifier is `experimental.<group>.<method>`, and it lands in the SDK as `client.experimental.<group>.<method>`. Its description says "Experimental: may change without compatibility guarantees."
+- `packages/protocol/test/experimental-identifiers.test.ts` enforces the path and identifier match in both directions; the SDK namespace follows from the path.
+- An experimental field or parameter on a stable endpoint goes under an `experimental` key (`experimental.<name>`), the same way config does (`config.experimental.*`).
+- New endpoints and new default behaviors start experimental.
+- To graduate one, move the route out of `/api/experimental`, drop the `experimental.` prefix, and note it in `CHANGELOG.md`.
+- Experimental HTTP routes change without aliases: rename or remove the route, then update the callers.
+- A breaking move of shipped SDK or plugin API (including moving it under `experimental`) keeps the old path and type names as deprecated aliases of the new ones until the next minor, each marked `@deprecated` with the replacement and "Removed in the next minor". Generated SDK moves get them from the codegen (`compile(..., { aliases: true })` in `packages/client/script/generate.ts`), not by hand.
+- Experimental plugin hooks are named `experimental.*` (`experimental.ws.handshake`).
+
+### Feature Flags
+
+- When you open a PR, decide whether the change needs a flag: new user-visible behavior, risky core changes, and anything not ready to release get one; fixes, refactors, docs and tests do not.
+- Gate risky behavior, or behavior that lands over several PRs, with a key and a description in `packages/schema/src/config/flag.ts`, and read it with `Flag.enabled("<key>")` from `@opencode/core/flag`.
+- Flags are on in local and dev builds and off in releases; `experimental.<key>` in config and `OPENCODE_FLAGS="key,-other"` override that.
+- Say in the PR body which flag guards the change. To try every flag at once, use `OPENCODE_FLAGS=all` or `experimental.all_flags: true`; a `-<key>` opt-out or `experimental.<key>: false` still wins, and neither `all` nor `all_flags` is a flag key.
+- Ship a feature by deleting its flag and the checks that read it.
+
 ## Testing
 
 - Avoid mocks as much as possible, you shouldn't be using globalThis.\* at all unless it's the only option.
 - Test actual implementation, do not duplicate logic into tests
 - Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package directories such as `packages/core`.
-- Before writing or changing tests, read the matching skill in `.opencode/skills`: `unit-tests` (bun test), `tui-tests` (OpenTUI renderer tests), `app-e2e-tests` (Playwright in `packages/app/e2e`) or `component-tests` (Storybook Playwright). They cover what has made tests slow or flaky in CI.
+- Before writing or changing tests, read the matching skill in `.opencode/skills`: `unit-tests` (bun test), `tui-tests` (OpenTUI renderer tests), `app-e2e-tests` (Playwright in `packages/app/e2e`) or `component-tests` (Playwright on stories, `packages/stories`). They cover what has made tests slow or flaky in CI.
 
 ## Checks
 

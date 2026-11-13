@@ -2,9 +2,10 @@
 
 // Publishes the Kilo host that script/build.ts built to npm as `@kilocode/cli` with the `kilo-v2` dist-tag.
 //
-// Mirror of the npm part of packages/cli/script/publish.ts (upstream). It publishes one platform package per target
-// (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the `@kilocode/cli` launcher package. The launcher
-// has the platform packages as optional dependencies, and its postinstall script copies the matching binary into place.
+// Mirror of the npm part of upstream's publish script (packages/cli/script/publish.ts, replaced by pack.ts in v2.2).
+// It publishes one platform package per target (`@kilocode/cli-<os>-<arch>`, written by script/build.ts) and then the
+// `@kilocode/cli` launcher package. The launcher has the platform packages as optional dependencies, and its
+// postinstall script copies the matching binary into place.
 // Upstream's update artifacts, Docker image, AUR and Homebrew steps are not part of this script.
 //
 // v1 publishes the same package names under the `latest` and `rc` dist-tags. This script uses only its own dist-tag,
@@ -20,6 +21,7 @@ import { $ } from "bun"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
 import { Script } from "@opencode/script"
+import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 
 const dir = path.resolve(import.meta.dirname, "..")
 const root = path.join(dir, "dist")
@@ -80,11 +82,32 @@ await rm(launcher, { recursive: true, force: true })
 await mkdir(path.join(launcher, "bin"), { recursive: true })
 // Upstream's postinstall script finds the platform package by the `-<os>-<arch>` suffix, so it works for Kilo names.
 // Only its messages name OpenCode.
+// Kilo: the sandbox resolves its helpers next to the executable, so the launcher copies them from the platform
+// package together with the binary. Linux proxy mode also needs the network relay and the seccomp helper.
+const helpers = ["bwrap", "licenses", "kilo-sandbox-mutation-worker.js", KiloSandboxNetwork.relay, KiloSandboxNetwork.seccomp]
+const executables = ["bwrap", KiloSandboxNetwork.seccomp]
+const postinstall = (await Bun.file(path.join(dir, "..", "cli", "script", "postinstall.mjs")).text())
+  .replaceAll("OpenCode", "Kilo")
+  .replaceAll("opencode-install-", "kilo-install-")
+const copied = "    fs.copyFileSync(source, targetBinary)\n  }\n  fs.chmodSync(targetBinary, 0o755)\n"
+if (!postinstall.includes(copied)) throw new Error("postinstall.mjs changed: cannot add the sandbox helper copy")
 await Bun.write(
   path.join(launcher, "postinstall.mjs"),
-  (await Bun.file(path.join(dir, "..", "cli", "script", "postinstall.mjs")).text())
-    .replaceAll("OpenCode", "Kilo")
-    .replaceAll("opencode-install-", "kilo-install-"),
+  postinstall.replace(
+    copied,
+    copied +
+      [
+        `  for (const name of ${JSON.stringify(helpers)}) {`,
+        "    const from = path.join(path.dirname(source), name)",
+        "    if (!fs.existsSync(from)) continue",
+        "    const to = path.join(path.dirname(targetBinary), name)",
+        "    fs.rmSync(to, { recursive: true, force: true })",
+        "    fs.cpSync(from, to, { recursive: true })",
+        `    if (${JSON.stringify(executables)}.includes(name)) fs.chmodSync(to, 0o755)`,
+        "  }",
+        "",
+      ].join("\n"),
+  ),
 )
 // The postinstall script replaces this placeholder with the binary. It stays only when install scripts are disabled.
 await Bun.write(
@@ -106,9 +129,9 @@ await Bun.write(
       version,
       license: "MIT",
       repository,
-      // The postinstall script uses the first command as the binary name in the platform packages. `kilo` keeps the
-      // v1 command working, because a global install of this package replaces v1.
-      bin: { kilo2: "./bin/kilo2.exe", kilo: "./bin/kilo2.exe" },
+      // The postinstall script uses the first command as the binary name in the platform packages. Only `kilo2`: a
+      // `kilo` alias would make a v1 user's `kilo` start v2, which keeps its logins and config apart from v1 (D-4).
+      bin: { kilo2: "./bin/kilo2.exe" },
       scripts: { postinstall: "node ./postinstall.mjs" },
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],

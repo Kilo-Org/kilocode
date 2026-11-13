@@ -27,6 +27,8 @@ export interface Namespace {
 interface BaseOptions {
   readonly namespace?: string
   readonly permission?: string
+  readonly mcp?: true // kilocode_change(sandbox) seam - provenance, so a namespaced MCP tool is never read as built-in
+  readonly direct?: true // kilocode_change(codemode-direct) seam - keep a Code Mode tool on the provider's native tool list
 }
 
 export type Options = BaseOptions &

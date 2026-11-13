@@ -2,11 +2,15 @@ export * as PluginModule from "./module.js"
 
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { Host } from "@opencode/plugin/host"
+import { GuiBundle, type Source } from "@opencode/schema/plugin"
 import { createPluginSources } from "@opencode/plugin/source"
+import { Hash } from "@opencode/util/hash"
 import { Npm } from "@opencode/util/npm"
-import { Deferred, Effect, FiberSet, PubSub, Schema, Stream } from "effect"
+// kilocode_change start - Option reads the optional host source resolver
+import { Context, Deferred, Effect, FiberSet, Option, PubSub, Schema, Stream } from "effect"
+// kilocode_change end
 import path from "path"
-import { stat } from "node:fs/promises"
+import { readFile, stat } from "node:fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
 import type { ConfigPluginSource } from "../config/plugin/source.js"
 import type { Generation } from "../plugin.js"
@@ -15,10 +19,36 @@ import { Config } from "../config.js"
 import { ManagedPolicy } from "../managed-policy.js"
 import { Watcher } from "../filesystem/watcher.js"
 
+// kilocode_change start - plugin source resolver seam
+/**
+ * What a host resolves a target it owns to: the directory the loader reads instead, plus the `plugin.use` resources
+ * the resolution stands for (for example a canonical identity), or `pending` when the source needs the installing
+ * pass. A host that supports more source syntax than a local path or an npm package returns this before the loader
+ * decides between the two; returning `undefined` leaves the target alone.
+ */
+export type PluginSourceResolution =
+  | { readonly target: string; readonly resources?: readonly string[] }
+  | { readonly pending: true; readonly resources?: readonly string[] }
+
+/** Plugin loader options a host may provide. */
+export interface Options {
+  readonly pluginSource?: (
+    target: string,
+    options: { readonly install: boolean },
+  ) => Effect.Effect<PluginSourceResolution | undefined, LoadError>
+}
+
+/** `Plugin.configured(options)` provides this service; the loader leaves itself untouched when it is absent. */
+export class OptionsService extends Context.Service<OptionsService, Options>()("@opencode/PluginModuleOptions") {}
+// kilocode_change end
+
 export const make = Effect.fn("PluginModule.make")(function* () {
   const config = yield* Config.Service
-  const managed = yield* ManagedPolicy.Service
   const watcher = yield* Watcher.Service
+  // kilocode_change start - the host's source resolver, absent upstream
+  const settings = yield* Effect.serviceOption(OptionsService)
+  const pluginSource = Option.isSome(settings) ? settings.value.pluginSource : undefined
+  // kilocode_change end
   const scope = yield* Effect.scope
   const runPromise = yield* FiberSet.makeRuntimePromise()
   const changes = yield* PubSub.unbounded<void>()
@@ -49,19 +79,37 @@ export const make = Effect.fn("PluginModule.make")(function* () {
         const version = operation.target.lastIndexOf("@")
         const target =
           path.isAbsolute(operation.target) || version <= 0 ? operation.target : operation.target.slice(0, version)
-        if (
-          ManagedPolicy.decision(
-            ManagedPolicy.statements(yield* config.entries(), managed.current()),
-            "integration.use",
-            `plugin:${target}`,
-          ) === "deny"
-        )
-          return { blocked: true as const }
-        return yield* load(operation, sources, options)
+        // kilocode_change start - the host source resolver runs before the local/npm split
+        const policies = ManagedPolicy.statements(yield* config.entries())
+        if (ManagedPolicy.decision(policies, "plugin.use", target) === "deny") return { blocked: true as const }
+        const denied = (resources: readonly string[] | undefined) =>
+          (resources ?? []).some((resource) => ManagedPolicy.decision(policies, "plugin.use", resource) === "deny")
+        if (pluginSource) {
+          // The read pass runs first even when the caller asked to install: it names the resources from the spec
+          // alone, so a denied plugin is blocked before the resolver reaches the network.
+          const cached = yield* pluginSource(operation.target, { install: false })
+          if (denied(cached?.resources)) return { blocked: true as const }
+          if (cached && "pending" in cached) {
+            if (options?.install === false) return { pending: true as const }
+            const resolved = yield* pluginSource(operation.target, { install: true })
+            if (denied(resolved?.resources)) return { blocked: true as const }
+            if (resolved && "pending" in resolved) return { pending: true as const }
+            return yield* load(operation, sources, watch, options, resolved?.target)
+          }
+          if (cached) return yield* load(operation, sources, watch, options, cached.target)
+        }
+        return yield* load(operation, sources, watch, options)
+        // kilocode_change end
       }),
     changes: () => Stream.fromPubSub(changes),
   }
 })
+
+// A local plugin's directory (or legacy standalone file), where clients resolve its other parts.
+export function source(target: string, version?: string): Source {
+  if (path.isAbsolute(target)) return { type: "local", path: target }
+  return { type: "package", target, ...(version ? { version } : {}) }
+}
 
 // A missing dependency may have missing parents too. Watch the nearest existing
 // ancestor recursively so creating the rest of the path can trigger recovery.
@@ -74,6 +122,8 @@ function watchTarget(file: string): Promise<Watcher.WatchInput> {
     },
   )
 }
+
+const GuiOptions = GuiBundle.fields.options
 
 const Module = Schema.Struct({
   default: Schema.Union([
@@ -98,29 +148,87 @@ export class LoadError extends Schema.TaggedError<LoadError>()("PluginModule.Loa
 const load = Effect.fn("PluginModule.load")(function* (
   operation: Extract<ConfigPluginSource.Operation, { type: "add" }>,
   sources: ReturnType<typeof createPluginSources>,
+  watch: (file: string) => Effect.Effect<void>,
   options?: { readonly install?: boolean },
+  // kilocode_change start - the directory a host resolved the target to
+  resolved?: string,
+  // kilocode_change end
 ) {
-  const local = path.isAbsolute(operation.target)
+  // kilocode_change start - a host resolves its own plugin source syntax to a local directory before the
+  // local/npm split; every other target keeps the upstream behavior.
+  // kilocode_change(plugin:25cfde80052f)
+  const target = resolved ?? operation.target
+  const local = path.isAbsolute(target)
   const npm = yield* Npm.Service
   const installed = local
     ? undefined
     : options?.install === false
-      ? yield* npm.resolve(operation.target)
-      : yield* npm.add(operation.target)
+      ? yield* npm.resolve(target)
+      : yield* npm.add(target)
   // Legacy auto-discovery still admits standalone server sources. Configured
   // local plugins always arrive here as directories.
   const entrypoints: Host.Entrypoints =
-    local && (yield* Effect.promise(() => stat(operation.target))).isFile()
-      ? { server: pathToFileURL(operation.target).href }
-      : yield* Effect.sync(() => Host.resolve(installed ?? { directory: operation.target }))
+    local && (yield* Effect.promise(() => stat(target))).isFile()
+      ? { server: pathToFileURL(target).href }
+      : yield* Effect.sync(() => Host.resolve(installed ?? { directory: target }))
+  // kilocode_change end
   const entrypoint = entrypoints.server
-  if (!local && options?.install === false && !entrypoint) return { pending: true as const }
-  if (!entrypoint) return yield* new LoadError({ message: `Plugin entrypoint not found: ${operation.target}` })
-  yield* Effect.log({ msg: "loading plugin", id: operation.target, entrypoint })
+  // A TUI-only package is not the server's to list; the TUI loads it from its own config.
+  const found = entrypoint || entrypoints.gui
+  if (!local && options?.install === false && !found) return { pending: true as const }
+  if (!found) return yield* new LoadError({ message: `Plugin entrypoint not found: ${operation.target}` })
+  yield* Effect.log({ msg: "loading plugin", id: operation.target, entrypoint: found })
+  // A package with only a GUI part (and maybe a TUI part) has nothing to run here: its id is its package name, and its
+  // other parts load from this listing.
+  const server = entrypoint
+    ? yield* loadServer(entrypoint, local ? sources : undefined, installed?.revision)
+    : undefined
+  const plugin = server?.plugin ?? {
+    // kilocode_change start - the resolved directory identifies the package
+    id: Host.packageID(installed ?? { directory: target }),
+    // kilocode_change end
+    effect: () => Effect.void,
+  }
+  const revision = JSON.stringify([operation, server ? server.version : installed?.revision])
+  // A local plugin's `./gui-experimental` bundle is outside the server entry's import graph: watch it, and let its
+  // content change the GUI's revision, so an edit reloads the GUI like a server or TUI edit reloads theirs. A package's
+  // bundle changes only with its installed version. The GUI's revision is a hash: windows receive it, and the operation
+  // holds the options.
+  const gui = local && entrypoints.gui ? fileURLToPath(entrypoints.gui) : undefined
+  if (gui) yield* watch(gui)
+  const bundle = gui ? Hash.sha256(yield* Effect.promise(() => readFile(gui))) : undefined
+  // The GUI receives the same options as the server entry; they cross to the app, so they must be JSON.
+  const guiOptions = entrypoints.gui
+    ? yield* Schema.decodeUnknownEffect(GuiOptions)(operation.options).pipe(
+        Effect.mapError(
+          (cause) => new LoadError({ message: "Plugin options must be JSON to reach its ./gui-experimental", cause }),
+        ),
+      )
+    : {}
+  return {
+    id: plugin.id,
+    features: {
+      ...(entrypoint ? { server: true as const } : {}),
+      ...(entrypoints.tui ? { tui: true as const } : {}),
+      ...(entrypoint && entrypoints.rpc ? { rpc: true as const } : {}),
+      ...(entrypoints.gui ? { gui: true as const } : {}),
+    },
+    gui: entrypoints.gui
+      ? { file: entrypoints.gui, revision: Hash.sha256(JSON.stringify([revision, bundle])), options: guiOptions }
+      : undefined,
+    revision,
+    source: source(operation.target, installed?.version),
+    effect: (host) => plugin.effect({ ...host, options: operation.options }),
+  } satisfies Generation
+})
+
+const loadServer = Effect.fn("PluginModule.loadServer")(function* (
+  entrypoint: string,
+  sources: ReturnType<typeof createPluginSources> | undefined,
+  revision: string | undefined,
+) {
   const loaded = yield* Effect.promise(() =>
-    local
-      ? sources.read(entrypoint)
-      : Host.load(entrypoint).then((module) => ({ module, version: installed?.revision })),
+    sources ? sources.read(entrypoint) : Host.load(entrypoint).then((module) => ({ module, version: revision })),
   )
   const value = (yield* Schema.decodeUnknownEffect(Module)(loaded.module).pipe(
     Effect.mapError(
@@ -131,21 +239,5 @@ const load = Effect.fn("PluginModule.load")(function* (
         }),
     ),
   )).default
-  const plugin = "effect" in value ? value : PluginPromise.fromPromise(value)
-  return {
-    id: plugin.id,
-    features: {
-      ...(entrypoints.tui ? { tui: true as const } : {}),
-      ...(entrypoints.rpc ? { rpc: true as const } : {}),
-    },
-    revision: JSON.stringify([operation, loaded.version]),
-    source: path.isAbsolute(operation.target)
-      ? { type: "local" as const, path: fileURLToPath(entrypoint) }
-      : {
-          type: "package" as const,
-          target: operation.target,
-          ...(installed?.version ? { version: installed.version } : {}),
-        },
-    effect: (host) => plugin.effect({ ...host, options: operation.options }),
-  } satisfies Generation
+  return { plugin: "effect" in value ? value : PluginPromise.fromPromise(value), version: loaded.version }
 })

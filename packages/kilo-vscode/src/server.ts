@@ -6,6 +6,7 @@ import { existsSync, mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
 import { launch } from "./process"
+import { dataPlans } from "./documents/document-reader"
 
 export type Command = { cmd: string; args: string[]; env: Record<string, string> }
 export type Server = { url: string; authorization: string; process: ChildProcess }
@@ -39,6 +40,20 @@ const V1_ONLY = [
 const PASSWORDS = ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "KILO_SERVER_PASSWORD"]
 
 /**
+ * Names the extension owns from the Kilo settings (`settingsEnvironment`). An inherited value must not mask the
+ * setting, so drop it here and set it again in `extra`. The Claude Code `*_SKILLS` names and `NODE_EXTRA_CA_CERTS` are
+ * not owned, so an inherited value passes through as in v1.
+ */
+const MANAGED = ["KILO_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_CLAUDE_CODE"]
+
+/**
+ * The Integrated Browser and notebook endpoints are this host's private brokers. An inherited value would point
+ * tools at another host's broker, or leave them enabled when the feature is off here.
+ */
+const BROWSER = ["KILO_BROWSER_BROKER_URL", "KILO_BROWSER_BROKER_TOKEN"]
+const NOTEBOOK = ["KILO_NOTEBOOK_BROKER_URL", "KILO_NOTEBOOK_BROKER_TOKEN"]
+
+/**
  * The bundled `bin/kilo2` when it exists. Otherwise, in a repository checkout, the isolated dev entry
  * `script/dev-isolated.ts` with its own profile: `KILO_V2_PROFILE`, or a `profile` directory in the extension storage.
  */
@@ -60,14 +75,59 @@ export function command(input: {
   }
 }
 
+/** The global plan directory the server writes. The isolated dev profile moves the data directory into the profile. */
+export function serverPlans(cmd: Command | undefined, env: NodeJS.ProcessEnv): string {
+  const profile = cmd?.env.KILO_V2_PROFILE
+  if (profile) return path.join(path.resolve(profile), "data", "kilo2", "plans")
+  return dataPlans(env)
+}
+
 export function environment(base: NodeJS.ProcessEnv, extra: Record<string, string>): NodeJS.ProcessEnv {
   return {
-    ...Object.fromEntries(Object.entries(base).filter(([key]) => !V1_ONLY.includes(key) && !PASSWORDS.includes(key))),
+    ...Object.fromEntries(
+      Object.entries(base).filter(
+        ([key]) =>
+          !V1_ONLY.includes(key) &&
+          !PASSWORDS.includes(key) &&
+          !MANAGED.includes(key) &&
+          !BROWSER.includes(key) &&
+          !NOTEBOOK.includes(key),
+      ),
+    ),
     // The server trusts the OS certificate store, as VS Code does by default.
     NODE_USE_SYSTEM_CA: base.NODE_USE_SYSTEM_CA ?? "1",
     KILO_CLIENT: "vscode",
+    // The indexing plugin gates on machine-local project consent only when the server runs for VS Code.
+    KILO_PLATFORM: "vscode",
+    // This extension answers the Agent Manager RPC, so it advertises the agent_manager tool.
+    KILO_AGENT_MANAGER_HOST: "1",
     ...extra,
   }
+}
+
+/**
+ * The server environment derived from the Kilo VS Code settings and the running editor. The CLI reads the `KILO_`
+ * names and translates them to the `OPENCODE_` names the runtime reads, so the server starts with Claude Code loading
+ * off by default. A changed value applies on the next start, which the extension host triggers by stopping the server.
+ */
+export function settingsEnvironment(values: {
+  claudeCodeCompat: boolean
+  extraCaCerts: string
+  editor: string
+}): Record<string, string> {
+  const extraCaCerts = values.extraCaCerts.trim()
+  return {
+    // v1 `services/cli-backend/server-manager.ts` reported the editor as `${vscode.env.appName} ${vscode.version}`,
+    // which the Gateway stores as `X-KILOCODE-EDITORNAME`.
+    KILOCODE_EDITOR_NAME: values.editor,
+    ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
+    ...(extraCaCerts.length > 0 ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
+  }
+}
+
+/** The indexing server gate: without a workspace folder the server must not index anything. */
+export function indexingEnvironment(folders: number | undefined): Record<string, string> {
+  return folders && folders > 0 ? {} : { KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" }
 }
 
 /** The URL from the first complete JSON line `{"url":"http://127.0.0.1:<port>"}`. */
@@ -85,6 +145,7 @@ export function start(input: {
   command: Command
   cwd: string
   env: NodeJS.ProcessEnv
+  settings?: Record<string, string>
   log?: (text: string) => void
   onExit?: (child: ChildProcess) => void
 }): Promise<Server> {
@@ -94,7 +155,12 @@ export function start(input: {
     cwd: input.cwd,
     // `serve --stdio` removes OPENCODE_PASSWORD from its own environment before it starts tools.
     // dev-isolated.ts runs the CLI in INIT_CWD, which `bun run extension` leaves set to the caller's folder.
-    env: environment(input.env, { ...input.command.env, OPENCODE_PASSWORD: password, INIT_CWD: input.cwd }),
+    env: environment(input.env, {
+      ...input.command.env,
+      ...input.settings,
+      OPENCODE_PASSWORD: password,
+      INIT_CWD: input.cwd,
+    }),
     stdio: ["pipe", "pipe", "pipe"],
     detached: process.platform !== "win32",
   })
@@ -155,35 +221,45 @@ export function stop(child: ChildProcess) {
 /**
  * One server per extension host, started on first use and again after it exits. A failed start is kept for `retry`
  * milliseconds, because every webview request and event stream reconnect would start another server. `onError`
- * reports the first failure after a start or Restart Server.
+ * reports the first failure after a start or Restart Server. `settings` may be a function so a start after a settings
+ * change reads the current values.
  */
 export function manager(input: {
   command: () => Command | undefined
   cwd: string
   env: NodeJS.ProcessEnv
+  settings?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>)
   log?: (text: string) => void
   onError?: (error: Error) => void
+  onStart?: (server: Server) => void
+  onStop?: () => void
   retry?: number
 }) {
   const state: { current?: Promise<Server>; failed: boolean } = { failed: false }
   const boot = () => {
-    const found = input.command()
-    const promise = found
-      ? start({
-          command: found,
-          cwd: input.cwd,
-          env: input.env,
-          log: input.log,
-          onExit: () => {
-            if (state.current === promise) state.current = undefined
-          },
-        })
-      : Promise.reject(
-          new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository."),
-        )
+    const promise = (async () => {
+      const found = input.command()
+      if (!found)
+        throw new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository.")
+      // Settings may await host work, such as the loopback notebook and Integrated Browser broker endpoints.
+      const settings = typeof input.settings === "function" ? await input.settings() : input.settings
+      return start({
+        command: found,
+        cwd: input.cwd,
+        env: input.env,
+        settings,
+        log: input.log,
+        onExit: () => {
+          if (state.current !== promise) return
+          state.current = undefined
+          input.onStop?.()
+        },
+      })
+    })()
     promise.then(
-      () => {
+      (server) => {
         state.failed = false
+        if (state.current === promise) input.onStart?.(server)
       },
       (error: Error) => {
         if (!state.failed) input.onError?.(error)
@@ -205,6 +281,7 @@ export function manager(input: {
       const current = state.current
       state.current = undefined
       state.failed = false
+      if (current) input.onStop?.()
       return current?.then(
         (server) => stop(server.process),
         () => undefined,
@@ -237,6 +314,10 @@ function signal(child: ChildProcess, name: NodeJS.Signals) {
 }
 
 function bun(env: NodeJS.ProcessEnv, platform: NodeJS.Platform) {
-  const file = path.join(env.BUN_INSTALL ?? path.join(homedir(), ".bun"), "bin", platform === "win32" ? "bun.exe" : "bun")
+  const file = path.join(
+    env.BUN_INSTALL ?? path.join(homedir(), ".bun"),
+    "bin",
+    platform === "win32" ? "bun.exe" : "bun",
+  )
   return existsSync(file) ? file : "bun"
 }

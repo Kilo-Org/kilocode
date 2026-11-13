@@ -196,19 +196,28 @@ export const dict = {
 
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Search worktrees",
+  "prompt.mention.empty": "No files or folders found",
+  "prompt.mention.terminalUnavailable": "Terminal context unavailable",
+  "prompt.mention.gitChangesUnavailable": "Git changes unavailable",
   "prompt.thinking.tooltip": "Reasoning effort",
   "prompt.shortcutHint.addSelection": "to add the selection",
   "prompt.shortcutHint.waiting": "to answer a waiting session",
   "prompt.shortcutHint.type": "to type",
   "prompt.shortcutHint.sessions": "to switch session",
   "prompt.shortcutHint.stop": "to stop",
+  "prompt.shortcutHint.queue": "to queue",
+  "prompt.shortcutHint.steer": "to steer",
   "prompt.shortcutHint.changes": "to review changes",
   "prompt.shortcutHint.pr": "to open the PR",
+  "prompt.shortcutHint.newWorktree": "to start a new worktree",
   "prompt.shortcutHint.mode": "Next mode",
   "prompt.action.send": "Send",
   "prompt.action.continue": "Continue",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
   "prompt.action.send.recording": "Transcribe and send",
+  "prompt.action.steer": "Steer this turn",
+  "prompt.action.queue": "Queue for after this turn",
+  "prompt.action.stopAndSend": "Stop and send",
   "prompt.action.stop": "Stop",
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
@@ -261,6 +270,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "Failed to send prompt",
 
   "mcp.status.connected": "connected",
+  "mcp.status.pending": "connecting",
   "mcp.status.failed": "failed",
   "mcp.status.needs_auth": "needs auth",
   "mcp.status.needs_registration": "needs client registration",
@@ -291,6 +301,9 @@ export const dict = {
   "provider.failure.http": "Provider error (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "Provider error.",
   "provider.failure.schema": "Unexpected response from the provider.",
+  "provider.failure.organizationMissing": "The selected team is no longer available. Select another team.",
+  "provider.failure.scopeConflict": "The selected team conflicts with the team of your Kilo token.",
+  "provider.failure.personalUnavailable": "This account has no personal account. Select a team.",
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
@@ -299,7 +312,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
+  "ui.permission.noChanges": "No changes.",
   "ui.permission.reject": "Reject",
+  "ui.permission.allowAllSites": "Allow all sites",
   "ui.permission.feedbackPlaceholder": "Tell Kilo what to do differently",
   "ui.permission.feedbackHint": "Enter to reject, Esc to cancel",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
@@ -341,6 +356,8 @@ export const dict = {
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
+  "session.review.viewTurnChanges": "View turn changes",
+  "session.review.turnChangesEmpty": "No changes in this turn.",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 
@@ -658,7 +675,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
   "settings.webTools.title": "Web Tools",
-  "settings.webTools.description": "Configure web search and browser automation.",
+  "settings.webTools.description": "Configure web search.",
   "settings.webTools.webSearch.enable": "Enable for All Providers",
   "settings.webTools.browserAutomation": "Browser Automation",
   "settings.webTools.webSearch.title": "Web Search",
@@ -726,6 +743,17 @@ export const dict = {
   "session.prompts.first": "First prompt",
   "session.prompts.latest": "Latest prompt",
   "session.prompts.overflow": "{{count}} earlier prompts",
+  "session.pending.status.steering": "Sends after the current step",
+  "session.pending.status.starting": "Sending",
+  "session.pending.status.stranded": "Not sent",
+  "session.pending.status.queued": "Queued for after this turn",
+  "session.pending.status.paused": "Queued, paused until you send",
+  "session.pending.action.stopAndSend": "Stop everything and send now",
+  "session.pending.action.send": "Send now",
+  "session.pending.action.steer": "Send after the current step",
+  "session.pending.action.queue": "Move to queue",
+  "session.pending.action.edit": "Edit",
+  "session.pending.action.delete": "Delete",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.working": "Working...",
@@ -743,7 +771,7 @@ export const dict = {
   "prompt.goal.set": "Set goal",
   "prompt.goal.start": "Start goal",
   "session.goal.active": "Active",
-  "session.goal.complete": "Complete (model-reported)",
+  "session.goal.complete": "Complete",
   "session.goal.blocked": "Blocked",
   "session.goal.restart": "Restart goal",
   "session.goal.paused": "Paused",
@@ -763,6 +791,8 @@ export const dict = {
   "sidebar.topBar.profile": "Profile",
   "sidebar.topBar.settings": "Settings",
   "sidebar.session.newSession": "New Session",
+  "sidebar.session.changes.title": "Changes",
+  "sidebar.session.changes.openAll": "Open All",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newWorktree": "New Worktree",
   "sidebar.session.newWorktree.tooltip":
@@ -796,8 +826,10 @@ export const dict = {
   "prompt.placeholder.connecting": "Connecting to server...",
   "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.plain": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.plainHint": "Type a message... ({{key}} {{action}})",
   "prompt.placeholder.hint": "Type a message, @ to mention files... ({{key}} {{action}})",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
+
 
   "context.usage.sessionCost": "Session cost",
   "context.usage.olderSessions": "{{count}} older sessions",
@@ -818,6 +850,7 @@ export const dict = {
   "settings.aboutKiloCode.port.label": "Port:",
   "settings.aboutKiloCode.versionInfo": "Version Information",
   "settings.aboutKiloCode.version.label": "Version:",
+  "settings.aboutKiloCode.serverVersion.label": "Server Version:",
   "settings.aboutKiloCode.community": "Community & Support",
   "settings.aboutKiloCode.feedback.prefix": "If you have any questions or feedback, feel free to open an issue on",
   "settings.aboutKiloCode.feedback.or": "or",
@@ -838,6 +871,7 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "This file was exported from a newer version of Kilo. Some settings may be ignored.",
   "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "Telemetry",
   "settings.aboutKiloCode.telemetry.description":
@@ -992,6 +1026,11 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
+  "settings.agentBehaviour.sendWhileRunning.title": "Enter While the Agent Works",
+  "settings.agentBehaviour.sendWhileRunning.description":
+    "Steer sends your message to the agent after its current step. Queue waits until the agent is done. Alt+Enter does the other, and Cmd+Enter (Ctrl+Enter) stops the agent and sends.",
+  "settings.agentBehaviour.sendWhileRunning.steer": "Steer",
+  "settings.agentBehaviour.sendWhileRunning.queue": "Queue",
   "settings.agentBehaviour.availableAgents": "Available Agents",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
@@ -1019,7 +1058,9 @@ export const dict = {
   "settings.agentBehaviour.noAgentsFound": "No agents found.",
   "settings.agentBehaviour.removeAgent.title": "Remove agent",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Remove agent "{{name}}"? This will disable the agent by updating your config.',
+    'Remove agent "{{name}}"? This deletes the markdown file that defines it, or removes its config entry.',
+  "settings.agentBehaviour.removeAgent.confirmAll":
+    'Remove agent "{{name}}"? It is defined in both the project and global config, so this removes it from both.',
   "settings.agentBehaviour.removeAgent.button": "Remove",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",
@@ -1085,11 +1126,14 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url.placeholder": "e.g. http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "Browse Marketplace",
   "settings.agentBehaviour.mcpEmpty":
-    "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
+    "No MCP servers configured. Add MCP servers in kilo2.json, or ask the agent to add them for you.",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "Startup timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "Catalog timeout (ms)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "Execution timeout (ms)",
   "settings.agentBehaviour.workflows.description":
-    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
+    "Workflows are custom commands defined in your config or command Markdown files. You can set a model and reasoning variant for each workflow.",
   "settings.agentBehaviour.workflows.empty":
-    "No custom commands configured. Add commands to your opencode.json to see them here.",
+    "No custom commands found. Add commands to kilo2.json or a .kilo2/command Markdown file.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
   "settings.agentBehaviour.workflows.model": "model",
@@ -1130,6 +1174,9 @@ export const dict = {
     "This is a built-in mode. Its base definition cannot be changed, but you can configure overrides below.",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
   "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.perAgentPermissions.title": "Per-Agent Permissions",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "These settings only apply to this custom agent. Change a dropdown from Default to create an override, or use Add path/Add command for tool-specific exceptions.",
   "settings.agentBehaviour.permissions.title": "Calculated Permissions",
   "settings.agentBehaviour.permissions.count": "{{count}} rules",
   "settings.agentBehaviour.permissions.effective": "Effective (wildcard):",
@@ -1141,10 +1188,12 @@ export const dict = {
     "Rules are evaluated in order — last matching rule wins. This is the resolved ruleset from the CLI backend.",
 
   "settings.autoApprove.description":
-    "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
+    "Define how tools are allowed to run. Most tools default to Allow. Bash defaults to Ask.",
   "settings.autoApprove.maxCost.title": "Session Cost Alert",
   "settings.autoApprove.maxCost.description":
     "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; leave empty to disable.",
+  "settings.autoApprove.maxCost.v2Description":
+    "Show a non-blocking alert when a session reaches this USD amount. Leave empty to disable.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",
@@ -1216,6 +1265,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
+  "settings.context.compactionKeep.title": "Keep Recent Tokens",
+  "settings.context.compactionKeep.description":
+    "Recent tokens kept verbatim when the context is compacted. Leave blank to keep 15,000.",
+  "settings.context.compactionBuffer.title": "Compaction Buffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens kept free below the model context limit before compacting. Leave blank to keep 15% free, at least 16,000.",
   "settings.context.prune.title": "Prune Old Outputs",
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
@@ -1289,12 +1344,17 @@ export const dict = {
   "settings.display.mcpTool.description": "Choose whether MCP and generic tool blocks start expanded or collapsed.",
   "settings.display.mcpTool.expanded": "Expanded",
   "settings.display.mcpTool.collapsed": "Collapsed",
+  "settings.display.codeMode.title": "Code Mode Blocks",
+  "settings.display.codeMode.description":
+    "Choose whether Code Mode blocks start with their tool calls listed or as one line. The script always stays hidden until you open it.",
+  "settings.display.codeMode.expanded": "Expanded",
+  "settings.display.codeMode.collapsed": "Collapsed",
   "settings.display.shortcutHints.title": "Show shortcut hints",
   "settings.display.shortcutHints.description":
-    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to add selected code or return to the prompt.",
+    "Show the keyboard shortcut that fits what you do now in the empty prompt, for example how to queue a prompt, add selected code, review changes, or return to the prompt.",
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Shown by default; disable this setting to hide it when needed.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
   "settings.display.autoApprovalReason.description":
     "Show why a tool call was auto-approved, such as a matching permission rule or an agent default.",
@@ -1314,6 +1374,8 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",
+  "settings.models.hidePromptTraining.managed":
+    "This value comes from a configuration file that this panel cannot change, such as a managed or enterprise file.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
@@ -1374,6 +1436,16 @@ export const dict = {
   "migration.sessionFormat.unknownError": "Unknown error",
 
   "error.details.show": "Details",
+  "error.failure.message": "{{message}}",
+  "error.failure.unknown": "unknown error",
+  "error.failure.notKilo": "Not a Kilo v2 server.",
+  "error.failure.transport": "Couldn't reach the Kilo server. Check that it is running, then try again.",
+  "error.failure.timeout": "The Kilo server took too long to respond. Try again.",
+  "error.failure.busy": "The Kilo server is busy right now. Try again in a moment.",
+  "error.failure.trouble": "The Kilo server is having trouble right now. Try again in a moment.",
+  "error.failure.status": "The Kilo server returned an unexpected status ({{status}}).",
+  "error.failure.statusUnknown": "The Kilo server returned an unexpected status.",
+  "error.failure.unreadable": "The Kilo server sent a response this client couldn't read.",
 
   "task.todos.progress": "{{done}}/{{total}} to-dos done",
   "task.todos.allDone": "{{count}} to-dos done",
@@ -1386,6 +1458,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "Open all background agents",
   "task.backgroundAgents.cancel": "Stop",
   "task.backgroundAgents.continueInBackground": "Continue in background",
+  "task.backgroundAgents.promoteFailed": "This agent could not continue in the background. It may have finished already.",
   "task.backgroundAgents.waiting": "A background agent needs your input",
   "task.backgroundAgents.needsInput": "Needs input",
   "task.backgroundAgents.clearFinished": "Clear finished",
@@ -1428,6 +1501,8 @@ export const dict = {
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.source.turn.label": "Turn",
+  "diffViewer.source.turn.tooltip": "Files changed by Kilo during one turn.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
@@ -1461,6 +1536,20 @@ export const dict = {
   "chat.search.nextMatch": "Next match",
   "chat.search.close": "Close search",
   "chat.search.invalidRegex": "Invalid regular expression",
+  "chat.search.historyFailed": "Could not search earlier messages",
   "chat.search.noResults": "No results",
   "chat.search.searchingHistory": "Searching earlier messages…",
+  "chat.reply.toolbar": "Selected text",
+  "chat.reply.quote": "Quote",
+  "chat.reply.quoteHint": "Quote in your reply",
+  "chat.reply.commentHint": "Comment on this passage",
+  "chat.reply.copy": "Copy",
+  "chat.reply.sendHint": "Send this comment to Kilo now",
+  "chat.reply.commentLater": "Save for your next message",
+  "chat.reply.count": "Replies ({{count}})",
+  "chat.reply.sendAll": "Send all",
+  "chat.reply.showInChat": "Show in chat",
+  "chat.injected.goToSource": "Go to originating session",
+  "chat.injected.showPrompt": "Show prompt",
+  "chat.injected.hidePrompt": "Hide prompt",
 }

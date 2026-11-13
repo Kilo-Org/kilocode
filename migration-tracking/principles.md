@@ -32,8 +32,10 @@ Every client (VS Code, JetBrains, Kilo Desktop, other consumers) is a new packag
 ## 4. Identity and config names
 
 - The internal v2 line is `kilo2`: binary `kilo2`, and separate `kilo2` config, data, cache and state directories. v1 directories and files are never written; an opt-in v1 import leaves the originals unchanged.
-- Runtime config uses `kilo2.json` and `kilo2.jsonc` (project roots and ancestors up to the worktree root, or to the filesystem root outside version control; global and system directories) and the project directory `.kilo2`. Contents use the v2 schema; explicit config paths still accept any filename. The CLI creates `kilo2.json`; the server's global writer creates `kilo2.jsonc` if neither file exists.
+- Runtime config uses `kilo2.json` and `kilo2.jsonc` (project roots and ancestors up to the worktree root, or to the filesystem root outside version control; global directories) and the project directory `.kilo2`. Contents use the v2 schema; explicit config paths still accept any filename. The CLI creates `kilo2.json`; the server's global writer creates `kilo2.jsonc` if neither file exists.
+- The platform-managed system directory (`/etc/kilo`, `/Library/Application Support/kilo`, `%ProgramData%\kilo`) is the exception to the isolation: it keeps the stable product names `kilo.json` and `kilo.jsonc`, because an administrator deploys it once and the policy must keep applying across internal renames (#15326).
 - There is no fallback to v1 `kilo.json`, `kilo.jsonc`, `.kilo` or `.kilocode`, nor to OpenCode config.
+- Opt-in exception to both rules above: `KILO_USE_RELEASE_CONFIG=1` switches the config file and directory names to `kilo.json`, `kilo.jsonc` and `.kilo` for reads and writes, in project and global directories, so a Cloud Agent reads a repository's existing `.kilo` config. It is a switch, not a fallback: `.kilo2` is then not read. The app directories, the database and the Agent Manager state (`.kilo2/agent-manager.json`) keep `kilo2`. It becomes the default at the release rename, and the variable is then removed.
 - The repository's own `.kilo/` contributor tooling (skills, agents, commands) stays where it is.
 
 ## 5. Behavioral reference

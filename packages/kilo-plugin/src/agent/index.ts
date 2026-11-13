@@ -8,9 +8,12 @@ import { ToolOutput } from "@opencode/core/tool-output"
 import { Wildcard } from "@opencode/core/util/wildcard"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
+import type { Location } from "@opencode/schema/location"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { KiloOrganizationModes } from "../gateway/modes"
+import { PlanFile } from "../plan/plan-file"
 import { Effect, Option, Stream } from "effect"
 import path from "path"
 
@@ -26,8 +29,12 @@ import PROMPT_ORCHESTRATOR from "./orchestrator.txt"
 
 const build = Agent.ID.make("build")
 const code = Agent.ID.make("code")
+const explore = Agent.ID.make("explore")
 const general = Agent.ID.make("general")
 const plan = Agent.ID.make("plan")
+const planTools = [rule("kilo.plan_exit", "*", "deny")]
+// Kilo Swarm coordination stays open to the read-only agents; the board plugin registers the tools only when enabled.
+const board = ["board_read", "board_post"]
 
 type Table = Record<string, Permission.Rule["effect"]>
 
@@ -144,6 +151,18 @@ const readOnlyShell: Table = {
   "man *-H*": "deny",
 }
 
+// Explore runs as a delegated subagent, so it cannot answer a permission prompt: an `ask` would stall
+// it. `gh` drops from ask to deny for that reason, and `find` is denied because it can mutate through
+// `-delete` and `-exec` (glob and list cover the read-only need). Evaluation takes the last matching
+// rule, so the `gh` denies must come after the inherited `gh <subcommand>` allows; the inherited `gh`
+// commands are dropped and a single trailing deny replaces them. Table keys are `<command> <args>`
+// patterns, so match the `gh ` command token (not the `gh` prefix, which would also catch a `ghq`).
+const exploreShell: Table = {
+  ...Object.fromEntries(Object.entries(readOnlyShell).filter(([resource]) => !resource.startsWith("gh "))),
+  "gh *": "deny",
+  "find *": "deny",
+}
+
 // Collects the global config rules: config appends them to every agent, and no config names this
 // agent. The ceiling plugin reads it after config and removes it.
 const probe = Agent.ID.make("kilo-config-permissions")
@@ -151,7 +170,7 @@ const probe = Agent.ID.make("kilo-config-permissions")
 export const Plugin = define({
   id: "kilo.agent",
   effect: Effect.fn(function* (ctx) {
-    const guard = guards(yield* Global.Service)
+    const guard = guards(yield* Global.Service, ctx.location)
     // Agents that exist before user config. Only their catch-all edit rule describes them reliably.
     const builtins = new Set<string>()
 
@@ -163,7 +182,9 @@ export const Plugin = define({
       editor.update(code, (item) => {
         if (source) Object.assign(item, structuredClone(source))
         item.name = Agent.Name.make("Code")
-        item.permissions.push(...rules("shell", shell))
+        // Only the Plan agent runs the Kilo plan handoff; other agents must not expose plan_exit. open_plan is a
+        // read-only document action and stays available to them, inside Code Mode where it can execute.
+        item.permissions.push(...rules("shell", shell), ...planTools)
       })
       // kilo_port(unattributed:agent:6f9571fe6129)
       // kilo_port(unattributed:agent:a91ca8efa1b6)
@@ -179,7 +200,18 @@ export const Plugin = define({
         item.hidden = true
       })
 
-      if (editor.get(general)) editor.update(general, (item) => item.permissions.push(...rules("shell", shell)))
+      if (editor.get(general))
+        editor.update(general, (item) =>
+          item.permissions.push(...rules("shell", shell), ...planTools),
+        )
+
+      // Native Explore allows a broad shell. Append the read-only shell table so the later rules win
+      // (evaluation takes the last match) and Explore keeps the read-only bash allowlist. The ceiling
+      // reapplies it after config; this copy keeps Explore read-only even when the ceiling does not run.
+      if (editor.get(explore))
+        editor.update(explore, (item) =>
+          item.permissions.push(...rules("shell", exploreShell), ...board.map((action) => rule(action, "*", "allow"))),
+        )
 
       editor.update(Agent.ID.make("ask"), (item) => {
         item.name = Agent.Name.make("Ask")
@@ -207,6 +239,8 @@ export const Plugin = define({
 
       builtins.clear()
       for (const agent of editor.list()) builtins.add(agent.id)
+      // This plugin defines Plan itself below, so Plan is a built-in although it is not in the list yet.
+      builtins.add(plan)
 
       editor.update(probe, (item) => {
         item.mode = "subagent"
@@ -214,12 +248,14 @@ export const Plugin = define({
         item.permissions = []
       })
 
-      // Re-insert Plan last so the agent cycle keeps the v1 order: code, ask, debug, orchestrator, plan.
+      // Kilo owns the Plan agent: the host turns off the native Plan plugin. Re-insert Plan last so the agent cycle
+      // keeps the order code, ask, debug, orchestrator, plan.
       const native = editor.get(plan)
-      if (!native) return
       editor.remove(plan)
       editor.update(plan, (item) => {
-        Object.assign(item, native)
+        if (native) Object.assign(item, native)
+        item.name = Agent.Name.make("Plan")
+        item.mode = "primary"
         item.description = "Plan mode. Can only edit plan files; all other filesystem mutations are denied."
         item.permissions = structuredClone(guard.plan)
       })
@@ -280,7 +316,7 @@ export const Plugin = define({
 export const Ceiling = define({
   id: "kilo.agent.ceiling",
   effect: Effect.fn(function* (ctx) {
-    const guard = guards(yield* Global.Service)
+    const guard = guards(yield* Global.Service, ctx.location)
     yield* ctx.agent.transform((editor) => {
       // The global config rules, then the rules that later post plugins append to every agent (the
       // browser plugin's deny).
@@ -326,45 +362,72 @@ export const Ceiling = define({
           ])
         })
       }
+
+      // Explore is always delegated and cannot answer a prompt, so neither a broad global allow nor an
+      // explicit per-agent shell allow may reopen its shell. Unlike the guarded primary agents above,
+      // this reapplies unconditionally: there is no opt-in for a writable Explore shell. Config denies
+      // that can reach shell are kept after the table (as `seal` does), so a user can still tighten
+      // Explore further. The config rules are the tail after the table the plugin phase appended, found
+      // by matching that sequence, so a user's own `shell "*"` or `"*"` deny is not confused with the
+      // table's identical entries.
+      const exploreInfo = editor.get(explore)
+      const table = rules("shell", exploreShell)
+      const tableEnd = exploreInfo && sequenceEnd(exploreInfo.permissions, table)
+      if (exploreInfo && tableEnd !== undefined) {
+        const denies = exploreInfo.permissions
+          .slice(tableEnd)
+          .filter((entry) => entry.effect === "deny" && Wildcard.match("shell", entry.action))
+        editor.update(explore, (item) => item.permissions.push(...table, ...denies))
+      }
     })
   }),
 })
 
 /** Kilo rules for the agents whose limits config must not widen. */
-function guards(global: Global.Interface) {
+function guards(global: Global.Interface, location: Location.Info) {
   // Read-only agents still need the files where long tool and shell output is stored.
   const output = [ToolOutput.DIRECTORY, Shell.DIRECTORY].map((dir) =>
     rule("external_directory", path.join(global.data, dir, "*"), "allow"),
   )
   const read = rules("read", { "*": "allow", "*.env": "ask", "*.env.*": "ask", "*.env.example": "allow" })
-  // The native Plan directory, which the native Plan reminder names.
-  const plans = path.join(global.home, ".opencode", "plan", "*")
+  // The Kilo plan storage. Edits inside the session's workspace arrive as relative paths: the project-relative form
+  // is the workspace form for root sessions, the parent form for a session started in a subdirectory.
+  const planDirectory = PlanFile.directory(location, global.data)
+  const data = path.join(global.data, "plans", "*")
+  const stored = [
+    path.join(path.relative(location.directory, planDirectory) || ".", "*.md"),
+    path.join(KiloConfigFiles.directories[0], "plans", "*.md"),
+    path.join("plans", "*.md"),
+    path.join(".plans", "*.md"),
+    path.join(planDirectory, "*.md"),
+    data,
+  ]
   const allow = (...actions: string[]) => actions.map((action) => rule(action, "*", "allow"))
   return {
     ask: [
       rule("*", "*", "deny"),
       ...rules("shell", readOnlyShell),
       ...read,
-      ...allow("grep", "glob", "skill", "question", "webfetch", "websearch"),
+      ...allow("grep", "glob", "skill", "question", "webfetch", "websearch", ...board),
       ...output,
       rule("edit", "*", "deny"),
       rule("subagent", "*", "deny"),
     ],
     plan: [
       rule("*", "*", "deny"),
-      ...allow("question", "skill", "subagent"),
+      ...allow("question", "skill", "subagent", "kilo.plan_exit", "kilo.open_plan"),
       rule("subagent", general, "deny"),
       ...rules("shell", readOnlyShell),
       ...read,
-      ...allow("grep", "glob", "webfetch", "websearch"),
+      ...allow("grep", "glob", "webfetch", "websearch", ...board),
       ...output,
-      rule("external_directory", plans, "allow"),
+      rule("external_directory", data, "allow"),
       rule("edit", "*", "deny"),
-      rule("edit", plans, "allow"),
+      ...rules("edit", Object.fromEntries(stored.map((entry) => [entry, "allow" as const]))),
     ],
     orchestrator: [
       rule("*", "*", "deny"),
-      ...allow("read", "grep", "glob", "question", "skill", "subagent", "webfetch", "websearch"),
+      ...allow("read", "grep", "glob", "question", "skill", "subagent", "webfetch", "websearch", ...board),
       ...output,
       rule("shell", "*", "deny"),
     ],
@@ -412,6 +475,13 @@ function starts(rules: readonly Permission.Rule[], prefix: readonly Permission.R
       rules[index]?.resource === entry.resource &&
       rules[index]?.effect === entry.effect,
   )
+}
+
+/** The index just past the last occurrence of `block` in `rules`, or undefined when it is absent. */
+function sequenceEnd(rules: readonly Permission.Rule[], block: readonly Permission.Rule[]) {
+  for (let start = rules.length - block.length; start >= 0; start--)
+    if (starts(rules.slice(start), block)) return start + block.length
+  return undefined
 }
 
 function rule(action: string, resource: string, effect: Permission.Rule["effect"]) {

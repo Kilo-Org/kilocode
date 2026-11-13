@@ -33,31 +33,33 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 ## Branding and upstream drift
 
-Decision: keep the approach in PR #15417 as an **interim adapter**, not a permanent branding API. Its reference implementation is `packages/kilo-cli/src/branding/`; check whether the PR is merged before assuming those files exist on your branch.
+Branding is a Kilo-owned load/build-time transform in `packages/kilo-cli/src/branding/`, not a public branding API: a rule engine for user-visible text, a few exact structural transforms, and a coverage audit. Its design note is `migration-tracking/technical-notes/branding-rule-engine.md`.
 
-- For these CLI/TUI surfaces, v1 used Kilo constants and OAuth wrappers called from patched shared files, rather than a translation catalog. The v2 adapter instead transforms selected upstream source text in memory, through Kilo-owned runtime/build wiring. Upstream source and unhosted behavior stay unchanged. Compiled binaries contain the branded result; they do not rewrite installed source at startup.
-- The adapter still depends on exact paths and text anchors. Fewer shared-file patches does **not** mean less semantic coupling or automatic adaptation to upstream changes.
-- Known anchor changes throw, and the branding tests read every mapped file and check each replacement. Changed wording and moved/deleted files must fail CI. In source development a missing anchor can also fail module loading; do not promise that drift is always a harmless fallback.
-- New upstream text outside the mapping can remain unbranded without failing current tests. It needs manual review. A dedicated sync-time branding audit/report is a proposed follow-up, **not implemented automation**.
+- For these CLI/TUI surfaces, v1 used Kilo constants and OAuth wrappers called from patched shared files, rather than a translation catalog. v2 instead brands upstream source text in memory through Kilo-owned runtime/build wiring, leaving upstream source and unhosted behavior unchanged. Compiled binaries contain the branded result; they do not rewrite installed source at startup.
+- User-visible text branding is now rule-based (`packages/kilo-cli/src/branding/rules.ts` + `engine.ts`): it brands `OpenCode`/`opencode` in user-visible spans dynamically, so new upstream wording in an intercepted file is branded without a list edit. What stays exact and path-coupled: the intercepted file set (`text.ts` `files`) and the structural transforms (`structural.ts`: logo/preflight/presentation logic and the OAuth wordmark). Fewer shared-file patches does **not** mean less coupling to the intercepted paths and structural anchors.
+- Structural anchor changes throw (`Kilo branding no longer matches`), and the branding tests keep upstream/hosted controls, OAuth escaping, and real TSX rendering in source and compiled modes. Moved/deleted structural sites must fail CI.
+- New user-visible OpenCode text in a file **not** in the intercepted set ships unbranded. The branding audit (`bun run --cwd packages/kilo-cli branding:audit`, enforced by `branding-audit.test.ts` and the `kilo-packages` CI job) hard-fails on exactly this, so a miss is a checked failure rather than a silent regression.
 
 At every upstream sync, and after merging a newer `v2` into a branding branch:
 
-1. Read the previous and new upstream pins through the sync tooling. Inspect renames, deletions and changes to mapped files; do not rely only on merge conflicts.
-2. Locate moved code and update its mapping. Review changed wording before updating replacement anchors. Remove an entry only when its behavior is gone or tracked elsewhere; never weaken assertions just to make CI pass.
-3. Review new user-visible names, commands, titles, links and callback pages. Preserve real OpenCode provider identities, package imports, protocol/keybind IDs and schema URLs. Use the host's config filename source, such as `KiloConfigFiles.newFile`, rather than guessing from the product name.
+1. Read the previous and new upstream pins through the sync tooling. Inspect renames, deletions and changes to the intercepted files and structural sites; do not rely only on merge conflicts.
+2. Locate moved structural code and update `structural.ts` anchors. Never weaken assertions just to make CI pass.
+3. Run the branding audit and triage every finding: add the file to `text.ts` `files` (missing interception), extend the rules in `rules.ts` or the protected contexts (`isProtected` in `engine.ts`) for a rule gap, add a namespace transform to `structural.ts` (or correct Kilo-owned text) for a namespace leak, or add a reviewed entry to `branding-audit-allow.ts` when the text is genuinely not host branding (a real OpenCode provider/SaaS product name, a schema/wire identifier, or a Kilo-replaced unreachable path). Use the host's config filename source, such as `KiloConfigFiles.newFile`, rather than guessing from the product name.
 4. Run the focused branding tests and affected package typechecks. Keep both upstream/hosted controls, OAuth escaping checks, and real TSX rendering coverage in source and compiled modes. Repeat isolated source/compiled smoke checks when their surfaces change.
-5. Record mapping adaptations, test results and remaining gaps in the sync/feature PR. Keep live CI status and evidence current; source-rendered OAuth screenshots do not prove a live browser sign-in.
+5. Record audit triage, test results and remaining gaps in the sync/feature PR. Keep live CI status and evidence current; source-rendered OAuth screenshots do not prove a live browser sign-in.
 
-The legacy sync branding passes exist but are disabled by default and process conflicts only. Do not enable them as a substitute for this review: their broad rules and scope differ from the adapter. Moving the same mapping to sync time or generated copies does not remove its path/string dependency. A stable API or a different generation mechanism needs a separate approved design; do not add upstream seams solely to remove Kilo-owned code.
+The legacy sync branding passes exist but are disabled by default and process conflicts only. Do not enable them as a substitute for this review: their broad merge-time rewriting differs from the host's load/build-time engine and would bake branding into committed shared files, against the direction rule. Moving branding to sync time or generated copies does not remove its coupling to the intercepted paths and structural anchors. A different generation mechanism or a public branding API needs a separate approved design; do not add upstream seams solely to remove Kilo-owned code.
 
 ## Isolation: never touch the v1 setup
 
 - Run the CLI only through `bun dev` (`script/dev-isolated.ts`, which starts the Kilo host entry `packages/kilo-cli/src/index.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
 - Use a fresh profile per test: `KILO_V2_PROFILE=/tmp/kilo-v2-<id>`. Add `--standalone` so parallel agents do not share the service port.
-- `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
+- `bun dev` ignores the database, config file and directory, home, session, server password and client identity that a shell inherits from a Kilo or OpenCode process (`OPENCODE_DB`, `KILO2_DB`, `KILO2_CONFIG`, `KILO2_CONFIG_DIR`, their `OPENCODE_` names, `OPENCODE_HOME_DIR`, `OPENCODE_SESSION_ID`, `KILO_CLIENT`, `KILO_PLATFORM`, ...), so it is safe from an agent shell inside VS Code. Only `serve --stdio`, the server a client starts for itself, keeps the client identity. To pass config, use `OPENCODE_CONFIG_CONTENT`; to use another home, set `KILO_TEST_HOME`.
+- `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models, but their free tier can rate-limit with "You need to sign up to keep going"; do not wait on it. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories.
-- Models: `kilo/kilo-auto/free` by default. Use `kilo/deepseek/deepseek-v4.1-flash` only when a paid model is needed.
+- Models: use a cheap model such as `kilo/deepseek/deepseek-v4.1-flash` for self-tests; a paid request of this size is fine and does not need approval. `kilo/kilo-auto/free` is fine when it answers.
 - Isolate tests too. Upstream tests can write into the real home and leave servers running. Run them with `T=$(mktemp -d)` and `env OPENCODE_TEST_HOME=$T XDG_DATA_HOME=$T/data XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache bun test ...`. After the run, stop any of your processes that `pgrep -fl 'opencode-test-|opencode-service-lifecycle'` lists.
+- `OPENCODE_TEST_HOME` overrides the home directory `Global.Path.home` reports, so tests can point it at a scratch directory. When you run the Kilo host entry (`bun dev`, `packages/kilo-cli`), set `KILO_TEST_HOME` instead: the host translates `KILO_<NAME>` to `OPENCODE_<NAME>` at boot (`packages/kilo-cli/src/env.ts`, `names`), so `KILO_TEST_HOME` becomes `OPENCODE_TEST_HOME` before `@opencode/util/global` loads. Use the `OPENCODE_` name only when driving an upstream package directly (not the host).
 
 ## Self-test the CLI
 
@@ -118,16 +120,16 @@ The TUI is ready when the last command prints the home screen (about 15 seconds)
 
 Start every later shell call with `source /tmp/kilo-v2-st-<ID>/env.sh`. Then act, read `screen`, and check for the expected text.
 
-| Command | Use |
-|---|---|
-| `st type --value "<text>" >/dev/null` | Type a prompt, a slash command (`/connect`) or a mention (`@math`) |
-| `st press --keys <keys> >/dev/null` | `Enter`, `Escape`, `Shift+Tab` (agent), `Control+p` (commands). Chords are two calls: `Control+x`, then `n` (new tab) or `m` (model) |
-| `idle` | Wait until the answer is complete (at most 4 minutes; reports a failure if the session does not become idle). Use after sending a prompt |
-| `screen` | Print the terminal text |
-| `tclick "<text>"` | Click visible TUI text, for example a tab title. Use a short unique part |
-| `st wait --text "<text>"` | Wait until text appears. Default 10 seconds, `--timeout-ms` at most 60000. Check `isError` in the JSON |
-| `logs` | Print CLI log errors. `logs "<pattern>" <lines>` for other lines |
-| `st screenshot` | Only with `HEADLESS=false`. Read the PNG |
+| Command                               | Use                                                                                                                                      |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `st type --value "<text>" >/dev/null` | Type a prompt, a slash command (`/connect`) or a mention (`@math`)                                                                       |
+| `st press --keys <keys> >/dev/null`   | `Enter`, `Escape`, `Shift+Tab` (agent), `Control+p` (commands). Chords are two calls: `Control+x`, then `n` (new tab) or `m` (model)     |
+| `idle`                                | Wait until the answer is complete (at most 4 minutes; reports a failure if the session does not become idle). Use after sending a prompt |
+| `screen`                              | Print the terminal text                                                                                                                  |
+| `tclick "<text>"`                     | Click visible TUI text, for example a tab title. Use a short unique part                                                                 |
+| `st wait --text "<text>"`             | Wait until text appears. Default 10 seconds, `--timeout-ms` at most 60000. Check `isError` in the JSON                                   |
+| `logs`                                | Print CLI log errors. `logs "<pattern>" <lines>` for other lines                                                                         |
+| `st screenshot`                       | Only with `HEADLESS=false`. Read the PNG                                                                                                 |
 
 Example: check that an `@` mention attaches a file and the agent reads it.
 
@@ -152,7 +154,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 
 - Read `screen` after every step. Dialogs chain: choosing a model opens a variant dialog, and the next typed text lands in its search field.
 - Do not wait for text you typed. It is already on the screen. Use `idle`.
-- A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
+- A model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
 - `st click --text` does not reach the terminal. Use `tclick`.
 - Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review and for the PR screenshots (section `## Proof` under Evidence), because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
@@ -186,7 +188,7 @@ Grow the test surface with each PR.
 
 ## Progress map
 
-`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it. CI regenerates and commits it on every push to v2; a PR never commits the generated files (`progress.json`, `README.md`, `*.svg`), because parallel PRs would conflict on them. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every port:
+`migration-tracking/progress/README.md` is the generated map of Kilo's v1 feature delta: one cell per Kilo-owned file, `/kilocode/*` API operation and feature-attributed patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it. On pushes to v2, CI regenerates the map and opens or updates a bot PR when the generated files (`progress.json`, `README.md`, `*.svg`) change; the map on v2 updates when that PR is reviewed and merged. Other PRs do not commit the generated files, because parallel PRs would conflict on them. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every port:
 
 - Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each patch cell names its v1 source line. Read a v1 hunk with `git show <v1Target>:<path> | sed -n '<line-10>,<line+15>p'` (the pin is `pins.v1Target` in `features.json`).
 - Close each cell with the first proof that applies:
@@ -197,6 +199,7 @@ Grow the test surface with each PR.
   5. The behavior is not carried: a `dropped` disposition with the evidence (see below).
 
   Dispositions go in `migration-tracking/progress/dispositions.json` with `state`, `note` and `by` (your branch name). Without a proof the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
+
 - Verify before you close a cell. A proof or a disposition says that v2 has the behavior, not that a file exists:
   - Compare the v1 hunk or file with the v2 code you name, behavior by behavior: defaults, precedence, retries, error paths and tests.
   - Find the v1 callers: `git grep -n <symbol> <v1Target> -- packages`. Code with no caller on v1 is `dropped` (write that in the note), not `ported`.
@@ -206,8 +209,8 @@ Grow the test surface with each PR.
   - A v1 test cell closes only when the v2 tests carry its important assertions. Add the missing ones when they are cheap. When v2 does the opposite on purpose, use `dropped` with the reason.
   - A classification in a task, a plan or a peer message is a claim. Verify it the same way, and report each one you found wrong.
 - Git must track a new file before the map sees it: `git add` new files before you regenerate.
-- A loose patch that lands in `unattributed:<area>` can be proved in place with `kilo_port(unattributed:<area>:<id>)`, which closes the cell. It still belongs to a feature: tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it into the feature box.
-- Check before you commit: run `bun script/upstream/progress.ts` (it fails on invalid inputs), then `--list <feature>` again, then restore the generated files with `git checkout origin/v2 -- $(bun script/upstream/progress.ts --outputs)`. Commit only the inputs: code, done-proofs, `features.json` and `dispositions.json`. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports) and the two ratchets, computed from maps it generates for the base and the PR.
+- Unattributed shared-file hunks (`unattributed:<area>`, with no `kilocode_change(<feature>)` tag, Kilo import or Kilo identifier) are not counted in the progress map, because v2 ports behavior through plugins, host composition and generic seams rather than re-applying v1 monolith patches. Existing `unattributed:` proofs and dispositions remain valid and `--list unattributed:<area>` still lists them for optional inspection; do not add new `unattributed:` proofs or open PRs on `main` just to tag old monolith hunks.
+- Check before you commit: run `bun script/upstream/progress.ts` (it fails on invalid inputs), then `--list <feature>` again, then restore the generated files with `git checkout HEAD -- $(bun script/upstream/progress.ts --outputs)`. Commit only the inputs: code, done-proofs, `features.json` and `dispositions.json`. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports) and the two ratchets, computed from maps it generates for the base and the PR. When the PR adds lines in Kilo-owned package files and closes no cell, the comment says so and asks for a done-proof or a disposition instead of "No change to the progress map."
 
 ## Evidence
 

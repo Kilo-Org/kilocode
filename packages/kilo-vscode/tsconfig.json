@@ -21,6 +21,17 @@
     "test"
   ],
   "exclude": [
-    "src/shared"
+    "src/shared",
+    "test/fixtures/agent-stack-render.tsx",
+    "test/fixtures/browser-panel-render.tsx",
+    "test/fixtures/composer-focus-switch.tsx",
+    "test/fixtures/display-preview-render.tsx",
+    "test/fixtures/error-banner-render.tsx",
+    "test/fixtures/marketplace-render.tsx",
+    "test/fixtures/marketplace-install-modal.tsx",
+    "test/fixtures/prompt-rail-render.tsx",
+    "test/fixtures/prompt-toolbar-flicker.tsx",
+    "test/fixtures/revert-banner-render.tsx",
+    "test/fixtures/settings-search-focus.tsx"
   ]
 }

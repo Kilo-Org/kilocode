@@ -5,6 +5,7 @@ on:
     branches: [dev, v2] # kilocode_change
   # kilocode_change - run for every pull request, so Kilo v2 PRs (which target v2 or a stacked PR branch) are checked
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -14,6 +15,7 @@ concurrency:
 jobs:
   check:
     name: typecheck
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
@@ -32,7 +34,15 @@ jobs:
       - name: Typecheck (TypeScript 7.1)
         run: bun run typecheck:tsc
 
-      # Every GUI package file (app, desktop, gui-extensions, ui, session-ui) a pull request adds or edits must be free of
+      # kilocode_change start - restore v1 metric ratchets
+      - name: Check architecture ratchets
+        run: bun run check:architecture
+
+      - name: Check Kilo-owned code duplication
+        run: bun run check:duplication
+      # kilocode_change end
+
+      # Every GUI package file (app, desktop, gui-plugins, the plugin package's GUI SDK, ui, session-ui) a pull request adds or edits must be free of
       # oxlint problems, warn-level rules (anti-slop) included. Other packages are not affected.
       - name: Lint changed files
         if: github.event_name == 'pull_request' && !(startsWith(github.head_ref, 'sync-v') && contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.pull_request.author_association)) # kilocode_change

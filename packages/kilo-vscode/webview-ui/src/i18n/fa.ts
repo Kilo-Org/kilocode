@@ -54,7 +54,7 @@ export const anacondaDesktopDict = {
 } as const
 
 export const dict = {
-  "session.goal.complete": "تکمیل‌شده (گزارش مدل)",
+  "session.goal.complete": "تکمیل‌شده",
   "session.goal.blocked": "مسدود",
   "session.goal.restart": "شروع مجدد هدف",
   ...anacondaDesktopDict,
@@ -265,6 +265,7 @@ export const dict = {
   "prompt.toast.promptSendFailed.title": "ارسال پرامپت ناموفق بود",
 
   "mcp.status.connected": "متصل",
+  "mcp.status.pending": "در حال اتصال",
   "mcp.status.failed": "ناموفق",
   "mcp.status.needs_auth": "نیاز به احراز هویت",
   "mcp.status.needs_registration": "نیاز به ثبت کلاینت",
@@ -295,6 +296,9 @@ export const dict = {
   "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
   "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
   "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
+  "provider.failure.organizationMissing": "تیم انتخاب‌شده دیگر در دسترس نیست. تیم دیگری انتخاب کنید.",
+  "provider.failure.scopeConflict": "تیم انتخاب‌شده با تیم توکن Kilo شما در تعارض است.",
+  "provider.failure.personalUnavailable": "این حساب، حساب شخصی ندارد. یک تیم انتخاب کنید.",
 
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
@@ -303,7 +307,9 @@ export const dict = {
   "notification.permission.descriptionSandboxEscalation":
     "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
+  "ui.permission.noChanges": "تغییری وجود ندارد.",
   "ui.permission.reject": "رد",
+  "ui.permission.allowAllSites": "اجازه به همه سایت‌ها",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
   "ui.permission.feedbackHint": "Enter برای رد، Esc برای لغو",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
@@ -345,6 +351,8 @@ export const dict = {
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",
+  "session.review.viewTurnChanges": "مشاهده تغییرات نوبت",
+  "session.review.turnChangesEmpty": "در این نوبت تغییری وجود ندارد.",
   "session.review.change.other": "تغییرات",
   "session.review.loadingChanges": "در حال بارگذاری تغییرات...",
   "session.review.noChanges": "بدون تغییر",
@@ -665,7 +673,7 @@ export const dict = {
   "settings.agentBehaviour.title": "رفتار عامل",
   "settings.autoApprove.title": "تأیید خودکار",
   "settings.webTools.title": "ابزارهای وب",
-  "settings.webTools.description": "جستجوی وب و اتوماسیون مرورگر را پیکربندی کنید.",
+  "settings.webTools.description": "جستجوی وب را پیکربندی کنید.",
   "settings.webTools.webSearch.enable": "فعال‌سازی برای همه ارائه‌دهندگان",
   "settings.webTools.browserAutomation": "اتوماسیون مرورگر",
   "settings.webTools.webSearch.title": "جستجوی وب",
@@ -845,6 +853,7 @@ export const dict = {
     "این فایل از نسخه جدیدتری از Kilo صادر شده است. برخی تنظیمات ممکن است نادیده گرفته شوند.",
   "settings.aboutKiloCode.importSettings.success":
     "تنظیمات وارد شد. تغییرات بالا را بررسی کنید، سپس روی ذخیره کلیک کنید.",
+  "settings.aboutKiloCode.importSettings.applied": "Settings imported and applied.",
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
@@ -1077,12 +1086,15 @@ export const dict = {
   "settings.agentBehaviour.addMcp.url": "URL سرور",
   "settings.agentBehaviour.addMcp.url.placeholder": "مثلاً http://localhost:3000/sse",
   "settings.agentBehaviour.mcpBrowseMarketplace": "مرور Marketplace",
+  "settings.agentBehaviour.mcp.timeout.startup.title": "مهلت راه‌اندازی (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.catalog.title": "مهلت فهرست (میلی‌ثانیه)",
+  "settings.agentBehaviour.mcp.timeout.execution.title": "مهلت اجرا (میلی‌ثانیه)",
   "settings.agentBehaviour.mcpEmpty":
-    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo.jsonc اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
+    "هیچ سرور MCP پیکربندی نشده است. سرورهای MCP را در kilo2.json اضافه کنید، یا از agent بخواهید آن‌ها را برایتان اضافه کند.",
   "settings.agentBehaviour.workflows.description":
-    "Workflow‌ها دستورات slash سفارشی هستند که در پیکربندی شما تعریف شده‌اند. برای فراخوانی آن‌ها /command-name را در چت تایپ کنید. دستورات در opencode.json زیر بخش 'command' پیکربندی می‌شوند.",
+    "Workflow‌ها دستورات سفارشی هستند که در پیکربندی شما یا در فایل‌های Markdown دستورات تعریف شده‌اند. می‌توانید برای هر Workflow یک مدل و یک گونه استدلال تعیین کنید.",
   "settings.agentBehaviour.workflows.empty":
-    "هیچ دستور سفارشی پیکربندی نشده است. دستورات را به opencode.json خود اضافه کنید تا اینجا نمایش داده شوند.",
+    "هیچ دستور سفارشی یافت نشد. دستورات را به kilo2.json یا یک فایل Markdown در .kilo2/command اضافه کنید.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
   "settings.agentBehaviour.workflows.model": "مدل",
@@ -1124,6 +1136,9 @@ export const dict = {
     "این یک حالت داخلی است. تعریف پایه آن قابل تغییر نیست، اما می‌توانید تنظیمات سفارشی را در زیر پیکربندی کنید.",
   "settings.agentBehaviour.editMode.promptOverride": "پرامپت سفارشی جایگزین برای این حالت داخلی",
   "settings.agentBehaviour.badge.subagent": "زیرعامل",
+  "settings.agentBehaviour.perAgentPermissions.title": "مجوزهای هر عامل",
+  "settings.agentBehaviour.perAgentPermissions.description":
+    "این تنظیمات فقط برای این عامل سفارشی اعمال می‌شوند. برای ایجاد یک مقدار جایگزین، مقدار یکی از فهرست‌های کشویی را از 'پیش‌فرض' تغییر دهید یا برای استثناهای ویژه هر ابزار از 'افزودن مسیر' یا 'افزودن دستور' استفاده کنید.",
   "settings.agentBehaviour.permissions.title": "مجوزهای محاسبه‌شده",
   "settings.agentBehaviour.permissions.count": "{{count}} قانون",
   "settings.agentBehaviour.permissions.effective": "مؤثر (wildcard):",
@@ -1135,10 +1150,12 @@ export const dict = {
     "قوانین به ترتیب ارزیابی می‌شوند — آخرین قانون منطبق اعمال می‌شود. این مجموعه قوانین حل‌شده از backend CLI است.",
 
   "settings.autoApprove.description":
-    "نحوه اجرای ابزارها را تعریف کنید. اکثر ابزارها به‌طور پیش‌فرض روی Allow هستند. doom_loop و external_directory به‌طور پیش‌فرض روی Ask هستند.",
+    "نحوه اجرای ابزارها را تعریف کنید. اکثر ابزارها به‌طور پیش‌فرض روی Allow هستند. Bash به‌طور پیش‌فرض روی Ask هستند.",
   "settings.autoApprove.maxCost.title": "هشدار هزینه جلسه",
   "settings.autoApprove.maxCost.description":
     "هنگامی که هزینه یک جلسه از این مقدار دلاری فراتر رفت، یک هشدار غیرمسدودکننده نمایش داده شود. از اعداد صحیح استفاده کنید؛ برای غیرفعال کردن خالی بگذارید.",
+  "settings.autoApprove.maxCost.v2Description":
+    "هنگامی که هزینه یک جلسه به این مقدار دلاری رسید، یک هشدار غیرمسدودکننده نمایش داده شود. برای غیرفعال کردن خالی بگذارید.",
   "settings.autoApprove.level.allow": "اجازه",
   "settings.autoApprove.level.ask": "پرسش",
   "settings.autoApprove.level.deny": "رد کردن",
@@ -1211,6 +1228,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "محدودیت فشرده‌سازی خودکار",
   "settings.context.compactionLimit.description":
     "زمانی فشرده‌سازی انجام شود که زمینه به این درصد از پنجره مدل برسد. برای استفاده تنها از بافر ایمنی، خالی بگذارید.",
+  "settings.context.compactionKeep.title": "نگهداشتن توکن‌های اخیر",
+  "settings.context.compactionKeep.description":
+    "توکن‌های اخیری که هنگام فشرده‌سازی زمینه عیناً نگه داشته می‌شوند. برای نگه‌داشتن ۱۵٬۰۰۰ خالی بگذارید.",
+  "settings.context.compactionBuffer.title": "بافر فشرده‌سازی",
+  "settings.context.compactionBuffer.description":
+    "توکن‌هایی که پیش از فشرده‌سازی زیر حد زمینه مدل آزاد نگه داشته می‌شوند. برای آزاد نگه‌داشتن ۱۵٪، حداقل ۱۶٬۰۰۰، خالی بگذارید.",
   "settings.context.prune.title": "حذف خروجی‌های قدیمی",
   "settings.context.prune.description": "حذف خروجی‌های قدیمی ابزار در حین فشرده‌سازی",
   "settings.context.watcherPatterns": "الگوهای نادیده‌گیری ناظر فایل",
@@ -1287,12 +1310,17 @@ export const dict = {
     "انتخاب کنید که بلوک‌های ابزار MCP و عمومی در حالت گسترش‌یافته یا جمع‌شده شروع شوند.",
   "settings.display.mcpTool.expanded": "گسترش‌یافته",
   "settings.display.mcpTool.collapsed": "جمع‌شده",
+  "settings.display.codeMode.title": "بلوک‌های Code Mode",
+  "settings.display.codeMode.description":
+    "انتخاب کنید که بلوک‌های Code Mode با فهرست فراخوانی‌های ابزار شروع شوند یا در یک خط. اسکریپت همیشه تا زمانی که آن را باز نکنید پنهان می‌ماند.",
+  "settings.display.codeMode.expanded": "گسترش‌یافته",
+  "settings.display.codeMode.collapsed": "جمع‌شده",
   "settings.display.shortcutHints.title": "نمایش راهنمای میانبرها",
   "settings.display.shortcutHints.description":
     "میانبر صفحه‌کلیدی متناسب با کاری که اکنون انجام می‌دهید را در اعلان خالی نمایش می‌دهد، مثلاً نحوه افزودن کد انتخاب‌شده یا بازگشت به اعلان.",
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
-    "نمایش نرخ تولید متن (tokens/sec) در جدیدترین پیام دستیار و سربرگ کار. به‌طور پیش‌فرض نمایش داده می‌شود؛ برای پنهان کردن آن در صورت نیاز، این تنظیم را غیرفعال کنید.",
+    "Display the text-generation rate (tokens/sec) on the latest assistant message footer. Shown by default; disable this setting to hide it when needed.",
   "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
   "settings.display.autoApprovalReason.description":
     "نشان می‌دهد چرا یک فراخوانی ابزار به‌طور خودکار تأیید شده است، مانند یک قانون مجوز مطابق یا پیش‌فرض عامل.",
@@ -1386,6 +1414,7 @@ export const dict = {
   "task.backgroundAgents.openAll": "باز کردن همه عامل‌های پس‌زمینه",
   "task.backgroundAgents.cancel": "توقف",
   "task.backgroundAgents.continueInBackground": "ادامه در پس‌زمینه",
+  "task.backgroundAgents.promoteFailed": "این عامل نتوانست در پس‌زمینه ادامه دهد. ممکن است کارش تمام شده باشد.",
   "task.backgroundAgents.waiting": "یک عامل پس‌زمینه به ورودی شما نیاز دارد",
   "task.backgroundAgents.needsInput": "ورودی لازم است",
   "task.backgroundAgents.clearFinished": "پاک کردن موارد تکمیل‌شده",
@@ -1426,6 +1455,8 @@ export const dict = {
   "diffViewer.source.unstaged.tooltip":
     "فایل‌های تغییر یافته در working tree شما که هنوز stage نشده‌اند، به علاوه فایل‌های ردیابی‌نشده (جدید).",
   "diffViewer.source.session.label": "جلسه",
+  "diffViewer.source.turn.tooltip": "فایل‌های تغییر یافته توسط Kilo در یک نوبت.",
+  "diffViewer.source.turn.label": "نوبت",
   "diffViewer.source.session.tooltip":
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",
   "diffViewer.group.session": "جلسه",
@@ -1474,6 +1505,16 @@ export const dict = {
   "settings.experimental.browserLinks.external": "مرورگر سیستم",
   "settings.experimental.browserLinks.integrated": "مرورگر یکپارچه",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "chat.reply.toolbar": "متن انتخاب‌شده",
+  "chat.reply.quote": "نقل قول",
+  "chat.reply.quoteHint": "در پاسخ خود نقل قول کن",
+  "chat.reply.commentHint": "درباره این بخش نظر بده",
+  "chat.reply.copy": "کپی",
+  "chat.reply.sendHint": "این نظر را همین حالا برای Kilo بفرست",
+  "chat.reply.commentLater": "ذخیره برای پیام بعدی",
+  "chat.reply.count": "پاسخ‌ها ({{count}})",
+  "chat.reply.sendAll": "ارسال همه",
+  "chat.reply.showInChat": "نمایش در چت",
   "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
   "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
 }

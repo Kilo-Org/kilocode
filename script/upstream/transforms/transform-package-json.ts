@@ -353,7 +353,7 @@ function mergeKiloChanges(
   const result: Record<string, unknown> = {}
   const names = new Set([...Object.keys(ours), ...Object.keys(theirs), ...Object.keys(base ?? {})])
   for (const name of names) {
-    const preserve = base && !same(ours[name], base[name]) && same(theirs[name], base[name])
+    const preserve = base ? !same(ours[name], base[name]) && same(theirs[name], base[name]) : ours[name] !== undefined
     const value = preserve ? ours[name] : theirs[name]
     if (value === undefined) {
       if (preserve && !same(ours[name], theirs[name])) changes.push(`${section}.${name}: preserved Kilo removal`)
