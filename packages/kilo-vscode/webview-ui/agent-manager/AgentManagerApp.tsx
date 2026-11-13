@@ -1059,17 +1059,6 @@ const AgentManagerContent: Component = () => {
     if (!item?.worktreeId) return false
     return focusManagedSession(item.worktreeId, sid)
   }
-  const cycleAgent = (direction: 1 | -1) => {
-    const id = sessions.currentSessionID() ?? activePendingId()
-    if (!id) return
-    const list = appSession.agents()
-    if (list.length < 2) return
-    const index = list.findIndex((item) => item.id === sessions.get(id)?.agent)
-    const raw = index + direction
-    const next = raw < 0 ? list.length - 1 : raw >= list.length ? 0 : raw
-    const value = list[next]?.id
-    if (value) void sessions.scope(id)?.api.session.switchAgent({ sessionID: id, agent: value })
-  }
   const router = createProjectStateRouter({
     catalog: projectList,
     apply: (state) => applyActiveState(state),
@@ -1900,10 +1889,10 @@ const AgentManagerContent: Component = () => {
         newTerminalTab: termHandlers.requestNew,
         newSideTerminal: termHandlers.addSide,
         cycleAgentMode: () => {
-          if (!mode.dispatch(1)) cycleAgent(1)
+          if (!mode.dispatch(1)) appSession.panel.command("cycleAgentMode")
         },
         cyclePreviousAgentMode: () => {
-          if (!mode.dispatch(-1)) cycleAgent(-1)
+          if (!mode.dispatch(-1)) appSession.panel.command("cyclePreviousAgentMode")
         },
         jump: (index) => projectNav.jump(index),
       },
