@@ -174,12 +174,12 @@ export function SessionView(props: {
     if (!id) return []
     return [id, ...v2.data.session.family(id).filter((item) => item !== id)]
   })
-  // Sibling-aware identicons for the direct children of the open session. A subagent transcript uses its own
-  // children, matching the palette the open session's transcript had.
+  // Sibling-aware identicons for the subagents this session spawned, from its subagent tool parts. A subagent
+  // transcript uses its own children, matching the open session's transcript palette.
   const siblings = createMemo(() => {
     const id = session()
     if (!id) return []
-    return sessionChildren(id, v2.data.session.family(id), (item) => v2.data.session.get(item)?.parentID)
+    return sessionChildren(v2.data.session.message.list(id))
   })
   const permissions = () => family().flatMap((id) => v2.data.session.permission.list(id) ?? [])
   const forms = () => formsOf(session())
