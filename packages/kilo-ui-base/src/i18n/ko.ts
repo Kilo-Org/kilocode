@@ -257,7 +257,6 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}}에서 {{to}}(으)로",
   "ui.messagePart.board.empty": "에이전트 메시지 없음",
   "ui.messagePart.board.stored": "저장만 되었습니다. 전달 및 읽기 여부는 확인되지 않았습니다.",
-  "ui.messagePart.board.more": "메시지가 더 있습니다.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "변경됨",

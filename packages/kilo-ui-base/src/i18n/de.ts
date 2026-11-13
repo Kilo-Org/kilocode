@@ -247,7 +247,6 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}} an {{to}}",
   "ui.messagePart.board.empty": "Keine Nachrichten von Agenten",
   "ui.messagePart.board.stored": "Nur gespeichert. Zustellung und Lesen sind nicht bestätigt.",
-  "ui.messagePart.board.more": "Weitere Nachrichten sind verfügbar.",
   // kilocode_change end
   "ui.mermaid.rendering": "Mermaid-Diagramm wird gerendert...",
   "ui.mermaid.renderError": "Mermaid-Rendering fehlgeschlagen: {{message}}",

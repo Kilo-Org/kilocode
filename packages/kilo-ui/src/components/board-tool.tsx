@@ -153,9 +153,6 @@ export function BoardTool(props: ToolProps) {
               <Show when={text(result()?.warning)}>
                 {(warning) => <span data-slot="board-message-note">{warning()}</span>}
               </Show>
-              <Show when={result()?.hasMore === true}>
-                <span data-slot="board-message-note">{i18n.t("ui.messagePart.board.more")}</span>
-              </Show>
             </div>
           )}
         </Show>

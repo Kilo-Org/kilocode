@@ -265,7 +265,6 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}} vers {{to}}",
   "ui.messagePart.board.empty": "Aucun message d'agent",
   "ui.messagePart.board.stored": "Uniquement enregistré. La remise et la lecture ne sont pas confirmées.",
-  "ui.messagePart.board.more": "D'autres messages sont disponibles.",
   // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",

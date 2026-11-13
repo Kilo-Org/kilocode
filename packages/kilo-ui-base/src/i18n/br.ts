@@ -116,7 +116,6 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}} para {{to}}",
   "ui.messagePart.board.empty": "Nenhuma mensagem dos agentes",
   "ui.messagePart.board.stored": "Apenas armazenada. A entrega e a leitura não foram confirmadas.",
-  "ui.messagePart.board.more": "Mais mensagens estão disponíveis.",
   // kilocode_change end
   "ui.messagePart.title.edit": "Editar",
   "ui.messagePart.title.write": "Escrever",

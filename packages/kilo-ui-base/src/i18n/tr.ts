@@ -248,7 +248,6 @@ export const dict = {
   "ui.messagePart.board.route": "Gönderen: {{from}}, alıcı: {{to}}",
   "ui.messagePart.board.empty": "Ajan mesajı yok",
   "ui.messagePart.board.stored": "Yalnızca kaydedildi. Teslim edildiği ve okunduğu doğrulanmadı.",
-  "ui.messagePart.board.more": "Daha fazla mesaj var.",
   "ui.mermaid.rendering": "Mermaid diyagramı işleniyor...",
   "ui.mermaid.renderError": "Mermaid işleme başarısız: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid diyagramı işlenemiyor.",

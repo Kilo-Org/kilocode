@@ -1156,6 +1156,7 @@ ToolRegistry.register({
                 <span data-slot="task-tool-title">{i18n.t("session.messages.taskStarting")}</span>
               </div>
             </Show>
+            <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
             <For each={tools()}>
               {(tool) => {
                 const info = () => childToolInfo(i18n, tool.name, record(tool.state.input) ? tool.state.input : {})
@@ -1176,7 +1177,6 @@ ToolRegistry.register({
                 )
               }}
             </For>
-            <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
           </div>
         </div>
       </BasicTool>

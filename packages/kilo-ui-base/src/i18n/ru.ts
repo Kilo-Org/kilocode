@@ -267,7 +267,6 @@ export const dict = {
   "ui.messagePart.board.route": "Отправитель: {{from}}, получатель: {{to}}",
   "ui.messagePart.board.empty": "Нет сообщений агентов",
   "ui.messagePart.board.stored": "Только сохранено. Доставка и прочтение не подтверждены.",
-  "ui.messagePart.board.more": "Доступны дополнительные сообщения.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "Изменено",

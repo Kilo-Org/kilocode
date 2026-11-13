@@ -244,7 +244,6 @@ export const dict: Record<string, string> = {
   "ui.messagePart.board.route": "Da {{from}} a {{to}}",
   "ui.messagePart.board.empty": "Nessun messaggio degli agenti",
   "ui.messagePart.board.stored": "Solo salvato. La consegna e la lettura non sono confermate.",
-  "ui.messagePart.board.more": "Sono disponibili altri messaggi.",
   // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",

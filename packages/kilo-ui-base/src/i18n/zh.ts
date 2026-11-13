@@ -244,7 +244,6 @@ export const dict = {
   "ui.messagePart.board.route": "从 {{from}} 到 {{to}}",
   "ui.messagePart.board.empty": "没有智能体消息",
   "ui.messagePart.board.stored": "仅确认已保存。尚未确认是否送达或被读取。",
-  "ui.messagePart.board.more": "还有更多消息。",
   "ui.mermaid.rendering": "正在渲染 Mermaid 图表...",
   "ui.mermaid.renderError": "Mermaid 渲染失败：{{message}}",
   "ui.mermaid.errorDefault": "无法渲染 Mermaid 图表。",

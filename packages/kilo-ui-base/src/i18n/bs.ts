@@ -252,7 +252,6 @@ export const dict = {
   "ui.messagePart.board.route": "Pošiljalac: {{from}}, primalac: {{to}}",
   "ui.messagePart.board.empty": "Nema poruka agenata",
   "ui.messagePart.board.stored": "Samo sačuvano. Nema potvrde o isporuci ni o čitanju.",
-  "ui.messagePart.board.more": "Dostupno je još poruka.",
   "ui.mermaid.rendering": "Renderovanje Mermaid dijagrama...",
   "ui.mermaid.renderError": "Renderovanje Mermaid dijagrama nije uspjelo: {{message}}",
   "ui.mermaid.errorDefault": "Nije moguće renderovati Mermaid dijagram.",

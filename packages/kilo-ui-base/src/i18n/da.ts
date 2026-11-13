@@ -111,7 +111,6 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}} til {{to}}",
   "ui.messagePart.board.empty": "Ingen beskeder fra agenter",
   "ui.messagePart.board.stored": "Kun gemt. Levering og læsning er ikke bekræftet.",
-  "ui.messagePart.board.more": "Flere beskeder er tilgængelige.",
   // kilocode_change end
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
