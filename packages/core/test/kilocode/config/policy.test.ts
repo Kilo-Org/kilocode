@@ -177,6 +177,20 @@ test("pages config merges per field, and the last document that sets a field win
   ).toEqual({ enabled: false, destination: "pages" })
 })
 
+test("retention config merges per field, and the last document that sets a field wins", () => {
+  const document = (retention?: { enabled?: boolean; maxAgeDays?: number }) =>
+    new Document({ type: "document", info: new KiloConfigPolicy.Info({ retention }) })
+  expect(KiloConfigPolicy.retentionConfig([])).toEqual({})
+  // A project document that sets only the age keeps the global enable.
+  expect(KiloConfigPolicy.retentionConfig([document({ enabled: true }), document({ maxAgeDays: 7 })])).toEqual({
+    enabled: true,
+    maxAgeDays: 7,
+  })
+  expect(
+    KiloConfigPolicy.retentionConfig([document({ enabled: true, maxAgeDays: 7 }), document({ enabled: false })]),
+  ).toEqual({ enabled: false, maxAgeDays: 7 })
+})
+
 test("the display layouts are Kilo settings, and an invalid layout is ignored", () => {
   const valid = {
     terminal_command_display: "collapsed",
