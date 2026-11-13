@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 2013,
+    "done": 2015,
     "total": 5339,
     "percent": 37.7,
     "dropped": 101,
     "kinds": [
       {
         "kind": "module",
-        "done": 1492,
+        "done": 1493,
         "total": 3266
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 436,
+        "done": 437,
         "total": 1719
       }
     ],
@@ -36,7 +36,7 @@
       "seam": 6,
       "patch": 2
     },
-    "coreImports": 62,
+    "coreImports": 65,
     "sharedPatches": {
       "seam": 79,
       "patch": 58
@@ -70,6 +70,7 @@
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/environment",
     "@opencode/core/file-access",
+    "@opencode/core/flag",
     "@opencode/core/form",
     "@opencode/core/generate",
     "@opencode/core/instance/service",
@@ -77,8 +78,10 @@
     "@opencode/core/job",
     "@opencode/core/location",
     "@opencode/core/location-service-map",
+    "@opencode/core/managed-policy",
     "@opencode/core/mcp",
     "@opencode/core/mcp/host",
+    "@opencode/core/mcp/pool",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
@@ -2474,12 +2477,12 @@
     },
     {
       "feature": "ui",
-      "done": 152,
+      "done": 154,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 150,
+          "done": 151,
           "total": 248
         },
         "api": {
@@ -2491,7 +2494,7 @@
           "total": 1
         },
         "test": {
-          "done": 2,
+          "done": 3,
           "total": 18
         }
       }
@@ -2902,6 +2905,8 @@
     "module:packages/kilo-ui/src/components/basic-tool.tsx",
     "module:packages/kilo-ui/src/components/board-message.css",
     "module:packages/kilo-ui/src/components/board-message.tsx",
+    "module:packages/kilo-ui/src/components/board-route.test.ts",
+    "module:packages/kilo-ui/src/components/board-route.ts",
     "module:packages/kilo-ui/src/components/button.css",
     "module:packages/kilo-ui/src/components/button.tsx",
     "module:packages/kilo-ui/src/components/card.css",
