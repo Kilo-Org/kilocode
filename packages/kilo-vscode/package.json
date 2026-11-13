@@ -1001,11 +1001,13 @@
           "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@5"
-        },
+        }
+      ],
+      "editor/title": [
         {
           "command": "kilo-code.v2.openInTab",
-          "when": "view == kilo-code.v2.chat",
-          "group": "navigation@6"
+          "when": "true",
+          "group": "navigation"
         }
       ],
       "scm/title": [

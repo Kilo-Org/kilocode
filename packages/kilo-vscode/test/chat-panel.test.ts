@@ -254,12 +254,15 @@ describe("restored chat target", () => {
 })
 
 describe("chat panel manifest", () => {
-  it("contributes the command with its icon, the chat title button and the restore activation event", () => {
+  it("contributes the command with its icon, the editor title button and the restore activation event", () => {
     const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
       activationEvents: string[]
       contributes: {
         commands: Array<{ command: string; title: string; category: string; icon?: unknown }>
-        menus: { "view/title": Array<{ command: string; when: string; group: string }> }
+        menus: {
+          "view/title": Array<{ command: string; when?: string; group: string }>
+          "editor/title": Array<{ command: string; when?: string; group: string }>
+        }
         keybindings: Array<{ command: string; when: string }>
       }
     }
@@ -269,11 +272,15 @@ describe("chat panel manifest", () => {
       category: "Kilo Code",
       icon: { light: "assets/icons/kilo-light.svg", dark: "assets/icons/kilo-dark.svg" },
     })
-    expect(manifest.contributes.menus["view/title"]).toContainEqual({
+    // Like v1, the button belongs in the editor title toolbar, not the chat view title.
+    expect(manifest.contributes.menus["editor/title"]).toContainEqual({
       command: "kilo-code.v2.openInTab",
-      when: "view == kilo-code.v2.chat",
-      group: "navigation@6",
+      when: "true",
+      group: "navigation",
     })
+    expect(manifest.contributes.menus["view/title"].some((entry) => entry.command === "kilo-code.v2.openInTab")).toBe(
+      false,
+    )
   })
 
   it("routes the shared chat shortcuts to a focused chat tab", () => {
