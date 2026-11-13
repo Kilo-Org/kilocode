@@ -52,6 +52,7 @@ Route requests through unified APIs with additional features:
 - **[DaoXE](/docs/ai-providers/daoxe)** - Connect multiple model families through one API
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 - **[Eden AI](/docs/ai-providers/edenai)** - EU-based gateway with one key across vendors
+- **[TeamoRouter](/docs/ai-providers/teamorouter)** - Pay-as-you-go gateway with one key for Claude, GPT, Gemini, DeepSeek, GLM, Kimi, and Qwen
 
 ## Choosing a Provider
 
