@@ -25,6 +25,70 @@ export function canOpenRootSession(id: string, sessions: Pick<SessionLike, "id" 
   return !!session && isKnownRootSession(session)
 }
 
+/**
+ * The worktree that owns a session, from the directory the server runs it in. `null` means the session runs in the
+ * project root, `undefined` that the session is not loaded yet or runs in a directory this comparison cannot place
+ * (for example a path alias), so callers keep the host's filing. A session belongs to the worktree of its directory,
+ * so opening it never moves it into another worktree.
+ */
+export function sessionOwner(
+  id: string,
+  sessions: { id: string; location: { directory: string } }[],
+  worktrees: { id: string; path: string }[],
+  root: string | undefined,
+): string | null | undefined {
+  const session = sessions.find((item) => item.id === id)
+  if (!session) return undefined
+  return directoryOwner(session.location.directory, worktrees, root)
+}
+
+/** The worktree that owns `directory`, `null` for the project root, or undefined for a directory it cannot place. */
+export function directoryOwner(
+  directory: string,
+  worktrees: { id: string; path: string }[],
+  root: string | undefined,
+): string | null | undefined {
+  const worktree = directoryWorktree(directory, worktrees)
+  if (worktree) return worktree
+  return root !== undefined && trimPath(root) === trimPath(directory) ? null : undefined
+}
+
+/** The worktree whose path is `directory`, or `null` when no worktree has it (the project root). */
+export function directoryWorktree(directory: string, worktrees: { id: string; path: string }[]): string | null {
+  const target = trimPath(directory)
+  return worktrees.find((worktree) => trimPath(worktree.path) === target)?.id ?? null
+}
+
+/**
+ * Whether the selected context may show a session with this owner. A worktree reads from the store of its own
+ * directory, so it never shows a session that runs elsewhere; Local reads from the session's own store. An unloaded
+ * session (`undefined` owner) is shown until its directory is known.
+ */
+export function showsSession(selection: string | null, owner: string | null | undefined): boolean {
+  if (!selection || selection === LOCAL || owner === undefined) return true
+  return owner === selection
+}
+
+/**
+ * Where a send files its session: a worktree id, or `null` for Local. Every send reports its session. One already
+ * filed in the selected context stays there, so a Local filing of a worktree session is kept. Any other session is
+ * filed under the worktree it runs in (`owner`), since the selection can change during the send.
+ */
+export function sendFiling(input: {
+  selection: string | null
+  filed: string | null | undefined
+  local: boolean
+  owner: string | null
+}): string | null {
+  if (input.selection === LOCAL && (input.filed === null || input.local)) return null
+  if (input.selection && input.selection !== LOCAL && input.filed === input.selection) return input.selection
+  return input.owner
+}
+
+function trimPath(directory: string) {
+  return directory.length > 1 ? directory.replace(/[\\/]+$/, "") : directory
+}
+
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index
   if (!current) {

@@ -397,6 +397,8 @@ export class WorktreeStateManager {
       previous.autoNameSessionId = undefined
       previous.autoNamePromptCount = undefined
     }
+    // The tabs of the previous worktree must not keep the session: a worktree shows the sessions in its tab order.
+    if (session.worktreeId && session.worktreeId !== worktreeId) this.dropTab(session.worktreeId, sessionId)
     session.worktreeId = worktreeId
     const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
     if (worktree?.autoNameSessionId) {
@@ -405,6 +407,15 @@ export class WorktreeStateManager {
     }
     this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
     void this.save()
+  }
+
+  private dropTab(key: string, id: string): void {
+    const order = this.tabOrder[key]?.filter((item) => item !== id)
+    if (order?.length) this.tabOrder[key] = order
+    else delete this.tabOrder[key]
+    const pinned = this.pinnedTabs[key]?.filter((item) => item !== id)
+    if (pinned?.length) this.pinnedTabs[key] = pinned
+    else delete this.pinnedTabs[key]
   }
 
   closeSession(id: string, worktreeId: string | null): void {

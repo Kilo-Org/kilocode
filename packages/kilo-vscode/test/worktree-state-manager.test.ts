@@ -463,6 +463,19 @@ describe("WorktreeStateManager", () => {
       expect(manager.getTabOrder()[wt.id]).toEqual(["s2"])
     })
 
+    it("drops a moved session from the tab order and pins of its previous worktree", () => {
+      const wt = manager.addWorktree({ branch: "fix", path: "/tmp/fix", parentBranch: "main" })
+      manager.addSession("s1", wt.id)
+      manager.addSession("s2", wt.id)
+      manager.setTabOrder(wt.id, ["s1", "s2"])
+      manager.setPinnedTabs(wt.id, ["s2"])
+
+      manager.moveSession("s2", null)
+
+      expect(manager.getTabOrder()[wt.id]).toEqual(["s1"])
+      expect(manager.getPinnedTabs()[wt.id]).toBeUndefined()
+    })
+
     it("removes tab order entry when last session in order is removed", () => {
       manager.addSession("s1", null)
       manager.setTabOrder("local", ["s1"])
