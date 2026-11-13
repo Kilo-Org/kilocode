@@ -178,6 +178,14 @@ export function chat(input: {
 }
 
 /**
+ * The session a web link opened from this view belongs to. A chat editor tab reports the session it shows; the
+ * sidebar reports its own session, which the host tracks separately.
+ */
+export function linkSession(input: { session?: () => string | undefined } = {}): string | undefined {
+  return input.session ? input.session() : sidebarSession()
+}
+
+/**
  * Connects one webview (the sidebar view or an editor panel) to the server relay and the host messages, and loads
  * the webview bundle. `view` selects the root view of the bundle.
  */
@@ -232,7 +240,7 @@ export function wire(input: {
     target: () => input.server.get(),
     post: (message) => void webview.postMessage(message),
     open: (url, external) => {
-      const session = input.session ? input.session() : sidebarSession()
+      const session = linkSession(input)
       // Without an in-app opener the link goes to the system browser, which is what shift-click asks for.
       void openBrowserLink(
         url,

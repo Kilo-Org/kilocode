@@ -81,7 +81,7 @@ export function chatPanels(input: {
   const tabSurface = (entry: Entry): ChatPanelSurface => ({
     post: entry.post,
     focus: () => {
-      entry.panel.reveal(ViewColumn.Active)
+      entry.panel.reveal(entry.panel.viewColumn ?? ViewColumn.Active)
       entry.post({ type: "command", name: "focusPrompt" })
     },
   })
@@ -112,7 +112,7 @@ export function chatPanels(input: {
   const open = (sessionID?: string) => {
     const existing = find(sessionID)
     if (existing) {
-      existing.panel.reveal(ViewColumn.Active)
+      existing.panel.reveal(existing.panel.viewColumn ?? ViewColumn.Active)
       return existing.panel
     }
     return attach(
@@ -192,8 +192,9 @@ export function chatPanels(input: {
       surface.dispose()
       entries.delete(entry)
       setFocused(entry, false)
-      if (state.last === entry) state.last = state.focused
-      if (!state.last) chatFocus.closed("chatPanel")
+      // Closing the tab the user worked in falls back to a tab that is still open, not to the sidebar.
+      if (state.last === entry) state.last = state.focused ?? [...entries][0]
+      if (entries.size === 0) chatFocus.closed("chatPanel")
     })
     return panel
   }

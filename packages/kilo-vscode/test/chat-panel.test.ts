@@ -19,6 +19,8 @@ function fakePanel() {
   const sent: unknown[] = []
   const panel = {
     reveals: 0,
+    revealedColumn: undefined as unknown,
+    viewColumn: 2,
     disposed: false,
     title: "",
     visible: true,
@@ -39,8 +41,9 @@ function fakePanel() {
       asWebviewUri: (uri: unknown) => uri,
     },
     receive: (message: ToHost) => receivers.forEach((callback) => callback(message)),
-    reveal: () => {
+    reveal: (column?: unknown) => {
       panel.reveals++
+      panel.revealedColumn = column
     },
     onDidChangeViewState: () => ({ dispose: () => undefined }),
     onDidDispose: (callback: () => void) => {
@@ -238,6 +241,36 @@ describe("chat panels", () => {
     panel?.dispose()
     expect(panels.lastFocused()).toBeUndefined()
     expect(chatFocus.surface()).toBeUndefined()
+  })
+
+  it("falls back to a remaining tab when the last-worked tab closes", () => {
+    const panels = create()
+    panels.open("ses_a")
+    panels.open("ses_b")
+    const first = state.created[0]?.panel
+    const second = state.created[1]?.panel
+
+    first?.receive({ type: "webviewFocusChanged", focused: true })
+    second?.receive({ type: "webviewFocusChanged", focused: true })
+    second?.receive({ type: "webviewFocusChanged", focused: false })
+    second?.dispose()
+
+    expect(panels.lastFocused()).toBeDefined()
+    expect(chatFocus.surface()).toBe("chatPanel")
+
+    first?.dispose()
+    expect(panels.lastFocused()).toBeUndefined()
+    expect(chatFocus.surface()).toBeUndefined()
+  })
+
+  it("focuses a tab in its own editor group", () => {
+    const panels = create()
+    panels.open("ses_a")
+    const panel = state.created[0]?.panel
+    panel?.receive({ type: "webviewFocusChanged", focused: true })
+
+    panels.lastFocused()?.focus()
+    expect(panel?.revealedColumn).toBe(2)
   })
 
   it("moves the focused surface to the last focused tab", () => {
