@@ -19,6 +19,7 @@ import * as KiloConfiguredReference from "@/kilocode/reference"
 import { KiloReadObject } from "@/kilocode/tool/read-object"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
+import { FilePermission } from "../kilocode/permission/file-pattern"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -85,14 +86,14 @@ export const ReadTool = Tool.define<
     const scope = yield* Scope.Scope
 
     // kilocode_change start - authorize missing paths without enumerating sibling names
-    const miss = Effect.fn("ReadTool.miss")(function* (filepath: string, worktree: string, ctx: Tool.Context) {
+    const miss = Effect.fn("ReadTool.miss")(function* (filepath: string, root: string, ctx: Tool.Context) {
       const dir = path.dirname(filepath)
       const parent = yield* fs.realPath(dir).pipe(Effect.option)
       if (parent._tag === "None") return yield* Effect.fail(new Error(`File not found: ${filepath}`))
       yield* assertExternalDirectoryEffect(ctx, parent.value, { bypass: false, kind: "directory" })
       yield* ctx.ask({
         permission: "read",
-        patterns: [...new Set([filepath, parent.value].map((item) => path.relative(worktree, item)))],
+        patterns: [...new Set([filepath, parent.value].map((item) => path.relative(root, item)))],
         always: ["*"],
         metadata: {},
       })
@@ -228,7 +229,7 @@ export const ReadTool = Tool.define<
         ),
       )
       if (!info) {
-        return yield* miss(requested, instance.worktree, ctx)
+        return yield* miss(requested, FilePermission.root(instance), ctx) // kilocode_change
       }
       // kilocode_change end
 
@@ -245,7 +246,7 @@ export const ReadTool = Tool.define<
         yield* assertExternalDirectoryEffect(ctx, target, { bypass: referenced, kind: "directory" })
         yield* ctx.ask({
           permission: "read",
-          patterns: [...new Set([requested, target].map((item) => path.relative(instance.worktree, item)))],
+          patterns: [...new Set([requested, target].map((item) => path.relative(FilePermission.root(instance), item)))], // kilocode_change
           always: ["*"],
           metadata: {},
         })
@@ -306,7 +307,11 @@ export const ReadTool = Tool.define<
       yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: referenced, kind: "file" })
       yield* ctx.ask({
         permission: "read",
-        patterns: [...new Set([requested, file.target].map((item) => path.relative(instance.worktree, item)))],
+        // kilocode_change start
+        patterns: [
+          ...new Set([requested, file.target].map((item) => path.relative(FilePermission.root(instance), item))),
+        ],
+        // kilocode_change end
         always: ["*"],
         metadata: {},
       })
