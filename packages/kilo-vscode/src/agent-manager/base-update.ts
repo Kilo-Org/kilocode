@@ -1,9 +1,9 @@
-import type { JsonValue } from "@opencode/client"
 import type { ProjectContext } from "./project/context"
 import type { LifecycleHost } from "./provider-lifecycle"
 import type { Worktree } from "./WorktreeStateManager"
 import { prompt } from "./orchestration-domain"
 import { startSession } from "./mcp-warmup"
+import { sessionCreateBody } from "./session-create"
 import { fetchRunningSessions } from "../session-status"
 import { injectedMetadata } from "../shared/injected-prompt"
 
@@ -77,12 +77,7 @@ export async function handleBaseUpdate(
             current()
             if (state.getSessions(worktree.id).length)
               throw new Error("A session was added. Try Update from base again.")
-            return client.session.create(
-              {
-                location: { directory: worktree.path },
-                metadata: { kilocode: { platform: "agent-manager" } } as Record<string, JsonValue>,
-              },
-            )
+            return client.session.create(sessionCreateBody({ directory: worktree.path }))
           },
           host.log,
         )
