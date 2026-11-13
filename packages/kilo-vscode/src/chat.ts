@@ -191,6 +191,10 @@ export function wire(input: {
   directory: string
   webview: Webview
   view: View
+  /** Where the webview lives. The chat editor panel passes "editor" and the session it opens on. */
+  surface?: "editor" | "sidebar"
+  /** The session a chat editor tab starts on; the sidebar restores its own local tabs instead. */
+  sessionID?: string
   trackCostSession?: (sessionID: string) => void
   /** Directory for a saved image, when the view follows a session in another directory. */
   saveImageDirectory?: () => string | undefined
@@ -552,6 +556,8 @@ export function wire(input: {
     version: (input.context.extension.packageJSON as { version?: string }).version ?? "",
     view: input.view,
     sidebar,
+    surface: input.surface,
+    sessionID: input.sessionID,
     settings: readKiloSettings(),
     globals: input.globals,
   })
@@ -615,6 +621,10 @@ export function html(input: {
   view?: View
   /** Physical workbench edge of the sidebar view; editor panels have none. */
   sidebar?: "left" | "right"
+  /** Where this webview lives, for the chat that an editor tab shows instead of the sidebar. */
+  surface?: "editor" | "sidebar"
+  /** The session a chat editor tab starts on; null for a new-session tab and the sidebar. */
+  sessionID?: string | null
   settings: Record<string, unknown>
   globals?: Record<string, unknown>
 }) {
@@ -638,6 +648,8 @@ export function html(input: {
     ICONS_BASE_URI: input.icons,
     KILO_SHIKI_WORKER_URI: input.worker,
     KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
+    KILO_SURFACE: input.surface ?? "sidebar",
+    KILO_SESSION_ID: input.sessionID ?? null,
     KILO_TOP_BAR: false,
     KILO_TOP_BAR_SURFACE: "sidebar_title",
     KILO_SANDBOX_CONTROLS: process.platform !== "win32",

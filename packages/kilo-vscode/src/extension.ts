@@ -22,7 +22,8 @@ import { clearLegacyTerminalDestination, ensureCommandsSkipShell } from "./agent
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
-import { chat } from "./chat"
+import { chat, type ChatWorktree } from "./chat"
+import { chatPanels } from "./chat-panel"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
@@ -241,6 +242,27 @@ export function activate(context: ExtensionContext) {
   let browserTab: BrowserTabProvider | undefined
   // The Documents panel is an editor tab created after this view, so the view receives it through a lazy getter.
   const documentsRef: { current?: DocumentViewerProvider } = {}
+  // The Agent Manager owns worktree creation and movement for both the sidebar and its editor tabs.
+  const worktree: ChatWorktree = {
+    continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
+    create: (baseBranch, branchName) =>
+      agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
+    advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
+    branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
+  }
+  // The chat editor tabs share the sidebar's host actions, each with its own webview, relay bridge and event stream.
+  const editorChat = chatPanels({
+    context,
+    server,
+    directory,
+    trackCostSession: alerts.track,
+    diff: diffs,
+    changes,
+    gitStats: (onStats) => gitChanges({ directory, onStats }),
+    worktree,
+    openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
+    documents: () => documentsRef.current,
+  })
   const view = chat({
     context,
     server,
@@ -249,13 +271,7 @@ export function activate(context: ExtensionContext) {
     diff: diffs,
     changes,
     gitStats: (onStats) => gitChanges({ directory, onStats }),
-    worktree: {
-      continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
-      create: (baseBranch, branchName) =>
-        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
-      advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
-      branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
-    },
+    worktree,
     openBrowser: (sessionId, url) => browserTab?.openUrl(sessionId, url) ?? false,
     documents: () => documentsRef.current,
   })
@@ -379,6 +395,11 @@ export function activate(context: ExtensionContext) {
     { dispose: () => diffs.dispose() },
     diffCatalog,
     changes,
+    editorChat,
+    commands.registerCommand("kilo-code.v2.openInTab", (sessionID?: string) => {
+      // The optional argument is a session id; without one, open the session the sidebar shows, or a new one.
+      editorChat.open(sessionID ?? sidebarSession())
+    }),
     commands.registerCommand(
       "kilo-code.v2.showChanges",
       (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),

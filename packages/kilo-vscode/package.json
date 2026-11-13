@@ -47,7 +47,8 @@
     "onWebviewPanel:kilo-code.v2.agentManagerPanel",
     "onWebviewPanel:kilo-code.v2.documentsPanel",
     "onWebviewPanel:kilo-code.v2.subagentPanel",
-    "onWebviewPanel:kilo-code.v2.DiffViewerPanel"
+    "onWebviewPanel:kilo-code.v2.DiffViewerPanel",
+    "onWebviewPanel:kilo-code.v2.chatPanel"
   ],
   "contributes": {
     "configurationDefaults": {
@@ -458,6 +459,15 @@
         "command": "kilo-code.v2.showChanges",
         "title": "Show Changes",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.openInTab",
+        "title": "Open in Tab",
+        "category": "Kilo Code",
+        "icon": {
+          "light": "assets/icons/kilo-light.svg",
+          "dark": "assets/icons/kilo-dark.svg"
+        }
       },
       {
         "command": "kilo-code.v2.cycleAgentMode",
@@ -991,6 +1001,11 @@
           "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation@5"
+        },
+        {
+          "command": "kilo-code.v2.openInTab",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation@6"
         }
       ],
       "scm/title": [
