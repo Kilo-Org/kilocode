@@ -42,9 +42,15 @@ describe("Kilo builtin config skill", () => {
       expect(String(items[0]?.name)).toBe("kilo-config")
       expect(items[0]?.path).toBe(AbsolutePath.make("/builtin/kilo-config.md"))
       expect(items[0]?.description).toContain("kilo2.json")
+      expect(items[0]?.description).toContain("/periodic")
+      expect(items[0]?.description).toContain("service install")
       expect(items[0]?.content).toContain("kilo2.json")
       expect(items[0]?.content).toContain(".kilo2")
       expect(items[0]?.content).toContain("KILO2_CONFIG")
+      expect(items[0]?.content).toContain("/periodic")
+      expect(items[0]?.content).toContain("flow_create")
+      expect(items[0]?.content).toContain("schedule_wakeup")
+      expect(items[0]?.content).toContain("service install")
     }),
   )
 

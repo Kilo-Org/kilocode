@@ -1,6 +1,6 @@
 # Kilo
 
-Kilo configures itself with `kilo2.json` and `kilo2.jsonc`, and its command is `kilo2`. This guide covers the file names, the search order, the project directories that hold commands, agents and skills, the settings an agent may edit, the terminal settings, MCP servers, the background service, the API, Agent Manager and troubleshooting. Use it for any question about Kilo itself.
+Kilo configures itself with `kilo2.json` and `kilo2.jsonc`, and its command is `kilo2`. This guide covers the file names, the search order, the project directories that hold commands, agents and skills, the settings an agent may edit, the terminal settings, MCP servers, scheduled Flows and wakeups, the background service, the API, Agent Manager and troubleshooting. Use it for any question about Kilo itself.
 
 ## Documentation
 
@@ -107,7 +107,7 @@ Other upstream keys: `share` (`manual`, `auto`, `disabled`), `update` (`disable`
 
 `permissions` is an ordered array of `{ action, resource, effect }`; `effect` is `allow`, `ask` or `deny`, and the last matching rule wins, so put broad rules first. Unmatched actions ask. A `deny` on `resource: "*"` also hides the tool from the model. Top-level rules apply to every agent; an agent's own rules come after them and win.
 
-Actions are tool names: `read`, `edit` (covers write and patch), `shell`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `subagent`, `question`, `todowrite`, `external_directory`, `execute`, and Kilo's `semantic_search`, `browser_open`, `recall`, `board_read`, `board_post`, `agent_manager`, `sandbox_escalation`. MCP tools use `<server>_<tool>` (`github_*` matches a whole server). v1's `bash` is `shell`, `task` is `subagent`. When converting a v1 `permission` map, move the catch-all `"*"` rule first. `~` expands in `read`, `edit` and `external_directory` resources only.
+Actions are tool names: `read`, `edit` (covers write and patch), `shell`, `grep`, `glob`, `webfetch`, `websearch`, `skill`, `subagent`, `question`, `todowrite`, `external_directory`, `execute`, and Kilo's `semantic_search`, `browser_open`, `recall`, `board_read`, `board_post`, `agent_manager`, `sandbox_escalation`, `flow` (unattended Flow approval; always asks unless denied), `flow_create`, `flow_list`, `flow_update`, `flow_delete`, `flow_run`, `schedule_wakeup`, `cancel_wakeup`, `cron_create`, `cron_list`, `cron_delete`. MCP tools use `<server>_<tool>` (`github_*` matches a whole server). v1's `bash` is `shell`, `task` is `subagent`. When converting a v1 `permission` map, move the catch-all `"*"` rule first. `~` expands in `read`, `edit` and `external_directory` resources only.
 
 `policies` is a separate firewall that only allows or denies, and anything unmatched is allowed. Its actions are `provider.use`, `tool.use`, `mcp.use`, `skill.use`, `plugin.use`, `integration.connect`, `integration.use` and `websearch.use`. Managed policy outranks user and project. v1 `disabled_providers` and `enabled_providers` become `provider.use` rules:
 
@@ -129,7 +129,7 @@ Keybindings go under `keybinds`. The leader defaults to `ctrl+x` (`keybinds.lead
 
 The default theme is `kilo`. Custom themes are JSON files in `~/.config/kilo2/themes/` and appear in `/themes`.
 
-Common slash commands: `/sessions`, `/new`, `/models`, `/agents`, `/variants` (`/thinking` opens it), `/mcps`, `/connect`, `/settings`, `/themes`, `/status`, `/reload`, `/compact`, `/undo`, `/redo`, `/fork`, `/rename`, `/timeline`, `/copy`, `/copy-session`, `/export`, `/skills`, `/worktrees`, `/terminal`, `/diff`, `/stats`, `/help`, `/exit`. Kilo adds `/review`, `/usage` (`/plans`, `/quota`), `/profile`, `/teams`, `/marketplace`, `/indexing`, `/sandbox`, `/privacy`, `/remote`, `/caffeinate` and `/about`. `/share`, `/timestamps` and `/summarize` no longer exist.
+Common slash commands: `/sessions`, `/new`, `/models`, `/agents`, `/variants` (`/thinking` opens it), `/mcps`, `/connect`, `/settings`, `/themes`, `/status`, `/reload`, `/compact`, `/undo`, `/redo`, `/fork`, `/rename`, `/timeline`, `/copy`, `/copy-session`, `/export`, `/skills`, `/worktrees`, `/terminal`, `/diff`, `/stats`, `/help`, `/exit`. Kilo adds `/review`, `/periodic`, `/usage` (`/plans`, `/quota`), `/profile`, `/teams`, `/marketplace`, `/indexing`, `/sandbox`, `/privacy`, `/remote`, `/caffeinate` and `/about`. `/share`, `/timestamps` and `/summarize` no longer exist.
 
 ## MCP servers
 
@@ -210,16 +210,38 @@ Troubleshooting:
 
 Full guides: <https://kilo.ai/docs/automate/agent-manager> and <https://kilo.ai/docs/automate/agent-manager-workflows>.
 
+## Scheduled Flows and wakeups
+
+Scheduling is always on in Kilo (no `experimental.schedules` flag is needed) and offers two separate local surfaces:
+
+| Surface | TUI and tools | Execution |
+|---|---|---|
+| Session wakeups and cron | Direct tools `schedule_wakeup`, `cancel_wakeup`, `cron_create`, `cron_list`, `cron_delete` | Resumes the same Session when due (`delay`, `when` or 5-field `cron`). Up to 10 pending wakeups and 10 cron tasks per Session; delays clamp to at least 10s, horizon is 7 days, cron tasks expire after 7 days, and deleting the Session or ending its Goal cancels its tasks. Shown read-only as `agent task` rows in `/periodic`. |
+| Periodic Flows | `/periodic` and Code Mode tools `flow_create`, `flow_list`, `flow_update`, `flow_delete`, `flow_run` | Starts a fresh Session on each `every`, `cron`, `at` or `in` trigger (with timezone and optional `ends` limit), reusing the source directory (`worktree: "reuse"`) or creating a git worktree (`worktree: "new"`). `flow_*` tools are refused inside a Flow run Session. |
+
+Every Flow freezes its prompt, directory, worktree mode, model, agent and unattended allowlist. Runs are deny-by-default beyond the repository-local `read: *`, `glob: *` and `grep: *` baseline: add narrow `{ action, resource }` grants (`shell` matches parsed command text, never paths; paths outside the Flow directory also require a bounded `external_directory` wildcard such as `/home/user/*`; MCP tools use `*`). Creating a Flow or changing its allowlist prompts in the Session under the `flow` permission action (`flow` always asks unless denied); editing other fields keeps the existing approval.
+
+`/periodic` creates Flows from a Session (`n`), edits (`e`), enables or disables (`space`), runs now (`r`), opens any retained run's Session (`Enter`, or `v` for the latest) and deletes (`d`). Each Flow keeps its latest 20 run records and 20 skipped-run records; run Sessions and worktrees stay until explicitly deleted (`deleteSessions` and `deleteWorktrees` on `flow_delete` or in the `/periodic` delete prompt, which never deletes the source or forked Sessions and never force-removes worktrees with uncommitted changes). If a Flow's source Session was deleted (removing its backing schedule) or its source directory disappeared (pausing the schedule with a health error instead of retrying forever), press `r` or `e` in `/periodic` to repair or update it from the frozen definition.
+
 ## Service and API
 
-Kilo is client and server: the TUI and the editor extensions connect to a background service that owns sessions, configuration, plugins, permissions and tool execution. It starts automatically. Restart it only when it is stuck or unhealthy, never to apply config:
+Kilo is client and server: the TUI and the editor extensions connect to a background service that owns sessions, configuration, plugins, permissions, schedules and tool execution. It starts automatically when a client runs. Restart it only when it is stuck or unhealthy, never to apply config:
 
 ```sh
 kilo2 service status
 kilo2 service restart
 ```
 
-`kilo2 service start|stop|get|set|unset` manage it further (`kilo2 daemon` is an alias). `kilo2 run "message"` runs one prompt non-interactively, `kilo2 mini` opens the minimal interface, and `kilo2 session list|export|import|delete` manages sessions.
+`kilo2 service start|stop|get|set|unset` manage it further (`kilo2 daemon` is an alias). To start the background service automatically at login so scheduled Flows and wakeups fire with no client open, install the OS login unit:
+
+```sh
+kilo2 service install
+kilo2 service uninstall
+```
+
+`kilo2 service install [--command <path>]` writes and starts a macOS launchd agent (`ai.kilo.kilo2.<channel>`), a Linux systemd user unit (`kilo2-<channel>.service`) or a Windows logon task (`Kilo kilo2 <channel>`) running `<exe> serve --service`; development builds require `--command <path>`. `kilo2 service status` reports the server URL on stdout and the login-unit state (`not installed`, `installed` or `stale`) on stderr. `kilo2 service stop` stops the running login unit first so its restart policy does not relaunch the server while keeping it installed for the next login, and `kilo2 uninstall` removes the login unit (`--dry-run` previews it).
+
+`kilo2 run "message"` runs one prompt non-interactively, `kilo2 mini` opens the minimal interface, and `kilo2 session list|export|import|delete` manages sessions.
 
 In Code Mode, call the built-in `tools.kilo.*` namespace inside `execute` first; find its tools with `search({ namespace: "kilo" })`. For anything it does not cover, use `kilo2 api`, which discovers and authenticates against the same service as the TUI. It takes an HTTP method and path or an OpenAPI operation ID, `--data`/`-d` for a JSON body and `--header`/`-H` for headers:
 
