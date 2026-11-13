@@ -1,6 +1,7 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
@@ -68,6 +69,7 @@ const withTool = <A, E, R>(directory: string, body: (registry: Tool.Interface) =
   }).pipe(
     Effect.provide(
       AppNodeBuilder.build(LayerNode.group([Tool.node, node]), [
+        Config.node.replace(Config.testLayer()),
         ReadToolFileSystem.node.replace(KiloRead.node),
         Environment.node.replace(hostEnvironmentLayer),
         Location.node.replace(activeLocation),

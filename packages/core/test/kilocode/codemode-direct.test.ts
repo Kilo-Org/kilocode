@@ -1,6 +1,7 @@
 import { expect } from "bun:test"
 import { CodeModeCatalog } from "@opencode/core/codemode/catalog"
 import { CodeModeInstructions } from "@opencode/core/codemode/instructions"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Location } from "@opencode/core/location"
 import { AbsolutePath } from "@opencode/core/schema"
@@ -13,6 +14,7 @@ import { it } from "../lib/effect"
 import { codeModeListings, executeTool, toolIdentity } from "../lib/tool"
 
 const node = AppNodeBuilder.build(Tool.node, [
+  Config.node.replace(Config.testLayer()),
   Location.node.replace(Location.boundNode({ directory: AbsolutePath.make("/project") })),
 ])
 

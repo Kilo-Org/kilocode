@@ -2,6 +2,7 @@ import { expect } from "bun:test"
 import { InMemoryTransport } from "@modelcontextprotocol/client"
 import { McpServer } from "@modelcontextprotocol/server"
 import { Bus } from "@opencode/core/bus"
+import { Config } from "@opencode/core/config"
 import { Credential } from "@opencode/core/credential"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
@@ -23,6 +24,7 @@ const unused = () => Effect.die("unused integration service")
 
 const it = testEffect(
   AppNodeBuilder.build(LayerNode.group([Tool.node, McpTool.node, Mcp.node, Bus.node]), [
+    Config.node.replace(Config.testLayer()),
     Location.node.replace(tempLocationLayer),
     Environment.node.replace(hostEnvironmentLayer),
     Integration.node.replace(

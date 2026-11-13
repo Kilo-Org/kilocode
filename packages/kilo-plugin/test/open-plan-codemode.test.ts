@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { Bus } from "@opencode/core/bus"
 import { CodeModeCatalog } from "@opencode/core/codemode/catalog"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Location } from "@opencode/core/location"
 import { Permission } from "@opencode/core/permission"
@@ -24,6 +25,7 @@ const session = { id: sessionID, time: { created, updated: created } } as unknow
 const planPath = ".kilo2/plans/1000-dark-mode-plan.md"
 
 const registryLayer = AppNodeBuilder.build(LayerNode.group([Tool.node, PluginHooks.node]), [
+  Config.node.replace(Config.testLayer()),
   Permission.node.replace(permissionLayer({ assert: () => Effect.void })),
   Location.node.replace(
     Layer.succeed(

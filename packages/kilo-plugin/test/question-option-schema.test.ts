@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer, Schema } from "effect"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Form } from "@opencode/core/form"
 import { Image } from "@opencode/core/image"
@@ -58,6 +59,7 @@ const build = (kilo: boolean, forms: "mock" | "real") =>
       }),
     ]),
     [
+      Config.node.replace(Config.testLayer()),
       Permission.node.replace(permission),
       ...(forms === "mock" ? [Form.node.replace(form)] : []),
       Image.node.replace(imagePassthrough),
