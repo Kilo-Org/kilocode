@@ -1,10 +1,13 @@
-import { NodeFileSystem } from "@effect/platform-node"
+import { NodeFileSystem, NodeServices } from "@effect/platform-node"
+import { LayerNode } from "@opencode/util/effect/layer-node"
+import { AppProcess } from "@opencode/util/process"
 import { expect, test } from "bun:test"
 import { Effect, FileSystem } from "effect"
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloLoginService } from "../src/service/login"
+import { fakeSupervisor } from "./fixtures/login-supervisor"
 
 const exists = (file: string) =>
   stat(file).then(
@@ -297,7 +300,7 @@ test("installs, starts, finds and deletes the Windows logon task", async () => {
     expect((await provided(KiloLoginService.status(target, missing.run))).installed).toBeFalse()
     expect(await provided(KiloLoginService.uninstall(target, missing.run))).toMatchObject({ removed: false })
     expect(missing.calls).toEqual([
-      ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
+      ["schtasks", "/Query", "/TN", "Kilo kilo2 latest", "/XML"],
       ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
     ])
 
@@ -329,10 +332,31 @@ test("installs, starts, finds and deletes the Windows logon task", async () => {
       ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
       ["schtasks", "/Delete", "/F", "/TN", "Kilo kilo2 latest"],
     ])
+
+    const running = recorder({ "schtasks /Run": 1 })
+    await provided(
+      KiloLoginService.install(
+        target,
+        { command: ["C:\\Kilo\\kilo.exe", "serve", "--service"], path: undefined },
+        running.run,
+      ),
+    )
+    expect(running.calls.map((call) => call.at(1))).toEqual(["/Create", "/Run"])
+
+    const refused = recorder({ "schtasks /Create": 5 })
+    await expect(
+      provided(
+        KiloLoginService.install(
+          target,
+          { command: ["C:\\Kilo\\kilo.exe", "serve", "--service"], path: undefined },
+          refused.run,
+        ),
+      ),
+    ).rejects.toThrow("failed with exit code 5: denied by policy")
   }, "win32")
 })
 
-test("reports a stale Windows logon task when its recorded executable is gone", async () => {
+test("reports a stale Windows logon task from UTF-16 Task Scheduler XML when its executable is gone", async () => {
   await withHome(async (target) => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-login-win-stale-"))
     try {
@@ -350,7 +374,16 @@ test("reports a stale Windows logon task when its recorded executable is gone", 
         `  </Actions>`,
         `</Task>`,
       ].join("\r\n")
-      const recorded = recorder({}, { "schtasks /Query /TN Kilo kilo2 latest /XML": xml })
+      const bom = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")])
+      const raw = Buffer.from(xml, "utf16le")
+      expect(KiloLoginService.decodeOutput(bom)).toBe(xml)
+      expect(KiloLoginService.decodeOutput(raw)).toBe(xml)
+      expect(KiloLoginService.decodeOutput(Buffer.from(xml, "utf8"))).toBe(xml)
+
+      const recorded = recorder(
+        {},
+        { "schtasks /Query /TN Kilo kilo2 latest /XML": KiloLoginService.decodeOutput(bom) },
+      )
 
       const active = await provided(KiloLoginService.status(target, recorded.run))
       expect(active).toEqual({
@@ -359,10 +392,7 @@ test("reports a stale Windows logon task when its recorded executable is gone", 
         installed: true,
         stale: false,
       })
-      expect(recorded.calls).toEqual([
-        ["schtasks", "/Query", "/TN", "Kilo kilo2 latest"],
-        ["schtasks", "/Query", "/TN", "Kilo kilo2 latest", "/XML"],
-      ])
+      expect(recorded.calls).toEqual([["schtasks", "/Query", "/TN", "Kilo kilo2 latest", "/XML"]])
 
       await rm(executable)
       const stale = await provided(KiloLoginService.status(target, recorded.run))
@@ -390,4 +420,46 @@ test("an unsupported platform fails with a clear message", async () => {
       "not supported on freebsd",
     )
   }, "freebsd")
+})
+
+test("processRunner decodes raw UTF-16LE bytes emitted by schtasks /Query /XML", async () => {
+  await withHome(async (target) => {
+    const sup = await fakeSupervisor(target.home)
+    const executable = path.join(target.home, "kilo2.exe")
+    await writeFile(executable, "binary")
+    const key = Object.keys(process.env).find((name) => name.toLowerCase() === "path") ?? "PATH"
+    const previous = process.env[key]
+    process.env[key] = previous ? `${sup.bin}${path.delimiter}${previous}` : sup.bin
+    try {
+      const check = Effect.gen(function* () {
+        const run = yield* KiloLoginService.processRunner
+        yield* KiloLoginService.install(
+          target,
+          { command: [executable, "serve", "--service"], path: undefined },
+          run,
+        )
+        const before = yield* KiloLoginService.status(target, run)
+        yield* Effect.promise(() => rm(executable))
+        const after = yield* KiloLoginService.status(target, run)
+        return { before, after }
+      }).pipe(Effect.provide(LayerNode.compile(AppProcess.node)), Effect.provide(NodeServices.layer))
+
+      const out = await Effect.runPromise(check)
+      expect(out.before).toEqual({
+        kind: "schtasks",
+        name: "Kilo kilo2 latest",
+        installed: true,
+        stale: false,
+      })
+      expect(out.after).toEqual({
+        kind: "schtasks",
+        name: "Kilo kilo2 latest",
+        installed: true,
+        stale: true,
+      })
+    } finally {
+      if (previous === undefined) delete process.env[key]
+      if (previous !== undefined) process.env[key] = previous
+    }
+  }, "win32")
 })

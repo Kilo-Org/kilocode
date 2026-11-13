@@ -30,7 +30,8 @@ if (args.at(0) === "/Query") {
   }
   if (args.includes("/XML")) {
     const escaped = String(tasks[name]).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")
-    process.stdout.write(\`<Task version="1.2"><Actions Context="Author"><Exec><Command>&quot;\${escaped}&quot;</Command><Arguments>serve --service</Arguments></Exec></Actions></Task>\\n\`)
+    const xml = \`<?xml version="1.0" encoding="UTF-16"?><Task version="1.2"><Actions Context="Author"><Exec><Command>&quot;\${escaped}&quot;</Command><Arguments>serve --service</Arguments></Exec></Actions></Task>\\r\\n\`
+    process.stdout.write(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")]))
   }
   process.exit(0)
 }
@@ -41,20 +42,22 @@ export async function fakeSupervisor(root: string) {
   const dir = path.join(root, "supervisor")
   await mkdir(bin, { recursive: true })
   await mkdir(dir, { recursive: true })
+  const cfg = path.join(dir, "bunfig.toml")
   const script = path.join(dir, "supervisor.mjs")
   const log = path.join(dir, "calls.jsonl")
   const store = path.join(dir, "tasks.json")
+  await writeFile(cfg, "")
   await writeFile(script, supervisor)
   await Promise.all(
     ["launchctl", "systemctl", "schtasks"].map((tool) =>
       process.platform === "win32"
         ? writeFile(
             path.join(bin, `${tool}.cmd`),
-            `@echo off\r\n"${process.execPath}" "${script}" "${log}" "${store}" "${tool}" %*\r\n`,
+            `@echo off\r\n"${process.execPath}" "--config=${cfg}" "${script}" "${log}" "${store}" "${tool}" %*\r\n`,
           )
         : writeFile(
             path.join(bin, tool),
-            `#!/bin/sh\nexec "${process.execPath}" "${script}" "${log}" "${store}" "${tool}" "$@"\n`,
+            `#!/bin/sh\nexec "${process.execPath}" "--config=${cfg}" "${script}" "${log}" "${store}" "${tool}" "$@"\n`,
             { mode: 0o755 },
           ),
     ),

@@ -11,9 +11,12 @@ const transpiled = await mkdtemp(path.join(os.tmpdir(), "kilo-service-transpiler
 afterAll(() => rm(transpiled, { recursive: true, force: true }))
 
 function hostEnv(root: string, bin: string, extra: Record<string, string> = {}) {
+  const inherited = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key)),
+  )
   return prependPath(
     {
-      ...process.env,
+      ...inherited,
       HOME: root,
       USERPROFILE: root,
       KILO_TEST_HOME: root,

@@ -225,6 +225,18 @@ export const uninstall = Effect.fn("KiloLoginService.uninstall")(function* (targ
 
 export const status = Effect.fn("KiloLoginService.status")(function* (target: Target, run: Run) {
   const found = yield* supported(target)
+  if (found.check.type === "run") {
+    const content = yield* definition(found, run)
+    if (Option.isNone(content)) {
+      return { kind: found.kind, name: found.name, installed: false, stale: false } satisfies State
+    }
+    return {
+      kind: found.kind,
+      name: found.name,
+      installed: true,
+      stale: missingExecutable(found.kind, content.value),
+    } satisfies State
+  }
   const installed = yield* exists(found, run)
   // Finishing an install elsewhere, or an upgrade that moved the executable, leaves a unit that cannot start.
   const stale = installed ? yield* staleUnit(found, run) : false
@@ -252,6 +264,14 @@ export const target = Effect.gen(function* () {
   } satisfies Target
 })
 
+/** Decodes process output, including UTF-16 output emitted by Windows `schtasks /Query /XML`. */
+export function decodeOutput(bytes: Uint8Array) {
+  if (bytes.at(0) === 0xff && bytes.at(1) === 0xfe) return new TextDecoder("utf-16le").decode(bytes.subarray(2))
+  if (bytes.at(0) === 0xfe && bytes.at(1) === 0xff) return new TextDecoder("utf-16be").decode(bytes.subarray(2))
+  if (bytes.length >= 2 && bytes.at(0) !== 0 && bytes.at(1) === 0) return new TextDecoder("utf-16le").decode(bytes)
+  return new TextDecoder("utf-8").decode(bytes)
+}
+
 /** Runs launchctl, systemctl and schtasks for real. */
 export const processRunner = Effect.gen(function* () {
   const appProcess = yield* AppProcess.Service
@@ -265,8 +285,8 @@ export const processRunner = Effect.gen(function* () {
       .pipe(
         Effect.map((result) => ({
           exitCode: result.exitCode,
-          stdout: result.stdout.toString("utf8"),
-          stderr: result.stderr.toString("utf8"),
+          stdout: decodeOutput(result.stdout),
+          stderr: decodeOutput(result.stderr),
         })),
       )
   return run
@@ -340,7 +360,9 @@ function schtasks(name: string): Unit {
         command: "schtasks",
         args: ["/Create", "/F", "/SC", "ONLOGON", "/RL", "LIMITED", "/TN", name, "/TR", taskCommand(input.command)],
       },
-      { type: "run", command: "schtasks", args: ["/Run", "/TN", name] },
+      // `/Create` already persisted the task; `/Run` exits non-zero when an earlier instance of the task is still
+      // running `serve --service` in the foreground, so a reinstall must not fail on that return code.
+      { type: "run", command: "schtasks", args: ["/Run", "/TN", name], optional: true },
     ],
     uninstall: [{ type: "run", command: "schtasks", args: ["/Delete", "/F", "/TN", name] }],
     // The task has no restart policy and the server is an ordinary process, so there is nothing to unload.
@@ -375,9 +397,13 @@ const definition = Effect.fnUntraced(function* (found: Unit, run: Run) {
 const staleUnit = Effect.fnUntraced(function* (found: Unit, run: Run) {
   const content = yield* definition(found, run)
   if (Option.isNone(content)) return false
-  const executable = recordedExecutable(found.kind, content.value)
-  return executable !== undefined && !existsSync(executable)
+  return missingExecutable(found.kind, content.value)
 })
+
+function missingExecutable(kind: Kind, content: string) {
+  const executable = recordedExecutable(kind, content)
+  return executable !== undefined && !existsSync(executable)
+}
 
 /** The executable a unit starts: launchd's first ProgramArguments string, systemd's first ExecStart word, or schtasks' Exec Command. */
 function recordedExecutable(kind: Kind, content: string) {
