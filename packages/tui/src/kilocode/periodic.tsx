@@ -3,6 +3,7 @@
 // periodic-wizard.ts.
 import { Plugin } from "@opencode/plugin/tui"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
+import { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { TextAttributes, type Renderable, type ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
@@ -10,6 +11,7 @@ import { errorMessage } from "../util/error"
 import {
   capitalize,
   createFlow,
+  deleteFlow,
   editFlow,
   endsLabel,
   focus,
@@ -30,13 +32,24 @@ export type Actions = {
   readonly create: (selected: string | undefined) => void
   readonly edit: (flow: KiloFlowRpc.Info) => void
   readonly repair: (flow: KiloFlowRpc.Info) => void
+  readonly delete: (flow: KiloFlowRpc.Info) => void
 }
 
 /** `changed` events keep the open dialog current; this refresh only covers an event missed while disconnected. */
 const FALLBACK_REFRESH_MS = 60_000
 
-export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial; actions?: Actions }) {
+/** The flow plugin keeps this many run records of each kind; the Sessions and worktrees of older runs remain. */
+const RETENTION =
+  `The latest ${KiloFlowRpc.retainedRuns} runs and ${KiloFlowRpc.retainedRuns} skipped runs are kept. Older run sessions and worktrees stay until you delete them; deleting with worktree cleanup removes their clean worktrees too.`
+
+export function FlowsDialog(props: {
+  context: PeriodicContext
+  initial?: Initial
+  actions?: Actions
+  onManaged?: (managed: boolean) => void
+}) {
   const rpc = props.context.client.rpc(KiloFlowRpc.Definition)
+  const wakeups = props.context.client.rpc(KiloWakeupRpc.Definition)
   const location = options(props.context).location
   const [result, setResult] = createSignal<KiloFlowRpc.ListOutput>()
   const [loading, setLoading] = createSignal(true)
@@ -46,7 +59,6 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
   const [changing, setChanging] = createSignal(false)
   const [selected, setSelected] = createSignal(0)
   const [detailKey, setDetailKey] = createSignal<string>()
-  const [confirmingDelete, setConfirmingDelete] = createSignal(false)
   const [runs, setRuns] = createSignal<readonly KiloFlowRpc.Run[]>()
   const [runWarnings, setRunWarnings] = createSignal<readonly KiloFlowRpc.Warning[]>([])
   const [runsError, setRunsError] = createSignal("")
@@ -69,19 +81,13 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
   const detail = createMemo(() => flows().find((flow) => key(flow) === detailKey()))
   const warning = createMemo(() => (!stale() ? result()?.warnings[0] : undefined))
   const run = createMemo(() => runs()?.find((item) => item.id === selectedRun()))
-  // Only runs in a new worktree leave one behind; an edit can change the choice, so earlier runs count too.
-  const cleanable = createMemo(() => {
-    const flow = detail()
-    if (flow?.execution.mode === "fresh" && flow.execution.worktree === "new") return true
-    return (runs() ?? []).some((item) => item.worktree === "new")
-  })
   const banners = createMemo(() => Number(stale()) + Number(notice() !== undefined) + Number(warning() !== undefined))
   const availableHeight = createMemo(() => dimensions().height - Math.floor(dimensions().height / 4))
   const listHeight = createMemo(() => Math.max(1, Math.min(15, availableHeight() - 6 - banners() * 2)))
   const detailHeight = createMemo(() =>
     Math.max(
       1,
-      Math.min(16, availableHeight() - (confirmingDelete() ? 8 + Number(cleanable()) : 7) - banners() * 2),
+      Math.min(16, availableHeight() - 7 - banners() * 2),
     ),
   )
 
@@ -148,7 +154,6 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
   }
 
   function openDetail(flow: KiloFlowRpc.Info) {
-    setConfirmingDelete(false)
     setDetailKey(key(flow))
     setSelectedRun()
     setRuns()
@@ -159,10 +164,6 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
   }
 
   function back() {
-    if (confirmingDelete()) {
-      setConfirmingDelete(false)
-      return
-    }
     history?.abort()
     setNotice()
     setDetailKey()
@@ -221,33 +222,6 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
     )
   }
 
-  function remove(flow: KiloFlowRpc.Info | undefined, clean: boolean) {
-    if (flow?.reference.type !== "managed") return
-    const flowID = flow.reference.flowID
-    mutate(
-      (signal) => rpc.remove(clean ? { flowID, deleteWorktrees: true } : { flowID }, { location, signal }),
-      (output) => {
-        setDetailKey()
-        setConfirmingDelete(false)
-        const current = result()
-        if (current) replace({ ...current, flows: current.flows.filter((item) => key(item) !== flowID) })
-        const removed = output.removedWorktrees?.length ?? 0
-        setNotice({
-          message: `Deleted ${flow.name}.${removed === 0 ? "" : ` Removed ${removed} worktree${removed === 1 ? "" : "s"}.`}`,
-          variant: "success",
-        })
-        const kept = output.keptWorktrees ?? []
-        if (kept.length > 0)
-          props.context.ui.toast.show({
-            variant: "warning",
-            title: `Kept ${kept.length} worktree${kept.length === 1 ? "" : "s"} with changes`,
-            message: kept.join("\n"),
-          })
-      },
-      "Delete failed",
-    )
-  }
-
   function runNow(flow: KiloFlowRpc.Info | undefined) {
     if (flow?.reference.type !== "managed") return
     const flowID = flow.reference.flowID
@@ -302,20 +276,28 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
     active = request
     if (!result()) setLoading(true)
     const signal = AbortSignal.any([mounted.signal, request.signal])
-    await rpc.list({}, { location, signal }).then(
-      (next) => {
-        if (signal.aborted) return
-        replace(next)
-        select()
-        setError("")
-        setStale(false)
-      },
-      (cause: unknown) => {
-        if (signal.aborted) return
-        setError(errorMessage(cause))
-        setStale(result() !== undefined)
-      },
-    )
+    await rpc
+      .list({}, { location, signal })
+      .then((next) =>
+        agentPrompts(next, (scheduleIDs) =>
+          wakeups.prompts({ scheduleIDs }, { location, signal }).then((output) => output.prompts),
+        ),
+      )
+      .then(
+        (next) => {
+          if (signal.aborted) return
+          props.onManaged?.(next.flows.some((flow) => flow.reference.type === "managed"))
+          replace(next)
+          select()
+          setError("")
+          setStale(false)
+        },
+        (cause: unknown) => {
+          if (signal.aborted) return
+          setError(errorMessage(cause))
+          setStale(result() !== undefined)
+        },
+      )
     if (active === request) active = undefined
     if (signal.aborted) return
     setLoading(false)
@@ -380,7 +362,7 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
     commands: [
       {
         bind: "escape",
-        title: confirmingDelete() ? "Cancel delete" : "Back to periodic flows",
+        title: "Back to periodic flows",
         group: "Periodic",
         enabled: () => detail() !== undefined,
         run: back,
@@ -416,7 +398,7 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
         bind: "return",
         title: detail() ? "Open run session" : "Show Flow details",
         group: "Periodic",
-        enabled: () => (detail() ? !confirmingDelete() && run()?.sessionID !== undefined : flows().length > 0),
+        enabled: () => (detail() ? run()?.sessionID !== undefined : flows().length > 0),
         run: () => (detail() ? open(run()?.sessionID, "This run has no session.") : showDetail(flows()[selected()])),
       },
       {
@@ -426,7 +408,7 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
         enabled: () => {
           const flow = detail()
           if (!flow) return true
-          if (changing() || confirmingDelete() || flow.reference.type !== "managed") return false
+          if (changing() || flow.reference.type !== "managed") return false
           return !broken(flow) || props.actions !== undefined
         },
         run: () => {
@@ -438,13 +420,12 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
       },
       {
         bind: "n",
-        title: confirmingDelete() ? "Cancel Flow deletion" : "New Flow",
+        title: "New Flow",
         group: "Periodic",
-        enabled: () => confirmingDelete() || (!detail() && props.actions !== undefined),
+        enabled: () => !detail() && props.actions !== undefined,
         run: () => {
           const flow = flows()[selected()]
-          if (!confirmingDelete()) return props.actions?.create(flow && key(flow))
-          setConfirmingDelete(false)
+          props.actions?.create(flow && key(flow))
         },
       },
       {
@@ -452,10 +433,7 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
         title: "Edit Flow",
         group: "Periodic",
         enabled: () =>
-          props.actions !== undefined &&
-          !changing() &&
-          !confirmingDelete() &&
-          detail()?.reference.type === "managed",
+          props.actions !== undefined && !changing() && detail()?.reference.type === "managed",
         run: () => {
           const flow = detail()
           if (flow) props.actions?.edit(flow)
@@ -465,37 +443,24 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
         bind: "space",
         title: "Enable or disable Flow",
         group: "Periodic",
-        enabled: () => !changing() && !confirmingDelete() && toggleable(detail()),
+        enabled: () => !changing() && toggleable(detail()),
         run: () => toggle(detail()),
       },
       {
         bind: "d",
         title: "Delete Flow",
         group: "Periodic",
-        enabled: () => !changing() && !confirmingDelete() && detail()?.reference.type === "managed",
+        enabled: () => props.actions !== undefined && !changing() && detail()?.reference.type === "managed",
         run: () => {
-          setConfirmingDelete(true)
+          const flow = detail()
+          if (flow) props.actions?.delete(flow)
         },
-      },
-      {
-        bind: "y",
-        title: "Confirm Flow deletion",
-        group: "Periodic",
-        enabled: confirmingDelete,
-        run: () => remove(detail(), false),
-      },
-      {
-        bind: "w",
-        title: "Delete Flow and clean its worktrees",
-        group: "Periodic",
-        enabled: () => confirmingDelete() && cleanable(),
-        run: () => remove(detail(), true),
       },
       {
         bind: "v",
         title: "View latest run Session",
         group: "Periodic",
-        enabled: () => !confirmingDelete() && detail()?.latestRun?.sessionID !== undefined,
+        enabled: () => detail()?.latestRun?.sessionID !== undefined,
         run: () => open(detail()?.latestRun?.sessionID, `${detail()?.name ?? "This Flow"} has not run yet.`),
       },
     ],
@@ -506,7 +471,6 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
     if (selected() > last) setSelected(last)
     const current = detailKey()
     if (!current || flows().some((flow) => key(flow) === current)) return
-    setConfirmingDelete(false)
     setDetailKey()
     setRuns()
   })
@@ -593,11 +557,14 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
         </box>
       </Show>
       <Show when={result() && flows().length === 0}>
-        <box height={8} alignItems="center" justifyContent="center" gap={1}>
+        <box height={9} alignItems="center" justifyContent="center" gap={1}>
           <text attributes={TextAttributes.BOLD} fg={theme().text.base}>
             No periodic flows
           </text>
           <text fg={theme().text.muted}>Scheduled local tasks will appear here.</text>
+          <text fg={theme().text.muted} wrapMode="word">
+            A Flow repeats a session's task on a schedule, each run in a fresh session with the permissions you approve.
+          </text>
           <text fg={theme().text.muted}>
             {props.actions ? "Press n to create one from a session, r to refresh." : "Press r to refresh."}
           </text>
@@ -811,6 +778,11 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
                         )
                       }}
                     </For>
+                    <Show when={(runs()?.length ?? 0) > 0}>
+                      <text fg={theme().text.muted} wrapMode="word" marginTop={1}>
+                        {RETENTION}
+                      </text>
+                    </Show>
                   </box>
                 </Show>
               </>
@@ -819,104 +791,71 @@ export function FlowsDialog(props: { context: PeriodicContext; initial?: Initial
               when={flow().reference.type === "managed"}
               fallback={<text fg={theme().text.muted}>{readOnly(flow())}</text>}
             >
-              <Show
-                when={confirmingDelete()}
-                fallback={
-                  <box flexDirection="row" flexWrap="wrap" gap={1}>
-                    <Show when={props.actions}>
-                      {(actions) => (
-                        <Action
-                          label="Edit"
-                          shortcut="e"
-                          theme={theme()}
-                          disabled={changing()}
-                          onTrigger={() => actions().edit(flow())}
-                        />
-                      )}
-                    </Show>
-                    <Show when={toggleable(flow())}>
+              <box flexDirection="row" flexWrap="wrap" gap={1}>
+                <Show when={props.actions}>
+                  {(actions) => (
+                    <Action
+                      label="Edit"
+                      shortcut="e"
+                      theme={theme()}
+                      disabled={changing()}
+                      onTrigger={() => actions().edit(flow())}
+                    />
+                  )}
+                </Show>
+                <Show when={toggleable(flow())}>
+                  <Action
+                    label={flow().status === "paused" ? "Enable" : "Disable"}
+                    shortcut="space"
+                    theme={theme()}
+                    disabled={changing()}
+                    onTrigger={() => toggle(flow())}
+                  />
+                </Show>
+                <Show
+                  when={broken(flow())}
+                  fallback={
+                    <Action
+                      label="Run now"
+                      shortcut="r"
+                      theme={theme()}
+                      disabled={changing()}
+                      onTrigger={() => runNow(flow())}
+                    />
+                  }
+                >
+                  <Show when={props.actions}>
+                    {(actions) => (
                       <Action
-                        label={flow().status === "paused" ? "Enable" : "Disable"}
-                        shortcut="space"
+                        label="Repair"
+                        shortcut="r"
                         theme={theme()}
                         disabled={changing()}
-                        onTrigger={() => toggle(flow())}
+                        onTrigger={() => actions().repair(flow())}
                       />
-                    </Show>
-                    <Show
-                      when={broken(flow())}
-                      fallback={
-                        <Action
-                          label="Run now"
-                          shortcut="r"
-                          theme={theme()}
-                          disabled={changing()}
-                          onTrigger={() => runNow(flow())}
-                        />
-                      }
-                    >
-                      <Show when={props.actions}>
-                        {(actions) => (
-                          <Action
-                            label="Repair"
-                            shortcut="r"
-                            theme={theme()}
-                            disabled={changing()}
-                            onTrigger={() => actions().repair(flow())}
-                          />
-                        )}
-                      </Show>
-                    </Show>
+                    )}
+                  </Show>
+                </Show>
+                <Show when={props.actions}>
+                  {(actions) => (
                     <Action
                       label="Delete"
                       shortcut="d"
                       theme={theme()}
                       disabled={changing()}
-                      onTrigger={() => setConfirmingDelete(true)}
+                      onTrigger={() => actions().delete(flow())}
                     />
-                    <Show when={flow().latestRun?.sessionID}>
-                      <Action
-                        label="View session"
-                        shortcut="v"
-                        theme={theme()}
-                        onTrigger={() => open(flow().latestRun?.sessionID, `${flow().name} has not run yet.`)}
-                      />
-                    </Show>
-                  </box>
-                }
-              >
-                <box gap={1}>
-                  <box>
-                    <text fg={theme().text.feedback.warning.base} wrapMode="none" truncate minWidth={0}>
-                      Delete {flow().name}? Future runs stop and retained run records are removed.
-                    </text>
-                    <Show when={cleanable()}>
-                      <text fg={theme().text.muted} wrapMode="none" truncate minWidth={0}>
-                        Cleaning removes the run worktrees without changes; sessions are kept.
-                      </text>
-                    </Show>
-                  </box>
-                  <box flexDirection="row" flexWrap="wrap" gap={1}>
-                    <Action label="Cancel" shortcut="n" theme={theme()} onTrigger={() => setConfirmingDelete(false)} />
-                    <Action
-                      label="Delete"
-                      shortcut="y"
-                      theme={theme()}
-                      disabled={changing()}
-                      onTrigger={() => remove(flow(), false)}
-                    />
-                    <Show when={cleanable()}>
-                      <Action
-                        label="Delete and clean worktrees"
-                        shortcut="w"
-                        theme={theme()}
-                        disabled={changing()}
-                        onTrigger={() => remove(flow(), true)}
-                      />
-                    </Show>
-                  </box>
-                </box>
-              </Show>
+                  )}
+                </Show>
+                <Show when={flow().latestRun?.sessionID}>
+                  <Action
+                    label="View session"
+                    shortcut="v"
+                    theme={theme()}
+                    onTrigger={() => open(flow().latestRun?.sessionID, `${flow().name} has not run yet.`)}
+                  />
+                </Show>
+              </box>
             </Show>
           </>
         )}
@@ -983,6 +922,34 @@ function kind(flow: KiloFlowRpc.Info) {
   if (flow.reference.action !== "hook") return "schedule"
   if (flow.name.startsWith("Wakeup") || flow.name.startsWith("Cron")) return "agent task"
   return "internal"
+}
+
+/**
+ * Fills the prompt of agent-task rows whose schedule row predates storing it (an empty hook prompt) from the wakeup
+ * tasks that still hold it. A read that fails leaves the rows as they are.
+ */
+export async function agentPrompts(
+  output: KiloFlowRpc.ListOutput,
+  load: (scheduleIDs: readonly string[]) => Promise<Record<string, string>>,
+): Promise<KiloFlowRpc.ListOutput> {
+  const blank = (flow: KiloFlowRpc.Info) => kind(flow) === "agent task" && flow.prompt.trim() === ""
+  const scheduleIDs = [
+    ...new Set(
+      output.flows
+        .filter(blank)
+        .flatMap((flow) => (flow.reference.type === "native-schedule" ? [flow.reference.scheduleID] : [])),
+    ),
+  ]
+  if (scheduleIDs.length === 0) return output
+  const prompts = await load(scheduleIDs).catch((): Record<string, string> => ({}))
+  return {
+    ...output,
+    flows: output.flows.map((flow) => {
+      if (!blank(flow) || flow.reference.type !== "native-schedule") return flow
+      const prompt = prompts[flow.reference.scheduleID]
+      return prompt ? { ...flow, prompt } : flow
+    }),
+  }
 }
 
 function readOnly(flow: KiloFlowRpc.Info) {
@@ -1062,22 +1029,59 @@ export default Plugin.define({
   id: "kilocode.periodic",
   setup(context) {
     let owner: object | undefined
+    let dialogOpen = false
     const open: Open = (initial) => {
       const current = {}
       owner = current
+      dialogOpen = true
       context.ui.dialog.show(
-        () => <FlowsDialog context={context} initial={initial} actions={actions} />,
+        () => <FlowsDialog context={context} initial={initial} actions={actions} onManaged={setManaged} />,
         () => {
+          dialogOpen = false
           if (owner === current) owner = undefined
         },
       )
       context.ui.dialog.set({ size: "large" })
     }
+    // `/periodic` is suggested in the palette while the launch project has a managed Flow. One list at start, after
+    // each change and after a reconnect keeps that current without polling. An open dialog refreshes itself and reports
+    // the same fact through `onManaged`, so a burst of changes coalesces into one check and none runs while it is open.
+    const rpc = context.client.rpc(KiloFlowRpc.Definition)
+    const [managed, setManaged] = createSignal(false)
+    // A failed or unusable answer (a server without the flow plugin) leaves the last state; it is only a suggestion.
+    let checking = false
+    let queued = false
+    const check = () => {
+      if (dialogOpen) return
+      if (checking) {
+        queued = true
+        return
+      }
+      checking = true
+      void Promise.resolve()
+        .then(() => rpc.list({}, options(context)))
+        .then((output) => setManaged(output.flows.some((flow) => flow.reference.type === "managed")))
+        .catch(() => undefined)
+        .finally(() => {
+          checking = false
+          if (!queued) return
+          queued = false
+          check()
+        })
+    }
+    check()
+    const unsubscribe = [
+      rpc.events.on("changed", () => {
+        if (!dialogOpen) check()
+      }),
+      context.data.on("server.connected", check),
+    ]
     const fail = (cause: unknown) => context.ui.toast.show({ variant: "error", message: errorMessage(cause) })
     const actions: Actions = {
       create: (selected) => void createFlow(context, open, { key: selected }).catch(fail),
       edit: (flow) => void editFlow(context, open, flow).catch(fail),
       repair: (flow) => void createFlow(context, open, { key: key(flow), detail: true }, flow).catch(fail),
+      delete: (flow) => void deleteFlow(context, open, flow).catch(fail),
     }
     const unregister = context.ui.slot({
       append: "app",
@@ -1091,6 +1095,7 @@ export default Plugin.define({
               description: "View and schedule local Flows",
               group: "Kilo",
               palette: true,
+              suggested: managed,
               slash: { name: "periodic" },
               run: () => open(),
             },
@@ -1101,6 +1106,7 @@ export default Plugin.define({
     })
     return () => {
       unregister()
+      unsubscribe.forEach((stop) => stop())
       if (owner) context.ui.dialog.clear()
     }
   },

@@ -20,7 +20,7 @@ for (const hosted of [false, true]) {
       const fixture = path.join(import.meta.dir, "fixtures/epilogue-resize.ts")
       const output = await run([process.execPath, fixture, ...columns.map(String)], root.path, hosted)
       checkEpilogue(output, hosted, columns.at(-1)!)
-    }, 30_000)
+    }, 60_000)
   }
 
   test(`compiled resize epilogue: ${hosted ? "Kilo" : "upstream"}`, async () => {

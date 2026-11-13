@@ -25,9 +25,8 @@ const runPrefix = "flow-run:v1:"
 const activePrefix = "flow-active:v1:"
 const schedulePrefix = "flow-schedule:v1:"
 const latestPrefix = "flow-latest:v1:"
-const metadataKey = "kilocode.flow"
+const metadataKey = KiloFlowRpc.sessionMetadata
 const permissionAction = "flow"
-const retainedRuns = 20
 const lookups = 8
 const decodeRecord = Schema.decodeUnknownOption(
   Schema.Union([KiloFlowRpc.Record, Schema.fromJsonString(KiloFlowRpc.Record)]),
@@ -137,7 +136,11 @@ export const KiloFlowPlugin = define({
         list: () => list(ctx, schedules, ctx.location.project.id, runtime.fs),
         create: (input, context) =>
           create(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
-            Effect.mapError((error) => context.error("failed", error.message)),
+            Effect.mapError((error) =>
+              error instanceof FlowExists
+                ? context.error("exists", error.message, { flowID: error.flowID })
+                : context.error("failed", error.message),
+            ),
           ),
         update: (input, context) =>
           update(ctx, schedules, input, ctx.location.project.id, runtime).pipe(
@@ -178,6 +181,7 @@ export const KiloFlowPlugin = define({
           execute: (input, context) => {
             const selection = selections.get(context.sessionID)
             return ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) =>
                 create(
                   ctx,
@@ -209,6 +213,7 @@ export const KiloFlowPlugin = define({
           options: { codemode: true },
           execute: (_, context) =>
             ctx.session.get({ sessionID: context.sessionID }).pipe(
+              Effect.tap(refuseRunSession),
               Effect.flatMap((session) => list(ctx, schedules, session.projectID, runtime.fs)),
               Effect.map((output) => ({ output, content: inventory(output) })),
               Effect.mapError(toolError),
@@ -234,7 +239,7 @@ export const KiloFlowPlugin = define({
         editor.add({
           name: "flow_delete",
           description:
-            "Delete a managed local Flow: stops its active run, removes its schedule and run records, and keeps the run Sessions. With deleteWorktrees, also deletes the worktrees its runs created; a worktree with changes is kept.",
+            "Delete a managed local Flow: stops its active run and removes its schedule and run records. Run Sessions and worktrees are kept unless asked: deleteSessions also deletes the run Sessions (never the source Session), and deleteWorktrees also deletes the worktrees its runs created; a worktree with changes is kept.",
           input: KiloFlowRpc.RemoveInput,
           output: KiloFlowRpc.RemoveOutput,
           options: { codemode: true },
@@ -246,6 +251,10 @@ export const KiloFlowPlugin = define({
                 output,
                 content: [
                   `Deleted Flow ${input.flowID}.`,
+                  ...(output.removedSessions?.length ? [`Deleted run Sessions: ${output.removedSessions.join(", ")}`] : []),
+                  ...(output.keptSessions?.length
+                    ? [`Run Sessions that could not be deleted: ${output.keptSessions.join(", ")}`]
+                    : []),
                   ...(output.removedWorktrees?.length ? [`Deleted worktrees: ${output.removedWorktrees.join(", ")}`] : []),
                   ...(output.keptWorktrees?.length
                     ? [`Kept worktrees with changes or that could not be removed: ${output.keptWorktrees.join(", ")}`]
@@ -285,11 +294,12 @@ export const KiloFlowPlugin = define({
 
 /**
  * A Flow run Session has a deny-by-default allowlist and reads repository content unattended, so it must not manage the
- * project's other Flows: rewriting a more privileged Flow's prompt and running it would escape its own allowlist.
+ * project's Flows: rewriting a more privileged Flow's prompt and running it would escape its own allowlist, creating
+ * one could only fail at the approval its Session denies, and listing would expose other Flows' prompts and allowlists.
  */
 function refuseRunSession(session: Session.Info) {
   if (Option.isNone(decodeMetadata(session.metadata?.[metadataKey]))) return Effect.void
-  return Effect.fail(new Error(`Session ${session.id} runs a Flow and cannot start, change, or delete Flows`))
+  return Effect.fail(new Error(`Session ${session.id} runs a Flow and cannot list, create, start, change, or delete Flows`))
 }
 
 function toolError(error: unknown) {
@@ -326,10 +336,10 @@ function describeWhen(when: Schedule.When) {
 
 export function create(
   ctx: Plugin.Context,
-  schedules: Pick<Schedule.Interface, "create" | "remove">,
+  schedules: Pick<Schedule.Interface, "create" | "remove" | "get">,
   input: KiloFlowRpc.CreateInput,
   projectID: Session.Info["projectID"] | undefined,
-  runtime: Pick<Runtime, "changed">,
+  runtime: Pick<Runtime, "changed" | "locks">,
 ): Effect.Effect<KiloFlowRpc.Info, Error> {
   return Effect.gen(function* () {
     const session = yield* ctx.session
@@ -345,9 +355,11 @@ export function create(
     if (invalidPermission) return yield* Effect.fail(new Error(invalidPermission))
     const now = Date.now()
     const permissions = flowPermissions(input.permissions)
+    // A retried create reuses the client's request id, so it addresses the same Flow and the lock below serializes it.
+    const id = input.requestID ? KiloFlowRpc.ID.make(`flw_${input.requestID}`) : KiloFlowRpc.ID.create()
     const record: KiloFlowRpc.Record = {
       version: 1,
-      id: KiloFlowRpc.ID.create(),
+      id,
       name: input.name,
       authority: { type: "local" },
       trigger: {
@@ -373,54 +385,97 @@ export function create(
       ...(input.ends ? { ends: input.ends } : {}),
       time: { created: now, updated: now },
     }
-    yield* ctx.permission.assert({
-      action: permissionAction,
-      resources:
-        permissions.map((permission) => `${permission.action}: ${permission.resource}`),
-      sessionID: session.id,
-      agent,
-      metadata: {
-        [metadataKey]: {
-          flowID: record.id,
-          name: record.name,
-          permissions,
-          unattended: true,
-        },
-      },
-    })
-    const key = `${prefix}${record.id}`
-    yield* ctx.storage
-      .set(key, JSON.stringify(record))
-      .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
-    const schedule = yield* schedules
-      .create(backingSchedule(record, session.id))
-      .pipe(
-        Effect.mapError((error) => new Error(`Couldn't schedule Flow ${record.id}: ${error.message}`)),
-        Effect.onError(() => ctx.storage.remove(key).pipe(Effect.ignore)),
-      )
-    const configured: KiloFlowRpc.Record = {
-      ...record,
-      scheduleID: schedule.id,
-      time: { ...record.time, updated: Date.now() },
-    }
-    yield* ctx.storage.set(key, JSON.stringify(configured)).pipe(
-      Effect.mapError(() => new Error(`Couldn't save backing schedule for Flow ${record.id}`)),
-      Effect.onError(() =>
-        schedules.remove(schedule.id).pipe(Effect.ignore, Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore))),
+    const lock = flowLock(runtime, id)
+    creating.set(lock, (creating.get(lock) ?? 0) + 1)
+    return yield* lock.withPermit(
+      Effect.gen(function* () {
+        // A retried create may arrive after the first attempt committed but its response was lost. Return that Flow
+        // instead of allocating a second one and a second backing schedule.
+        const existing = Option.getOrUndefined(decodeRecord(yield* ctx.storage.get(`${prefix}${id}`)))
+        if (existing) {
+          if (existing.context.projectID !== session.projectID)
+            return yield* Effect.fail(new Error(`Flow ${id} already exists`))
+          // The same key with other settings is a conflict: returning the first Flow would silently drop the edits.
+          if (!sameRequest(existing, record))
+            return yield* Effect.fail(
+              new FlowExists(id, `Flow ${id} was already created from this request with different settings`),
+            )
+          const schedule = existing.scheduleID
+            ? Option.getOrUndefined(yield* schedules.get(existing.scheduleID).pipe(Effect.option))
+            : undefined
+          return managed(existing, schedule)
+        }
+        yield* ctx.permission.assert({
+          action: permissionAction,
+          resources:
+            permissions.map((permission) => `${permission.action}: ${permission.resource}`),
+          sessionID: session.id,
+          agent,
+          metadata: {
+            [metadataKey]: {
+              flowID: record.id,
+              name: record.name,
+              permissions,
+              unattended: true,
+            },
+          },
+        })
+        const key = `${prefix}${record.id}`
+        yield* ctx.storage
+          .set(key, JSON.stringify(record))
+          .pipe(Effect.mapError(() => new Error(`Couldn't save Flow ${record.id}`)))
+        const schedule = yield* schedules
+          .create(backingSchedule(record, session.id))
+          .pipe(
+            Effect.mapError((error) => new Error(`Couldn't schedule Flow ${record.id}: ${error.message}`)),
+            Effect.onError(() => ctx.storage.remove(key).pipe(Effect.ignore)),
+          )
+        const configured: KiloFlowRpc.Record = {
+          ...record,
+          scheduleID: schedule.id,
+          time: { ...record.time, updated: Date.now() },
+        }
+        yield* ctx.storage.set(key, JSON.stringify(configured)).pipe(
+          Effect.mapError(() => new Error(`Couldn't save backing schedule for Flow ${record.id}`)),
+          Effect.onError(() =>
+            schedules
+              .remove(schedule.id)
+              .pipe(Effect.ignore, Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore))),
+          ),
+        )
+        yield* ctx.storage.set(scheduleKey(schedule.id), configured.id).pipe(
+          Effect.mapError(() => new Error(`Couldn't index backing schedule for Flow ${record.id}`)),
+          Effect.onError(() =>
+            schedules.remove(schedule.id).pipe(
+              Effect.ignore,
+              Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore)),
+              Effect.andThen(ctx.storage.remove(scheduleKey(schedule.id)).pipe(Effect.ignore)),
+            ),
+          ),
+        )
+        yield* Effect.logInfo("Flow created", {
+          flowID: configured.id,
+          projectID: session.projectID,
+          name: configured.name,
+          worktree: configured.execution.worktree,
+          requestID: input.requestID,
+        })
+        yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
+        return managed(configured, schedule)
+      }),
+    ).pipe(
+      // A create that ends without a Flow (refused approval, schedule or storage error) leaves nothing to lock again;
+      // drop the lock so failed request ids do not keep a semaphore for the runtime's life. Only the last create still
+      // holding or waiting on this lock may drop it: removing it under a queued create would let a later run or edit
+      // take a fresh lock and run concurrently with that create.
+      Effect.ensuring(
+        Effect.gen(function* () {
+          if (release(lock) > 0) return
+          const stored = yield* ctx.storage.get(`${prefix}${id}`)
+          if (stored === undefined && !creating.has(lock) && runtime.locks.get(id) === lock) runtime.locks.delete(id)
+        }).pipe(Effect.ignore),
       ),
     )
-    yield* ctx.storage.set(scheduleKey(schedule.id), configured.id).pipe(
-      Effect.mapError(() => new Error(`Couldn't index backing schedule for Flow ${record.id}`)),
-      Effect.onError(() =>
-        schedules.remove(schedule.id).pipe(
-          Effect.ignore,
-          Effect.andThen(ctx.storage.remove(key).pipe(Effect.ignore)),
-          Effect.andThen(ctx.storage.remove(scheduleKey(schedule.id)).pipe(Effect.ignore)),
-        ),
-      ),
-    )
-    yield* runtime.changed({ projectID: session.projectID, flowID: configured.id, kind: "created" })
-    return managed(configured, schedule)
   })
 }
 
@@ -569,6 +624,44 @@ function approve(
   })
 }
 
+/** A retried create collided with a Flow its request id already created with different settings. */
+class FlowExists extends Error {
+  constructor(
+    readonly flowID: KiloFlowRpc.ID,
+    message: string,
+  ) {
+    super(message)
+  }
+}
+
+/** True when a stored Flow and a freshly built record describe the same create request. */
+function sameRequest(stored: KiloFlowRpc.Record, requested: KiloFlowRpc.Record) {
+  return (
+    stored.name === requested.name &&
+    stored.prompt === requested.prompt &&
+    stored.execution.sourceSessionID === requested.execution.sourceSessionID &&
+    stored.execution.worktree === requested.execution.worktree &&
+    stored.trigger.timezone === requested.trigger.timezone &&
+    canonical(stored.trigger.when) === canonical(requested.trigger.when) &&
+    canonical(stored.ends) === canonical(requested.ends) &&
+    canonical(stored.context.model) === canonical(requested.context.model) &&
+    stored.context.agent === requested.context.agent &&
+    samePermissions(stored.permissions ?? [], requested.permissions ?? [])
+  )
+}
+
+// Key-order independent JSON, so a decoded record compares equal to one built in memory.
+function canonical(value: unknown): string {
+  if (value === undefined) return ""
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`
+  if (value === null || typeof value !== "object") return JSON.stringify(value)
+  return `{${Object.entries(value)
+    .filter((entry) => entry[1] !== undefined)
+    .toSorted((a, b) => a[0].localeCompare(b[0]))
+    .map((entry) => `${JSON.stringify(entry[0])}:${canonical(entry[1])}`)
+    .join(",")}}`
+}
+
 function samePermissions(
   left: readonly KiloFlowRpc.PermissionGrant[],
   right: readonly KiloFlowRpc.PermissionGrant[],
@@ -636,12 +729,13 @@ function remove(
   return Effect.gen(function* () {
     const record = yield* requireRecord(ctx, input.flowID, authorizedProjectID)
     const lock = flowLock(runtime, record.id)
-    const worktrees = yield* lock.withPermit(
+    const { worktrees, sessions } = yield* lock.withPermit(
       Effect.gen(function* () {
         const active = yield* reconcileFlowActive(ctx, record.id)
         if (active?.sessionID) yield* ctx.session.interrupt({ sessionID: active.sessionID }).pipe(Effect.ignore)
-        // Read the run worktrees before the run records go away.
+        // Read the run worktrees and Sessions before the run records go away.
         const worktrees = input.deleteWorktrees ? yield* runWorktrees(ctx, record) : []
+        const sessions = input.deleteSessions ? yield* runSessions(ctx, record) : []
         if (record.scheduleID)
           yield* schedules.remove(record.scheduleID).pipe(
             Effect.catchTag("Schedule.NotFoundError", () => Effect.void),
@@ -657,25 +751,95 @@ function remove(
           { discard: true },
         )
         yield* removeRuns(ctx, record.id)
-        return worktrees
+        return { worktrees, sessions }
       }),
     )
     if (runtime.locks.get(record.id) === lock) runtime.locks.delete(record.id)
     yield* notify(runtime, record, "removed")
-    const projectID = record.context.projectID
-    if (!projectID || worktrees.length === 0) return {}
-    // Without force, git refuses to remove a worktree with changes, so a refusal keeps the user's work.
-    const results = yield* Effect.forEach(worktrees, (directory) =>
-      ctx.worktree.remove({ projectID, directory, force: false }).pipe(
-        Effect.as({ directory, removed: true }),
-        Effect.catchCause(() => Effect.succeed({ directory, removed: false })),
+    // Sessions go before worktrees: a run Session may live in the worktree being removed. A Session that cannot be
+    // removed is reported, never a reason to fail the delete of a Flow that is already gone.
+    const sessionResults = yield* Effect.forEach(sessions, (sessionID) =>
+      ctx.session.remove({ sessionID }).pipe(
+        Effect.as({ sessionID, removed: true }),
+        Effect.catchCause(() => Effect.succeed({ sessionID, removed: false })),
       ),
     )
-    return {
-      removedWorktrees: results.filter((result) => result.removed).map((result) => result.directory),
-      keptWorktrees: results.filter((result) => !result.removed).map((result) => result.directory),
-    }
+    const sessionOutput =
+      sessions.length === 0
+        ? {}
+        : {
+            removedSessions: sessionResults.filter((result) => result.removed).map((result) => result.sessionID),
+            keptSessions: sessionResults.filter((result) => !result.removed).map((result) => result.sessionID),
+          }
+    const projectID = record.context.projectID
+    // Without force, git refuses to remove a worktree with changes, so a refusal keeps the user's work.
+    const worktreeResults =
+      projectID === undefined
+        ? []
+        : yield* Effect.forEach(worktrees, (directory) =>
+            ctx.worktree.remove({ projectID, directory, force: false }).pipe(
+              Effect.as({ directory, removed: true }),
+              Effect.catchCause(() => Effect.succeed({ directory, removed: false })),
+            ),
+          )
+    const worktreeOutput =
+      worktreeResults.length === 0
+        ? {}
+        : {
+            removedWorktrees: worktreeResults.filter((result) => result.removed).map((result) => result.directory),
+            keptWorktrees: worktreeResults.filter((result) => !result.removed).map((result) => result.directory),
+          }
+    yield* Effect.logInfo("Flow removed", {
+      flowID: record.id,
+      projectID: authorizedProjectID,
+      name: record.name,
+      deleteWorktrees: input.deleteWorktrees === true,
+      deleteSessions: input.deleteSessions === true,
+      removedSessions: sessionOutput.removedSessions?.length ?? 0,
+      removedWorktrees: worktreeOutput.removedWorktrees?.length ?? 0,
+    })
+    return { ...sessionOutput, ...worktreeOutput }
   })
+}
+
+/**
+ * The run Sessions of a Flow, never its source Session. Retained run records name recent ones; every run Session also
+ * carries the Flow in its metadata, so a project scan finds the runs whose records retention already pruned.
+ */
+function runSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
+  return Effect.gen(function* () {
+    const stored = yield* runs(ctx, [record.id])
+    const recorded = stored.runs.flatMap((run) => (run.sessionID ? [run.sessionID] : []))
+    const scanned = yield* flowSessions(ctx, record)
+    return [...new Set([...recorded, ...scanned])].filter((sessionID) => sessionID !== record.execution.sourceSessionID)
+  })
+}
+
+/** Project run Sessions (not forks of them) whose Flow metadata names this Flow, read page by page. */
+function flowSessions(ctx: Plugin.Context, record: KiloFlowRpc.Record) {
+  const projectID = record.context.projectID
+  if (!projectID) return Effect.succeed<Session.ID[]>([])
+  const page = (
+    cursor: Session.ListCursor | undefined,
+    found: Session.ID[],
+  ): Effect.Effect<Session.ID[], never> =>
+    ctx.session.list({ project: projectID, limit: 200, ...(cursor ? { cursor } : {}) }).pipe(
+      Effect.flatMap((output) => {
+        // A fork copies its parent's metadata, so a Session the user forked from a run still names the Flow. Forks are
+        // never run Sessions, and deleting one would remove a transcript the user kept on purpose.
+        const matched = output.data.flatMap((session) =>
+          session.fork === undefined &&
+          Option.getOrUndefined(decodeMetadata(session.metadata?.[metadataKey]))?.flowID === record.id
+            ? [session.id]
+            : [],
+        )
+        const next = output.cursor.next
+        return next && output.data.length > 0 ? page(next, [...found, ...matched]) : Effect.succeed([...found, ...matched])
+      }),
+      // A failed scan still deletes the recorded run Sessions; it only misses older ones.
+      Effect.catchCause(() => Effect.succeed(found)),
+    )
+  return page(undefined, [])
 }
 
 /**
@@ -1255,8 +1419,8 @@ function pruneRuns(ctx: Plugin.Context, flowID: KiloFlowRpc.ID) {
     // Skipped placeholders have their own budget so frequent skips never evict real execution history.
     const keep = new Set<KiloFlowRpc.RunID>([
       ...(active ? [active] : []),
-      ...sorted.filter((run) => run.status !== "skipped").slice(0, retainedRuns).map((run) => run.id),
-      ...sorted.filter((run) => run.status === "skipped").slice(0, retainedRuns).map((run) => run.id),
+      ...sorted.filter((run) => run.status !== "skipped").slice(0, KiloFlowRpc.retainedRuns).map((run) => run.id),
+      ...sorted.filter((run) => run.status === "skipped").slice(0, KiloFlowRpc.retainedRuns).map((run) => run.id),
     ])
     const stale = stored.runs.filter((run) => !keep.has(run.id))
     yield* Effect.forEach(stale, (run) => ctx.storage.remove(runKey(run)), { discard: true })
@@ -1347,7 +1511,18 @@ function clearActive(ctx: Plugin.Context, run: Pick<KiloFlowRpc.Run, "flowID" | 
   })
 }
 
-function flowLock(runtime: Runtime, flowID: KiloFlowRpc.ID) {
+/** Creates holding or waiting on each Flow lock, so a failed create never drops a lock another create still needs. */
+const creating = new WeakMap<Semaphore.Semaphore, number>()
+
+/** Marks one create as done with `lock`; returns how many creates still use it. */
+function release(lock: Semaphore.Semaphore) {
+  const users = (creating.get(lock) ?? 1) - 1
+  if (users > 0) creating.set(lock, users)
+  if (users <= 0) creating.delete(lock)
+  return users
+}
+
+function flowLock(runtime: Pick<Runtime, "locks">, flowID: KiloFlowRpc.ID) {
   const current = runtime.locks.get(flowID)
   if (current) return current
   const lock = Semaphore.makeUnsafe(1)

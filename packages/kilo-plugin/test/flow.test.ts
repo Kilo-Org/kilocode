@@ -8,14 +8,18 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { Provider } from "@opencode/core/provider"
 import { Schedule } from "@opencode/core/schedule"
 import { Tool } from "@opencode/core/tool"
-import { assemble, flowPermissions, list, permissionInstructions, storedRecord } from "../src/flow"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { AbsolutePath } from "@opencode/schema/schema"
+import { assemble, create, flowPermissions, list, permissionInstructions, scheduled, storedRecord } from "../src/flow"
 import { KiloFlowPlugin } from "../src/flow"
 import { validatePermissions } from "../src/flow/permissions"
 import { KiloFlowRpc } from "@opencode/schema/kilocode/flow"
 import { Session } from "@opencode/schema/session"
 import { SessionMessage } from "@opencode/schema/session-message"
 import { FSUtil } from "@opencode/util/fs-util"
-import { DateTime, Effect, Layer, Schema } from "effect"
+import { DateTime, Deferred, Effect, Fiber, Layer, Schema, Semaphore } from "effect"
 import { testEffect } from "../../core/test/lib/effect"
 import { makePluginTestLayer, PluginTestLayer } from "../../core/test/plugin/fixture"
 
@@ -376,6 +380,246 @@ test("missing Sessions and malformed stored records are isolated", () => {
   })
   expect(storedRecord(`flow:v1:${legacy.id}`, JSON.stringify(legacy))).toEqual({ record: legacy })
 })
+
+it.live("drops the lock of a create that fails before its Flow exists", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Schedule.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const locks = new Map<KiloFlowRpc.ID, Semaphore.Semaphore>()
+    const runtime = { locks, changed: () => Effect.void }
+    const input = {
+      sourceSessionID: source.id,
+      name: "Lock check",
+      when: { every: "1 day" as const, tz: "UTC" },
+      prompt: "Check once",
+      worktree: "reuse" as const,
+      permissions: [],
+      requestID: "00112233445566778899aabbccddeeff",
+    }
+    const failing = { ...schedules, create: () => Effect.fail(new Schedule.InvalidError({ reason: "scheduler unavailable" })) }
+    const failure = yield* create(context, failing, input, source.projectID, runtime).pipe(Effect.flip)
+    expect(failure.message).toContain("scheduler unavailable")
+    expect(locks.size).toBe(0)
+    // A create that persists keeps its lock for the runs and edits that follow.
+    yield* create(context, schedules, input, source.projectID, runtime)
+    expect([...locks.keys()]).toEqual([KiloFlowRpc.ID.make(`flw_${input.requestID}`)])
+
+    // A failing create must not drop the lock another create with the same id is already queued on.
+    const raced = { ...input, requestID: "ffeeddccbbaa99887766554433221100" }
+    const entered = yield* Deferred.make<void>()
+    const gate = yield* Deferred.make<void>()
+    const blocked = {
+      ...schedules,
+      create: () =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.andThen(Effect.fail(new Schedule.InvalidError({ reason: "scheduler unavailable" }))),
+        ),
+    }
+    const first = yield* create(context, blocked, raced, source.projectID, runtime).pipe(Effect.flip, Effect.forkChild)
+    yield* Deferred.await(entered)
+    const lock = locks.get(KiloFlowRpc.ID.make(`flw_${raced.requestID}`))
+    const second = yield* create(context, schedules, raced, source.projectID, runtime).pipe(Effect.forkChild)
+    yield* Effect.yieldNow
+    yield* Deferred.succeed(gate, undefined)
+    expect((yield* Fiber.join(first)).message).toContain("scheduler unavailable")
+    yield* Fiber.join(second)
+    expect(locks.get(KiloFlowRpc.ID.make(`flw_${raced.requestID}`))).toBe(lock)
+  }),
+)
+
+it.live("keeps a Session the user forked from a run when deleting run Sessions", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const host = yield* PluginHost.make(plugins, "test")
+    // A fork copies its parent's metadata, so it names the Flow too; the listing marks it with `fork`.
+    const forked = new Set<Session.ID>()
+    const context = {
+      ...host,
+      session: {
+        ...host.session,
+        list: (input: Parameters<typeof host.session.list>[0]) =>
+          host.session.list(input).pipe(
+            Effect.map((output) => ({
+              ...output,
+              data: output.data.map((session) =>
+                forked.has(session.id) ? { ...session, fork: { sessionID: session.id, boundary: "end" as const } } : session,
+              ),
+            })),
+          ),
+      },
+    } as typeof host
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
+    const flowDelete = (yield* tools.list()).find((tool) => tool.id === "flow_delete")
+    if (!flowCreate || !flowDelete) return yield* Effect.die("Expected flow_create and flow_delete")
+    const model = { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") }
+    const source = yield* host.session.create({ title: "Flow source", agent: Agent.ID.make("build"), model })
+    const call = (id: string) => ({
+      sessionID: source.id,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make(id),
+      progress: () => Effect.void,
+    })
+    const created = yield* flowCreate.execute(
+      {
+        name: "Fork check",
+        when: { every: "1 day" as const, tz: "UTC" },
+        prompt: "Check",
+        worktree: "reuse" as const,
+        permissions: [],
+        requestID: "cccccccccccccccccccccccccccccccc",
+      },
+      call("call_create_fork"),
+    )
+    if (created.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const flowID = created.output.reference.flowID
+    const tagged = (title: string) =>
+      host.session.create({
+        title,
+        agent: Agent.ID.make("build"),
+        model,
+        metadata: { "kilocode.flow": { flowID, runID: KiloFlowRpc.RunID.create() } },
+      })
+    const runSession = yield* tagged("Run")
+    const fork = yield* tagged("Fork of the run")
+    forked.add(fork.id)
+    const deleted = yield* flowDelete.execute({ flowID, deleteSessions: true }, call("call_delete_fork"))
+    expect(deleted.output?.removedSessions).toEqual([runSession.id])
+    expect(
+      yield* host.session.get({ sessionID: fork.id }).pipe(
+        Effect.as(true),
+        Effect.catchCause(() => Effect.succeed(false)),
+      ),
+    ).toBeTrue()
+  }),
+)
+
+it.live("deletes a Flow's run Sessions only when asked, never its source Session", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
+    const flowDelete = (yield* tools.list()).find((tool) => tool.id === "flow_delete")
+    if (!flowCreate || !flowDelete) return yield* Effect.die("Expected flow_create and flow_delete")
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const call = (id: string) => ({
+      sessionID: source.id,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make(id),
+      progress: () => Effect.void,
+    })
+    const make = (name: string, requestID: string) =>
+      flowCreate.execute(
+        { name, when: { every: "1 day" as const, tz: "UTC" }, prompt: "Check", worktree: "reuse" as const, permissions: [], requestID },
+        call(`call_create_${requestID}`),
+      )
+    const runSession = (flowID: KiloFlowRpc.ID, title: string) =>
+      context.session.create({
+        title,
+        agent: Agent.ID.make("build"),
+        model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+        metadata: { "kilocode.flow": { flowID, runID: KiloFlowRpc.RunID.create() } },
+      })
+    const exists = (sessionID: Session.ID) =>
+      context.session.get({ sessionID }).pipe(
+        Effect.as(true),
+        Effect.catchCause(() => Effect.succeed(false)),
+      )
+
+    // A run Session whose record retention pruned is still found through its metadata; the source Session is kept.
+    const kept = yield* make("Keep sessions", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    if (kept.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const keptRun = yield* runSession(kept.output.reference.flowID, "Kept run")
+    yield* flowDelete.execute({ flowID: kept.output.reference.flowID }, call("call_delete_plain"))
+    expect(yield* exists(keptRun.id)).toBeTrue()
+
+    const removed = yield* make("Remove sessions", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    if (removed.output?.reference.type !== "managed") return yield* Effect.die("Expected a managed Flow")
+    const flowID = removed.output.reference.flowID
+    const first = yield* runSession(flowID, "Run 1")
+    const second = yield* runSession(flowID, "Run 2")
+    const other = yield* runSession(KiloFlowRpc.ID.make("flw_other"), "Other Flow's run")
+    const deleted = yield* flowDelete.execute({ flowID, deleteSessions: true }, call("call_delete_sessions"))
+    expect([...(deleted.output?.removedSessions ?? [])].toSorted()).toEqual([first.id, second.id].toSorted())
+    expect(deleted.output?.keptSessions).toEqual([])
+    expect(yield* exists(first.id)).toBeFalse()
+    expect(yield* exists(second.id)).toBeFalse()
+    expect(yield* exists(other.id)).toBeTrue()
+    expect(yield* exists(source.id)).toBeTrue()
+  }),
+)
+
+it.live("returns the existing Flow when a create is retried with the same request id", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    scheduleCounter = 0
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    yield* KiloFlowPlugin.effect(context)
+    const tools = yield* Tool.Service
+    const flowCreate = (yield* tools.list()).find((tool) => tool.id === "flow_create")
+    if (!flowCreate) return yield* Effect.die("Expected flow_create to be registered")
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const requestID = "0123456789abcdef0123456789abcdef"
+    const input = {
+      name: "Idempotent check",
+      when: { every: "1 day" as const, tz: "UTC" },
+      prompt: "Check the project once",
+      worktree: "reuse" as const,
+      permissions: [],
+      requestID,
+    }
+    const call = (id: string) => ({
+      sessionID: source.id,
+      agent: Agent.ID.make("build"),
+      messageID: SessionMessage.ID.create(),
+      id: Tool.CallID.make(id),
+      progress: () => Effect.void,
+    })
+    const first = yield* flowCreate.execute(input, call("call_idempotent_first"))
+    const second = yield* flowCreate.execute(input, call("call_idempotent_second"))
+    if (!first.output || first.output.reference.type !== "managed")
+      return yield* Effect.die("Expected the first create to return a managed Flow")
+    if (!second.output || second.output.reference.type !== "managed")
+      return yield* Effect.die("Expected the retry to return a managed Flow")
+    expect(second.output.reference.flowID).toBe(first.output.reference.flowID)
+    expect(second.output.reference.flowID).toBe(`flw_${requestID}`)
+    expect(second.output.reference.scheduleID).toBe(first.output.reference.scheduleID)
+    expect((yield* (yield* Schedule.Service).list()).length).toBe(1)
+    expect(backingSchedules.size).toBe(1)
+    // Reusing the key with other settings is a conflict that names the Flow, never a silent return or a duplicate.
+    const stored = yield* context.storage.get(`flow:v1:flw_${requestID}`)
+    const conflict = yield* flowCreate
+      .execute({ ...input, permissions: [{ action: "shell", resource: "npm test" }] }, call("call_idempotent_edited"))
+      .pipe(Effect.flip)
+    expect(conflict.message).toContain(`Flow flw_${requestID} was already created from this request with different settings`)
+    expect(yield* context.storage.get(`flow:v1:flw_${requestID}`)).toBe(stored)
+    expect(backingSchedules.size).toBe(1)
+  }),
+)
 
 it.live("registers and executes the managed Flow creation and run tools", () =>
   Effect.gen(function* () {
@@ -895,6 +1139,14 @@ recording.live("lists, updates, and deletes Flows through the agent tools, appro
       .pipe(Effect.flip)
     expect(invalid.message).toContain("must name one concrete capability")
     expect(approvals).toHaveLength(2)
+    // Removing a pattern is a change too: the user approves the narrower allowlist that will be stored.
+    const narrowed = yield* tool("flow_update").execute(
+      { flowID, permissions: [{ action: "shell", resource: "taskctl *" }] },
+      call(source.id, "call_narrow"),
+    )
+    expect(approvals).toHaveLength(3)
+    expect(approvals[2]).toMatchObject({ resources: ["read: *", "glob: *", "grep: *", "shell: taskctl *"] })
+    expect(narrowed.output?.permissions).not.toContainEqual({ action: "edit", resource: "reports/*" })
 
     // A Flow run Session has a deny-by-default allowlist, so it must not manage the project's other Flows.
     const run = yield* tool("flow_run").execute({ flowID }, call(source.id, "call_run"))
@@ -910,7 +1162,16 @@ recording.live("lists, updates, and deletes Flows through the agent tools, appro
     expect(refusedDelete.message).toContain("runs a Flow and cannot")
     const refusedRun = yield* tool("flow_run").execute({ flowID }, call(runSession, "call_run_run")).pipe(Effect.flip)
     expect(refusedRun.message).toContain("runs a Flow and cannot")
-    expect(approvals).toHaveLength(2)
+    const refusedCreate = yield* tool("flow_create")
+      .execute(
+        { name: "Escalate", when: { every: "1 day", tz: "UTC" }, prompt: "Do more", worktree: "reuse", permissions: [] },
+        call(runSession, "call_run_create"),
+      )
+      .pipe(Effect.flip)
+    expect(refusedCreate.message).toContain("runs a Flow and cannot")
+    const refusedList = yield* tool("flow_list").execute({}, call(runSession, "call_run_list")).pipe(Effect.flip)
+    expect(refusedList.message).toContain("runs a Flow and cannot")
+    expect(approvals).toHaveLength(3)
 
     const removed = yield* tool("flow_delete").execute({ flowID }, call(source.id, "call_delete"))
     expect(removed.output).toEqual({})
@@ -965,6 +1226,77 @@ it.live("pauses a scheduled Flow whose directory no longer exists instead of ret
       health: { status: "error", message: "Flow directory /definitely/missing/flow/directory no longer exists" },
       latestRun: { status: "failed", error: "Flow directory /definitely/missing/flow/directory no longer exists" },
     })
+  }),
+)
+
+it.live("retries an occurrence in the worktree it kept and removes only with force off", () =>
+  Effect.gen(function* () {
+    backingSchedules.clear()
+    const plugins = yield* Plugin.Service
+    const context = yield* PluginHost.make(plugins, "test")
+    const schedules = yield* Schedule.Service
+    const fs = yield* FSUtil.Service
+    const source = yield* context.session.create({
+      title: "Flow source",
+      agent: Agent.ID.make("build"),
+      model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("free") },
+    })
+    const scratch = mkdtempSync(path.join(tmpdir(), "flow-worktrees-"))
+    const created: string[] = []
+    const removals: { directory: string; force: boolean }[] = []
+    // The first removal is refused, as git refuses a worktree with changes; later ones succeed.
+    const worktree = {
+      ...context.worktree,
+      list: () => Effect.succeed([{ directory: AbsolutePath.make(source.location.directory) }]),
+      create: () =>
+        Effect.sync(() => {
+          const directory = mkdtempSync(path.join(scratch, "run-"))
+          created.push(directory)
+          return { directory: AbsolutePath.make(directory) }
+        }),
+      remove: (input: { directory: AbsolutePath; force: boolean }) => {
+        removals.push({ directory: input.directory, force: input.force })
+        return removals.length === 1 ? Effect.fail(new Error("worktree has changes")) : Effect.void
+      },
+    }
+    // Every start fails before its Session exists.
+    const session = { ...context.session, create: () => Effect.fail(new Error("model unavailable")) }
+    const flaky = { ...context, worktree, session } as typeof context
+    const backing = yield* schedules.create({
+      sessionID: source.id,
+      name: "Flow: Retry",
+      when: { type: "every", every: "1 hour" },
+      action: { type: "hook", prompt: "Retry" },
+    })
+    const retry = Schema.decodeUnknownSync(KiloFlowRpc.Record)({
+      ...record("flw_retry", backing.id),
+      context: {
+        directory: source.location.directory,
+        projectID: source.projectID,
+        sessionID: source.id,
+        model: source.model,
+        agent: source.agent,
+      },
+    })
+    yield* context.storage.set(`flow:v1:${retry.id}`, JSON.stringify(retry))
+    const runtime = { fs, locks: new Map(), changed: () => Effect.void }
+    const runKey = `flow-run:v1:${retry.id}:flr_retry_${DateTime.toEpochMillis(backing.nextDueAt!)}`
+    const stored = () =>
+      context.storage.get(runKey).pipe(Effect.map((value) => Schema.decodeUnknownSync(KiloFlowRpc.Run)(JSON.parse(String(value)))))
+
+    // A refused removal keeps the worktree recorded on the failed run.
+    expect((yield* scheduled(flaky, schedules, backing, retry.id, runtime).pipe(Effect.exit))._tag).toBe("Failure")
+    expect(created).toHaveLength(1)
+    expect(yield* stored()).toMatchObject({ status: "failed", worktreeDirectory: created[0] })
+
+    // The retry of the same occurrence reuses it instead of creating another, and removes it once the start fails.
+    expect((yield* scheduled(flaky, schedules, backing, retry.id, runtime).pipe(Effect.exit))._tag).toBe("Failure")
+    expect(created).toHaveLength(1)
+    expect(removals).toEqual([
+      { directory: created[0], force: false },
+      { directory: created[0], force: false },
+    ])
+    expect((yield* stored()).worktreeDirectory).toBeUndefined()
   }),
 )
 

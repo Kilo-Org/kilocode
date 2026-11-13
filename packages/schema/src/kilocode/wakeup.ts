@@ -26,6 +26,8 @@ export const Wakeup = Schema.Struct({
   recurring: Schema.Boolean,
   /** The 5-field cron expression of a recurring task. */
   schedule: optional(Schema.String),
+  /** The native schedule row that backs the task, so a schedule inventory can match its row to the task. */
+  scheduleID: optional(Schema.String),
 }).annotate({ identifier: "KiloWakeup" })
 export type Wakeup = typeof Wakeup.Type
 
@@ -54,6 +56,14 @@ export const Definition = Rpc.define({
     pending: {
       input: portable(Schema.Struct({ directory: Schema.String })),
       output: portable(Schema.Struct({ sessions: Schema.Array(Pending) })),
+    },
+    /**
+     * The prompts of the requested native schedule rows, keyed by schedule ID. Read-only: it never reconciles, removes
+     * or rewrites a record, so a client can read a prompt without retiring a paused or finished task.
+     */
+    prompts: {
+      input: portable(Schema.Struct({ scheduleIDs: Schema.Array(Schema.String) })),
+      output: portable(Schema.Struct({ prompts: Schema.Record(Schema.String, Schema.String) })),
     },
   },
   events: {

@@ -13,6 +13,12 @@ import { SessionID } from "../session-id.js"
 
 const portable = Schema.toStandardSchemaV1
 
+/** Session metadata key the flow plugin sets on every run Session. */
+export const sessionMetadata = "kilocode.flow"
+
+/** How many run records the flow plugin keeps for each of its two kinds, real runs and skipped placeholders. */
+export const retainedRuns = 20
+
 export const ID = Schema.String.check(Schema.isStartingWith("flw_")).pipe(
   Schema.brand("KiloFlow.ID"),
   Schema.annotate({ identifier: "KiloFlow.ID" }),
@@ -239,6 +245,12 @@ const CreateFields = {
   permissions: Schema.Array(CreatePermissionGrant).annotate({ description: permissionsDescription }),
   model: Model.Ref.pipe(optional).annotate({ description: "Model override. Defaults to the source Session model." }),
   agent: Agent.ID.pipe(optional).annotate({ description: "Agent override. Defaults to the source Session agent." }),
+  requestID: Schema.String.check(Schema.isPattern(/^[0-9a-f]{32}$/u))
+    .pipe(optional)
+    .annotate({
+      description:
+        "Opaque client idempotency key of 32 lowercase hex characters. A create retried with the same key and settings returns the Flow the first request created instead of creating a duplicate; the same key with different settings fails with `exists`. A new create uses a new key.",
+    }),
 }
 
 const UpdateFields = {
@@ -292,12 +304,19 @@ export const RemoveInput = Schema.Struct({
   deleteWorktrees: Schema.Boolean.pipe(optional).annotate({
     description: "Also delete the worktrees created by the Flow's retained runs. A worktree with changes is kept.",
   }),
+  deleteSessions: Schema.Boolean.pipe(optional).annotate({
+    description:
+      "Also delete the Flow's run Sessions, including runs whose records retention already pruned. The source Session is never deleted.",
+  }),
 }).annotate({ identifier: "KiloFlow.RemoveInput" })
 export type RemoveInput = typeof RemoveInput.Type
 
 export const RemoveOutput = Schema.Struct({
   removedWorktrees: Schema.Array(AbsolutePath).pipe(optional),
   keptWorktrees: Schema.Array(AbsolutePath).pipe(optional),
+  removedSessions: Schema.Array(SessionID).pipe(optional),
+  /** Run Sessions that could not be deleted; the Flow itself is still removed. */
+  keptSessions: Schema.Array(SessionID).pipe(optional),
 }).annotate({ identifier: "KiloFlow.RemoveOutput" })
 export type RemoveOutput = typeof RemoveOutput.Type
 
@@ -342,7 +361,8 @@ export const Definition = Rpc.define({
     create: {
       input: portable(CreateInput),
       output: portable(Info),
-      errors: { failed: portable(Schema.Undefined) },
+      // `exists`: the request id already created a Flow with different settings; data names that Flow.
+      errors: { failed: portable(Schema.Undefined), exists: portable(Schema.Struct({ flowID: ID })) },
       description:
         "Experimental: may change without compatibility guarantees. Creates a local managed Flow definition.",
     },
