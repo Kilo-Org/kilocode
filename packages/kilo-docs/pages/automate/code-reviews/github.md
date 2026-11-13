@@ -42,6 +42,10 @@ The GitHub App requests the following permissions:
    - **Use REVIEW.md** — Load repository-specific review guidance, including sub-agent usage, from the base branch
 4. Click **Save Configuration**
 
+{% callout type="note" %}
+If your account has compute billing enabled, the **Code Reviews** settings show the hourly compute rate and note that each review uses paid Cloud Agent compute. Compute is charged to your Kilo credits, separately from model usage. See [Cost](/docs/automate/code-reviews/overview#cost).
+{% /callout %}
+
 ### Step 3: Open a Pull Request
 
 Once configured, the Review Agent automatically runs when:

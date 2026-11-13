@@ -32,10 +32,11 @@ Before enabling Code Reviews:
 
 ## Cost
 
-- **Compute and review time are free during limited beta**
-  - Feedback is welcome in the Code Reviews beta Discord channel:
-    - [Kilo Discord](https://discord.gg/hZnd57qN)
-- **Kilo Code credits are still used** when the agent performs model reasoning during a review.
+- **Kilo Code credits are used** when the agent performs model reasoning during a review. Each review shows this separately as **Model cost**.
+- **Compute and review time are free during limited beta** for accounts without compute billing. Feedback is welcome in the Code Reviews beta Discord channel: [Kilo Discord](https://discord.gg/hZnd57qN).
+- **Accounts with compute billing enabled pay for compute.** Every code review runs on a [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent#cost), which is a paid resource. The Code Reviews settings show the hourly compute rate for code reviews, and compute is charged to your Kilo credits, separately from model usage. Charges accumulate across every attempt a review makes, including retries. Each review shows this separately as **Compute cost**.
+
+If Kilo cannot verify compute billing for the account, the settings show a **Cloud Agent pricing is unavailable** notice with **Retry** instead of the rate.
 
 ## Concurrent reviews
 

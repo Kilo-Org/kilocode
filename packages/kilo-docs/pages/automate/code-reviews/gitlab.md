@@ -39,6 +39,10 @@ Once connected, return here to configure the Review Agent.
    - **Use REVIEW.md** — Load repository-specific review guidance, including sub-agent usage, from the base branch
 4. Click **Save Configuration**
 
+{% callout type="note" %}
+If your account has compute billing enabled, the **Code Reviews** settings show the hourly compute rate and note that each review uses paid Cloud Agent compute. Compute is charged to your Kilo credits, separately from model usage. See [Cost](/docs/automate/code-reviews/overview#cost).
+{% /callout %}
+
 When you select repositories, Kilo **automatically creates webhooks** on each project.
 
 ### Step 3: Open a Merge Request

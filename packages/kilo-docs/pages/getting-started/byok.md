@@ -140,7 +140,7 @@ These rules apply to saved API keys. Eligible requests use a connected ChatGPT s
 
 - When you use the **Kilo Gateway** provider, Kilo checks if there's a BYOK key for the selected model's provider.
 - If a matching BYOK key exists and the request is not served by a connected subscription like ChatGPT, the request is routed using your key.
-- If the key is invalid, the request fails. It does not fall back to using Kilo's keys.
+- If a BYOK key's provider answers with an error, Kilo retries the request with your next BYOK key that serves the model, in route order. It never falls back to Kilo's own keys or credits: if every BYOK key fails, the request returns the last key's failure.
 - Subscription-based providers (such as the Z.ai Coding Plan or Kimi Code) only expose the models included in that plan. Select one of those models to route traffic through your subscription.
 
 ## Using BYOK in the Extensions and CLI
