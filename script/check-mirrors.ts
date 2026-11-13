@@ -3,9 +3,9 @@
  * Mirror registry check.
  *
  * A mirror is a Kilo-owned copy of an upstream file, registered in script/upstream/mirrors.json with
- * the upstream blob SHA last verified against the pinned release and the intent of Kilo's
- * differences. Upstream never edits Kilo-owned paths, so a copied upstream change merges cleanly at
- * its own path and the copy drifts silently.
+ * the upstream blob SHA last verified against the pinned release, why Kilo copies the file, and the
+ * invariants a re-merge must keep. Upstream never edits Kilo-owned paths, so a copied upstream change
+ * merges cleanly at its own path and the copy drifts silently.
  *
  * The default run checks only the registry structure: every `// kilo_mirror: <upstream path>` copy
  * has an entry, every entry has a marked copy, and the paths agree. That is the part a normal PR can
@@ -25,7 +25,7 @@
 
 import path from "node:path"
 import { repoRoot } from "./upstream/utils/baseline"
-import { drift, inspect, problems, REGISTRY, status } from "./upstream/utils/mirrors"
+import { drift, inspect, malformed, problems, REGISTRY, status } from "./upstream/utils/mirrors"
 import { pinned } from "./upstream/utils/upstream"
 
 const argv = process.argv.slice(2)
@@ -51,8 +51,8 @@ if (!(await Bun.file(path.resolve(root, registry)).exists())) {
   console.error(`check-mirrors: registry not found: ${registry}`)
   process.exit(1)
 }
-const { states, marked } = await inspect(root, registry, pin)
-const structure = problems(states, marked, registry)
+const { registry: entries, states, marked } = await inspect(root, registry, pin)
+const structure = [...malformed(entries, registry), ...problems(states, marked, registry)]
 const changed = pin ? drift(states, registry) : []
 
 if (argv.includes("--json")) {
@@ -92,7 +92,7 @@ for (const error of changed) console.error(error)
 console.error("")
 if (structure.length > 0)
   console.error(
-    "A copy is a mirror only when the registry lists it: add the entry with its upstream SHA and intent, and start the copy with `// kilo_mirror: <upstream path>`.",
+    "A copy is a mirror only when the registry lists it: add the entry with its upstream SHA, why and invariants, and start the copy with `// kilo_mirror: <upstream path>`.",
   )
 if (changed.length > 0)
   console.error(

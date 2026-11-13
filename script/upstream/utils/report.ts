@@ -59,8 +59,10 @@ export interface Analysis {
 export interface MirrorTouch {
   upstream: string
   mirror: string
-  /** The intent of Kilo's differences, from script/upstream/mirrors.json */
-  changes: string
+  /** Why Kilo copies the file instead of using an upstream extension point */
+  why: string
+  /** Rules a re-merge must keep */
+  invariants: string[]
 }
 
 export interface SyncReport {
@@ -172,7 +174,7 @@ export async function analyzeSync(
   const stat = (await $`git diff --shortstat ${mergeBase} ${target} -- ${config.harness}`.quiet().text()).trim()
   const mirrorsTouched = Object.entries((await readMirrors(await root())).mirrors)
     .filter(([upstream]) => touched.has(upstream))
-    .map(([upstream, entry]) => ({ upstream, mirror: entry.mirror, changes: entry.changes }))
+    .map(([upstream, entry]) => ({ upstream, mirror: entry.mirror, why: entry.why, invariants: entry.invariants }))
 
   return {
     base,
@@ -199,11 +201,6 @@ async function show(ref: string, file: string) {
 
 async function list(command: ReturnType<typeof $>) {
   return (await command.quiet().text()).split("\n").filter(Boolean)
-}
-
-// Intent text is free prose, so keep a pipe or newline from breaking the table row.
-function cell(value: string) {
-  return value.replaceAll("|", "\\|").replaceAll("\n", " ")
 }
 
 export function generateMarkdownReport(report: SyncReport): string {
@@ -255,15 +252,18 @@ export function generateMarkdownReport(report: SyncReport): string {
     "",
     "## Mirrors touched",
     "",
-    "Kilo-owned copies of upstream files that upstream changed in this sync. Re-merge each change into the copy, keep the intent in `script/upstream/mirrors.json`, then record the new upstream SHA there:",
+    "Kilo-owned copies of upstream files that upstream changed in this sync. Re-merge each change into the copy, keep the invariants in `script/upstream/mirrors.json`, then record the new upstream SHA there:",
     "",
     ...(a.mirrorsTouched.length === 0
       ? ["None."]
-      : [
-          "| Upstream | Mirror | Kilo's changes |",
-          "|---|---|---|",
-          ...a.mirrorsTouched.map((m) => `| \`${m.upstream}\` | \`${m.mirror}\` | ${cell(m.changes)} |`),
-        ]),
+      : a.mirrorsTouched.flatMap((m) => [
+          `### \`${m.upstream}\` → \`${m.mirror}\``,
+          "",
+          m.why,
+          "",
+          ...m.invariants.map((rule) => `- ${rule}`),
+          "",
+        ])),
     "",
     ...(report.notes.length === 0 ? [] : ["## Notes", "", ...report.notes.map((n) => `- ${n}`), ""]),
   ].join("\n")

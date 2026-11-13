@@ -448,7 +448,7 @@ async function mirrorDrift(sync: report.SyncReport, reportFile: string) {
   sync.notes.push("`check-mirrors.ts --drift` fails: re-merge the listed mirrors and record their new SHAs")
   await report.saveReport(sync, reportFile)
   logger.error("The sync is incomplete: upstream changed a file Kilo copies.")
-  logger.info("Re-merge each copy listed above with the recorded intent in script/upstream/mirrors.json,")
+  logger.info("Re-merge each copy listed above with the recorded `why` and `invariants` in script/upstream/mirrors.json,")
   logger.info("record the new upstream SHA there, then run `bun script/check-mirrors.ts --drift`.")
   logger.info(`Report saved to ${reportFile}`)
   process.exit(1)

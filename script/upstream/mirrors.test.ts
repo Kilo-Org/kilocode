@@ -8,7 +8,7 @@ const script = path.join(import.meta.dir, "..", "check-mirrors.ts")
 
 async function registry(
   r: Repo,
-  mirrors: Record<string, { mirror: string; sha: string; changes: string }>,
+  mirrors: Record<string, { mirror: string; sha: string; why: string; invariants: string[] }>,
   file = "script/upstream/mirrors.json",
 ) {
   await r.write(file, JSON.stringify({ mirrors }, null, 2))
@@ -27,7 +27,7 @@ test("a registered mirror matches the registry structure without a pin", async (
   const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
   await r.write("packages/kilo-probe/src/thing.ts", "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
   await registry(r, {
-    "packages/cli/src/thing.ts": { mirror: "packages/kilo-probe/src/thing.ts", sha, changes: "adds the kilo copy" },
+    "packages/cli/src/thing.ts": { mirror: "packages/kilo-probe/src/thing.ts", sha, why: "adds the kilo copy", invariants: ["keeps the kilo copy"] },
   })
   await r.commit("kilo")
 
@@ -49,7 +49,7 @@ test("the structure check ignores drift, and --drift fails until the SHA is reco
   const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
   const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
-  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, changes: "adds the kilo copy" } })
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, why: "adds the kilo copy", invariants: ["keeps the kilo copy"] } })
   await r.commit("kilo")
 
   await r.write("packages/cli/src/thing.ts", "export const upstream = 2\n")
@@ -67,7 +67,7 @@ test("the structure check ignores drift, and --drift fails until the SHA is reco
   expect((await run(r, "--pin", next)).code).toBe(1)
 
   const current = await r.git("rev-parse", `${next}:packages/cli/src/thing.ts`)
-  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: current, changes: "adds the kilo copy" } })
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: current, why: "adds the kilo copy", invariants: ["keeps the kilo copy"] } })
   expect((await run(r, "--drift", "--pin", next)).code).toBe(0)
 })
 
@@ -78,7 +78,7 @@ test("a custom registry path is named in the error and a missing registry fails"
   const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
   const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
-  await registry(r, { "packages/cli/src/other.ts": { mirror, sha, changes: "adds the kilo copy" } }, "custom/mirrors.json")
+  await registry(r, { "packages/cli/src/other.ts": { mirror, sha, why: "adds the kilo copy", invariants: ["keeps the kilo copy"] } }, "custom/mirrors.json")
   await r.commit("kilo")
 
   const unregistered = await run(r, "--registry", "custom/mirrors.json")
@@ -97,7 +97,7 @@ test("a CRLF copy marker is read", async () => {
   const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
   const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\r\nexport const kilo = 1\r\n")
-  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, changes: "adds the kilo copy" } })
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, why: "adds the kilo copy", invariants: ["keeps the kilo copy"] } })
   await r.commit("kilo")
 
   expect((await run(r)).code).toBe(0)
@@ -111,7 +111,7 @@ test("an unregistered marker, a marker mismatch and a missing copy fail without 
   const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
   await r.write("packages/kilo-probe/src/other.ts", "// kilo_mirror: packages/cli/src/other.ts\nexport const other = 1\n")
-  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, changes: "adds the kilo copy" } })
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, why: "adds the kilo copy", invariants: ["keeps the kilo copy"] } })
   await r.commit("kilo")
 
   const unregistered = await run(r)
@@ -136,13 +136,33 @@ test("a removed upstream file is drift, not structure", async () => {
   await r.commit("upstream")
   const mirror = "packages/kilo-probe/src/thing.ts"
   await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
-  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: "0".repeat(40), changes: "adds the kilo copy" } })
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha: "0".repeat(40), why: "adds the kilo copy", invariants: ["keeps the kilo copy"] } })
   await r.commit("kilo")
 
   expect((await run(r)).code).toBe(0)
   const removed = await run(r, "--drift", "--pin", before)
   expect(removed.code).toBe(1)
   expect(removed.output).toContain("no longer exists at the pin")
+})
+
+test("an entry needs a why and an invariant to guide a re-merge", async () => {
+  await using r = await repo()
+  await r.write("packages/cli/src/thing.ts", "export const upstream = 1\n")
+  const pin = await r.commit("upstream")
+  const sha = await r.git("rev-parse", `${pin}:packages/cli/src/thing.ts`)
+  const mirror = "packages/kilo-probe/src/thing.ts"
+  await r.write(mirror, "// kilo_mirror: packages/cli/src/thing.ts\nexport const kilo = 1\n")
+
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, why: "  ", invariants: ["a rule"] } })
+  await r.commit("empty why")
+  const why = await run(r)
+  expect(why.code).toBe(1)
+  expect(why.output).toContain("`why` is empty")
+
+  await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, why: "a reason", invariants: [] } })
+  const invariants = await run(r)
+  expect(invariants.code).toBe(1)
+  expect(invariants.output).toContain("`invariants` needs at least one non-empty rule")
 })
 
 test("analysis lists mirrors whose upstream file changed", async () => {
@@ -155,9 +175,10 @@ test("analysis lists mirrors whose upstream file changed", async () => {
   await r.write("src/a.ts", "export const a = 2\n")
   const target = await r.release("v2.0.27", "2026-10-12T00:00:00Z")
   await linkUpstream(r)
-  const changes = "adds | the\nkilo copy"
+  const why = "adds | the kilo copy"
+  const invariants = ["keeps the kilo copy", "resolves imports through @opencode/cli/*"]
   await registry(r, {
-    "src/a.ts": { mirror: "packages/kilo-probe/src/a.ts", sha: "0".repeat(40), changes },
+    "src/a.ts": { mirror: "packages/kilo-probe/src/a.ts", sha: "0".repeat(40), why, invariants },
   })
 
   const cwd = process.cwd()
@@ -165,7 +186,7 @@ test("analysis lists mirrors whose upstream file changed", async () => {
   try {
     const result = await analyzeSync("v2", target, base, defaultConfig)
     expect(result.mirrorsTouched).toEqual([
-      { upstream: "src/a.ts", mirror: "packages/kilo-probe/src/a.ts", changes },
+      { upstream: "src/a.ts", mirror: "packages/kilo-probe/src/a.ts", why, invariants },
     ])
 
     const report: SyncReport = {
@@ -179,7 +200,16 @@ test("analysis lists mirrors whose upstream file changed", async () => {
       lagAfter: { releases: 0, days: 0 },
       notes: [],
     }
-    expect(generateMarkdownReport(report)).toContain("adds \\| the kilo copy")
+    expect(generateMarkdownReport(report)).toContain(
+      [
+        "### `src/a.ts` → `packages/kilo-probe/src/a.ts`",
+        "",
+        why,
+        "",
+        `- ${invariants[0]}`,
+        `- ${invariants[1]}`,
+      ].join("\n"),
+    )
   } finally {
     process.chdir(cwd)
   }

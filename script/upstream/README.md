@@ -75,7 +75,7 @@ Reference worktrees (`.worktrees/upstream-sync/`): `upstream` (pristine release 
 
   Move the code in a follow-up PR: the sync PR contains only the merge and the conflict resolutions.
 - New upstream workflow: review it, add it to `active` or `removed` in `script/check-workflows.ts`, then `bun script/check-workflows.ts --fix`.
-- Mirror listed under "Mirrors touched": upstream changed a file that Kilo copies into a Kilo-owned path, so the merge took the upstream change and left the copy behind. Re-merge the change into the copy, keep the intent in `script/upstream/mirrors.json`, and record the new upstream SHA there. The sync stops until `bun script/check-mirrors.ts --drift` passes.
+- Mirror listed under "Mirrors touched": upstream changed a file that Kilo copies into a Kilo-owned path, so the merge took the upstream change and left the copy behind. Re-merge the change into the copy, keep the `why` and `invariants` in `script/upstream/mirrors.json` true, and record the new upstream SHA there. The sync stops until `bun script/check-mirrors.ts --drift` passes.
 - Conclude with `git commit --no-edit` to keep the sync message.
 - `.kilo/agent/upstream-merge.md` has the detailed resolution workflow.
 
@@ -106,7 +106,9 @@ CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`),
 
 ## Mirror checks
 
-A mirror is a Kilo-owned copy of an upstream file (the host entry, a replaced tool). Upstream never edits Kilo-owned paths, so a change to a copied upstream file merges cleanly at its own path and the copy drifts with no conflict and no report line. `script/upstream/mirrors.json` lists every mirror: the upstream path, the Kilo copy, the upstream blob SHA last verified against the pinned release, and the intent of Kilo's differences. Each copy starts with `// kilo_mirror: <upstream path>`.
+A mirror is a Kilo-owned copy of an upstream file (the host entry, a replaced tool). Upstream never edits Kilo-owned paths, so a change to a copied upstream file merges cleanly at its own path and the copy drifts with no conflict and no report line. `script/upstream/mirrors.json` lists every mirror: the upstream path, the Kilo copy, the upstream blob SHA last verified against the pinned release, `why` Kilo copies the file instead of using an upstream extension point, and the `invariants` a re-merge must keep. Each copy starts with `// kilo_mirror: <upstream path>`.
+
+The entry describes decisions, not an inventory: the upstream diff shows which lines differ, so an invariant earns its place by saying what must stay true after upstream reshapes the file (an import scheme, an ordering, a deliberate omission). A drifted mirror prints its `why` and `invariants`, and the sync rewrites them when the divergence set changes.
 
 `bun script/check-mirrors.ts [--json] [--registry <file>]` checks the registry structure and needs no pin: a registered copy is missing, its `kilo_mirror` marker is missing or names another path, or a copy declares a marker with no registry entry. CI runs it in the `shared upstream patches` job, because a PR that adds a copy can fix all of that.
 

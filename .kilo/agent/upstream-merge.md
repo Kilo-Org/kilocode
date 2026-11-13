@@ -263,9 +263,13 @@ be broken. Check every auto-merged file for:
 - **Registered mirrors.** The sync report lists each mirror whose upstream file
   changed under "Mirrors touched". Upstream's change lands at the upstream path
   while the Kilo copy (`// kilo_mirror:` in `packages/kilo-*`) stays behind, so
-  no conflict marks it. Re-merge the change into the copy with the recorded
-  intent in `script/upstream/mirrors.json` in view, then record the new
-  upstream SHA in that file.
+  no conflict marks it. For each one: read
+  `git diff <recorded sha>..<pin> -- <upstream path>`, re-apply the entry's
+  `invariants` to the new upstream shape, then record the new upstream SHA in
+  `script/upstream/mirrors.json`. If the divergence set changed, rewrite the
+  entry's `why` and `invariants` too: they are what the next sync merges by, so
+  they describe the decisions, not the lines. `bun script/check-mirrors.ts
+  --drift` must pass before you hand the branch off.
 
 ### 7. Verify each resolution before moving on
 
@@ -369,8 +373,9 @@ Structure the description so reviewers can skim:
   check from §2.5 for each Kilo patch.
 - **Shared files touched**: from the sync report, with the option (1 to 5) and
   the missing seam for each Kilo patch.
-- **Mirrors touched**: from the sync report, with the re-merged change and the
-  new upstream SHA recorded in `script/upstream/mirrors.json`.
+- **Mirrors touched**: from the sync report, with the re-merged change, any entry
+  whose `why` or `invariants` changed, and the new upstream SHA recorded in
+  `script/upstream/mirrors.json`.
 - **Notable auto-merged changes**: new columns, new helper files, renamed
   middleware - anything reviewers should eyeball even though git didn't flag
   it.

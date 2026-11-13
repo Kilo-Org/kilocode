@@ -4,7 +4,8 @@
  * A mirror is a Kilo-owned copy of an upstream file. Upstream never edits Kilo-owned paths, so an
  * upstream change to the copied file merges cleanly at its own path and the copy drifts with no
  * conflict and no report line. Each entry records the upstream blob SHA last verified against the
- * pinned release and the intent of Kilo's differences.
+ * pinned release, why Kilo copies the file instead of using an upstream extension point, and the
+ * invariants a re-merge must keep.
  *
  * The registry has two kinds of problem, and they belong to different people:
  * - Structure: a copy without an entry, an entry whose copy is missing, a marker naming another
@@ -22,8 +23,10 @@ export interface MirrorEntry {
   mirror: string
   /** Upstream blob SHA at the last verified pinned release */
   sha: string
-  /** The intent of Kilo's differences from the upstream file */
-  changes: string
+  /** Why Kilo copies the file instead of using an upstream extension point */
+  why: string
+  /** Rules a re-merge must keep: what Kilo's copy adds on top of upstream */
+  invariants: string[]
 }
 
 export interface Mirrors {
@@ -91,23 +94,34 @@ export async function marked(root: string): Promise<MarkedMirror[]> {
   return found.filter((item): item is MarkedMirror => item !== null)
 }
 
-/** Read the registry and the copies. Blob lookups happen only with a pin, so the structure check needs none. */
+/**
+ * Read the registry and the copies. Blob lookups happen only with a pin, so the structure check needs
+ * none. Incomplete entries are left to `malformed`, which reports them.
+ */
 export async function inspect(root: string, file = REGISTRY, pin?: string) {
   const registry = await readMirrors(root, file)
   const states = await Promise.all(
-    Object.entries(registry.mirrors).map(async ([upstream, entry]): Promise<MirrorState> => {
-      const handle = Bun.file(path.join(root, entry.mirror))
-      const exists = await handle.exists()
-      return {
-        upstream,
-        entry,
-        current: pin ? await blob(pin, upstream) : undefined,
-        exists,
-        declared: exists ? declared(await handle.slice(0, HEAD).text()) : null,
-      }
-    }),
+    Object.entries(registry.mirrors)
+      .filter(
+        ([, entry]) =>
+          typeof entry.mirror === "string" &&
+          typeof entry.sha === "string" &&
+          typeof entry.why === "string" &&
+          Array.isArray(entry.invariants),
+      )
+      .map(async ([upstream, entry]): Promise<MirrorState> => {
+        const handle = Bun.file(path.join(root, entry.mirror))
+        const exists = await handle.exists()
+        return {
+          upstream,
+          entry,
+          current: pin ? await blob(pin, upstream) : undefined,
+          exists,
+          declared: exists ? declared(await handle.slice(0, HEAD).text()) : null,
+        }
+      }),
   )
-  return { states, marked: await marked(root) }
+  return { registry, states, marked: await marked(root) }
 }
 
 export function status(state: MirrorState): "ok" | "changed" | "removed" | "missing" | "unmarked" {
@@ -116,6 +130,28 @@ export function status(state: MirrorState): "ok" | "changed" | "removed" | "miss
   if (!state.exists) return "missing"
   if (state.declared !== state.upstream) return "unmarked"
   return "ok"
+}
+
+/**
+ * Entries that cannot guide a re-merge: a missing path or SHA, an empty `why`, or no invariant. The
+ * prose is the point of the entry, so an empty one leaves the next sync with nothing to re-merge by.
+ */
+export function malformed(registry: Mirrors, file = REGISTRY): string[] {
+  return Object.entries(registry.mirrors).flatMap(([upstream, entry]) => {
+    const rules = Array.isArray(entry.invariants) ? entry.invariants : []
+    return [
+      ...(typeof entry.mirror === "string" && entry.mirror !== ""
+        ? []
+        : [`${upstream}: missing \`mirror\` in ${file}`]),
+      ...(typeof entry.sha === "string" && entry.sha !== "" ? [] : [`${upstream}: missing \`sha\` in ${file}`]),
+      ...(typeof entry.why === "string" && entry.why.trim() !== ""
+        ? []
+        : [`${upstream}: \`why\` is empty in ${file}. Say why Kilo copies the file instead of using an upstream extension point`]),
+      ...(rules.length > 0 && rules.every((rule) => typeof rule === "string" && rule.trim() !== "")
+        ? []
+        : [`${upstream}: \`invariants\` needs at least one non-empty rule a re-merge must keep, in ${file}`]),
+    ]
+  })
 }
 
 /** Problems the PR that adds or edits a copy can fix without knowing the pin. */
@@ -132,7 +168,10 @@ export function problems(states: MirrorState[], marked: MarkedMirror[], file = R
     }),
     ...marked
       .filter((item) => !registered.has(item.upstream))
-      .map((item) => `unregistered mirror: ${item.file} declares ${item.upstream}. Add it to ${file} with its SHA and intent`),
+      .map(
+        (item) =>
+          `unregistered mirror: ${item.file} declares ${item.upstream}. Add it to ${file} with its SHA, why and invariants`,
+      ),
     ...marked.flatMap((item) => {
       const mirror = registered.get(item.upstream)
       if (!mirror || mirror === item.file) return []
@@ -148,7 +187,12 @@ export function drift(states: MirrorState[], file = REGISTRY): string[] {
       return [`${state.upstream} no longer exists at the pin. Remove ${state.entry.mirror} or update ${file}`]
     if (state.current === undefined || state.current === state.entry.sha) return []
     return [
-      `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror} with this intent: ${state.entry.changes} Then record the new SHA in ${file}`,
+      [
+        `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror}.`,
+        `  why: ${state.entry.why}`,
+        ...state.entry.invariants.map((rule) => `  keep: ${rule}`),
+        `  then record the new SHA in ${file}`,
+      ].join("\n"),
     ]
   })
 }
