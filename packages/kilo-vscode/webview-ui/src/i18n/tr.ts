@@ -815,6 +815,11 @@ export const dict = {
   "context.usage.sessionCost": "Oturum maliyeti",
   "context.usage.olderSessions": "{{count}} eski oturum",
   "context.stats.thisSession": "Bu oturum",
+  "context.limits.missing.title": "Model sınırları yapılandırılmamış",
+  "context.limits.missing.context":
+    "Bu model için bağlam penceresi ayarlanmadığından bağlam kullanım yüzdesi gösterilemez ve otomatik sıkıştırma çalışmayabilir. Büyük oturumlarda manuel sıkıştırma da başarısız olabilir. Sağlayıcı yapılandırmasında bu model için limit.context değerini ayarlayın.",
+  "context.limits.missing.both":
+    "Bu model için bağlam penceresi veya maksimum çıktı sınırı ayarlanmamış. Otomatik sıkıştırma çalışmayabilir ve bağlam kullanım yüzdesi gösterilemez. Büyük oturumlarda manuel sıkıştırma da başarısız olabilir. Sağlayıcı yapılandırmasında bu model için limit.context ve limit.output değerlerini ayarlayın.",
 
   "time.today": "Bugün",
   "time.yesterday": "Dün",

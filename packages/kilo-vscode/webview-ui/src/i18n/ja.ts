@@ -821,6 +821,11 @@ export const dict = {
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",
   "context.stats.thisSession": "このセッション",
+  "context.limits.missing.title": "モデルの制限が設定されていません",
+  "context.limits.missing.context":
+    "このモデルにはコンテキストウィンドウが設定されていないため、コンテキスト使用率を表示できず、自動圧縮が実行されない可能性があります。大規模なセッションでは手動圧縮も失敗することがあります。プロバイダー設定でこのモデルの limit.context を設定してください。",
+  "context.limits.missing.both":
+    "このモデルにはコンテキストウィンドウも最大出力制限も設定されていません。自動圧縮が実行されない可能性があり、コンテキスト使用率も表示できません。大規模なセッションでは手動圧縮も失敗することがあります。プロバイダー設定でこのモデルの limit.context と limit.output を設定してください。",
 
   "time.today": "今日",
   "time.yesterday": "昨日",
