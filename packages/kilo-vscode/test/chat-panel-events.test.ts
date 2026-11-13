@@ -48,11 +48,15 @@ const chunks = (sent: ToWebview[]) =>
 
 let upstream: ReturnType<typeof Bun.serve> | undefined
 let previousSidebarSession: string | undefined
+let previousTrust: PropertyDescriptor | undefined
 
 afterEach(() => {
   upstream?.stop(true)
   upstream = undefined
   setSidebarSession(previousSidebarSession)
+  if (previousTrust) Object.defineProperty(vscode.workspace, "isTrusted", previousTrust)
+  else delete (vscode.workspace as { isTrusted?: boolean }).isTrusted
+  previousTrust = undefined
 })
 
 describe("chat panel event streams", () => {
@@ -122,5 +126,33 @@ describe("chat panel event streams", () => {
     // A tab without a session does not inherit the sidebar's session.
     expect(linkSession({ session: () => undefined })).toBeUndefined()
     expect(linkSession()).toBe("ses_sidebar")
+  })
+
+  test("a chat tab opens a web link for the session it shows", () => {
+    previousSidebarSession = sidebarSession()
+    setSidebarSession("ses_sidebar")
+    previousTrust = Object.getOwnPropertyDescriptor(vscode.workspace, "isTrusted")
+    Object.defineProperty(vscode.workspace, "isTrusted", { configurable: true, value: true })
+    const opened: Array<[string, string]> = []
+    const web = fakeWebview()
+    const surface = wire({
+      context,
+      server: { get: () => Promise.reject(new Error("no server in this test")) } as unknown as Manager,
+      directory: "/repo",
+      webview: web.webview as never,
+      view: "chat",
+      surface: "editor",
+      sessionID: "ses_a",
+      session: () => "ses_tab",
+      openBrowser: (session, url) => {
+        opened.push([session, url])
+        return true
+      },
+    })
+
+    web.receive({ type: "open", url: "https://kilo.ai/docs" })
+    surface.dispose()
+    // The sidebar shows another session, so this only passes when wire() uses the tab's session.
+    expect(opened).toEqual([["ses_tab", "https://kilo.ai/docs"]])
   })
 })
