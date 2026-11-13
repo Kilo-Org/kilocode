@@ -1145,6 +1145,34 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
+  // Unlike plusButtonClicked, this does not carry the current prompt into the new chat.
+  const startChat = (message: Extract<ExtensionMessage, { type: "newChatWithText" }>) => {
+    const before = draftKey()
+    const id = tabs?.add()
+    if (!id) session.clearCurrentSession()
+    const key = id ? scopeDraftKey(boxKey(), pendingDraftKey(id) ?? "new") : draftKey()
+    // Leave the text in the prompt box when sending is not possible, as handleSend would
+    // otherwise run a local slash command and clear it.
+    const ready = () => message.send && !isDisabled() && !props.blocked?.()
+    // Without tabs the blank chat shares the current draft, so keep what is typed there.
+    // Sending it would also send that draft, so it is only sent when the blank chat is empty.
+    if (key === before) {
+      const empty =
+        !text().trim() &&
+        reviewComments().length === 0 &&
+        imageAttach.images().length === 0 &&
+        browsers().length === 0 &&
+        contexts().length === 0
+      appendBox({ type: "appendChatBoxMessage", text: message.text })
+      if (empty && ready()) void handleSend()
+      return
+    }
+    saveDraft(key, message.text, [], [], 0, [], [], [])
+    restoreBox({ type: "setChatBoxMessage", text: message.text, images: [], review: [], browser: [] }, key)
+    textareaRef?.focus()
+    if (ready()) void handleSend()
+  }
+
   const appendContext = (message: Extract<ExtensionMessage, { type: "appendChatContext" }>, key = draftKey()) => {
     if (defer(key, (key) => appendContext(message, key))) return
     if (key !== draftKey()) {
@@ -1230,6 +1258,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "appendChatBoxMessage") appendBox(message)
+
+    if (message.type === "newChatWithText") startChat(message)
 
     if (message.type === "appendChatContext") appendContext(message)
 
