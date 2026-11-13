@@ -57,6 +57,15 @@ describe("Telemetry", () => {
     expect(backend.batches[0]!.properties).toMatchObject({ appName: "kilo-code", platform: "vscode", suggestionLength: 3 })
   })
 
+  test("every event is marked as v2, and a caller cannot change the mark", async () => {
+    using backend = posthog()
+    await start(backend.url)
+    Telemetry.trackCliStart()
+    Telemetry.track("Task Created", { kiloLine: "v1" })
+    await Telemetry.shutdown(2000)
+    expect(backend.batches.map((item) => item.properties.kiloLine)).toEqual(["v2", "v2"])
+  })
+
   test("trackToolUsed sends Tool Used event with tool name and sessionId", async () => {
     using backend = posthog()
     await start(backend.url)

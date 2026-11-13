@@ -143,6 +143,7 @@ test(
         os_name: process.platform,
         os_arch: process.arch,
         appVersion: expect.any(String),
+        kiloLine: "v2",
       },
     })
   },

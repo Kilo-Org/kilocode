@@ -134,12 +134,16 @@ export async function updateIdentity(token: string | null, accountId?: string | 
   if (email && previousId && email !== previousId) Client.alias(email, previousId)
 }
 
+// v2 shares the PostHog project and the identities with v1, so every event names the line it comes from.
+const LINE = "v2"
+
 export function track(event: string, properties?: Record<string, unknown>) {
   const org = Identity.getOrganizationId()
   const props = state.props
   Client.capture(event, {
     ...props,
     ...properties,
+    kiloLine: LINE,
     ...(Identity.getUserId() &&
       (event === TelemetryEvent.CLI_START || event === TelemetryEvent.AUTH_SUCCESS) && {
         $set: {
