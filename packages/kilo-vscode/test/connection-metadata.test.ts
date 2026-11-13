@@ -20,11 +20,8 @@ const { createConnectionMetadata } = await import("../webview-ui/src/v2/connecti
 
 const unavailable = { type: "rpc.unavailable", message: "RPC is unavailable: kilocode.handshake" }
 
-async function until(check: () => boolean, attempts = 200) {
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    if (check()) return
-    await Bun.sleep(10)
-  }
+async function until(check: () => boolean, timeout = 2_000) {
+  for (const deadline = Date.now() + timeout; Date.now() < deadline; await Bun.sleep(10)) if (check()) return
   throw new Error("condition not reached")
 }
 
@@ -49,12 +46,12 @@ function make(input: { list: (call: number) => Promise<unknown[]>; kilo: boolean
       },
     }),
   } as unknown as OpenCodeClient
-  const [status] = createSignal("connected")
+  const [status, setStatus] = createSignal("connected")
   const connection = { status } as unknown as Parameters<typeof createConnectionMetadata>[0]["connection"]
   return createRoot((dispose) => {
     const metadata = createConnectionMetadata({ api, connection, subscribe: () => () => {}, chat: false })
     metadata.attach("/workspace")
-    return { calls, metadata, dispose }
+    return { calls, metadata, dispose, setStatus }
   })
 }
 
@@ -96,6 +93,37 @@ describe("createConnectionMetadata handshake", () => {
     }
   })
 
+  test("a connection that drops during the wait is not reported as a server that is not Kilo", async () => {
+    const state = { online: true }
+    const scope = make({
+      kilo: true,
+      list: async () => {
+        // A dropped connection fails every request.
+        if (!state.online) throw new TypeError("fetch failed")
+        return []
+      },
+    })
+    try {
+      await until(() => scope.calls.length >= 2)
+      state.online = false
+      scope.setStatus("reconnecting")
+      await Bun.sleep(400)
+      expect(scope.metadata.handshake()).toBeUndefined()
+      expect(scope.calls).not.toContain("handshake")
+      const settled = scope.calls.length
+      await Bun.sleep(300)
+      expect(scope.calls).toHaveLength(settled)
+
+      // The read starts again with the connection.
+      state.online = true
+      scope.setStatus("connected")
+      await until(() => scope.calls.length > settled)
+      expect(scope.metadata.handshake()).toBeUndefined()
+    } finally {
+      scope.dispose()
+    }
+  })
+
   test("stops waiting when its owner is disposed", async () => {
     const scope = make({ kilo: true, list: async () => [] })
     await until(() => scope.calls.length >= 2)
@@ -124,7 +152,7 @@ describe("createConnectionMetadata handshake", () => {
       return { metadata, dispose }
     })
     try {
-      await until(() => scope.metadata.version() !== "" || scope.metadata.handshake() !== undefined, 3_000)
+      await until(() => scope.metadata.version() !== "" || scope.metadata.handshake() !== undefined, 30_000)
       expect(scope.metadata.handshake()).toBeUndefined()
       expect(scope.metadata.version()).not.toBe("")
     } finally {

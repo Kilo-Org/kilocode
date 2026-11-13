@@ -93,7 +93,12 @@ export function createConnectionMetadata(input: {
     on(
       () => [input.connection.status(), directory()] as const,
       ([status, dir]) => {
-        if (status !== "connected" || !dir) return
+        if (status !== "connected" || !dir) {
+          // A request that fails on a dropped connection says nothing about the server: end the running read. The
+          // read starts again when the connection is back.
+          state.handshake++
+          return
+        }
         readHandshake(dir)
       },
     ),
