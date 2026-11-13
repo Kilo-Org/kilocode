@@ -17,6 +17,10 @@ This usage overview includes all of your usage of the Kilo Gateway provider. It 
 Sign in with ChatGPT requests routed through Kilo are included. Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and token totals. Cost is **$0** for every Sign in with ChatGPT request.
 {% /callout %}
 
+## Analytics API
+
+You can also use the Analytics API to retrieve your organization's usage data programmatically, including costs, requests, and token usage. Organization-wide data is available to Owners, Admins, and Billing Managers. See the [API reference](https://kilocode.ai/api/docs) for authentication, parameters, and available endpoints.
+
 ## Summary Metrics
 
 The dashboard displays five key metrics at the top:
