@@ -680,6 +680,26 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.5] - 2026-11-13
+
+### Added
+- feat(jetbrains): add unified Agent Manager sections by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16100
+- feat(jetbrains): add dictation input by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16138
+
+### Fixed
+- fix(jetbrains): fix freezes and crashes reported from IDE logs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16103
+- fix(jetbrains): keep Agent Manager branch state fresh by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16096
+
+### Changed
+- release(jetbrains): v7.2.1-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16079
+- docs: auto-sync gateway with merged PRs (through 2026-11-12) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15725
+- docs: auto-sync cloud-web with merged PRs (through 2026-11-12) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/15726
+- [AISAGE-789] fix(cli): settle Kilo charge from usage.cost, upstream cost only for BYOK by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/16098
+- [AISAGE-706] fix(kilo-gateway): prefer reasoning_options over legacy variants by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/16097
+- [AISAGE-1089] feat(autocomplete): retire Mercury models and make Codestral the default by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/16080
+- docs: auto-sync gateway with merged PRs (through 2026-11-13) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/16141
+
+
 ## [7.2.1-rc.3] - 2026-11-11
 
 ### Added
