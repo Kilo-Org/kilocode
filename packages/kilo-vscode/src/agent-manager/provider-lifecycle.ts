@@ -411,7 +411,14 @@ export async function promoteLifecycleSession(
       return undefined
     })
   if (!client) {
-    host.post({ type: "error", message: "Failed to move the session into the new worktree" })
+    // Ends the setup state the worktree creation started, so the new worktree does not stay "setting up".
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to move the session into the new worktree",
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
     host.push()
     return null
   }

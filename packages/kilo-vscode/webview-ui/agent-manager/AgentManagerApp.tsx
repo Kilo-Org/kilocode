@@ -50,8 +50,8 @@ import {
   isKnownRootSession,
   adjacentHint,
   focusChatSearch,
+  directoryOwner,
   sendFiling,
-  sessionOwner,
   showsSession,
 } from "./navigate"
 import { useBridge } from "./v2/vscode"
@@ -879,11 +879,20 @@ const AgentManagerContent: Component = () => {
     directory: () => directories.root(currentProjectId()) ?? "",
   })
   // The directory a session runs in decides its worktree. Both the live stores and the host catalog carry it, so a
-  // session that is not loaded in a store still resolves to the worktree that owns it.
-  const ownerOf = (sid: string) => {
+  // session that is not loaded in a store still resolves to the worktree that owns it. Built once per update, so
+  // resolving the owner of every tab stays linear.
+  const locations = createMemo(() => {
     const pid = currentProjectId()
-    const catalog = (pid ? projectSessionsLive()[pid] : undefined) ?? []
-    return sessionOwner(sid, [...sessions.sessions(), ...catalog], worktrees(), directories.root(pid))
+    const result = new Map<string, string>()
+    for (const session of sessions.sessions()) result.set(session.id, session.location.directory)
+    for (const session of (pid ? projectSessionsLive()[pid] : undefined) ?? [])
+      if (!result.has(session.id)) result.set(session.id, session.location.directory)
+    return result
+  })
+  const ownerOf = (sid: string) => {
+    const directory = locations().get(sid)
+    if (directory === undefined) return undefined
+    return directoryOwner(directory, worktrees(), directories.root(currentProjectId()))
   }
   // The host may not have stamped a freshly created worktree session yet, but its tab is already in the order.
   const sessionsForWorktree = (id: string) => {

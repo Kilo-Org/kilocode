@@ -427,7 +427,7 @@ describe("Agent Manager worktree lifecycle", () => {
     await promoteLifecycleSession(ctx, host, "promoted")
 
     expect(state.getSession("promoted")?.worktreeId).toBeNull()
-    expect(calls).toContain("post:error")
+    expect(calls).toContain("post:agentManager.worktreeSetup")
     expect(host.notifyReady).not.toHaveBeenCalled()
   })
 

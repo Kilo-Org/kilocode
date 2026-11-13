@@ -39,9 +39,18 @@ export function sessionOwner(
 ): string | null | undefined {
   const session = sessions.find((item) => item.id === id)
   if (!session) return undefined
-  const worktree = directoryWorktree(session.location.directory, worktrees)
+  return directoryOwner(session.location.directory, worktrees, root)
+}
+
+/** The worktree that owns `directory`, `null` for the project root, or undefined for a directory it cannot place. */
+export function directoryOwner(
+  directory: string,
+  worktrees: { id: string; path: string }[],
+  root: string | undefined,
+): string | null | undefined {
+  const worktree = directoryWorktree(directory, worktrees)
   if (worktree) return worktree
-  return root !== undefined && trimPath(root) === trimPath(session.location.directory) ? null : undefined
+  return root !== undefined && trimPath(root) === trimPath(directory) ? null : undefined
 }
 
 /** The worktree whose path is `directory`, or `null` when no worktree has it (the project root). */
