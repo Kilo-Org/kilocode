@@ -19,7 +19,7 @@ Sign in with ChatGPT requests routed through Kilo are included. Filter **Usage â
 
 ## Analytics API
 
-You can also use the Analytics API to retrieve your organization's usage data programmatically, including costs, requests, and token usage. Organization-wide data is available to Owners, Admins, and Billing Managers. See the [API reference](https://kilocode.ai/api/docs) for authentication, parameters, and available endpoints.
+You can also use the Analytics API to retrieve your organization's usage data programmatically, including costs, requests, and token usage. Organization-wide data is available to Owners, Admins, and Billing Managers. See the [API reference](https://app.kilo.ai/api/docs) for authentication, parameters, and available endpoints.
 
 ## Summary Metrics
 
