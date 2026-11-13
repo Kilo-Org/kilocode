@@ -2,6 +2,7 @@ export * as KiloConfigPolicy from "./policy.js"
 
 import { Config } from "@opencode/schema/config"
 import { ConfigCommand } from "@opencode/schema/config/command"
+import { ConfigExperimental } from "@opencode/schema/config/experimental"
 import { ConfigModel } from "@opencode/schema/config/model"
 import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import { KiloPagesRpc } from "@opencode/schema/kilocode/pages"
@@ -33,6 +34,15 @@ const Retention = Schema.Struct({
 })
 
 const ReasoningDisplay = Schema.Literals(["expanded", "preview", "headline"])
+
+// The Kilo `experimental` keys next to the upstream ones. Upstream normalization refuses `openTelemetry` as a legacy
+// setting, so `normalize` below takes it out before upstream sees it and `parse` decodes it from the raw document.
+export class Experimental extends ConfigExperimental.Info.extend<Experimental>("KiloConfigPolicy.Experimental")({
+  openTelemetry: Schema.Boolean.pipe(optional).annotate({
+    description:
+      "Send product telemetry to Kilo once the client has recorded consent (default: true). false turns it off, also when a client consents",
+  }),
+}) {}
 
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
@@ -108,6 +118,7 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   // kilo_port(indexing:fe813c19ebaf) kilo_port(indexing:987c9e6c9e85) kilo_port(indexing:854fbb30ce6c)
   indexing: KiloIndexingRpc.Config.pipe(optional),
   pages: KiloPagesRpc.Config.pipe(optional),
+  experimental: Experimental.pipe(optional),
 }) {}
 
 // The recognized top-level keys: the full v2 schema without the derived `workflow_models` (built from model-only
@@ -203,6 +214,8 @@ export function normalize(input: unknown) {
   if (!record(input)) return input
   return Object.fromEntries(
     Object.entries(input).map(([key, value]) => {
+      if (key === "experimental" && record(value))
+        return [key, Object.fromEntries(Object.entries(value).filter(([name]) => name !== "openTelemetry"))]
       if ((key !== "command" && key !== "commands") || !record(value)) return [key, value]
       return [key, Object.fromEntries(Object.entries(value).filter(([, command]) => !modelOnly(command)))]
     }),
@@ -288,6 +301,7 @@ export function parse(
           ...compactionSettings(input, normalized, report),
           ...displaySettings(input, report),
           ...decodedSettings,
+          ...experimentalSettings(input, normalized, report),
           workflow_models: models && Object.keys(models).length ? models : undefined,
         }).filter(([, value]) => value !== undefined),
       ),
@@ -322,6 +336,25 @@ function compactionSettings(
   const reserved = 100 - percent
   // The buffer percentage accepts 1 to 99, so a fractional limit above 99 keeps the smallest valid reserve instead.
   return { compaction: { ...native, buffer: reserved === 0 ? 0 : reserved < 1 ? "1%" : `${reserved}%` } }
+}
+
+/** The Kilo `experimental` keys, added to the upstream ones that normalization already decoded. */
+function experimentalSettings(
+  input: unknown,
+  normalized: Readonly<Record<string, unknown>>,
+  report?: (diagnostic: ConfigNormalize.Diagnostic) => void,
+) {
+  if (!record(input) || !record(input.experimental) || !("openTelemetry" in input.experimental)) return {}
+  const value = input.experimental.openTelemetry
+  if (typeof value !== "boolean") {
+    report?.({
+      path: ["experimental", "openTelemetry"],
+      kind: "invalid",
+      message: "ignored invalid experimental.openTelemetry; expected a boolean (true or false)",
+    })
+    return {}
+  }
+  return { experimental: { ...(record(normalized.experimental) ? normalized.experimental : {}), openTelemetry: value } }
 }
 
 /** The display layouts, ignoring an invalid value with a diagnostic instead of failing the whole document. */
@@ -388,6 +421,16 @@ export function fromEntries(entries: readonly Config.Entry[]) {
  */
 export function privacyMode(entries: readonly Config.Entry[]) {
   return entries.some((entry) => entry.type === "document" && entry.info instanceof Info && entry.info.privacy_mode === true)
+}
+
+/**
+ * Whether the effective entries allow product telemetry (`experimental.openTelemetry`, default true). Any document that
+ * sets false turns it off: a project `true` cannot turn back on what the user turned off in global config.
+ */
+export function openTelemetry(entries: readonly Config.Entry[]) {
+  return !entries.some(
+    (entry) => entry.type === "document" && entry.info instanceof Info && entry.info.experimental?.openTelemetry === false,
+  )
 }
 
 /** The custom commit message prompt of the effective entries: the last document that sets one wins, and empty means none. */

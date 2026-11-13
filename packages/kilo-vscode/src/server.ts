@@ -114,12 +114,16 @@ export function settingsEnvironment(values: {
   claudeCodeCompat: boolean
   extraCaCerts: string
   editor: string
+  machine?: string
 }): Record<string, string> {
   const extraCaCerts = values.extraCaCerts.trim()
   return {
     // v1 `services/cli-backend/server-manager.ts` reported the editor as `${vscode.env.appName} ${vscode.version}`,
     // which the Gateway stores as `X-KILOCODE-EDITORNAME`.
     KILOCODE_EDITOR_NAME: values.editor,
+    // The VS Code machine ID is the server's machine ID: the anonymous telemetry identity and the Gateway's
+    // `X-KILOCODE-MACHINEID`.
+    ...(values.machine ? { KILO_MACHINE_ID: values.machine } : {}),
     ...(values.claudeCodeCompat ? {} : { KILO_DISABLE_CLAUDE_CODE: "true" }),
     ...(extraCaCerts.length > 0 ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
   }

@@ -243,3 +243,42 @@ test("an invalid compaction threshold is ignored with a diagnostic and keeps the
   ])
   expect(KiloConfigPolicy.parse({ compaction: { threshold_percent: null } }, {})?.compaction?.buffer).toBeUndefined()
 })
+
+test("experimental.openTelemetry is a Kilo setting next to the upstream experimental keys", () => {
+  const input = { experimental: { openTelemetry: false, codemode_vm: true }, shell: "valid" }
+  const normalized = ConfigNormalize.normalize(KiloConfigPolicy.normalize(input))
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  // Upstream refuses the legacy key; the Kilo normalization takes it out first, so the reader reports nothing.
+  expect(normalized.diagnostics).toEqual([])
+  expect(ConfigNormalize.normalize(input).diagnostics.map((item) => item.path)).toContainEqual(["experimental", "openTelemetry"])
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
+  expect(diagnostics).toEqual([])
+  expect(parsed?.experimental?.openTelemetry).toBe(false)
+  expect(parsed?.experimental?.codemode_vm).toBe(true)
+  expect(KiloConfigPolicy.parse({ shell: "valid" }, { shell: "valid" })?.experimental?.openTelemetry).toBeUndefined()
+})
+
+test.each(["false", 0, null, {}])("an invalid experimental.openTelemetry %p is reported and not applied", (value) => {
+  const input = { experimental: { openTelemetry: value } }
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, {}, (diagnostic) => diagnostics.push(diagnostic))
+  expect(parsed?.experimental?.openTelemetry).toBeUndefined()
+  expect(diagnostics).toEqual([
+    { kind: "invalid", path: ["experimental", "openTelemetry"], message: expect.stringContaining("expected a boolean") },
+  ])
+})
+
+test("telemetry is allowed by default and off when any effective document sets openTelemetry to false", () => {
+  const document = (openTelemetry?: boolean) =>
+    new Document({
+      type: "document",
+      info: new KiloConfigPolicy.Info({ experimental: new KiloConfigPolicy.Experimental({ openTelemetry }) }),
+    })
+  expect(KiloConfigPolicy.openTelemetry([])).toBe(true)
+  expect(KiloConfigPolicy.openTelemetry([document(), document(true)])).toBe(true)
+  // global false, project true: the explicit false still reaches the engine
+  expect(KiloConfigPolicy.openTelemetry([document(false), document(true)])).toBe(false)
+  expect(KiloConfigPolicy.openTelemetry([document(true), document(false)])).toBe(false)
+  expect(KiloConfigPolicy.openTelemetry([new Document({ type: "document", info: new Info({}) })])).toBe(true)
+})

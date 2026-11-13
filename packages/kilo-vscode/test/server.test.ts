@@ -126,6 +126,13 @@ describe("settingsEnvironment", () => {
     })
   })
 
+  test("passes the VS Code machine ID as the server's machine ID", () => {
+    expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor, machine: "vscode-machine" })).toEqual({
+      KILOCODE_EDITOR_NAME: editor,
+      KILO_MACHINE_ID: "vscode-machine",
+    })
+  })
+
   test("leaves Claude Code loading on when compatibility is enabled", () => {
     expect(settingsEnvironment({ claudeCodeCompat: true, extraCaCerts: "", editor })).toEqual({
       KILOCODE_EDITOR_NAME: editor,

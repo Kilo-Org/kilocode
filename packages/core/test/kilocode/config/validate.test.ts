@@ -24,6 +24,13 @@ describe("KiloConfigValidate.check", () => {
     expect(KiloConfigValidate.check(`{ "shell": "sh" }`, [{ path: ["privacy_mode"], value: true }])).toEqual([])
   })
 
+  test("accepts experimental.openTelemetry, which upstream normalization refuses as a legacy setting", () => {
+    expect(KiloConfigValidate.check(`{}`, [{ path: ["experimental", "openTelemetry"], value: false }])).toEqual([])
+    expect(KiloConfigValidate.check(`{}`, [{ path: ["experimental", "openTelemetry"], value: "no" }])).toEqual([
+      "$.experimental.openTelemetry: ignored invalid experimental.openTelemetry; expected a boolean (true or false)",
+    ])
+  })
+
   test("reports a malformed upstream value", () => {
     expect(KiloConfigValidate.check(`{}`, [{ path: ["shell"], value: 5 }])).toEqual([
       "$.shell: skipped malformed recognized value",

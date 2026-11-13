@@ -50,6 +50,7 @@ import { indexingHost } from "./indexing/host"
 import { openToolFile, type ToolDiff } from "./tool-diff"
 import { chatFocus } from "./services/code-actions/target"
 import { createMentionHost, isMentionRequest } from "./kilo-provider/mention-requests"
+import { TelemetryProxy } from "./services/telemetry/telemetry-proxy"
 
 // The sidebar may only write the settings its own UI owns. Other views keep their own write path.
 // The settings each webview may write; the Settings panel writes every Kilo setting through its own handler.
@@ -438,6 +439,10 @@ export function wire(input: {
   }
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
+    if (message.type === "telemetry") {
+      TelemetryProxy.capture(message.event, message.properties)
+      return true
+    }
     if (message.type === "saveImage") {
       void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
       return true

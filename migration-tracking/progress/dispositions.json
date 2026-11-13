@@ -2696,5 +2696,10 @@
     "state": "dropped",
     "note": "Tested the dropped removePrefixOverlap.ts. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
     "by": "retire-mercury"
+  },
+  "module:packages/kilo-vscode/tests/unit/telemetry-errors.test.ts": {
+    "state": "dropped",
+    "note": "The test covered ApiProviderError and ConsecutiveMistakeError in src/services/telemetry/errors.ts, which have no caller on the v1 target outside this test (git grep isApiProviderError, ConsecutiveMistakeError, getApiProviderErrorProperties). Dead v1 code; the v2 telemetry service (packages/kilo-vscode/src/services/telemetry) does not carry it.",
+    "by": "telemetry-port"
   }
 }

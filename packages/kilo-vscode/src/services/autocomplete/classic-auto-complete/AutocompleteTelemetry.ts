@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { TelemetryEventName } from "../../telemetry/types"
 import type { AutocompleteContext, CacheMatchType, FillInAtCursorSuggestion } from "../types"
 import { getSuggestionKey as _getSuggestionKey, insertWithLRUEviction } from "./telemetry-utils"
 
@@ -8,21 +9,18 @@ export function getSuggestionKey(suggestion: FillInAtCursorSuggestion): string {
   return _getSuggestionKey(suggestion)
 }
 
-/**
- * Autocomplete telemetry event names. These are the event name strings the
- * telemetry transport forwards once it exists.
- */
+/** The autocomplete events of the extension's telemetry catalog. */
 export const AutocompleteTelemetryEvent = {
-  AUTOCOMPLETE_SUGGESTION_REQUESTED: "Autocomplete Suggestion Requested",
-  AUTOCOMPLETE_LLM_REQUEST_COMPLETED: "Autocomplete LLM Request Completed",
-  AUTOCOMPLETE_LLM_REQUEST_FAILED: "Autocomplete LLM Request Failed",
-  AUTOCOMPLETE_LLM_SUGGESTION_RETURNED: "Autocomplete LLM Suggestion Returned",
-  AUTOCOMPLETE_SUGGESTION_CACHE_HIT: "Autocomplete Suggestion Cache Hit",
-  AUTOCOMPLETE_ACCEPT_SUGGESTION: "Autocomplete Accept Suggestion",
-  AUTOCOMPLETE_SUGGESTION_FILTERED: "Autocomplete Suggestion Filtered",
-  AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN: "Autocomplete Unique Suggestion Shown",
-  INLINE_ASSIST_AUTO_TASK: "Inline Assist Auto Task",
-  GHOST_SERVICE_DISABLED: "Ghost Service Disabled",
+  AUTOCOMPLETE_SUGGESTION_REQUESTED: TelemetryEventName.AUTOCOMPLETE_SUGGESTION_REQUESTED,
+  AUTOCOMPLETE_LLM_REQUEST_COMPLETED: TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED,
+  AUTOCOMPLETE_LLM_REQUEST_FAILED: TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_FAILED,
+  AUTOCOMPLETE_LLM_SUGGESTION_RETURNED: TelemetryEventName.AUTOCOMPLETE_LLM_SUGGESTION_RETURNED,
+  AUTOCOMPLETE_SUGGESTION_CACHE_HIT: TelemetryEventName.AUTOCOMPLETE_SUGGESTION_CACHE_HIT,
+  AUTOCOMPLETE_ACCEPT_SUGGESTION: TelemetryEventName.AUTOCOMPLETE_ACCEPT_SUGGESTION,
+  AUTOCOMPLETE_SUGGESTION_FILTERED: TelemetryEventName.AUTOCOMPLETE_SUGGESTION_FILTERED,
+  AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN: TelemetryEventName.AUTOCOMPLETE_UNIQUE_SUGGESTION_SHOWN,
+  INLINE_ASSIST_AUTO_TASK: TelemetryEventName.INLINE_ASSIST_AUTO_TASK,
+  GHOST_SERVICE_DISABLED: TelemetryEventName.GHOST_SERVICE_DISABLED,
 } as const
 
 export type AutocompleteTelemetryEventName = (typeof AutocompleteTelemetryEvent)[keyof typeof AutocompleteTelemetryEvent]
@@ -32,9 +30,8 @@ export type AutocompleteTelemetryCapture = (event: string, properties: Record<st
 let transport: AutocompleteTelemetryCapture | undefined
 
 /**
- * Register the telemetry transport that forwards autocomplete events. No
- * transport exists yet; the default capture drops events after the consent
- * check.
+ * Register the telemetry transport that forwards autocomplete events. The extension registers the telemetry proxy at
+ * activation (`registerTelemetry`); without a transport the default capture drops events after the consent check.
  */
 export function setAutocompleteTelemetrySink(fn: AutocompleteTelemetryCapture | undefined): void {
   transport = fn
