@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
 internal enum class SpeechInputState {
     IDLE,
@@ -24,6 +25,7 @@ internal class SpeechInput(
     private val transcribe: suspend (ByteArray) -> String,
     private val insert: (String) -> Unit,
     private val change: (SpeechInputState, String?) -> Unit,
+    private val notice: (String) -> Unit = {},
 ) {
     var state = SpeechInputState.IDLE
         private set
@@ -36,10 +38,17 @@ internal class SpeechInput(
     private var generation = 0L
     private var opening = false
     private var restart = false
+    private var cap: Cap? = null
+    private var notified: String? = null
 
     private data class Finish(
         val done: (() -> Unit)?,
         val ready: (() -> Boolean)?,
+    )
+
+    private data class Cap(
+        val id: String,
+        val duration: Long,
     )
 
     @RequiresEdt
@@ -56,6 +65,8 @@ internal class SpeechInput(
     @RequiresEdt
     fun start() {
         if (state != SpeechInputState.IDLE) return
+        cap = null
+        notified = null
         update(SpeechInputState.STARTING)
         if (opening) {
             restart = true
@@ -70,7 +81,15 @@ internal class SpeechInput(
         opening = true
         job = cs.launch {
             val result = runCatching {
-                capture.start { token, err ->
+                capture.start(
+                    cap = { token, duration ->
+                        cs.launch {
+                            withContext(Dispatchers.EDT) {
+                                capped(attempt, token, duration)
+                            }
+                        }
+                    },
+                ) { token, err ->
                     cs.launch {
                         withContext(Dispatchers.EDT) {
                             if (attempt == generation) {
@@ -127,6 +146,8 @@ internal class SpeechInput(
         id?.let(capture::cancel)
         id = null
         pending = null
+        cap = null
+        notified = null
         update(SpeechInputState.IDLE)
     }
 
@@ -138,9 +159,33 @@ internal class SpeechInput(
         }
         id = token
         update(SpeechInputState.RECORDING)
+        val reached = cap?.takeIf { it.id == token }
+        cap = null
+        if (reached != null) {
+            capped(attempt, reached.id, reached.duration)
+            return
+        }
         val finish = pending ?: return
         pending = null
         stop(finish.done, finish.ready)
+    }
+
+    @RequiresEdt
+    private fun capped(attempt: Long, token: String, duration: Long) {
+        if (attempt != generation) return
+        if (id == null && state == SpeechInputState.STARTING) {
+            cap = Cap(token, duration)
+            return
+        }
+        if (id != token || notified == token) return
+        if (state != SpeechInputState.RECORDING && state != SpeechInputState.TRANSCRIBING) return
+        notified = token
+        if (state == SpeechInputState.RECORDING) {
+            val finish = pending
+            pending = null
+            stopRecording(finish?.done, finish?.ready)
+        }
+        notice(KiloBundle.message("prompt.speech.limit", TimeUnit.MILLISECONDS.toMinutes(duration)))
     }
 
     @RequiresEdt
@@ -154,6 +199,7 @@ internal class SpeechInput(
         }.onSuccess { done ->
             id = null
             job = null
+            cap = null
             update(SpeechInputState.IDLE)
             done?.invoke()
         }.onFailure(::failed)
@@ -166,6 +212,8 @@ internal class SpeechInput(
         id = null
         job = null
         pending = null
+        cap = null
+        notified = null
         update(SpeechInputState.ERROR, err.message ?: KiloBundle.message("prompt.speech.error.title"))
     }
 

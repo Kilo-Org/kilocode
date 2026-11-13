@@ -326,7 +326,7 @@ class PromptPanel(
     }
     private val speechButton = HoverIcon()
     private val speech = speechCapture?.let { capture ->
-        SpeechInput(cs, capture, onTranscribe, ::insertSpeech, ::syncSpeech)
+        SpeechInput(cs, capture, onTranscribe, ::insertSpeech, ::syncSpeech, ::warn)
     }
     private var speechState = SpeechInputState.IDLE
 
@@ -1301,6 +1301,11 @@ class PromptPanel(
 
     private fun notify(text: String) {
         com.intellij.notification.Notification("Kilo Code", text, com.intellij.notification.NotificationType.WARNING).notify(project)
+    }
+
+    @RequiresEdt
+    private fun warn(text: String) {
+        KiloNotifications.warning(project, text)
     }
 
     @RequiresEdt

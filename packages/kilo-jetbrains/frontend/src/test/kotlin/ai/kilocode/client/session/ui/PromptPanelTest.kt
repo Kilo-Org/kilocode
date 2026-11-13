@@ -37,6 +37,7 @@ import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.LookupPositionStrategy
 import com.intellij.codeInsight.lookup.impl.LookupImpl
 import com.intellij.notification.Notification
+import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -1872,6 +1873,39 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertFalse(panel.isSpeechEnabled)
     }
 
+    fun `test speech limit automatically transcribes and shows one localized warning`() {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        project.messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        val capture = SpeechCaptureStub()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+            onTranscribe = { "truncated prompt" },
+        )
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        capture.limit()
+        capture.limit()
+        waitForSend { panel.text() == "truncated prompt" && notes.size == 1 }
+
+        assertEquals(1, capture.stops)
+        assertEquals(speechTooltip("prompt.speech.start"), speech.toolTipText)
+        assertEquals(KiloBundle.message("prompt.speech.limit", 2), notes.single().title)
+        assertEquals(NotificationType.WARNING, notes.single().type)
+    }
+
     fun `test speech action stays enabled while microphone is starting after disconnect`() {
         val capture = PendingSpeechCapture()
         val panel = PromptPanel(
@@ -2390,8 +2424,14 @@ class PromptPanelTest : BasePlatformTestCase() {
         var starts = 0
         var stops = 0
         var cancels = 0
+        @Volatile
+        private var cap: ((String, Long) -> Unit)? = null
 
-        override suspend fun start(fail: (String, Throwable) -> Unit): String {
+        override suspend fun start(
+            cap: (String, Long) -> Unit,
+            fail: (String, Throwable) -> Unit,
+        ): String {
+            this.cap = cap
             starts++
             return "recording"
         }
@@ -2406,12 +2446,19 @@ class PromptPanelTest : BasePlatformTestCase() {
             assertEquals("recording", id)
             cancels++
         }
+
+        fun limit() {
+            requireNotNull(cap).invoke("recording", 120_000)
+        }
     }
 
     private class PendingSpeechCapture : SpeechCapture {
         private val started = CompletableDeferred<String>()
 
-        override suspend fun start(fail: (String, Throwable) -> Unit): String = started.await()
+        override suspend fun start(
+            cap: (String, Long) -> Unit,
+            fail: (String, Throwable) -> Unit,
+        ): String = started.await()
 
         override suspend fun stop(id: String): ByteArray = byteArrayOf()
 

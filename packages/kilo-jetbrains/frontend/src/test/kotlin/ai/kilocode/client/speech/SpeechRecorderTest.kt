@@ -1,5 +1,6 @@
 package ai.kilocode.client.speech
 
+import ai.kilocode.client.plugin.KiloBundle
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,9 +73,10 @@ class SpeechRecorderTest {
         })
         val recorder = recorder(scope, line, pause = { deadline.await() })
         val failures = mutableListOf<Throwable>()
+        val caps = mutableListOf<Pair<String, Long>>()
 
         try {
-            val id = recorder.start { _, err -> failures.add(err) }
+            val id = recorder.start(cap = { token, duration -> caps.add(token to duration) }) { _, err -> failures.add(err) }
             blocked.await("audio read did not block")
 
             deadline.complete(Unit)
@@ -82,6 +84,7 @@ class SpeechRecorderTest {
 
             assertContentEquals(pcm, decode(recorder.stop(id)))
             assertTrue(failures.isEmpty())
+            assertEquals(listOf(id to MAX_DURATION_MS), caps)
         } finally {
             recorder.dispose()
             scope.cancel()
@@ -98,13 +101,15 @@ class SpeechRecorderTest {
         })
         val recorder = recorder(scope, line, limit = 1, pause = { awaitCancellation() })
         val failures = mutableListOf<Throwable>()
+        val caps = mutableListOf<Pair<String, Long>>()
 
         try {
-            val id = recorder.start { _, err -> failures.add(err) }
+            val id = recorder.start(cap = { token, duration -> caps.add(token to duration) }) { _, err -> failures.add(err) }
             line.closed.await("byte cap did not close the audio line")
 
             assertContentEquals(pcm.copyOf(32), decode(recorder.stop(id)))
             assertTrue(failures.isEmpty())
+            assertEquals(listOf(id to 1L), caps)
         } finally {
             recorder.dispose()
             scope.cancel()
@@ -141,6 +146,11 @@ class SpeechRecorderTest {
             assertIs<TimeoutCancellationException>(err)
             closing.await("stop did not attempt to close the audio line")
 
+            val restart = scope.async { runCatching { recorder.start { _, _ -> } }.exceptionOrNull() }
+            val restartErr = withTimeout(TimeUnit.SECONDS.toMillis(WAIT_SECONDS)) { restart.await() }
+            assertIs<IllegalStateException>(restartErr)
+            assertEquals(KiloBundle.message("prompt.speech.microphone"), restartErr.message)
+
             recorder.dispose()
             line.closed.await("dispose did not retry the timed-out close")
             assertTrue(line.closes.get() >= 2)
@@ -167,7 +177,7 @@ class SpeechRecorderTest {
                 finish()
             },
         )
-        val recorder = recorder(scope, line)
+        val recorder = recorder(scope, line, timeout = STOP_TIMEOUT_MS)
 
         try {
             val id = recorder.start { _, _ -> }
@@ -175,6 +185,11 @@ class SpeechRecorderTest {
 
             val err = assertIs<IllegalStateException>(runCatching { recorder.stop(id) }.exceptionOrNull())
             assertEquals(failure.message, err.message)
+
+            val restart = scope.async { runCatching { recorder.start { _, _ -> } }.exceptionOrNull() }
+            val restartErr = withTimeout(TimeUnit.SECONDS.toMillis(WAIT_SECONDS)) { restart.await() }
+            assertIs<IllegalStateException>(restartErr)
+            assertEquals(KiloBundle.message("prompt.speech.microphone"), restartErr.message)
 
             recorder.dispose()
             line.closed.await("dispose did not retry the throwing close")

@@ -69,6 +69,7 @@ internal class SpeechRecorder internal constructor(
         val id: String,
         val line: TargetDataLine,
         val format: AudioFormat,
+        val cap: (String, Long) -> Unit,
         val fail: (String, Throwable) -> Unit,
     ) {
         val data = ByteArrayOutputStream()
@@ -85,10 +86,19 @@ internal class SpeechRecorder internal constructor(
     private val closing = mutableSetOf<Capture>()
     private var disposed = false
 
-    override suspend fun start(fail: (String, Throwable) -> Unit): String = withContext(NonCancellable) {
-        while (true) {
-            val wait = synchronized(lock) { closing.firstOrNull()?.closed } ?: break
-            wait.await()
+    override suspend fun start(
+        cap: (String, Long) -> Unit,
+        fail: (String, Throwable) -> Unit,
+    ): String = withContext(NonCancellable) {
+        runCatching {
+            withTimeout(timeout) {
+                while (true) {
+                    val wait = synchronized(lock) { closing.firstOrNull()?.closed } ?: break
+                    wait.await()
+                }
+            }
+        }.getOrElse { err ->
+            throw IllegalStateException(KiloBundle.message("prompt.speech.microphone"), err)
         }
         synchronized(lock) {
             check(!disposed) { "Speech recorder is disposed" }
@@ -96,7 +106,7 @@ internal class SpeechRecorder internal constructor(
             starting = true
         }
 
-        val result = runCatching { withContext(Dispatchers.IO) { open(fail) } }
+        val result = runCatching { withContext(Dispatchers.IO) { open(cap, fail) } }
         synchronized(lock) { starting = false }
         val item = result.getOrThrow()
         val accepted = synchronized(lock) {
@@ -168,10 +178,10 @@ internal class SpeechRecorder internal constructor(
         }
     }
 
-    private fun open(fail: (String, Throwable) -> Unit): Capture {
+    private fun open(cap: (String, Long) -> Unit, fail: (String, Throwable) -> Unit): Capture {
         val errors = mutableListOf<Throwable>()
         val item = FORMATS.firstNotNullOfOrNull { format ->
-            open(format, fail).onFailure { errors.add(it) }.getOrNull()
+            open(format, cap, fail).onFailure { errors.add(it) }.getOrNull()
         }
         if (item != null) return item
         val err = errors.lastOrNull()
@@ -182,7 +192,11 @@ internal class SpeechRecorder internal constructor(
         )
     }
 
-    private fun open(format: AudioFormat, fail: (String, Throwable) -> Unit): Result<Capture> = runCatching {
+    private fun open(
+        format: AudioFormat,
+        cap: (String, Long) -> Unit,
+        fail: (String, Throwable) -> Unit,
+    ): Result<Capture> = runCatching {
         val info = DataLine.Info(TargetDataLine::class.java, format)
         val line = source(info)
         runCatching {
@@ -191,7 +205,7 @@ internal class SpeechRecorder internal constructor(
         }.onFailure {
             if (line.isOpen) line.close()
         }.getOrThrow()
-        Capture(UUID.randomUUID().toString(), line, format, fail)
+        Capture(UUID.randomUUID().toString(), line, format, cap, fail)
     }
 
     private fun capture(item: Capture) {
@@ -208,8 +222,7 @@ internal class SpeechRecorder internal constructor(
                     val remaining = (max - item.data.size()).coerceAtLeast(0)
                     item.data.write(buffer, 0, count.coerceAtMost(remaining))
                     if (item.data.size() >= max && item.stopped.compareAndSet(false, true)) {
-                        runCatching { close(item) }
-                            .onFailure { LOG.warn("failed to close limited speech recording", it) }
+                        cap(item)
                     }
                 }
             }
@@ -253,10 +266,14 @@ internal class SpeechRecorder internal constructor(
     private suspend fun expire(item: Capture) {
         pause(limit)
         if (!item.stopped.compareAndSet(false, true)) return
-        withContext(Dispatchers.IO) {
-            runCatching { close(item) }
-                .onFailure { LOG.warn("failed to close expired speech recording", it) }
-        }
+        withContext(Dispatchers.IO) { cap(item) }
+    }
+
+    private fun cap(item: Capture) {
+        runCatching { item.cap(item.id, limit) }
+            .onFailure { LOG.warn("speech recording limit callback failed", it) }
+        runCatching { close(item) }
+            .onFailure { LOG.warn("failed to close limited speech recording", it) }
     }
 
     private fun finish(item: Capture): CompletableDeferred<Result<Unit>> {
@@ -277,7 +294,10 @@ internal class SpeechRecorder internal constructor(
 }
 
 interface SpeechCapture {
-    suspend fun start(fail: (String, Throwable) -> Unit): String
+    suspend fun start(
+        cap: (String, Long) -> Unit = { _, _ -> },
+        fail: (String, Throwable) -> Unit,
+    ): String
 
     suspend fun stop(id: String): ByteArray
 
