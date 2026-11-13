@@ -73,6 +73,7 @@ import ai.kilocode.client.ui.active.ActiveBadge
 import ai.kilocode.client.ui.active.ActiveBadgeCell
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.active.ActiveMetrics
+import ai.kilocode.client.ui.active.ActiveMove
 import ai.kilocode.client.ui.tree.ActiveEntry
 import ai.kilocode.client.ui.tree.ActiveTreeView
 import ai.kilocode.client.ui.active.activeHitCells
@@ -110,6 +111,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.ide.DeleteProvider
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.actionSystem.DataSnapshotProvider
 import com.intellij.openapi.actionSystem.DataMap
@@ -151,11 +153,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     private lateinit var service: KiloWorktreeService
     private lateinit var run: FakeRunRpcApi
     private var delegate: Any? = null
+    private var stored: String? = null
 
     override fun setUp() {
         super.setUp()
         delegate = UIManager.get("TreeUI")
         UIManager.put("TreeUI", "com.intellij.ui.tree.ui.DefaultTreeUI")
+        stored = PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")
+        PropertiesComponent.getInstance(project).unsetValue("kilo.agentManager.layout")
         installBrowser()
         coroutines = TestCoroutines()
         rpc = FakeWorktreeRpcApi()
@@ -177,6 +182,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             edt { service<WorktreeNameCache>().clear() }
             coroutines.close(::pump)
         } finally {
+            PropertiesComponent.getInstance(project).setValue("kilo.agentManager.layout", stored)
             UIManager.put("TreeUI", delegate)
             super.tearDown()
         }
@@ -206,10 +212,14 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test creating a worktree opens the created worktree session editor`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
 
         edt { controller.create("feature/y", null) }
+        val pending = edt { controller.model.getElementAt(0).id }
+        gate.complete(Unit)
         flush()
 
         val list = edt { tree(panel) }
@@ -220,6 +230,23 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(created.path, file.path.params["path"])
         assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
         assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending))
+    }
+
+    fun `test failed creation forgets its pending layout key`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        rpc.createResult = { ai.kilocode.rpc.dto.CreateWorktreeResultDto(error = "creation failed") }
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        edt { controller.create("feature/failure", null) }
+        val pending = edt { controller.model.getElementAt(0).id }
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(0, rows(panel))
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending))
     }
 
     fun `test configure creates the worktree only after the dialog closes`() {
@@ -312,18 +339,196 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertNull(edt { UIUtil.findComponentOfType(panel, SearchTextField::class.java) })
     }
 
-    fun `test local worktrees group has no context menu`() {
+    fun `test worktrees appear at the root without fixed groups`() {
+        rpc.listed += main()
+        rpc.listed += worktree("aardvark")
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+        edt { controller.reload() }
+        flush()
         val view = tree(panel)
         layout(view)
 
         edt {
-            val entry = (0 until view.rowCount)
-                .map { view.getPathForRow(it).lastPathComponent as ActiveEntry }
-                .single { it.allowsChildren }
-            assertFalse(view.showMenu(center(view.bounds(entry)!!), context = true))
+            assertEquals(2, view.rowCount)
+            assertTrue(leaves(view).all { it.parent === view.hierarchy.root })
         }
+    }
+
+    fun `test section rows use the shared menu glyph and deletion keeps their worktrees`() {
+        val current = main()
+        val item = worktree("aardvark")
+        rpc.listed += listOf(current, item)
+        val section = edt {
+            val state = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            val section = state.create("Planning")
+            state.nodes(listOf(object : ActiveItem { override val key = current.id; override val title = current.name },
+                object : ActiveItem { override val key = item.id; override val title = item.name }))
+            state.move(ai.kilocode.client.ui.active.ActiveMove(item.id, 1, 0, listOf(item.id), parent = section.key))
+            section
+        }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        layout(view)
+
+        edt {
+            val entry = view.hierarchy.entries.getValue(section.key)
+            assertTrue(entry.allowsChildren)
+            assertEquals("Planning", entry.item.title)
+            assertEquals(ai.kilocode.client.ui.tree.ActiveTreeColors.color("red"), entry.color)
+            assertSame(entry, view.hierarchy.entries.getValue(item.id).parent)
+            assertNull(view.hierarchy.entries.getValue(item.id).color)
+            val frame = view.regions.cell(entry)
+            view.dispatchEvent(MouseEvent(view, MouseEvent.MOUSE_MOVED, 0, 0,
+                frame.x + 1, frame.y + frame.height / 2, 0, false, MouseEvent.NOBUTTON))
+            assertTrue(view.regions.hits(entry).any { it.id == ACTIVE_MENU_CELL && it.enabled })
+            assertTrue(view.select(section.key))
+            val context = context(panel)
+            assertNull(WorktreeDataKeys.WORKTREE.getData(context))
+            assertNull(HostedWorkspaceDataKeys.WORKSPACE.getData(context))
+            val provider = PlatformDataKeys.DELETE_ELEMENT_PROVIDER.getData(context)!!
+            assertTrue(provider.canDeleteElement(context))
+            provider.deleteElement(context)
+            assertFalse(view.hierarchy.entries.containsKey(section.key))
+            assertEquals(listOf(current.id, item.id), leaves(view).map { it.key })
+            assertTrue(leaves(view).all { it.parent === view.hierarchy.root })
+            assertNull(AgentManagerLayout(PropertiesComponent.getInstance(project)).section(section.key))
+        }
+        assertTrue(rpc.removes.isEmpty())
+    }
+
+    fun `test worktrees drag into a section and back below the primary checkout using the shared tree`() {
+        val current = main()
+        val item = worktree("aardvark")
+        rpc.listed += listOf(current, item)
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        layout(view)
+
+        edt {
+            val entry = view.hierarchy.entries.getValue(section.key)
+            val frame = view.regions.cell(entry)
+            view.over(item.id, center(frame))
+            view.drop()
+            assertSame(entry, view.hierarchy.entries.getValue(item.id).parent)
+            assertEquals(item.id, view.selected()?.key)
+            val root = view.regions.cell(view.hierarchy.entries.getValue(current.id))
+            view.over(item.id, Point(root.x + 1, root.y))
+            assertSame(entry, view.hierarchy.entries.getValue(item.id).parent)
+            assertFalse(view.placeholder(view.hierarchy.entries.getValue(item.id)))
+            assertEquals(listOf(current.id, section.key), roots(view))
+            view.drop()
+            view.over(item.id, Point(root.x + root.width / 2, root.y + root.height - 1))
+            assertSame(view.hierarchy.root, view.hierarchy.entries.getValue(item.id).parent)
+            assertTrue(view.placeholder(view.hierarchy.entries.getValue(item.id)))
+            assertEquals(listOf(current.id, item.id, section.key), roots(view))
+            view.drop()
+            assertSame(view.hierarchy.root, view.hierarchy.entries.getValue(item.id).parent)
+            assertEquals(listOf(current.id, item.id, section.key), roots(view))
+            assertEquals(item.id, view.selected()?.key)
+        }
+        edt { controller.reload() }
+        flush()
+        assertEquals(listOf(current.id, item.id), leaves(view).map { it.key })
+        assertTrue(rpc.reorders.isEmpty())
+    }
+
+    fun `test repeated usable local reloads prune missing worktrees but not undiscovered cloud placement`() {
+        val item = worktree("aardvark")
+        val cloud = HostedWorkspaceRefDto("cloud", "missing")
+        val props = PropertiesComponent.getInstance(project)
+        val items = listOf(main().id, item.id, cloud.key).map { key ->
+            object : ActiveItem { override val key = key; override val title = key }
+        }
+        val section = edt {
+            val state = AgentManagerLayout(props)
+            val section = state.create("Planning")
+            state.nodes(items)
+            state.move(ai.kilocode.client.ui.active.ActiveMove(item.id, 1, 0, listOf(item.id), parent = section.key))
+            state.move(ai.kilocode.client.ui.active.ActiveMove(cloud.key, 1, 1, listOf(item.id, cloud.key), parent = section.key))
+            section
+        }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        assertTrue(props.getValue("kilo.agentManager.layout")!!.contains(item.id))
+
+        rpc.listed += main()
+        repeat(WORKTREE_MISS_LIMIT - 1) {
+            edt { controller.reload() }
+            flush()
+            assertTrue(props.getValue("kilo.agentManager.layout")!!.contains(item.id))
+        }
+        edt { controller.reload() }
+        flush()
+
+        assertFalse(props.getValue("kilo.agentManager.layout")!!.contains(item.id))
+        val nodes = edt { AgentManagerLayout(props).nodes(items) }
+        assertEquals(listOf(cloud.key), nodes.single { it.item.key == section.key }.children!!.map { it.item.key })
+        assertEquals(listOf(main().id), leaves(tree(panel)).map { it.key })
+    }
+
+    fun `test temporarily unlisted worktrees retain placement and returning resets consecutive misses`() {
+        val a = worktree("aardvark")
+        val b = worktree("beluga")
+        rpc.listed += listOf(main(), a, b)
+        val props = PropertiesComponent.getInstance(project)
+        val items = rpc.listed.map { dto ->
+            object : ActiveItem { override val key = dto.id; override val title = dto.name }
+        }
+        val section = edt {
+            val state = AgentManagerLayout(props)
+            val section = state.create("Planning")
+            state.nodes(items, pin = main().id)
+            state.move(ai.kilocode.client.ui.active.ActiveMove(a.id, 1, 0, listOf(a.id), parent = section.key))
+            state.move(ai.kilocode.client.ui.active.ActiveMove(b.id, 1, 1, listOf(main().id, b.id, section.key)))
+            state.move(ai.kilocode.client.ui.active.ActiveMove(section.key, 2, 1, listOf(main().id, section.key, b.id)))
+            section
+        }
+        val before = props.getValue("kilo.agentManager.layout")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        rpc.listed.removeAll { !it.main }
+        repeat(WORKTREE_MISS_LIMIT - 1) {
+            edt { controller.reload() }
+            flush()
+            assertEquals(before, props.getValue("kilo.agentManager.layout"))
+        }
+
+        rpc.listed += listOf(b, a)
+        edt { controller.reload() }
+        flush()
+
+        val view = tree(panel)
+        edt {
+            val entry = view.hierarchy.entries.getValue(section.key)
+            assertSame(entry, view.hierarchy.entries.getValue(a.id).parent)
+            assertEquals(listOf(main().id, section.key, b.id), roots(view))
+        }
+        assertEquals(listOf(main().id, a.id, b.id), leaves(view).map { it.key })
+
+        rpc.listed.removeAll { !it.main }
+        repeat(WORKTREE_MISS_LIMIT - 1) {
+            edt { controller.reload() }
+            flush()
+            assertEquals(before, props.getValue("kilo.agentManager.layout"))
+        }
+
+        edt { controller.remove(a) }
+        flush()
+        assertFalse(props.getValue("kilo.agentManager.layout")!!.contains(a.id))
+        assertTrue(props.getValue("kilo.agentManager.layout")!!.contains(b.id))
     }
 
     fun `test worktree list paints tool window background`() {
@@ -448,7 +653,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertNull(current.section)
         assertNull(current.metrics)
         assertNull(row(panel, 1).section)
-        assertEquals("Local worktrees", groupTitle(panel))
+        assertEquals(2, edt { tree(panel).hierarchy.root.childCount })
 
         val list = edt { tree(panel) }
         edt {
@@ -731,6 +936,40 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(a.id, edt { (selectedValue(list) as ActiveItem).key })
         val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
         assertEquals(a.path, file.path.params["path"])
+    }
+
+    fun `test deleting a reordered worktree opens its visual neighbor inside a section`() {
+        val a = worktree("aardvark")
+        val b = worktree("beluga")
+        val c = worktree("cougar")
+        rpc.listed += listOf(a, b, c)
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        layout(view)
+        edt {
+            val entry = view.hierarchy.entries.getValue(section.key)
+            view.over(a.id, center(view.regions.cell(entry)))
+            view.drop()
+            val cell = view.regions.cell(view.hierarchy.entries.getValue(a.id))
+            view.over(c.id, Point(cell.x + cell.width / 2, cell.y))
+            view.drop()
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(c), focus = true)
+        }
+        pump()
+        assertEquals(listOf(b.id, c.id, a.id), leaves(view).map { it.key })
+
+        edt { controller.remove(c) }
+        flush()
+
+        assertEquals(a.id, edt { view.selected()?.key })
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(a.path, file.path.params["path"])
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(c.id))
     }
 
     fun `test worktree row shows activity icon for matching directory`() {
@@ -1338,7 +1577,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("main", row(panel, 0).title)
     }
 
-    fun `test current row shows the pr badge for the main checkout`() {
+    fun `test current row PR badge follows manual branch reloads`() {
         val main = main()
         rpc.listed += main
         rpc.prResult = WorktreePrListDto(
@@ -1361,6 +1600,25 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("#12", current.secondaryBadges.single().text)
         assertEquals("pull-request", current.secondaryBadges.single().id)
         assertTrue(edt { panel.canOpenPr(main) })
+
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforePrStatus = { gate.await() }
+        rpc.prResult = WorktreePrListDto(
+            GhAvailability.OK,
+            listOf(WorktreePrDto(main.path, 13, GhState.OPEN, "https://example.test/pr/13", "Feature work")),
+        )
+        rpc.listed[0] = main.copy(branch = "feature/y")
+        edt { controller.reload() }
+        waitUntil { row(panel, 0).title == "feature/y" }
+        waitUntil { rpc.prCalls.size == 2 && row(panel, 0).secondaryBadges.isEmpty() }
+
+        assertFalse(edt { panel.canOpenPr(main) })
+        assertEquals(0L, rpc.prAges.last())
+        assertEquals(listOf(main.path), rpc.prFresh.last())
+
+        gate.complete(Unit)
+        waitUntil { row(panel, 0).secondaryBadges.singleOrNull()?.text == "#13" }
+        assertEquals("feature/y", row(panel, 0).title)
     }
 
     fun `test conversation review and check glyphs sit on the title line in that order`() {
@@ -1716,7 +1974,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
     }
 
-    fun `test dragging a worktree above another reorders the model and persists the path order`() {
+    fun `test dragging a worktree above another persists the unified display order`() {
         val a = worktree("aardvark")
         val b = worktree("beluga")
         rpc.listed += main()
@@ -1732,13 +1990,17 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // Display order: current (main) row is index 0, then a (1), b (2).
         edt {
             assertEquals(b.id, view.pickable(rowCenter(view, 2)))
-            view.over(b.id, rowCenter(view, 1))
+            view.over(b.id, rowCenter(view, 1).apply { y-- })
             view.drop()
         }
         flush()
 
-        assertEquals(listOf(b.path, a.path), edt { worktreeIds(controller) })
-        assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+        assertEquals(listOf(main().id, b.id, a.id), leaves(view).map { it.key })
+        assertTrue(rpc.reorders.isEmpty())
+        val restored = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)) }
+        assertEquals(listOf(main().id, b.id, a.id), edt {
+            restored.nodes(leaves(view).map { it.item }.reversed()).map { it.item.key }
+        })
     }
 
     fun `test dragging a worktree keeps dropped row selected after reorder reload`() {
@@ -1756,7 +2018,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         layout(view)
         edt {
             assertTrue(view.select(b.id))
-            view.over(b.id, rowCenter(view, 1))
+            view.over(b.id, rowCenter(view, 1).apply { y-- })
             view.drop()
         }
         flush()
@@ -1784,9 +2046,10 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("renamed", edt { (view.selected() as ActiveItem).title })
     }
 
-    fun `test the current and pending rows are not draggable`() {
+    fun `test primary and pending rows are not draggable while normal worktrees are`() {
+        val item = worktree("aardvark")
         rpc.listed += main()
-        rpc.listed += worktree("aardvark")
+        rpc.listed += item
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
@@ -1802,18 +2065,184 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             // Row 0 is the current (main) row; row 1 is the pending create.
             assertNull(view.pickable(rowCenter(view, 0)))
             assertNull(view.pickable(rowCenter(view, 1)))
+            assertEquals(item.id, view.pickable(rowCenter(view, 2)))
         }
         gate.complete(Unit)
         flush()
     }
 
-    fun `test a failed reorder rpc reloads from git ground truth`() {
+    fun `test primary flag pins a feature checkout while a linked worktree named main can move`() {
+        val current = main().copy(branch = "feature/primary")
+        val item = worktree("main")
+        rpc.listed += listOf(item, current)
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
+        val controller = WorktreeController(service, item.path, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        layout(view)
+
+        edt {
+            val primary = view.hierarchy.entries.getValue(current.id)
+            val entry = view.hierarchy.entries.getValue(item.id)
+            val group = view.hierarchy.entries.getValue(section.key)
+            val frame = view.regions.cell(primary)
+            val cell = view.regions.cell(entry)
+            assertEquals("feature/primary", primary.item.title)
+            assertNull(primary.item.progress)
+            assertNull(view.pickable(Point(frame.x + 8, frame.y + frame.height / 2)))
+            assertEquals(item.id, view.pickable(Point(cell.x + 8, cell.y + cell.height / 2)))
+            assertTrue(view.select(current.id))
+            val before = roots(view)
+            assertEquals(current.id, before.first())
+
+            for (point in listOf(center(view.regions.cell(group)), Point(frame.x + 8, view.height))) {
+                view.over(current.id, point)
+
+                assertSame(view.hierarchy.root, primary.parent)
+                assertEquals(before, roots(view))
+                assertFalse(view.placeholder(primary))
+                assertEquals(current.id, view.selected()?.key)
+                view.drop()
+            }
+
+            view.over(item.id, center(view.regions.cell(group)))
+
+            assertSame(group, entry.parent)
+            assertTrue(view.placeholder(entry))
+            assertEquals(current.id, roots(view).first())
+            view.drop()
+            assertSame(group, entry.parent)
+            assertEquals(item.id, view.selected()?.key)
+        }
+        assertTrue(rpc.reorders.isEmpty())
+    }
+
+    fun `test root worktrees sections and section children cannot preview before the primary checkout`() {
+        val current = main()
+        val item = worktree("aardvark")
+        val other = worktree("beluga")
+        rpc.listed += listOf(current, item, other)
+        val props = PropertiesComponent.getInstance(project)
+        val section = edt {
+            val state = AgentManagerLayout(props)
+            val section = state.create("Planning")
+            state.nodes(rpc.listed.map { dto ->
+                object : ActiveItem { override val key = dto.id; override val title = dto.name }
+            }, pin = current.id)
+            state.move(ActiveMove(item.id, 1, 0, listOf(item.id), parent = section.key))
+            section
+        }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        layout(view)
+
+        edt {
+            val frame = view.regions.cell(view.hierarchy.entries.getValue(current.id))
+            val before = listOf(current.id, other.id, section.key)
+            assertEquals(before, roots(view))
+            assertTrue(view.select(current.id))
+            val saved = props.getValue("kilo.agentManager.layout")
+            for (key in listOf(other.id, section.key, item.id)) {
+                val entry = view.hierarchy.entries.getValue(key)
+                val parent = entry.parent
+
+                view.over(key, Point(frame.x + 1, frame.y))
+
+                assertEquals(before, roots(view))
+                assertSame(parent, entry.parent)
+                assertFalse(view.placeholder(entry))
+                assertEquals(current.id, view.selected()?.key)
+                view.drop()
+                assertEquals(before, roots(view))
+                assertEquals(saved, props.getValue("kilo.agentManager.layout"))
+            }
+        }
+        assertTrue(rpc.reorders.isEmpty())
+    }
+
+    fun `test repaired primary placement and selection survive reload and panel reconstruction`() {
+        val current = main()
+        val item = worktree("aardvark")
+        val other = worktree("beluga")
+        rpc.listed += listOf(current, item, other)
+        val props = PropertiesComponent.getInstance(project)
+        val section = edt {
+            val state = AgentManagerLayout(props)
+            val section = state.create("Planning")
+            state.color(section.key, "purple")
+            // Reproduce a layout saved before primary checkouts were pinned.
+            state.nodes(rpc.listed.map { dto ->
+                object : ActiveItem { override val key = dto.id; override val title = dto.name }
+            })
+            state.move(ActiveMove(current.id, 0, 0, listOf(current.id), parent = section.key))
+            state.move(ActiveMove(item.id, 0, 1, listOf(current.id, item.id), parent = section.key))
+            state.move(ActiveMove(section.key, 1, 0, listOf(section.key, other.id)))
+            section
+        }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        layout(view)
+        val primary = edt { view.hierarchy.entries.getValue(current.id) }
+        edt {
+            assertEquals(listOf(current.id, section.key, other.id), roots(view))
+            assertSame(view.hierarchy.root, primary.parent)
+            assertSame(view.hierarchy.entries.getValue(section.key), view.hierarchy.entries.getValue(item.id).parent)
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(current), focus = true)
+            assertTrue(view.select(current.id))
+        }
+        flush()
+        val saved = props.getValue("kilo.agentManager.layout")
+        rpc.listed.clear()
+        rpc.listed += listOf(other, current.copy(branch = "feature/reloaded"), item)
+
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            assertEquals(listOf(current.id, section.key, other.id), roots(view))
+            assertSame(primary, view.hierarchy.entries.getValue(current.id))
+            assertEquals("feature/reloaded", primary.item.title)
+            assertEquals(current.id, view.selected()?.key)
+            assertEquals(saved, props.getValue("kilo.agentManager.layout"))
+            Disposer.dispose(panel)
+        }
+        val next = WorktreeController(service, project.basePath!!, coroutines.scope)
+        edt { next.reload() }
+        flush()
+        val rebuilt = edt { AgentManagerPanel(testRootDisposable, next, project) }
+        flush()
+        val restored = tree(rebuilt)
+        layout(restored)
+
+        edt {
+            assertEquals(listOf(current.id, section.key, other.id), roots(restored))
+            val entry = restored.hierarchy.entries.getValue(current.id)
+            assertSame(restored.hierarchy.root, entry.parent)
+            assertNull(restored.pickable(rowCenter(restored, 0)))
+            assertEquals(current.id, restored.selected()?.key)
+            val group = restored.hierarchy.entries.getValue(section.key)
+            assertSame(group, restored.hierarchy.entries.getValue(item.id).parent)
+            assertEquals(ai.kilocode.client.ui.tree.ActiveTreeColors.color("purple"), group.color)
+            assertEquals(saved, props.getValue("kilo.agentManager.layout"))
+        }
+        assertTrue(rpc.reorders.isEmpty())
+    }
+
+    fun `test unified display order survives a backend refresh`() {
         val a = worktree("aardvark")
         val b = worktree("beluga")
         rpc.listed += main()
         rpc.listed += a
         rpc.listed += b
-        rpc.reorderResult = false
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
         edt { controller.reload() }
@@ -1822,14 +2251,15 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val view = edt { tree(panel) }
         layout(view)
         edt {
-            view.over(b.id, rowCenter(view, 1))
+            view.over(b.id, rowCenter(view, 1).apply { y-- })
             view.drop()
+            controller.reload()
         }
         flush()
 
-        // The optimistic swap is discarded; reload restores the backend (listed) order.
         assertEquals(listOf(a.path, b.path), edt { worktreeIds(controller) })
-        assertEquals(listOf(listOf(b.path, a.path)), rpc.reorders.toList())
+        assertEquals(listOf(main().id, b.id, a.id), leaves(view).map { it.key })
+        assertTrue(rpc.reorders.isEmpty())
     }
 
     fun `test cloud rows share busy indicators and popup context without reloading or losing selection`() {
@@ -1869,6 +2299,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(KiloSessionService::class.java,
             KiloSessionService(project, coroutines.scope, sessions), testRootDisposable)
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
         rpc.listed += main()
         rpc.listed += worktree("aardvark")
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
@@ -1877,11 +2308,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         waitUntil { rows(panel) == 4 }
         val view = tree(panel)
         edt {
-            val cloud = (0 until view.rowCount)
-                .map { view.getPathForRow(it).lastPathComponent as ActiveEntry }
-                .single { it.item.title == KiloBundle.message("worktree.section.cloud") }
-            assertEquals(listOf(ref.key, other.key), (0 until cloud.childCount)
-                .map { (cloud.getChildAt(it) as ActiveEntry).key })
+            assertEquals(listOf(main().id, worktree("aardvark").id, ref.key, other.key), leaves(view).map { it.key })
+            assertTrue(leaves(view).all { it.parent === view.hierarchy.root })
             assertTrue(view.select(ref.key))
             val row = row(panel, 2) as HostedWorkspaceRow
             assertEquals("Active", row.badges.single().text)
@@ -1926,6 +2354,28 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val context = context(panel)
             assertNull(HostedWorkspaceDataKeys.WORKSPACE.getData(context))
             assertNotNull(WorktreeDataKeys.WORKTREE.getData(context))
+            val entry = view.hierarchy.entries.getValue(section.key)
+            assertEquals(ref.key, view.pickable(rowCenter(view, 2)))
+            view.over(ref.key, center(view.regions.cell(entry)))
+            view.drop()
+            assertSame(entry, view.hierarchy.entries.getValue(ref.key).parent)
+            view.over(worktree("aardvark").id, center(view.regions.cell(entry)))
+            view.drop()
+            assertEquals(listOf(ref.key, worktree("aardvark").id),
+                (0 until entry.childCount).map { (entry.getChildAt(it) as ActiveEntry).key })
+            val cell = view.regions.cell(view.hierarchy.entries.getValue(main().id))
+            view.over(ref.key, Point(cell.x + 1, cell.y))
+            assertSame(entry, view.hierarchy.entries.getValue(ref.key).parent)
+            assertFalse(view.placeholder(view.hierarchy.entries.getValue(ref.key)))
+            assertEquals(main().id, roots(view).first())
+            view.drop()
+            view.over(ref.key, Point(cell.x + cell.width / 2, cell.y + cell.height - 1))
+            assertSame(view.hierarchy.root, view.hierarchy.entries.getValue(ref.key).parent)
+            assertTrue(view.placeholder(view.hierarchy.entries.getValue(ref.key)))
+            assertEquals(main().id, roots(view).first())
+            view.drop()
+            assertSame(view.hierarchy.root, view.hierarchy.entries.getValue(ref.key).parent)
+            assertSame(entry, view.hierarchy.entries.getValue(worktree("aardvark").id).parent)
         }
     }
 
@@ -2000,6 +2450,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         createGate.complete(Unit)
         waitUntil { rows(panel) == 2 && edt { selectedValue(view)?.key } == createdRef.key }
         waitUntil { calls.size == 2 }
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending.key))
 
         val removal = project.service<HostedWorkspaceRemoval>()
         edt { removal.delete(createdRef, project.basePath!!) }
@@ -2012,6 +2463,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         // Successful deletion forgets the workspace entirely instead of leaving it in the
         // persisted exclusion set.
         assertFalse(project.service<HostedManagementService>().excluded(createdRef))
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(createdRef.key))
     }
 
     fun `test cloud create keeps its row through a stale discovery`() {
@@ -2343,6 +2795,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             waitUntil { calls.get() > count && !hosted.state.value.loading }
         }
         waitUntil { rows(panel) == 1 }
+        assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(createdRef.key))
     }
 
     fun `test deleting a created workspace that discovery has not listed removes its row`() {
@@ -2624,21 +3077,16 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     ): java.awt.Component =
         tree.cellRenderer.getTreeCellRendererComponent(tree, entry, selected, true, false, 0, focused)
 
-    private fun groupTitle(panel: AgentManagerPanel): String {
-        val tree = tree(panel)
-        return edt {
-            (0 until tree.rowCount).mapNotNull {
-                tree.getPathForRow(it)?.lastPathComponent as? ActiveEntry
-            }.first { it.allowsChildren }.item.title
-        }
-    }
-
     private fun leaves(tree: ActiveTreeView): List<ActiveEntry> =
         edt {
             (0 until tree.rowCount).mapNotNull {
                 tree.getPathForRow(it)?.lastPathComponent as? ActiveEntry
             }.filter { !it.allowsChildren }
         }
+
+    private fun roots(tree: ActiveTreeView) = edt {
+        (0 until tree.hierarchy.root.childCount).map { (tree.hierarchy.root.getChildAt(it) as ActiveEntry).key }
+    }
 
     private fun leafEntry(tree: ActiveTreeView, index: Int): ActiveEntry = leaves(tree)[index]
 
