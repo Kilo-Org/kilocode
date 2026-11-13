@@ -130,11 +130,13 @@ export function registerCodeActions(
       "kilo-code.new.newChatWithText",
       async (args?: string | { text?: string; send?: boolean }) => {
         const given = typeof args === "string" ? { text: args } : (args ?? {})
-        const text = given.text ?? (await vscode.window.showInputBox({ prompt: "Text to put in a new Kilo Code chat" }))
+        // Callers are other extensions, so don't trust the argument types.
+        const preset = typeof given.text === "string" ? given.text : undefined
+        const text = preset ?? (await vscode.window.showInputBox({ prompt: "Text to put in a new Kilo Code chat" }))
         if (!text?.trim()) return
-        const send = typeof given.send === "boolean" ? given.send : given.text === undefined ? await askSend() : false
+        const send = typeof given.send === "boolean" ? given.send : preset === undefined ? await askSend() : false
         if (send === undefined) return
-        const view = target()
+        const view = lastFocusedChat?.() ?? target()
         if (!(await revealTarget(view))) return
         view.postMessage({ type: "newChatWithText", text, ...(send ? { send } : {}) })
       },

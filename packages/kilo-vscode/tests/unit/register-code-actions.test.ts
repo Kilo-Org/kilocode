@@ -31,7 +31,7 @@ function setup(
   last?: "sidebar" | "agent" | "tab",
   tabbed = false,
   typed?: string,
-  sent?: boolean,
+  answer?: "Yes" | "No",
 ) {
   const commands = new Map<string, Command>()
   const prompts: string[] = []
@@ -91,10 +91,11 @@ function setup(
     prompts.push(options?.prompt ?? "")
     return typed
   }
+  // Picks by what the user sees, so a label that no longer matches its behaviour fails a test.
   api.window.showQuickPick = (async (items: Array<{ label: string; send: boolean }>) => {
     events.push("pick")
     picks.push(items.map((item) => item.label))
-    return items.find((item) => item.send === sent)
+    return items.find((item) => item.label === answer)
   }) as never
   api.window.activeTextEditor = {
     selection: {
@@ -245,6 +246,27 @@ describe("registerCodeActions", () => {
     expect(state.posts).toEqual([{ type: "newChatWithText", text: "hello" }])
   })
 
+  it.each(["sidebar", "agent", "tab"] as const)("opens the new chat in the last focused %s", async (last) => {
+    const state = setup(false, true, last)
+
+    await state.commands.get("kilo-code.new.newChatWithText")?.({ text: "hello" })
+
+    expect(state.recipients).toEqual([last])
+    expect(state.posts).toEqual([{ type: "newChatWithText", text: "hello" }])
+  })
+
+  it.each([42, { text: 42 }, { text: { nested: true } }])(
+    "treats non-string text %p as missing instead of throwing",
+    async (args) => {
+      const state = setup(false, true, undefined, false, "typed in the palette", "No")
+
+      await state.commands.get("kilo-code.new.newChatWithText")?.(args)
+
+      expect(state.events).toEqual(["input", "pick", "focus", "wait", "post"])
+      expect(state.posts).toEqual([{ type: "newChatWithText", text: "typed in the palette" }])
+    },
+  )
+
   it.each(["", "  \n", { text: "" }])("ignores empty text %p without asking", async (args) => {
     const state = setup(false, true, undefined, false, "unused")
 
@@ -255,7 +277,7 @@ describe("registerCodeActions", () => {
   })
 
   it.each([undefined, {}])("asks for the text when run without any (%p), as from the Command Palette", async (args) => {
-    const state = setup(false, true, undefined, false, "typed in the palette", false)
+    const state = setup(false, true, undefined, false, "typed in the palette", "No")
 
     await state.commands.get("kilo-code.new.newChatWithText")?.(args)
 
@@ -265,7 +287,7 @@ describe("registerCodeActions", () => {
   })
 
   it("offers sending as a second Command Palette step, with No first", async () => {
-    const state = setup(false, true, undefined, false, "typed in the palette", true)
+    const state = setup(false, true, undefined, false, "typed in the palette", "Yes")
 
     await state.commands.get("kilo-code.new.newChatWithText")?.()
 
@@ -283,7 +305,7 @@ describe("registerCodeActions", () => {
   })
 
   it("sends only when the caller asks for it, without any prompt", async () => {
-    const state = setup(false, true, undefined, false, "unused", true)
+    const state = setup(false, true, undefined, false, "unused", "Yes")
     const run = state.commands.get("kilo-code.new.newChatWithText")
 
     await run?.({ text: "keep" })
@@ -300,7 +322,7 @@ describe("registerCodeActions", () => {
   })
 
   it("only asks for the text when the caller already decided whether to send", async () => {
-    const state = setup(false, true, undefined, false, "typed in the palette", false)
+    const state = setup(false, true, undefined, false, "typed in the palette", "No")
 
     await state.commands.get("kilo-code.new.newChatWithText")?.({ send: true })
 
@@ -309,7 +331,7 @@ describe("registerCodeActions", () => {
   })
 
   it.each([undefined, "  "])("does nothing when the palette prompt is cancelled or blank (%p)", async (typed) => {
-    const state = setup(false, true, undefined, false, typed, true)
+    const state = setup(false, true, undefined, false, typed, "Yes")
 
     await state.commands.get("kilo-code.new.newChatWithText")?.()
 
