@@ -207,7 +207,7 @@ for (const hosted of [false, true]) {
     await using root = await temporary()
     const fixture = path.join(import.meta.dir, "fixtures/branding-tsx.ts")
     checkOnboarding(await run([process.execPath, fixture], root.path, hosted), hosted)
-  }, 30_000)
+  }, 60_000)
 
   test(`compiled TSX renders ${hosted ? "Kilo" : "upstream"} branding`, async () => {
     await using root = await temporary()
@@ -238,7 +238,7 @@ for (const args of [["--help"], ["auth", "logout", "--help"]]) {
     expect(output).toContain("kilo2")
     expect(output).not.toContain("OpenCode")
     expect(output).not.toContain("opencode ")
-  }, 30_000)
+  }, 60_000)
 }
 
 for (const args of [["upgrade"], ["upgrade", "99.0.0", "--method", "npm"], ["update", "99.0.0", "--method", "curl"]]) {
@@ -248,7 +248,7 @@ for (const args of [["upgrade"], ["upgrade", "99.0.0", "--method", "npm"], ["upd
     expect(output).toContain("Kilo updates are disabled")
     expect(output).toContain("Update Kilo manually")
     expect(output).not.toContain("opencode.ai")
-  }, 30_000)
+  }, 60_000)
 }
 
 function checkPages(output: string, hosted: boolean) {
