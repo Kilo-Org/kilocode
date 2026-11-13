@@ -211,6 +211,7 @@ export const dict = {
   "prompt.action.continue": "Продолжить",
   "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.send.recording": "Расшифровать и отправить",
+  "prompt.action.click": "щелчок",
   "prompt.action.stop": "Остановить",
   "prompt.action.stop.background": "Остановить основного агента. Фоновые агенты продолжат работу.",
   "prompt.agents.show": "Показать фоновых агентов",

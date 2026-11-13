@@ -53,7 +53,7 @@ const App: Component = () => {
       vscode.postMessage({
         type: "document.sendComments",
         comments: detail.comments,
-        autoSend: detail.autoSend,
+        send: detail.send,
       } as never)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, review)

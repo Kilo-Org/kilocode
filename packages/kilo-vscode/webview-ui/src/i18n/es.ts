@@ -214,6 +214,7 @@ export const dict = {
   "prompt.action.continue": "Continuar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.send.recording": "Transcribir y enviar",
+  "prompt.action.click": "clic",
   "prompt.action.stop": "Detener",
   "prompt.action.stop.background": "Detener el agente principal. Los agentes en segundo plano siguen en ejecución.",
   "prompt.agents.show": "Mostrar agentes en segundo plano",

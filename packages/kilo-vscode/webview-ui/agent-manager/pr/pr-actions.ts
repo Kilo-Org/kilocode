@@ -6,6 +6,7 @@
  * from either place marks the same items as sent.
  */
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
+import type { SendIntent } from "../../../src/shared/prompt-send"
 import type { PRReviewCommentData } from "../../../src/shared/review-comments"
 import { SEND_LIMIT, prConversationPayload, prPayload } from "./pr-comment-payload"
 import { type CommentState, patchCommentState } from "./pr-comment-state"
@@ -37,14 +38,15 @@ export function actionableConversation(items: PRTimelineItem[], state: CommentSt
     .map((item) => item.id)
 }
 
-function send<T>(
+function submit<T>(
   worktree: string,
   comments: T[],
   ids: string[],
   state: CommentState,
   key: (comment: T) => string,
   payload: (comment: T) => PRReviewCommentData,
-  terminal?: string,
+  terminal: string | undefined,
+  send: SendIntent,
 ): void {
   const index = new Map(comments.map((item) => [key(item), item]))
   const batch = ids
@@ -54,7 +56,7 @@ function send<T>(
     })
     .slice(0, SEND_LIMIT)
   if (batch.length === 0) return
-  if (!sendReviewComments(batch.map(payload), terminal)) return
+  if (!sendReviewComments(batch.map(payload), terminal, send)) return
   patchCommentState(worktree, (prev) => {
     const sent = { ...prev.sent }
     for (const item of batch) sent[key(item)] = true
@@ -67,17 +69,23 @@ export function sendThreads(
   comments: PRComment[],
   ids: string[],
   state: CommentState,
-  terminal?: string,
+  terminal: string | undefined,
+  send: SendIntent,
 ): void {
-  send(worktree, comments, ids, state, (item) => item.threadId, prPayload, terminal)
+  submit(worktree, comments, ids, state, (item) => item.threadId, prPayload, terminal, send)
 }
 
 /**
  * Hands one PR comment to the prompt or a terminal and marks it sent only when
  * a consumer took the batch.
  */
-export function sendPRComment(comment: PRComment, terminal: string | undefined, markSent: () => void): boolean {
-  if (!sendReviewComments([prPayload(comment)], terminal)) return false
+export function sendPRComment(
+  comment: PRComment,
+  terminal: string | undefined,
+  markSent: () => void,
+  send: SendIntent,
+): boolean {
+  if (!sendReviewComments([prPayload(comment)], terminal, send)) return false
   markSent()
   return true
 }
@@ -87,7 +95,17 @@ export function sendConversation(
   items: PRTimelineItem[],
   ids: string[],
   state: CommentState,
-  terminal?: string,
+  terminal: string | undefined,
+  send: SendIntent,
 ): void {
-  send(worktree, items.filter(isConversationComment), ids, state, (item) => item.id, prConversationPayload, terminal)
+  submit(
+    worktree,
+    items.filter(isConversationComment),
+    ids,
+    state,
+    (item) => item.id,
+    prConversationPayload,
+    terminal,
+    send,
+  )
 }

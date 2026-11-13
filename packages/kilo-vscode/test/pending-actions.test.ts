@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  intentMode,
   pendingActions,
   pendingEditable,
   pendingRequest,
@@ -44,6 +45,25 @@ describe("sendMode", () => {
   test("the other platform's modifier does not send now", () => {
     expect(sendMode(key({ ctrl: true }), true, "steer", true)).toBe("steer")
     expect(sendMode(key({ meta: true }), true, "steer", false)).toBe("steer")
+  })
+})
+
+describe("intentMode", () => {
+  test("a plain click sends the way Enter does and an Option-click the way ⌥↵ does", () => {
+    expect(intentMode("enter", true, "steer")).toBe("steer")
+    expect(intentMode("alternate", true, "steer")).toBe("queue")
+    expect(intentMode("enter", true, "queue")).toBe("queue")
+    expect(intentMode("alternate", true, "queue")).toBe("steer")
+  })
+
+  test("an idle session sends normally from either click", () => {
+    expect(intentMode("enter", false, "queue")).toBe("steer")
+    expect(intentMode("alternate", false, "steer")).toBe("steer")
+  })
+
+  test("a click never stops the run", () => {
+    expect(intentMode("enter", true, "steer")).not.toBe("now")
+    expect(intentMode("alternate", true, "steer")).not.toBe("now")
   })
 })
 

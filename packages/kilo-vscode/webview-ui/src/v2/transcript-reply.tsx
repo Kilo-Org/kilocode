@@ -8,11 +8,13 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
 import { Portal } from "solid-js/web"
 import type { ChatReferenceData } from "../../../src/shared/review-comments"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import { REVEAL_CHAT_REFERENCE } from "../components/chat/review-actions"
 import { useLanguage } from "../context/language"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import type { ReplyHandler } from "./append-ready"
 import { isMac } from "./pending-actions"
+import { SendHint } from "./send-hint"
 import { anchorRange, selectionAnchor, type ReplyAnchor } from "./transcript-reply-anchor"
 import { highlightApi } from "./transcript-search-highlight"
 
@@ -173,7 +175,7 @@ export function TranscriptReply(props: {
 
   const close = () => setDraft(undefined)
 
-  const save = (send: boolean) => {
+  const save = (send: boolean, intent: SendIntent = "enter") => {
     const open = draft()
     const body = text().trim()
     if (!open || !body) return
@@ -181,15 +183,15 @@ export function TranscriptReply(props: {
     close()
     if (!send) return props.reply.add(next, false)
     if (open.reference) props.reply.remove(open.reference.id)
-    props.reply.send(next)
+    props.reply.send(next, intent)
   }
 
-  const sendSaved = () => {
+  const sendSaved = (event: MouseEvent) => {
     const saved = draft()?.reference
     if (!saved) return
     close()
     props.reply.remove(saved.id)
-    props.reply.send(saved)
+    props.reply.send(saved, clickSend(event))
   }
 
   const remove = () => {
@@ -225,10 +227,10 @@ export function TranscriptReply(props: {
       event.stopPropagation()
       return close()
     }
-    // The same keys as a diff review comment: Enter sends it to Kilo, Cmd/Ctrl+Enter saves it for later.
+    // The same keys as a diff review comment: Enter sends it to Kilo, ⌥↵ uses the alternate delivery, Cmd/Ctrl+Enter saves it for later.
     if (!isEnterKeyCommitNotIme(event) || event.shiftKey) return
     event.preventDefault()
-    save(!(event.metaKey || event.ctrlKey))
+    save(!(event.metaKey || event.ctrlKey), clickSend(event))
   }
 
   // A row in the composer or a sent prompt asks to show its passage. The row may not be mounted yet, so look for the
@@ -385,9 +387,11 @@ export function TranscriptReply(props: {
                         {language.t("common.delete")}
                       </Button>
                       <span class="transcript-reply-card-gap" />
-                      <Button variant="primary" size="small" onClick={sendSaved}>
-                        {language.t("diffViewer.comment.sendToKilo")}
-                      </Button>
+                      <SendHint title={language.t("diffViewer.comment.sendToKilo")} placement="bottom">
+                        <Button variant="primary" size="small" onClick={sendSaved}>
+                          {language.t("diffViewer.comment.sendToKilo")}
+                        </Button>
+                      </SendHint>
                     </div>
                   </>
                 }
@@ -419,16 +423,21 @@ export function TranscriptReply(props: {
                     {language.t("common.cancel")}
                   </Button>
                   <span class="transcript-reply-card-gap" />
-                  <TooltipKeybind
-                    title={language.t("chat.reply.sendHint")}
+                  <SendHint
+                    title={language.t("diffViewer.comment.sendToKilo")}
                     keybind={mac ? "↵" : "Enter"}
+                    alternateKeybind={mac ? "⌥↵" : "Alt+Enter"}
                     placement="bottom"
-                    openDelay={400}
                   >
-                    <Button variant="primary" size="small" disabled={!text().trim()} onClick={() => save(true)}>
+                    <Button
+                      variant="primary"
+                      size="small"
+                      disabled={!text().trim()}
+                      onClick={(event: MouseEvent) => save(true, clickSend(event))}
+                    >
                       {language.t("diffViewer.comment.sendToKilo")}
                     </Button>
-                  </TooltipKeybind>
+                  </SendHint>
                 </div>
               </Show>
             </div>

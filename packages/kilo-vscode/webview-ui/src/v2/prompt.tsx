@@ -43,6 +43,7 @@ import {
   partFeedback,
   type BrowserReference,
 } from "../../../src/shared/browser-feedback"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import {
   registerAppend,
   registerReviewAppend,
@@ -77,7 +78,7 @@ import { insertSpacedText } from "./prompt-speech"
 import { PromptOverflow, type OverflowItem } from "./prompt-overflow"
 import { kiloSettings, runningDelivery } from "./kilo-settings"
 import { composeReviewPrompt, mergePromptMetadata, mergeReviewComments } from "./review-drafts"
-import { other, sendMode, sendShortcuts, type SendMode } from "./pending-actions"
+import { other, intentMode, sendMode, sendShortcuts, type SendMode } from "./pending-actions"
 import { PromptHint } from "./prompt-hint"
 import { recommend, type ManagerContext } from "./shortcut-hint"
 import { parseSlash, type SlashEntry } from "./slash"
@@ -155,6 +156,8 @@ export function PromptInput(props: {
   /** Draft identity: the session id, or the pending tab id before a session exists. */
   draftKey?: string
   running: boolean
+  /** A prompt was admitted and waits for its execution to start, so follow-ups already steer or queue. */
+  submitting?: boolean
   disabled: boolean
   /** The model the composer shows; Enhance uses it so the rewrite never depends on another provider. */
   model?: ModelRef
@@ -252,7 +255,8 @@ export function PromptInput(props: {
     setComments(next)
     saveReviewDraft(draft, next)
   }
-  const [sending, setSending] = createSignal(false)
+  const [inFlight, setInFlight] = createSignal(0)
+  const sending = () => inFlight() > 0
   const [enhancing, setEnhancing] = createSignal(false)
   // Goal mode, as main's goal composer: `/goal` alone, or the goal command picked from the menu, turns the next send
   // into the objective of a new session goal. The plugin's command sets it, so the mode needs that command.
@@ -432,16 +436,22 @@ export function PromptInput(props: {
   const canUseSpeech = () => speechStatus.status().enabled
   // Recording is enough to send: the transcript arrives first and the send continues from it. No other speech state
   // may send, or a draft would leave before the transcript is ready and the transcript would become a draft.
-  const ready = () =>
+  const composerReady = (mode: SendMode = "steer") =>
     !props.disabled &&
-    !props.blocked &&
-    !sending() &&
+    (!props.blocked || mode === "queue") &&
     images.pending() === 0 &&
     !terminal.pending() &&
     !changes.pending()
+  const ready = () => composerReady("steer")
+  const busy = () => (props.running || !!props.submitting) && speech.state() !== "recording"
+  // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
+  // a click will do before pressing it. The accessible name stays "Send". The modifiers are kept rather than the
+  // action, so changing what Enter does in the settings updates the preview at once.
+  const [held, setHeld] = createSignal<Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">>(NO_KEYS)
+  const sendAction = (): SendMode => (busy() ? sendMode(held(), true, runningDelivery()) : "steer")
   // A goal needs an objective; attachments alone are not one.
-  const canSend = () =>
-    ready() &&
+  const canSend = (mode: SendMode = sendAction()) =>
+    composerReady(mode) &&
     (speech.state() === "recording" ||
       (!speech.active() &&
         (goalMode()
@@ -454,10 +464,6 @@ export function PromptInput(props: {
     if (goalMode()) return language.t("prompt.goal.start")
     return language.t("prompt.action.send")
   }
-  // While the agent runs, a held modifier previews its send action on the Send button, so the user sees what Enter or
-  // a click will do before pressing it. The accessible name stays "Send". The modifiers are kept rather than the
-  // action, so changing what Enter does in the settings updates the preview at once.
-  const [held, setHeld] = createSignal<Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">>(NO_KEYS)
   const hold = (event: KeyboardEvent) =>
     setHeld({ altKey: event.altKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey })
   const release = () => setHeld(NO_KEYS)
@@ -532,8 +538,10 @@ export function PromptInput(props: {
     v2.connection.status() === "connected"
       ? language.t("prompt.placeholder.plain")
       : language.t("prompt.placeholder.connecting")
-  const busySend = () => props.running && !props.blocked && speech.state() !== "recording"
-  const sendAction = (): SendMode => (busySend() ? sendMode(held(), true, runningDelivery()) : "steer")
+  const busySend = () => busy() && (!props.blocked || sendAction() === "queue")
+  // A context action hands its content to the composer, and the composer sends it the way the key the click stands
+  // for would: a plain click like Enter, an Option-click like ⌥↵. Both follow the configured delivery.
+  const sendForIntent = (intent: SendIntent): SendMode => intentMode(intent, busy(), runningDelivery())
   // While the agent runs, Send draws the icon the pending prompt rows use for its action: the steer arrow ("join this
   // turn") or the clock ("after this turn"). The other delivery is ⌥↵, previewed here, or the pending row's controls.
   const sendIcon = () =>
@@ -808,15 +816,35 @@ export function PromptInput(props: {
     if (key) mentionDrafts.delete(key)
   }
 
-  const submit = (
-    external?: { text: string; items: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
-    mode: SendMode = "steer",
+  type ExternalPrompt = {
+    text: string
+    items: PromptAttachment[]
+    metadata?: { [key: string]: JsonValue }
+    comments?: ReviewCommentEntry[]
+  }
+
+  const submitAllowed = (external: ExternalPrompt | undefined, mode: SendMode) =>
+    external
+      ? !props.disabled && (!props.blocked || mode === "queue")
+      : composerReady(mode) && !(speech.active() && speech.state() !== "recording") && canSend(mode)
+
+  const restoreDraft = (
+    draft: string,
+    backing: string[],
+    items: PromptAttachment[],
+    picked: BrowserReference[],
+    pending: ReviewCommentEntry[],
   ) => {
-    if (!ready() || (speech.active() && speech.state() !== "recording")) {
-      if (external) putInDraft(external.text, external.items)
-      return
-    }
-    if (!external && !canSend()) return
+    if (text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0) return
+    setText(draft)
+    paste.load(draft, backing)
+    mention.seedFromText(draft)
+    setAttachments(items)
+    setBrowsers(picked)
+    replaceComments(pending)
+  }
+
+  const prepareSubmit = (external: ExternalPrompt | undefined) => {
     const draft = text()
     // Capture the paste ranges before the draft is cleared, so a mismatched placeholder count still expands the
     // blocks that have backing text.
@@ -832,54 +860,62 @@ export function PromptInput(props: {
     // prompt, which carries them in its text and metadata.
     const runner = external || pending.length > 0 || picked.length > 0 ? undefined : props.slash
     const target = runner ? parseSlash(runner.entries(), sent) : undefined
-    // The draft key identifies the conversation this send belongs to, even when the session is created first.
-    const key = props.draftKey
-    // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
-    // if the send fails and the user has not typed, attached or picked something new.
-    const restore = () => {
-      if (external) return putInDraft(external.text, external.items)
-      if (text().trim() || attachments().length > 0 || browsers().length > 0 || comments().length > 0) return
-      setText(draft)
-      paste.load(draft, backing)
-      mention.seedFromText(draft)
-      setAttachments(items)
-      setBrowsers(picked)
-      replaceComments(pending)
-    }
     // The review Markdown leads the text, so the transcript can strip it again with the comments in metadata.
     const review = external
       ? { text: external.text, metadata: external.metadata }
       : composeReviewPrompt(pending, expandPastes(draft, pastes), pushFixes())
     // The mentions are located in the text that is sent, so the transcript can highlight each one in place. They are
     // read before the draft is cleared, while the composer still knows them.
-    const located = target ? sent : review.text
-    const pendingFiles = external ? Promise.resolve<MentionFile[]>([]) : mentionFiles(located)
+    const pendingFiles = external ? Promise.resolve<MentionFile[]>([]) : mentionFiles(target ? sent : review.text)
+    return { draft, backing, items, picked, pending, prompt, sent, runner, target, review, pendingFiles }
+  }
+
+  const submit = (external?: ExternalPrompt, mode: SendMode = "steer") => {
+    if (!ready() && !submitAllowed(external, mode)) {
+      if (external?.comments) return replaceComments(mergeReviewComments(comments(), external.comments))
+      if (external) putInDraft(external.text, external.items)
+      return
+    }
+    if (!submitAllowed(external, mode)) return
+    const state = prepareSubmit(external)
+    const key = props.draftKey
+    // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
+    // if the send fails and the user has not typed, attached or picked something new.
+    const restore = () => {
+      if (external?.comments) return replaceComments(mergeReviewComments(comments(), external.comments))
+      if (external) return putInDraft(external.text, external.items)
+      restoreDraft(state.draft, state.backing, state.items, state.picked, state.pending)
+    }
     if (!external) clearDraft(key)
-    setSending(true)
-    const request = pendingFiles.then((files) => {
-      // A mention whose context could not be read keeps the draft for another try.
-      if (!files) return false
-      if (runner && target) return runner.run(target.entry, target.args, mode, items, files)
-      // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
-      return props.onSend(review.text, mode, {
-        items,
-        files,
-        metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
+    setInFlight((count) => count + 1)
+    void state.pendingFiles
+      .then((files) => {
+        // A mention whose context could not be read keeps the draft for another try.
+        if (!files) return false
+        if (state.runner && state.target)
+          return state.runner.run(state.target.entry, state.target.args, mode, state.items, files)
+        // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
+        return props.onSend(state.review.text, mode, {
+          items: state.items,
+          files,
+          metadata: mergePromptMetadata(
+            state.prompt.metadata as { [key: string]: JsonValue } | undefined,
+            state.review.metadata,
+          ),
+        })
       })
-    })
-    void request
       .then((ok) => {
-        if (ok) preEnhance = null
-        else restore()
-        if (!ok || external) return
-        history.append(sent, key)
+        if (!ok) return restore()
+        preEnhance = null
+        if (external) return
+        history.append(state.sent, key)
         history.reset()
       })
       .catch((err: unknown) => {
         v2.report(err)
         restore()
       })
-      .finally(() => setSending(false))
+      .finally(() => setInFlight((count) => count - 1))
   }
 
   // A typed client action runs in the webview without a send, and leaves the attachments in the draft.
@@ -898,7 +934,7 @@ export function PromptInput(props: {
   // objective for another try.
   const submitGoal = (entry: SlashEntry, mode: SendMode) => {
     const run = props.slash?.run
-    if (!run || !ready() || (speech.active() && speech.state() !== "recording") || !text().trim()) return
+    if (!run || !composerReady(mode) || (speech.active() && speech.state() !== "recording") || !text().trim()) return
     const draft = text()
     const pastes = paste.pastes()
     const backing = pastes.map((item) => item.text)
@@ -920,7 +956,7 @@ export function PromptInput(props: {
     mention.closeMention()
     if (key) mentionDrafts.delete(key)
     setGoalMode(false)
-    setSending(true)
+    setInFlight((count) => count + 1)
     void files
       // `--` keeps an objective that is itself a control word, such as "pause", an objective, as in v1.
       .then((list) => (list ? run(entry, `-- ${sent}`, mode, items, list) : false))
@@ -934,7 +970,7 @@ export function PromptInput(props: {
         v2.report(err)
         restore()
       })
-      .finally(() => setSending(false))
+      .finally(() => setInFlight((count) => count - 1))
   }
 
   const sendDraft = (mode: SendMode = "steer") => {
@@ -960,7 +996,7 @@ export function PromptInput(props: {
   const send = (mode: SendMode = "steer") => {
     if (enterGoal()) return
     if (!goalMode() && runAction()) return
-    if (!canSend()) return
+    if (!canSend(mode)) return
     if (speech.state() === "recording") {
       transcribeAndSend()
       return
@@ -997,7 +1033,7 @@ export function PromptInput(props: {
     },
   })
 
-  registerAppend(props.onAppendReady, (value, shouldSend) => {
+  registerAppend(props.onAppendReady, (value, intent) => {
     const current = text()
     enhanceToken++
     preEnhance = null
@@ -1005,16 +1041,28 @@ export function PromptInput(props: {
     const next = current.trim() ? `${current}\n\n${value}` : value
     setText(next)
     mention.seedFromText(next)
-    if (shouldSend) send()
+    if (intent) send(sendForIntent(intent))
     else focusInput()
   })
 
   // Merges comments into the current draft and sends them at once when the composer was otherwise empty, as v1 did.
-  const appendComments = (incoming: ReviewCommentEntry[], shouldSend: boolean) => {
+  // An Option-click sends the merged draft even when it already had content.
+  const appendComments = (incoming: ReviewCommentEntry[], intent: SendIntent) => {
     if (incoming.length === 0) return
+    if (goalMode()) {
+      const merged = mergeReviewComments(comments(), incoming)
+      if (intent === "enter") return replaceComments(merged)
+      // The goal send carries every chip the draft holds, so they leave with it and the restore brings them back
+      // if the send is refused.
+      replaceComments([])
+      const review = composeReviewPrompt(merged, "", pushFixes())
+      submit({ text: review.text, items: [], metadata: review.metadata, comments: merged }, sendForIntent(intent))
+      return
+    }
     const empty = !text().trim() && attachments().length === 0 && browsers().length === 0 && comments().length === 0
     replaceComments(mergeReviewComments(comments(), incoming))
-    if (shouldSend && empty) send()
+    if (intent === "enter" && !empty) return
+    send(sendForIntent(intent))
   }
 
   registerReviewAppend(props.onReviewAppendReady, appendComments)
@@ -1026,9 +1074,12 @@ export function PromptInput(props: {
       if (focus) focusInput()
     },
     remove: (id) => replaceComments(comments().filter((item) => item.id !== id)),
-    send: (reference) => {
+    send: (reference, intent = "enter") => {
       const review = composeReviewPrompt([reference], "", false)
-      submit({ text: review.text, items: [], metadata: review.metadata })
+      submit(
+        { text: review.text, items: [], metadata: review.metadata, comments: [reference] },
+        sendForIntent(intent),
+      )
     },
   })
 
@@ -1317,7 +1368,7 @@ export function PromptInput(props: {
           sessionID={props.session}
           onRemove={(id) => replaceComments(comments().filter((item) => item.id !== id))}
           onClear={(ids) => replaceComments(comments().filter((item) => !ids.includes(item.id)))}
-          onSend={() => send()}
+          onSend={(event: MouseEvent) => send(sendForIntent(clickSend(event)))}
         />
       </Show>
       <Show when={browsers().length > 0}>
@@ -1473,7 +1524,7 @@ export function PromptInput(props: {
               if (historyKey(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
-              send(sendMode(e, props.running, runningDelivery()))
+              send(sendMode(e, busy(), runningDelivery()))
             }}
             onKeyUp={(e) => {
               speechUp(e)
@@ -1598,7 +1649,7 @@ export function PromptInput(props: {
                       data-variant="ghost"
                       data-icon={sendIcon()}
                       class="prompt-send-button"
-                      onClick={(event) => send(sendMode(event, props.running, runningDelivery()))}
+                      onClick={(event) => send(sendMode(event, busy(), runningDelivery()))}
                       disabled={!canSend()}
                       aria-label={sendLabel()}
                     >

@@ -1,10 +1,10 @@
 // The delivery choices for a prompt while the agent runs: steer the running turn now, queue it until the turn ends,
 // or stop everything (running tools too) and send it now.
 import type { DataPendingStatus } from "@opencode/client/solid"
+import type { Delivery, SendIntent } from "../../../src/shared/prompt-send"
 
 export type SendMode = "steer" | "queue" | "now"
-/** What a plain Enter does while the agent runs (`kilo-code.v2.chat.sendWhileRunning`). Alt+Enter does the other. */
-export type Delivery = "steer" | "queue"
+export type { Delivery }
 export type PendingAction = "now" | "steer" | "queue" | "edit" | "delete"
 
 /**
@@ -52,6 +52,14 @@ export function sendMode(event: Key, running: boolean, preferred: Delivery = "st
   if (mac ? event.metaKey : event.ctrlKey) return "now"
   if (event.altKey) return other(preferred)
   return preferred
+}
+
+/**
+ * The send a context action's click asks for, resolved for the session it lands in. A plain click sends the way Enter
+ * does, an Option-click the way ⌥↵ does, because the button that was clicked cannot see the run state.
+ */
+export function intentMode(intent: SendIntent, running: boolean, preferred: Delivery = "steer"): SendMode {
+  return sendMode({ altKey: intent === "alternate", ctrlKey: false, metaKey: false }, running, preferred)
 }
 
 /** The key of each send action while the session runs. */

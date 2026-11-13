@@ -185,7 +185,8 @@ export function Chat() {
         return
       }
       if (item.type !== "appendReviewComments") return
-      reviewQueue.push(item.comments, item.autoSend)
+      setView("chat")
+      reviewQueue.push(item.comments, item.send)
     })
     onCleanup(() => {
       message()

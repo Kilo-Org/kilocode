@@ -1428,6 +1428,7 @@ export const dict = {
 
   // Prompt recording
   "prompt.action.send.recording": "Trascrivi e invia",
+  "prompt.action.click": "clic",
 
   // Session export
   "command.session.export": "Esporta trascrizione sessione",

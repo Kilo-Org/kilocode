@@ -87,6 +87,7 @@ export interface BaseUpdateRequest {
   model?: { providerID: string; modelID: string }
   variant?: string
   agent?: string
+  send?: "enter" | "alternate"
 }
 
 export interface TerminalFont {

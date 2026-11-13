@@ -16,6 +16,8 @@ interface Options {
   worktree: Accessor<string>
   /** Gate GitHub publication, for example when only a local diff source is shown. */
   canPublish?: Accessor<boolean>
+  /** The active terminal, whose sends paste the comment instead of choosing a delivery. */
+  terminal?: Accessor<string | undefined>
 }
 
 export function createDiffCommentForms(opts: Options) {
@@ -64,6 +66,7 @@ export function createDiffCommentForms(opts: Options) {
             selectedText={selected}
             destination={context() && meta.destination === "github" ? "github" : "local"}
             github={context()}
+            terminal={!!opts.terminal?.()}
             initialBody={actions.body}
             onBodyChange={actions.onBodyChange}
             onDestinationChange={actions.onDestination}

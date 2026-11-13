@@ -4,6 +4,7 @@ import { DiffViewerProvider, hasReactionComment, restoredContext } from "../src/
 import type { DiffSourceCatalog } from "../src/diff/sources/catalog"
 import type { PanelContext } from "../src/diff/context"
 import type { PRReviewCommentData, ReviewCommentEntry } from "../src/shared/review-comments"
+import type { SendIntent } from "../src/shared/prompt-send"
 import type { Manager } from "../src/server"
 import type { PRStatus } from "../src/agent-manager/types"
 
@@ -31,14 +32,14 @@ type Internals = { onMessage(msg: Record<string, unknown>): boolean; post?: (mes
 
 function harness() {
   const contexts: PanelContext[] = []
-  const sent: Array<[ReviewCommentEntry[], boolean]> = []
+  const sent: Array<[ReviewCommentEntry[], SendIntent]> = []
   const provider = new DiffViewerProvider(
     {
       context,
       server,
       directory: "/repo",
       catalog,
-      onComments: (comments, autoSend) => sent.push([comments, autoSend]),
+      onComments: (comments, send) => sent.push([comments, send]),
     },
     {
       sessionIdProvider: () => "sidebar",
@@ -222,9 +223,9 @@ describe("DiffViewerProvider ChangesTab contract", () => {
       selectedText: "",
     }
     h.provider.openFromCommand()
-    h.internals.onMessage({ type: "diffViewer.sendComments", comments: [comment], autoSend: true })
+    h.internals.onMessage({ type: "diffViewer.sendComments", comments: [comment], send: "alternate" })
 
-    expect(h.sent).toEqual([[[comment], true]])
+    expect(h.sent).toEqual([[[comment], "alternate"]])
   })
 })
 

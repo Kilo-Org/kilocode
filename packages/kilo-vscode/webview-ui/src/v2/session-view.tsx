@@ -32,6 +32,7 @@ import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { PromptInput, setPromptDraft } from "./prompt"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
+import { createDraftSends } from "./draft-sends"
 import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
 import type { ManagerContext } from "./shortcut-hint"
@@ -354,7 +355,7 @@ export function SessionView(props: {
     session,
     readOnly: () => !!props.readOnly,
     running,
-    edit: (text) => composer?.(text, false),
+    edit: (text) => composer?.(text),
   })
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
   // A memo, so the actions row rebuilds only when this flips.
@@ -363,13 +364,20 @@ export function SessionView(props: {
     return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
   })
 
+  // A draft has no session id until its first send creates one, so two sends that race on that draft would each
+  // create a session. Each draft's sends queue behind the previous one, so a later send adopts the created session.
+  const draftSends = createDraftSends()
+  const begin = (mode: SendMode) => {
+    // The send stays bound to the session and draft it was pressed in, not the tab it lands on after an earlier send.
+    const key = draftKey()
+    return draftSends.run(key, session(), (existing) => beginSend(key, existing, mode))
+  }
+
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
-  const begin = async (mode: SendMode) => {
-    // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
-    // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
-    const key = draftKey()
-    const existing = session()
+  const beginSend = async (key: string, existing: string | undefined, mode: SendMode) => {
+    // A workspace restore can take a while and a send may wait behind an earlier one, so the session and draft come
+    // from the press. Reading them here would send this text into the tab the user switched to.
     reverts.sent(existing)
     await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
@@ -399,8 +407,10 @@ export function SessionView(props: {
     // The first prompt settles the draft tab into a session key. Carry the history a late append still targets.
     const scopedHistory = kiloSettings()["experimental.conversationPromptHistory"] === true
     if (key !== id && scopedHistory) movePromptHistory(key, id)
-    for (const form of questions) {
-      void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
+    if (mode !== "queue") {
+      for (const form of questions) {
+        void v2.data.session.form.cancel({ sessionID: form.sessionID, formID: form.id }).catch(() => undefined)
+      }
     }
     // A steer reaches a thinking or writing model only by stopping that model call; a running tool finishes first.
     // Stop before admitting: if the prompt were admitted first, the run could start answering it at a step boundary
@@ -637,6 +647,7 @@ export function SessionView(props: {
                   session={session()}
                   // An active goal keeps working between its runs, so the composer offers Stop as main did.
                   running={running() || goal.active()}
+                  submitting={working.submitting()}
                   disabled={v2.connection.status() !== "connected" || !!v2.handshake()}
                   blocked={blocked()}
                   questioning={questioning()}

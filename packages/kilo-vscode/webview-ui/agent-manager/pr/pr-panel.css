@@ -712,7 +712,8 @@
 }
 
 .am-pr-comment-composer[data-action="diff"] .am-split-button,
-.am-pr-comment-composer[data-action="diff"] [data-action="send-kilo"] {
+.am-pr-comment-composer[data-action="diff"] [data-action="send-kilo"],
+.am-pr-comment-composer[data-action="diff"] [data-component="tooltip-trigger"]:has(> [data-action="send-kilo"]) {
   order: 3;
 }
 
@@ -786,9 +787,15 @@
 }
 
 .am-pr-comment-send-all,
-.am-pr-checks-fix {
+.am-pr-checks-fix,
+[data-component="tooltip-trigger"]:has(> .am-pr-comment-send-all),
+[data-component="tooltip-trigger"]:has(> .am-pr-checks-fix) {
   margin-top: 6px;
   align-self: flex-start;
+}
+
+[data-component="tooltip-trigger"] > :is(.am-pr-comment-send-all, .am-pr-checks-fix) {
+  margin-top: 0;
 }
 
 .am-pr-comment-done-group {

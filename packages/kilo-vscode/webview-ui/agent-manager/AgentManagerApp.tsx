@@ -53,7 +53,7 @@ import { createWorktreeTransfer } from "../src/v2/worktree-transfer"
 import { createComposerQueue } from "../src/v2/composer"
 import { createPlanOpener } from "../src/v2/open-plan"
 import type { ToWebview } from "../../src/protocol"
-import type { ReferenceHandler } from "../src/v2/append-ready"
+import type { AppendHandler, ReferenceHandler } from "../src/v2/append-ready"
 import { createAppDirectories } from "./app-directories"
 import { createAppSession } from "./app-session"
 import {
@@ -167,6 +167,7 @@ import { openPRComment } from "../src/utils/pr-review"
 import type { ReviewAppendHandler } from "../src/v2/append-ready"
 import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
 import { injectedMetadata } from "../../src/shared/injected-prompt"
+import type { SendIntent } from "../../src/shared/prompt-send"
 import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
@@ -1148,18 +1149,19 @@ const AgentManagerContent: Component = () => {
   })
 
   // The composer of the visible session; review comments and Fix with Kilo append to it.
-  let promptAppend: ((value: string, send: boolean) => void) | undefined
+  let promptAppend: AppendHandler | undefined
   let promptReviewAppend: ReviewAppendHandler | undefined
   // The same composer's browser reference list; an element picked in the browser panel joins it.
   let promptReference: ReferenceHandler | undefined
-  const appendToPrompt = (text: string, autoSend: boolean) => {
-    promptAppend?.(text, autoSend)
+  const appendToPrompt = (text: string, send: SendIntent) => {
+    promptAppend?.(text, send)
     requestChatFocus(true)
   }
-  const appendCommentsToPrompt = (comments: ReviewCommentEntry[], autoSend: boolean) => {
+  const appendCommentsToPrompt = (comments: ReviewCommentEntry[], send: SendIntent) => {
+    closeHistory()
     // A composer without review-comment support still gets the batch as markdown text.
-    if (promptReviewAppend) promptReviewAppend(comments, autoSend)
-    else appendToPrompt(formatReviewCommentsMarkdown(comments), autoSend)
+    if (promptReviewAppend) promptReviewAppend(comments, send)
+    else appendToPrompt(formatReviewCommentsMarkdown(comments), send)
     requestChatFocus(true)
   }
   // Review comment rows open files and PR threads through the surface that owns those panels.
@@ -2104,7 +2106,7 @@ const AgentManagerContent: Component = () => {
       const detail = (event as CustomEvent<AppendReviewCommentsDetail>).detail
       const comments = takeReviewCommentsForPromptBatch(detail)
       if (!comments) return
-      appendCommentsToPrompt(comments, detail.autoSend)
+      appendCommentsToPrompt(comments, detail.send)
     }
     window.addEventListener(APPEND_REVIEW_COMMENTS, reviewCommentsEvent)
     // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
@@ -2538,6 +2540,7 @@ const AgentManagerContent: Component = () => {
           focusedComment={reviewActive() ? remote.focus(diffScopeId()) : undefined}
           onCommentsChange={setReviewCommentsForSelection}
           composer={composers.get(`${activeProjectId() ?? "single"}\0${diffScopeId() ?? ""}`)}
+          onSendClick={closeReviewTab}
           onSendAll={closeReviewTab}
           diffStyle={diffStyle()}
           onDiffStyleChange={setSharedDiffStyle}

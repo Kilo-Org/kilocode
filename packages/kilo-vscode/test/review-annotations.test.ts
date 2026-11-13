@@ -76,7 +76,7 @@ function build(opts: { mount?: CommentFormMount; destination?: "local" | "github
   const meta = annotation()
   if (opts.destination) meta.destination = opts.destination
   const added: string[] = []
-  const sent: string[] = []
+  const sent: Array<[string, string]> = []
   const destinations: string[] = []
   const disposals: Array<() => void> = []
   let success = 0
@@ -88,7 +88,7 @@ function build(opts: { mount?: CommentFormMount; destination?: "local" | "github
       editing: null,
       setEditing: () => {},
       addComment: (_file, _side, _line, text) => added.push(text),
-      sendComment: (_file, _side, _line, text) => sent.push(text),
+      sendComment: (_file, _side, _line, text, _selected, send) => sent.push([text, send]),
       updateComment: () => {},
       deleteComment: () => {},
       cancelDraft: () => cancelled++,
@@ -138,8 +138,8 @@ describe("review annotation draft", () => {
     expect(result.meta.text).toBe("Draft text")
     actions.onSave("Saved body", "selected")
     expect(result.added).toEqual(["Saved body"])
-    actions.onSend("Sent body", "selected")
-    expect(result.sent).toEqual(["Sent body"])
+    actions.onSend("Sent body", "selected", "alternate")
+    expect(result.sent).toEqual([["Sent body", "alternate"]])
     actions.onDestination("github")
     expect(result.meta.destination).toBe("github")
     expect(result.destinations).toEqual(["github"])
@@ -179,10 +179,60 @@ describe("review annotation draft", () => {
     expect(result.added).toEqual(["Native comment"])
     const send = [...result.root.querySelectorAll("button")].find((button) => button.textContent === "Send")
     if (!send) throw new Error("Missing send button")
+    // The native button only has a title, so it carries the same delivery hint as the tooltip.
+    expect(send.title).toBe("Send to chat")
     textarea.value = "To chat"
     textarea.dispatchEvent(new window.Event("input", { bubbles: true }))
     send.click()
-    expect(result.sent).toEqual(["To chat"])
+    expect(result.sent).toEqual([["To chat", "enter"]])
+
+    // An Option-click on the same button asks for the alternate send, as ⌥↵ does.
+    send.dispatchEvent(new window.MouseEvent("click", { altKey: true, bubbles: true }))
+    expect(result.sent.at(-1)).toEqual(["To chat", "alternate"])
+
+    // Pressing Option+Enter in the fallback textarea also asks for the alternate send.
+    textarea.value = "Queued via keyboard"
+    textarea.dispatchEvent(new window.Event("input", { bubbles: true }))
+    textarea.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true }))
+    expect(result.sent.at(-1)).toEqual(["Queued via keyboard", "alternate"])
+  })
+
+  it("refreshes the native send title on hover when the delivery setting changes", () => {
+    setup()
+    let current = "Send to chat (⌥+click: Queue for after this turn)"
+    const root = buildReviewAnnotation(
+      {
+        side: "additions",
+        lineNumber: 2,
+        metadata: {
+          type: "comment",
+          comment: { id: "c1", file: "src/file.ts", side: "additions", line: 2, comment: "Fix", selectedText: "new" },
+          file: "src/file.ts",
+          side: "additions",
+          line: 2,
+        },
+      },
+      {
+        diffs,
+        editing: null,
+        setEditing: () => {},
+        addComment: () => {},
+        sendComment: () => {},
+        updateComment: () => {},
+        deleteComment: () => {},
+        cancelDraft: () => {},
+        labels: { ...labels, sendToChat: current },
+        sendToChatTitle: () => current,
+        activeTerminalId: () => undefined,
+      },
+    )
+    if (!root) throw new Error("Missing saved annotation")
+    const send = root.querySelector<HTMLButtonElement>(".am-annotation-icon-btn")
+    if (!send) throw new Error("Missing action button")
+    expect(send.title).toBe("Send to chat (⌥+click: Queue for after this turn)")
+    current = "Send to chat (⌥+click: Steer this turn)"
+    send.dispatchEvent(new window.Event("pointerenter"))
+    expect(send.title).toBe("Send to chat (⌥+click: Steer this turn)")
   })
 
   it("disposes the mounted form when the lifecycle releases it", () => {

@@ -212,6 +212,7 @@ export const dict = {
   "prompt.action.continue": "Devam et",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
+  "prompt.action.click": "tıkla",
   "prompt.action.stop": "Durdur",
   "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
   "prompt.agents.show": "Arka plan ajanlarını göster",

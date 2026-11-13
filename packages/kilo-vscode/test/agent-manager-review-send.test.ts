@@ -102,11 +102,11 @@ describe("review comment delivery", () => {
       marked += 1
     }
 
-    expect(sendPRComment(comment, "terminal-missing", markSent)).toBe(false)
+    expect(sendPRComment(comment, "terminal-missing", markSent, "enter")).toBe(false)
     expect(marked).toBe(0)
 
     window.addEventListener(APPEND_REVIEW_COMMENTS, promptConsumer([]))
-    expect(sendPRComment(comment, undefined, markSent)).toBe(true)
+    expect(sendPRComment(comment, undefined, markSent, "enter")).toBe(true)
     expect(marked).toBe(1)
     view.close()
   })
@@ -116,14 +116,14 @@ describe("review comment delivery", () => {
     const worktree = "review-send-unhandled"
     const comments = [thread("open")]
 
-    sendThreads(worktree, comments, ["open"], commentState(worktree), "terminal-missing")
+    sendThreads(worktree, comments, ["open"], commentState(worktree), "terminal-missing", "enter")
     expect(commentState(worktree).sent).toEqual({})
 
-    sendThreads(worktree, comments, ["open"], commentState(worktree))
+    sendThreads(worktree, comments, ["open"], commentState(worktree), undefined, "enter")
     expect(commentState(worktree).sent).toEqual({})
 
     window.addEventListener(APPEND_REVIEW_COMMENTS, promptConsumer([]))
-    sendThreads(worktree, comments, ["open"], commentState(worktree))
+    sendThreads(worktree, comments, ["open"], commentState(worktree), undefined, "enter")
     expect(commentState(worktree).sent).toEqual({ open: true })
     view.close()
   })
