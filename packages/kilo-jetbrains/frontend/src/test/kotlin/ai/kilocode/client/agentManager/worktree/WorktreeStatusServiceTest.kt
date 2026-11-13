@@ -297,6 +297,55 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         handle.close()
     }
 
+    fun `test a branch change drops the old badge and reloads past the throttle`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        val handle = service.attach()
+        drain()
+        assertEquals(1, service.pr.value[key]?.number)
+        // A recent poll must not make the branch change wait out the throttle.
+        service.refreshPr(force = true)
+        drain()
+
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 2, GhState.OPEN, "https://pr/2")))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforePrStatus = { gate.await() }
+        service.branchChanged(setOf(path))
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.size == 3 })
+        assertNull("the old branch's badge must disappear before the new answer", service.pr.value[key])
+        assertEquals(0L, rpc.prAges.last())
+        assertEquals(listOf(key), rpc.prFresh.last())
+
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(2, service.pr.value[key]?.number)
+        handle.close()
+    }
+
+    fun `test a branch change discards a lookup started for the old branch`() {
+        val path = "${project.basePath}/.kilo/worktrees/feature-x"
+        val key = normalizeWorktreePath(path)
+        val gate = CompletableDeferred<Unit>()
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 1, GhState.OPEN, "https://pr/1")))
+        rpc.beforePrStatus = { gate.await() }
+        val handle = service.attach()
+        assertTrue(coroutines.pumpUntil { rpc.prCalls.size == 1 })
+
+        // The running answer was resolved against the branch the row no longer has.
+        service.branchChanged(setOf(path))
+        assertNull(service.pr.value[key])
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 2, GhState.OPEN, "https://pr/2")))
+        rpc.beforePrStatus = {}
+        gate.complete(Unit)
+        drain()
+
+        assertEquals(2, rpc.prCalls.size)
+        assertEquals(2, service.pr.value[key]?.number)
+        handle.close()
+    }
+
     fun `test a forced refresh does not stack a second lookup on a running one`() {
         val gate = CompletableDeferred<Unit>()
         rpc.prResult = WorktreePrListDto(GhAvailability.OK)

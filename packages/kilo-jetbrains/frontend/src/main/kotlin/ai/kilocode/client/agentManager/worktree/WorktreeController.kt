@@ -12,11 +12,14 @@ import ai.kilocode.rpc.dto.orphans.OrphanDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.WorktreeListDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,8 +65,18 @@ class WorktreeController(
     var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
     var onActivityChanged: (() -> Unit)? = null
 
+    /**
+     * Fired on the EDT when an accepted [reload] applies a branch change. The argument holds the
+     * normalized paths whose branch moved; callers use this to drop PR and stats state resolved
+     * against the old branch, regardless of whether a poll or a manual refresh found the change.
+     */
+    var onBranchChanged: ((Set<String>) -> Unit)? = null
+
     @Volatile
     private var kinds: Map<String, SessionActivityKind> = emptyMap()
+
+    private val generation = AtomicInteger()
+    private var branchJob: Job? = null
 
     init {
         // The New Worktree dialog rejects a pull request from another repository using [origin], and
@@ -124,12 +137,20 @@ class WorktreeController(
 
     fun kind(path: String): SessionActivityKind? = kinds[normalizeWorktreePath(path)]
 
-    fun reload() {
+    fun reload() = reload(null)
+
+    private fun reload(snapshot: WorktreeListDto?) {
+        val gen = generation.incrementAndGet()
         cs.launch {
-            val listing = async { service.list(directory) }
+            val listing = async { snapshot ?: service.list(directory) }
             val branchInfo = service.listBranches(directory)
             val result = listing.await()
             edt {
+                // A branch watcher can start a reload while an older one is still in flight. Only the
+                // newest answer may replace the model, or a stale listing would restore the branch the
+                // watcher just proved gone.
+                if (gen != generation.get()) return@edt
+                val moved = branchesMoved(result)
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
                 val rows = pending.values.toList().asReversed() + extra
@@ -142,9 +163,62 @@ class WorktreeController(
                 known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
                 origin = branchInfo.origin
                 orphans = result.orphans
+                if (!moved.isNullOrEmpty()) onBranchChanged?.invoke(moved)
                 onReload?.invoke()
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
+        }
+    }
+
+    /**
+     * Checks whether a checkout moved to another branch without Agent Manager noticing. The list
+     * reloads on a tab switch or an explicit refresh, so a branch started from the Git tool window,
+     * or switched by an agent inside a worktree, otherwise leaves the row labelled with the old
+     * branch — and the PR badge already resolved for that row keeps belonging to it.
+     *
+     * One `git worktree list` answers for every checkout. The model is only replaced when a branch
+     * (or the set of worktrees) actually differs, so the tree and its selection stay stable on a
+     * poll that found nothing.
+     */
+    fun refreshBranches() {
+        if (branchJob?.isActive == true) return
+        val gen = generation.get()
+        branchJob = cs.launch {
+            val listing = service.list(directory)
+            edt {
+                // A newer reload owns the model now; this older poll must not invalidate its PR state.
+                if (gen != generation.get()) return@edt
+                if (branchesMoved(listing) == null) return@edt
+                LOG.info("worktree branches changed, reloading the list")
+                reload(listing)
+            }
+        }
+    }
+
+    /**
+     * Normalized paths whose branch differs from [listing], or an empty set when only the set of
+     * worktrees changed. `null` means the rows still match, or the listing failed (no main entry).
+     */
+    private fun branchesMoved(listing: WorktreeListDto): Set<String>? {
+        val main = listing.worktrees.firstOrNull { it.main } ?: return null
+        val shownMain = current
+        val shown = (0 until model.size).mapNotNull { index ->
+            val item = model.getElementAt(index)
+            if (isPending(item.id)) null else normalizeWorktreePath(item.path) to item.branch
+        }.toMap()
+        val fresh = listing.worktrees.asSequence()
+            .filterNot { it.main }
+            .associate { normalizeWorktreePath(it.path) to it.branch }
+        val moved = fresh.mapNotNullTo(HashSet()) { (path, branch) ->
+            shown[path]?.takeIf { it != branch }?.let { path }
+        }
+        if (shownMain != null && main.branch != shownMain.branch) moved += normalizeWorktreePath(main.path)
+        return when {
+            // Nothing has been shown yet: this is the first load, not a branch change, so reload but
+            // leave PR state alone — no badge was resolved against an old branch.
+            shownMain == null -> emptySet()
+            moved.isEmpty() && shown.keys == fresh.keys -> null
+            else -> moved
         }
     }
 
