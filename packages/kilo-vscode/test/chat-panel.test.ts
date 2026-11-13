@@ -4,7 +4,7 @@ import { join } from "node:path"
 import * as vscode from "vscode"
 import type { ToHost } from "../src/protocol"
 import { sidebarSession } from "../src/browser-tab/sidebar-session"
-import { CHAT_PANEL_FOCUSED, CHAT_PANEL_TYPE, chatPanels, restoredTarget } from "../src/chat-panel"
+import { CHAT_PANEL_FOCUSED, CHAT_PANEL_TYPE, chatPanels, restoredTarget, sessionArgument } from "../src/chat-panel"
 import type { Manager } from "../src/server"
 
 const ROOT = join(import.meta.dir, "..")
@@ -250,6 +250,16 @@ describe("restored chat target", () => {
     expect(restoredTarget({ sessionID: "ses_a" })).toBeUndefined()
     expect(restoredTarget({ sessionID: 7, directory: "/repo" })).toBeUndefined()
     expect(restoredTarget(null)).toBeUndefined()
+  })
+})
+
+describe("open in tab argument", () => {
+  it("accepts only a non-empty string as a session id", () => {
+    expect(sessionArgument("ses_a")).toBe("ses_a")
+    expect(sessionArgument("")).toBeUndefined()
+    expect(sessionArgument(undefined)).toBeUndefined()
+    // The editor title menu passes the active editor's URI.
+    expect(sessionArgument({ $mid: 1, fsPath: "Untitled-2", scheme: "untitled" })).toBeUndefined()
   })
 })
 

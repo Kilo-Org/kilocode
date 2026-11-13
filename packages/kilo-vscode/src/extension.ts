@@ -23,7 +23,7 @@ import { VscodeHost } from "./agent-manager/vscode-host"
 import { BrowserTabProvider } from "./browser-tab/BrowserTabProvider"
 import { editorTabOwns, setEditorTabs, sidebarSession } from "./browser-tab/sidebar-session"
 import { chat, type ChatWorktree } from "./chat"
-import { chatPanels } from "./chat-panel"
+import { chatPanels, sessionArgument } from "./chat-panel"
 import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { commitMessageCommand, commitMessageLanguage, connect, type GitExports } from "./commit-message"
@@ -411,9 +411,10 @@ export function activate(context: ExtensionContext) {
     diffCatalog,
     changes,
     editorChat,
-    commands.registerCommand("kilo-code.v2.openInTab", (sessionID?: string) => {
-      // The optional argument is a session id; without one, open the session the sidebar shows, or a new one.
-      editorChat.open(sessionID ?? sidebarSession())
+    commands.registerCommand("kilo-code.v2.openInTab", (argument?: unknown) => {
+      // The optional argument is a session id. The editor title menu passes the active editor's URI, which is not a
+      // session; without one, open the session the sidebar shows, or a new one.
+      editorChat.open(sessionArgument(argument) ?? sidebarSession())
     }),
     commands.registerCommand(
       "kilo-code.v2.showChanges",

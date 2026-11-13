@@ -189,3 +189,11 @@ export function restoredTarget(state: unknown): ChatPanelTarget | undefined {
   if (sessionID !== undefined && sessionID !== null && typeof sessionID !== "string") return undefined
   return { sessionID: sessionID || undefined, directory: record.directory }
 }
+
+/**
+ * The session id an `openInTab` argument carries. The editor title menu passes the active editor's URI, so only a
+ * non-empty string is a session; anything else asks for the sidebar session or a new one.
+ */
+export function sessionArgument(value: unknown): string | undefined {
+  return typeof value === "string" && value ? value : undefined
+}
