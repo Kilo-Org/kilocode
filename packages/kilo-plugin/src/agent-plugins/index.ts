@@ -85,10 +85,11 @@ export const Plugin = define<Global.Service | Scope.Scope>({
     const directory = (scope: KiloAgentPluginsRpc.Scope) => (scope === "global" ? global.config : project)
     const root = (scope: KiloAgentPluginsRpc.Scope) =>
       scope === "global" ? global.config : path.join(project, KiloConfigFiles.directories[0])
-    // The native config files of a scope that exist: the global ones, or the project's and the opened directory's.
-    // A project file that resolves outside its native locations (a committed symlink) is never written.
+    // The native config files of a scope that exist: the global ones, or those of every directory config discovery
+    // reads from the opened directory up to the project root. A project file that resolves outside its native
+    // locations (a committed symlink) is never written.
     const existing = async (scope: KiloAgentPluginsRpc.Scope) => {
-      const directories = scope === "global" ? [global.config] : [...new Set([project, ctx.location.directory])]
+      const directories = scope === "global" ? [global.config] : ancestors(ctx.location.directory, project)
       const files = new Map<string, string>()
       for (const item of directories)
         for (const candidate of KiloConfigFiles.writeCandidates(item, scope === "global")) {
@@ -502,6 +503,15 @@ export function withDisabled(current: unknown, name: string, enabled: boolean) {
   const { disabled: _, ...rest } = settings
   const next = disabled.length ? { ...rest, disabled } : rest
   return Object.keys(next).length ? next : undefined
+}
+
+/** `from` and each parent up to `to`, or only `to` when `from` is not inside it. */
+export function ancestors(from: string, to: string): string[] {
+  const start = path.resolve(from)
+  const end = path.resolve(to)
+  if (!Paths.contains(end, start)) return [end]
+  if (start === end) return [end]
+  return [start, ...ancestors(path.dirname(start), end)]
 }
 
 function resolve(item: string, home: string, directory: string) {

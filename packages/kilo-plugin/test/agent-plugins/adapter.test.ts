@@ -94,6 +94,8 @@ const settings = (agent_plugins: KiloConfigPolicy.AgentPlugins, file?: string) =
 const start = Effect.fnUntraced(function* (input: {
   home: string
   project?: string
+  /** A directory inside a versioned `project` to open instead of the project root. */
+  opened?: string
   entries?: Entry[]
   servers?: Record<string, Mcp.ServerConfig>
 }) {
@@ -103,7 +105,8 @@ const start = Effect.fnUntraced(function* (input: {
   const roots = [path.join(input.home, ".config/kilo2"), ...(input.project ? [path.join(input.project, ".kilo2")] : [])]
   const directories = roots.map((root) => new Directory({ type: "directory", path: AbsolutePath.make(root) }))
   const rpc = rpcHost()
-  const directory = AbsolutePath.make(input.project ?? input.home)
+  const directory = AbsolutePath.make(input.opened ?? input.project ?? input.home)
+  const projectDirectory = AbsolutePath.make(input.project ?? input.home)
   yield* KiloAgentPlugins.Plugin.effect(
     host({
       skill: { list: () => Effect.die("unused skill.list"), transform: skills.transform, reload: skills.reload },
@@ -111,7 +114,11 @@ const start = Effect.fnUntraced(function* (input: {
       rpc: rpc.domain,
       location: new Location.Info({
         directory,
-        project: { id: Project.ID.global, directory, canonical: directory },
+        project: {
+          id: input.opened ? Project.ID.make("agent-plugins-test") : Project.ID.global,
+          directory: projectDirectory,
+          canonical: projectDirectory,
+        },
       }),
     }),
   ).pipe(
@@ -675,6 +682,24 @@ describe("kilocode.agent-plugins RPC edge cases", () => {
       const read = (file: string) => Effect.promise(() => Bun.file(path.join(project, ".kilo2", file)).json())
       expect(yield* read("kilo2.jsonc")).toEqual({})
       expect(yield* read("kilo2.json")).toEqual({ agent_plugins: { disabled: ["other"] } })
+    }),
+  )
+
+  it.live("enabling clears the name from config files between the opened directory and the project root", () =>
+    Effect.gen(function* () {
+      const home = yield* Effect.promise(temp)
+      const project = yield* Effect.promise(temp)
+      const opened = path.join(project, "packages/app")
+      const disabled = JSON.stringify({ agent_plugins: { disabled: ["demo"] } })
+      yield* Effect.promise(async () => {
+        await write(path.join(project, "packages/.kilo2"), { "kilo2.json": disabled })
+        await write(path.join(project, "packages"), { "kilo2.jsonc": disabled })
+        await write(opened, {})
+      })
+      const { rpc } = yield* start({ home, project, opened })
+      yield* call(rpc, "setEnabled", { name: "demo", enabled: true, scope: "project" })
+      expect(yield* Effect.promise(() => Bun.file(path.join(project, "packages/.kilo2/kilo2.json")).json())).toEqual({})
+      expect(yield* Effect.promise(() => Bun.file(path.join(project, "packages/kilo2.jsonc")).json())).toEqual({})
     }),
   )
 

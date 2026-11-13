@@ -94,12 +94,14 @@ async function replace(stage: string, target: string, staging: string, root: str
   )
   if (restored) throw swapped
   const kept = path.join(root, RECOVERY, `${path.basename(target)}-${randomUUID()}`)
-  await fs.mkdir(path.dirname(kept), { recursive: true })
-  const moved = await fs.rename(previous, kept).then(
-    () => kept,
-    // Leave it in staging; the caller skips the cleanup of a directory that still holds it.
-    () => previous,
-  )
+  const moved = await fs
+    .mkdir(path.dirname(kept), { recursive: true })
+    .then(() => fs.rename(previous, kept))
+    .then(
+      () => kept,
+      // Leave it in staging; the caller skips the cleanup of a directory that still holds it.
+      () => previous,
+    )
   throw new KeptError(
     `Couldn't replace the plugin (${message(swapped)}); the previous version is kept at ${moved}`,
     moved,
