@@ -19,11 +19,11 @@ export const transient =
     const response = await fetch(url, init).catch((error: unknown) => {
       if (init.signal?.aborted) throw error
       return unavailable(
-        `Token refresh could not reach ${host}: ${error instanceof Error ? error.message : String(error)}`,
+        `Token refresh could not reach ${host}: ${error instanceof Error ? error.message : String(error)} (temporarily_unavailable)`,
       )
     })
-    if (TRANSIENT_STATUS.has(response.status))
-      return unavailable(`Token refresh at ${host} failed with HTTP ${response.status}`)
+    if (retryable(response.status))
+      return unavailable(`Token refresh at ${host} failed with HTTP ${response.status} (temporarily_unavailable)`)
     return response
   }
 
@@ -35,8 +35,7 @@ export const isTransient = (error: unknown) =>
   typeof error === "object" && error !== null && "code" in error && error.code === "temporarily_unavailable"
 
 // 408, 429 and 5xx are what `McpClient.isTransient` retries for an ordinary request; 501 will never recover.
-const TRANSIENT_STATUS = new Set([408, 429])
-const retryable = (status: number) => TRANSIENT_STATUS.has(status) || (status >= 500 && status !== 501)
+const retryable = (status: number) => status === 408 || status === 429 || (status >= 500 && status !== 501)
 
 // Imported on the failure path only: the SDK at module scope would join the host's startup module graph, and
 // the startup ratchet (packages/kilo-cli/script/startup.ts) measures that graph.
