@@ -49,7 +49,9 @@ import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
+import com.intellij.openapi.actionSystem.Shortcut
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
@@ -71,6 +73,8 @@ import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
+import com.intellij.openapi.keymap.Keymap
+import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -103,6 +107,8 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.event.FocusEvent
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -115,6 +121,7 @@ import javax.swing.JPanel
 import javax.swing.ImageIcon
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
+import javax.swing.KeyStroke
 
 private const val FLOATING = "com.intellij.openapi.editor.toolbar.floating.EditorFloatingToolbar"
 
@@ -1814,12 +1821,75 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         speech.doClick()
         waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        assertSame(AllIcons.CodeWithMe.CwmMicOn, speech.icon)
         speech.doClick()
         waitForSend { panel.text() == "keep dictated prompt keep" }
 
         assertEquals(1, capture.starts)
         assertEquals(1, capture.stops)
         assertEquals("keep dictated prompt keep", editor.document.text)
+    }
+
+    fun `test speech error uses friendly tooltip and notifies only on transition`() {
+        val notes = mutableListOf<Notification>()
+        val listener = object : Notifications {
+            override fun notify(notification: Notification) {
+                notes.add(notification)
+            }
+        }
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        project.messageBus.connect(testRootDisposable).subscribe(Notifications.TOPIC, listener)
+        val detail = "Kilo Core request failed (500): technical detail"
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = SpeechCaptureStub(),
+            onTranscribe = { error(detail) },
+        )
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        speech.doClick()
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        speech.doClick()
+        waitForSend { speech.toolTipText == KiloBundle.message("prompt.speech.error") && notes.isNotEmpty() }
+
+        assertEquals(KiloBundle.message("prompt.speech.error"), speech.toolTipText)
+        assertFalse(speech.toolTipText.contains(detail))
+        assertSame(AllIcons.CodeWithMe.CwmMicOff, speech.icon)
+        assertEquals(KiloBundle.message("prompt.speech.error.title"), notes.single().title)
+        assertFalse(notes.single().content.contains(detail))
+
+        panel.setReady(false)
+        panel.setReady(true)
+        panel.setReady(false)
+
+        assertEquals(1, notes.size)
+        assertTrue(panel.isSpeechEnabled)
+        panel.toggleSpeech()
+        assertFalse(panel.isSpeechEnabled)
+    }
+
+    fun `test speech action stays enabled while microphone is starting after disconnect`() {
+        val capture = PendingSpeechCapture()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = capture,
+        )
+
+        assertFalse(panel.isSpeechEnabled)
+        panel.setReady(true)
+        assertTrue(panel.isSpeechEnabled)
+        realizedEditor(panel)
+        speechButton(panel).doClick()
+        panel.setReady(false)
+
+        assertTrue(panel.isSpeechEnabled)
     }
 
     fun `test send while recording transcribes and submits an empty draft`() {
@@ -1891,6 +1961,37 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
         val attached = (panel.defaultFocusedComponent as EditorTextField).getEditor(true)!!
         assertEquals(1, ActionUtil.getActions(attached.contentComponent).count { it === action })
+    }
+
+    fun `test speech action local shortcut refreshes after remap`() {
+        val manager = ActionManager.getInstance()
+        val action = SpeechInputAction()
+        manager.registerAction(SpeechInputAction.ID, action)
+        Disposer.register(testRootDisposable) { manager.unregisterAction(SpeechInputAction.ID) }
+        val keymap = KeymapManager.getInstance().activeKeymap
+        val original = keymap.getShortcuts(SpeechInputAction.ID).toList()
+        val before = KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F9, InputEvent.ALT_DOWN_MASK), null)
+        val after = KeyboardShortcut(KeyStroke.getKeyStroke(KeyEvent.VK_F10, InputEvent.ALT_DOWN_MASK), null)
+        remap(keymap, listOf(before))
+        try {
+            val panel = PromptPanel(
+                project = project,
+                onSend = { _, _ -> },
+                onAbort = {},
+                cs = scope,
+                speechCapture = SpeechCaptureStub(),
+            )
+            val editor = realizedEditor(panel)
+            assertEquals(listOf(before), action.shortcutSet.shortcuts.toList())
+
+            remap(keymap, listOf(after))
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertEquals(listOf(after), action.shortcutSet.shortcuts.toList())
+            assertEquals(1, ActionUtil.getActions(editor.contentComponent).count { it === action })
+        } finally {
+            remap(keymap, original)
+        }
     }
 
     fun `test send is disabled while speech transcription is pending`() {
@@ -2265,6 +2366,13 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
+    private fun remap(keymap: Keymap, shortcuts: List<Shortcut>) {
+        ApplicationManager.getApplication().runWriteAction {
+            keymap.getShortcuts(SpeechInputAction.ID).forEach { keymap.removeShortcut(SpeechInputAction.ID, it) }
+            shortcuts.forEach { keymap.addShortcut(SpeechInputAction.ID, it) }
+        }
+    }
+
     private fun pasteContext(editor: Editor, item: Transferable) = DataContext { id ->
         when (id) {
             CommonDataKeys.EDITOR.name -> editor
@@ -2298,6 +2406,16 @@ class PromptPanelTest : BasePlatformTestCase() {
             assertEquals("recording", id)
             cancels++
         }
+    }
+
+    private class PendingSpeechCapture : SpeechCapture {
+        private val started = CompletableDeferred<String>()
+
+        override suspend fun start(fail: (String, Throwable) -> Unit): String = started.await()
+
+        override suspend fun stop(id: String): ByteArray = byteArrayOf()
+
+        override fun cancel(id: String) = Unit
     }
 
     private class FileListTransferable(private val files: List<File>) : Transferable {

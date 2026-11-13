@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.project.DumbAwareAction
 
@@ -33,19 +34,18 @@ class SpeechInputAction : DumbAwareAction(
 
     override fun promote(actions: List<AnAction>, context: DataContext): List<AnAction> {
         if (!enabled(context)) return emptyList()
-        return actions.filter(::speech)
+        return if (this in actions) listOf(this) else emptyList()
     }
 
     override fun suppress(actions: List<AnAction>, context: DataContext): List<AnAction> {
         if (!enabled(context)) return emptyList()
-        return actions.filterNot(::speech)
+        val manager = ActionManager.getInstance()
+        return actions.filter { action ->
+            val root = ActionUtil.getDelegateChainRootAction(action)
+            manager.getId(root) == IdeActions.ACTION_CHECKIN_PROJECT
+        }
     }
 
     private fun enabled(context: DataContext): Boolean =
         PromptDataKeys.SPEECH.getData(context)?.isSpeechEnabled == true
-
-    private fun speech(action: AnAction): Boolean {
-        val root = ActionUtil.getDelegateChainRootAction(action)
-        return ActionManager.getInstance().getId(root) == ID || root === this
-    }
 }

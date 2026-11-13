@@ -147,12 +147,16 @@ internal class SpeechInput(
     private fun completed(value: String, finish: Finish) {
         val text = value.trim()
         if (text.isEmpty()) return failed(IllegalStateException(KiloBundle.message("prompt.speech.empty")))
-        val done = finish.done.takeUnless { finish.ready?.invoke() == false }
-        insert(text)
-        id = null
-        job = null
-        update(SpeechInputState.IDLE)
-        done?.invoke()
+        runCatching {
+            val done = finish.done.takeUnless { finish.ready?.invoke() == false }
+            insert(text)
+            done
+        }.onSuccess { done ->
+            id = null
+            job = null
+            update(SpeechInputState.IDLE)
+            done?.invoke()
+        }.onFailure(::failed)
     }
 
     @RequiresEdt

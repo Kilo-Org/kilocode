@@ -86,6 +86,20 @@ class KiloSpeechRpcApiImplTest {
         }
     }
 
+    @Test
+    fun `caps a large core error response`() = runBlocking {
+        val body = "x".repeat(100_000)
+        mock.transcription = body
+        mock.transcriptionStatus = 500
+        val rpc = KiloAppRpcApiImpl(app())
+
+        val err = assertFailsWith<java.io.IOException> {
+            rpc.transcribe(null, SpeechRequestDto(byteArrayOf(1), "speech/model"))
+        }
+
+        assertEquals("Kilo Core request failed (500): ${body.take(1_000)}", err.message)
+    }
+
     private suspend fun app(): KiloBackendAppService {
         val app = KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
         app.connect()

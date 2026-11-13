@@ -123,6 +123,30 @@ class SpeechInputTest : BasePlatformTestCase() {
         assertEquals(SpeechInputState.IDLE, edtWait { input.state })
     }
 
+    fun `test insertion failure clears recording and reports error without completion`() {
+        val capture = Capture()
+        var done = false
+        val input = SpeechInput(
+            coroutines.scope,
+            capture,
+            transcribe = { "hello" },
+            insert = { error("document is read-only") },
+            change = { _, _ -> },
+        )
+
+        edtWait { input.start() }
+        capture.started.complete("recording")
+        assertTrue(coroutines.pumpUntil { edtWait { input.state == SpeechInputState.RECORDING } })
+        edtWait { input.stop(done = { done = true }) }
+        capture.stopped.complete(byteArrayOf(1))
+        assertTrue(coroutines.pumpUntil { edtWait { input.state == SpeechInputState.ERROR } })
+
+        assertEquals("document is read-only", edtWait { input.error })
+        assertFalse(done)
+        edtWait { input.cancel() }
+        assertNull(capture.cancelled)
+    }
+
     fun `test callee cancellation enters error state`() {
         val capture = Capture()
         val input = SpeechInput(

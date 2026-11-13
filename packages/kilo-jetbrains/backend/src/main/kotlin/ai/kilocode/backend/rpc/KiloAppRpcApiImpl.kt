@@ -222,11 +222,11 @@ class KiloAppRpcApiImpl internal constructor(
         val call = http.newCall(builder.build())
         call.timeout().timeout(timeout, TimeUnit.SECONDS)
         return call.await().use { response ->
-            val content = response.body.string()
             if (!response.isSuccessful) {
-                throw IOException("Kilo Core request failed (${response.code}): ${content.take(ERROR_BODY_LIMIT)}")
+                val content = response.peekBody(ERROR_BODY_LIMIT.toLong()).string()
+                throw IOException("Kilo Core request failed (${response.code}): $content")
             }
-            content
+            response.body.string()
         }
     }
 

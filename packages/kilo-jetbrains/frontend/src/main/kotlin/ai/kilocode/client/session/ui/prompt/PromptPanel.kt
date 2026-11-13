@@ -328,6 +328,7 @@ class PromptPanel(
     private val speech = speechCapture?.let { capture ->
         SpeechInput(cs, capture, onTranscribe, ::insertSpeech, ::syncSpeech)
     }
+    private var speechState = SpeechInputState.IDLE
 
     @Volatile
     private var busy = false
@@ -350,7 +351,14 @@ class PromptPanel(
         get() = busy
 
     override val isSpeechEnabled: Boolean
-        get() = speech != null
+        get() {
+            val state = speech?.state ?: return false
+            return when (state) {
+                SpeechInputState.IDLE -> ready
+                SpeechInputState.STARTING, SpeechInputState.RECORDING, SpeechInputState.ERROR -> true
+                SpeechInputState.TRANSCRIBING -> false
+            }
+        }
 
     @RequiresEdt
     override fun toggleSpeech() {
@@ -914,7 +922,9 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncSpeech(state: SpeechInputState, error: String?) {
-        val label = speechLabel(state, error)
+        val previous = speechState
+        speechState = state
+        val label = speechLabel(state)
         speechButton.icon = speechIcon(state)
         speechButton.isEnabled = when (state) {
             SpeechInputState.RECORDING, SpeechInputState.ERROR -> true
@@ -923,13 +933,14 @@ class PromptPanel(
         }
         speechButton.toolTipText = label
         speechButton.accessibleContext.accessibleName = label
-        if (state == SpeechInputState.ERROR) {
-            KiloNotifications.error(project, KiloBundle.message("prompt.speech.error.title"), error)
+        if (state == SpeechInputState.ERROR && previous != SpeechInputState.ERROR) {
+            error?.takeIf(String::isNotBlank)?.let { LOG.warn("kind=prompt-speech failed detail=$it") }
+            KiloNotifications.error(project, KiloBundle.message("prompt.speech.error.title"), null)
         }
         syncButton()
     }
 
-    private fun speechLabel(state: SpeechInputState, error: String?): String = when (state) {
+    private fun speechLabel(state: SpeechInputState): String = when (state) {
         SpeechInputState.IDLE -> KeymapUtil.createTooltipText(
             KiloBundle.message("prompt.speech.start"),
             SpeechInputAction.ID,
@@ -940,13 +951,13 @@ class PromptPanel(
             SpeechInputAction.ID,
         )
         SpeechInputState.TRANSCRIBING -> KiloBundle.message("prompt.speech.transcribing")
-        SpeechInputState.ERROR -> error ?: KiloBundle.message("prompt.speech.error")
+        SpeechInputState.ERROR -> KiloBundle.message("prompt.speech.error")
     }
 
     private fun speechIcon(state: SpeechInputState): Icon = when (state) {
         SpeechInputState.STARTING, SpeechInputState.TRANSCRIBING -> SpinnerIcon.icon
-        SpeechInputState.RECORDING, SpeechInputState.ERROR -> SPEECH_ERROR_ICON
-        SpeechInputState.IDLE -> SPEECH_ICON
+        SpeechInputState.ERROR -> SPEECH_ERROR_ICON
+        SpeechInputState.IDLE, SpeechInputState.RECORDING -> SPEECH_ICON
     }
 
     @RequiresEdt
@@ -1118,7 +1129,11 @@ class PromptPanel(
         if (speech == null) return
         val action = ActionManager.getInstance().getAction(SpeechInputAction.ID) ?: return
         val binding = Disposer.newDisposable("Kilo speech input shortcut")
-        action.registerCustomShortcutSet(ed.contentComponent, binding)
+        action.registerCustomShortcutSet(
+            KeymapUtil.getActiveKeymapShortcuts(SpeechInputAction.ID),
+            ed.contentComponent,
+            binding,
+        )
         speechBinding = binding
     }
 
@@ -1300,6 +1315,7 @@ class PromptPanel(
                 syncSpeech(speech?.state ?: SpeechInputState.IDLE, speech?.error)
                 syncSelectorTooltips()
                 refreshCompletionShortcut()
+                refreshSpeechShortcut()
             }
 
             override fun shortcutsChanged(keymap: Keymap, actionIds: Collection<String>, fromSettings: Boolean) {
@@ -1311,6 +1327,7 @@ class PromptPanel(
                 if (IdeActions.ACTION_CODE_COMPLETION in actionIds) refreshCompletionShortcut()
                 if (SpeechInputAction.ID in actionIds) {
                     syncSpeech(speech?.state ?: SpeechInputState.IDLE, speech?.error)
+                    refreshSpeechShortcut()
                 }
                 if (CycleModeAction.ID in actionIds || CycleModelAction.ID in actionIds ||
                     CycleReasoningAction.ID in actionIds || ResetModelAction.ID in actionIds) {

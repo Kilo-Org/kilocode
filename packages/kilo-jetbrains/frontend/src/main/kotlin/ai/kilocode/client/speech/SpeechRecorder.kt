@@ -6,8 +6,11 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -24,18 +27,29 @@ import javax.sound.sampled.DataLine
 import javax.sound.sampled.TargetDataLine
 
 @Service(Service.Level.APP)
-internal class SpeechRecorder(
+internal class SpeechRecorder internal constructor(
     private val cs: CoroutineScope,
+    private val source: (DataLine.Info) -> TargetDataLine,
+    private val pause: suspend (Long) -> Unit,
+    private val limit: Long,
+    private val timeout: Long,
 ) : SpeechCapture, Disposable {
+    constructor(cs: CoroutineScope) : this(
+        cs,
+        { info -> AudioSystem.getLine(info) as TargetDataLine },
+        { delay(it) },
+        MAX_DURATION_MS,
+        STOP_TIMEOUT_MS,
+    )
+
     companion object {
         private val LOG = KiloLog.create(SpeechRecorder::class.java)
         private const val STOP_TIMEOUT_MS = 5000L
-        private const val MAX_SECONDS = 120
+        private const val MAX_DURATION_MS = 120_000L
         private const val PCM_BITS = 16
         private const val PCM_BYTES = 2
         private const val BUFFER_FRAMES = 1024
         private const val BUFFER_DIVISOR = 5
-        private const val MINUTE_SECONDS = 60
         private val FORMATS = listOf(16000f, 44100f, 48000f).flatMap { rate ->
             listOf(1, 2).map { channels ->
                 AudioFormat(
@@ -62,6 +76,7 @@ internal class SpeechRecorder(
         val closed = CompletableDeferred<Unit>()
         val error = AtomicReference<Throwable?>()
         val stopped = AtomicBoolean(false)
+        val deadline = AtomicReference<Job?>()
     }
 
     private val lock = Any()
@@ -97,7 +112,10 @@ internal class SpeechRecorder(
             error(if (disposed) "Speech recorder is disposed" else "Speech recording is already in progress")
         }
 
+        val deadline = cs.launch(start = CoroutineStart.LAZY) { expire(item) }
+        item.deadline.set(deadline)
         cs.launch(Dispatchers.IO) { capture(item) }
+        deadline.start()
         item.id
     }
 
@@ -106,11 +124,16 @@ internal class SpeechRecorder(
             val value = active?.takeIf { it.id == id } ?: error("No active speech recording")
             active = null
             value.stopped.set(true)
+            closing.add(value)
             value
         }
+        val attempt = finish(item)
         return withContext(NonCancellable + Dispatchers.IO) {
-            close(item)
-            withTimeout(STOP_TIMEOUT_MS) { item.done.await() }
+            withTimeout(timeout) {
+                attempt.await().getOrThrow()
+                item.done.await()
+            }
+            settle(item)
             item.error.get()?.let { throw it }
             check(item.data.size() > 0) { KiloBundle.message("prompt.speech.empty") }
             wav(item.data.toByteArray(), item.format)
@@ -125,12 +148,7 @@ internal class SpeechRecorder(
             closing.add(value)
             value
         }
-        cs.launch(Dispatchers.IO) {
-            val result = runCatching { close(item) }
-            synchronized(lock) { closing.remove(item) }
-            item.closed.complete(Unit)
-            result.exceptionOrNull()?.let { LOG.warn("failed to close cancelled speech recording", it) }
-        }
+        finish(item)
     }
 
     override fun dispose() {
@@ -139,15 +157,14 @@ internal class SpeechRecorder(
             val values = buildList {
                 active?.let(::add)
                 addAll(closing)
-            }
+            }.distinct()
             active = null
-            closing.clear()
             values.onEach { it.stopped.set(true) }
         }
         items.forEach { item ->
-            runCatching { close(item) }
+            val result = runCatching { close(item) }
                 .onFailure { LOG.warn("failed to close disposed speech recording", it) }
-            item.closed.complete(Unit)
+            if (result.isSuccess) item.done.invokeOnCompletion { settle(item) }
         }
     }
 
@@ -167,7 +184,7 @@ internal class SpeechRecorder(
 
     private fun open(format: AudioFormat, fail: (String, Throwable) -> Unit): Result<Capture> = runCatching {
         val info = DataLine.Info(TargetDataLine::class.java, format)
-        val line = AudioSystem.getLine(info) as TargetDataLine
+        val line = source(info)
         runCatching {
             line.open(format)
             line.start()
@@ -178,45 +195,84 @@ internal class SpeechRecorder(
     }
 
     private fun capture(item: Capture) {
-        val size = (item.line.bufferSize / BUFFER_DIVISOR)
-            .coerceAtLeast(item.format.frameSize * BUFFER_FRAMES)
-        val buffer = ByteArray(size - size % item.format.frameSize)
-        val limit = (item.format.frameRate * item.format.frameSize * MAX_SECONDS).toInt()
         val result = runCatching {
+            val size = (item.line.bufferSize / BUFFER_DIVISOR)
+                .coerceAtLeast(item.format.frameSize * BUFFER_FRAMES)
+            val buffer = ByteArray(size - size % item.format.frameSize)
+            val max = (item.format.frameRate.toDouble() * item.format.frameSize * limit / 1000)
+                .toInt()
+                .coerceAtLeast(item.format.frameSize)
             while (!item.stopped.get()) {
                 val count = item.line.read(buffer, 0, buffer.size)
                 if (count > 0) {
-                    val remaining = (limit - item.data.size()).coerceAtLeast(0)
+                    val remaining = (max - item.data.size()).coerceAtLeast(0)
                     item.data.write(buffer, 0, count.coerceAtMost(remaining))
-                    if (count > remaining) {
-                        item.error.set(
-                            IllegalStateException(
-                                KiloBundle.message("prompt.speech.limit", MAX_SECONDS / MINUTE_SECONDS),
-                            ),
-                        )
-                        item.stopped.set(true)
-                        close(item)
+                    if (item.data.size() >= max && item.stopped.compareAndSet(false, true)) {
+                        runCatching { close(item) }
+                            .onFailure { LOG.warn("failed to close limited speech recording", it) }
                     }
                 }
             }
         }
-        val err = result.exceptionOrNull()
-        val failure = item.error.get() ?: err?.takeUnless { item.stopped.get() }
-        if (failure != null) {
-            item.error.set(failure)
-            if (!item.stopped.getAndSet(true)) close(item)
+        val failure = result.exceptionOrNull()?.takeIf { item.stopped.compareAndSet(false, true) }
+        var closed = false
+        try {
+            if (failure == null) return
+            item.error.compareAndSet(null, failure)
             synchronized(lock) {
-                if (active === item) active = null
+                closing.add(item)
             }
+            val close = runCatching { close(item) }
+                .onFailure { LOG.warn("failed to close failed speech recording", it) }
+            closed = close.isSuccess
             LOG.warn("speech recording failed", failure)
-            item.fail(item.id, failure)
+            runCatching { item.fail(item.id, failure) }
+                .onFailure { LOG.warn("speech recording failure callback failed", it) }
+        } finally {
+            item.deadline.get()?.cancel()
+            if (failure != null) {
+                synchronized(lock) {
+                    if (active === item) active = null
+                }
+            }
+            item.done.complete(Unit)
+            if (closed) settle(item)
         }
-        item.done.complete(Unit)
     }
 
     private fun close(item: Capture) {
-        if (item.line.isRunning) item.line.stop()
-        if (item.line.isOpen) item.line.close()
+        val stopped = runCatching {
+            if (item.line.isRunning) item.line.stop()
+        }.exceptionOrNull()
+        runCatching { item.line.close() }
+            .onFailure { err -> stopped?.let(err::addSuppressed) }
+            .getOrThrow()
+        stopped?.let { LOG.warn("failed to stop speech recording before close", it) }
+    }
+
+    private suspend fun expire(item: Capture) {
+        pause(limit)
+        if (!item.stopped.compareAndSet(false, true)) return
+        withContext(Dispatchers.IO) {
+            runCatching { close(item) }
+                .onFailure { LOG.warn("failed to close expired speech recording", it) }
+        }
+    }
+
+    private fun finish(item: Capture): CompletableDeferred<Result<Unit>> {
+        val attempt = CompletableDeferred<Result<Unit>>()
+        cs.launch(Dispatchers.IO) {
+            val result = runCatching { close(item) }
+                .onFailure { LOG.warn("failed to close speech recording", it) }
+            if (result.isSuccess) item.done.invokeOnCompletion { settle(item) }
+            attempt.complete(result)
+        }
+        return attempt
+    }
+
+    private fun settle(item: Capture) {
+        synchronized(lock) { closing.remove(item) }
+        item.closed.complete(Unit)
     }
 }
 

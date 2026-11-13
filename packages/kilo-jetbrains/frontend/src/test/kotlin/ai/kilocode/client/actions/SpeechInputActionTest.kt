@@ -5,9 +5,11 @@ import ai.kilocode.client.session.ui.prompt.SpeechInputContext
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
@@ -45,13 +47,24 @@ class SpeechInputActionTest : BasePlatformTestCase() {
         val other = object : DumbAwareAction() {
             override fun actionPerformed(e: AnActionEvent) = Unit
         }
+        val manager = ActionManager.getInstance()
+        val id = "Kilo.Test.SpeechInputConflict"
+        manager.registerAction(id, other)
+        Disposer.register(testRootDisposable) { manager.unregisterAction(id) }
+        val checkin = manager.getAction(IdeActions.ACTION_CHECKIN_PROJECT) ?: object : DumbAwareAction() {
+            override fun actionPerformed(e: AnActionEvent) = Unit
+        }.also {
+            manager.registerAction(IdeActions.ACTION_CHECKIN_PROJECT, it)
+            Disposer.register(testRootDisposable) { manager.unregisterAction(IdeActions.ACTION_CHECKIN_PROJECT) }
+        }
         val enabled = context(FakeContext(true))
         val disabled = context(FakeContext(false))
 
-        assertEquals(listOf(action), action.promote(listOf(other, action), enabled))
-        assertEquals(listOf(other), action.suppress(listOf(other, action), enabled))
-        assertTrue(action.promote(listOf(other, action), disabled).isEmpty())
-        assertTrue(action.suppress(listOf(other, action), disabled).isEmpty())
+        assertEquals(listOf(action), action.promote(listOf(other, checkin, action), enabled))
+        assertTrue(action.promote(listOf(other, checkin), enabled).isEmpty())
+        assertEquals(listOf(checkin), action.suppress(listOf(other, checkin, action), enabled))
+        assertTrue(action.promote(listOf(other, checkin, action), disabled).isEmpty())
+        assertTrue(action.suppress(listOf(other, checkin, action), disabled).isEmpty())
     }
 
     fun `test frontend descriptor registers configurable control K shortcut`() {
