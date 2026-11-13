@@ -9,20 +9,20 @@ If something isn't working in Kilo Desktop, start here.
 
 ## The app can't reach the agent
 
-Kilo Desktop runs the agent through a local server (a `kilo serve` process) that starts on demand. If chats fail to respond:
+Kilo Desktop runs the agent through a local server (a `kilo serve` process) that starts when the app opens. If chats fail to respond:
 
-- Wait a moment after launch — the server starts the first time you open a chat and needs to report healthy before it accepts requests.
+- Wait a moment after launch — the server needs to report healthy before it accepts requests. If the server stops, Kilo Desktop tries to restart it automatically.
 - Make sure you're signed in to your [Kilo account](/docs/desktop/settings/ai#ai-providers) so hosted models are available.
-- Restart the app to relaunch the server.
+- If you see **Kilo isn't running**, select **Restart**. Restarting the app also relaunches the server.
 
-## The Changes tab or branch switcher isn't available
+## The Changes tab or branch picker isn't available
 
 Git integration needs your system `git`. If the tools are missing or not working:
 
 - Confirm `git` is installed and on your `PATH`. 
 - If you see *Kilo Desktop needs Git 2.17 or newer, but found Git …*, your `git` is too old. Update Git (run `git --version` to check), then restart Kilo Desktop.
 - If the folder isn't a git repository, use **Initialize Git** in the Changes tab to create one. See [Git integration](/docs/desktop/features/git#set-up-git-for-a-folder).
-- For bare or unsafe repositories, the branch switcher is intentionally hidden. Kilo Desktop shows a short explanation instead of a broken control.
+- For bare or unsafe repositories, the **Use** and **Branch** fields on the New Session page are intentionally hidden.
 - **macOS:** if git reports that you haven't agreed to the Xcode license, run `sudo xcodebuild -license` in Terminal, accept it, then try again.
 - **macOS:** if you see *Git was not found. Install Git, then restart Kilo Desktop.*, the Xcode Command Line Tools may be missing. Run `xcode-select --install` in Terminal, then restart Kilo Desktop.
 
