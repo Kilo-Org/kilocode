@@ -18,6 +18,8 @@ import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { authFailure } from "@opencode/core/kilocode/mcp/auth-failure"
 import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
+import { KiloMcpRecovery } from "@opencode/core/kilocode/mcp/recovery"
+import { KiloMcpRefresh } from "@opencode/core/kilocode/mcp/refresh"
 import { Model } from "@opencode/core/model"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Schedule } from "@opencode/core/schedule"
@@ -189,15 +191,18 @@ export const overrides: LayerNode.Replacements = [
   ),
   // MCP servers see the Kilo client identity, the hosted Kilo client document and its issuer binding, and a
   // non-SSE body on the optional GET stream probe is normalized so it cannot start a reconnect loop. The Pages wrapper
-  // adds the Kilo bearer to the `pages` entry that the Pages plugin registers and to nothing else.
+  // adds the Kilo bearer to the `pages` entry that the Pages plugin registers and to nothing else. A server that fails,
+  // such as on a DNS outage at startup or after sleep, is retried in the background instead of staying failed, and a
+  // token refresh that cannot reach its server keeps the credential and fails so that retry can recover it.
   // kilo_port(mcp:18028d867142)
   Mcp.node.replace(
-    Mcp.configured({
+    KiloMcpRecovery.configured({
       clientInfo: { name: "kilo", version: KiloApp.version },
       host: {
         oauth: McpClientMetadata.oauth,
-        fetch: (base, endpoint) => PagesAuth.wrap(KiloSseProbe.probe(base, endpoint)),
+        fetch: (base, endpoint) => KiloMcpRefresh.transient(PagesAuth.wrap(KiloSseProbe.probe(base, endpoint))),
         authFailure,
+        transient: KiloMcpRefresh.isTransient,
       },
     }),
   ),
