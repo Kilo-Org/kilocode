@@ -6693,7 +6693,14 @@
                     "type": "object",
                     "properties": {
                       "archived": {
-                        "type": "number"
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "additionalProperties": false
@@ -33854,6 +33861,10 @@
                       },
                       "info": {
                         "$ref": "#/components/schemas/Session"
+                      },
+                      "unarchived": {
+                        "type": "boolean",
+                        "enum": [true]
                       }
                     },
                     "required": ["sessionID", "info"],
@@ -49018,6 +49029,10 @@
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
+              },
+              "unarchived": {
+                "type": "boolean",
+                "enum": [true]
               }
             },
             "required": ["sessionID", "info"],
@@ -52341,6 +52356,10 @@
                   },
                   "info": {
                     "$ref": "#/components/schemas/Session"
+                  },
+                  "unarchived": {
+                    "type": "boolean",
+                    "enum": [true]
                   }
                 },
                 "required": ["sessionID", "info"],
@@ -58374,6 +58393,10 @@
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
+              },
+              "unarchived": {
+                "type": "boolean",
+                "enum": [true]
               }
             },
             "required": ["sessionID", "info"],
@@ -61721,6 +61744,10 @@
               },
               "info": {
                 "$ref": "#/components/schemas/Session"
+              },
+              "unarchived": {
+                "type": "boolean",
+                "enum": [true]
               }
             },
             "required": ["sessionID", "info"],

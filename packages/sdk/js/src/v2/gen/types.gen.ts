@@ -1317,6 +1317,7 @@ export type GlobalEvent = {
         properties: {
           sessionID: string
           info: Session
+          unarchived?: true
         }
       }
     | {
@@ -5949,6 +5950,7 @@ export type EventSessionUpdated = {
   properties: {
     sessionID: string
     info: Session
+    unarchived?: true
   }
 }
 
@@ -7053,6 +7055,7 @@ export type SyncEventSessionUpdated = {
     data: {
       sessionID: string
       info: Session
+      unarchived?: true
     }
   }
 }
@@ -8982,6 +8985,7 @@ export type SessionUpdated = {
   data: {
     sessionID: string
     info: Session
+    unarchived?: true
   }
 }
 
@@ -10184,6 +10188,7 @@ export type EventSessionUpdated1 = {
   properties: {
     sessionID: string
     info: Session
+    unarchived?: true
   }
 }
 
@@ -14187,7 +14192,7 @@ export type SessionUpdateData = {
     }
     permission?: PermissionRuleset
     time?: {
-      archived?: number
+      archived?: number | null
     }
   }
   path: {

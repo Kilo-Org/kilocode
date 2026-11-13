@@ -924,7 +924,9 @@ export const layer: Layer.Layer<
       return session
     })
 
-    const patch = (sessionID: SessionID, info: Patch) =>
+    // kilocode_change start
+    const patch = (sessionID: SessionID, info: Patch, options?: { unarchived?: true }) =>
+      // kilocode_change end
       Effect.gen(function* () {
         const current = yield* get(sessionID)
         const next = {
@@ -937,7 +939,7 @@ export const layer: Layer.Layer<
           permission: info.permission === null ? undefined : (info.permission ?? current.permission),
         } as Info
         next.metadata = GoalState.project(sessionID, next.metadata) // kilocode_change
-        yield* events.publish(SessionV1.Event.Updated, { sessionID, info: next })
+        yield* events.publish(SessionV1.Event.Updated, { sessionID, info: next, ...options }) // kilocode_change
       })
 
     const touch = Effect.fn("Session.touch")(function* (sessionID: SessionID) {
@@ -959,7 +961,10 @@ export const layer: Layer.Layer<
         )
         // kilocode_change end
       }
-      yield* patch(input.sessionID, { time: { archived: input.time } }).pipe(Effect.orDie)
+      // kilocode_change start
+      const options = input.time == null ? { unarchived: true as const } : undefined
+      yield* patch(input.sessionID, { time: { archived: input.time } }, options).pipe(Effect.orDie)
+      // kilocode_change end
     })
 
     const setMetadata = Effect.fn("Session.setMetadata")(function* (input: typeof SetMetadataInput.Type) {
