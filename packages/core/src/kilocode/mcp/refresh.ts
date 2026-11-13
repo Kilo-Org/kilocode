@@ -1,6 +1,6 @@
 export * as KiloMcpRefresh from "./refresh.js"
 
-import { OAuthError, OAuthErrorCode, type FetchLike } from "@modelcontextprotocol/client"
+import type { FetchLike } from "@modelcontextprotocol/client"
 
 /**
  * The MCP SDK treats a token refresh that fails on the network, or with a 5xx, as a rejected credential: it
@@ -18,15 +18,18 @@ export const transient =
     const host = new URL(url).host
     const response = await fetch(url, init).catch((error: unknown) => {
       if (init.signal?.aborted) throw error
-      throw new OAuthError(
-        OAuthErrorCode.TemporarilyUnavailable,
+      return unavailable(
         `Token refresh could not reach ${host}: ${error instanceof Error ? error.message : String(error)}`,
       )
     })
     if (response.status === 429 || (response.status >= 500 && response.status !== 501))
-      throw new OAuthError(
-        OAuthErrorCode.TemporarilyUnavailable,
-        `Token refresh at ${host} failed with HTTP ${response.status}`,
-      )
+      return unavailable(`Token refresh at ${host} failed with HTTP ${response.status}`)
     return response
   }
+
+// Imported on the failure path only: the SDK at module scope would join the host's startup module graph, and
+// the startup ratchet (packages/kilo-cli/script/startup.ts) measures that graph.
+const unavailable = async (message: string): Promise<never> => {
+  const { OAuthError, OAuthErrorCode } = await import("@modelcontextprotocol/client")
+  throw new OAuthError(OAuthErrorCode.TemporarilyUnavailable, message)
+}
