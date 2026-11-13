@@ -15,6 +15,8 @@ import { PRCommentTime } from "./PRCommentTime"
 import type { PRComment, PRReaction, PRReactionContent } from "./pr-types"
 import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { PRReactions } from "./PRReactions"
 import { PRCommentForm } from "./PRCommentForm"
 
@@ -196,12 +198,20 @@ export function PRCommentCard(props: Props) {
           </Show>
           <Show when={props.error}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
           <div class="am-pr-comment-actions am-pr-row">
-            <SendHint title={sendLabel()} alternate={!props.activeTerminalId}>
+            <SendHint
+              title={sendLabel()}
+              alternateKeybind={alternateEnterKeybind()}
+              alternate={!props.activeTerminalId}
+            >
               <Button
                 variant="primary"
                 size="small"
                 disabled={props.sent}
                 onClick={(event: MouseEvent) => props.onSend(clickSend(event))}
+                onKeyDown={(event: KeyboardEvent) => {
+                  if (props.sent) return
+                  altEnterSend(event, () => props.onSend("alternate"))
+                }}
               >
                 {sendLabel()}
               </Button>

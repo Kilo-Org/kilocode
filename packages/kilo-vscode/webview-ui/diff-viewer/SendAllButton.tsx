@@ -4,6 +4,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../src/context/language"
 import { SendHint } from "../src/v2/send-hint"
+import { alternateEnterKeybind } from "../src/v2/send-hint-text"
 
 interface Props {
   /** Number of local comments. */
@@ -38,6 +39,7 @@ export const SendAllButton: Component<Props> = (props) => {
     <SendHint
       title={t("agentManager.review.sendAllToChat")}
       keybind={props.keybind}
+      alternateKeybind={alternateEnterKeybind()}
       alternate={!props.terminal}
       placement={placement()}
     >

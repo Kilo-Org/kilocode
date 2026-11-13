@@ -6,6 +6,8 @@ import { Show, For, createEffect, createSignal, onCleanup } from "solid-js"
 import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import { useLanguage } from "../../src/context/language"
 import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { useBridge } from "../v2/vscode"
 import type { PRMergeMethod, PRStatus } from "../../src/types/messages/agent-manager"
 import type { PRMergeRequest } from "../../../src/shared/pr-comment-actions"
@@ -271,6 +273,12 @@ export function PRMerge(props: Props) {
           <div
             class="am-pr-summary-row am-pr-row am-pr-merge-status"
             data-status={merge()?.mergeable === "conflicting" ? "error" : state()}
+            onKeyDown={(event) =>
+              altEnterSend(event, () => {
+                if (merge()?.mergeable !== "conflicting") return
+                fix("alternate")
+              })
+            }
           >
             <div class="am-pr-summary-icon">
               <Show when={state() === "unknown"} fallback={<Icon name={statusIcon()} size="normal" />}>
@@ -284,7 +292,7 @@ export function PRMerge(props: Props) {
               </Show>
             </div>
             <Show when={merge()?.mergeable === "conflicting"}>
-              <SendHint title={t("agentManager.pr.merge.fix")}>
+              <SendHint title={t("agentManager.pr.merge.fix")} alternateKeybind={alternateEnterKeybind()}>
                 <Button
                   variant="primary"
                   size="small"

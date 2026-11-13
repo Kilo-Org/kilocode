@@ -25,6 +25,8 @@ import type {
 } from "./pr-types"
 import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { PRReactions } from "./PRReactions"
 import { PRCommentForm } from "./PRCommentForm"
 import { PRDescription } from "./PRDescription"
@@ -135,12 +137,20 @@ function PRConversationCard(props: CardProps) {
         <PRCommentBody comment={props.comment} target={props.comment.kind === "issue" ? props : undefined} />
         <Show when={props.reactionError}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
         <div class="am-pr-comment-actions am-pr-row">
-          <SendHint title={sendLabel()} alternate={!props.activeTerminalId}>
+          <SendHint
+            title={sendLabel()}
+            alternateKeybind={alternateEnterKeybind()}
+            alternate={!props.activeTerminalId}
+          >
             <Button
               variant="primary"
               size="small"
               disabled={props.sent}
               onClick={(event: MouseEvent) => props.onSend(clickSend(event))}
+              onKeyDown={(event: KeyboardEvent) => {
+                if (props.sent) return
+                altEnterSend(event, () => props.onSend("alternate"))
+              }}
             >
               {sendLabel()}
             </Button>
@@ -394,7 +404,10 @@ export function PRConversation(props: Props) {
   return (
     <>
       <div class="am-pr-panel-divider" />
-      <div class="am-pr-panel-section">
+      <div
+        class="am-pr-panel-section"
+        onKeyDown={(event) => altEnterSend(event, () => send(actionable(), "alternate"))}
+      >
         <SectionHeading
           title={t("agentManager.pr.conversation.title")}
           open={open()}
@@ -403,7 +416,11 @@ export function PRConversation(props: Props) {
         />
         <Show when={open()}>
           <Show when={actionable().length > 1}>
-            <SendHint title={sendAllLabel()} alternate={!props.activeTerminalId}>
+            <SendHint
+              title={sendAllLabel()}
+              alternateKeybind={alternateEnterKeybind()}
+              alternate={!props.activeTerminalId}
+            >
               <Button
                 variant="primary"
                 size="small"

@@ -6,6 +6,8 @@ import { useBridge } from "../v2/vscode"
 import type { PRStatus } from "../../src/types/messages/agent-manager"
 import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
 import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { PRCommentCard } from "./PRCommentCard"
 import { resolvedFor, sendThreads, unsentThreads } from "./pr-actions"
 import { SEND_LIMIT, githubUrl } from "./pr-comment-payload"
@@ -184,7 +186,10 @@ export function PRComments(props: Props) {
   return (
     <>
       <div class="am-pr-panel-divider" />
-      <div class="am-pr-panel-section">
+      <div
+        class="am-pr-panel-section"
+        onKeyDown={(event) => altEnterSend(event, () => send(unsent(), "alternate"))}
+      >
         <SectionHeading
           title={t("agentManager.pr.comment.title")}
           open={state().open}
@@ -198,7 +203,11 @@ export function PRComments(props: Props) {
         />
         <Show when={state().open}>
           <Show when={unsent().length > 0}>
-            <SendHint title={sendAllLabel()} alternate={!props.activeTerminalId}>
+            <SendHint
+              title={sendAllLabel()}
+              alternateKeybind={alternateEnterKeybind()}
+              alternate={!props.activeTerminalId}
+            >
               <Button
                 variant="primary"
                 size="small"

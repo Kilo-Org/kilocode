@@ -503,7 +503,8 @@ export function createReviewView(
     ),
   )
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== "Enter" || !(event.metaKey || event.ctrlKey)) return
+    // ⌘/Ctrl+Enter sends every comment now; ⌥/Alt+Enter sends them with the alternate delivery, like ⌥↵ in the composer.
+    if (event.key !== "Enter" || (!(event.metaKey || event.ctrlKey) && !event.altKey)) return
     if (keepsNativeFocus(event.target) || props.canComment === false || !comments().length) return
     event.preventDefault()
     event.stopPropagation()

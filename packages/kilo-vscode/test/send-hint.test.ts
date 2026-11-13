@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { alternateClickKey, clickModifier, sendHintRows, sendHintText } from "../webview-ui/src/v2/send-hint-text"
+import { alternateEnterKeybind, alternateClickKey, clickModifier, sendHintRows, sendHintText } from "../webview-ui/src/v2/send-hint-text"
 
 const t = (key: string) => `t:${key}`
 const click = "click"
@@ -68,5 +68,10 @@ describe("send hint", () => {
   test("the modifier follows the platform", () => {
     expect(clickModifier(true)).toBe("⌥")
     expect(clickModifier(false)).toBe("Alt")
+  })
+
+  test("the alternate send key follows the platform", () => {
+    expect(alternateEnterKeybind(true)).toBe("⌥↵")
+    expect(alternateEnterKeybind(false)).toBe("Alt+Enter")
   })
 })

@@ -29,6 +29,7 @@ import { clickSend, type SendIntent } from "../../src/shared/prompt-send"
 import { runningDelivery } from "../src/v2/kilo-settings"
 import { other } from "../src/v2/pending-actions"
 import { SendHint } from "../src/v2/send-hint"
+import { alternateEnterKeybind } from "../src/v2/send-hint-text"
 import { useLanguage } from "../src/context/language"
 
 export interface DocumentPanelProps {
@@ -82,7 +83,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function handleSendAllKeyDown(event: KeyboardEvent, comments: ReviewComment[], send: (intent: SendIntent) => void): void {
-  if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return
+  // ⌘/Ctrl+Enter sends all now; ⌥/Alt+Enter sends them with the alternate delivery, like ⌥↵ in the composer.
+  if (event.key !== "Enter" || (!(event.metaKey || event.ctrlKey) && !event.altKey)) return
   if (isEditableTarget(event.target)) return
   if (comments.length === 0) return
   event.preventDefault()
@@ -445,6 +447,7 @@ export const DocumentPanel: Component<DocumentPanelProps> = (props) => {
           <SendHint
             title={t("agentManager.review.sendAllToChat")}
             keybind={sendAllKeybind(t)}
+            alternateKeybind={alternateEnterKeybind()}
             alternate={!props.activeTerminalId}
             placement="top"
           >

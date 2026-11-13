@@ -17,6 +17,7 @@ Object.assign(globalThis, {
   ResizeObserver: window.ResizeObserver,
   IntersectionObserver: window.IntersectionObserver,
   Event: window.Event,
+  CustomEvent: window.CustomEvent,
   MouseEvent: window.MouseEvent,
   PointerEvent: window.PointerEvent,
   KeyboardEvent: window.KeyboardEvent,
@@ -69,6 +70,7 @@ const { PRMerge } = await import("../../webview-ui/agent-manager/pr/PRMerge")
 const { PRCommentForm } = await import("../../webview-ui/agent-manager/pr/PRCommentForm")
 const { isMac } = await import("../../webview-ui/src/v2/pending-actions")
 const { clickModifier } = await import("../../webview-ui/src/v2/send-hint-text")
+const { APPEND_REVIEW_COMMENTS } = await import("../../webview-ui/diff-viewer/review-annotations")
 
 const english = { ...dict, ...amDict } as Record<string, string>
 
@@ -106,7 +108,13 @@ const pr = {
 }
 
 const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms))
+const alternate = `${isMac() ? "⌥↵" : "Alt+Enter"} / ${clickModifier()}+click`
 const expected = (title: string) => [
+  [title, "click"],
+  ["Queue for after this turn", alternate],
+]
+// A row whose action has no key of its own, such as a section summary, advertises the click only.
+const expectedClick = (title: string) => [
   [title, "click"],
   ["Queue for after this turn", `${clickModifier()}+click`],
 ]
@@ -161,7 +169,7 @@ await verify(
 
 await verify("PR checks", () => <PRChecks pr={pr} worktreeId="hint-checks" />, "Fix with Kilo")
 
-await verify("PR summary", () => <PRSummary pr={pr} worktreeId="hint-summary" />, "Fix with Kilo")
+await verify("PR summary", () => <PRSummary pr={pr} worktreeId="hint-summary" />, "Fix with Kilo", expectedClick)
 
 const thread = {
   id: "r1",
@@ -284,6 +292,75 @@ await verify(
     root.remove()
   }
 }
+
+// ⌥/Alt+Enter queues from the comments section, from a focused card, and stays out of reply fields.
+async function altEnterChecks(worktreeId: string, run: (section: HTMLElement, sent: string[]) => Promise<void>) {
+  const sent: string[] = []
+  const listener = (event: Event) => {
+    const detail = (event as CustomEvent<{ comments: unknown[]; send?: string; handled?: boolean }>).detail
+    if (!detail || detail.handled || detail.comments.length === 0) return
+    detail.handled = true
+    sent.push(detail.send ?? "enter")
+  }
+  window.addEventListener(APPEND_REVIEW_COMMENTS, listener)
+  const root = document.createElement("div")
+  document.body.append(root)
+  const dispose = render(
+    () => (
+      <LanguageContext.Provider value={language}>
+        <VSCodeProvider>
+          <RichProvider>
+            <PRComments
+              comments={{ total: 1, unresolved: 1, comments: [thread] }}
+              worktreeId={worktreeId}
+              prNumber={1}
+              prUrl="https://github.com/o/r/pull/1"
+            />
+          </RichProvider>
+        </VSCodeProvider>
+      </LanguageContext.Provider>
+    ),
+    root,
+  )
+  try {
+    await tick()
+    const section = root.querySelector<HTMLElement>(".am-pr-panel-section")
+    assert.ok(section, "the comments section is rendered")
+    await run(section, sent)
+  } finally {
+    dispose()
+    root.remove()
+    window.removeEventListener(APPEND_REVIEW_COMMENTS, listener)
+  }
+}
+
+await altEnterChecks("hint-alt-section", async (section, sent) => {
+  section.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true }))
+  await tick()
+  assert.deepEqual(sent, ["alternate"], "Alt+Enter in the comments section queues the unsent threads")
+})
+
+await altEnterChecks("hint-alt-field", async (section, sent) => {
+  const openReply = [...section.querySelectorAll("button")].find((item) => /reply/i.test(item.textContent ?? ""))!
+  assert.ok(openReply, "the card offers a reply field")
+  openReply.click()
+  await tick()
+  const reply = section.querySelector<HTMLTextAreaElement>("textarea")
+  assert.ok(reply, "the reply field is rendered inside the section")
+  reply.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true }))
+  await tick()
+  assert.deepEqual(sent, [], "Alt+Enter inside the reply field does not send the section")
+})
+
+await altEnterChecks("hint-alt-card", async (section, sent) => {
+  const fix = [...section.querySelectorAll("button")].find(
+    (item) => item.textContent?.trim() === language.t("agentManager.pr.fixWithKilo"),
+  )
+  assert.ok(fix, "the review card offers Fix with Kilo")
+  fix.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true }))
+  await tick()
+  assert.deepEqual(sent, ["alternate"], "Alt+Enter on the focused card queues that thread")
+})
 
 // Verify PRCommentForm diff mode tooltip, Option+click, Enter, and Option+Enter.
 {

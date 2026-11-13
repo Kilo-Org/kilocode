@@ -10,6 +10,11 @@ export function alternateClickKey(t: (key: string) => string, mac = isMac()): st
   return `${clickModifier(mac)}+${t("prompt.action.click")}`
 }
 
+/** The keycap of the key that sends the way ⌥↵ does, such as `⌥↵` or `Alt+Enter`. */
+export function alternateEnterKeybind(mac = isMac()): string {
+  return mac ? "⌥↵" : "Alt+Enter"
+}
+
 /** One row of a send tooltip: the action and the keys or click that perform it. */
 export type SendHintRow = { action: string; keys: string }
 

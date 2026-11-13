@@ -13,6 +13,8 @@ import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
 import { clickSend } from "../../../src/shared/prompt-send"
 import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { checkFeedback } from "./pr-check-feedback"
 import { pushFixes } from "./pr-push-fixes"
 import { commentState, patchCommentState } from "./pr-comment-state"
@@ -68,6 +70,12 @@ export function PRChecks(props: {
     if (!item) return
     sendReviewComments([item], props.activeTerminalId, clickSend(event))
   }
+  // ⌥/Alt+Enter in this section queues the checks feedback, like an Option-click on its Fix button.
+  const sendAlternate = () => {
+    const item = feedback()
+    if (!item) return
+    sendReviewComments([item], props.activeTerminalId, "alternate")
+  }
   const fixLabel = () =>
     t(props.activeTerminalId ? "agentManager.pr.checks.terminal" : "agentManager.pr.checks.fix")
   const toggleOpen = () => {
@@ -86,7 +94,7 @@ export function PRChecks(props: {
   return (
     <>
       <div class="am-pr-panel-divider" />
-      <div class="am-pr-panel-section">
+      <div class="am-pr-panel-section" onKeyDown={(event) => altEnterSend(event, sendAlternate)}>
         <SectionHeading
           title={t("agentManager.pr.checks.title")}
           open={open()}
@@ -96,7 +104,7 @@ export function PRChecks(props: {
         />
         <Show when={open()}>
           <Show when={feedback()}>
-            <SendHint title={fixLabel()} alternate={!props.activeTerminalId}>
+            <SendHint title={fixLabel()} alternateKeybind={alternateEnterKeybind()} alternate={!props.activeTerminalId}>
               <Button variant="primary" size="small" class="am-pr-checks-fix" onClick={send}>
                 {fixLabel()}
               </Button>
