@@ -831,6 +831,26 @@ describe("QdrantVectorStore", () => {
       expect(mockCreatePayloadIndex).toHaveBeenCalledTimes(6)
     })
 
+    test("state reports empty when only the completion marker remains", async () => {
+      // A scanned-then-cleared collection still holds points_count 1 for the
+      // completion marker: emptiness must subtract it.
+      mockGetCollection.mockResolvedValue({ points_count: 1 })
+      mockRetrieve.mockResolvedValue([{ payload: { indexing_complete: true } }])
+
+      const state = await vectorStore.state()
+
+      expect(state).toEqual({ status: "empty", points: 0 })
+    })
+
+    test("state counts data points without the completion marker", async () => {
+      mockGetCollection.mockResolvedValue({ points_count: 4 })
+      mockRetrieve.mockResolvedValue([{ payload: { indexing_complete: true } }])
+
+      const state = await vectorStore.state()
+
+      expect(state).toEqual({ status: "complete", points: 3 })
+    })
+
     test("should throw vectorDimensionMismatch error when deleteCollection fails during recreation", async () => {
       const differentVectorSize = 768
       mockGetCollection.mockResolvedValue({

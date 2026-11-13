@@ -70,10 +70,13 @@ export interface IVectorStore {
   collectionExists(): Promise<boolean>
 
   /**
-   * Checks if the collection exists and has indexed points
-   * @returns Promise resolving to boolean indicating if the collection exists and has points
+   * Reports how far along the store is. `partial` means points exist but no
+   * successful scan finished, which is what a store owned by another live
+   * session looks like. Callers must treat `partial` as usable-but-untrusted
+   * and must never clear it on behalf of a session that does not own the
+   * writer lock.
    */
-  hasIndexedData(): Promise<boolean>
+  state(): Promise<StoreState>
 
   /**
    * Marks the indexing process as complete by storing metadata
@@ -92,6 +95,13 @@ export interface VectorStoreSearchResult {
   id: string | number
   score: number
   payload?: Payload | null
+}
+
+export type StoreStatus = "empty" | "partial" | "complete"
+
+export type StoreState = {
+  status: StoreStatus
+  points?: number
 }
 
 export interface Payload {
