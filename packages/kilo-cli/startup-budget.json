@@ -9,6 +9,7 @@
     "kilocode.provider-usage": 10,
     "kilocode.openai": 10,
     "kilocode.marketplace": 10,
+    "kilocode.agent-plugins": 15,
     "kilocode.flow": 10,
     "kilocode.session-sync": 10,
     "kilocode.remote": 10,

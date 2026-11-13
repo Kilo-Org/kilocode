@@ -6,6 +6,7 @@ import { ConfigModel } from "@opencode/schema/config/model"
 import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import { KiloPagesRpc } from "@opencode/schema/kilocode/pages"
 import { optional } from "@opencode/schema/schema"
+import path from "path"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
 import type { ConfigNormalize } from "../../config/normalize.js"
@@ -34,12 +35,27 @@ const Retention = Schema.Struct({
 
 const ReasoningDisplay = Schema.Literals(["expanded", "preview", "headline"])
 
+export const AgentPlugins = Schema.Struct({
+  paths: Schema.String.pipe(Schema.Array, optional).annotate({
+    description:
+      "Agent Plugin directories to load, each a plugin root holding plugin.json. Relative paths resolve from the config file; ~/ expands to the home directory",
+  }),
+  disabled: Schema.String.pipe(Schema.Array, optional).annotate({
+    description: "Names of Agent Plugins not to load",
+  }),
+}).annotate({ identifier: "KiloConfigPolicy.AgentPlugins" })
+export type AgentPlugins = typeof AgentPlugins.Type
+
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   session_sync: Schema.Boolean.pipe(optional).annotate({
     description: "Synchronize signed-in Kilo sessions and required assets (default: true; global config only)",
   }),
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
     description: "Hide Kilo models that can use prompts for training and deny provider data collection",
+  }),
+  agent_plugins: AgentPlugins.pipe(optional).annotate({
+    description:
+      "Agent Plugins (agent-plugins.org) to load besides the plugins/ directories of ~/.agents and the project's .agents",
   }),
   privacy_mode: Schema.Boolean.pipe(optional).annotate({
     description:
@@ -143,6 +159,7 @@ const settings = {
   memory_model: { schema: Schema.NullOr(Schema.String), expected: "a model string or null" },
   web_search: { schema: Schema.Boolean, expected: "a boolean" },
   retention: { schema: Retention, expected: "an object with optional enabled and maxAgeDays" },
+  agent_plugins: { schema: AgentPlugins, expected: 'an object with string arrays "paths" and "disabled"' },
 } as const
 
 /** Decode each Kilo-only setting on its own, so one invalid field does not drop the others. */
@@ -372,11 +389,8 @@ export function commandDocuments(entries: readonly Config.Entry[], documents: { 
 /** Read only effective location config entries, never plugin storage or a user's ordinary config store. */
 export function fromEntries(entries: readonly Config.Entry[]) {
   return {
-    hide_prompt_training_models: entries.reduce(
-      (value, entry) =>
-        entry.type === "document" && entry.info instanceof Info && entry.info.hide_prompt_training_models !== undefined
-          ? entry.info.hide_prompt_training_models
-          : value,
+    hide_prompt_training_models: documents(entries).reduce(
+      (value, document) => document.info.hide_prompt_training_models ?? value,
       false,
     ),
   }
@@ -432,3 +446,27 @@ export function pagesConfig(entries: readonly Config.Entry[]) {
 }
 
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))
+
+/**
+ * The effective `agent_plugins` settings: every document adds its plugin paths and disabled names. A relative path
+ * resolves from the directory of the config file that names it; documents without a file keep it relative for the
+ * caller to resolve.
+ */
+export function agentPlugins(entries: readonly Config.Entry[]) {
+  return {
+    paths: documents(entries).flatMap((document) =>
+      (document.info.agent_plugins?.paths ?? []).map((item) =>
+        document.file && !path.isAbsolute(item) && !item.startsWith("~/")
+          ? path.join(path.dirname(document.file), item)
+          : item,
+      ),
+    ),
+    disabled: [...new Set(documents(entries).flatMap((document) => document.info.agent_plugins?.disabled ?? []))],
+  }
+}
+
+function documents(entries: readonly Config.Entry[]) {
+  return entries.flatMap((entry) =>
+    entry.type === "document" && entry.info instanceof Info ? [{ info: entry.info, file: entry.path }] : [],
+  )
+}
