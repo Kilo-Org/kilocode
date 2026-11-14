@@ -14,6 +14,7 @@ type Internals = {
   refreshConfig: (type: "configLoaded" | "configUpdated", dir?: string) => Promise<void>
   initializeConnection: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
+  handleProviderAction: (msg: Record<string, unknown>) => Promise<void>
   fetchAndSendIndexingStatus: (directory?: string, projectId?: string) => void
   flushPendingKiloModel: () => void
   checkConfigWarnings: (reason: string) => Promise<void>
@@ -216,5 +217,57 @@ describe("KiloProvider providers on reconnect", () => {
     await Bun.sleep(0)
 
     expect(providers).toBe(before)
+  })
+})
+
+describe("KiloProvider provider actions", () => {
+  const cases = [
+    {
+      name: "a save without config",
+      msg: { type: "saveCustomProvider", requestId: "req", providerID: "myprovider" },
+      error: { providerID: "myprovider", action: "connect", message: "Missing provider configuration" },
+    },
+    {
+      name: "a connect without an API key",
+      msg: { type: "connectProvider", requestId: "req", providerID: "openai" },
+      error: { providerID: "openai", action: "connect", message: "Missing API key" },
+    },
+    {
+      name: "a request without a provider ID",
+      msg: { type: "disconnectProvider", requestId: "req" },
+      error: { providerID: "", action: "disconnect", message: "Missing provider ID" },
+    },
+  ]
+
+  for (const item of cases) {
+    it(`replies with an error to ${item.name}`, async () => {
+      const messages: unknown[] = []
+      const internal = provider(connection())
+      stub(internal)
+      internal.webview = { postMessage: async (message) => messages.push(message) }
+
+      await internal.handleProviderAction(item.msg)
+
+      expect(messages).toEqual([{ type: "providerActionError", requestId: "req", ...item.error }])
+    })
+  }
+
+  it("replies with an error when the backend is not connected", async () => {
+    const messages: unknown[] = []
+    const internal = provider(connection(false))
+    stub(internal)
+    internal.webview = { postMessage: async (message) => messages.push(message) }
+
+    await internal.handleProviderAction({ type: "saveCustomProvider", requestId: "req", providerID: "myprovider" })
+
+    expect(messages).toEqual([
+      {
+        type: "providerActionError",
+        requestId: "req",
+        providerID: "myprovider",
+        action: "connect",
+        message: "Not connected to CLI backend",
+      },
+    ])
   })
 })
