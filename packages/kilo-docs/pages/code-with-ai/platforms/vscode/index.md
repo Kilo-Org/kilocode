@@ -31,6 +31,8 @@ Key features include:
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
 - **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
+- **Prompt navigator** — Jump between prompts in long sessions from a rail beside the transcript
+- **[Documents tab](/docs/code-with-ai/agents/chat-interface)** — Markdown references open in a rendered, interactive document tab with image previews, copy actions, and line comments
 - **[Notifications](/docs/getting-started/settings/notifications)** - Choose sounds, VS Code alerts, or OS notifications when a session needs attention
 - **[Keep Awake](/docs/getting-started/settings/keep-awake)** - Optionally prevent system sleep while agents work in a local VS Code window
 - **Transcript export:** Save complete local session transcripts as Markdown files
@@ -39,7 +41,7 @@ Key features include:
 
 ## Background agents
 
-When Kilo starts an agent in the background, a collapsible status strip appears in the chat header. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Click the strip to expand it and see each agent.
+When Kilo starts an agent in the background, the agent stack appears in the session dock above the prompt, next to the working indicator or the idle actions. It stays visible while the transcript scrolls, so you can check background work without searching the conversation. The stack shows the agents started in the current run, with running agents first and finished agents dimmed below them. Select the agent avatars to open a panel with each agent and its controls.
 
 Each agent shows one of these states:
 
@@ -52,13 +54,14 @@ Each agent shows one of these states:
 
 An agent can also show **Needs input** when it is waiting for a permission decision or an answer to a question. Open the agent row to inspect its read-only transcript and handle the request in the child-agent view. In the sidebar and Kilo tab, the transcript opens in a read-only editor tab. In Agent Manager, it opens in the right-hand inspector.
 
-Use these controls in the background-agent strip:
+Use these controls in the agent panel:
 
+- **Open** an agent row to view its transcript. **Open all background agents** opens every agent in the stack at once.
 - **Stop** cancels a running agent and its child session.
 - **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
-- **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
-- **Clear finished** hides all agents that are no longer running.
-- **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
+- **Clear finished** hides agents that are no longer running. It does not delete their transcripts or agent records.
+
+**Continue in background** appears on a running foreground subagent's task card. It promotes that work so the parent session can continue while the subagent runs in the background.
 
 Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
 
@@ -67,6 +70,26 @@ Stopping the main session with **Stop** or `Esc` ends its current response but l
 Send a message while Kilo is working to queue it for processing in order. To revise a queued message, clear the prompt input and click the message's edit icon. This removes it from the queue and restores its text, images, and file references to the input. Sending it again adds it to the end of the queue.
 
 After stopping a response, leave the input empty and click **Continue** to resume the interrupted turn with its original model and agent, without adding another user message. Continue starts a new model request; it does not undo tool actions already performed and is not available for completed responses.
+
+## Prompt navigator
+
+When a session has two or more prompts, a prompt navigator appears along the transcript edge as a hairline tick per prompt. Hover a tick to open a card of prompt and answer previews, then select a row to jump to that prompt. The card header jumps to the first or latest prompt.
+
+You can also use the keyboard: `ArrowUp` and `ArrowDown` move between ticks, `Home` and `End` move to the first or latest tick, and `Enter` or `Space` opens the focused entry. `Esc` closes the card before other chat shortcuts see it.
+
+The first tick loads earlier history progressively when it has not been loaded yet and shows a loading row while it runs. In long sessions, older prompts collapse into a dashed overflow tick. Queued prompts carry a **Queued** marker until they are delivered, and the scroll wheel over the rail scrolls the transcript. The rail follows your sidebar location, so it stays on the physical right in Agent Manager and editor tabs.
+
+## Reviewing changes
+
+The **Changes** button above the prompt shows the working tree totals (`+N -M`) when files have changed and opens the **Changes** editor tab. The tab opens on the **Branch** diff, which compares your branch with its base branch and includes staged, unstaged, untracked, and local commit changes. Use the source picker to switch to **Staged**, **Unstaged**, or **Session**; the **Session** scope collects the files Kilo changed during the current session.
+
+Each completed turn that changed files shows a **Modified N files** row with addition and deletion bars. Select the row to open the diff for that turn only.
+
+In the diff viewer:
+
+- Use the layout toggle to switch between unified and split view. Kilo remembers your choice in the `kilo-code.new.diff.style` setting.
+- For Markdown files, use the eye/code toggle to switch between rendered Markdown and the raw diff. See [Markdown Diff Rendering](/docs/getting-started/settings#markdown-diff-rendering).
+- Add an inline comment on a changed line and choose **Send to Kilo**. The comment appears as a card above the prompt and is included when you send your next message.
 
 ## Multi-root workspaces
 
