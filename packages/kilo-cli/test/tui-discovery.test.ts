@@ -109,10 +109,12 @@ test("the hosted project directory is the one of Kilo's config discovery", () =>
   expect(KiloConfigFiles.directories).toEqual([projectConfigName])
 })
 
-test("every host mirror names an upstream file and a Kilo file", async () => {
+test("every host mirror names an upstream file, a Kilo file and its registry marker", async () => {
   for (const [upstream, mirror] of Object.entries(hostMirrors)) {
     expect(await Bun.file(path.join(import.meta.dir, "../..", upstream)).exists(), upstream).toBe(true)
     expect(await Bun.file(path.join(import.meta.dir, "../src", mirror)).exists(), mirror).toBe(true)
+    // Ties this list to script/upstream/mirrors.json, whose check fails for a marker without an entry.
+    expect(await source(`../src/${mirror}`), mirror).toContain(`// kilo_mirror: packages/${upstream}\n`)
   }
 })
 

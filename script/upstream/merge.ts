@@ -42,6 +42,7 @@ import { transformConflictedExtensions } from "./transforms/transform-extensions
 import { transformConflictedWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
 import { BASELINE } from "./utils/baseline"
+import { REGISTRY } from "./utils/mirrors"
 
 export interface MergeOptions {
   version?: string
@@ -208,6 +209,7 @@ export async function main(argv: string[]) {
 
   logger.step(7, 7, "Finishing...")
   await guards(sync)
+  await mirrorDrift(sync, reportFile)
   if (options.push) {
     await git.push(config.originRemote, branch, true)
     logger.success(`Pushed ${branch}`)
@@ -307,6 +309,8 @@ function printAnalysis(sync: report.SyncReport) {
   }
   logger.info(`Shared files touched: ${a.sharedTouched.length}`)
   logger.list(a.sharedTouched)
+  logger.info(`Mirrors touched: ${a.mirrorsTouched.length}`)
+  logger.list(a.mirrorsTouched.map((m) => `${m.upstream} -> ${m.mirror}`))
 }
 
 /** Remove upstream files under the packages Kilo dropped. Also runs after a clean merge, which skips resolve(). */
@@ -420,6 +424,34 @@ async function guards(sync: report.SyncReport) {
       sync.notes.push(`\`${name}\` fails after the merge. Fix it in the sync PR`)
     }
   }
+}
+
+/**
+ * A Kilo-owned copy of an upstream file is behind the pinned release. Only the sync can re-merge it,
+ * so the sync stops here: the merge is committed and the report is written, but the branch is not
+ * pushed and not handed off as done. CI checks the registry structure instead, because a normal PR
+ * cannot fix drift and must not be asked to.
+ */
+async function mirrorDrift(sync: report.SyncReport, reportFile: string) {
+  if (!(await Bun.file(REGISTRY).exists())) {
+    sync.notes.push(`The branch has no \`${REGISTRY}\`: the mirror drift check was skipped`)
+    return
+  }
+  const branch = "script/check-mirrors.ts"
+  const script = (await Bun.file(branch).exists()) ? branch : new URL("../check-mirrors.ts", import.meta.url).pathname
+  const result = await $`bun ${script} --drift`.quiet().nothrow()
+  console.log(result.stdout.toString() + result.stderr.toString())
+  if (result.exitCode === 0) {
+    logger.success("check-mirrors.ts --drift: ok")
+    return
+  }
+  sync.notes.push("`check-mirrors.ts --drift` fails: re-merge the listed mirrors and record their new SHAs")
+  await report.saveReport(sync, reportFile)
+  logger.error("The sync is incomplete: upstream changed a file Kilo copies.")
+  logger.info("Re-merge each copy listed above with the recorded `why` and `invariants` in script/upstream/mirrors.json,")
+  logger.info("record the new upstream SHA there, then run `bun script/check-mirrors.ts --drift`.")
+  logger.info(`Report saved to ${reportFile}`)
+  process.exit(1)
 }
 
 async function references(options: MergeOptions, target: Release, base: string) {

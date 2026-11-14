@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+// kilo_mirror: packages/cli/src/index.ts
 // The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.2.6): the same layers and the
 // upstream command handlers, with Kilo's composition added: KILO_* environment translation and the `kilo2` app
 // directory (./env, imported first), Kilo's app name, and a serve handler (./serve) that gives the server the Kilo

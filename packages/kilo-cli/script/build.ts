@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+// kilo_mirror: packages/cli/script/build.ts
 // Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo2` executable for internal releases.
 //
 // Mirror of packages/cli/script/build.ts (v2.2.6). That script compiles the upstream entry as `opencode` and takes

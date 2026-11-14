@@ -18,7 +18,7 @@ git remote add upstream https://github.com/anomalyco/opencode.git   # once
 bun install --cwd script/upstream                                     # once, for the codemods (ts-morph)
 
 bun script/upstream/list-versions.ts              # releases, which ones v2 has, next target, lag
-bun script/upstream/analyze.ts                    # dry run of the next sync: conflicts, new workflows, shared files touched
+bun script/upstream/analyze.ts                    # dry run of the next sync: conflicts, new workflows, shared files and mirrors touched
 bun script/upstream/merge.ts                      # merge the next release into a new branch sync-v2-x-y from origin/v2
 bun script/upstream/merge.ts --version v2.0.27    # a given release
 ```
@@ -41,7 +41,7 @@ In an Agent Manager worktree that is already on a fresh branch from `origin/v2`,
    - Branding transforms: only when `transforms.branding` is on.
    - Lock files: keep ours, then regenerate with `bun install` (only with the Bun version from `packageManager`).
 7. Runs `bun script/check-workflows.ts` and lists unexpected workflows.
-8. If conflicts or unexpected workflows are left, it stops with the merge in progress and writes the report. Otherwise it commits the merge, runs `script/check-opencode-annotations.ts` and `script/check-shared-patches.ts`, and writes the report.
+8. If conflicts or unexpected workflows are left, it stops with the merge in progress and writes the report. Otherwise it commits the merge, runs `script/check-opencode-annotations.ts`, `script/check-shared-patches.ts` and `script/check-mirrors.ts --drift`, and writes the report. A mirror behind the pinned release stops the sync before any push.
 
 Reports go to `$(git rev-parse --absolute-git-dir)/upstream-sync/report-<tag>.md`, so they are never committed.
 
@@ -75,6 +75,7 @@ Reference worktrees (`.worktrees/upstream-sync/`): `upstream` (pristine release 
 
   Move the code in a follow-up PR: the sync PR contains only the merge and the conflict resolutions.
 - New upstream workflow: review it, add it to `active` or `removed` in `script/check-workflows.ts`, then `bun script/check-workflows.ts --fix`.
+- Mirror listed under "Mirrors touched": upstream changed a file that Kilo copies into a Kilo-owned path, so the merge took the upstream change and left the copy behind. Re-merge the change into the copy, keep the `why` and `invariants` in `script/upstream/mirrors.json` true, and record the new upstream SHA there. The sync stops until `bun script/check-mirrors.ts --drift` passes.
 - Conclude with `git commit --no-edit` to keep the sync message.
 - `.kilo/agent/upstream-merge.md` has the detailed resolution workflow.
 
@@ -86,12 +87,13 @@ bun script/check-workflows.ts
 bun run check                                   # or bun typecheck in packages/core, cli, server, tui, plugin
 bun script/check-opencode-annotations.ts
 bun script/check-shared-patches.ts
+bun script/check-mirrors.ts --drift
 bun script/upstream/progress.ts                   # validates the map inputs; do not commit the generated files
 ```
 
 Then run focused tests in `packages/core`, `cli` and `server` with the test isolation from `.kilo/skills/v2-migration/SKILL.md`, run the same tests on `origin/v2`, and classify each failure as new or already failing. Self-test the CLI as the skill describes (`VERIFICATION_TEST.md`).
 
-The sync PR body gives: release and SHA, lag before and after, each conflict and its resolution, shared files touched, tooling gaps, the test comparison, self-test evidence, and in bold: **Merge with 'Create a merge commit'. Do not squash or rebase.**
+The sync PR body gives: release and SHA, lag before and after, each conflict and its resolution, shared files touched, mirrors touched with the re-merged change and recorded SHA, tooling gaps, the test comparison, self-test evidence, and in bold: **Merge with 'Create a merge commit'. Do not squash or rebase.**
 
 ## Shared-patch checks
 
@@ -101,6 +103,16 @@ Both checks compare the tree with the pinned upstream release commit: the second
 - `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]`: prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them. Paths in `skipFiles` are not shared files and are not counted. Generated files (`bun.lock`, listed in `utils/owned.ts`) are listed but not counted: they follow from the `package.json` files, so a new Kilo-owned package does not trip the checks.
 
 CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`), and the tests of this directory (job `upstream sync tooling tests`).
+
+## Mirror checks
+
+A mirror is a Kilo-owned copy of an upstream file (the host entry, a replaced tool). Upstream never edits Kilo-owned paths, so a change to a copied upstream file merges cleanly at its own path and the copy drifts with no conflict and no report line. `script/upstream/mirrors.json` lists every mirror: the upstream path, the Kilo copy, the upstream blob SHA last verified against the pinned release, `why` Kilo copies the file instead of using an upstream extension point, and the `invariants` a re-merge must keep. Each copy starts with `// kilo_mirror: <upstream path>`.
+
+The entry describes decisions, not an inventory: the upstream diff shows which lines differ, so an invariant earns its place by saying what must stay true after upstream reshapes the file (an import scheme, an ordering, a deliberate omission). A drifted mirror prints its `why` and `invariants`, and the sync rewrites them when the divergence set changes.
+
+`bun script/check-mirrors.ts [--json] [--registry <file>]` checks the registry structure and needs no pin: a registered copy is missing, its `kilo_mirror` marker is missing or names another path, or a copy declares a marker with no registry entry. CI runs it in the `shared upstream patches` job, because a PR that adds a copy can fix all of that.
+
+`bun script/check-mirrors.ts --drift [--pin <ref>]` adds the pin comparison and fails when the pinned upstream file changed or disappeared since the recorded SHA. `--pin` implies `--drift`. Only a sync can act on that result, so the sync runs it and does not finish while a copy is behind: `merge.ts` stops after the merge commit, writes the report and exits non-zero before any push. The fix is to re-merge the upstream change into the copy, keep what the entry requires, then record the new SHA. The sync report lists the same files under "Mirrors touched".
 
 ## Progress map
 

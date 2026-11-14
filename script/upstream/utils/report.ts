@@ -10,7 +10,9 @@ import { $ } from "bun"
 import path from "node:path"
 import { defaultConfig, type MergeConfig } from "./config"
 import { matches } from "./match"
+import { readMirrors } from "./mirrors"
 import { isKiloOwned } from "./owned"
+import { root } from "./upstream"
 import { isLockFile } from "../transforms/lock-files"
 import type { Lag, Release } from "./version"
 
@@ -50,6 +52,17 @@ export interface Analysis {
   newWorkflows: string[]
   /** Shared files that Kilo patched and upstream also changed */
   sharedTouched: string[]
+  /** Registered mirrors whose upstream file upstream changed since the merge base */
+  mirrorsTouched: MirrorTouch[]
+}
+
+export interface MirrorTouch {
+  upstream: string
+  mirror: string
+  /** Why Kilo copies the file instead of using an upstream extension point */
+  why: string
+  /** Rules a re-merge must keep */
+  invariants: string[]
 }
 
 export interface SyncReport {
@@ -159,6 +172,9 @@ export async function analyzeSync(
   const kilo = (await list($`git diff --name-only ${pin} ${base}`)).filter((file) => !isKiloOwned(file, upstream))
   const touched = new Set(changed)
   const stat = (await $`git diff --shortstat ${mergeBase} ${target} -- ${config.harness}`.quiet().text()).trim()
+  const mirrorsTouched = Object.entries((await readMirrors(await root())).mirrors)
+    .filter(([upstream]) => touched.has(upstream))
+    .map(([upstream, entry]) => ({ upstream, mirror: entry.mirror, why: entry.why, invariants: entry.invariants }))
 
   return {
     base,
@@ -174,6 +190,7 @@ export async function analyzeSync(
     conflicts,
     newWorkflows,
     sharedTouched: kilo.filter((file) => touched.has(file)).sort(),
+    mirrorsTouched,
   }
 }
 
@@ -232,6 +249,21 @@ export function generateMarkdownReport(report: SyncReport): string {
     "Shared upstream files that Kilo patched and upstream changed in this sync:",
     "",
     ...(a.sharedTouched.length === 0 ? ["None."] : a.sharedTouched.map((f) => `- \`${f}\``)),
+    "",
+    "## Mirrors touched",
+    "",
+    "Kilo-owned copies of upstream files that upstream changed in this sync. Re-merge each change into the copy, keep the invariants in `script/upstream/mirrors.json`, then record the new upstream SHA there:",
+    "",
+    ...(a.mirrorsTouched.length === 0
+      ? ["None."]
+      : a.mirrorsTouched.flatMap((m) => [
+          `### \`${m.upstream}\` → \`${m.mirror}\``,
+          "",
+          m.why,
+          "",
+          ...m.invariants.map((rule) => `- ${rule}`),
+          "",
+        ])),
     "",
     ...(report.notes.length === 0 ? [] : ["## Notes", "", ...report.notes.map((n) => `- ${n}`), ""]),
   ].join("\n")

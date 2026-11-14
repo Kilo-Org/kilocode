@@ -260,6 +260,16 @@ be broken. Check every auto-merged file for:
   deliberately stubbed out (commented blocks, removed fallbacks). If the
   auto-merge pulled in references to names that only exist in the removed
   path, the file compiles upstream but breaks on Kilo.
+- **Registered mirrors.** The sync report lists each mirror whose upstream file
+  changed under "Mirrors touched". Upstream's change lands at the upstream path
+  while the Kilo copy (`// kilo_mirror:` in `packages/kilo-*`) stays behind, so
+  no conflict marks it. For each one: read
+  `git diff <recorded sha>..<pin> -- <upstream path>`, re-apply the entry's
+  `invariants` to the new upstream shape, then record the new upstream SHA in
+  `script/upstream/mirrors.json`. If the divergence set changed, rewrite the
+  entry's `why` and `invariants` too: they are what the next sync merges by, so
+  they describe the decisions, not the lines. `bun script/check-mirrors.ts
+  --drift` must pass before you hand the branch off.
 
 ### 7. Verify each resolution before moving on
 
@@ -284,9 +294,11 @@ be broken. Check every auto-merged file for:
 - focused tests in `packages/core`, `cli` and `server` with the test isolation
   from `.kilo/skills/v2-migration/SKILL.md`. Run the same tests on `origin/v2`
   and classify each failure: new from the sync, or already failing before
-- `bun script/check-opencode-annotations.ts` and `bun script/check-shared-patches.ts`.
-  They compare with the pinned upstream release, which is the new release once
-  the merge commit exists. Run them after the commit
+- `bun script/check-opencode-annotations.ts`, `bun script/check-shared-patches.ts`
+  and `bun script/check-mirrors.ts --drift`. They compare with the pinned upstream
+  release, which is the new release once the merge commit exists. Run them
+  after the commit. The sync is not finished while a mirror is behind: re-merge
+  the copy and record the new SHA before you hand the branch off
 - the self-test from the v2-migration skill: `bun dev` quick check and a TUI
   check (the Kilo executable on `v2` must keep working)
 
@@ -361,6 +373,9 @@ Structure the description so reviewers can skim:
   check from §2.5 for each Kilo patch.
 - **Shared files touched**: from the sync report, with the option (1 to 5) and
   the missing seam for each Kilo patch.
+- **Mirrors touched**: from the sync report, with the re-merged change, any entry
+  whose `why` or `invariants` changed, and the new upstream SHA recorded in
+  `script/upstream/mirrors.json`.
 - **Notable auto-merged changes**: new columns, new helper files, renamed
   middleware - anything reviewers should eyeball even though git didn't flag
   it.
