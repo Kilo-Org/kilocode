@@ -2,6 +2,8 @@ package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.agentManager.SectionChoice
+import ai.kilocode.client.agentManager.SectionPicker
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.PromptAttachment
@@ -123,6 +125,38 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
             HostedCreatePlan("Build cloud feature", null, null, "build", "kilo/gpt-5", "low"),
             created(),
         )
+    }
+
+    fun `test section picker preselects the passed section and records the choice`() {
+        val first = SectionChoice.Group("first", "First")
+        val second = SectionChoice.Group("second", "Second")
+        open(sections = listOf(first, second), initialSection = second.key)
+        ready()
+
+        edt {
+            assertEquals(second.key, sectionPicker().selected())
+            sectionPicker().selectedItem = first
+            submit()
+        }
+
+        assertEquals(first.key, created().section)
+    }
+
+    fun `test section picker defaults to no section and allows clearing a section`() {
+        val section = SectionChoice.Group("planning", "Planning")
+        open(sections = listOf(section))
+        ready()
+
+        edt {
+            val picker = sectionPicker()
+            assertNull(picker.selected())
+            picker.selectedItem = section
+            assertEquals(section.key, picker.selected())
+            picker.selectedItem = SectionChoice.None
+            submit()
+        }
+
+        assertNull(created().section)
     }
 
     fun `test no profile default leaves no profile selected`() {
@@ -789,11 +823,13 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         branch: String = "",
         load: (suspend () -> HostedWorkspaceProfileListDto)? = null,
         selection: HostedProfileSelectionStore = this.selection,
+        sections: List<SectionChoice.Group> = emptyList(),
+        initialSection: String? = null,
     ) {
         dialog = edt {
             HostedWorkspaceDialog(
                 JBPanel<Nothing>(), project, "/test", "https://github.com/kilo-org/kilocode.git",
-                branch, app, workspaces, load ?: { profiles }, selection,
+                branch, app, workspaces, load ?: { profiles }, selection, sections, initialSection,
             )
         }
         if (load == null) {
@@ -831,13 +867,15 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
 
     private fun prompt(): PromptPanel = controls().filterIsInstance<PromptPanel>().single()
 
+    private fun sectionPicker(): SectionPicker = controls().filterIsInstance<SectionPicker>().single()
+
     private fun branch(): JBTextField = controls().filterIsInstance<JBTextField>().single { it.isEditable }
 
     private fun repository(): ComboBox<*> =
         controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) is String }
 
     private fun profile(): ComboBox<*> =
-        controls().filterIsInstance<ComboBox<*>>().single { it.getItemAt(0) !is String }
+        controls().filterIsInstance<ComboBox<*>>().single { it !is SectionPicker && it.getItemAt(0) !is String }
 
     private fun useDefault(): HyperlinkLabel = controls().filterIsInstance<HyperlinkLabel>()
         .single { it.text == KiloBundle.message("hosted.workspace.dialog.profile.useDefault") }

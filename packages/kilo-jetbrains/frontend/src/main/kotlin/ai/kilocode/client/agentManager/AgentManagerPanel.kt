@@ -160,7 +160,8 @@ class AgentManagerPanel(
     parent: Disposable,
     private val controller: WorktreeController,
     private val project: Project? = null,
-    private val dialog: (Component, Project) -> NewWorktreeHandle = { anchor, target ->
+    private val dialog: (Component, Project, List<SectionChoice.Group>, String?) -> NewWorktreeHandle = {
+        anchor, target, sections, section ->
         NewWorktreeDialog(
             anchor,
             target,
@@ -169,6 +170,8 @@ class AgentManagerPanel(
             controller.defaultBranch,
             controller.branches,
             controller.origin,
+            sections = sections,
+            initialSection = section,
         )
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
@@ -470,21 +473,26 @@ class AgentManagerPanel(
      * dialog closes, so [onCreate] — e.g. the chat dock switching the tool window to this panel —
      * never competes with the modal dialog for focus.
      */
+    @RequiresEdt
     fun configure(anchor: Component = this, onCreate: () -> Unit = {}) {
         val target = project ?: return
-        val handle = dialog(anchor, target)
+        val section = ordering.parent(tree.selectedKeys().firstOrNull())
+        val handle = dialog(anchor, target, groups(), section)
         if (!handle.showAndGet()) return
         val plan = handle.result() ?: return
+        val assign = { item: WorktreeDto -> ordering.assign(item.id, plan.section) }
         onCreate()
         when (plan) {
-            is NewWorktreePlan.Create -> controller.create(plan.branch, plan.base, prompt = plan.prompt, fetchBase = plan.fetchBase)
+            is NewWorktreePlan.Create -> controller.create(
+                plan.branch, plan.base, prompt = plan.prompt, fetchBase = plan.fetchBase, onSuccess = assign,
+            )
             is NewWorktreePlan.Branch -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "branch"))
-                controller.importBranch(plan.branch)
+                controller.importBranch(plan.branch, onSuccess = assign)
             }
             is NewWorktreePlan.Pr -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "pr"))
-                controller.importPr(plan.url)
+                controller.importPr(plan.url, onSuccess = assign)
             }
         }
     }
@@ -498,6 +506,9 @@ class AgentManagerPanel(
         sync()
         renameSection(section.key)
     }
+
+    private fun groups(): List<SectionChoice.Group> =
+        ordering.sections().map { SectionChoice.Group(it.key, it.title) }
 
     @RequiresEdt
     private fun renameSection(key: String) {
@@ -526,6 +537,8 @@ class AgentManagerPanel(
             target,
             controller.directory,
             repo,
+            sections = groups(),
+            initialSection = ordering.parent(tree.selectedKeys().firstOrNull()),
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return
@@ -537,11 +550,11 @@ class AgentManagerPanel(
             operationKey = java.util.UUID.randomUUID().toString(),
             messageID = hostedMessageID(),
         )
-        createHosted(request)
+        createHosted(request, plan.section)
     }
 
     @RequiresEdt
-    internal fun createHosted(request: HostedCreateWorkspaceDto) {
+    internal fun createHosted(request: HostedCreateWorkspaceDto, section: String? = null) {
         val target = project ?: return
         if (hostedState.signedOut) {
             KiloNotifications.info(target, KiloBundle.message("hosted.workspace.signInRequired"))
@@ -556,6 +569,7 @@ class AgentManagerPanel(
             profileID = request.profileID,
         )
         pendingHosted[pending.ref.key] = pending
+        ordering.assign(pending.ref.key, section)
         sync()
         tree.select(pending.ref.key)
         tree.focus()
@@ -579,11 +593,12 @@ class AgentManagerPanel(
                         KiloBundle.message("hosted.workspace.create.failed"),
                         failure?.message,
                         KiloBundle.message("common.retry"),
-                    ) { createHosted(request) }
+                    ) { createHosted(request, section) }
                     return@edt
                 }
                 createdHosted[workspace.ref.key] = workspace
                 missedHosted.remove(workspace.ref.key)
+                ordering.assign(workspace.ref.key, section)
                 sync()
                 target.service<HostedManagementService>().select(workspace.ref, session.id)
                 tree.select(workspace.ref.key)

@@ -2,6 +2,8 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.agentManager.SectionChoice
+import ai.kilocode.client.agentManager.SectionPicker
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
@@ -532,7 +534,48 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertNull(plan())
     }
 
-    private fun open(branches: List<String> = listOf("main"), origin: String? = null) {
+    fun `test section picker preselects the passed section and records the choice`() {
+        val first = SectionChoice.Group("first", "First")
+        val second = SectionChoice.Group("second", "Second")
+        open(sections = listOf(first, second), initialSection = second.key)
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+
+        edt {
+            assertEquals(second.key, sectionPicker().selected())
+            sectionPicker().selectedItem = first
+            prompt().setText("grouped work")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+
+        assertEquals(first.key, submitted().section)
+    }
+
+    fun `test section picker defaults to no section and allows clearing a section`() {
+        val section = SectionChoice.Group("planning", "Planning")
+        open(sections = listOf(section))
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+
+        edt {
+            val picker = sectionPicker()
+            assertNull(picker.selected())
+            picker.selectedItem = section
+            assertEquals(section.key, picker.selected())
+            picker.selectedItem = SectionChoice.None
+            prompt().setText("ungrouped work")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+
+        assertNull(submitted().section)
+    }
+
+    private fun open(
+        branches: List<String> = listOf("main"),
+        origin: String? = null,
+        sections: List<SectionChoice.Group> = emptyList(),
+        initialSection: String? = null,
+    ) {
         dialog = edt {
             NewWorktreeDialog(
                 JBPanel<Nothing>(),
@@ -544,6 +587,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 origin,
                 app,
                 workspaces,
+                sections,
+                initialSection,
             )
         }
     }
@@ -584,6 +629,11 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     private fun reasoning(): ReasoningPicker = prompt().reasoning
 
     private fun prompt(): PromptPanel = descendants(newTab()).filterIsInstance<PromptPanel>().single()
+
+    private fun sectionPicker(): SectionPicker {
+        val root = generateSequence<Component>(requireNotNull(dialog).preferredFocusedComponent) { it.parent }.last()
+        return descendants(root).filterIsInstance<SectionPicker>().single()
+    }
 
     private fun combo(): ComboBox<*> = descendants(newTab()).filterIsInstance<ComboBox<*>>().single()
 

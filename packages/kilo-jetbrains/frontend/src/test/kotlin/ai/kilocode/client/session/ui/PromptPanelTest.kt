@@ -964,6 +964,22 @@ class PromptPanelTest : BasePlatformTestCase() {
         menu.doClick()
     }
 
+    fun `test dialog prompt with hidden submit still offers speech input`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = SpeechCaptureStub(),
+            onTranscribe = { "dictated prompt" },
+            showSubmit = false,
+        )
+        panel.setReady(true)
+
+        assertTrue(buttons(panel).contains(speechButton(panel)))
+        assertFalse(buttons(panel).contains(panel.buttonForTest()))
+    }
+
     fun `test hidden submit button still exposes send context from editor`() {
         var sent: String? = null
         val panel = PromptPanel(
@@ -2132,6 +2148,36 @@ class PromptPanelTest : BasePlatformTestCase() {
         gate.complete("dictated text")
         waitForSend { panel.text().contains("dictated text") }
         assertNull(sent)
+    }
+
+    fun `test dialog prompt notifies validation while speech is active`() {
+        val gate = CompletableDeferred<String>()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            cs = scope,
+            speechCapture = SpeechCaptureStub(),
+            onTranscribe = { gate.await() },
+            showSubmit = false,
+        )
+        val changes = mutableListOf<Boolean>()
+        panel.onChange = { changes.add(panel.isSpeechActive) }
+        panel.setReady(true)
+        val speech = speechButton(panel)
+
+        assertFalse(panel.isSpeechActive)
+        speech.doClick()
+        assertTrue(panel.isSpeechActive)
+        waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
+        speech.doClick()
+        assertTrue(panel.isSpeechActive)
+        gate.complete("dictated prompt")
+        waitForSend { !panel.isSpeechActive }
+
+        assertEquals("dictated prompt", panel.text())
+        assertTrue(changes.contains(true))
+        assertEquals(false, changes.last())
     }
 
     fun `test enhance button follows connection and busy state`() {

@@ -1,6 +1,8 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.agentManager.AgentManagerDialog
+import ai.kilocode.client.agentManager.SectionChoice
+import ai.kilocode.client.agentManager.SectionPicker
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -34,6 +36,7 @@ internal data class HostedCreatePlan(
     val agent: String,
     val model: String,
     val variant: String?,
+    val section: String? = null,
 )
 
 internal class HostedWorkspaceDialog @RequiresEdt constructor(
@@ -46,6 +49,8 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     workspaces: KiloWorkspaceService = service(),
     private val load: suspend () -> HostedWorkspaceProfileListDto = { project.service<KiloHostedService>().profiles() },
     private val selection: HostedProfileSelectionStore = service<HostedProfileSelectionService>(),
+    sections: List<SectionChoice.Group> = emptyList(),
+    initialSection: String? = null,
 ) : AgentManagerDialog(parent, project, directory, false, app, workspaces) {
     private object None
     private object Loading
@@ -78,6 +83,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             defaultProfile()?.let { profile.selectedItem = it }
         }
     }
+    private val section = if (sections.isEmpty()) null else SectionPicker(sections, initialSection)
     private var result: HostedCreatePlan? = null
 
     init {
@@ -131,6 +137,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
 
     @RequiresEdt
     override fun doValidate(): ValidationInfo? = when {
+        prompt.isSpeechActive -> ValidationInfo("")
         loading -> ValidationInfo("")
         profiles.error != null -> ValidationInfo(
             profiles.error?.message ?: KiloBundle.message("hosted.workspace.profiles.failed"),
@@ -154,6 +161,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
                     Stack.horizontal(gap = UiStyle.Gap.pad()).next(useDefault),
                 ),
             )
+            section?.let { addLabeledComponent(KiloBundle.message("agentManager.section.label"), it) }
         }.panel
         return content(null, fields)
     }
@@ -165,7 +173,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     override fun doOKAction() = submitCreate(prompt.text())
 
     override fun submitCreate(text: String) {
-        if (loading || profiles.error != null) {
+        if (prompt.isSpeechActive || loading || profiles.error != null) {
             syncValidation()
             return
         }
@@ -193,6 +201,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             agent = mode,
             model = "${picked.provider}/$model",
             variant = picked.variant,
+            section = section?.selected(),
         )
         selection.remember(repositoryUrl, selected?.id, defaultProfile()?.id)
         close(OK_EXIT_CODE)

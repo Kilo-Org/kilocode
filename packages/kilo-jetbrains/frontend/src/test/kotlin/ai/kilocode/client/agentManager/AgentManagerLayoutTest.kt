@@ -49,6 +49,43 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertTrue(nodes.all { it.children == null })
     }
 
+    fun `test parent resolves section rows and section members`() = edtWait {
+        val section = layout.create("Planning")
+        layout.nodes(items)
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key), parent = section.key))
+
+        assertEquals(section.key, layout.parent(section.key))
+        assertEquals(section.key, layout.parent(local.key))
+        assertNull(layout.parent(current.key))
+        assertNull(layout.parent(null))
+        assertNull(layout.parent("missing"))
+    }
+
+    fun `test assign files new keys into a section root or another section`() = edtWait {
+        val first = layout.create("First")
+        val second = layout.create("Second")
+        layout.nodes(items)
+
+        layout.assign(local.key, first.key)
+        layout.assign(cloud.key, first.key)
+        var nodes = layout.nodes(items)
+        assertEquals(listOf(local.key, cloud.key), keys(children(nodes, first)))
+
+        layout.assign(local.key, second.key)
+        nodes = layout.nodes(items)
+        assertEquals(listOf(cloud.key), keys(children(nodes, first)))
+        assertEquals(listOf(local.key), keys(children(nodes, second)))
+
+        layout.assign(cloud.key, null)
+        nodes = layout.nodes(items)
+        assertEquals(listOf(current.key, first.key, second.key, cloud.key), keys(nodes))
+        assertNull(layout.parent(cloud.key))
+
+        layout.assign(first.key, second.key)
+        layout.assign("missing", "missing-section")
+        assertEquals(listOf(local.key), keys(children(layout.nodes(items), second)))
+    }
+
     fun `test creating sections appends distinct empty root branches`() = edtWait {
         layout.nodes(items)
         val first = layout.create("First")

@@ -229,11 +229,13 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     /** Imports a worktree that checks out an existing local branch. */
-    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH)
+    fun importBranch(branch: String, onSuccess: (WorktreeDto) -> Unit = {}) =
+        create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH, onSuccess = onSuccess)
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
      * editor auto-sends it once it opens with its picked mode/model (see [PendingWorktreePrompt]).
+     * [onSuccess] runs on the EDT before publishing the row, so callers can place it in the layout.
      */
     fun create(
         branch: String,
@@ -242,6 +244,7 @@ class WorktreeController(
         prompt: PendingPrompt? = null,
         kind: CreateKind = CreateKind.CREATE,
         fetchBase: Boolean = false,
+        onSuccess: (WorktreeDto) -> Unit = {},
     ) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
@@ -256,11 +259,11 @@ class WorktreeController(
                 directory,
                 CreateWorktreeRequestDto(branch, base, existingBranch = existingBranch, fetchBase = fetchBase),
             )
-            finishCreate(temp, branch, prompt, result, kind)
+            finishCreate(temp, prompt, result, kind, onSuccess)
         }
     }
 
-    fun importPr(url: String) {
+    fun importPr(url: String, onSuccess: (WorktreeDto) -> Unit = {}) {
         val id = "pending:pr:${System.nanoTime()}"
         val temp = WorktreeDto(id, KiloBundle.message("worktree.import.pr.section"), "", id)
         edt {
@@ -271,23 +274,25 @@ class WorktreeController(
         }
         cs.launch {
             val result = service.importPr(directory, url)
-            finishCreate(temp, "pr", null, result, CreateKind.PR)
+            finishCreate(temp, null, result, CreateKind.PR, onSuccess)
         }
     }
 
     private fun finishCreate(
         temp: WorktreeDto,
-        branch: String,
         prompt: PendingPrompt?,
         result: CreateWorktreeResultDto,
         kind: CreateKind,
+        onSuccess: (WorktreeDto) -> Unit,
     ) {
+        val branch = if (kind == CreateKind.PR) "pr" else temp.branch
         val created = result.worktree
         edt {
             pending.remove(temp.id)
             tasks.remove(temp.id)
             val idx = model.getElementIndex(temp)
             if (created != null) {
+                onSuccess(created)
                 if (idx >= 0) model.setElementAt(created, idx) else model.add(0, created)
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }

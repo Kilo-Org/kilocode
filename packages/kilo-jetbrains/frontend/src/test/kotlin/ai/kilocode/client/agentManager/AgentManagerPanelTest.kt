@@ -254,7 +254,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val plan = NewWorktreePlan.Create("feature/y", "main", PendingPrompt("build it"))
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
-            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ -> FakeWorktreeDialog(plan, order) })
         }
 
         edt { panel.configure(onCreate = { order += "switch" }) }
@@ -268,11 +268,92 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         edt { assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text) }
     }
 
+    fun `test configure preselects the section containing the selected worktree`() {
+        val item = worktree("aardvark")
+        rpc.listed += listOf(main(), item)
+        val section = edt {
+            val layout = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            val section = layout.create("Planning")
+            layout.assign(item.id, section.key)
+            section
+        }
+        var groups: List<SectionChoice.Group> = emptyList()
+        var initial: String? = null
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, sections, selected ->
+                groups = sections
+                initial = selected
+                FakeWorktreeDialog(null, mutableListOf())
+            })
+        }
+        edt { controller.reload() }
+        flush()
+        edt {
+            assertTrue(tree(panel).select(item.id))
+            panel.configure()
+        }
+
+        assertEquals(section.key, initial)
+        assertEquals(listOf(section.key), groups.map { it.key })
+    }
+
+    fun `test configure files the created worktree in the chosen section`() {
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
+        val plan = NewWorktreePlan.Create("feature/y", "main", PendingPrompt("build it"), section = section.key)
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ -> FakeWorktreeDialog(plan, mutableListOf()) })
+        }
+
+        edt { panel.configure() }
+        flush()
+
+        val created = edt { controller.model.getElementAt(0) }
+        val restored = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)) }
+        assertEquals(section.key, restored.parent(created.id))
+    }
+
+    fun `test concurrent worktree creations keep their own sections`() {
+        val sections = edt {
+            val layout = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            listOf(layout.create("First"), layout.create("Second"))
+        }
+        val first = CompletableDeferred<Unit>()
+        val second = CompletableDeferred<Unit>()
+        val gates = java.util.concurrent.ConcurrentLinkedQueue(listOf(first, second, CompletableDeferred(Unit)))
+        rpc.beforeCreate = { requireNotNull(gates.poll()).await() }
+        val plans = ArrayDeque(sections.map { NewWorktreePlan.Create(it.title, "main", null, section = it.key) })
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ ->
+                FakeWorktreeDialog(plans.removeFirst(), mutableListOf())
+            })
+        }
+
+        edt { panel.configure() }
+        coroutines.drain()
+        edt { panel.configure() }
+        coroutines.drain()
+        edt { controller.create("ungrouped", "main") }
+        coroutines.drain()
+        second.complete(Unit)
+        coroutines.drain()
+        first.complete(Unit)
+        flush()
+
+        edt {
+            val restored = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            sections.forEach { assertEquals(it.key, restored.parent(it.title)) }
+            assertNull(restored.parent("ungrouped"))
+        }
+    }
+
     fun `test configure does nothing when the dialog is cancelled`() {
         val order = mutableListOf<String>()
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
-            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(null, order) })
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ -> FakeWorktreeDialog(null, order) })
         }
 
         edt { panel.configure(onCreate = { order += "switch" }) }
@@ -288,7 +369,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val plan = NewWorktreePlan.Create("feature/local", "main", PendingPrompt("build locally"))
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
-            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ -> FakeWorktreeDialog(plan, order) })
         }
         val local = AgentManagerAddAction().getChildren(null).first()
         val context = SimpleDataContext.builder().add(SidePanelKeys.WORKTREE_PANEL, panel).build()
@@ -304,10 +385,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test configure imports an existing branch`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan.Branch("feature/x")
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
+        val plan = NewWorktreePlan.Branch("feature/x", section.key)
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
-            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ -> FakeWorktreeDialog(plan, order) })
         }
 
         edt { panel.configure() }
@@ -316,20 +398,23 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val req = rpc.creates.single()
         assertEquals("feature/x", req.branch)
         assertTrue("branch import checks out an existing branch", req.existingBranch)
+        edt { assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(plan.branch)) }
     }
 
     fun `test configure imports a pull request`() {
         val order = mutableListOf<String>()
-        val plan = NewWorktreePlan.Pr("https://github.com/o/r/pull/7")
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
+        val plan = NewWorktreePlan.Pr("https://github.com/o/r/pull/7", section.key)
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt {
-            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(plan, order) })
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _, _, _ -> FakeWorktreeDialog(plan, order) })
         }
 
         edt { panel.configure() }
         flush()
 
         assertEquals(listOf("https://github.com/o/r/pull/7"), rpc.prImports.toList())
+        edt { assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(plan.url)) }
     }
 
     fun `test panel hides worktree search field`() {
@@ -2510,6 +2595,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(KiloSessionService::class.java,
             KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()), testRootDisposable)
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
         rpc.listed += main()
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -2524,9 +2610,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             operationKey = "00000000-0000-4000-8000-000000000004",
             messageID = "msg_00000000000400000000000000",
         )
-        edt { panel.createHosted(request) }
+        edt { panel.createHosted(request, section.key) }
         val view = tree(panel)
         assertTrue(edt { selectedValue(view)!!.key }.contains(HostedWorkspaceEditorKind.PENDING_PREFIX))
+        edt {
+            val pending = selectedValue(view)!!.key
+            assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(pending))
+        }
 
         create.complete(Unit)
         waitUntil { rows(panel) == 2 && edt { selectedValue(view)?.key } == createdRef.key }
@@ -2539,6 +2629,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         second.complete(Unit)
         waitUntil { rows(panel) == 2 && (row(panel, 1) as HostedWorkspaceRow).data.dto.ref == createdRef }
         assertEquals(createdRef.key, edt { selectedValue(view)?.key })
+        edt { assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(createdRef.key)) }
     }
 
     fun `test cloud create keeps its row when discovery fails`() {

@@ -2,6 +2,8 @@ package ai.kilocode.client.speech
 
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,19 +80,20 @@ internal class SpeechInput(
     @RequiresEdt
     private fun launch() {
         val attempt = ++generation
+        val modality = ModalityState.current().asContextElement()
         opening = true
-        job = cs.launch {
+        job = cs.launch(modality) {
             val result = runCatching {
                 capture.start(
                     cap = { token, duration ->
-                        cs.launch {
+                        cs.launch(modality) {
                             withContext(Dispatchers.EDT) {
                                 capped(attempt, token, duration)
                             }
                         }
                     },
                 ) { token, err ->
-                    cs.launch {
+                    cs.launch(modality) {
                         withContext(Dispatchers.EDT) {
                             if (attempt == generation) {
                                 val current = state == SpeechInputState.STARTING || state == SpeechInputState.RECORDING
@@ -130,7 +133,7 @@ internal class SpeechInput(
             return
         }
         update(SpeechInputState.TRANSCRIBING)
-        job = cs.launch {
+        job = cs.launch(ModalityState.current().asContextElement()) {
             val result = runCatching { transcribe(capture.stop(token)) }
             withContext(Dispatchers.EDT) {
                 result.onSuccess { text -> completed(text, Finish(done, ready)) }.onFailure(::failed)
