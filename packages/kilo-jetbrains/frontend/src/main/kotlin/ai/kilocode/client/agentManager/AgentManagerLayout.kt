@@ -35,7 +35,29 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
     private var order = state.order
     private var pinned: String? = null
 
+    fun sections(): List<Section> = state.sections
+
     fun section(key: String): Section? = state.sections.firstOrNull { it.key == key }
+
+    /** Resolves a selected section or the section containing a selected workspace. */
+    fun parent(key: String?): String? {
+        val id = key ?: return null
+        return section(id)?.key ?: state.membership[id]?.takeIf { section(it) != null }
+    }
+
+    /** Places [key] in [section], or at the root when [section] is null. */
+    @RequiresEdt
+    fun assign(key: String, section: String?) {
+        if (this.section(key) != null) return
+        if (section != null && this.section(section) == null) return
+        val membership = if (section == null) state.membership - key else state.membership + (key to section)
+        val target = section ?: ROOT
+        val orders = order.mapValues { (_, keys) -> keys.filterNot { it == key } }
+        save(state.copy(
+            membership = membership,
+            order = orders + (target to orders[target].orEmpty() + key),
+        ))
+    }
 
     fun neighbors(key: String): List<String> {
         val keys = order[ROOT].orEmpty().flatMap { id ->

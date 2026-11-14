@@ -2,6 +2,8 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.AgentManagerDialog
+import ai.kilocode.client.agentManager.SectionChoice
+import ai.kilocode.client.agentManager.SectionPicker
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -32,14 +34,17 @@ private const val NAME_COLUMNS = 67
 
 /** What the user confirmed in the New Worktree dialog. */
 sealed interface NewWorktreePlan {
+    val section: String?
+
     data class Create(
         val branch: String,
         val base: String?,
         val prompt: PendingPrompt?,
         val fetchBase: Boolean = false,
+        override val section: String? = null,
     ) : NewWorktreePlan
-    data class Branch(val branch: String) : NewWorktreePlan
-    data class Pr(val url: String) : NewWorktreePlan
+    data class Branch(val branch: String, override val section: String? = null) : NewWorktreePlan
+    data class Pr(val url: String, override val section: String? = null) : NewWorktreePlan
 }
 
 /**
@@ -80,6 +85,8 @@ internal class NewWorktreeDialog(
     private val origin: String? = null,
     app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
+    sections: List<SectionChoice.Group> = emptyList(),
+    initialSection: String? = null,
 ) : AgentManagerDialog(parent, project, directory, true, app, workspaces), NewWorktreeHandle {
 
     // Sizes the dialog: the name field is its widest fixed-width child.
@@ -88,6 +95,7 @@ internal class NewWorktreeDialog(
     }
     private val branch = JBTextField(suggestedName)
     private val base = BranchPicker(branches, defaultBase)
+    private val section = if (sections.isEmpty()) null else SectionPicker(sections, initialSection)
     private val fetch = JBCheckBox(
         KiloBundle.message("worktree.configure.fetchBase"),
         KiloPluginSettings.getFetchWorktreeBase(),
@@ -109,7 +117,13 @@ internal class NewWorktreeDialog(
         setOKButtonText(KiloBundle.message("worktree.dialog.create"))
     }
 
-    override fun createCenterPanel(): JComponent = tabs().also { center = it }
+    override fun createCenterPanel(): JComponent = BorderLayoutPanel().apply {
+        addToCenter(tabs().also { center = it })
+        section?.let { picker ->
+            border = JBUI.Borders.empty(0, UiStyle.Gap.sm(), UiStyle.Gap.sm(), UiStyle.Gap.sm())
+            addToBottom(sectionRow(picker))
+        }
+    }
 
     /** The built content, so tests can drive the real Swing tree before the dialog is shown. */
     internal fun centerComponent(): JComponent = center ?: error("center panel not built")
@@ -124,6 +138,7 @@ internal class NewWorktreeDialog(
     override fun doOKAction() = submit()
 
     internal fun submit() {
+        if (prompt.isSpeechActive) return
         setErrorText(null)
         when (tab) {
             DialogTab.PR -> submitPr()
@@ -201,6 +216,12 @@ internal class NewWorktreeDialog(
         .addComponent(fetch)
         .panel
 
+    private fun sectionRow(picker: SectionPicker): JComponent = object : FormBuilder() {
+        override fun getFill(component: JComponent) = GridBagConstraints.HORIZONTAL
+    }
+        .addLabeledComponent(KiloBundle.message("agentManager.section.label"), picker)
+        .panel
+
     private fun validBase(value: String?): Boolean {
         if (base.known(value)) return true
         KiloNotifications.error(
@@ -213,12 +234,13 @@ internal class NewWorktreeDialog(
     }
 
     override fun submitCreate(text: String) {
+        if (prompt.isSpeechActive) return
         val explicit = branch.text.trim()
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = base.resolve()
         if (!validBase(target)) return
         KiloPluginSettings.setFetchWorktreeBase(fetch.isSelected)
-        plan = NewWorktreePlan.Create(resolved, target, pending(text), fetch.isSelected)
+        plan = NewWorktreePlan.Create(resolved, target, pending(text), fetch.isSelected, section?.selected())
         close(OK_EXIT_CODE)
     }
 
@@ -243,7 +265,7 @@ internal class NewWorktreeDialog(
             url.selectAll()
             return
         }
-        plan = NewWorktreePlan.Pr(value)
+        plan = NewWorktreePlan.Pr(value, section?.selected())
         close(OK_EXIT_CODE)
     }
 
@@ -254,7 +276,7 @@ internal class NewWorktreeDialog(
             pick.focusText()
             return
         }
-        plan = NewWorktreePlan.Branch(target)
+        plan = NewWorktreePlan.Branch(target, section?.selected())
         close(OK_EXIT_CODE)
     }
 
