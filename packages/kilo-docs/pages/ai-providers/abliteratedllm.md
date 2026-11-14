@@ -93,7 +93,7 @@ See [Custom Models](/docs/code-with-ai/agents/custom-models) for every model fie
 
 Kilo Code connects to AbliteratedLLM through the OpenAI-compatible Chat Completions API at `https://api.abliteratedllm.dev/v1`. AbliteratedLLM also exposes an Anthropic Messages endpoint, but the configuration on this page uses the OpenAI-compatible path.
 
-- Every model is a reasoning model. With `reasoning: true`, Kilo Code offers reasoning-effort variants for a custom provider. For GLM models these are `none`, `low`, `medium`, `high`, `xhigh` and `max`. GLM models reject `none`, so the example disables that variant. Do the same for other GLM models.
+- Every model is a reasoning model. With `reasoning: true`, Kilo Code offers reasoning-effort variants for a custom provider. For the GLM-5.3 models in the catalog these are `none`, `low`, `medium`, `high`, `xhigh` and `max`. GLM models reject `none`, so the example disables that variant. Do the same for the other GLM-5.3 models.
 - Audio and file attachments are rejected. Image input works only on models that list `image` in `input_modalities`.
 
 For standalone cURL, Python and TypeScript examples, see the [AbliteratedLLM examples repository](https://github.com/abliteratedllm/examples).
