@@ -132,6 +132,7 @@ internal class NewWorktreeDialog @RequiresEdt constructor(
     override fun doOKAction() = submit()
 
     internal fun submit() {
+        if (prompt.isSpeechActive) return
         setErrorText(null)
         when (tab) {
             DialogTab.PR -> submitPr()
@@ -222,6 +223,7 @@ internal class NewWorktreeDialog @RequiresEdt constructor(
 
     @RequiresEdt
     override fun submitCreate(text: String) {
+        if (prompt.isSpeechActive) return
         val explicit = branch.text.trim()
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = base.resolve()

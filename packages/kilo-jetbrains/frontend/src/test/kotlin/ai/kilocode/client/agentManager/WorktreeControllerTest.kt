@@ -381,6 +381,32 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("feature/y"), created.map { it.branch })
     }
 
+    fun `test creation placement runs on the EDT before publishing and selecting the row`() {
+        val controller = controller()
+        val calls = mutableListOf<String>()
+        controller.onSelect = { if (!controller.isPending(it)) calls.add("select") }
+        controller.onCreated = { calls.add("created") }
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.create("feature/y", null, place = { id, previous ->
+                assertTrue(ApplicationManager.getApplication().isDispatchThread)
+                if (previous == null) {
+                    assertTrue(controller.isPending(id))
+                    assertEquals(0, controller.model.size)
+                    calls.add("pending")
+                    return@create
+                }
+                assertTrue(previous.startsWith("pending:"))
+                assertEquals(previous, controller.model.getElementAt(0).id)
+                assertEquals("feature/y", id)
+                calls.add("place")
+            })
+        }
+        flush()
+
+        assertEquals(listOf("pending", "place", "select", "created"), calls)
+    }
+
     fun `test a failed create announces nothing`() {
         rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
         val controller = controller()

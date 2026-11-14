@@ -18,6 +18,7 @@ import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
+import ai.kilocode.client.speech.SpeechRecorder
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.tree.ActiveTreeColors
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -25,6 +26,7 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
@@ -73,6 +75,8 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
         onAbort = {},
         completion = completion,
         cs = scope,
+        speechCapture = service<SpeechRecorder>(),
+        onTranscribe = { data -> app.transcribe(directory.takeIf { local }, data) },
         rounded = false,
         showSubmit = false,
         approve = false,
@@ -123,6 +127,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
 
     @RequiresEdt
     protected fun content(above: JComponent?, below: JComponent): JComponent {
+        prompt.onChange = { syncValidation() }
         prompt.mode.onSelect = { item ->
             agent = item.id
             syncSelection()
@@ -201,7 +206,10 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     }
 
     /** Re-runs dialog validation after the prompt, agent, or model selection changes. */
-    protected open fun syncValidation() {}
+    @RequiresEdt
+    protected open fun syncValidation() {
+        setOKActionEnabled(!prompt.isSpeechActive)
+    }
 
     @RequiresEdt
     private fun syncReasoning(item: ModelPicker.Item) {

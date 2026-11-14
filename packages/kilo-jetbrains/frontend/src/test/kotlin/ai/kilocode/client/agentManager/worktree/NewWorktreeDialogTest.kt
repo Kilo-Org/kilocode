@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.actions.SpeechInputAction
 import ai.kilocode.client.agentManager.AgentManagerLayout
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -26,6 +27,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -50,6 +52,7 @@ import java.awt.KeyboardFocusManager
 import java.awt.event.FocusEvent
 import java.awt.image.BufferedImage
 import javax.swing.ComboBoxEditor
+import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JList
 import javax.swing.JTextField
@@ -104,6 +107,22 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             assertEquals("kilo/gpt-5", model().selectionKeyForTest())
             assertTrue(reasoning().isVisible)
             assertEquals("low", reasoning().selectedForTest()?.id)
+        }
+    }
+
+    fun `test local dialog prompt exposes the microphone without a submit button`() {
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+
+        edt {
+            val buttons = descendants(prompt()).filterIsInstance<JButton>()
+            val name = KeymapUtil.createTooltipText(KiloBundle.message("prompt.speech.start"), SpeechInputAction.ID)
+            val speech = buttons.single { it.accessibleContext.accessibleName == name }
+            assertTrue(speech.isVisible)
+            assertTrue(speech.isEnabled)
+            assertTrue(prompt().isSpeechEnabled)
+            assertFalse(prompt().isSpeechActive)
+            assertFalse(buttons.contains(prompt().buttonForTest()))
         }
     }
 
@@ -557,15 +576,19 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertNull(taken().section)
     }
 
-    fun `test supplied section is selected and forwarded when creating`() {
+    fun `test supplied section can be changed and forwarded by prompt send`() {
         open(sections = sections, section = "shipping")
+        flushUntil { edt { model().selectionKeyForTest() != null } }
 
         edt {
             assertSame(sections[1], section().selectedItem)
-            submit()
+            section().selectedItem = sections[0]
+            prompt().setText("grouped work")
         }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
 
-        assertEquals("shipping", taken().section)
+        assertEquals("planning", submitted().section)
     }
 
     fun `test one section picker retains selection across all local tabs`() {
@@ -644,6 +667,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         open(sections = sections)
 
         edt {
+            assertEquals(0, section().selectedIndex)
             sections.forEachIndexed { index, item ->
                 val cell = sectionCell(index + 1)
                 assertEquals(item.title, cell.toString())

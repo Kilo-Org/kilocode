@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.hosted
 
+import ai.kilocode.client.actions.SpeechInputAction
 import ai.kilocode.client.agentManager.AgentManagerLayout
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -29,6 +30,7 @@ import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.util.Disposer
@@ -113,6 +115,22 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
         edt { assertPromptCentered() }
     }
 
+    fun `test cloud dialog prompt exposes the microphone without a submit button`() {
+        open()
+        ready()
+
+        edt {
+            val buttons = descendants(prompt()).filterIsInstance<JButton>()
+            val name = KeymapUtil.createTooltipText(KiloBundle.message("prompt.speech.start"), SpeechInputAction.ID)
+            val speech = buttons.single { it.accessibleContext.accessibleName == name }
+            assertTrue(speech.isVisible)
+            assertTrue(speech.isEnabled)
+            assertTrue(prompt().isSpeechEnabled)
+            assertFalse(prompt().isSpeechActive)
+            assertFalse(buttons.contains(prompt().buttonForTest()))
+        }
+    }
+
     fun `test default cloud selections create a plan with an optional blank branch`() {
         open()
         ready()
@@ -145,10 +163,11 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
     }
 
     fun `test cloud prompt send forwards the changed section`() {
-        open(sections = sections, section = "planning")
+        open(sections = sections)
         ready()
 
         edt {
+            assertEquals(0, section().selectedIndex)
             section().selectedItem = sections[1]
             prompt().send()
         }

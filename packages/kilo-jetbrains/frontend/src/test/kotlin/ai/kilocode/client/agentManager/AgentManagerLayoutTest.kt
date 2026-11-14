@@ -49,6 +49,20 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertTrue(nodes.all { it.children == null })
     }
 
+    fun `test parent resolves membership while section resolves section rows`() = edtWait {
+        val section = layout.create("Planning")
+        layout.nodes(items)
+        layout.move(ActiveMove(local.key, 2, 0, listOf(local.key), parent = section.key))
+
+        assertEquals(section, layout.section(section.key))
+        assertNull(layout.parent(section.key))
+        assertEquals(section.key, layout.parent(local.key))
+        assertNull(layout.section(local.key))
+        assertNull(layout.parent(current.key))
+        assertNull(layout.parent("missing"))
+        assertNull(layout.section("missing"))
+    }
+
     fun `test creating sections appends distinct empty root branches`() = edtWait {
         layout.nodes(items)
         val first = layout.create("First")
@@ -189,12 +203,15 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(second.key, layout.parent(local.key))
         val saved = PropertiesComponent.getInstance(project).getValue(STORAGE)
         layout.move(local.key, "missing")
+        layout.move("missing", "missing-section")
+        layout.move(first.key, second.key)
         assertEquals(saved, PropertiesComponent.getInstance(project).getValue(STORAGE))
         val restored = AgentManagerLayout(PropertiesComponent.getInstance(project))
         assertEquals(layout.nodes(items), restored.nodes(items.reversed(), pin = current.key))
         restored.move(local.key, null)
         assertNull(restored.parent(local.key))
         assertEquals(listOf(cloud.key), keys(children(restored.nodes(items), second)))
+        assertEquals(listOf(current.key, first.key, second.key, local.key), keys(restored.nodes(items)))
     }
 
     fun `test section choices follow visual order and membership resolves after deletion`() = edtWait {

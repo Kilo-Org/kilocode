@@ -287,9 +287,63 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(created.id, view.selected()?.key)
             assertEquals(section.key, panel.section())
             assertSame(view.hierarchy.entries.getValue(section.key), view.hierarchy.entries.getValue(created.id).parent)
+            assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(created.id))
             assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text)
         }
         assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending.id))
+    }
+
+    fun `test concurrent worktree creations keep their own sections`() {
+        val sections = edt {
+            val layout = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            listOf(layout.create("First"), layout.create("Second"))
+        }
+        val first = CompletableDeferred<Unit>()
+        val second = CompletableDeferred<Unit>()
+        val gates = java.util.concurrent.ConcurrentLinkedQueue(listOf(first, second, CompletableDeferred(Unit)))
+        rpc.beforeCreate = { requireNotNull(gates.poll()).await() }
+        val plans = ArrayDeque(sections.map { NewWorktreePlan.Create(it.title, "main", null, section = it.key) })
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ ->
+                FakeWorktreeDialog(plans.removeFirst(), mutableListOf())
+            })
+        }
+
+        edt { panel.configure() }
+        assertTrue(coroutines.pumpUntil { gates.size == 2 })
+        val pending = edt { controller.model.getElementAt(0).id }
+        edt { assertEquals(sections[0].key, panel.section(pending)) }
+        edt { panel.configure() }
+        assertTrue(coroutines.pumpUntil { gates.size == 1 })
+        val other = edt { controller.model.getElementAt(0).id }
+        edt { assertEquals(sections[1].key, panel.section(other)) }
+        edt { controller.create("ungrouped", "main") }
+        assertTrue(coroutines.pumpUntil { edt { controller.model.items.any { it.id == "ungrouped" } } })
+        second.complete(Unit)
+        assertTrue(coroutines.pumpUntil { edt { !controller.isPending(other) } })
+        edt {
+            assertTrue(controller.isPending(pending))
+            assertEquals(sections[0].key, panel.section(pending))
+            val created = controller.model.items.single { it.branch == sections[1].title }
+            assertEquals(sections[1].key, panel.section(created.id))
+            assertNull(panel.section("ungrouped"))
+        }
+        first.complete(Unit)
+        flush()
+
+        edt {
+            val restored = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            sections.forEach {
+                val created = controller.model.items.single { row -> row.branch == it.title }
+                assertEquals(it.key, panel.section(created.id))
+                assertEquals(it.key, restored.parent(created.id))
+            }
+            assertNull(restored.parent("ungrouped"))
+            val saved = PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!
+            assertFalse(saved.contains(pending))
+            assertFalse(saved.contains(other))
+        }
     }
 
     fun `test configure does nothing when the dialog is cancelled`() {
@@ -2680,6 +2734,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
         project.replaceService(KiloSessionService::class.java,
             KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()), testRootDisposable)
+        val section = edt { AgentManagerLayout(PropertiesComponent.getInstance(project)).create("Planning") }
         rpc.listed += main()
         val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -2694,9 +2749,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             operationKey = "00000000-0000-4000-8000-000000000004",
             messageID = "msg_00000000000400000000000000",
         )
-        edt { panel.createHosted(request) }
+        edt { panel.createHosted(request, section.key) }
         val view = tree(panel)
         assertTrue(edt { selectedValue(view)!!.key }.contains(HostedWorkspaceEditorKind.PENDING_PREFIX))
+        edt {
+            val pending = selectedValue(view)!!.key
+            assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(pending))
+        }
 
         create.complete(Unit)
         waitUntil { rows(panel) == 2 && edt { selectedValue(view)?.key } == createdRef.key }
@@ -2709,6 +2768,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         second.complete(Unit)
         waitUntil { rows(panel) == 2 && (row(panel, 1) as HostedWorkspaceRow).data.dto.ref == createdRef }
         assertEquals(createdRef.key, edt { selectedValue(view)?.key })
+        edt { assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(createdRef.key)) }
     }
 
     fun `test cloud create keeps its row when discovery fails`() {

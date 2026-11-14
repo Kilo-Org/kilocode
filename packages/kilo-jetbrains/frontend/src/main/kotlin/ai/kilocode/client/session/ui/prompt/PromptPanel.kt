@@ -360,6 +360,11 @@ class PromptPanel(
             }
         }
 
+    val isSpeechActive: Boolean
+        get() = speechState == SpeechInputState.STARTING ||
+            speechState == SpeechInputState.RECORDING ||
+            speechState == SpeechInputState.TRANSCRIBING
+
     @RequiresEdt
     override fun toggleSpeech() {
         val input = speech ?: return
@@ -436,16 +441,16 @@ class PromptPanel(
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
         if (showEnhance) bar.add(enhance)
-        if (showSubmit) {
+        if (showSubmit || speech != null) {
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(separator)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            if (speech != null) {
-                bar.add(speechButton)
-                bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            }
-            bar.add(button)
         }
+        if (speech != null) {
+            bar.add(speechButton)
+            if (showSubmit) bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
+        if (showSubmit) bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         addComponentListener(resize)
@@ -946,6 +951,7 @@ class PromptPanel(
             KiloNotifications.error(project, KiloBundle.message("prompt.speech.error.title"), null)
         }
         syncButton()
+        if (previous != state) onChange()
     }
 
     private fun speechLabel(state: SpeechInputState): String = when (state) {

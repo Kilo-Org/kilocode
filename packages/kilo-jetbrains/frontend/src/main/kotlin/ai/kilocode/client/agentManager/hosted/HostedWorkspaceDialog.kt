@@ -88,7 +88,6 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         title = KiloBundle.message("hosted.workspace.dialog.create.title")
         init()
         initValidation()
-        prompt.onChange = { syncValidation() }
         profile.addActionListener {
             syncValidation()
             syncUseDefault()
@@ -135,6 +134,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
 
     @RequiresEdt
     override fun doValidate(): ValidationInfo? = when {
+        prompt.isSpeechActive -> ValidationInfo("")
         loading -> ValidationInfo("")
         profiles.error != null -> ValidationInfo(
             profiles.error?.message ?: KiloBundle.message("hosted.workspace.profiles.failed"),
@@ -171,7 +171,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
 
     @RequiresEdt
     override fun submitCreate(text: String) {
-        if (loading || profiles.error != null) {
+        if (prompt.isSpeechActive || loading || profiles.error != null) {
             syncValidation()
             return
         }
