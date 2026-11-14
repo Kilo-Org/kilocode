@@ -29,7 +29,7 @@ export const Parameters = Schema.Struct({
   }),
 })
 
-const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "kilo-exa"]) // kilocode_change - kilo-exa env override
+const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "kilo-exa", "keenable"]) // kilocode_change - kilo-exa and keenable env overrides
 export type WebSearchProvider = Schema.Schema.Type<typeof WebSearchProviderSchema>
 
 // kilocode_change start - signature reflowed by the added override parameter (KILO_WEBSEARCH_PROVIDER resolved via Env.Service by the caller)
@@ -39,7 +39,10 @@ export function selectWebSearchProvider(
   override?: string,
 ): WebSearchProvider {
   // kilocode_change end
-  if (override === "exa" || override === "parallel" || override === "kilo-exa") return override // kilocode_change - kilo-exa env override
+  // kilocode_change start - kilo-exa and keenable env overrides
+  if (override === "exa" || override === "parallel" || override === "kilo-exa" || override === "keenable")
+    return override
+  // kilocode_change end
   if (flags.parallel) return "parallel"
   if (flags.exa) return "exa"
 
@@ -49,6 +52,7 @@ export function selectWebSearchProvider(
 export function webSearchProviderLabel(provider: unknown) {
   if (provider === "parallel") return "Parallel Web Search"
   if (provider === "exa" || provider === "kilo-exa") return "Exa Web Search" // kilocode_change - kilo-exa shares label
+  if (provider === "keenable") return "Keenable Web Search" // kilocode_change
   return "Web Search"
 }
 
@@ -67,6 +71,14 @@ function parallelAuthHeaders(apiKey: string | undefined) {
   if (!apiKey) return headers
   return { ...headers, Authorization: `Bearer ${apiKey}` }
 }
+
+// Keenable answers without a key on its public tier (rate-limited per IP; the app is
+// identified by X-Keenable-Title). KEENABLE_API_KEY switches to the keyed tier.
+export function keenableHeaders(apiKey: string | undefined): Record<string, string> {
+  const headers = { "User-Agent": `opencode/${InstallationVersion}`, "X-Keenable-Title": "Kilo Code" }
+  if (!apiKey) return headers
+  return { ...headers, "X-API-Key": apiKey }
+}
 // kilocode_change end
 
 function callProvider(
@@ -74,8 +86,24 @@ function callProvider(
   provider: WebSearchProvider,
   params: Schema.Schema.Type<typeof Parameters>,
   ctx: Tool.Context,
-  keys: { exa: string | undefined; parallel: string | undefined }, // kilocode_change
+  keys: { exa: string | undefined; parallel: string | undefined; keenable: string | undefined }, // kilocode_change
 ) {
+  // kilocode_change start - Keenable provider
+  if (provider === "keenable") {
+    return McpWebSearch.call(
+      http,
+      McpWebSearch.KEENABLE_URL,
+      "search_web_pages",
+      McpWebSearch.KeenableSearchArgs,
+      {
+        query: params.query,
+        max_results: Math.min(params.numResults || 8, MAX_RESULTS),
+      },
+      "25 seconds",
+      keenableHeaders(keys.keenable),
+    )
+  }
+  // kilocode_change end
   if (provider === "parallel") {
     return McpWebSearch.call(
       http,
@@ -125,10 +153,11 @@ export const WebSearchTool = Tool.define(
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           // kilocode_change start - config via Env.Service instead of process.env reads
-          const [override, exaKey, parallelKey] = yield* Effect.all([
+          const [override, exaKey, parallelKey, keenableKey] = yield* Effect.all([
             env.get("KILO_WEBSEARCH_PROVIDER"),
             env.get("EXA_API_KEY"),
             env.get("PARALLEL_API_KEY"),
+            env.get("KEENABLE_API_KEY"),
           ])
           const provider = selectWebSearchProvider(
             ctx.sessionID,
@@ -147,6 +176,7 @@ export const WebSearchTool = Tool.define(
           //   provider="exa" + Kilo auth   -> kilo-rest        (new default for authed users)
           //   provider="exa" + no auth     -> mcp-exa-unauth   (preserves current fallback)
           //   provider="parallel"          -> mcp-parallel     (unchanged)
+          //   provider="keenable"          -> mcp-keenable     (keyless, or KEENABLE_API_KEY)
           const kiloToken = yield* Effect.gen(function* () {
             if (provider !== "exa" && provider !== "kilo-exa") return undefined as string | undefined
             const info = yield* authSvc.get("kilo")
@@ -158,11 +188,13 @@ export const WebSearchTool = Tool.define(
               ? "kilo-rest"
               : provider === "parallel"
                 ? "mcp-parallel"
-                : provider === "exa" && exaKey
-                  ? "mcp-exa-byok"
-                  : provider === "exa" && kiloToken
-                    ? "kilo-rest"
-                    : "mcp-exa-unauth"
+                : provider === "keenable"
+                  ? "mcp-keenable"
+                  : provider === "exa" && exaKey
+                    ? "mcp-exa-byok"
+                    : provider === "exa" && kiloToken
+                      ? "kilo-rest"
+                      : "mcp-exa-unauth"
           // kilocode_change end
           // kilocode_change start - add transport to metadata
           yield* ctx.metadata({
@@ -198,7 +230,7 @@ export const WebSearchTool = Tool.define(
                   kiloToken,
                 )
               : Effect.die(new Error("KILO_WEBSEARCH_PROVIDER=kilo-exa requires Kilo auth; run `kilo auth login`"))
-            : callProvider(http, provider, params, ctx, { exa: exaKey, parallel: parallelKey }) // kilocode_change
+            : callProvider(http, provider, params, ctx, { exa: exaKey, parallel: parallelKey, keenable: keenableKey }) // kilocode_change
           // kilocode_change end
 
           return {
