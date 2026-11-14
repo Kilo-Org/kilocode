@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.stop.background": "Stopp hovedagenten. Bakgrunnsagenter fortsetter å kjøre.",
   "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
+  "prompt.action.enhanceStop": "Stopp forbedring av prompt",
   "prompt.action.more": "Flere handlinger",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
   "prompt.issues.title": "Sesjonsproblemer",

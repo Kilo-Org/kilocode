@@ -13182,6 +13182,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "EnhancePromptFailedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnhancePromptFailedError"
+                }
+              }
+            }
           }
         },
         "description": "Rewrite a user's draft prompt into a clearer, more specific, and more effective prompt.",
@@ -42922,6 +42932,16 @@
           }
         },
         "required": ["keybinds"],
+        "additionalProperties": false
+      },
+      "EnhancePromptFailedError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
         "additionalProperties": false
       },
       "KiloEmbeddingModelCatalog": {

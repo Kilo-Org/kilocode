@@ -216,6 +216,7 @@ export const dict = {
   "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
   "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
+  "prompt.action.enhanceStop": "Komut geliştirmeyi durdur",
   "prompt.action.more": "Diğer eylemler",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.issues.title": "Oturum sorunları",

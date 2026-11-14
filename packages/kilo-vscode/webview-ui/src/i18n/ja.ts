@@ -217,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "メインエージェントを停止します。バックグラウンドエージェントは実行を続けます。",
   "prompt.agents.show": "バックグラウンドエージェントを表示",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.action.enhanceStop": "プロンプトの改善を停止",
   "prompt.action.more": "その他の操作",
   "prompt.paste.expand": "クリックして貼り付けたテキストを展開",
   "prompt.issues.title": "セッションの問題",
