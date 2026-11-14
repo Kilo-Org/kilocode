@@ -193,6 +193,7 @@ rm -f /tmp/kilo-serve.pid /tmp/kilo-serve.log
 | Var | Why you'd set it |
 |---|---|
 | `KILO_SERVER_PASSWORD` | Enable Basic auth. Omit for auth-bypassed local testing. |
+| `KILO_SERVER_PASSWORD_FILE=<path>` | Enable Basic auth with the password read from a file, keeping it out of the process environment. Ignored when `KILO_SERVER_PASSWORD` is set. |
 | `KILO_DB=":memory:"` | Skip on-disk SQLite — hermetic runs. |
 | `KILO_DISABLE_DEFAULT_PLUGINS=true` | Don't auto-load bundled plugins. |
 | `KILO_WORKSPACE_ID=<id>` | Single-workspace mode; disables control-plane routes. |

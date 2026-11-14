@@ -183,6 +183,7 @@ const layer = Layer.effect(
       // kilocode_change start - do not expose local server credentials to user terminals.
       // node-pty inherits parent values for omitted keys, so empty tombstones are required.
       env.KILO_SERVER_PASSWORD = ""
+      env.KILO_SERVER_PASSWORD_FILE = ""
       env.KILO_SERVER_USERNAME = ""
       // kilocode_change end
       if (process.platform === "win32") {
