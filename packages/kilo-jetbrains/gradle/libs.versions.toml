@@ -17,7 +17,7 @@ junit-jupiter = "5.14.4"
 junit-platform = "1.14.4"
 kodein = "7.33.0"
 okhttp = "5.5.1"
-openapi-generator = "7.26.0"
+openapi-generator = "7.27.0"
 detekt = "1.23.8"
 commonmark = "0.31.0"
 autolink = "0.12.0"
@@ -27,14 +27,14 @@ commons-compress = "1.28.0"
 # Security floors for transitive build and test dependencies that never ship in the plugin: the
 # Gradle plugin classpath and the IntelliJ test framework / ide-starter. build.gradle.kts applies
 # them as BOMs and constraints, so Gradle only ever raises a version to meet them.
-security-netty = "4.2.19.Final"
+security-netty = "4.2.20.Final"
 security-jackson = "2.22.4"
 security-opentelemetry = "1.67.0"
 security-bouncycastle = "1.86"
-security-guava = "33.7.2-jre"
+security-guava = "33.8.0-jre"
 security-handlebars = "4.5.8"
-security-jsoup = "1.23.2"
-security-lz4 = "1.12.1"
+security-jsoup = "1.24.1"
+security-lz4 = "1.13.0"
 
 [libraries]
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
