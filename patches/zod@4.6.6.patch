@@ -1,0 +1,34 @@
+diff --git a/v4/core/to-json-schema.cjs b/v4/core/to-json-schema.cjs
+index c2db7a55afd652408925c24bba4103d3b3351857..cd5174358126766b232be2dbb42eb04067572c8d 100644
+--- a/v4/core/to-json-schema.cjs
++++ b/v4/core/to-json-schema.cjs
+@@ -402,8 +402,10 @@ function finalize(ctx, schema) {
+     // flatten refs - inherit properties from parent schemas
+     const flattenRef = (zodSchema) => {
+         const seen = ctx.seen.get(zodSchema);
+-        // already processed
+-        if (seen.ref === null)
++        // A schema with both a custom `toJSONSchema` override and a `parent` is never
++        // registered in `seen` by `processSchema`, yet `flattenRef(parent)` below still
++        // recurses into it. Treat an unregistered schema as nothing to flatten.
++        if (seen === undefined || seen.ref === null)
+             return;
+         const schema = seen.def ?? seen.schema;
+         const _cached = { ...schema };
+diff --git a/v4/core/to-json-schema.js b/v4/core/to-json-schema.js
+index c0ae14b7326566650a389c86c367c64341e7edcb..f23e12b7019b8017bea39eab7ed54ab51f67c598 100644
+--- a/v4/core/to-json-schema.js
++++ b/v4/core/to-json-schema.js
+@@ -393,8 +393,10 @@ export function finalize(ctx, schema) {
+     // flatten refs - inherit properties from parent schemas
+     const flattenRef = (zodSchema) => {
+         const seen = ctx.seen.get(zodSchema);
+-        // already processed
+-        if (seen.ref === null)
++        // A schema with both a custom `toJSONSchema` override and a `parent` is never
++        // registered in `seen` by `processSchema`, yet `flattenRef(parent)` below still
++        // recurses into it. Treat an unregistered schema as nothing to flatten.
++        if (seen === undefined || seen.ref === null)
+             return;
+         const schema = seen.def ?? seen.schema;
+         const _cached = { ...schema };
