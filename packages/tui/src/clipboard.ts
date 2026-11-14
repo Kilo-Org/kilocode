@@ -8,7 +8,7 @@ const exec = promisify(execFile)
 
 function command(command: string, args: string[] = [], input?: string) {
   return new Promise<Buffer>((resolve, reject) => {
-    const child = spawn(command, args, { stdio: [input === undefined ? "ignore" : "pipe", "pipe", "ignore"] })
+    const child = spawn(command, args, { stdio: [input === undefined ? "ignore" : "pipe", "pipe", "ignore"], env: process.env })
     const output: Buffer[] = []
     child.on("error", reject)
     child.stdout?.on("data", (chunk: Buffer) => output.push(chunk))
@@ -99,7 +99,14 @@ let copyMethod: Promise<(text: string) => Promise<void>> | undefined
 function getCopyMethod() {
   return (copyMethod ??= (async () => {
     const { which } = await import("@opencode-ai/core/util/which")
-    const native = copyCommand(platform(), Boolean(process.env.WAYLAND_DISPLAY), (name) => Boolean(which(name)))
+    const checkPath = (name: string) => {
+      if (which(name)) return true
+      if (name === "xclip" && (which("/usr/bin/xclip") || which("/usr/local/bin/xclip"))) return true
+      if (name === "xsel" && (which("/usr/bin/xsel") || which("/usr/local/bin/xsel"))) return true
+      if (name === "wl-copy" && which("/usr/bin/wl-copy")) return true
+      return false
+    }
+    const native = copyCommand(platform(), Boolean(process.env.WAYLAND_DISPLAY), checkPath)
     if (native?.[0] === "osascript") {
       return async (text: string) => {
         const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
@@ -107,8 +114,18 @@ function getCopyMethod() {
       }
     }
     if (native) {
+      let cmd = native[0]
+      if (!which(cmd)) {
+        for (const p of ["/usr/bin/" + cmd, "/usr/local/bin/" + cmd]) {
+          if (which(p)) {
+            cmd = p
+            break
+          }
+        }
+      }
+      const args = native.slice(1)
       return async (text: string) => {
-        await command(native[0], native.slice(1), text).catch(() => undefined)
+        await command(cmd, args, text).catch(() => undefined)
       }
     }
     return async (text: string) => {

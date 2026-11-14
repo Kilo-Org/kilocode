@@ -78,3 +78,4 @@ packages/app/.artifacts/
 packages/opencode/.artifacts/
 /out/
 **/allure-results/
+.kilo/tui.json

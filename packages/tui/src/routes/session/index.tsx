@@ -28,6 +28,7 @@ import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, 
 import { Prompt, type PromptRef } from "../../component/prompt"
 import type {
   AssistantMessage,
+  Message,
   Part,
   Provider,
   ToolPart,
@@ -310,6 +311,102 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
+  // providers and showDetails must be declared before model and routed memos to avoid ReferenceError
+  const providers = createMemo(() => Model.index(sync.data.provider))
+  const [showDetails, setShowDetails] = kv.signal("tool_details_visibility", true)
+  const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
+
+  const cleanText = (text: string) => {
+    if (!text) return ""
+    let cleaned = text.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+    cleaned = cleaned
+      .split("```")
+      .map((part, i) => (i % 2 === 0 ? part.replace(/[ \t]+/g, " ") : part))
+      .join("```")
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n")
+    return cleaned.trim()
+  }
+
+  const model = createMemo(() => {
+    const msg = lastAssistant()
+    if (!msg) return ""
+    return Model.name(providers(), msg.providerID, msg.modelID)
+  })
+
+  const duration = createMemo(() => {
+    const msg = lastAssistant()
+    if (!msg || !msg.time.completed) return 0
+    const user = messages().find((x) => x.role === "user" && x.id === msg.parentID)
+    if (!user || !user.time) return 0
+    return msg.time.completed - user.time.created
+  })
+
+  // --- Utility helpers for copy actions ---
+  const getTurnMessages = () => {
+    const lastUserIndex = messages().findLastIndex((m) => m.role === "user")
+    if (lastUserIndex === -1) return []
+    return messages().slice(lastUserIndex).filter((m) => m.role === "assistant")
+  }
+
+  const getAllAssistantMessages = () => {
+    return messages().filter((m) => m.role === "assistant")
+  }
+
+  const extractText = (msgs: Message[]) => {
+    return msgs
+      .flatMap((m) => sync.data.part[m.id] ?? [])
+      .filter((x): x is TextPart => x.type === "text")
+      .map((x) => x.text)
+      .join("\n")
+  }
+
+  const extractRaw = (msgs: Message[]) => {
+    return msgs
+      .flatMap((m) => sync.data.part[m.id] ?? [])
+      .map((p: Part) => {
+        if (p.type === "reasoning") return `[Thought]\n${p.text}`
+        if (p.type === "tool") {
+          const tool = p.tool
+          const input = p.state.input
+          const output = p.state.status === "completed" ? p.state.output : ""
+          return `[Tool: ${tool}]\nInput: ${JSON.stringify(input, null, 2)}\nOutput: ${output}`
+        }
+        if (p.type === "text") return p.text
+        return ""
+      })
+      .filter(Boolean)
+      .join("\n\n")
+  }
+
+  const copyToClipboard = (content: string, label: string) => {
+    const cleaned = cleanText(content)
+    if (!cleaned) {
+      toast.show({ message: "No text found", variant: "error" })
+      return
+    }
+    clipboard
+      .write?.(cleaned)
+      .then(() => toast.show({ message: `${label} copied to clipboard!`, variant: "success" }))
+      .catch(() => toast.show({ message: `Failed to copy ${label.toLowerCase()}`, variant: "error" }))
+  }
+
+  const copyTurnText = () => copyToClipboard(extractText(getTurnMessages()), "Turn text")
+  const copyTurnRaw = () => copyToClipboard(extractRaw(getTurnMessages()), "Turn raw")
+  const copyAllText = () => copyToClipboard(extractText(getAllAssistantMessages()), "All text")
+  const copyAllRaw = () => copyToClipboard(extractRaw(getAllAssistantMessages()), "All raw")
+
+  const routed = createMemo(() => {
+    const msg = lastAssistant()
+    if (!msg) return undefined
+    return RoutedModelMeta.info(providers(), sync.data.part[msg.id] ?? [], showDetails(), msg)
+  })
+
+  const routeFooter = createMemo(() => {
+    const r = routed()
+    if (!r) return undefined
+    return r.footer
+  })
+
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
@@ -318,12 +415,11 @@ export function Session() {
   const thinkingMode = thinking.mode
   const showThinking = createMemo(() => true)
   const [timestamps, setTimestamps] = kv.signal<"hide" | "show">("timestamps", "hide")
-  const [showDetails, setShowDetails] = kv.signal("tool_details_visibility", true)
   const [showAssistantMetadata, _setShowAssistantMetadata] = kv.signal("assistant_metadata_visibility", true)
   const [showScrollbar, setShowScrollbar] = kv.signal("scrollbar_visible", false)
   const [diffWrapMode] = kv.signal<"word" | "none">("diff_wrap_mode", "word")
   const [_animationsEnabled, _setAnimationsEnabled] = kv.signal("animations_enabled", true)
-  const [showGenericToolOutput, setShowGenericToolOutput] = kv.signal("generic_tool_output_visibility", false)
+  const [optimizing, setOptimizing] = createSignal(false)
 
   const wide = createMemo(() => dimensions().width > 120)
   const sidebarVisible = createMemo(() => {
@@ -334,7 +430,6 @@ export function Session() {
   })
   const showTimestamps = createMemo(() => timestamps() === "show")
   const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
-  const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
@@ -520,6 +615,169 @@ export function Session() {
       if (!scroll || scroll.isDestroyed) return
       scroll.scrollTo(scroll.scrollHeight)
     }, 50)
+  }
+
+  const jumpPrev = () => {
+    const targetID = findNextVisibleMessage("prev")
+    if (!targetID) {
+      scroll.scrollTo(0)
+      return
+    }
+    const child = scroll.getChildren().find((c) => c.id === targetID)
+    if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
+
+  const jumpNext = () => {
+    const targetID = findNextVisibleMessage("next")
+    if (!targetID) {
+      scroll.scrollTo(scroll.scrollHeight)
+      return
+    }
+    const child = scroll.getChildren().find((c) => c.id === targetID)
+    if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
+
+  // Retry: inject a machine-dense prompt that resumes the last turn
+  // without preamble and without looping on the same tool call.
+  const retryLastTurn = () => {
+    if (!prompt) return
+    if (!visible()) return
+    const RETRY_PROMPT = "RESUME_PREV. CONTINUE_FROM_LAST. NO_PREAMBLE. NO_LOOPING. EXECUTE_NOW."
+    prompt.set({ input: RETRY_PROMPT, parts: [] })
+    // Give SolidJS time to flush the prompt state before submitting
+    setTimeout(() => {
+      if (!prompt) return
+      const p = prompt as any
+      if (typeof p.submit === "function") {
+        p.submit()
+      } else if (typeof p.focus === "function") {
+        p.focus()
+      }
+    }, 100)
+  }
+
+  // Magic Prompt: spawn a throwaway side session, ask LLM to optimize
+  // the prompt, then delete the session. No context pollution.
+  const optimizePrompt = async () => {
+    if (!prompt || optimizing()) return
+
+    const currentInput = prompt.current?.input ?? ""
+    if (!currentInput.trim()) {
+      toast.show({ message: "Prompt is empty. Type something first.", variant: "warning", duration: 3000 })
+      return
+    }
+
+    setOptimizing(true)
+    let sideSessionID: string | undefined
+
+    try {
+      // Escape triple-quote if input accidentally contains it (rare edge case)
+      const safeInput = currentInput.replace(/"""/g, '\\"\\"\\"')
+      const OPTIMIZER_PROMPT = `You are a prompt optimizer for an AI coding agent. Rewrite the user's draft to be clearer and more actionable WITHOUT changing its intent or language.
+
+OUTPUT_RULES:
+- Output ONLY the rewritten prompt. No intro, no quotes, no markdown fences.
+- Same language as input. Preserve code/paths/names/URLs verbatim.
+- If the input is already clear, return it as-is.
+
+IMPROVEMENT_RULES:
+- Make implicit requirements explicit (what "done" looks like).
+- Add concrete constraints ONLY if obvious from context.
+- Prefer specific verbs over vague ones ("extract" not "handle").
+- If ambiguous, ask ONE clarifying question inline instead of guessing.
+- For file-reading tasks, append: report path if not found.
+
+INPUT:
+"""
+${safeInput}
+"""
+
+REWRITTEN:`
+
+      // Step 1: create a throwaway session
+      const createResult: any = await sdk.client.session.create({})
+      sideSessionID =
+        createResult?.data?.id ??
+        createResult?.data?.session?.id ??
+        createResult?.id ??
+        createResult?.session?.id
+      if (!sideSessionID) {
+        throw new Error("Failed to create side session")
+      }
+
+      // Step 2: send prompt (try known method names in order)
+      const api: any = sdk.client.session
+      const sendFn =
+        api.prompt ??
+        api.promptAsync ??
+        api.prompt_async ??
+        api.send ??
+        api.command
+      if (typeof sendFn !== "function") {
+        throw new Error("SDK has no prompt/send method")
+      }
+
+      await sendFn.call(api, {
+        sessionID: sideSessionID,
+        parts: [{ type: "text", text: OPTIMIZER_PROMPT }],
+      })
+
+      // Step 3: poll messages until assistant responds
+      const timeoutMs = 30_000
+      const pollIntervalMs = 500
+      const start = Date.now()
+      let optimized: string | undefined
+
+      while (Date.now() - start < timeoutMs) {
+        await new Promise((r) => setTimeout(r, pollIntervalMs))
+        try {
+          const msgsResult: any = await sdk.client.session.messages({ sessionID: sideSessionID })
+          const msgs: any[] = msgsResult?.data ?? msgsResult ?? []
+          const assistant = [...msgs].reverse().find((m) => {
+            const info = m?.info ?? m
+            return info?.role === "assistant"
+          })
+          if (assistant) {
+            const parts = assistant?.parts ?? []
+            const text = parts
+              .filter((p: any) => p?.type === "text")
+              .map((p: any) => p?.text ?? "")
+              .join("\n")
+              .trim()
+            if (text) {
+              optimized = text
+              break
+            }
+          }
+        } catch {
+          // ignore individual poll errors
+        }
+      }
+
+      if (!optimized) {
+        throw new Error("Timeout waiting for optimized prompt")
+      }
+
+      prompt.set({ input: optimized, parts: [] })
+      toast.show({ message: "Prompt optimized", variant: "success", duration: 2000 })
+    } catch (e) {
+      console.error("optimizePrompt failed", e)
+      toast.show({
+        message: `Optimize failed: ${e instanceof Error ? e.message : "unknown"}`,
+        variant: "error",
+        duration: 6000,
+      })
+    } finally {
+      // Cleanup: delete side session
+      if (sideSessionID) {
+        const api: any = sdk.client.session
+        const deleteFn = api.delete ?? api.remove ?? api.destroy
+        if (typeof deleteFn === "function") {
+          void Promise.resolve(deleteFn.call(api, { sessionID: sideSessionID })).catch(() => {})
+        }
+      }
+      setOptimizing(false)
+    }
   }
 
   const local = useLocal()
@@ -1460,6 +1718,58 @@ export function Session() {
                 <Show when={networkVisible()}>
                   <NetworkPrompt request={network()[0]} />
                 </Show>
+                <box flexShrink={0} paddingTop={1} paddingBottom={1}>
+                  <Show when={lastAssistant()} keyed>
+                    {(msg) => (
+                      <box flexShrink={0} paddingLeft={3}>
+                        <box flexDirection="row">
+                          <text>
+                            <span style={{ fg: local.agent.color(msg.agent) }}>▣ </span>
+                            <span style={{ fg: theme.text }}>{Locale.titlecase(msg.mode)}</span>
+                            <span style={{ fg: theme.textMuted }}>  |  {model()}</span>
+                            <Show when={routeFooter()}>
+                              <span style={{ fg: theme.textMuted }}>  |  {routeFooter()}</span>
+                            </Show>
+                            <Show when={duration()}>
+                              <span style={{ fg: theme.textMuted }}>  |  {Locale.duration(duration())}</span>
+                            </Show>
+                            <Show when={msg.error?.name === "MessageAbortedError"}>
+                              <span style={{ fg: theme.textMuted }}>  |  interrupted</span>
+                            </Show>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyTurnText()} fg={theme.text}>
+                            <b>copy</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyTurnRaw()} fg={theme.text}>
+                            <b>raw</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyAllText()} fg={theme.text}>
+                            <b>copy-all</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => copyAllRaw()} fg={theme.text}>
+                            <b>raw-all</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => retryLastTurn()} fg={theme.text}>
+                            <b>⟳</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => jumpPrev()} fg={theme.text}>
+                            <b>↑</b>
+                          </text>
+                          <text fg={theme.textMuted}>  |  </text>
+                          <text onMouseDown={() => jumpNext()} fg={theme.text}>
+                            <b>↓</b>
+                          </text>
+                        </box>
+                      </box>
+                    )}
+                  </Show>
+                </box>
                 <Show when={visible()}>
                   <pluginRuntime.Slot
                     name="session_prompt"
@@ -1479,7 +1789,14 @@ export function Session() {
                       }}
                       sessionID={route.sessionID}
                       directory={session()?.directory}
-                      right={<pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
+                      right={
+                        <box flexDirection="row" justifyContent="flex-end" marginRight={-1}>
+                          <text onMouseDown={() => optimizePrompt()} fg={optimizing() ? theme.warning : theme.text}>
+                            <b>{optimizing() ? "..." : "[+]"}</b>
+                          </text>
+                          <pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />
+                        </box>
+                      }
                     />
                   </pluginRuntime.Slot>
                 </Show>
@@ -1621,25 +1938,11 @@ function UserMessage(props: {
 
 function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const ctx = use()
-  const local = useLocal()
   const { theme } = useTheme()
   const sync = useSync()
-  const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
-  const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
+  const clipboard = useClipboard()
+  const toast = useToast()
   const routed = createMemo(() => RoutedModelMeta.info(ctx.providers(), props.parts, ctx.showDetails(), props.message)) // kilocode_change
-  const route = createMemo(() => routed().footer) // kilocode_change
-
-  const final = createMemo(() => {
-    return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
-  })
-
-  const duration = createMemo(() => {
-    if (!final()) return 0
-    if (!props.message.time.completed) return 0
-    const user = messages().find((x) => x.role === "user" && x.id === props.message.parentID)
-    if (!user || !user.time) return 0
-    return props.message.time.completed - user.time.created
-  })
 
   const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
@@ -1711,37 +2014,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         />
       </Show>
       {/* kilocode_change end */}
-      <Switch>
-        <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
-            <text marginTop={1}>
-              <span
-                style={{
-                  fg:
-                    props.message.error?.name === "MessageAbortedError"
-                      ? theme.textMuted
-                      : local.agent.color(props.message.agent),
-                }}
-              >
-                ▣{" "}
-              </span>{" "}
-              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-              <span style={{ fg: theme.textMuted }}> · {model()}</span>
-              {/* kilocode_change start - show routed model in regular assistant footer */}
-              <Show when={route()}>
-                <span style={{ fg: theme.textMuted }}> · {route()}</span>
-              </Show>
-              {/* kilocode_change end */}
-              <Show when={duration()}>
-                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-              </Show>
-              <Show when={props.message.error?.name === "MessageAbortedError"}>
-                <span style={{ fg: theme.textMuted }}> · interrupted</span>
-              </Show>
-            </text>
-          </box>
-        </Match>
-      </Switch>
     </>
   )
 }
