@@ -28,6 +28,15 @@ The mobile app lets you:
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 - Browse the files an agent produced straight from your phone's file browser — see [Agent artifacts in your file browser](#agent-artifacts-in-your-file-browser).
 - Use the Kilo tools from a signed-in chat, with no key or URL to configure — see [Kilo tools in chat](#kilo-tools-in-chat).
+- Share a session or open a shared link to read it in the app — see [Sharing a session](#sharing-a-session).
+- Review a session's changed files, refresh the diff, and send line comments to the agent — see [Reviewing session changes](#reviewing-session-changes).
+- Manage your account from the app: profile links, sign-in methods, provider keys (BYOK), data export, and blocked or muted people — see [Account settings](#account-settings).
+- Review your credit history and invoices, and manage Kilo Pass — see [Kilo Pass and billing](#kilo-pass-and-billing).
+- Connect GitHub, GitLab, Slack, Linear, Discord, and Bitbucket for your account or an organization — see [Integrations](#integrations).
+- See your usage — cost, requests, tokens, top models, and top features — for your account or an organization — see [Usage](#usage).
+- See sandbox compute cost in session totals and open sandbox previews — see [Session cost and model details](#session-cost-and-model-details) and [Sandbox previews and triggers](#sandbox-previews-and-triggers).
+- Manage an organization — billing, audit log, settings areas, and creation — see [Organization management](#organization-management).
+- Configure automated code reviews and review memory — see [Code reviewer settings](#code-reviewer-settings).
 
 ## App actions
 
@@ -88,7 +97,11 @@ The app follows your device language, with English as the fallback. Choose anoth
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
-Kilo Pass is not sold inside the iOS or Android app. Subscribe to or change your Kilo Pass on the web instead. If you try to buy a Kilo Pass in the app, it shows **Kilo Pass purchase is not available right now.** The Android app can open the web to manage a Kilo Pass you already have; the iOS app does not offer that link.
+Kilo Pass is not sold inside the iOS or Android app. Your profile's Kilo Pass card and the Kilo Pass screen read the pass on your account: an active pass shows its plan and billing cadence, status, the renewal date (or the date a cancellation or pause takes effect), the current period's usage against your available credits, and the bonus credits earned for the period. An account with no pass shows that Kilo Pass is not available in the app, and a pass that has ended shows the ended message. While the details load, the card and screen show placeholders, and a failed read offers **Retry**.
+
+### Managing Kilo Pass
+
+The Kilo Pass screen manages an existing pass. You can cancel it (behind a confirmation), resume a cancelled or paused pass, and view or cancel a scheduled plan change; while a cancellation is pending, the status line reads **Cancels on <date>**. Plan changes that cost money stay on the web, so the app opens the web page on Android and shows plain text on iOS. A pass bought through a store points to the store's own subscription settings instead. The page keeps its placeholders until every ledger it shows has answered, so it does not shift after the first paint.
 
 ### Buying credits in the app
 
@@ -97,6 +110,16 @@ The personal credits section shows an **Add credits** entry at any balance, whic
 Selecting a pack opens the store's own purchase sheet — StoreKit on iOS, Google Play Billing on Android. The app never grants credits itself: credits are added only after the backend validates the purchase with the store. A successful purchase shows a confirmation and refreshes your balance, and a cancelled purchase shows no error. If a purchase fails, the screen shows one inline message with a retry action; if the store is unreachable, it shows one banner naming that store while keeping the four packs visible. A purchase the backend has not yet credited is recovered the next time the app connects, and a refunded pack has its credits reversed.
 
 For other ways to add credits, see [Adding Credits](/docs/getting-started/adding-credits).
+
+### Credit history
+
+Your account's **Credit history** screen lists every credit movement — purchases, bonuses, Kilo Pass months, expiries, and deductions — in the same layout as the organization credit activity. Opening a card purchase shows its Stripe receipt. An App Store or Google Play purchase shows **Receipt from the App Store** or **Receipt from Google Play** in place of an invoice link.
+
+### Invoices
+
+The **Invoices** screen lists your Stripe invoices with the same period and cursor paging as the organization invoice list, and opening one lets you share its PDF. An account with no Stripe customer shows an empty list; the app does not create a customer for you.
+
+A **Manage billing on kilo.ai** row under Credits opens the web billing page on Android and shows plain text on iOS.
 
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing active agent sessions" caption="Start coding tasks and resume active sessions from the mobile home screen." /%}
@@ -125,6 +148,10 @@ For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organ
 
 Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. The owner's default sandbox and per-repository overrides are set in [Cloud Agent settings](/docs/code-with-ai/platforms/cloud-agent#choosing-where-sessions-run). Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
 
+A Cloud Agent session can also start from a saved cloud environment. The **Cloud environment** row lists the environments that contain the selected repository in your personal or organization scope. When one environment matches, Kilo uses it automatically; when several match, Kilo asks **Select an environment to start.** and blocks Start until you choose. Kilo remembers your last choice for that repository and scope.
+
+Open an environment to see its build state. The build view shows the state, the failure reason when a build fails, the last published snapshot, and the build logs while a build runs. The available action matches the web: **Build**, **Refresh**, **Cancel**, or the reason it is blocked. Build logs and controls are manager-only, as on the web. This row is separate from the **Environment** row, which selects an agent environment profile.
+
 ## Agent environment profiles
 
 The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
@@ -133,7 +160,61 @@ Organization-owned profiles are read-only for members: only organization owners 
 
 When you start a session, pick a profile in the new-session screen or choose **No profile**. The active profile appears as a chip on the new-session and session screens; in an organization session, tap the chip to open the profile in its owner's scope. You can also change the profile under **Advanced Configuration** while starting a session. Environment variables and setup commands you enter under **Advanced Configuration** are sent with the session even if you do not save them to a profile.
 
-The profile editor manages the profile's environment variables, setup commands, slash commands, MCP servers, skills, and agents. Secret values stay masked until you reveal them; enter a new value to rotate a secret. To save the current environment variables and setup commands as a new profile, use **Save as Profile**, which appears once a setup command has text. Marking a profile as the default updates it for the profile's owner.
+The profile editor manages the profile's environment variables, setup commands, slash commands, MCP servers, skills, agents, and instruction files. Secret values stay masked until you reveal them; enter a new value to rotate a secret. To save the current environment variables and setup commands as a new profile, use **Save as Profile**, which appears once a setup command has text. Marking a profile as the default updates it for the profile's owner.
+
+Each profile also has an **Instructions** screen, reachable from both the **Profile** tab and profile management. It lists the profile's instruction files with an enable switch and lets you create, edit, and delete them; deleting asks for confirmation. The form mirrors the server's limits and shows the saved path before you save.
+
+An **Import config** row opens a sheet where you paste a `kilo.json` (or paste it from the clipboard), preview what each section would add or change, toggle sections, and apply. Server parse errors and issues show inline, and **Import** stays disabled while the config is invalid. Importing on mobile carries `kilo.json` only — instruction file contents and skill folders still need the web ZIP upload described in [Importing a local configuration](/docs/code-with-ai/platforms/cloud-agent#importing-a-local-configuration).
+
+## Account settings
+
+The **Profile** tab also provides your account settings:
+
+- **Edit profile** — set the LinkedIn and GitHub links shown on your profile. Your display name comes from your sign-in provider and is not editable here.
+- **Sign-in methods** — view the providers linked to your account, unlink one behind a confirmation, or **Link another provider**, which opens the web connected-accounts page. The server refuses to unlink your last remaining method and shows the reason inline.
+- **Sign out of all web sessions** — ends every web session on your account, behind a confirmation.
+- **Provider keys (BYOK)** — list, add, test, enable or disable, and delete provider keys. A key's value is masked as you enter it and is never shown again, and managed keys are read-only.
+- **Your data** — request an export of your data, follow each export's status, enter the emailed download code, and download or share the file. This follows the same release toggle as the web, so accounts without it see a not-available state.
+- **Blocked and muted people** — review the people you have blocked or muted and **Unblock** or **Unmute** them.
+
+After you report a comment from a pull request discussion, a report receipt screen shows the report and lets you appeal once.
+
+## Integrations
+
+The **Profile** tab has a **Connected services** section, and the organization hub has an **Integrations** row; both open the **Integrations** screen for that scope. The screen reads one status for every service and shows a row per service, reading **Connected to <account>** when it is connected.
+
+**Connect** opens the web page that owns the provider's OAuth flow, because provider callbacks land on the web; the screen refetches when you return. **Disconnect** asks for confirmation first. Which services you can act on follows the web: GitHub and Slack are available to owners and admins, GitLab, Discord, and Linear to billing roles, and Bitbucket to owners and billing managers. Members see status only. Bitbucket is organization-only and reads **Manage on the web**.
+
+The screen shows a loading skeleton while it resolves, a retryable error with **Retry**, and an explanation when you lose the permission to act.
+
+## Usage
+
+Your **Profile** tab has a **Usage** row under the credits card, and the organization hub has a usage card; both open a native usage screen backed by the same analytics as the web. Choose a 7-, 30-, or 90-day range to see cost, request, and token totals, a daily bar chart you can switch between **Cost**, **Requests**, and **Tokens**, and lists of your top models and top features.
+
+In organization scope, owners and billing managers see organization-wide usage; other roles see their own usage in that organization, as on the web. Organization member rows show each member's daily spend as `$spent / $limit` only for sales-demo organizations that report both values, otherwise `$limit/day`, and nothing when there is no limit.
+
+## Organization management
+
+Select an organization to open its hub, which mirrors the areas of the web sidebar that the app covers.
+
+- **Billing** — the organization's plan, subscription state (renews, cancels at period end, trial, past due, or ended), seats used and total, any scheduled seat decrease, the auto top-up amount and threshold, and the organization [Kilo Pass](#kilo-pass-and-billing). It follows the web's role rules: billing roles see it, and other roles get an access-denied message. Every money-changing action — buy seats, change plan, or set up auto top-up — opens the web page on Android and shows plain text on iOS.
+- **Settings** — one row for each area that lives on the web: usage details, providers and models, custom modes, groups, guardrails, BYOK, SSO and domain, email preferences, audit logs, request logs, integrations, sub-organizations, distribute funds, and data collection. Rows follow the web sidebar's role and plan rules, and each opens its web page.
+- **Audit log** — a native read-only list of organization events with paging, shown to the same roles as the web. See [Audit Logs](/docs/collaborate/enterprise/audit-logs).
+
+You can create an organization from **Profile** or from the no-organization state. Enter a name and the app creates it with the same defaults as the web flow, then switches to the new organization. The company domain stays a web dashboard setting.
+
+An invite link for an organization (`/organizations/<id>`) opens in the app, so accepting an invite lands on the organization. Only that path is claimed — `/organizations/new`, `/organizations/create`, and any deeper organization page open in the browser.
+
+## Code reviewer settings
+
+The app configures Kilo's automated [Code Reviews](/docs/automate/code-reviews/overview) from the **Code Reviewer** area, matching the web settings:
+
+- **Skip bot pull requests** — a GitHub reviewer setting that stops automatic reviews of pull requests opened by bots.
+- **Review memory** — use **Analyze now** to pick a repository and start a review-memory analysis, with the same result messages as the web.
+- **Per-repository model and effort** — on the repositories screen, override the review model and thinking effort for individual repositories.
+- **Council review** — for an entitled organization when council review is enabled for it (off by default, like the web), configure specialists, the aggregation strategy, required labels, and per-repository opt-in. The screen refuses a change that would drop an enabled council below its minimum specialist count.
+- **Review analytics** — an organization screen with four metric cards and a per-repository breakdown for 7, 30, or 90 days.
+- **Clear findings for removed repositories** — on the security repositories screen, remove findings for a repository the GitHub App can no longer access, behind a two-step confirmation. See [Security Reviews](/docs/deploy-secure/security-reviews).
 
 ## Starting a session from a picture
 
@@ -157,6 +238,12 @@ The action is not shown on the first user message, on queued or failed messages,
 A Cloud Agent source has no per-message file changes, so the Continue screen reports **Files start from the base branch.** For a computer destination it reports **Files on this computer are not changed.**
 
 Forking to a connected CLI needs a CLI that supports the session cut. An older CLI shows **Update the Kilo CLI**, and **Start** stays disabled.
+
+## Sharing a session
+
+Open a session's context sheet and use the **Share** section to create a public link. Choose how long the link lasts — 1 hour, 1 day, 7 days, 30 days, or never — and whether new messages are included. The active link shows its expiry, with actions to copy it (the row shows **Link copied**), open your device's native share sheet, and **Revoke** it after a confirmation. A link created elsewhere shows as active here, and creating a new link replaces the existing one, as on the web.
+
+Shared links use the `/s/<token>` form. Opening one — from a message, the share sheet, or a universal link — opens the shared session read-only in the app. The screen shows a loading state, offers **Retry** after a network failure, and shows a terminal message with no retry when the link has expired or been revoked. The in-app view requires you to be signed in and accepts only a live share link, never a session ID, so it is narrower than the public web page at the same link, which anyone can open.
 
 ## Live session counts
 
@@ -227,6 +314,10 @@ Turn on **Hide thinking details** in **Settings → Preferences → General** to
 
 While a model streams reasoning, the composer and subagent spinners still read **Thinking**. With the setting off, the session page behaves exactly as before.
 
+## Collapsing tool calls
+
+The app groups consecutive tool calls into a collapsed row by default, so the transcript stays focused on the conversation. Turn this off with the switch under **Preferences**.
+
 ## Queueing follow-up messages
 
 The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
@@ -258,6 +349,12 @@ Attach up to **5 files** (each up to **20 MiB**) from your phone to the remote s
 - **Other file types** (binaries, archives, etc.) — the file is saved to a per-session scratch directory on the CLI machine. The session transcript shows the saved path, filename, file size, and MIME type. The agent can inspect the file with the `read` tool for text content or shell utilities for binary content.
 
 Attaching files from the phone is the mobile flow — this is separate from `kilo run --file <path>`, which attaches local files to a local prompt.
+
+### Previewing document attachments
+
+For a document attachment, Kilo offers a preview as the first choice, opening the file in your phone's native viewer — for example, a PDF in the platform PDF viewer. The existing **Open as text** and **Open in external app** options remain available.
+
+A device with no viewer for the file type reports that once and then drops the preview choice for that chip, and unsupported files such as archives keep only the text and share choices. If the file has not finished downloading, Kilo reports the error so you can retry.
 
 ### Receiving files from the CLI on your phone
 
@@ -292,15 +389,34 @@ Reviews use your connected account for that provider; the app asks you to connec
 
 Recents, drafts, viewed-file sets, and pending comments stay separate across providers, accounts, and GitLab instances, so same-named repositories never share state.
 
+## Reviewing session changes
+
+A session's changes screen lists the files a Cloud Agent session changed so you can review them and send line comments back to the agent.
+
+- **Refresh** — the header action and pull-to-refresh reload the worktree changes. A failed refresh shows **Couldn't refresh. Pull down to try again.**
+- **Changed files** — the list shows each file's status, its additions and deletions, a marker for binary files, and a notice when the list is truncated. Open a file to view its diff at the listed revision; a file that is stale, was not captured, is no longer listed, or had its diff omitted shows its own state.
+- **Line comments** — tap a line to add or edit a comment, and commented lines are marked. The review sheet sends your comments to the agent as a single message. Discarding a comment asks for confirmation.
+
+Draft comments live with the screen, so leaving the screen discards them. A session without a Cloud Agent keeps its stored diff and shows a banner that comments are off.
+
 ## Session cost and model details
 
 The app shows what each session cost and which models did the work:
 
 - **Session list** — a finished session with a recorded cost shows it in the row's meta line (for example, `$0.12 · 5m ago`). Sessions that are still running or have no cost show no cost.
 - **Cost breakdown** — open a session's Context usage sheet to see a Token usage section (input, output, reasoning, cache read, and cache write tokens, plus the cache hit rate) and a collapsible Models section with each model's name, provider, step count, and cost. A Subagents row covers any remaining spend, so the per-model costs always add up to the session total.
+- **Compute cost** — the session header's cost pill and the Context usage sheet's total add the session's sandbox compute charges to model cost. A Compute section lists the total, each sandbox run with its time, duration × rate, and amount, and the current Medium and Large sandbox rates.
 - **Per-message model label** — assistant messages show a dimmed model label on the first assistant reply and whenever the model changes during the session. Turns routed by [Auto Model](/docs/code-with-ai/agents/auto-model) show the concrete model that handled the turn.
 
-Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost.
+Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost. Session lists, live rows, and the Android glanceable card show model cost only, because compute is read one session at a time.
+
+## Sandbox previews and triggers
+
+When a Cloud Agent session is running, its context sheet lists the sandbox's preview services. Tap a preview to open its minted URL in the app's in-app browser. The list shows loading, stopped, empty, unsupported, and failed states.
+
+The same context sheet has a sandbox section that shows the sandbox's state, a detail line, and when that state was last checked. If the sandbox failed to start, the section offers a fresh start: Kilo checks for a recoverable workspace snapshot and, after you confirm, removes a snapshot that cannot be used.
+
+The **Profile** tab also has a **Triggers & webhooks** row that opens the web triggers page for the current scope.
 
 ## Notifications
 
