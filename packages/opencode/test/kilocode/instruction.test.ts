@@ -230,7 +230,8 @@ describe("Instruction config instructions entries", () => {
 
       const out = yield* run([missing], { [missing]: { trusted: false, source: missing, root: projectTmp } }, projectTmp, home, cap.logs, cap.layer)
       expect(out.paths.has(missing)).toBe(false)
-      expect(cap.logs.some((line) => line.includes("instructions entry matched no files") && line.includes(missing))).toBe(true)
+      // run() invokes systemSources twice (systemPaths + system); the warning must fire only once per entry.
+      expect(cap.logs.filter((line) => line.includes("instructions entry matched no files") && line.includes(missing))).toHaveLength(1)
     }),
   )
 })

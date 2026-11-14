@@ -82,6 +82,8 @@ const layer: Layer.Layer<
         Effect.succeed({
           // Track which instruction files have already been attached for a given assistant message.
           claims: new Map<MessageID, Set<string>>(),
+          // Track which config instructions entries already warned about matching no files. // kilocode_change
+          warned: new Set<string>(),
         }),
       ),
     )
@@ -140,6 +142,7 @@ const layer: Layer.Layer<
     const systemSources = Effect.fn("Instruction.systemSources")(function* () {
       const config = yield* cfg.get()
       const ctx = yield* InstanceState.context
+      const s = yield* InstanceState.get(state)
       const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
       const paths = new Map<string, KilocodeMarkdown.Source>()
       const add = (item: string, origin: KilocodeMarkdown.Source) => {
@@ -184,7 +187,8 @@ const layer: Layer.Layer<
           const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
-          if (matches.length === 0) {
+          if (matches.length === 0 && !s.warned.has(raw)) {
+            s.warned.add(raw)
             yield* Effect.logWarning(`instructions entry matched no files and will be skipped: ${raw}`)
           }
           matches.forEach((item) => add(item, origin))
