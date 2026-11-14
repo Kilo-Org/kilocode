@@ -37,6 +37,8 @@ Work on notebooks together with the agent. Ask it to make a change — fix a typ
 
 If you're signed out when the agent tries to open or list notebooks, the chat shows **Sign in to use embedded notebooks?** with **Sign in** and **Not now**. After you sign in, the agent continues the task. **Not now** turns off the agent's notebook tools until you sign in or restart the app. Other features still ask on their own.
 
+Before the agent runs code in a notebook — running cells or restarting the kernel — Kilo Desktop asks you first (for example **Run code in this notebook?**, **Run all code cells?**, or **Restart the notebook kernel?**). The request shows the notebook, the cells or code it will run, and a reminder that the code runs on your computer with your permissions. Choose **Allow once** or **Reject**, or select **Always allow** to let the agent run code in that notebook for the rest of the chat without asking again. Other notebooks and new chats still ask.
+
 ## Environment and packages
 
 Each notebook uses a Python environment. Select the kernel button in the toolbar to see the details of that environment. New notebooks can get a shared `environment.yml` in their workspace; toggle this under [Settings → Notebooks](/docs/desktop/settings/general#notebooks).
@@ -47,4 +49,4 @@ Before the agent adds packages to a notebook that you haven't approved yet, it a
 
 ## Runtime status
 
-The notebook runtime starts on demand. While it's starting you'll see a brief status; if it can't be reached, the tab shows a Retry button.
+The notebook runtime starts on demand. While it's starting you'll see a brief status; if it can't start, the tab shows **Could not start the notebook runtime** with a **Try again** button.

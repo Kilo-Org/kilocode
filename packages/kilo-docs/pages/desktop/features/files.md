@@ -21,9 +21,9 @@ Select a file to open it in the editor with syntax highlighting.
 
 - Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) tab (requires sign-in).
 - Markdown (`.md`) files can be viewed in a {% svgIcon src="/docs/img/desktop/eye.svg" /%} rendered preview or {% svgIcon src="/docs/img/desktop/code.svg" /%} as source code, with links to other workspace files clickable inline. In the rendered preview, press **⌘F** / **Ctrl+F** to find text (see [Find text](/docs/desktop/quickstart#find-text)).
-- Mermaid (`.mmd`, `.mermaid`) files open as a rendered diagram; switch to {% svgIcon src="/docs/img/desktop/code.svg" /%} source to edit them. A file opened at a specific line, such as from a link like `flow.mmd:12`, opens in the source view. Mermaid code blocks in Markdown files render as diagrams in the preview.
+- Mermaid (`.mmd`, `.mermaid`) files open as a rendered diagram you can zoom and pan; switch to {% svgIcon src="/docs/img/desktop/code.svg" /%} source to edit them. A file opened at a specific line, such as from a link like `flow.mmd:12`, opens in the source view. Mermaid code blocks in Markdown files render as diagrams in the preview.
 - HTML (`.html`, `.htm`) files open rendered in a [Browser](/docs/desktop/features/browser) tab.
-- Images open in a preview.
+- Images open in a preview you can zoom and pan, like the chat's [Viewer](/docs/desktop/quickstart#pages-and-diagrams-in-replies).
 - **CSV** (`.csv`), **TSV** (`.tsv`), and **Parquet** (`.parquet`) files open as interactive tables. You can scroll, sort, and filter the data.
   - For CSV and TSV, select **Edit source** to edit the text and **Show as table** to switch back. Save as usual.
   - Parquet tables are read-only.
