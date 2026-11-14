@@ -758,7 +758,13 @@ export const NewWorktreeDialog: Component<{
     }
     if (msg.type === "enhancePromptError") {
       const ev = msg as EnhancePromptErrorMessage
-      if (ev.requestId === request) cancel()
+      if (ev.requestId !== request) return
+      cancel()
+      showToast({
+        variant: "error",
+        title: t(`prompt.enhance.status.${ev.reason}`, { error: ev.error }),
+        description: t("prompt.enhance.status.request", { id: ev.requestId }),
+      })
     }
   })
 
