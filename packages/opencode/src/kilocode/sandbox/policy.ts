@@ -348,6 +348,25 @@ export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: Se
   }
 })
 
+/**
+ * The containment facts the deterministic security layer decides on.
+ *
+ * Deliberately read from the same live per-session snapshot `execute` runs under, so the profile a
+ * call is allowed against is the profile it then executes against. `widened` reports that the
+ * configuration adds writable roots beyond the ones `profile` builds itself: a proven sandbox does
+ * not bound the call when its own boundary was moved.
+ */
+export const containment = Effect.fn("SandboxPolicy.containment")(function* (sessionID: SessionID) {
+  const active = yield* current(sessionID)
+  const support = backendSupport({ mode: active.state.mode, allowedHosts: active.state.allowedHosts })
+  return {
+    enabled: active.state.enabled && support.available,
+    mode: active.state.mode,
+    destinations: active.state.allowedHosts,
+    widened: active.state.writablePaths.length > 0,
+  }
+})
+
 export const networkRestricted = Effect.fn("SandboxPolicy.networkRestricted")(function* (sessionID: SessionID) {
   const active = yield* current(sessionID)
   return active.state.enabled && active.state.mode !== "allow"

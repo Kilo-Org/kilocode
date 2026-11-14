@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { isEligible, setKillSwitch, resetEligibility, type OrgState } from "@/kilocode/session-export/eligibility"
+import {
+  exportableAgent,
+  isEligible,
+  setKillSwitch,
+  resetEligibility,
+  type OrgState,
+} from "@/kilocode/session-export/eligibility"
 
 const base = {
   model: {
@@ -40,5 +46,25 @@ describe("isEligible", () => {
   test("killSwitch blocks everything", () => {
     setKillSwitch(true, "test")
     expect(isEligible(base)).toBe(false)
+  })
+})
+
+/**
+ * The security reviewer is a service of the policy layer, not a turn of the user's conversation.
+ * Its prompt carries the command line under review, so letting it reach the export stream would
+ * reopen through a side channel exactly what the trusted-config and privacy-mode work closed.
+ */
+describe("exportableAgent", () => {
+  test("excludes the security reviewer", () => {
+    expect(exportableAgent("security-reviewer")).toBe(false)
+  })
+
+  test("still excludes the title agent", () => {
+    expect(exportableAgent("title")).toBe(false)
+  })
+
+  test("keeps ordinary agents exportable", () => {
+    expect(exportableAgent("code")).toBe(true)
+    expect(exportableAgent("plan")).toBe(true)
   })
 })

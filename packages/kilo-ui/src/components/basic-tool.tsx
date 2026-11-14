@@ -1,10 +1,11 @@
-import { createMemo, createSignal, Show } from "solid-js"
+import { createMemo, createSignal, Show, type JSX } from "solid-js"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { checksum } from "@opencode-ai/core/util/encode"
 import { BasicTool as Base, GenericTool } from "@opencode-ai/ui/basic-tool"
 import type { BasicToolProps as BaseProps, TriggerTitle } from "@opencode-ai/ui/basic-tool"
 import { toolOpenKey, readToolOpen, writeToolOpen } from "./tool-open-state"
 import { useToolApproval, ToolApprovalLine } from "./tool-approval"
+import { useToolSecurity, ToolSecurityBadge } from "./tool-security"
 
 export { GenericTool }
 export type { TriggerTitle }
@@ -64,10 +65,27 @@ export function shouldRenderApprovalInBody(placement: BasicToolProps["approvalPl
   return placement !== "hidden" && hasApproval
 }
 
+/**
+ * The trigger with the security state chip folded in.
+ *
+ * It rides on the trigger rather than the body because `reviewing` is transient: by the time a user
+ * expands the row the reviewer has long since answered. A trigger the caller built as an element
+ * rather than a `TriggerTitle` has no slot to put it in, and is left alone.
+ */
+export function withSecurity(trigger: BasicToolProps["trigger"], badge: JSX.Element) {
+  if (typeof trigger !== "object" || trigger === null || !("title" in trigger)) return trigger
+  return { ...(trigger as TriggerTitle), status: badge }
+}
+
 export function BasicTool(props: BasicToolProps) {
   const key = () => toolOpenKey(props)
   const initial = () => initialOpen(props)
   const approval = useToolApproval()
+  const security = useToolSecurity()
+  const trigger = () => {
+    const value = security()
+    return value ? withSecurity(props.trigger, <ToolSecurityBadge display={value} />) : props.trigger
+  }
   const inBody = () => shouldRenderApprovalInBody(props.approvalPlacement, approval() !== undefined)
   // A deferred card that mounts open paints one frame without its body (the
   // trigger only, about 24px) and grows to full size a frame later. On the
@@ -136,6 +154,7 @@ export function BasicTool(props: BasicToolProps) {
           {...props}
           defer={defer()}
           deferredSize={size}
+          trigger={trigger()}
           defaultOpen={initial()}
           retainDetails={props.defer}
           onOpenChange={change}
@@ -146,6 +165,7 @@ export function BasicTool(props: BasicToolProps) {
         {...props}
         defer={defer()}
         deferredSize={size}
+        trigger={trigger()}
         defaultOpen={initial()}
         retainDetails={props.defer}
         onOpenChange={change}
