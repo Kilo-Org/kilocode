@@ -56,7 +56,7 @@ Add AbliteratedLLM as a custom provider in `~/.config/kilo/kilo.json` or `./kilo
           "name": "GLM-5.3 Flash Abliterated",
           "reasoning": true,
           "modalities": { "input": ["text", "image"], "output": ["text"] },
-          "variants": { "none": { "disabled": true }, "minimal": { "disabled": true } },
+          "variants": { "none": { "disabled": true } },
           "limit": { "context": 1048576, "output": 131072 },
           "cost": { "input": 0.0977, "output": 0.3421, "cache_read": 0.0098 },
         },
@@ -93,7 +93,7 @@ See [Custom Models](/docs/code-with-ai/agents/custom-models) for every model fie
 
 Kilo Code connects to AbliteratedLLM through the OpenAI-compatible Chat Completions API at `https://api.abliteratedllm.dev/v1`. AbliteratedLLM also exposes an Anthropic Messages endpoint, but the configuration on this page uses the OpenAI-compatible path.
 
-- Every model is a reasoning model. With `reasoning: true`, Kilo Code offers reasoning-effort variants for a custom provider, for most models from `none` to `max`. GLM models reject `none`, and `glm-5.3-flash-abliterated` also rejects `minimal`. The example therefore disables both variants for that model. For other GLM models, disable `none`.
+- Every model is a reasoning model. With `reasoning: true`, Kilo Code offers reasoning-effort variants for a custom provider. For GLM models these are `none`, `low`, `medium`, `high`, `xhigh` and `max`. GLM models reject `none`, so the example disables that variant. Do the same for other GLM models.
 - Audio and file attachments are rejected. Image input works only on models that list `image` in `input_modalities`.
 
 For standalone cURL, Python and TypeScript examples, see the [AbliteratedLLM examples repository](https://github.com/abliteratedllm/examples).
@@ -103,7 +103,7 @@ For standalone cURL, Python and TypeScript examples, see the [AbliteratedLLM exa
 - **Invalid API key (HTTP 401):** create a new key on the [API keys page](https://abliteratedllm.dev/dashboard/keys), then reconnect with `/connect` or `kilo auth login`, or update `ABLITERATEDLLM_API_KEY`.
 - **Model not found:** copy the model ID exactly as the models endpoint returns it.
 - **Provider not visible:** a custom provider needs at least one entry under `models`. Check that `provider.abliteratedllm` is in a config file Kilo Code loads.
-- **HTTP 400 after picking a reasoning variant:** GLM models reject the `none` variant, and `glm-5.3-flash-abliterated` also rejects `minimal`. Disable them as described under [API compatibility](#api-compatibility).
+- **HTTP 400 after picking a reasoning variant:** GLM models reject the `none` variant. Disable it as described under [API compatibility](#api-compatibility).
 - **HTTP 429:** trial accounts allow one concurrent request and 10 requests per minute per key. Wait for the `Retry-After` interval and try again.
 
 {% callout type="note" %}
