@@ -22,6 +22,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
+import { KiloSessionCompaction } from "@/kilocode/session/compaction" // kilocode_change - #34
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
 // kilocode_change end
@@ -688,11 +689,19 @@ const layer = Layer.effect(
               model: userMessage.model,
             })
             KiloSessionPromptQueue.retarget(input.sessionID, continueMsg.id) // kilocode_change - expose auto-continue to scope()
-            const text =
+            // kilocode_change start - #34: inject original task for sub-agent compaction continue
+            const defaultText =
               (input.overflow
                 ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
                 : "") +
               "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+            const text =
+              KiloSessionCompaction.continuePrompt({
+                sessionID: input.sessionID,
+                messages: input.messages,
+                overflow: input.overflow,
+              }) ?? defaultText
+            // kilocode_change end
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: continueMsg.id,
