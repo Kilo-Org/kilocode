@@ -5,7 +5,7 @@ description: "Run commands in an interactive shell scoped to your workspace in K
 
 # Terminal
 
-Run commands in an interactive shell next to your chat. Each terminal is a real shell session that starts in the workspace's root folder, so commands run against the same files the agent is working with.
+Run commands in an interactive shell next to your chat. Each terminal is a real shell session that starts in the session's folder (its worktree, if the session runs in one), so commands run against the same files the agent is working with. In a session without a workspace, it starts in your home folder.
 
 ## Working with the agent
 
