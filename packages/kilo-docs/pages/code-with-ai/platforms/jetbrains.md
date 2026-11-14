@@ -120,6 +120,15 @@ These shortcuts work while a Kilo session is active. They use `Ctrl` on macOS to
 | `Ctrl+2` | Cycle favorite models, or recommended models if you have no favorites |
 | `Ctrl+3` | Cycle reasoning effort for the current model |
 | `Ctrl+0` | Reset the model override |
+| `Ctrl+K` | Start or stop voice input while the prompt is focused |
+
+## Voice input
+
+Dictate a prompt instead of typing it. A microphone button sits in the prompt bar; select it to start recording, speak, then select it again to stop. Kilo transcribes your speech and inserts it at the caret, or replaces the prompt's selected text when there is a selection. To send in one step, press Send while recording: Kilo stops, transcribes, and sends the prompt.
+
+`Ctrl+K` starts and stops recording while the prompt is focused. The action is registered as **Toggle Voice Input**, so you can reassign it in **Settings → Keymap**. While the prompt is focused, the action takes precedence over the IDE's own `Ctrl+K` binding; outside the prompt, the IDE shortcut is unchanged.
+
+Recording stops automatically after two minutes. Audio is captured on your machine with the local microphone and uploaded to Kilo through your signed-in account for transcription, so remote development still uses your local microphone. Kilo selects a transcription model available to your account automatically. See [Voice Transcription](/docs/code-with-ai/features/speech-to-text) for how transcription through Kilo Gateway works.
 
 ## Permission requests
 
