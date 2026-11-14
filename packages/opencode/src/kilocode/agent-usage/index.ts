@@ -164,6 +164,10 @@ export namespace AgentUsage {
   // `role` is the assistant message's persisted `mode`, the execution-time
   // record the schema exposes alongside `agent`. Compaction summary messages
   // persist `agent`/`mode` = "compaction", so they surface as their own agent.
+  //
+  // Rows copied by `Session.fork` set `forked`. They are the parent's transcript,
+  // not another execution, so they must not add runs, tokens, or active time.
+  // Positive cost is not a usable filter: a free model still does real work.
   const cte = (projectID: ProjectV2.ID) => sql`
     WITH RECURSIVE
     tree(id, root_id) AS (
@@ -192,7 +196,9 @@ export namespace AgentUsage {
         json_extract(message.data, '$.error.name') AS errorName
       FROM message
       JOIN session ON session.id = message.session_id AND session.project_id = ${projectID}
-      WHERE json_valid(message.data) AND json_extract(message.data, '$.role') = 'assistant'
+      WHERE json_valid(message.data)
+        AND json_extract(message.data, '$.role') = 'assistant'
+        AND coalesce(json_extract(message.data, '$.forked'), 0) = 0
     ),
     usage AS (
       SELECT
