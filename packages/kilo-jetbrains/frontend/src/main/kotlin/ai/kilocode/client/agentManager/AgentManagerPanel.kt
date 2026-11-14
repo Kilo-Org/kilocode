@@ -176,7 +176,8 @@ class AgentManagerPanel(
     private val edit = RenameAction()
     private val ordering = AgentManagerLayout(project?.let(PropertiesComponent::getInstance))
     private val missed = mutableMapOf<String, Int>()
-    private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
+    private val rows = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? DefaultActionGroup ?: DefaultActionGroup()
+    private val manager get() = ActionManager.getInstance()
     private val sections: Array<AnAction> = arrayOf(
         object : DumbAwareAction(KiloBundle.message("agentManager.section.rename")) {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
@@ -202,7 +203,8 @@ class AgentManagerPanel(
         },
     )
     private val group = object : ActionGroup(), DumbAware {
-        override fun getChildren(e: AnActionEvent?) = if (e?.getData(SECTION) != null) sections else rows.getChildren(e)
+        override fun getChildren(e: AnActionEvent?) =
+            if (e?.getData(SECTION) != null) sections else rows.getChildren(manager)
     }
     private val pendingHosted = linkedMapOf<String, HostedWorkspaceDto>()
     private val createdHosted = linkedMapOf<String, HostedWorkspaceDto>()
