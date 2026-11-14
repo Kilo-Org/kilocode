@@ -357,13 +357,91 @@ export const ShellPermission = Effect.gen(function* () {
     return path.resolve(root, text)
   })
 
+  // A path inside the project can still point outside through a symlink that already exists.
+  // Apply `..` to the symlink target so `linkdir/../outside/file` stays on the real path.
+  // Commands that create the link and read it in the same invocation are not visible yet.
+  const normalize = (file: string) => (process.platform === "win32" ? FSUtil.normalizePath(file) : file)
+  const drive = (text: string) => process.platform === "win32" && /^[A-Za-z]:(?![\\/])/.test(text)
+  const absolute = (root: string, text: string) => {
+    if (path.isAbsolute(text)) return text
+    if (process.platform === "win32" && /^[A-Za-z]:/.test(text)) return text
+    if (root.endsWith("/") || root.endsWith("\\")) return root + text
+    return root + (root.includes("\\") ? "\\" : "/") + text
+  }
+  const segments = (file: string) => {
+    if (process.platform === "win32") {
+      const text = file.replaceAll("/", "\\")
+      if (text.startsWith("\\\\")) {
+        const bits = text.split("\\").filter((part) => part.length > 0)
+        const base = bits.length >= 2 ? `\\\\${bits[0]}\\${bits[1]}` : text
+        return { base, parts: bits.slice(2) }
+      }
+      const matched = /^([A-Za-z]:)(.*)$/.exec(text)
+      if (matched) {
+        const rest = matched[2].replace(/^\\/, "")
+        return { base: `${matched[1]}\\`, parts: rest.length === 0 ? [] : rest.split("\\") }
+      }
+    }
+    return { base: "/", parts: file.split("/") }
+  }
+  // Node's realpath folds `..` before it reads symlinks, so walk one segment at a time.
+  const physical = Effect.fn("ShellTool.physical")(function* (file: string) {
+    const parsed = segments(file)
+    let current = parsed.base
+    const pending: string[] = []
+    for (const part of parsed.parts) {
+      if (part.length === 0 || part === ".") continue
+      if (part === "..") {
+        if (pending.length > 0) {
+          pending.pop()
+          continue
+        }
+        const parent = path.dirname(current)
+        if (parent !== current) current = parent
+        continue
+      }
+      if (pending.length > 0) {
+        pending.push(part)
+        continue
+      }
+      const next = path.join(current, part)
+      const hit = yield* fs.realPath(next).pipe(Effect.option)
+      if (hit._tag === "None") {
+        pending.push(part)
+        continue
+      }
+      current = normalize(hit.value)
+    }
+    if (pending.length === 0) return normalize(current)
+    return normalize(path.join(current, ...pending))
+  })
+  const external = Effect.fn("ShellTool.external")(function* (file: string, instance: InstanceContext) {
+    const up = file.split(/[\\/]/).includes("..")
+    if (!up && !containsPath(file, instance)) return file
+    const real = yield* physical(file)
+    if (containsPath(real, instance)) return undefined
+    return real
+  })
+
   const argpath = Effect.fn("ShellTool.argPath")(function* (arg: string, cwd: string, ps: boolean, shell: string) {
     const text = ps ? expand(arg, cwd, shell) : home(unquote(arg))
     const file = text && prefix(text)
     if (!file || dynamic(file, ps)) return
     const next = ps ? provider(file) : file
     if (!next) return
-    return yield* resolve(next, cwd, shell)
+    const parts = next.split(/[\\/]/)
+    if (!parts.includes("..") || drive(next)) return yield* resolve(next, cwd, shell)
+    if (
+      process.platform === "win32" &&
+      Shell.posix(shell) &&
+      next.startsWith("/") &&
+      FSUtil.windowsPath(next) === next
+    ) {
+      const converted = yield* cygpath(shell, next)
+      if (converted) return converted
+    }
+    const raw = process.platform === "win32" ? FSUtil.windowsPath(next) : next
+    return absolute(cwd, raw)
   })
 
   const collect = Effect.fn("ShellTool.collect")(function* (
@@ -397,8 +475,10 @@ export const ShellPermission = Effect.gen(function* () {
         for (const arg of pathArgs(command, ps, kind === "cmd")) {
           const resolved = yield* argpath(arg, cwd, ps, shell)
           yield* Effect.logInfo("resolved path", { arg, resolved })
-          if (!resolved || containsPath(resolved, instance)) continue
-          const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
+          if (!resolved) continue
+          const target = yield* external(resolved, instance)
+          if (!target) continue
+          const dir = (yield* fs.isDir(target)) ? target : path.dirname(target)
           scan.dirs.add(dir)
           if (accessKind !== "read") scan.access = "unknown"
         }
@@ -429,10 +509,13 @@ export const ShellPermission = Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
         const metadata = heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))) // kilocode_change
-        if (!containsPath(input.cwd, instance)) {
-          scan.dirs.add(input.cwd)
+        // kilocode_change start - a symlinked working directory can escape the project
+        const outside = yield* external(input.cwd, instance)
+        if (outside) {
+          scan.dirs.add(outside)
           scan.access = "unknown"
         }
+        // kilocode_change end
         yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
         const gitMutation = commands(tree.rootNode).some((node) => mutatesGit(node.text))
         if (input.escalate && gitMutation) {
@@ -465,7 +548,8 @@ export const ShellPermission = Effect.gen(function* () {
       Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
-        if (!containsPath(input.cwd, instance)) scan.dirs.add(input.cwd)
+        const outside = yield* external(input.cwd, instance)
+        if (outside) scan.dirs.add(outside)
         return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob) }
       }),
     )
