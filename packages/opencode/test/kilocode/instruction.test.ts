@@ -2,7 +2,7 @@
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import path from "path"
-import { Effect, FileSystem, Layer } from "effect"
+import { Effect, FileSystem, Layer, Logger } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { NodeFileSystem } from "@effect/platform-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -121,6 +121,116 @@ describe("Instruction.systemPaths KILO_CONFIG_DIR profile fallback", () => {
         provideInstruction({ home: globalTmp, config: globalTmp }),
         withConfigDir(undefined),
       )
+    }),
+  )
+})
+
+describe("Instruction config instructions entries", () => {
+  const capture = () => {
+    const logs: string[] = []
+    const logger = Logger.make(({ message }) => {
+      logs.push(String(message))
+    })
+    return { logs, layer: Logger.layer([logger], { mergeWithExisting: false }) }
+  }
+
+  const run = (
+    instructions: string[],
+    origins: Record<string, { trusted: boolean; source: string; root?: string }>,
+    project: string,
+    home: string,
+    logs: string[],
+    logLayer: Layer.Layer<Logger.CurrentLoggers>,
+  ) =>
+    Effect.gen(function* () {
+      const svc = yield* Instruction.Service
+      const paths = yield* svc.systemPaths()
+      const sys = yield* svc.system()
+      return { paths, joined: sys.join("\n"), logs }
+    }).pipe(
+      provideInstance(project),
+      Effect.provide(
+        AppNodeBuilder.build(Instruction.node, [
+          [
+            Config.node,
+            TestConfig.layer({
+              get: () => Effect.succeed({ instructions, instruction_origins: origins }),
+            }),
+          ],
+          [Global.node, Global.layerWith({ home, config: home })],
+        ]),
+      ),
+      Effect.provide(logLayer),
+    )
+
+  it.live("loads both entries when two files share a basename", () =>
+    Effect.gen(function* () {
+      const globalTmp = yield* tmpdirScoped()
+      const projectTmp = yield* tmpdirScoped()
+      const home = yield* tmpdirScoped()
+      const globalMem = path.join(globalTmp, ".agents", "memory", "MEMORY.md")
+      const projectMem = path.join(projectTmp, "memory", "MEMORY.md")
+      yield* write(globalMem, "GLOBAL MEMORY BODY")
+      yield* write(projectMem, "PROJECT MEMORY BODY")
+      const cap = capture()
+
+      const out = yield* run(
+        [globalMem, projectMem],
+        {
+          [globalMem]: { trusted: true, source: globalMem },
+          [projectMem]: { trusted: false, source: projectMem, root: projectTmp },
+        },
+        projectTmp,
+        home,
+        cap.logs,
+        cap.layer,
+      )
+      expect(out.paths.has(globalMem)).toBe(true)
+      expect(out.paths.has(projectMem)).toBe(true)
+      expect(out.joined).toContain("GLOBAL MEMORY BODY")
+      expect(out.joined).toContain("PROJECT MEMORY BODY")
+    }),
+  )
+
+  it.live("warns when a discovered instruction file cannot be read", () =>
+    Effect.gen(function* () {
+      const globalTmp = yield* tmpdirScoped()
+      const projectTmp = yield* tmpdirScoped()
+      const outsideTmp = yield* tmpdirScoped()
+      const home = yield* tmpdirScoped()
+      const globalMem = path.join(globalTmp, ".agents", "memory", "MEMORY.md")
+      const outsideMem = path.join(outsideTmp, "shared", "MEMORY.md")
+      yield* write(globalMem, "GLOBAL MEMORY BODY")
+      yield* write(outsideMem, "OUTSIDE MEMORY BODY")
+      const cap = capture()
+
+      const out = yield* run(
+        [globalMem, outsideMem],
+        {
+          [globalMem]: { trusted: true, source: globalMem },
+          [outsideMem]: { trusted: false, source: outsideMem, root: projectTmp },
+        },
+        projectTmp,
+        home,
+        cap.logs,
+        cap.layer,
+      )
+      expect(out.joined).toContain("GLOBAL MEMORY BODY")
+      expect(out.joined).not.toContain("OUTSIDE MEMORY BODY")
+      expect(cap.logs.some((line) => line.includes("skipping instruction file that could not be read") && line.includes(outsideMem))).toBe(true)
+    }),
+  )
+
+  it.live("warns when an instructions entry matches no files", () =>
+    Effect.gen(function* () {
+      const projectTmp = yield* tmpdirScoped()
+      const home = yield* tmpdirScoped()
+      const missing = path.join(projectTmp, "nope", "MEMORY.md")
+      const cap = capture()
+
+      const out = yield* run([missing], { [missing]: { trusted: false, source: missing, root: projectTmp } }, projectTmp, home, cap.logs, cap.layer)
+      expect(out.paths.has(missing)).toBe(false)
+      expect(cap.logs.some((line) => line.includes("instructions entry matched no files") && line.includes(missing))).toBe(true)
     }),
   )
 })

@@ -111,7 +111,13 @@ const layer: Layer.Layer<
 
     const read = Effect.fnUntraced(function* (filepath: string, origin?: KilocodeMarkdown.Source) {
       const opts = yield* options(filepath, origin)
-      return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts).catch(() => ""))
+      return yield* Effect.tryPromise(() => KilocodeInstruction.read(filepath, opts)).pipe(
+        Effect.catch((error) =>
+          Effect.logWarning(`skipping instruction file that could not be read: ${filepath}`, {
+            error: String(error),
+          }).pipe(Effect.as("")),
+        ),
+      )
     })
     // kilocode_change end
 
@@ -178,6 +184,9 @@ const layer: Layer.Layer<
           const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
+          if (matches.length === 0) {
+            yield* Effect.logWarning(`instructions entry matched no files and will be skipped: ${raw}`)
+          }
           matches.forEach((item) => add(item, origin))
         }
       }
