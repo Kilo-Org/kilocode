@@ -70,4 +70,37 @@ describe("workflow variant resolution", () => {
       }),
     ).toBe("high")
   })
+  test("keeps the chat variant when the command agent already uses the same model", () => {
+    expect(
+      resolve({
+        command: { model: undefined, agent: "reviewer", variant: undefined },
+        agent: { model, variant: undefined },
+        model,
+        selected,
+        input: "high",
+      }),
+    ).toBe("high")
+
+    expect(
+      resolve({
+        command: { model: undefined, agent: "reviewer", variant: undefined },
+        agent: { model, variant: "low" },
+        model,
+        selected,
+        input: "high",
+      }),
+    ).toBe("high")
+  })
+
+  test("falls through when the chat variant is not available on the model", () => {
+    expect(
+      resolve({
+        command: { model: undefined, agent: "reviewer", variant: undefined },
+        agent: { model: undefined, variant: undefined },
+        model,
+        selected,
+        input: "medium",
+      }),
+    ).toBeUndefined()
+  })
 })
