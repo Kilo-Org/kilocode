@@ -229,11 +229,14 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     /** Imports a worktree that checks out an existing local branch. */
-    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH)
+    fun importBranch(branch: String, place: (String, String?) -> Unit = { _, _ -> }) =
+        create(branch, base = null, existingBranch = true, kind = CreateKind.BRANCH, place = place)
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
      * editor auto-sends it once it opens with its picked mode/model (see [PendingWorktreePrompt]).
+     * [place] receives each ID and its pending predecessor (null for pending rows) on the EDT
+     * before their rows notify model listeners.
      */
     fun create(
         branch: String,
@@ -242,12 +245,14 @@ class WorktreeController(
         prompt: PendingPrompt? = null,
         kind: CreateKind = CreateKind.CREATE,
         fetchBase: Boolean = false,
+        place: (String, String?) -> Unit = { _, _ -> },
     ) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
+            place(temp.id, null)
             model.add(0, temp)
             onSelect?.invoke(temp.id)
         }
@@ -256,38 +261,41 @@ class WorktreeController(
                 directory,
                 CreateWorktreeRequestDto(branch, base, existingBranch = existingBranch, fetchBase = fetchBase),
             )
-            finishCreate(temp, branch, prompt, result, kind)
+            finishCreate(temp, prompt, result, kind, place)
         }
     }
 
-    fun importPr(url: String) {
+    fun importPr(url: String, place: (String, String?) -> Unit = { _, _ -> }) {
         val id = "pending:pr:${System.nanoTime()}"
         val temp = WorktreeDto(id, KiloBundle.message("worktree.import.pr.section"), "", id)
         edt {
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
+            place(temp.id, null)
             model.add(0, temp)
             onSelect?.invoke(temp.id)
         }
         cs.launch {
             val result = service.importPr(directory, url)
-            finishCreate(temp, "pr", null, result, CreateKind.PR)
+            finishCreate(temp, null, result, CreateKind.PR, place)
         }
     }
 
     private fun finishCreate(
         temp: WorktreeDto,
-        branch: String,
         prompt: PendingPrompt?,
         result: CreateWorktreeResultDto,
         kind: CreateKind,
+        place: (String, String?) -> Unit,
     ) {
         val created = result.worktree
+        val branch = if (kind == CreateKind.PR) "pr" else temp.branch
         edt {
             pending.remove(temp.id)
             tasks.remove(temp.id)
             val idx = model.getElementIndex(temp)
             if (created != null) {
+                place(created.id, temp.id)
                 if (idx >= 0) model.setElementAt(created, idx) else model.add(0, created)
                 cache().put(created)
                 prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }

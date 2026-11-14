@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.agentManager.AgentManagerDialog
+import ai.kilocode.client.agentManager.AgentManagerLayout
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -34,6 +35,7 @@ internal data class HostedCreatePlan(
     val agent: String,
     val model: String,
     val variant: String?,
+    val section: String? = null,
 )
 
 internal class HostedWorkspaceDialog @RequiresEdt constructor(
@@ -46,6 +48,8 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
     workspaces: KiloWorkspaceService = service(),
     private val load: suspend () -> HostedWorkspaceProfileListDto = { project.service<KiloHostedService>().profiles() },
     private val selection: HostedProfileSelectionStore = service<HostedProfileSelectionService>(),
+    private val sections: List<AgentManagerLayout.Section> = emptyList(),
+    private val section: String? = null,
 ) : AgentManagerDialog(parent, project, directory, false, app, workspaces) {
     private object None
     private object Loading
@@ -142,6 +146,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
         else -> null
     }
 
+    @RequiresEdt
     override fun createCenterPanel(): JComponent {
         val fields = object : FormBuilder() {
             override fun getFill(component: JComponent) = GridBagConstraints.HORIZONTAL
@@ -155,7 +160,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
                 ),
             )
         }.panel
-        return content(null, fields)
+        return sectioned(content(null, fields), sections, section)
     }
 
     override fun getPreferredFocusedComponent(): JComponent = prompt.defaultFocusedComponent
@@ -164,6 +169,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
 
     override fun doOKAction() = submitCreate(prompt.text())
 
+    @RequiresEdt
     override fun submitCreate(text: String) {
         if (loading || profiles.error != null) {
             syncValidation()
@@ -193,6 +199,7 @@ internal class HostedWorkspaceDialog @RequiresEdt constructor(
             agent = mode,
             model = "${picked.provider}/$model",
             variant = picked.variant,
+            section = selectedSection,
         )
         selection.remember(repositoryUrl, selected?.id, defaultProfile()?.id)
         close(OK_EXIT_CODE)

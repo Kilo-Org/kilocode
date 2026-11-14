@@ -19,13 +19,17 @@ import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.tree.ActiveTreeColors
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.ColoredListCellRenderer
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -36,7 +40,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.awt.Component
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
+import javax.swing.JList
 
 /** Shared prompt and selection lifecycle for Local and Cloud workspace creation. */
 internal abstract class AgentManagerDialog @RequiresEdt constructor(
@@ -47,6 +53,8 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     private val app: KiloAppService,
     private val workspaces: KiloWorkspaceService,
 ) : DialogWrapper(parent, false) {
+    private object None
+
     protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     protected open val allowEmptyPrompt: Boolean get() = false
     protected open val ready: Boolean get() = workspace != null
@@ -78,6 +86,40 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     private var workspace: ModelsWorkspaceDto? = null
     private var variant: String? = null
     @Volatile private var disposed = false
+    private val picker = ComboBox<Any>().apply {
+        renderer = object : ColoredListCellRenderer<Any>() {
+            @RequiresEdt
+            override fun customizeCellRenderer(
+                list: JList<out Any>,
+                value: Any?,
+                index: Int,
+                selected: Boolean,
+                hasFocus: Boolean,
+            ) {
+                val item = value as? AgentManagerLayout.Section
+                icon = ActiveTreeColors.icon(item?.color)
+                append(item?.title ?: KiloBundle.message("agentManager.section.none"))
+            }
+        }
+    }
+    protected val selectedSection: String?
+        @RequiresEdt get() = (picker.selectedItem as? AgentManagerLayout.Section)?.key
+
+    @RequiresEdt
+    protected fun sectioned(
+        body: JComponent,
+        sections: List<AgentManagerLayout.Section>,
+        section: String?,
+    ): JComponent {
+        picker.model = DefaultComboBoxModel((listOf(None) + sections).toTypedArray())
+        picker.selectedItem = sections.firstOrNull { it.key == section } ?: None
+        val row = BorderLayoutPanel(UiStyle.Gap.md(), 0).apply {
+            border = JBUI.Borders.empty(UiStyle.Gap.sm())
+            addToLeft(JBLabel(KiloBundle.message("agentManager.section.label")).apply { labelFor = picker })
+            addToCenter(picker)
+        }
+        return BorderLayoutPanel().addToCenter(body).addToBottom(row)
+    }
 
     @RequiresEdt
     protected fun content(above: JComponent?, below: JComponent): JComponent {

@@ -31,6 +31,8 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import java.awt.GraphicsEnvironment
+import javax.swing.event.ListDataEvent
+import javax.swing.event.ListDataListener
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -278,6 +280,94 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertFalse(controller.isPending(controller.model.getElementAt(0).id))
     }
 
+    fun `test create and imports place IDs on EDT before adding or replacing rows`() {
+        for (kind in CreateKind.entries) {
+            for (retained in listOf(true, false)) {
+                val gate = CompletableDeferred<Unit>()
+                rpc.beforeCreate = { gate.await() }
+                val controller = controller()
+                val events = mutableListOf<Pair<String, String>>()
+                val placed = mutableListOf<Pair<String, String?>>()
+                controller.model.addListDataListener(object : ListDataListener {
+                    override fun contentsChanged(event: ListDataEvent) {
+                        assertTrue(ApplicationManager.getApplication().isDispatchThread)
+                        events += "row" to controller.model.getElementAt(event.index0).id
+                    }
+
+                    override fun intervalAdded(event: ListDataEvent) = contentsChanged(event)
+                    override fun intervalRemoved(event: ListDataEvent) = Unit
+                })
+                val place: (String, String?) -> Unit = { id, previous ->
+                    assertTrue(ApplicationManager.getApplication().isDispatchThread)
+                    assertFalse((0 until controller.model.size).any { controller.model.getElementAt(it).id == id })
+                    placed += id to previous
+                    events += "place" to id
+                }
+
+                ApplicationManager.getApplication().invokeAndWait {
+                    when (kind) {
+                        CreateKind.CREATE -> controller.create("feature/y", null, place = place)
+                        CreateKind.BRANCH -> controller.importBranch("feature/x", place = place)
+                        CreateKind.PR -> controller.importPr("https://github.com/o/r/pull/7", place = place)
+                    }
+                }
+                val temp = controller.model.getElementAt(0)
+                assertTrue(controller.isPending(temp.id))
+                assertEquals(listOf(temp.id to null), placed)
+                assertEquals(listOf("place" to temp.id, "row" to temp.id), events)
+                if (!retained) {
+                    ApplicationManager.getApplication().invokeAndWait { controller.model.remove(temp) }
+                }
+
+                gate.complete(Unit)
+                flush()
+
+                val created = controller.model.getElementAt(0)
+                assertFalse(controller.isPending(created.id))
+                assertEquals(listOf(temp.id to null, created.id to temp.id), placed)
+                assertEquals(
+                    listOf("place" to temp.id, "row" to temp.id, "place" to created.id, "row" to created.id),
+                    events,
+                )
+            }
+        }
+    }
+
+    fun `test overlapping requests keep their placement callbacks when completed out of order`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        val controller = controller()
+        val first = mutableListOf<Pair<String, String?>>()
+        val second = mutableListOf<Pair<String, String?>>()
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.create("feature/y", null, place = { id, previous -> first += id to previous })
+        }
+        val temp = first.single().first
+        flush()
+        assertEquals(1, rpc.creates.size)
+        val finish = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { finish.await() }
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.importPr("https://github.com/o/r/pull/7", place = { id, previous -> second += id to previous })
+        }
+        val imported = second.single().first
+        finish.complete(Unit)
+        flush()
+
+        assertEquals(listOf(temp to null), first)
+        assertEquals(listOf(imported to null, "https://github.com/o/r/pull/7" to imported), second)
+        assertTrue(controller.isPending(temp))
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(temp to null, "feature/y" to temp), first)
+        assertEquals(listOf(imported to null, "https://github.com/o/r/pull/7" to imported), second)
+        assertFalse(controller.isPending(temp))
+    }
+
     fun `test created worktrees are announced once they exist`() {
         val controller = controller()
         val created = mutableListOf<WorktreeDto>()
@@ -307,15 +397,19 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
         val controller = controller()
         val failures = mutableListOf<CreateFailure>()
+        val placed = mutableListOf<Pair<String, String?>>()
         controller.onCreateFailure = { failures.add(it) }
 
-        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.create("feature/y", null, place = { id, previous -> placed += id to previous })
+        }
         val id = controller.model.getElementAt(0).id
         assertTrue(controller.isPending(id))
         flush()
 
         assertEquals(0, controller.model.size)
         assertFalse(controller.isPending(id))
+        assertEquals(listOf(id to null), placed)
         assertEquals(listOf(CreateFailure("boom", CreateKind.CREATE, "feature/y")), failures)
     }
 
