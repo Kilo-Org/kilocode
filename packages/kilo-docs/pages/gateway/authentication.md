@@ -111,7 +111,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 2. Keys are encrypted at rest using AES-256 encryption
 3. When you make a request for a model from that provider, the gateway automatically uses your key
 4. Usage is tracked but not billed to your Kilo balance (cost is set to $0)
-5. If your BYOK key fails, the request will not automatically fall back to Kilo's keys
+5. If a BYOK key's provider answers with an error, the gateway retries with your next BYOK key that serves the model, in route order. It never falls back to Kilo's keys: when every BYOK key fails, the request returns the last key's failure
 
 BYOK keys can be configured at the personal level or at the organization level. Organization-level keys apply to all members of the organization and require owner or billing manager access to manage.
 

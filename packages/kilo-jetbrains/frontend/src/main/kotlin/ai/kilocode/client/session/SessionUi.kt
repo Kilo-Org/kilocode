@@ -53,6 +53,7 @@ import ai.kilocode.client.session.ui.prompt.fileMentions
 import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.settings.TranscriptDisplayListener
+import ai.kilocode.client.speech.SpeechRecorder
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
@@ -772,6 +773,8 @@ class SessionUi(
             onMentions = ::mentionParts,
             completion = completion,
             cs = cs,
+            speechCapture = if (readonly) null else service<SpeechRecorder>(),
+            onTranscribe = { data -> app.transcribe(workspace.directory.takeUnless { hosted || hostedRef }, data) },
             hostedInEditorTab = manager?.hostedInEditorTab == true,
             files = !hosted,
         )

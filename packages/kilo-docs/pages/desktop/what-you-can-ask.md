@@ -19,4 +19,4 @@ Kilo Desktop's agent works across the tools in your workspace. Describe what you
 ## Tips
 
 - Reference workspace files directly with `@` in the chat to point the agent at a specific file.
-- Keep each chat scoped to one workspace so the agent's tools operate on the right folders. Use the **Select workspace** control in the chat to choose the workspace you want the agent to work in — its file, terminal, and git tools all run inside the folders in that workspace.
+- Keep each chat scoped to one workspace so the agent's tools operate on the right folders. Choose the **Workspace** on the [New Session page](/docs/desktop/quickstart#start-a-session) when you start a session — the agent's file, terminal, and git tools all run inside that workspace's folders.
