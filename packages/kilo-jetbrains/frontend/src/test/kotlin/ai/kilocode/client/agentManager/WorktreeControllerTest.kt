@@ -17,6 +17,10 @@ import ai.kilocode.client.testing.FakeRunRpcApi
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.tree.ActiveTree
+import ai.kilocode.client.ui.tree.ActiveTreeNode
+import ai.kilocode.client.ui.tree.ActiveTreeView
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.MoveProgressDto
 import ai.kilocode.rpc.dto.MoveStage
@@ -31,9 +35,12 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import java.awt.GraphicsEnvironment
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import javax.swing.event.ListDataEvent
+import javax.swing.event.ListDataListener
 
 @Suppress("UnstableApiUsage")
 class WorktreeControllerTest : BasePlatformTestCase() {
@@ -50,6 +57,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         service = KiloWorktreeService(coroutines.scope, rpc)
         ApplicationManager.getApplication()
             .replaceService(KiloRunService::class.java, KiloRunService(coroutines.scope, run), testRootDisposable)
+        ApplicationManager.getApplication()
+            .replaceService(PendingWorktreePrompt::class.java, PendingWorktreePrompt(), testRootDisposable)
     }
 
     override fun tearDown() {
@@ -334,6 +343,311 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertTrue(controller.isPending(id))
         gate.complete(Unit)
         flush()
+    }
+
+    fun `test reload discovering an in flight checkout reconciles completion without duplicate keys`() {
+        val created = WorktreeDto("/wt/race", "race", "race", "/wt/race")
+        val prompt = PendingPrompt("keep this prompt", "plan", "kilo", "gpt-5", "high")
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        rpc.createResult = { CreateWorktreeResultDto(created) }
+        val controller = controller()
+        val tree = tree(controller)
+        val completed = mutableListOf<WorktreeDto>()
+        controller.onSelect = { tree.select(it, false) }
+        controller.onCreated = { completed += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("race", "main", prompt = prompt) }
+        val temp = controller.model.getElementAt(0)
+        rpc.listed += created.copy(locked = true, lockReason = "initializing")
+        controller.reload()
+        flush()
+
+        assertEquals("only the placeholder is published until git finishes", listOf(temp), controller.model.items)
+        assertTrue(controller.isPending(temp.id))
+        assertNotNull(controller.progress(temp.id))
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(created), controller.model.items)
+        assertFalse(controller.isPending(temp.id))
+        assertFalse(controller.isPending(created.id))
+        assertNull(controller.progress(temp.id))
+        assertNull(controller.progress(created.id))
+        assertEquals(listOf(created), completed)
+        assertEquals(1, (tree.preferredFocus() as ActiveTreeView).rowCount)
+        assertEquals(listOf(created.id), tree.selectedKeys())
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+        }
+    }
+
+    fun `test completion rejects older reloads with a missing checkout or a temporary lock`() {
+        val created = WorktreeDto("/wt/stale", "stale", "stale", "/wt/stale")
+        for (rows in listOf(emptyList(), listOf(created.copy(locked = true, lockReason = "initializing")))) {
+            val creation = CompletableDeferred<Unit>()
+            val listing = CompletableDeferred<Unit>()
+            val entered = CompletableDeferred<Unit>()
+            rpc.listed.clear()
+            rpc.listed += rows
+            rpc.beforeCreate = { creation.await() }
+            rpc.beforeList = { entered.complete(Unit); listing.await() }
+            rpc.createResult = { CreateWorktreeResultDto(created) }
+            val controller = controller()
+            val tree = tree(controller)
+            val prompt = PendingPrompt("do not replay $rows", "plan", "kilo", "gpt-5", "high")
+            val completed = mutableListOf<WorktreeDto>()
+            controller.onCreated = { completed += it }
+            ApplicationManager.getApplication().invokeAndWait { controller.create("stale", "main", prompt = prompt) }
+            val temp = controller.model.getElementAt(0)
+            controller.reload()
+            flush()
+            assertTrue("the old listing must have captured its response", entered.isCompleted)
+
+            creation.complete(Unit)
+            flush()
+            assertEquals(listOf(created), controller.model.items)
+            listing.complete(Unit)
+            flush()
+
+            assertEquals(listOf(created), controller.model.items)
+            assertFalse(controller.isPending(temp.id))
+            assertNull(controller.progress(temp.id))
+            assertNull(controller.progress(created.id))
+            assertFalse(controller.model.getElementAt(0).locked)
+            assertEquals(1, (tree.preferredFocus() as ActiveTreeView).rowCount)
+            assertEquals(listOf(created), completed)
+            ApplicationManager.getApplication().invokeAndWait {
+                assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+            }
+        }
+    }
+
+    fun `test completion upserts a discovered normalized path when the branch was unknown`() {
+        val created = WorktreeDto("/wt/pr-race", "pr-race", "pr-race", "/wt/pr-race")
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        rpc.importPrResult = { CreateWorktreeResultDto(created) }
+        val controller = controller()
+        val tree = tree(controller)
+        ApplicationManager.getApplication().invokeAndWait { controller.importPr("https://github.com/o/r/pull/7") }
+        val temp = controller.model.getElementAt(0)
+        rpc.listed += created.copy(id = "listed:pr-race", path = "${created.path}/", locked = true)
+        controller.reload()
+        flush()
+        assertEquals(2, controller.model.size)
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(created), controller.model.items)
+        assertFalse(controller.isPending(temp.id))
+        assertNull(controller.progress(temp.id))
+        assertFalse(controller.model.items.single().locked)
+        assertEquals(1, (tree.preferredFocus() as ActiveTreeView).rowCount)
+    }
+
+    fun `test completion rejects an older branch poll containing a temporary lock`() {
+        val created = WorktreeDto("/wt/poll-race", "poll-race", "poll-race", "/wt/poll-race")
+        val creation = CompletableDeferred<Unit>()
+        val listing = CompletableDeferred<Unit>()
+        val entered = CompletableDeferred<Unit>()
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val controller = controller()
+        controller.reload()
+        flush()
+        rpc.beforeCreate = { creation.await() }
+        rpc.createResult = { CreateWorktreeResultDto(created) }
+        ApplicationManager.getApplication().invokeAndWait { controller.create("poll-race", "main") }
+        val temp = controller.model.items.single()
+        rpc.listed.set(0, rpc.listed.first().copy(branch = "stale"))
+        rpc.listed += created.copy(locked = true)
+        rpc.beforeList = { entered.complete(Unit); listing.await() }
+        controller.refreshBranches()
+        flush()
+        assertTrue(entered.isCompleted)
+
+        creation.complete(Unit)
+        flush()
+        listing.complete(Unit)
+        flush()
+
+        assertEquals(listOf(created), controller.model.items)
+        assertFalse(controller.isPending(temp.id))
+        assertNull(controller.progress(temp.id))
+        assertFalse(controller.model.items.single().locked)
+        assertEquals("main", controller.current?.branch)
+    }
+
+    fun `test thrown creation failure clears pending progress and allows retry`() {
+        rpc.createResult = { error("disconnected") }
+        val controller = controller()
+        val prompt = PendingPrompt("retry after disconnection", "plan", "kilo", "gpt-5", "high")
+        val failures = mutableListOf<CreateFailure>()
+        controller.onCreateFailure = { failures += it }
+        ApplicationManager.getApplication().invokeAndWait { controller.create("retry", "main", prompt = prompt) }
+        val temp = controller.model.getElementAt(0)
+        flush()
+
+        assertTrue(controller.model.isEmpty)
+        assertFalse(controller.isPending(temp.id))
+        assertNull(controller.progress(temp.id))
+        assertEquals(listOf(CreateFailure("disconnected", CreateKind.CREATE, "retry")), failures)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().draft("/test")?.prompt)
+        }
+
+        rpc.createResult = { CreateWorktreeResultDto(WorktreeDto("/wt/retry", "retry", "retry", "/wt/retry")) }
+        ApplicationManager.getApplication().invokeAndWait { controller.create("retry", "main", prompt = prompt) }
+        flush()
+        assertEquals("/wt/retry", controller.model.items.single().path)
+        assertFalse(controller.isPending(controller.model.items.single().id))
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(service<PendingWorktreePrompt>().draft("/test"))
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek("/wt/retry")?.prompt)
+        }
+    }
+
+    fun `test cancelled creation clears progress without losing the draft`() {
+        val prompt = PendingPrompt("retry after cancellation", "plan", "kilo", "gpt-5", "high")
+        rpc.createResult = { throw CancellationException("cancelled") }
+        val controller = controller()
+        ApplicationManager.getApplication().invokeAndWait { controller.create("cancelled", "main", prompt = prompt) }
+        val temp = controller.model.getElementAt(0)
+        flush()
+
+        assertTrue(controller.model.isEmpty)
+        assertFalse(controller.isPending(temp.id))
+        assertNull(controller.progress(temp.id))
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().draft("/test")?.prompt)
+        }
+    }
+
+    fun `test failed creation retains its complete draft across reload and retry`() {
+        val prompt = PendingPrompt("retry this creation", "plan", "kilo", "gpt-5", "high")
+        val created = WorktreeDto("/wt/retry-prompt", "retry-prompt", "retry-prompt", "/wt/retry-prompt")
+        rpc.createResult = { CreateWorktreeResultDto(error = "fetch failed") }
+        val controller = controller()
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.create("retry-prompt", "develop", prompt = prompt, fetchBase = true)
+        }
+        val temp = controller.model.getElementAt(0)
+        flush()
+        controller.reload()
+        flush()
+
+        assertTrue(controller.model.isEmpty)
+        assertFalse(controller.isPending(temp.id))
+        assertNull(controller.progress(temp.id))
+        ApplicationManager.getApplication().invokeAndWait {
+            val draft = service<PendingWorktreePrompt>().draft("/test")!!
+            assertEquals(prompt, draft.prompt)
+            assertEquals("retry-prompt", draft.branch)
+            assertEquals("develop", draft.base)
+            assertTrue(draft.fetchBase)
+            assertNull(draft.path)
+            rpc.createResult = { CreateWorktreeResultDto(created) }
+            controller.create(draft.branch, draft.base, prompt = draft.prompt, fetchBase = draft.fetchBase)
+        }
+        flush()
+
+        assertEquals(listOf(created), controller.model.items)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(service<PendingWorktreePrompt>().draft("/test"))
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+        }
+    }
+
+    fun `test failed creation never assigns its prompt to an existing checkout on the same branch`() {
+        val existing = WorktreeDto("/wt/existing", "existing", "occupied", "/wt/existing")
+        val prompt = PendingPrompt("keep as a creation draft", "plan", "kilo", "gpt-5", "high")
+        val gate = CompletableDeferred<Unit>()
+        rpc.listed += existing
+        rpc.beforeCreate = { gate.await() }
+        rpc.createResult = { CreateWorktreeResultDto(error = "branch already checked out") }
+        val controller = controller()
+        controller.reload()
+        flush()
+        ApplicationManager.getApplication().invokeAndWait { controller.create("occupied", "main", prompt = prompt) }
+        controller.reload()
+        flush()
+        assertTrue(controller.isPending(controller.model.items.single().id))
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(existing), controller.model.items)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(service<PendingWorktreePrompt>().peek(existing.path))
+            assertEquals(prompt, service<PendingWorktreePrompt>().draft("/test")?.prompt)
+        }
+    }
+
+    fun `test prompt is retained before a synchronous model listener can throw`() {
+        val prompt = PendingPrompt("survive list publication", "plan", "kilo", "gpt-5", "high")
+        val created = WorktreeDto("/wt/list-failure", "list-failure", "list-failure", "/wt/list-failure")
+        rpc.createResult = { CreateWorktreeResultDto(created) }
+        val controller = controller()
+        val completed = mutableListOf<WorktreeDto>()
+        val observed = mutableListOf<PendingPrompt?>()
+        val listener = object : ListDataListener {
+            fun update() {
+                val row = controller.model.items.singleOrNull() ?: return
+                val journal = service<PendingWorktreePrompt>()
+                observed += if (controller.isPending(row.id)) journal.draft("/test")?.prompt else journal.peek(row.path)?.prompt
+                if (row.id == created.id) error("listener failed")
+            }
+            override fun intervalAdded(event: ListDataEvent) = update()
+            override fun intervalRemoved(event: ListDataEvent) = update()
+            override fun contentsChanged(event: ListDataEvent) = update()
+        }
+        controller.model.addListDataListener(listener)
+        controller.onCreated = { completed += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("list-failure", "main", prompt = prompt) }
+        val temp = controller.model.getElementAt(0)
+        flush()
+
+        assertTrue("both placeholder and completion must notify the failing listener", observed.size >= 2)
+        assertTrue("every published row must already have its recoverable prompt", observed.all { it == prompt })
+        assertEquals(listOf(created), controller.model.items)
+        assertFalse(controller.isPending(temp.id))
+        assertNull(controller.progress(temp.id))
+        assertEquals(listOf(created), completed)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+        }
+        controller.model.removeListDataListener(listener)
+        rpc.listed += created
+        controller.reload()
+        flush()
+        assertEquals(listOf(created), controller.model.items)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+        }
+    }
+
+    fun `test editor opening failure does not prevent completion callbacks or lose the prompt`() {
+        val created = WorktreeDto("/wt/open-failure", "open-failure", "open-failure", "/wt/open-failure")
+        val prompt = PendingPrompt("recover after opening fails", "plan", "kilo", "gpt-5", "high")
+        rpc.createResult = { CreateWorktreeResultDto(created) }
+        val controller = controller()
+        val completed = mutableListOf<WorktreeDto>()
+        controller.onSelect = { if (it == created.id) error("editor unavailable") }
+        controller.onCreated = { completed += it }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("open-failure", "main", prompt = prompt) }
+        val temp = controller.model.getElementAt(0)
+        flush()
+
+        assertEquals(listOf(created), controller.model.items)
+        assertNull(controller.progress(temp.id))
+        assertFalse(controller.isPending(temp.id))
+        assertEquals(listOf(created), completed)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+        }
     }
 
     fun `test remove invokes rpc and removes from the model`() {
@@ -779,10 +1093,10 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         val created = controller.model.getElementAt(0)
         ApplicationManager.getApplication().invokeAndWait {
-            val stashed = service<PendingWorktreePrompt>().take(created.path)
+            val stashed = service<PendingWorktreePrompt>().peek(created.path)?.prompt
             assertEquals(PendingPrompt("fix the bug", "plan", "kilo", "gpt-5", "high"), stashed)
-            // A one-shot take clears it.
-            assertNull(service<PendingWorktreePrompt>().take(created.path))
+            // Publishing a row is not acknowledgement that the first session received it.
+            assertEquals(stashed, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
         }
     }
 
@@ -922,6 +1236,25 @@ class WorktreeControllerTest : BasePlatformTestCase() {
     ) = WorktreeController(service, "/test", coroutines.scope, activity = activity, abort = abort, telemetry = telemetry)
 
     private fun flush() = coroutines.drain(::pump)
+
+    private fun tree(controller: WorktreeController): ActiveTree {
+        val tree = ActiveTree("")
+        fun update() {
+            tree.update(controller.model.items.map { row ->
+                ActiveTreeNode(object : ActiveItem {
+                    override val key = row.id
+                    override val title = row.name
+                })
+            })
+        }
+        controller.model.addListDataListener(object : ListDataListener {
+            override fun intervalAdded(event: ListDataEvent) = update()
+            override fun intervalRemoved(event: ListDataEvent) = update()
+            override fun contentsChanged(event: ListDataEvent) = update()
+        })
+        update()
+        return tree
+    }
 
     private fun cache(): WorktreeNameCache = ApplicationManager.getApplication().service()
 

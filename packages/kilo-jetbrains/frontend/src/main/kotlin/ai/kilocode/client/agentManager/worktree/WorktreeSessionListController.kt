@@ -73,7 +73,7 @@ class WorktreeSessionListController(
     @RequiresEdt
     fun session(id: String): SessionDto? = sessions().firstOrNull { it.id == id }
 
-    fun reload(done: (() -> Unit)? = null) {
+    fun reload(failed: (() -> Unit)? = null, done: (() -> Unit)? = null) {
         cs.launch {
             try {
                 val result = service.sessionsFor(dir)
@@ -84,7 +84,7 @@ class WorktreeSessionListController(
                 }
             } catch (e: Exception) {
                 LOG.warn("worktree session list failed dir=$dir message=${e.message}", e)
-                edt { done?.invoke() }
+                edt { (failed ?: done)?.invoke() }
             }
         }
     }

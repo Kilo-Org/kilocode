@@ -159,8 +159,13 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     private fun startSessions() {
-        list.reload {
-            val target = session
+        list.reload(failed = {
+            if (Disposer.isDisposed(this)) return@reload
+            if (currentUi() == null) showBlank()
+            onListChanged?.invoke()
+        }) {
+            if (Disposer.isDisposed(this)) return@reload
+            val target = service<PendingWorktreePrompt>().peek(worktree.directory)?.session ?: session
             if (target != null) {
                 openSession(SessionRef.Local(target), false)
                 consumeStartupPrompts()
@@ -232,6 +237,7 @@ open class WorktreeSessionEditorManager(
         pending = true
         onListChanged?.invoke()
         list.create { session ->
+            if (Disposer.isDisposed(this)) return@create
             pending = false
             if (session != null) {
                 openSession(SessionRef.Local(session), focus)
@@ -304,12 +310,21 @@ open class WorktreeSessionEditorManager(
     /** Sends the New Worktree dialog's queued prompt into this worktree's first session, once. */
     @RequiresEdt
     private fun consumePendingPrompt() {
-        val prompt = service<PendingWorktreePrompt>().take(worktree.directory) ?: return
-        currentUi()?.submitPrompt(
-            prompt.text,
-            PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
-            injectedTitle = prompt.injectedTitle,
-        )
+        val ui = currentUi() ?: return
+        val id = ui.id ?: return
+        val store = service<PendingWorktreePrompt>()
+        store.claim(worktree.directory, id, ui)?.let { entry ->
+            val prompt = entry.prompt
+            ui.handoffPrompt(
+                prompt.text,
+                PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
+                message = entry.id,
+                automatic = !entry.attempted,
+                injectedTitle = prompt.injectedTitle,
+                started = { text -> store.attempted(entry.id, text) },
+                confirmed = { store.acknowledge(worktree.directory, entry.id, id) },
+            )
+        }
     }
 
     @RequiresEdt

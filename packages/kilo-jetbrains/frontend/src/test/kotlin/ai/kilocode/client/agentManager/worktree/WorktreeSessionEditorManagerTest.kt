@@ -14,9 +14,11 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.pumpEdt
@@ -26,18 +28,28 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.LegacyMigrationDetectionDto
 import ai.kilocode.rpc.dto.MigrationProviderInfoDto
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.xmlb.XmlSerializer
 import kotlinx.coroutines.CompletableDeferred
+import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -48,6 +60,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private lateinit var sessions: KiloSessionService
     private lateinit var app: KiloAppService
     private lateinit var workspaces: KiloWorkspaceService
+    private lateinit var workspaceRpc: FakeWorkspaceRpcApi
     private lateinit var workspace: Workspace
     private lateinit var timers: TestUiTimers
     private val created = mutableListOf<Pair<String, String?>>()
@@ -64,15 +77,17 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         TestDialogManager.setTestDialog(TestDialog.DEFAULT)
         coroutines = TestCoroutines()
         timers = TestUiTimers()
-        rpc = FakeSessionRpcApi()
+        rpc = FakeSessionRpcApi().also { it.session = it.session.copy(directory = DIR) }
         sessions = KiloSessionService(project, coroutines.scope, rpc)
         app = KiloAppService(coroutines.scope, FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         })
-        workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
+        workspaceRpc = FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
-        })
+        }
+        workspaces = KiloWorkspaceService(coroutines.scope, workspaceRpc)
         workspace = workspaces.workspace(DIR)
+        edt { service<PendingWorktreePrompt>().loadState(PendingWorktreePrompt.State()) }
         useInactiveDisposeTimeout()
     }
 
@@ -80,6 +95,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         try {
             TestDialogManager.setTestDialog(TestDialog.DEFAULT)
             coroutines.close(::pump)
+            edt { service<PendingWorktreePrompt>().loadState(PendingWorktreePrompt.State()) }
         } finally {
             super.tearDown()
         }
@@ -134,8 +150,501 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals("kilo", sent.third.providerID)
         assertEquals("gpt-5", sent.third.modelID)
         assertEquals("high", sent.third.variant)
-        // The queued prompt is consumed once, so it is cleared after the first new session.
-        assertNull(edt { service<PendingWorktreePrompt>().take(DIR) })
+        val pending = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertEquals(pending.id, sent.third.messageID)
+        assertTrue(pending.attempted)
+        assertEquals("ses_new", pending.session)
+        emit(ChatEventDto.MessageUpdated("ses_new", message("ses_new", pending.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        rpc.listed += rpc.session
+        edt { manager.start() }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+    }
+
+    fun `test reload winning creation race hands prompt to the intended first session once`() {
+        creation(reloadFirst = true)
+    }
+
+    fun `test creation winning stale reload race hands prompt to the intended first session once`() {
+        creation(reloadFirst = false)
+    }
+
+    private fun creation(reloadFirst: Boolean) {
+        val api = FakeWorktreeRpcApi()
+        val checkout = WorktreeDto("actual-id", "Feature", "feature/x", DIR)
+        val create = CompletableDeferred<Unit>()
+        val listing = CompletableDeferred<Unit>()
+        val reload = CompletableDeferred<Unit>()
+        api.beforeCreate = { create.await() }
+        api.createResult = { CreateWorktreeResultDto(checkout) }
+        api.listed += WorktreeDto("/repo", "Repo", "main", "/repo", main = true)
+        api.listed += checkout.copy(id = "stale-id", locked = true)
+        api.beforeList = { listing.complete(Unit); reload.await() }
+        val controller = WorktreeController(KiloWorktreeService(coroutines.scope, api), "/repo", coroutines.scope, telemetry = { _, _ -> })
+        val editor = manager()
+        rpc.session = session("ses_intended", updated = 1.0)
+        val payload = PendingPrompt("fix this checkout", "plan", "kilo", "gpt-5", "high")
+        edt {
+            controller.onSelect = { id ->
+                if (!controller.isPending(id)) {
+                    assertEquals(checkout.id, id)
+                    assertEquals(payload, service<PendingWorktreePrompt>().peek(checkout.path)?.prompt)
+                    editor.start()
+                }
+            }
+            controller.create("feature/x", "main", prompt = payload)
+            controller.reload()
+        }
+        waitUntil { api.creates.size == 1 && listing.isCompleted }
+        if (reloadFirst) {
+            reload.complete(Unit)
+            flush()
+            assertTrue(edt { controller.isPending(controller.model.getElementAt(0).id) })
+            assertTrue(rpc.prompts.isEmpty())
+        }
+        create.complete(Unit)
+        waitUntil { rpc.prompts.size == 1 }
+        if (!reloadFirst) {
+            reload.complete(Unit)
+            flush()
+        }
+
+        assertEquals(listOf(checkout), edt { (0 until controller.model.size).map { controller.model.getElementAt(it) } })
+        val sent = rpc.prompts.single()
+        assertEquals("ses_intended", sent.first)
+        assertEquals(DIR, sent.second)
+        assertEquals(payload.text, sent.third.parts.first().text)
+        assertEquals(payload.agent, sent.third.agent)
+        assertEquals(payload.provider, sent.third.providerID)
+        assertEquals(payload.model, sent.third.modelID)
+        assertEquals(payload.variant, sent.third.variant)
+        emit(ChatEventDto.MessageUpdated(sent.first, message(sent.first, requireNotNull(sent.third.messageID))))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+
+        rpc.listed += rpc.session
+        edt { editor.start() }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+    }
+
+    fun `test list failure retains pending prompt without creating a rival session`() {
+        queue()
+        rpc.listThrows = IllegalStateException("list unavailable")
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+
+        rpc.listThrows = null
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        assertEquals("initial prompt", rpc.prompts.single().third.parts.first().text)
+    }
+
+    fun `test failed first session creation retains prompt for retry`() {
+        queue()
+        rpc.createThrows = IllegalStateException("create unavailable")
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+        assertTrue(rpc.prompts.isEmpty())
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR)?.session })
+
+        rpc.createThrows = null
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        assertEquals("initial prompt", rpc.prompts.single().third.parts.first().text)
+    }
+
+    fun `test editor opening failure retains prompt for reopen`() {
+        queue()
+        var fail = true
+        val manager = manager(open = {
+            if (fail) {
+                fail = false
+                error("editor unavailable")
+            }
+        })
+        edt { manager.newSession() }
+        assertThrows(IllegalStateException::class.java) { flush() }
+        assertTrue(rpc.prompts.isEmpty())
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { Disposer.dispose(manager) }
+
+        rpc.listed += rpc.session
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { rpc.prompts.size == 1 }
+    }
+
+    fun `test closing while first session create is pending leaves prompt for reopen`() {
+        queue()
+        val gate = CompletableDeferred<Unit>()
+        rpc.createGate = gate
+        val manager = manager()
+        edt { manager.newSession() }
+        waitUntil { rpc.creates == 1 }
+        edt { Disposer.dispose(manager) }
+        gate.complete(Unit)
+        flush()
+
+        assertTrue(created.isEmpty())
+        assertTrue(rpc.prompts.isEmpty())
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        rpc.listed += rpc.session
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { rpc.prompts.size == 1 }
+    }
+
+    fun `test synchronous initial send failure restores an editable retry with the same correlation`() {
+        queue()
+        rpc.promptThrows = IllegalStateException("send rejected")
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "initial prompt" }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertTrue(entry.attempted)
+        assertTrue(rpc.prompts.isEmpty())
+
+        rpc.promptThrows = null
+        edt { prompt().send() }
+        waitUntil { rpc.prompts.size == 1 }
+        assertEquals(entry.id, rpc.prompts.single().third.messageID)
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, "unrelated")))
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+    }
+
+    fun `test asynchronous rejection after accepted RPC retains and restores initial prompt`() {
+        queue()
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        emit(ChatEventDto.Error(rpc.session.id, MessageErrorDto("unknown", message = "not persisted")))
+
+        assertEquals("initial prompt", edt { prompt().text() })
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        emit(ChatEventDto.TurnOpen(rpc.session.id))
+        assertEquals("initial prompt", edt { prompt().text() })
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals("", edt { prompt().text() })
+    }
+
+    fun `test automatic handoff preserves a newer composer draft typed during history loading`() {
+        queue()
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { rpc.historyCalls == 1 }
+        edt { prompt().setText("a newer draft") }
+        gate.complete(Unit)
+        waitUntil { rpc.prompts.size == 1 }
+
+        assertEquals("initial prompt", rpc.prompts.single().third.parts.first().text)
+        assertEquals("a newer draft", edt { prompt().text() })
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, requireNotNull(rpc.prompts.single().third.messageID))))
+        assertEquals("a newer draft", edt { prompt().text() })
+    }
+
+    fun `test pending prompt also hands off into an already loaded retained session UI`() {
+        val manager = manager()
+        edt { manager.openSession(SessionRef.Local(rpc.session)) }
+        flush()
+        assertEquals(1, rpc.historyCalls)
+        queue()
+        rpc.listed += rpc.session
+
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        assertEquals(1, rpc.historyCalls)
+        assertEquals("initial prompt", rpc.prompts.single().third.parts.first().text)
+    }
+
+    fun `test repeated sends while initial handoff is unconfirmed do not reuse its message id`() {
+        queue()
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        edt {
+            prompt().setText("a followup draft")
+            prompt().send()
+        }
+        flush()
+        edt { prompt().send() }
+        flush()
+
+        assertEquals(1, rpc.prompts.size)
+        assertEquals("a followup draft", edt { prompt().text() })
+        assertEquals("initial prompt", edt { service<PendingWorktreePrompt>().peek(DIR)?.text })
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, requireNotNull(rpc.prompts.single().third.messageID))))
+        edt { prompt().send() }
+        waitUntil { rpc.prompts.size == 2 }
+        assertEquals("a followup draft", rpc.prompts.last().third.parts.first().text)
+        assertNull(rpc.prompts.last().third.messageID)
+    }
+
+    fun `test initial client action is an editable draft and never automatically replays on reopen`() {
+        queue("/new")
+        val first = manager()
+        edt { first.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "/new" }
+        assertEquals(1, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+        edt { Disposer.dispose(first) }
+
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "/new" }
+        assertEquals(1, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { prompt().send() }
+        waitUntil { rpc.creates == 2 }
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { Disposer.dispose(reopened) }
+
+        rpc.listed += rpc.session
+        val again = manager()
+        edt { again.start() }
+        flush()
+        assertEquals(2, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test thrown explicit client action retains its draft until a synchronous retry succeeds`() {
+        val editors = edt { EditorFactory.getInstance().allEditors.size }
+        queue("/sessions")
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "/sessions" }
+        var calls = 0
+        edt {
+            manager.onListChanged = { calls++; error("navigation failed") }
+            prompt().send()
+        }
+        waitUntil { calls == 1 && prompt().text() == "/sessions" }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertTrue(entry.attempted)
+
+        edt {
+            manager.onListChanged = { calls++ }
+            prompt().send()
+        }
+        waitUntil { service<PendingWorktreePrompt>().peek(DIR) == null }
+        assertEquals(2, calls)
+        assertEquals("", edt { prompt().text() })
+        edt { Disposer.dispose(manager) }
+        rpc.listed += rpc.session
+        val reopened = manager()
+        edt { reopened.start() }
+        flush()
+        assertEquals(2, calls)
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { Disposer.dispose(reopened) }
+        flush()
+        assertEquals(editors, edt { EditorFactory.getInstance().allEditors.size })
+    }
+
+    fun `test initial server command automatically sends with durable correlation and selected choices`() {
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(commands = listOf(CommandDto("review")))
+        val payload = PendingPrompt("/review changes", "plan", "kilo", "gpt-5", "high")
+        edt { service<PendingWorktreePrompt>().put(DIR, payload) }
+        val first = manager()
+        edt { first.start() }
+        waitUntil { rpc.commands.size == 1 }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        val call = rpc.commands.single()
+        assertEquals(entry.id, call.prompt.messageID)
+        assertEquals(entry.session, call.id)
+        assertEquals(DIR, call.directory)
+        assertEquals("review", call.command)
+        assertEquals("changes", call.arguments)
+        assertEquals(payload.agent, call.prompt.agent)
+        assertEquals(payload.provider, call.prompt.providerID)
+        assertEquals(payload.model, call.prompt.modelID)
+        assertEquals(payload.variant, call.prompt.variant)
+        assertTrue(entry.attempted)
+        emit(ChatEventDto.MessageUpdated(call.id, message(call.id, "unrelated")))
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        emit(ChatEventDto.MessageUpdated(call.id, message(call.id, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { Disposer.dispose(first) }
+
+        rpc.listed += rpc.session
+        val reopened = manager()
+        edt { reopened.start() }
+        flush()
+        assertEquals(1, rpc.commands.size)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test synchronous initial command failure restores draft and retries with the same message id`() {
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(commands = listOf(CommandDto("review")))
+        rpc.commandThrows = IllegalStateException("command rejected")
+        queue("/review changes")
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "/review changes" }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertTrue(entry.attempted)
+        assertTrue(rpc.commands.isEmpty())
+
+        rpc.commandThrows = null
+        edt { prompt().send() }
+        waitUntil { rpc.commands.size == 1 }
+        assertEquals(entry.id, rpc.commands.single().prompt.messageID)
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+    }
+
+    fun `test asynchronous initial command error restores draft without acknowledging transport success`() {
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(commands = listOf(CommandDto("review")))
+        queue("/review changes")
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { rpc.commands.size == 1 }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        emit(ChatEventDto.Error(rpc.session.id, MessageErrorDto("unknown", message = "not persisted")))
+
+        assertEquals("/review changes", edt { prompt().text() })
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { prompt().send() }
+        waitUntil { rpc.commands.size == 2 }
+        assertEquals(listOf(entry.id, entry.id), rpc.commands.map { it.prompt.messageID })
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals("", edt { prompt().text() })
+    }
+
+    fun `test restart reconciles persisted initial command message without replay`() {
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(commands = listOf(CommandDto("review")))
+        queue("/review changes")
+        val first = manager()
+        edt { first.start() }
+        waitUntil { rpc.commands.size == 1 }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        val xml = edt { XmlSerializer.serialize(service<PendingWorktreePrompt>().getState()) }
+        edt {
+            Disposer.dispose(first)
+            service<PendingWorktreePrompt>().loadState(XmlSerializer.deserialize(xml, PendingWorktreePrompt.State::class.java))
+        }
+        rpc.history += MessageWithPartsDto(message(rpc.session.id, entry.id), emptyList())
+
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { service<PendingWorktreePrompt>().peek(DIR) == null }
+        assertEquals(entry.session, edt { reopened.currentKey() })
+        assertEquals(1, rpc.commands.size)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test restart restores uncertain initial command without automatically repeating it`() {
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(commands = listOf(CommandDto("review")))
+        queue("/review changes")
+        val first = manager()
+        edt { first.start() }
+        waitUntil { rpc.commands.size == 1 }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        val xml = edt { XmlSerializer.serialize(service<PendingWorktreePrompt>().getState()) }
+        edt {
+            Disposer.dispose(first)
+            service<PendingWorktreePrompt>().loadState(XmlSerializer.deserialize(xml, PendingWorktreePrompt.State::class.java))
+        }
+
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "/review changes" }
+        assertEquals(1, rpc.commands.size)
+        assertEquals(entry.session, edt { reopened.currentKey() })
+        edt { prompt().send() }
+        waitUntil { rpc.commands.size == 2 }
+        assertEquals(listOf(entry.id, entry.id), rpc.commands.map { it.prompt.messageID })
+    }
+
+    fun `test restart restores uncertain send into its exact session without automatic replay`() {
+        queue()
+        val first = manager()
+        edt { first.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        val xml = edt { XmlSerializer.serialize(service<PendingWorktreePrompt>().getState()) }
+        edt {
+            Disposer.dispose(first)
+            service<PendingWorktreePrompt>().loadState(XmlSerializer.deserialize(xml, PendingWorktreePrompt.State::class.java))
+        }
+        rpc.listed += rpc.session
+        rpc.listed += session("ses_unrelated", updated = 100.0)
+
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { ui.isNotEmpty() && prompt().text() == "initial prompt" }
+        assertEquals(entry.session, edt { reopened.currentKey() })
+        assertEquals(1, rpc.prompts.size)
+        edt { reopened.start() }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+
+        edt {
+            prompt().setText("edited explicit retry")
+            prompt().send()
+        }
+        waitUntil { rpc.prompts.size == 2 }
+        assertEquals(entry.id, rpc.prompts.last().third.messageID)
+        assertEquals("edited explicit retry", edt { service<PendingWorktreePrompt>().peek(DIR)?.text })
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+    }
+
+    fun `test restart reconciles an already persisted initial message without sending again`() {
+        queue()
+        val first = manager()
+        edt { first.start() }
+        waitUntil { rpc.prompts.size == 1 }
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        val xml = edt { XmlSerializer.serialize(service<PendingWorktreePrompt>().getState()) }
+        edt {
+            Disposer.dispose(first)
+            service<PendingWorktreePrompt>().loadState(XmlSerializer.deserialize(xml, PendingWorktreePrompt.State::class.java))
+        }
+        rpc.history += MessageWithPartsDto(message(rpc.session.id, entry.id), emptyList())
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { service<PendingWorktreePrompt>().peek(DIR) == null }
+        assertEquals(entry.session, edt { reopened.currentKey() })
+        assertEquals(1, rpc.prompts.size)
+        edt { Disposer.dispose(reopened) }
+
+        val again = manager()
+        rpc.listed += rpc.session
+        edt { again.start() }
+        flush()
+        assertEquals(1, rpc.prompts.size)
+    }
+
+    fun `test history load failure keeps initial prompt and does not send before reconciliation`() {
+        queue()
+        rpc.historyThrows = IllegalStateException("history unavailable")
+        val manager = manager()
+        edt { manager.start() }
+        waitUntil { created.any { it.second != null } }
+        flush()
+        assertTrue(rpc.prompts.isEmpty())
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { Disposer.dispose(manager) }
+
+        rpc.historyThrows = null
+        rpc.listed += rpc.session
+        val reopened = manager()
+        edt { reopened.start() }
+        waitUntil { rpc.prompts.size == 1 }
     }
 
     fun `test open session shows selected session`() {
@@ -669,6 +1178,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         resolveBase: suspend (String) -> Boolean = { false },
         moveHost: (String?, String, String) -> Unit = { id, dir, surface -> movedTo += Triple(id, dir, surface) },
         newWorktreeHost: () -> Unit = { newWorktreeCalls++ },
+        open: () -> Unit = {},
     ): WorktreeSessionEditorManager {
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
@@ -677,6 +1187,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             list = controller,
             del = del,
             create = { project, workspace, owner, ref, timers ->
+                open()
                 val id = when (ref) {
                     is SessionRef.Local -> ref.id
                     is SessionRef.Cloud -> ref.key
@@ -734,6 +1245,30 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     )
 
     private fun flush() = coroutines.drain()
+
+    private fun queue(text: String = "initial prompt") = edt { service<PendingWorktreePrompt>().put(DIR, PendingPrompt(text)) }
+
+    private fun prompt(): PromptPanel {
+        fun find(root: Container): PromptPanel? {
+            if (root is PromptPanel) return root
+            return root.components.filterIsInstance<Container>().firstNotNullOfOrNull(::find)
+        }
+        return requireNotNull(find(ui.last()))
+    }
+
+    private fun message(session: String, id: String) = MessageDto(id, session, "user", MessageTimeDto(0.0))
+
+    private fun emit(event: ChatEventDto) {
+        assertTrue(rpc.events.tryEmit(event))
+        flush()
+        edt {
+            ui.forEach {
+                val field = SessionUi::class.java.getDeclaredField("controller").apply { isAccessible = true }
+                (field.get(it) as SessionController).flushEvents()
+            }
+        }
+        flush()
+    }
 
     private fun waitUntil(block: () -> Boolean) {
         val done = coroutines.pumpUntil { edt(block) }

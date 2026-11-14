@@ -265,7 +265,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val created = edt { controller.model.getElementAt(0) }
         assertEquals("feature/y", created.branch)
         assertEquals("main", rpc.creates.single().baseBranch)
-        edt { assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text) }
+        edt { assertEquals("build it", service<PendingWorktreePrompt>().peek(created.path)?.prompt?.text) }
     }
 
     fun `test configure does nothing when the dialog is cancelled`() {
