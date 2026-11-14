@@ -184,6 +184,7 @@ const scan = Effect.fnUntraced(function* (
     }),
   )
 
+  matches.sort() // kilocode_change - ascending paths within a root; later roots still override
   for (const match of matches) {
     // kilocode_change start - a trusted match whose realpath resolves inside the project (e.g. a
     // symlink from ~/.agents/skills into the repo) must not mint trust for project-controlled content
