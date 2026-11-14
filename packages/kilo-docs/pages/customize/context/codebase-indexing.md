@@ -22,6 +22,10 @@ When enabled, the indexing system:
 
 This enables natural language queries like "user authentication logic" or "database connection handling" to find relevant code across your entire project.
 
+{% callout type="info" title="Tool selection" %}
+Indexing makes `semantic_search` available, but it does not force Kilo Code to use that tool for every codebase question. The agent can still choose exact-text search or file reads when it needs literal symbols, surrounding context, or source files that were not indexed. For broad codebase questions, add a project instruction in [AGENTS.md](/docs/customize/agents-md) or custom rules that asks Kilo Code to prefer `semantic_search` before falling back to text search.
+{% /callout %}
+
 ## Key Benefits
 
 - **Semantic Search**: Find code by meaning, not just keywords
