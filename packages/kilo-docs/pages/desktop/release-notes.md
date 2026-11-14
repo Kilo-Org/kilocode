@@ -5,7 +5,50 @@ description: "New features, improvements, bug fixes, and security updates in eac
 
 # Release notes
 
-Kilo Desktop updates itself automatically. To check which version you're running or to install an update, open the **About** section of the [General settings](/docs/desktop/settings/general#about).
+Kilo Desktop updates itself automatically on macOS and Windows, and tells you when an update is available on Linux (see [Updates](/docs/desktop/installation#updates)). To check which version you're running or to install an update, open the **About** section of the [General settings](/docs/desktop/settings/general#about).
+
+## Kilo Desktop 0.1.16
+
+Released November 13, 2026
+
+**What's new**
+
+- Sessions are now multi-agent: you can add as many agents as you need to a session.
+- You can now start a session with a Terminal, Notebook, Browser, or Files tab, without needing to send a chat message.
+- The new workspace board helps you keep your sessions organized.
+- You can now restore archived sessions, and archive, restore, pin, or delete several sessions at once.
+- The new `/compact` command summarizes a long chat to free up context.
+- Chat diagrams, images, and pages now open in a zoomable **Viewer** tab, with SVG and PNG export for diagrams.
+- The Anaconda **Local Model Catalog** now lets you browse and download local models to run on the local model server, with recommendations and performance estimates for your machine.
+- Long chats, streaming, tab switching, and startup are now faster.
+- On Linux, Kilo Desktop now checks for updates and offers the new `.deb` package to download.
+- The **About** settings now have a **Legal** section with third-party notices.
+
+**Improvements and bug fixes**
+
+- Upgrading keeps your workspaces, sessions (including pinned and archived), open tabs, and saved layouts.
+- On Windows and Linux, the shortcut to pin or unpin a session is now Ctrl+Alt+P.
+- The agent now asks before running `tar`, `unzip`, `gzip`, or `gunzip`.
+- Kilo Desktop now asks before the agent runs notebook code or restarts a notebook kernel.
+- In the Changes tab, you can now copy a file's path, open it in Files, and show diffs that are too large.
+- The message input now grows as you type and can be dragged taller.
+- Queued messages and unsent text now stay with their session across session switches, pop-out windows, and reloads.
+- Approval and question prompts raised while a chat wasn't open now appear when you open it.
+- Applying a layout now reopens the session's closed chats and asks before closing tabs it has no place for.
+- The message box now warns when the chat's workspace has an unavailable folder.
+- The finished sound now plays once, after background subagents finish, and requests answered by **Automatically approve** no longer play a sound.
+- Plan feedback sent with **Refine** now appears in the chat.
+- Terminals in a session without a workspace now open in your home folder.
+- Update notes in the **About** settings now show every item and label notes from earlier versions.
+- Signing in now shows the same confirmation code as the browser.
+- Notebooks now run on nteract 2.10, fixing notebooks stuck on *Initializing* in some project folders.
+- Fixed console windows repeatedly opening on Windows for workspace folders on a WSL share.
+- Fixed file names in the Files and Changes trees all showing "…" at some zoom levels.
+- The Kilo Gateway model filter no longer lists some publishers twice.
+
+**Known issues**
+
+- Keyboard shortcuts you customized in an earlier version need to be set again.
 
 ## Kilo Desktop 0.1.15
 

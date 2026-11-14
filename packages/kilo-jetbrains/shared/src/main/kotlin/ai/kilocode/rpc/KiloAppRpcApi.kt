@@ -12,6 +12,9 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
+import ai.kilocode.rpc.dto.SpeechResultDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
@@ -106,6 +109,12 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /** Refresh the user profile and return the latest data, or null if not logged in. */
     suspend fun refreshProfile(): ProfileDto?
+
+    /** Speech-to-text models available through the authenticated Kilo Gateway. */
+    suspend fun transcriptionModels(directory: String?): List<SpeechModelDto>
+
+    /** Transcribe an audio recording through the authenticated Kilo Gateway. */
+    suspend fun transcribe(directory: String?, request: SpeechRequestDto): SpeechResultDto
 
     /**
      * Start the device auth login flow for Kilo Gateway.
