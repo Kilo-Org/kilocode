@@ -200,6 +200,9 @@ class RefreshHostedWorkspaceActionTest : BasePlatformTestCase() {
     }
 
     private class FakeRpc(private val dto: HostedWorkspaceDto) : KiloHostedRpcApi {
+        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+
         val reading = CompletableDeferred<Triple<String?, String?, String?>>()
         val release = CompletableDeferred<Unit>()
         var edt = false

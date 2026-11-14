@@ -106,6 +106,7 @@ export class HostedFailure extends Schema.TaggedErrorClass<HostedFailure>()("Ses
   code: FailureCode,
   message: Schema.String,
   retryable: Schema.Boolean,
+  status: Schema.optional(Schema.Int),
 }) {}
 
 const DELETION_DISPATCHED = Symbol("workspace-deletion-dispatched")
@@ -316,6 +317,118 @@ export const HostedWorkspaceStatus = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspaceStatus" })
 export type HostedWorkspaceStatus = Schema.Schema.Type<typeof HostedWorkspaceStatus>
 
+const count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
+
+export const WorkspacePullRequestSummary = Schema.Struct({
+  url: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2048)),
+  number: Schema.Int.check(Schema.isGreaterThan(0)),
+  state: Schema.Literals(["open", "draft", "merged", "closed", "unknown"]),
+  title: Schema.NullOr(Schema.String.check(Schema.isMaxLength(1024))),
+  headSha: Schema.NullOr(Schema.String.check(Schema.isPattern(/^[0-9a-fA-F]{40}$/))),
+  lastSyncedAt: Schema.String.check(Schema.isMinLength(1)),
+  review: Schema.Struct({
+    decision: Schema.NullOr(Schema.Literals(["none", "review_required", "approved", "changes_requested"])),
+    available: Schema.Boolean,
+    pending: Schema.Boolean,
+  }),
+  checks: Schema.Struct({
+    total: count,
+    passed: count,
+    failed: count,
+    pending: count,
+    skipped: count,
+    unknown: count,
+    complete: Schema.Boolean,
+    available: Schema.Boolean,
+  }),
+  conversations: Schema.Struct({ unresolved: Schema.NullOr(count), complete: Schema.Boolean }),
+  mergeability: Schema.Struct({
+    mergeable: Schema.NullOr(Schema.Boolean),
+    state: Schema.NullOr(Schema.String.check(Schema.isMaxLength(100))),
+    complete: Schema.Boolean,
+  }),
+  partial: Schema.Boolean,
+  unavailable: Schema.Array(Schema.Literals(["checks", "statuses", "reviews"])),
+}).annotate({ identifier: "SessionHostWorkspacePullRequestSummary" })
+export type WorkspacePullRequestSummary = Schema.Schema.Type<typeof WorkspacePullRequestSummary>
+
+export const WorkspacePullRequestState = Schema.Literals([
+  "available",
+  "no_pr",
+  "signed_out",
+  "rejected",
+  "unreachable",
+  "rate_limited",
+  "unavailable",
+  "unsupported",
+]).annotate({ identifier: "SessionHostWorkspacePullRequestState" })
+export type WorkspacePullRequestState = Schema.Schema.Type<typeof WorkspacePullRequestState>
+
+export const WorkspacePullRequestRefresh = Schema.Struct({
+  status: Schema.Literals([
+    "refreshed",
+    "no_pr",
+    "no_integration",
+    "rate_limited",
+    "throttled",
+    "unavailable",
+    "failed",
+  ]),
+  retryAt: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspacePullRequestRefresh" })
+export type WorkspacePullRequestRefresh = Schema.Schema.Type<typeof WorkspacePullRequestRefresh>
+
+/**
+ * Only `no_pr` clears a previously known linked PR. Other states retain any
+ * returned cache evidence, and a null summary must not erase client evidence.
+ * Never merge observations across accounts, workspaces, PR identities, or heads.
+ */
+export const WorkspacePullRequestResult = Schema.Struct({
+  id: HostedWorkspaceID,
+  state: WorkspacePullRequestState,
+  pullRequest: Schema.NullOr(WorkspacePullRequestSummary),
+  refresh: Schema.optional(WorkspacePullRequestRefresh),
+})
+  .check(
+    Schema.makeFilter((result) => {
+      if (result.state === "available" && result.pullRequest === null) return "Available PR requires a summary"
+      if (result.state === "no_pr" && result.pullRequest !== null) return "No PR requires a null summary"
+      if (!result.refresh) return undefined
+      const state =
+        result.refresh.status === "refreshed"
+          ? "available"
+          : result.refresh.status === "no_pr"
+            ? "no_pr"
+            : result.refresh.status === "rate_limited" || result.refresh.status === "throttled"
+              ? "rate_limited"
+              : "unavailable"
+      return result.state === state ? undefined : "PR refresh status does not match availability"
+    }),
+  )
+  .annotate({ identifier: "SessionHostWorkspacePullRequestResult" })
+export type WorkspacePullRequestResult = Schema.Schema.Type<typeof WorkspacePullRequestResult>
+
+export function pullRequestFailure(id: HostedWorkspaceID, err: HostedFailure): WorkspacePullRequestResult {
+  const state = ((): WorkspacePullRequestState => {
+    if (err.status === 429) return "rate_limited"
+    if (err.status === 404 || err.status === 408 || (err.status != null && err.status >= 500)) return "unavailable"
+    switch (err.code) {
+      case "signed_out":
+        return "signed_out"
+      case "unauthorized":
+      case "rejected":
+      case "invalid_request":
+      case "payment_required":
+        return "rejected"
+      case "unavailable":
+        return err.status == null ? "unreachable" : "unavailable"
+      default:
+        return "unavailable"
+    }
+  })()
+  return { id, state, pullRequest: null }
+}
+
 export const Agent = Schema.Struct({
   mode: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50)),
   model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
@@ -426,6 +539,11 @@ export const WorkspaceStatusInput = Schema.Struct({
   organizationID: Schema.optional(OrganizationID),
 }).annotate({ identifier: "SessionHostWorkspaceStatusInput" })
 export type WorkspaceStatusInput = Schema.Schema.Type<typeof WorkspaceStatusInput>
+
+export const WorkspacePullRequestInput = WorkspaceStatusInput.annotate({
+  identifier: "SessionHostWorkspacePullRequestInput",
+})
+export type WorkspacePullRequestInput = Schema.Schema.Type<typeof WorkspacePullRequestInput>
 
 export const WorkspaceDeleteInput = Schema.Struct({
   id: HostedWorkspaceID,
@@ -661,6 +779,12 @@ export interface Provider {
   readonly listWorkspaces: (input?: WorkspaceListInput) => Effect.Effect<HostedWorkspacePage, HostedFailure>
   readonly getWorkspace: (input: WorkspaceGetInput) => Effect.Effect<HostedWorkspace, HostedFailure>
   readonly getWorkspaceStatus: (input: WorkspaceStatusInput) => Effect.Effect<HostedWorkspaceStatus, HostedFailure>
+  readonly getWorkspacePullRequest?: (
+    input: WorkspacePullRequestInput,
+  ) => Effect.Effect<WorkspacePullRequestResult, HostedFailure>
+  readonly refreshWorkspacePullRequest?: (
+    input: WorkspacePullRequestInput,
+  ) => Effect.Effect<WorkspacePullRequestResult, HostedFailure>
   readonly deleteWorkspace: (input: WorkspaceDeleteInput) => Effect.Effect<DeleteWorkspaceResult, HostedFailure>
   readonly createWorkspace: (input: CreateWorkspaceInput) => Effect.Effect<CreateWorkspaceResult, HostedFailure>
   /**

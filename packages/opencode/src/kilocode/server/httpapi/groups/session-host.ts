@@ -24,6 +24,7 @@ import {
   WorkspaceProfileDefaultInput,
   WorkspaceProfileDefaultResult,
   WorkspaceProfilePage,
+  WorkspacePullRequestResult,
   WorkspaceSessionStartBody,
   WorkspaceSessionStartResult,
 } from "@/kilocode/session-hosting/types"
@@ -56,6 +57,8 @@ export const SessionHostPaths = {
   workspaceProfilePersonalDefaultDetail: `${root}/workspace/profiles/personal-default/:profileID`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
   workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
+  workspacePullRequest: `${root}/workspace/:providerID/:workspaceID/pull-request`,
+  workspacePullRequestRefresh: `${root}/workspace/:providerID/:workspaceID/pull-request/refresh`,
   workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
 } as const
 
@@ -353,6 +356,32 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.getWorkspaceStatus",
             summary: "Read hosted workspace status",
             description: "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequest", SessionHostPaths.workspacePullRequest, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestResult, "Hosted workspace PR observation"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequest",
+            summary: "Read hosted workspace PR status",
+            description:
+              "Read the cached linked PR without contacting GitHub or waking compute. Only no_pr means no eligible linked PR is known; unavailable or partial observations must not clear previous evidence.",
+          }),
+        ),
+        HttpApiEndpoint.post("refreshWorkspacePullRequest", SessionHostPaths.workspacePullRequestRefresh, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestResult, "Hosted workspace PR refresh observation"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.refreshWorkspacePullRequest",
+            summary: "Refresh hosted workspace PR status",
+            description:
+              "Explicitly refresh the linked PR observation. Preserve cached evidence, partial fields, cooldown status, and retry time; refresh failure is not no_pr and does not mutate the PR or wake compute.",
           }),
         ),
         HttpApiEndpoint.delete("deleteWorkspace", SessionHostPaths.workspaceDetail, {

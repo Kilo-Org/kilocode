@@ -6,7 +6,9 @@ import { Continuation } from "@/kilocode/session-hosting/continuation"
 import {
   HostedFailure,
   StartInput,
+  WorkspacePullRequestResult,
   deletionDispatched,
+  pullRequestFailure,
   type ContinueWorkspaceInput,
   type CreateWorkspaceInput,
   type HostedWorkspaceID,
@@ -28,7 +30,7 @@ import {
   notFound,
 } from "@/server/routes/instance/httpapi/errors"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import {
@@ -371,6 +373,42 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       ).pipe(Effect.mapError(mapFailure))
     })
 
+    const pullRequest = Effect.fn("SessionHostHttpApi.pullRequest")(function* (
+      ctx: {
+        params: { providerID: ProviderID; workspaceID: WorkspaceID }
+        query: { organizationID?: OrganizationID }
+      },
+      refresh: boolean,
+    ) {
+      const provider = yield* require(ctx.params.providerID)
+      const id = workspaceID(ctx.params)
+      const action = refresh ? provider.refreshWorkspacePullRequest : provider.getWorkspacePullRequest
+      if (!action) return { id, state: "unsupported", pullRequest: null } as const
+      return yield* action({
+        id,
+        ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => {
+              const parsed = Schema.decodeUnknownSync(WorkspacePullRequestResult)(result)
+              if (parsed.id.providerID !== id.providerID || parsed.id.workspaceID !== id.workspaceID) {
+                throw new Error("Workspace PR identity does not match")
+              }
+              return parsed
+            },
+            catch: () =>
+              new HostedFailure({
+                code: "invalid_response",
+                message: "Session host returned an unsupported workspace PR observation",
+                retryable: false,
+              }),
+          }),
+        ),
+        Effect.catch((err) => Effect.succeed(pullRequestFailure(id, err))),
+      )
+    })
+
     const listWorkspaceSessions = Effect.fn("SessionHostHttpApi.listWorkspaceSessions")(function* (ctx: {
       params: { providerID: ProviderID; workspaceID: WorkspaceID }
       query: { limit?: number; cursor?: string; organizationID?: OrganizationID }
@@ -444,6 +482,8 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("continueWorkspace", continueWorkspace)
       .handle("getWorkspace", getWorkspace)
       .handle("getWorkspaceStatus", getWorkspaceStatus)
+      .handle("getWorkspacePullRequest", (ctx) => pullRequest(ctx, false))
+      .handle("refreshWorkspacePullRequest", (ctx) => pullRequest(ctx, true))
       .handle("listWorkspaceSessions", listWorkspaceSessions)
       .handle("deleteWorkspace", deleteWorkspace)
       .handle("startWorkspaceSession", startWorkspaceSession)

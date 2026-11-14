@@ -610,6 +610,55 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request",
+      "sessionHost.getWorkspacePullRequest",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.id)
+      check(body.id.providerID === "kilo-cloud", "PR read should preserve the provider identity")
+      check(
+        body.id.workspaceID === "worktree_00000000-0000-4000-8000-000000000001",
+        "PR read should preserve the workspace identity",
+      )
+      check(body.state === "signed_out", "PR read should distinguish missing local credentials from no PR")
+      check(body.pullRequest === null, "signed-out PR read should contain an explicit nullable projection")
+      check(body.refresh === undefined, "passive PR read must not request a refresh")
+    }),
+  http.protected
+    .post(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh",
+      "sessionHost.refreshWorkspacePullRequest",
+    )
+    .mutating()
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.id)
+      check(body.id.providerID === "kilo-cloud", "PR refresh should preserve the provider identity")
+      check(
+        body.id.workspaceID === "worktree_00000000-0000-4000-8000-000000000001",
+        "PR refresh should preserve the workspace identity",
+      )
+      check(body.state === "signed_out", "bodyless PR refresh should distinguish missing credentials from no PR")
+      check(body.pullRequest === null, "signed-out PR refresh should contain an explicit nullable projection")
+      check(body.refresh === undefined, "signed-out PR refresh must not fabricate an upstream refresh outcome")
+    }),
+  http.protected
     .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.listWorkspaceSessions")
     .probe({
       path:

@@ -17,6 +17,7 @@ import { SessionPaths } from "../../../src/server/routes/instance/httpapi/groups
 import { PublicApi } from "../../../src/server/routes/instance/httpapi/public"
 
 type Schema = {
+  $ref?: string
   anyOf?: Schema[]
   items?: Schema
   properties?: Record<string, Schema>
@@ -25,12 +26,16 @@ type Schema = {
   minLength?: number
   maxLength?: number
   pattern?: string
+  minimum?: number
+  exclusiveMinimum?: number
+  required?: string[]
 }
 
 type Parameter = {
   in?: string
   name?: string
   schema?: Schema
+  required?: boolean
 }
 
 type Method = "get" | "post" | "patch" | "put" | "delete"
@@ -91,6 +96,16 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "post" as const, path: SessionHostPaths.workspaceContinue, id: "sessionHost.continueWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.getWorkspaceStatus" },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspacePullRequest,
+        id: "sessionHost.getWorkspacePullRequest",
+      },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspacePullRequestRefresh,
+        id: "sessionHost.refreshWorkspacePullRequest",
+      },
       { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.listWorkspaceSessions" },
       { method: "post" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.startWorkspaceSession" },
@@ -137,6 +152,14 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     }
   })
 
+  test("preserves the published optional profile-default organization input", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const input = spec.components?.schemas?.SessionHostWorkspaceProfileDefaultInput
+    const field = Object.entries(input?.properties ?? {}).find(([key]) => key === "organizationID")?.[1]
+    expect(field).toEqual({ $ref: "#/components/schemas/SessionHostOrganizationID" })
+    expect(input?.required).toEqual(["id"])
+  })
+
   test("keeps passive hosted workspace status fields nullable", () => {
     const spec = OpenApi.fromApi(PublicApi)
     type Node = { properties?: Record<string, Node>; anyOf?: unknown[] }
@@ -159,6 +182,133 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(status?.deletion?.properties?.startedAt).toEqual({
       anyOf: [{ type: "number" }, { type: "null" }],
     })
+  })
+
+  test("publishes exact workspace PR control routes with optional query organization and no refresh payload", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    expect(SessionHostPaths.workspacePullRequest).toBe(
+      "/kilocode/session-host/workspace/:providerID/:workspaceID/pull-request",
+    )
+    expect(SessionHostPaths.workspacePullRequestRefresh).toBe(
+      "/kilocode/session-host/workspace/:providerID/:workspaceID/pull-request/refresh",
+    )
+    for (const [method, path, id] of [
+      ["get", SessionHostPaths.workspacePullRequest, "sessionHost.getWorkspacePullRequest"],
+      ["post", SessionHostPaths.workspacePullRequestRefresh, "sessionHost.refreshWorkspacePullRequest"],
+    ] as const) {
+      const route = spec.paths[path.replace(/:([A-Za-z0-9_]+)/g, "{$1}")]?.[method]
+      expect(route?.operationId).toBe(id)
+      const params = route?.parameters as Parameter[] | undefined
+      expect(
+        params
+          ?.filter((param) => param.in === "path")
+          .map((param) => param.name)
+          .sort(),
+      ).toEqual(["providerID", "workspaceID"])
+      expect(params?.filter((param) => param.in === "query").map((param) => param.name)).toEqual(["organizationID"])
+      expect(params?.find((param) => param.name === "organizationID")?.required).not.toBe(true)
+      expect(route?.requestBody).toBeUndefined()
+      const response = route?.responses?.["200"] as Body | undefined
+      expect(response?.content?.["application/json"]?.schema).toEqual({
+        $ref: "#/components/schemas/SessionHostWorkspacePullRequestResult",
+      })
+    }
+  })
+
+  test("preserves PR projection enums, required evidence, integer minimums, references, and genuine nullability", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const schemas = (spec.components?.schemas ?? {}) as Record<string, Schema>
+    const summary = schemas.SessionHostWorkspacePullRequestSummary
+    const refresh = schemas.SessionHostWorkspacePullRequestRefresh
+    const result = schemas.SessionHostWorkspacePullRequestResult
+    expect(summary?.required?.toSorted()).toEqual([
+      "checks",
+      "conversations",
+      "headSha",
+      "lastSyncedAt",
+      "mergeability",
+      "number",
+      "partial",
+      "review",
+      "state",
+      "title",
+      "unavailable",
+      "url",
+    ])
+    expect(Object.keys(summary?.properties ?? {}).toSorted()).toEqual(summary?.required?.toSorted() ?? [])
+    expect(summary?.properties?.state?.enum).toEqual(["open", "draft", "merged", "closed", "unknown"])
+    expect(summary?.properties?.number).toMatchObject({ type: "integer", exclusiveMinimum: 0 })
+    expect(summary?.properties?.url).toMatchObject({ type: "string", minLength: 1, maxLength: 2048 })
+    expect(summary?.properties?.lastSyncedAt).toMatchObject({ type: "string", minLength: 1 })
+    expect(summary?.properties?.title).toEqual({
+      anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
+    })
+    expect(summary?.properties?.headSha).toEqual({
+      anyOf: [expect.objectContaining({ type: "string", pattern: "^[0-9a-fA-F]{40}$" }), { type: "null" }],
+    })
+
+    const review = summary?.properties?.review
+    expect(review?.required?.toSorted()).toEqual(["available", "decision", "pending"])
+    expect(review?.properties?.decision).toEqual({
+      anyOf: [{ type: "string", enum: ["none", "review_required", "approved", "changes_requested"] }, { type: "null" }],
+    })
+    const checks = summary?.properties?.checks
+    expect(checks?.required?.toSorted()).toEqual([
+      "available",
+      "complete",
+      "failed",
+      "passed",
+      "pending",
+      "skipped",
+      "total",
+      "unknown",
+    ])
+    for (const field of ["total", "passed", "failed", "pending", "skipped", "unknown"]) {
+      expect(checks?.properties?.[field], field).toMatchObject({ type: "integer", minimum: 0 })
+    }
+    expect(checks?.properties?.complete).toEqual({ type: "boolean" })
+    expect(checks?.properties?.available).toEqual({ type: "boolean" })
+    const conversations = summary?.properties?.conversations
+    expect(conversations?.required?.toSorted()).toEqual(["complete", "unresolved"])
+    expect(conversations?.properties?.unresolved).toEqual({
+      anyOf: [{ type: "integer", minimum: 0 }, { type: "null" }],
+    })
+    const mergeability = summary?.properties?.mergeability
+    expect(mergeability?.required?.toSorted()).toEqual(["complete", "mergeable", "state"])
+    expect(mergeability?.properties?.mergeable).toEqual({ anyOf: [{ type: "boolean" }, { type: "null" }] })
+    expect(mergeability?.properties?.state).toEqual({
+      anyOf: [expect.objectContaining({ type: "string", maxLength: 100 }), { type: "null" }],
+    })
+    expect(summary?.properties?.unavailable?.items?.enum).toEqual(["checks", "statuses", "reviews"])
+
+    expect(schemas.SessionHostWorkspacePullRequestState?.enum).toEqual([
+      "available",
+      "no_pr",
+      "signed_out",
+      "rejected",
+      "unreachable",
+      "rate_limited",
+      "unavailable",
+      "unsupported",
+    ])
+    expect(refresh?.required?.toSorted()).toEqual(["retryAt", "status"])
+    expect(refresh?.properties?.status?.enum).toEqual([
+      "refreshed",
+      "no_pr",
+      "no_integration",
+      "rate_limited",
+      "throttled",
+      "unavailable",
+      "failed",
+    ])
+    expect(refresh?.properties?.retryAt).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+    expect(result?.required?.toSorted()).toEqual(["id", "pullRequest", "state"])
+    expect(Object.keys(result?.properties ?? {}).toSorted()).toEqual(["id", "pullRequest", "refresh", "state"])
+    expect(result?.properties?.pullRequest).toEqual({
+      anyOf: [{ $ref: "#/components/schemas/SessionHostWorkspacePullRequestSummary" }, { type: "null" }],
+    })
+    expect(result?.properties?.refresh).toEqual({ $ref: "#/components/schemas/SessionHostWorkspacePullRequestRefresh" })
+    expect(schemas.SessionHostWorkspace?.properties).not.toHaveProperty("pullRequest")
   })
 
   test("publishes hosted availability and keeps native turn events off the global stream", () => {

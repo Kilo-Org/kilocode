@@ -119,6 +119,69 @@ data class HostedWorkspaceStatusDto(
     val deletion: HostedDeletionDto? = null,
 )
 
+/** Only `no_pr` authoritatively clears earlier evidence for the same account/org/workspace. */
+@Serializable
+data class HostedWorkspacePullRequestDto(
+    val ref: HostedWorkspaceRefDto,
+    val state: String,
+    val pullRequest: HostedPullRequestSummaryDto?,
+    val refresh: HostedPullRequestRefreshDto? = null,
+)
+
+@Serializable
+data class HostedPullRequestSummaryDto(
+    val url: String,
+    val number: Long,
+    val state: String,
+    val title: String?,
+    val headSha: String?,
+    val lastSyncedAt: String,
+    val review: HostedPullRequestReviewDto,
+    val checks: HostedPullRequestChecksDto,
+    val conversations: HostedPullRequestConversationsDto,
+    val mergeability: HostedPullRequestMergeabilityDto,
+    val partial: Boolean,
+    val unavailable: List<String>,
+)
+
+@Serializable
+data class HostedPullRequestReviewDto(
+    val decision: String?,
+    val available: Boolean,
+    val pending: Boolean,
+)
+
+@Serializable
+data class HostedPullRequestChecksDto(
+    val total: Long,
+    val passed: Long,
+    val failed: Long,
+    val pending: Long,
+    val skipped: Long,
+    val unknown: Long,
+    val complete: Boolean,
+    val available: Boolean,
+)
+
+@Serializable
+data class HostedPullRequestConversationsDto(
+    val unresolved: Long?,
+    val complete: Boolean,
+)
+
+@Serializable
+data class HostedPullRequestMergeabilityDto(
+    val mergeable: Boolean?,
+    val state: String?,
+    val complete: Boolean,
+)
+
+@Serializable
+data class HostedPullRequestRefreshDto(
+    val status: String,
+    val retryAt: String?,
+)
+
 @Serializable
 data class HostedDeletionDto(
     val started: Boolean = false,
