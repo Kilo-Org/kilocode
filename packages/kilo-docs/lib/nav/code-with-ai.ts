@@ -98,6 +98,10 @@ export const CodeWithAiNav: NavSection[] = [
         href: "/code-with-ai/agents/goals",
         children: "Session Goals",
       },
+      {
+        href: "/code-with-ai/agents/scheduled-tasks",
+        children: "Scheduled Tasks",
+      },
     ],
   },
   {
