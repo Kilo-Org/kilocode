@@ -380,6 +380,9 @@ export namespace Goal {
               // Publish the wait before dropping the run token so a fire that
               // arrives during this write can still claim it (D3).
               GoalLink.set(id, wait)
+              // This suspend forks the watch, so it owns the wait from here on:
+              // a re-wait on the same process supersedes the previous watch.
+              const watch = GoalLink.watch(id)
               // Drop the run token before writing: the session metadata mapper
               // projects a goal with a live run token to "active", so only a
               // token-less goal keeps the persisted "waiting" status.
@@ -401,13 +404,12 @@ export namespace Goal {
               GoalState.markWaiting(id)
               // A process wait outlives the loop fiber, so watch it in the
               // instance scope and resume the goal when the process is gone.
-              // The watch stops once this wait is cleared or replaced, so a
-              // paused, cleared or replaced goal never restarts itself.
+              // The watch owns the session's wait until a later suspend, clear
+              // or release replaces it, so a paused, cleared or replaced goal
+              // never restarts itself, and a re-wait on the same process never
+              // leaves two watches that both resume the goal for one exit.
               if (wait.kind === "process") {
-                const superseded = Effect.gen(function* () {
-                  while (GoalLink.get(id)?.id === wait.id) yield* Effect.sleep("250 millis")
-                })
-                yield* GoalLink.processWatch(id, wait).pipe(Effect.raceFirst(superseded), Effect.forkIn(scope))
+                yield* GoalLink.processWatch(id, wait, watch).pipe(Effect.forkIn(scope))
               }
             }),
           )
@@ -531,11 +533,30 @@ export namespace Goal {
                 return { run: false }
               }
               const next = cycle.completed(result)
-              if (!next)
+              if (!next) {
+                // A no-action turn must not strand a goal that still owns a
+                // non-terminal background process: re-suspend on it instead.
+                const decision = yield* GoalLink.rewait(input.id)
+                // A fire that landed while the process list was read owns the
+                // next turn, exactly like a fire that lands mid-turn, and is
+                // delivered instead of being dropped by the pause below.
+                if (decision.kind === "fire") return { run: true, note: decision.note }
+                if (decision.kind === "process") {
+                  yield* suspend(input.id, input.text, { kind: "process", id: decision.id, label: decision.id })
+                  // A fire that lands while suspending resumes the goal now
+                  // instead of waiting for the process to exit.
+                  const extra = queued()
+                  if (extra) {
+                    yield* GoalLink.arm(input.id, { sessionID: input.id, action: "resume", note: extra.note })
+                    return { run: false }
+                  }
+                  return { run: false }
+                }
                 yield* settle(
                   "paused",
                   "No successful action or explicit completion report. Review the conversation before resuming.",
                 )
+              }
               return { run: next }
             }).pipe(Effect.scoped)
             if (!step.run) break
@@ -543,6 +564,8 @@ export namespace Goal {
               note = step.note
               continue
             }
+            // A fired note belongs to one goal turn; do not replay it on the next.
+            note = undefined
             yield* Effect.sleep("5 seconds").pipe(Effect.raceFirst(input.cancelled))
           }
         }).pipe(

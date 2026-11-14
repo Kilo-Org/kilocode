@@ -24,6 +24,7 @@ import { MessageV2 } from "@/session/message-v2"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { Goal } from "@/kilocode/session/goal/runner"
 import { GoalLink } from "@/kilocode/session/goal/link"
+import { BackgroundProcess } from "@/kilocode/background-process"
 import { GoalPolicy } from "@/kilocode/session/goal/policy"
 import { GoalState } from "@/kilocode/session/goal/state"
 import { Wakeup } from "@/kilocode/wakeup"
@@ -2392,6 +2393,222 @@ it.instance(
     const hits = yield* run.llm.hits
     expect(hits.length).toBeGreaterThan(before)
     expect(JSON.stringify(hits.slice(before).at(0)?.body.messages)).toContain(`[background process] ${wait.id}`)
+  }),
+  30_000,
+)
+
+it.instance(
+  "the background-process exit note is delivered once, not on every continuation turn",
+  Effect.gen(function* () {
+    const run = yield* setup({ permission: { bash: "allow" } })
+    yield* run.llm.push(
+      reply().tool("background_process", { action: "start", command: "sleep 600", description: "short wait" }),
+      reply().text("Started the process").stop(),
+    )
+    yield* run.command(objective)
+    const waiting = yield* goalStatus(run, "waiting")
+    const wait = waitOf(waiting)
+    const before = (yield* run.llm.hits).length
+    // Resume: one successful action, then a turn with no successful action.
+    yield* run.llm.push(
+      shell(),
+      reply().text("Checked the workspace").stop(),
+      reply().text("Nothing left to do").stop(),
+    )
+    // Release the awaited process deterministically instead of letting it time out.
+    yield* Effect.promise(() => BackgroundProcess.stop(wait.id as BackgroundProcess.ID))
+    const paused = yield* goalStatus(run, "paused")
+    expect(paused.active).toBe(false)
+    const note = `[background process] ${wait.id} `
+    const bodies = (yield* run.llm.hits).slice(before).map((hit) => JSON.stringify(hit.body.messages))
+    expect(bodies.length).toBeGreaterThanOrEqual(2)
+    // The turn that follows the exit is told the process is gone...
+    expect(bodies[0]).toContain(note)
+    // ...and the note must not be replayed on a later continuation turn.
+    expect(bodies.at(-1)?.split(note).length).toBe(2)
+    GoalLink.clear(run.session.id)
+  }),
+  30_000,
+)
+
+it.instance(
+  "a superseded process watch does not resume the goal",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    const notes: string[] = []
+    GoalLink.registerArm(run.session.id, (input) =>
+      Effect.sync(() => {
+        notes.push(input.note ?? "")
+      }),
+    )
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_missing", label: "bgp_missing" }
+    GoalLink.set(run.session.id, wait)
+    const stale = GoalLink.watch(run.session.id)
+    // A re-wait on the same process forks a new watch and takes the wait over.
+    GoalLink.set(run.session.id, wait)
+    const current = GoalLink.watch(run.session.id)
+    expect(current).not.toBe(stale)
+    yield* GoalLink.processWatch(run.session.id, wait, stale)
+    expect(notes).toEqual([])
+    yield* GoalLink.processWatch(run.session.id, wait, current)
+    expect(notes).toEqual([`[background process] ${wait.id} gone`])
+    GoalLink.clear(run.session.id)
+  }),
+  30_000,
+)
+
+it.instance(
+  "a watch superseded while it reads the process does not resume the goal",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    const notes: string[] = []
+    GoalLink.registerArm(run.session.id, (input) =>
+      Effect.sync(() => {
+        notes.push(input.note ?? "")
+      }),
+    )
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_missing", label: "bgp_missing" }
+    GoalLink.set(run.session.id, wait)
+    const watch = GoalLink.watch(run.session.id)
+    yield* GoalLink.processWatch(run.session.id, wait, watch, () =>
+      Effect.sync((): BackgroundProcess.Info | undefined => {
+        // A re-wait takes the session's watch over while the status is read.
+        GoalLink.watch(run.session.id)
+        return undefined
+      }),
+    )
+    expect(notes).toEqual([])
+    GoalLink.clear(run.session.id)
+  }),
+  30_000,
+)
+
+it.instance(
+  "a released session's watch does not resume after its goal is restored",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    const notes: string[] = []
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_missing", label: "bgp_missing" }
+    GoalLink.set(run.session.id, wait)
+    const stale = GoalLink.watch(run.session.id)
+    yield* GoalLink.processWatch(run.session.id, wait, stale, () =>
+      Effect.sync((): BackgroundProcess.Info | undefined => {
+        // Archiving releases the session's goal state, and restoring it
+        // re-registers the resume handler and re-waits, all while the status is
+        // read.
+        GoalLink.release(run.session.id)
+        GoalLink.hydrate(run.session.id, { "kilo.goal": { text: objective, status: "waiting", wait } }, (input) =>
+          Effect.sync(() => {
+            notes.push(input.note ?? "")
+          }),
+        )
+        GoalLink.watch(run.session.id)
+        return undefined
+      }),
+    )
+    expect(notes).toEqual([])
+    GoalLink.clear(run.session.id)
+  }),
+  30_000,
+)
+
+it.instance(
+  "a released session's watch does not resume after its restored goal is cleared",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    const notes: string[] = []
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_missing", label: "bgp_missing" }
+    GoalLink.set(run.session.id, wait)
+    const stale = GoalLink.watch(run.session.id)
+    yield* GoalLink.processWatch(run.session.id, wait, stale, () =>
+      Effect.sync((): BackgroundProcess.Info | undefined => {
+        GoalLink.release(run.session.id)
+        GoalLink.hydrate(run.session.id, { "kilo.goal": { text: objective, status: "waiting", wait } }, (input) =>
+          Effect.sync(() => {
+            notes.push(input.note ?? "")
+          }),
+        )
+        GoalLink.clear(run.session.id)
+        return undefined
+      }),
+    )
+    expect(notes).toEqual([])
+    GoalLink.clear(run.session.id)
+  }),
+  30_000,
+)
+
+it.instance(
+  "re-recording the same wait keeps a live process watch",
+  Effect.gen(function* () {
+    const run = yield* setup()
+    const notes: string[] = []
+    GoalLink.registerArm(run.session.id, (input) =>
+      Effect.sync(() => {
+        notes.push(input.note ?? "")
+      }),
+    )
+    const wait: GoalLink.Wait = { kind: "process", id: "bgp_missing", label: "bgp_missing" }
+    GoalLink.set(run.session.id, wait)
+    const watch = GoalLink.watch(run.session.id)
+    // A recovery (ensure/hydrate) re-records the same wait, and that must not
+    // stop the watch that owns it.
+    expect(GoalLink.hydrate(run.session.id, { "kilo.goal": { text: objective, status: "waiting", wait } })).toEqual(
+      wait,
+    )
+    yield* GoalLink.processWatch(run.session.id, wait, watch)
+    expect(notes).toEqual([`[background process] ${wait.id} gone`])
+    GoalLink.clear(run.session.id)
+  }),
+  30_000,
+)
+
+it.instance(
+  "a no-action turn re-waits on a still-running background process instead of pausing",
+  Effect.gen(function* () {
+    const run = yield* setup({ permission: { bash: "allow" } })
+    // Start the side watch before the goal so the goal never arms it. It stays live
+    // until the test releases it, so the ordering never depends on wall-clock time.
+    yield* run.llm.push(
+      reply().tool("background_process", { action: "start", command: "sleep 600", description: "side watch" }),
+      reply().text("Started a side watch").stop(),
+    )
+    yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Start a side watch" }] })
+    const side = (yield* Effect.promise(() => BackgroundProcess.list({ sessionID: run.session.id }))).find(
+      (info) => info.description === "side watch",
+    )
+    if (!side) throw new Error("the side watch was not started")
+    expect(side.status).toBe("running")
+    yield* run.llm.push(
+      reply().tool("background_process", { action: "start", command: "sleep 600", description: "goal wait" }),
+      reply().text("Armed the wait").stop(),
+      // The resumed turn makes no progress, so the goal must re-wait on the side
+      // watch instead of settling to paused.
+      reply().text("Nothing left to do").stop(),
+    )
+    yield* run.command(objective)
+    const first = waitOf(yield* goalStatus(run, "waiting"))
+    expect(first.kind).toBe("process")
+    expect(first.id).not.toBe(side.id)
+    // Release the awaited process deterministically instead of letting it time out.
+    const awaited = (yield* Effect.promise(() => BackgroundProcess.list({ sessionID: run.session.id }))).find(
+      (info) => info.id === first.id,
+    )
+    if (!awaited) throw new Error("the awaited process was not found")
+    yield* Effect.promise(() => BackgroundProcess.stop(awaited.id))
+    const next = yield* pollWithTimeout(
+      run.metadata.pipe(
+        Effect.map((value) => {
+          const goal = GoalState.read(value)
+          return goal?.status === "waiting" && goal.wait?.id !== first.id ? goal : undefined
+        }),
+      ),
+      "the goal never re-waited on the still-running process",
+      "15 seconds",
+    )
+    expect(waitOf(next).id).toBe(side?.id)
+    GoalLink.clear(run.session.id)
+    yield* Effect.promise(() => BackgroundProcess.stopSession(run.session.id))
   }),
   30_000,
 )
