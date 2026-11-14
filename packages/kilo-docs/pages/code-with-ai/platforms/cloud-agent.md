@@ -35,11 +35,15 @@ Usage is measured in whole seconds, with no rounding up to a longer billing inte
 
 See [Kilo Code pricing](https://kilo.ai/pricing) for current rates and pricing for other cloud products.
 
+Before you start a personal session, a line under the new-session context row shows the estimated compute price and the container specs, such as the hourly rate and the sandbox's vCPU and memory. Personal accounts that are not charged yet see **Upcoming compute price**; charged personal accounts see **Compute price**. The line appears only for Kilo-hosted containers, and organizations do not see it. If Kilo cannot determine the billing mode or read the price, the line stays hidden.
+
 ### Session cost display
 
 The session header separates **Token Usage** (model inference spend) from **Compute** (the cloud environment's estimated hourly rate). Several sessions can share that environment, so the rate is not a per-session spending total. **Not currently charged** means compute charges are not being applied.
 
 Open **Session Information** from a session to see recorded charges broken down into model spend, **Compute cost**, and a combined total. Because a workspace's compute is shared, Kilo sums compute across the restarts and chats that share it, so recorded charges can arrive after the work finishes. The **Compute rate** row shows the size and hourly price of the sandbox the session is actually running on; for runtimes Kilo does not manage, no hourly rate is shown. While charges load, the dialog shows a loading state, and it offers **Retry** if a request fails instead of treating unloaded charges as zero.
+
+The sandbox status popover uses the **Compute price** label for personal accounts. Organizations, and checks that fail, keep the **Compute rate** heading.
 
 If a compute billing check fails, follow the recovery action next to the composer. Available actions depend on whether you or your organization pays and your role in that organization. Your prompt is preserved so you can retry after resolving the issue.
 
@@ -54,7 +58,7 @@ Automatic commit and push depends on your session settings. If it is disabled, r
 
 ## Choosing where sessions run
 
-A Cloud Agent session runs in a sandbox, the environment that provides its compute. When your account can select a sandbox, the new-session page shows a **Sandbox** field. You can set a default sandbox for your owner account (personal or organization) and override it per repository so you do not have to pick each time.
+A Cloud Agent session runs in a sandbox, the environment that provides its compute. Sandbox selection is enabled for accounts enrolled in paid Cloud Agent billing, for Vercel BYOC enrollments, and for accounts Kilo enables directly; a paid enrollment covers the sizes it includes, so a size that is not enrolled stays unavailable. Personal and organization enrollment are separate: personal billing does not enable an organization's members. When your account can select a sandbox, the new-session page shows a **Sandbox** field. You can set a default sandbox for your owner account (personal or organization) and override it per repository so you do not have to pick each time. If Kilo cannot check your eligibility, the settings stay readable with your saved values and offer a retry instead of clearing the choice.
 
 Open the Cloud Agent settings dialog from the gear at the right of the top bar. It has a **General** tab for where sessions run and a **Profiles** tab for agent environment profiles.
 
@@ -124,6 +128,14 @@ A workspace that starts entirely from an environment snapshot skips the environm
 
 The composer stays editable while a session is being prepared or finalized, so you can keep typing and send follow-up messages without waiting for the current turn to finish. Sent messages are queued and processed in order, and the composer shows the current phase while it waits. While a session is still loading, when its connection is unresolved, or when a chat is read-only, the composer does not accept submissions, but anything you have typed is preserved.
 
+## Stopping a session or workspace
+
+While a response is streaming, select **Stop** in the composer to cancel that turn. The same control is available while a session is preparing its environment, before any response has started.
+
+While something is preparing, **Stop** stops the whole workspace: it cancels environment preparation along with any queued or accepted work in every chat that shares the workspace, and requests teardown of the sandbox. When nothing is preparing, **Stop** cancels only the current chat.
+
+A preparation you stop reads as **Preparation stopped** in the web app and **Session stopped** in the mobile app, rather than as a failure. After the workspace is stopped, sending a new message starts a fresh environment.
+
 ## Starting Tasks from the CLI
 
 Use the `kilo cloud` command to run Cloud Agent tasks without opening the browser:
@@ -176,6 +188,14 @@ A session cannot launch child sessions when any of these apply:
 Sessions created before this capability became available keep it disabled. Start a new session to launch child sessions.
 
 A child session links back to the session that started it. A muted **Started from parent** link sits under the session title, and on narrow screens it appears as a compact **View parent** label. The overflow menu also lists **Open parent session**. These links follow the session across its sibling chats, terminals, and file views. The link is hidden when the parent session is missing, deleted, or not accessible to you.
+
+## Background activity and results
+
+Cloud Agent chats can run background shell commands and subagent tasks. While background work is running or waiting, a strip above the composer shows it for the current chat and the child sessions it started. Activity from sibling chats is not included, and a finished task does not leave a stale count behind.
+
+When a background command or subagent finishes, its notice appears as a compact result card instead of raw output. Expand the card to read the captured output and failure state, copy the output, or open the child's transcript. The cards keep the same history and failure states as the native results.
+
+If Kilo cannot read the background activity inventory, the strip reports that the status is unavailable and offers **Retry** instead of showing an empty list. The strip does not add controls to stop or cancel background work.
 
 ## Worktrees and chats
 
@@ -285,6 +305,8 @@ Agent environment profiles are reusable bundles of environment settings for clou
 - Setup commands (which Cloud Agent will execute before starting a session)
 
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
+
+Each owner can hold up to **100 profiles**. When an owner is at the limit, creating another profile is refused; the profiles the owner already has stay readable, editable, deletable, and selectable as the default.
 
 In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent settings dialog](#choosing-where-sessions-run).
 

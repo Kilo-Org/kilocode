@@ -35,6 +35,8 @@ The mobile app lets you:
 - Connect GitHub, GitLab, Slack, Linear, Discord, and Bitbucket for your account or an organization — see [Integrations](#integrations).
 - See your usage — cost, requests, tokens, top models, and top features — for your account or an organization — see [Usage](#usage).
 - See sandbox compute cost in session totals and open sandbox previews — see [Session cost and model details](#session-cost-and-model-details) and [Sandbox previews and triggers](#sandbox-previews-and-triggers).
+- Manage an organization — billing, audit log, settings areas, and creation — see [Organization management](#organization-management).
+- Configure automated code reviews and review memory — see [Code reviewer settings](#code-reviewer-settings).
 
 ## App actions
 
@@ -146,6 +148,10 @@ For Cloud Agent sessions, choose a repository from GitHub, GitLab, or, for organ
 
 Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend's default destination. The owner's default sandbox and per-repository overrides are set in [Cloud Agent settings](/docs/code-with-ai/platforms/cloud-agent#choosing-where-sessions-run). Tap it to pick a sandbox type from a sheet that groups the types the backend offers by provider; the field then shows the choice, such as `Cloudflare · Shared`. While the options load, a field-sized skeleton holds the slot, and a failed load shows **Couldn't load sandbox options** with **Retry**. If a chosen type is no longer offered, the field shows why and offers **Use Default**, and you cannot start until you resolve it. Starting sends the type you picked, or the backend default when you pick nothing. Owners without sandbox selection see no Sandbox field.
 
+A Cloud Agent session can also start from a saved cloud environment. The **Cloud environment** row lists the environments that contain the selected repository in your personal or organization scope. When one environment matches, Kilo uses it automatically; when several match, Kilo asks **Select an environment to start.** and blocks Start until you choose. Kilo remembers your last choice for that repository and scope.
+
+Open an environment to see its build state. The build view shows the state, the failure reason when a build fails, the last published snapshot, and the build logs while a build runs. The available action matches the web: **Build**, **Refresh**, **Cancel**, or the reason it is blocked. Build logs and controls are manager-only, as on the web. This row is separate from the **Environment** row, which selects an agent environment profile.
+
 ## Agent environment profiles
 
 The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
@@ -186,6 +192,29 @@ The screen shows a loading skeleton while it resolves, a retryable error with **
 Your **Profile** tab has a **Usage** row under the credits card, and the organization hub has a usage card; both open a native usage screen backed by the same analytics as the web. Choose a 7-, 30-, or 90-day range to see cost, request, and token totals, a daily bar chart you can switch between **Cost**, **Requests**, and **Tokens**, and lists of your top models and top features.
 
 In organization scope, owners and billing managers see organization-wide usage; other roles see their own usage in that organization, as on the web. Organization member rows show each member's daily spend as `$spent / $limit` only for sales-demo organizations that report both values, otherwise `$limit/day`, and nothing when there is no limit.
+
+## Organization management
+
+Select an organization to open its hub, which mirrors the areas of the web sidebar that the app covers.
+
+- **Billing** — the organization's plan, subscription state (renews, cancels at period end, trial, past due, or ended), seats used and total, any scheduled seat decrease, the auto top-up amount and threshold, and the organization [Kilo Pass](#kilo-pass-and-billing). It follows the web's role rules: billing roles see it, and other roles get an access-denied message. Every money-changing action — buy seats, change plan, or set up auto top-up — opens the web page on Android and shows plain text on iOS.
+- **Settings** — one row for each area that lives on the web: usage details, providers and models, custom modes, groups, guardrails, BYOK, SSO and domain, email preferences, audit logs, request logs, integrations, sub-organizations, distribute funds, and data collection. Rows follow the web sidebar's role and plan rules, and each opens its web page.
+- **Audit log** — a native read-only list of organization events with paging, shown to the same roles as the web. See [Audit Logs](/docs/collaborate/enterprise/audit-logs).
+
+You can create an organization from **Profile** or from the no-organization state. Enter a name and the app creates it with the same defaults as the web flow, then switches to the new organization. The company domain stays a web dashboard setting.
+
+An invite link for an organization (`/organizations/<id>`) opens in the app, so accepting an invite lands on the organization. Only that path is claimed — `/organizations/new`, `/organizations/create`, and any deeper organization page open in the browser.
+
+## Code reviewer settings
+
+The app configures Kilo's automated [Code Reviews](/docs/automate/code-reviews/overview) from the **Code Reviewer** area, matching the web settings:
+
+- **Skip bot pull requests** — a GitHub reviewer setting that stops automatic reviews of pull requests opened by bots.
+- **Review memory** — use **Analyze now** to pick a repository and start a review-memory analysis, with the same result messages as the web.
+- **Per-repository model and effort** — on the repositories screen, override the review model and thinking effort for individual repositories.
+- **Council review** — for an entitled organization when council review is enabled for it (off by default, like the web), configure specialists, the aggregation strategy, required labels, and per-repository opt-in. The screen refuses a change that would drop an enabled council below its minimum specialist count.
+- **Review analytics** — an organization screen with four metric cards and a per-repository breakdown for 7, 30, or 90 days.
+- **Clear findings for removed repositories** — on the security repositories screen, remove findings for a repository the GitHub App can no longer access, behind a two-step confirmation. See [Security Reviews](/docs/deploy-secure/security-reviews).
 
 ## Starting a session from a picture
 
@@ -384,6 +413,8 @@ Cost is recorded when a session closes; sessions that closed before this feature
 ## Sandbox previews and triggers
 
 When a Cloud Agent session is running, its context sheet lists the sandbox's preview services. Tap a preview to open its minted URL in the app's in-app browser. The list shows loading, stopped, empty, unsupported, and failed states.
+
+The same context sheet has a sandbox section that shows the sandbox's state, a detail line, and when that state was last checked. If the sandbox failed to start, the section offers a fresh start: Kilo checks for a recoverable workspace snapshot and, after you confirm, removes a snapshot that cannot be used.
 
 The **Profile** tab also has a **Triggers & webhooks** row that opens the web triggers page for the current scope.
 
