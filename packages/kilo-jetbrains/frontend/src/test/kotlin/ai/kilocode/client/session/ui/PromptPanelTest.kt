@@ -2077,17 +2077,30 @@ class PromptPanelTest : BasePlatformTestCase() {
             speechCapture = capture,
             onTranscribe = { "dictated text" },
         )
+        val global = action.shortcutSet
         val editor = realizedEditor(panel)
         val root = roots.last()
 
         val actions = ActionUtil.getActions(editor.contentComponent)
-        assertEquals("actions=${actions.map(manager::getId)}", 1, actions.count { it === action })
+        assertEquals("actions=${actions.map(manager::getId)}", 1,
+            actions.count { ActionUtil.getDelegateChainRootAction(it) === action })
+        assertSame("The global action keeps its KeymapManager-owned shortcuts", global, action.shortcutSet)
         root.removeNotify()
-        assertFalse(ActionUtil.getActions(editor.contentComponent).contains(action))
+        assertFalse(ActionUtil.getActions(editor.contentComponent)
+            .any { ActionUtil.getDelegateChainRootAction(it) === action })
         root.addNotify()
         UIUtil.dispatchAllInvocationEvents()
         val attached = (panel.defaultFocusedComponent as EditorTextField).getEditor(true)!!
-        assertEquals(1, ActionUtil.getActions(attached.contentComponent).count { it === action })
+        val local = ActionUtil.getActions(attached.contentComponent)
+            .first { ActionUtil.getDelegateChainRootAction(it) === action }
+        assertEquals(1, ActionUtil.getActions(attached.contentComponent)
+            .count { ActionUtil.getDelegateChainRootAction(it) === action })
+        assertSame(global, action.shortcutSet)
+
+        panel.setReady(true)
+        local.actionPerformed(AnActionEvent.createFromAnAction(local, null, ActionPlaces.UNKNOWN,
+            com.intellij.openapi.actionSystem.impl.SimpleDataContext.getSimpleContext(PromptDataKeys.SPEECH, panel)))
+        waitForSend { capture.starts == 1 }
     }
 
     fun `test speech action local shortcut refreshes after remap`() {
@@ -2108,14 +2121,21 @@ class PromptPanelTest : BasePlatformTestCase() {
                 cs = scope,
                 speechCapture = SpeechCaptureStub(),
             )
+            val global = action.shortcutSet
             val editor = realizedEditor(panel)
-            assertEquals(listOf(before), action.shortcutSet.shortcuts.toList())
+            fun local() = ActionUtil.getActions(editor.contentComponent)
+                .first { ActionUtil.getDelegateChainRootAction(it) === action }
+                .shortcutSet.shortcuts.toList()
+            assertEquals(listOf(before), local())
+            assertSame(global, action.shortcutSet)
 
             remap(keymap, listOf(after))
             UIUtil.dispatchAllInvocationEvents()
 
-            assertEquals(listOf(after), action.shortcutSet.shortcuts.toList())
-            assertEquals(1, ActionUtil.getActions(editor.contentComponent).count { it === action })
+            assertEquals(listOf(after), local())
+            assertEquals(1, ActionUtil.getActions(editor.contentComponent)
+                .count { ActionUtil.getDelegateChainRootAction(it) === action })
+            assertSame(global, action.shortcutSet)
         } finally {
             remap(keymap, original)
         }

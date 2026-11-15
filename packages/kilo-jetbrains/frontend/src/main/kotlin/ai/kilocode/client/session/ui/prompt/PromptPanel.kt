@@ -1143,7 +1143,9 @@ class PromptPanel(
         if (speech == null) return
         val action = ActionManager.getInstance().getAction(SpeechInputAction.ID) ?: return
         val binding = Disposer.newDisposable("Kilo speech input shortcut")
-        action.registerCustomShortcutSet(
+        // Register the component-local shortcut on a wrapper so the globally registered action's
+        // shortcut set stays owned by KeymapManager.
+        ActionUtil.wrap(action).registerCustomShortcutSet(
             KeymapUtil.getActiveKeymapShortcuts(SpeechInputAction.ID),
             ed.contentComponent,
             binding,
