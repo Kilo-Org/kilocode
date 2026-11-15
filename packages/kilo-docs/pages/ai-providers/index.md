@@ -30,6 +30,7 @@ Major AI companies offering powerful models via API:
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 - **[Nebius Token Factory](/docs/ai-providers/nebius)** - Model inference on Nebius infrastructure
+- **[Obscurify.ai](/docs/ai-providers/obscurify)** - Privacy-focused OpenAI-compatible API with account-number sign-up
 - **[Poolside](/docs/ai-providers/poolside)** - Laguna models
 
 ### Local & Self-Hosted
