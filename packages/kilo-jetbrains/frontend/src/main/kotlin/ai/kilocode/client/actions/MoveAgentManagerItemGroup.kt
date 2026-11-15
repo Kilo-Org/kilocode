@@ -21,17 +21,20 @@ class MoveAgentManagerItemGroup : ActionGroup(
     @RequiresEdt
     override fun update(e: AnActionEvent) {
         val panel = e.getData(SidePanelKeys.WORKTREE_PANEL)
-        val key = e.getData(WorktreeDataKeys.WORKTREE)?.id ?: e.getData(HostedWorkspaceDataKeys.WORKSPACE)?.ref?.key
-        e.presentation.isEnabledAndVisible = panel?.canMove(key) == true
-        if (panel != null) e.presentation.isEnabled = panel.canMove(key) && panel.sections().isNotEmpty()
+        val key = target(e)
+        e.presentation.isEnabledAndVisible = when {
+            panel == null || key == null || !panel.canMove(key) -> false
+            else -> panel.sections().any { it.key != panel.section(key) }
+        }
     }
 
     @RequiresEdt
     override fun getChildren(e: AnActionEvent?): Array<AnAction> {
         val panel = e?.getData(SidePanelKeys.WORKTREE_PANEL)
-        val key = e?.getData(WorktreeDataKeys.WORKTREE)?.id ?: e?.getData(HostedWorkspaceDataKeys.WORKSPACE)?.ref?.key
+        val key = e?.let(::target)
         if (panel == null || key == null || !panel.canMove(key)) return emptyArray()
         return panel.sections().map { section ->
+
             object : DumbAwareAction(section.title, null, ActiveTreeColors.icon(section.color)) {
                 override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -47,4 +50,7 @@ class MoveAgentManagerItemGroup : ActionGroup(
             }
         }.toTypedArray()
     }
+
+    private fun target(e: AnActionEvent): String? =
+        e.getData(WorktreeDataKeys.WORKTREE)?.id ?: e.getData(HostedWorkspaceDataKeys.WORKSPACE)?.ref?.key
 }

@@ -506,6 +506,35 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertTrue(rpc.reorders.isEmpty())
     }
 
+    fun `test move submenu hides when the row already sits in its only section`() {
+        val item = worktree("aardvark")
+        val other = worktree("badger")
+        rpc.listed += listOf(main(), item, other)
+        val section = edt {
+            val state = AgentManagerLayout(PropertiesComponent.getInstance(project))
+            state.create("Planning").also { state.move(item.id, it.key) }
+        }
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val view = tree(panel)
+        val group = MoveAgentManagerItemGroup()
+
+        edt {
+            assertTrue(view.select(item.id))
+            assertEquals(section.key, panel.section(item.id))
+            val only = AnActionEvent.createFromAnAction(group, null, ActionPlaces.POPUP, context(panel))
+            group.update(only)
+            assertFalse(only.presentation.isEnabledAndVisible)
+
+            assertTrue(view.select(other.id))
+            val open = AnActionEvent.createFromAnAction(group, null, ActionPlaces.POPUP, context(panel))
+            group.update(open)
+            assertTrue(open.presentation.isEnabledAndVisible)
+        }
+    }
+
     fun `test move submenu and relocation reject primary busy and missing rows or destinations`() {
         val item = worktree("aardvark")
         rpc.listed += listOf(main(), item)
