@@ -134,10 +134,25 @@ val normalizeOpenApiSpec = tasks.register<NormalizeOpenApiSpecTask>("normalizeOp
     spec.set(generatedSpec)
 }
 
+// swagger-parser resolves local $refs through a java.net.URI built from the spec path,
+// which throws on spaces and non-ASCII characters (common in Windows checkout paths).
+// Stage the normalized spec in a space-free temp directory and generate from that copy.
+// remoteInputSpec is not a substitute: it routes the spec through the plugin's remote
+// loader, which drops `required` for string properties and makes those fields nullable.
+val specDir = File(
+    System.getProperty("java.io.tmpdir"),
+    "kilo-jetbrains-openapi-" + Integer.toHexString(projectDir.absolutePath.hashCode()),
+)
+val stageSpec = tasks.register<Sync>("stageOpenApiSpec") {
+    dependsOn(normalizeOpenApiSpec)
+    from(generatedSpec)
+    into(specDir)
+}
+
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("jvm-okhttp4")
-    inputSpec.set(generatedSpec)
+    inputSpec.set(File(specDir, generatedSpec.get().asFile.name).absolutePath)
     outputDir.set(layout.buildDirectory.dir("generated/openapi").get().asFile.absolutePath)
     packageName.set("ai.kilocode.jetbrains.api")
     apiPackage.set("ai.kilocode.jetbrains.api.client")
@@ -171,7 +186,7 @@ openApiGenerate {
 }
 
 tasks.named("openApiGenerate") {
-    dependsOn(normalizeOpenApiSpec)
+    dependsOn(stageSpec)
 }
 
 val fixGeneratedApi = tasks.register<FixGeneratedApiTask>("fixGeneratedApi") {
