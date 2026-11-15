@@ -157,6 +157,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var hostedStart = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"session":{"providerID":"cloud","sessionID":"ses_cloud_2"},"messageID":"msg_start","replayed":false}"""
     @Volatile var hostedDelete = """{"workspace":{"providerID":"cloud","workspaceID":"wrk_1"},"success":true}"""
     @Volatile var hostedManagementStatus = 200
+    @Volatile var hostedPullRequest = """{"id":{"providerID":"cloud","workspaceID":"wrk_1"},"state":"no_pr","pullRequest":null}"""
+    @Volatile var hostedPullRequestStatus = 200
+    @Volatile var hostedPullRequestHandler: ((Socket, BufferedWriter) -> Unit)? = null
+    data class PullRequestCall(val method: String, val path: String, val body: String, val authorization: String?)
+    val hostedPullRequestCalls = CopyOnWriteArrayList<PullRequestCall>()
     @Volatile var lastHostedCreateBody: String? = null
     @Volatile var lastHostedStartBody: String? = null
     @Volatile var lastHostedDeletePath: String? = null
@@ -445,12 +450,16 @@ class MockCliServer : AutoCloseable {
             val path = parts[1]
 
             var len = 0
+            var authorization: String? = null
             while (true) {
                 val header = input.readLine()
                 if (header.isNullOrBlank()) break
                 val parts = header.split(":", limit = 2)
                 if (parts.size == 2 && parts[0].equals("Content-Length", ignoreCase = true)) {
                     len = parts[1].trim().toIntOrNull() ?: 0
+                }
+                if (parts.size == 2 && parts[0].equals("Authorization", ignoreCase = true)) {
+                    authorization = parts[1].trim()
                 }
             }
             val body = if (len > 0) CharArray(len).also { input.read(it, 0, len) }.concatToString() else ""
@@ -654,6 +663,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/kilocode/session-host/provider" -> respond(output, 200, hostedProviders)
+                bare.matches(Regex("/kilocode/session-host/workspace/[^/]+/[^/]+/pull-request(/refresh)?")) -> {
+                    hostedPullRequestCalls.add(PullRequestCall(method, path, body, authorization))
+                    val handler = hostedPullRequestHandler
+                    if (handler != null) handler(socket, output) else respond(output, hostedPullRequestStatus, hostedPullRequest)
+                }
                 bare == "/kilocode/session-host/workspace/profiles" && method == "GET" -> {
                     lastHostedProfilesPath = path
                     respond(output, hostedManagementStatus, hostedProfiles)
