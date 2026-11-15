@@ -5,7 +5,7 @@ description: "Run open-weight models on Crusoe Managed Inference's OpenAI-compat
 
 # Using Crusoe With Kilo Code
 
-Crusoe provides Managed Inference, an OpenAI-compatible API for open-weight models such as GLM, DeepSeek, and Nemotron, served from Crusoe's vertically integrated AI cloud. It is available as a built-in provider in Kilo Code.
+Crusoe provides Managed Inference, an OpenAI-compatible API for open-weight models such as gpt-oss, Gemma, and Nemotron, served from Crusoe's vertically integrated AI cloud. It is available as a built-in provider in Kilo Code.
 
 **Website:** [https://crusoe.ai/](https://crusoe.ai/)
 
