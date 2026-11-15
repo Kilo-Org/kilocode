@@ -174,8 +174,13 @@ open class WorktreeSessionEditorManager(
         }
         session?.takeUnless { it == saved || it in deleting }?.let { openSession(SessionRef.Local(it), false) }
         // Root-only lists can omit a live session. Verify it before trusting the persisted binding.
-        list.get(saved) { dto ->
+        list.get(saved) { result ->
             if (Disposer.isDisposed(this)) return@get
+            val dto = result.getOrElse {
+                if (currentUi() == null) showBlank()
+                onListChanged?.invoke()
+                return@get
+            }
             val current = store.peek(worktree.directory)
             if (current?.id == entry.id && dto == null) {
                 store.release(worktree.directory, saved)

@@ -13,6 +13,8 @@ import ai.kilocode.rpc.dto.SessionChangeKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.openapi.application.ApplicationManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Suppress("UnstableApiUsage")
@@ -72,6 +74,74 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
 
         assertEquals(listOf("ses_wt"), controller.sessions().map { it.id })
         assertEquals(listOf("ses_main"), sessions.sessions.value.map { it.id })
+    }
+
+    fun `test lookup resolves child without changing root model and calls back on EDT`() {
+        rpc.listed += session("ses_root", "Root")
+        controller.reload()
+        drain()
+        rpc.session = session("ses_child", "Child").copy(parentID = "ses_root")
+        var result: Result<SessionDto?>? = null
+
+        controller.get("ses_child") {
+            assertTrue(ApplicationManager.getApplication().isDispatchThread)
+            result = it
+        }
+        drain()
+
+        assertEquals(rpc.session, requireNotNull(result).getOrThrow())
+        assertEquals(listOf("ses_child" to dir), rpc.finds)
+        assertEquals(listOf("ses_root"), controller.sessions().map { it.id })
+    }
+
+    fun `test lookup exposes confirmed absence as successful null`() {
+        rpc.missing += "ses_deleted"
+        var result: Result<SessionDto?>? = null
+
+        controller.get("ses_deleted") { result = it }
+        drain()
+
+        assertTrue(requireNotNull(result).isSuccess)
+        assertNull(requireNotNull(result).getOrThrow())
+        assertEquals(listOf("ses_deleted" to dir), rpc.finds)
+    }
+
+    fun `test failed lookup preserves error rather than reporting confirmed absence`() {
+        rpc.listed += session("ses_root", "Root")
+        controller.reload()
+        drain()
+        val err = IllegalStateException("session not found while backend disconnected")
+        rpc.findThrows = err
+        var result: Result<SessionDto?>? = null
+
+        controller.get("ses_child") { result = it }
+        drain()
+
+        assertTrue(requireNotNull(result).isFailure)
+        assertSame(err, requireNotNull(result).exceptionOrNull())
+        assertEquals(listOf("ses_root"), controller.sessions().map { it.id })
+    }
+
+    fun `test cancelled lookup does not invoke missing or failure callback`() {
+        rpc.findThrows = CancellationException("cancelled")
+        var called = false
+
+        controller.get("ses_child") { called = true }
+        drain()
+
+        assertFalse(called)
+        assertEquals(listOf("ses_child" to dir), rpc.finds)
+    }
+
+    fun `test cancelled listing does not begin fallback lookup`() {
+        rpc.listThrows = CancellationException("cancelled")
+        var called = false
+
+        controller.reload(failed = { called = true }) { called = true }
+        drain()
+
+        assertFalse(called)
+        assertTrue(rpc.finds.isEmpty())
     }
 
     fun `test create prepends the new session and keeps existing rows`() {

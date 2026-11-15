@@ -132,10 +132,12 @@ class PendingWorktreePrompt : PersistentStateComponent<PendingWorktreePrompt.Sta
     }
 
     @RequiresEdt
-    fun put(path: String, prompt: PendingPrompt) {
+    fun put(directory: String, path: String, prompt: PendingPrompt) {
         if (prompt.text.isBlank()) return
         val key = normalizeWorktreePath(path)
-        val entry = entry(prompt.copy(text = prompt.text.trim())).copy(path = key, order = ++clock)
+        val entry = entry(prompt.copy(text = prompt.text.trim())).copy(
+            directory = normalizeWorktreePath(directory), path = key, order = ++clock,
+        )
         update {
             supersede(key)
             entries.removeIf { it.value.path == key }

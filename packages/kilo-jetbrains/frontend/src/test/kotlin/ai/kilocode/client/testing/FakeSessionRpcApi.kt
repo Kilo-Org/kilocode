@@ -142,6 +142,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var renameThrows: Exception? = null
     val lists = mutableListOf<String>()
     var listThrows: Exception? = null
+    val finds = mutableListOf<Pair<String, String>>()
+    val missing = mutableSetOf<String>()
+    var findThrows: Exception? = null
     val recentCalls = mutableListOf<Pair<String, Int>>()
     val cloudCalls = mutableListOf<CloudCall>()
     val imports = mutableListOf<Pair<String, String>>()
@@ -207,6 +210,13 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun get(id: String, directory: String): SessionDto {
         assertNotEdt("get")
         return session
+    }
+
+    override suspend fun find(id: String, directory: String): SessionDto? {
+        assertNotEdt("find")
+        finds.add(id to directory)
+        findThrows?.let { throw it }
+        return session.takeUnless { id in missing }
     }
 
     override suspend fun delete(id: String, directory: String) {

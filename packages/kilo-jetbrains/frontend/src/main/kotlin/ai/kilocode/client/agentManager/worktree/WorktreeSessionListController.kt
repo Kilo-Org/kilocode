@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -82,6 +83,8 @@ class WorktreeSessionListController(
                     capture("Worktree Session List Loaded", mapOf("count" to result.sessions.size.toString()))
                     done?.invoke()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LOG.warn("worktree session list failed dir=$dir message=${e.message}", e)
                 edt { (failed ?: done)?.invoke() }
@@ -89,14 +92,19 @@ class WorktreeSessionListController(
         }
     }
 
-    /** Resolve a saved session that may be absent from the root-only list. */
-    fun get(id: String, done: (SessionDto?) -> Unit) {
+    /** A successful null confirms absence; a failed lookup must not invalidate a saved binding. */
+    @Suppress("TooGenericExceptionCaught") // Preserve non-cancellation RPC failures for caller recovery.
+    fun get(id: String, done: (Result<SessionDto?>) -> Unit) {
         cs.launch {
-            val result = runCatching { service.get(id, dir) }
-            result.exceptionOrNull()?.let { err ->
+            val result = try {
+                Result.success(service.find(id, dir))
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: Exception) {
                 LOG.warn("worktree session lookup failed id=$id dir=$dir message=${err.message}", err)
+                Result.failure(err)
             }
-            edt { done(result.getOrNull()) }
+            edt { done(result) }
         }
     }
 

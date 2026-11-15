@@ -57,6 +57,7 @@ import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.xmlb.XmlSerializer
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -142,6 +143,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         val manager = manager()
         edt {
             service<PendingWorktreePrompt>().put(
+                DIR,
                 DIR,
                 PendingPrompt("fix the bug", agent = "plan", provider = "kilo", model = "gpt-5", variant = "high"),
             )
@@ -297,9 +299,9 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         rpc.listThrows = IllegalStateException("list unavailable")
         val gate = CompletableDeferred<Unit>()
         val api = object : KiloSessionRpcApi by rpc {
-            override suspend fun get(id: String, directory: String): SessionDto {
+            override suspend fun find(id: String, directory: String): SessionDto? {
                 if (id == entry.session) gate.await()
-                return rpc.get(id, directory)
+                return rpc.find(id, directory)
             }
         }
         sessions = KiloSessionService(project, coroutines.scope, api)
@@ -332,6 +334,124 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(entry.session, edt { manager.currentKey() })
         assertEquals(listOf(DIR to entry.session), created)
         assertEquals("initial prompt", edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test failed list and lookup preserve live bound prompt until original target recovers`() {
+        unavailable(listed = false)
+    }
+
+    fun `test successful root list and failed lookup preserve live child session and correlation`() {
+        unavailable(listed = true)
+    }
+
+    fun `test cancelled lookup preserves live bound prompt and permits original target retry`() {
+        unavailable(listed = true, err = CancellationException("lookup cancelled"))
+    }
+
+    private fun unavailable(listed: Boolean, err: Exception = IllegalStateException("session not found during outage")) {
+        val payload = PendingPrompt("keep the original turn", "plan", "kilo", "gpt-5", "high")
+        val entry = bound(rpc.session.id, payload, attempted = false)
+        val gate = CompletableDeferred<Unit>()
+        val sending = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
+                rpc.prompt(id, directory, prompt)
+                sending.complete(Unit)
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+        rpc.listed += rpc.session
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+        val active = edt { ui.single() }
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+
+        rpc.listed.clear()
+        rpc.listed += session("ses_unrelated", updated = 100.0)
+        rpc.listThrows = if (listed) null else IllegalStateException("list unavailable")
+        rpc.findThrows = err
+        edt { manager.start() }
+        flush()
+
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertSame(active, edt { ui.single() })
+        assertEquals(entry.session, edt { manager.currentKey() })
+        assertEquals(listOf(DIR to entry.session), created)
+        assertEquals(listOf(entry.session to DIR), rpc.finds)
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+
+        rpc.findThrows = null
+        edt { manager.start() }
+        flush()
+        assertSame(active, edt { ui.single() })
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        gate.complete(Unit)
+        await(sending)
+
+        val sent = rpc.prompts.single()
+        assertEquals(entry.session, sent.first)
+        assertEquals(entry.id, sent.third.messageID)
+        assertEquals(payload.text, sent.third.parts.single().text)
+        assertEquals(payload.agent, sent.third.agent)
+        assertEquals(payload.provider, sent.third.providerID)
+        assertEquals(payload.model, sent.third.modelID)
+        assertEquals(payload.variant, sent.third.variant)
+        assertEquals(entry.copy(attempted = true), edt { service<PendingWorktreePrompt>().peek(DIR) })
+        edt { Disposer.dispose(manager) }
+        val reopened = manager()
+        edt { reopened.start() }
+        flush()
+
+        assertEquals(entry.session, edt { reopened.currentKey() })
+        assertEquals(entry.id, edt { service<PendingWorktreePrompt>().peek(DIR)?.id })
+        assertEquals(payload.text, edt { prompt().text() })
+        assertEquals(1, rpc.prompts.size)
+        assertEquals(0, rpc.creates)
+    }
+
+    fun `test failed lookup on reopen preserves attempted draft without selecting latest or creating rival`() {
+        val entry = bound("ses_original", PendingPrompt("retry this", "plan", "kilo", "gpt-5", "high"))
+        rpc.findThrows = IllegalStateException("backend unavailable")
+        rpc.listed += session("ses_unrelated", updated = 100.0)
+        val manager = manager()
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(listOf(DIR to null), created)
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+
+        rpc.session = session(requireNotNull(entry.session), updated = 1.0)
+        rpc.findThrows = null
+        edt { manager.start() }
+        flush()
+
+        assertEquals(entry.session, edt { manager.currentKey() })
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test supplied session wins during list and saved lookup failure without retargeting prompt`() {
+        val entry = bound("ses_original", PendingPrompt("keep original choices", "plan", "kilo", "gpt-5", "high"), attempted = false)
+        rpc.listThrows = IllegalStateException("list unavailable")
+        rpc.findThrows = IllegalStateException("lookup unavailable")
+        val manager = manager(session = "ses_supplied")
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals("ses_supplied", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_supplied"), created)
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
         assertEquals(0, rpc.creates)
         assertTrue(rpc.prompts.isEmpty())
     }
@@ -699,7 +819,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     fun `test initial server command automatically sends with durable correlation and selected choices`() {
         workspaceRpc.state.value = workspaceRpc.state.value.copy(commands = listOf(CommandDto("review")))
         val payload = PendingPrompt("/review changes", "plan", "kilo", "gpt-5", "high")
-        edt { service<PendingWorktreePrompt>().put(DIR, payload) }
+        edt { service<PendingWorktreePrompt>().put(DIR, DIR, payload) }
         val first = manager()
         edt { first.start() }
         waitUntil { rpc.commands.size == 1 }
@@ -1556,7 +1676,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
     private fun flush() = coroutines.drain()
 
-    private fun queue(text: String = "initial prompt") = edt { service<PendingWorktreePrompt>().put(DIR, PendingPrompt(text)) }
+    private fun queue(text: String = "initial prompt") = edt { service<PendingWorktreePrompt>().put(DIR, DIR, PendingPrompt(text)) }
 
     private fun bound(
         id: String,
@@ -1564,7 +1684,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         attempted: Boolean = true,
     ) = edt {
         val store = service<PendingWorktreePrompt>()
-        store.put(DIR, payload)
+        store.put(DIR, DIR, payload)
         val entry = requireNotNull(store.claim(DIR, id, testRootDisposable))
         if (attempted) store.attempted(entry.id, entry.text)
         store.loadState(store.getState())
@@ -1572,12 +1692,8 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     }
 
     private fun missing(gone: String, sent: CompletableDeferred<Unit>? = null) {
+        rpc.missing += gone
         val api = object : KiloSessionRpcApi by rpc {
-            override suspend fun get(id: String, directory: String): SessionDto {
-                if (id == gone) error("session deleted")
-                return rpc.get(id, directory)
-            }
-
             override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
                 rpc.prompt(id, directory, prompt)
                 sent?.complete(Unit)

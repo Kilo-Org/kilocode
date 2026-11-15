@@ -45,7 +45,7 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
 
     fun `test lease and failed editor disposal never consume the prompt`() = edtWait {
         val store = PendingWorktreePrompt()
-        store.put("/checkout", PendingPrompt("keep me"))
+        store.put("/repo", "/checkout", PendingPrompt("keep me"))
         val first = Disposer.newDisposable()
         val second = Disposer.newDisposable()
         try {
@@ -71,7 +71,7 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
 
     fun `test restart retains target session and uncertain send correlation`() = edtWait {
         val store = PendingWorktreePrompt()
-        store.put("/checkout", PendingPrompt("original", "plan", "kilo", "opus", "high", "Initial prompt"))
+        store.put("/repo", "/checkout", PendingPrompt("original", "plan", "kilo", "opus", "high", "Initial prompt"))
         val owner = Disposer.newDisposable()
         val entry = requireNotNull(store.claim("/checkout", "ses_target", owner))
         store.attempted(entry.id, "edited retry")
@@ -88,7 +88,7 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
 
     fun `test binding a recreated checkout evicts its previous prompt and claim`() = edtWait {
         val store = PendingWorktreePrompt()
-        store.put("/checkout", PendingPrompt("obsolete"))
+        store.put("/repo", "/checkout", PendingPrompt("obsolete"))
         val owner = Disposer.newDisposable(testRootDisposable)
         val old = requireNotNull(store.claim("/checkout", "ses_old", owner))
         val prompt = PendingPrompt("replacement", "plan", "kilo", "opus", "high")
@@ -214,7 +214,7 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
 
     fun `test loading legacy duplicate paths and superseded drafts keeps only the latest`() = edtWait {
         val store = PendingWorktreePrompt()
-        store.put("/checkout", PendingPrompt("old bound"))
+        store.put("/repo", "/checkout", PendingPrompt("old bound"))
         val state = store.getState()
         state.entries["new"] = state.entries.values.single().copy(id = "new", text = "new bound")
         state.entries["first"] = PendingWorktreePrompt.Entry(id = "first", directory = "/repo", text = "old draft")
@@ -231,7 +231,7 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
         val store = PendingWorktreePrompt()
         val prompt = PendingPrompt("keep choices", "plan", "kilo", "opus", "high")
         val owner = Disposer.newDisposable(testRootDisposable)
-        store.put("/checkout", prompt)
+        store.put("/repo", "/checkout", prompt)
         val old = requireNotNull(store.claim("/checkout", "ses_deleted", owner))
 
         store.release("/checkout/", "ses_other")
@@ -279,6 +279,36 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
         store.reconcile("/repo", listOf("/repo"), before)
 
         assertEquals(id, store.peek("/checkout/new")?.id)
+    }
+
+    fun `test queued prompts keep repository ownership across restart and external deletion`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val prompt = PendingPrompt("update from base", injectedTitle = "Update from main")
+        store.put("/repo/", "/checkout/queued/", prompt)
+        store.put("/other", "/other-checkout", PendingPrompt("unrelated"))
+        val restored = restart(store)
+        val queued = requireNotNull(restored.peek("/checkout/queued"))
+        assertEquals("/repo", queued.directory)
+        assertEquals(prompt, queued.prompt)
+        assertEquals(setOf(queued.id), restored.bound("/repo/"))
+
+        restored.reconcile("/repo", listOf("/repo", "/checkout/queued"), restored.bound("/repo"))
+        assertEquals(queued, restored.peek("/checkout/queued"))
+        restored.reconcile("/repo", listOf("/repo"), restored.bound("/repo"))
+
+        assertNull(restored.peek("/checkout/queued"))
+        assertEquals("unrelated", restored.peek("/other-checkout")?.text)
+        assertFalse(restart(restored).getState().entries.values.any { it.text == prompt.text })
+    }
+
+    fun `test an older listing cannot prune a queued prompt added after its snapshot`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val before = store.bound("/repo")
+        store.put("/repo", "/checkout/queued", PendingPrompt("keep newer queued prompt"))
+
+        store.reconcile("/repo", listOf("/repo"), before)
+
+        assertEquals("keep newer queued prompt", store.peek("/checkout/queued")?.text)
     }
 
     private fun restart(store: PendingWorktreePrompt): PendingWorktreePrompt {

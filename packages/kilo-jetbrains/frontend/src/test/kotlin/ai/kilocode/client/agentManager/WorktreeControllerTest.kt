@@ -680,7 +680,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         controller.reload()
         flush()
         ApplicationManager.getApplication().invokeAndWait {
-            service<PendingWorktreePrompt>().put(item.path, PendingPrompt("obsolete after deletion"))
+            service<PendingWorktreePrompt>().put("/test", item.path, PendingPrompt("obsolete after deletion"))
         }
 
         var success = false
@@ -759,7 +759,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         controller.reload()
         flush()
         ApplicationManager.getApplication().invokeAndWait {
-            service<PendingWorktreePrompt>().put(item.path, PendingPrompt("retain after failed deletion"))
+            service<PendingWorktreePrompt>().put("/test", item.path, PendingPrompt("retain after failed deletion"))
         }
 
         val failures = mutableListOf<RemoveWorktreeResultDto>()
@@ -824,12 +824,31 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test branch polling prunes externally removed queued prompts even when rows are unchanged`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += main
+        val controller = controller()
+        val store = service<PendingWorktreePrompt>()
+        controller.reload()
+        flush()
+        ApplicationManager.getApplication().invokeAndWait {
+            store.put("/test", "/checkout/removed", PendingPrompt("queued after the previous listing"))
+        }
+
+        controller.refreshBranches()
+        flush()
+
+        assertEquals(main, controller.current)
+        assertTrue(controller.model.isEmpty)
+        ApplicationManager.getApplication().invokeAndWait { assertNull(store.peek("/checkout/removed")) }
+    }
+
     fun `test creating without a prompt clears any old checkout incarnation prompt`() {
         val created = WorktreeDto("/checkout/reused", "reused", "reused", "/checkout/reused")
         val controller = controller()
         rpc.createResult = { CreateWorktreeResultDto(created) }
         ApplicationManager.getApplication().invokeAndWait {
-            service<PendingWorktreePrompt>().put(created.path, PendingPrompt("obsolete incarnation"))
+            service<PendingWorktreePrompt>().put("/test", created.path, PendingPrompt("obsolete incarnation"))
             controller.create("reused", "main")
         }
         flush()

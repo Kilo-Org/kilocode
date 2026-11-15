@@ -197,6 +197,9 @@ class WorktreeController(
             edt {
                 // A newer reload owns the model now; this older poll must not invalidate its PR state.
                 if (gen != generation.get()) return@edt
+                if (listing.worktrees.any { it.main }) {
+                    service<PendingWorktreePrompt>().reconcile(directory, listing.worktrees.map { it.path }, before)
+                }
                 if (branchesMoved(listing) == null) return@edt
                 LOG.info("worktree branches changed, reloading the list")
                 reload(listing, before)
