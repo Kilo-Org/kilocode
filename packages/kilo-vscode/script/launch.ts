@@ -298,7 +298,13 @@ async function packageVsix(out: string): Promise<string> {
 
 async function installVsix(path: string, app: string) {
   const cmd = codeCli(app)
-  await $`${cmd} --extensions-dir ${extDir} --user-data-dir ${userDir} --install-extension ${path} --force`.cwd(root)
+  // Bun shell loses quoting for shim paths with spaces (e.g. `C:\Program Files\nodejs\code.cmd`),
+  // so pass the arguments as an array instead.
+  const result = Bun.spawnSync(
+    [cmd, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--install-extension", path, "--force"],
+    { cwd: root, stderr: "pipe" },
+  )
+  if (result.exitCode !== 0) throw new Error(`Failed to install VSIX: ${result.stderr.toString().trim()}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -416,12 +422,17 @@ async function launch() {
     return
   }
 
+  // Do not use a shell here: on Windows `shell: true` joins the arguments into
+  // one unquoted command line, which breaks whenever the VS Code path or the
+  // workspace path contains spaces (e.g. "Microsoft VS Code", "My Projects").
+  // `windowsHide` is intentionally omitted: it maps to SW_HIDE in STARTUPINFO and
+  // would hide VS Code's own window. `app` is a GUI executable, so no console
+  // window is created anyway.
   const child = spawn(app, args, {
     cwd: workspace,
-    detached: !win,
+    detached: true,
     env,
     stdio: "ignore",
-    ...(win ? { shell: true } : {}),
   })
   child.unref()
 
