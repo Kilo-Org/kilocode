@@ -77,23 +77,29 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     private var items: List<ModelPicker.Item> = emptyList()
     private var workspace: ModelsWorkspaceDto? = null
     private var variant: String? = null
+    private var restored: PendingPrompt? = null
     @Volatile private var disposed = false
 
     @RequiresEdt
-    protected fun content(above: JComponent?, below: JComponent): JComponent {
+    protected fun content(above: JComponent?, below: JComponent, draft: PendingPrompt? = null): JComponent {
+        restored = draft
+        restored?.let { prompt.setText(it.text) }
         prompt.mode.onSelect = { item ->
+            restored = null
             agent = item.id
             syncSelection()
         }
         prompt.model.favorites = { app.favorites.value }
         prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
         prompt.model.onSelect = { item ->
+            restored = null
             model = item.key
             agent?.let { app.selectModel(it, item.provider, item.id) }
             syncReasoning(item)
             prompt.setAttachmentEnabled(local && item.attachment)
         }
         prompt.reasoning.onSelect = { item ->
+            restored = restored?.copy(variant = item.id)
             variant = item.id
             model?.let { app.selectVariant(it, item.id) }
         }
@@ -105,7 +111,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
             ui {
                 workspace = ws
                 items = modelItems(ws.providers).filter { local || it.provider == "kilo" }
-                agent = resolveSessionAgent(ws.agents, KiloPluginSettings.getAgent())
+                agent = resolveSessionAgent(ws.agents, restored?.agent ?: KiloPluginSettings.getAgent())
                 prompt.mode.setItems(modeItems(ws.agents?.agents), agent)
                 syncSelection()
                 prompt.setReady(ready)
@@ -135,7 +141,10 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
         val ws = workspace ?: return
         val first = items.firstOrNull() ?: return
         val id = agent
-        val current = if (id == null) {
+        val saved = restored?.let { draft ->
+            items.firstOrNull { it.provider == draft.provider && it.id == draft.model }
+        }
+        val current = saved ?: if (id == null) {
             first
         } else {
             val state = app.models.value
@@ -163,7 +172,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
 
     @RequiresEdt
     private fun syncReasoning(item: ModelPicker.Item) {
-        val saved = app.models.value.variant[item.key]?.takeIf { it in item.variants }
+        val saved = (restored?.variant ?: app.models.value.variant[item.key])?.takeIf { it in item.variants }
         variant = saved ?: item.variants.firstOrNull()
         prompt.reasoning.setItems(
             item.variants.map { ReasoningPicker.Item(it, it.replaceFirstChar { char -> char.titlecase() }) },

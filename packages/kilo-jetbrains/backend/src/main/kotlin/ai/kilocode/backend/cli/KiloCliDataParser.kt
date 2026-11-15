@@ -1069,6 +1069,7 @@ object KiloCliDataParser {
             "\"command\":${escape(command)}",
             "\"arguments\":${escape(args)}",
         )
+        prompt.messageID?.let { fields += "\"messageID\":${escape(it)}" }
         prompt.agent?.let { fields += "\"agent\":${escape(it)}" }
         prompt.variant?.let { fields += "\"variant\":${escape(it)}" }
         val pid = prompt.providerID

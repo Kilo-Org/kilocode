@@ -683,7 +683,9 @@ class AgentManagerPanel(
         val title = "Update from $parent"
         val text = worktreeBaseUpdatePrompt(item.path, parent, item.remote, item.parentBranchRecorded)
         if (!target.service<WorktreeBaseUpdatePrompts>().submit(item.path, text, title)) {
-            target.service<PendingWorktreePrompt>().put(item.path, PendingPrompt(text, injectedTitle = title))
+            service<PendingWorktreePrompt>().put(
+                controller.directory, item.path, PendingPrompt(text, injectedTitle = title),
+            )
         }
         open(item, focus = true)
     }
