@@ -50,6 +50,7 @@ Route requests through unified APIs with additional features:
 - **[TrustedRouter](/docs/ai-providers/trustedrouter)** - OpenAI-compatible access to attested routing, ZDR routing, and E2E encrypted model routes
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
 - **[DaoXE](/docs/ai-providers/daoxe)** - Connect multiple model families through one API
+- **[Tokenify](/docs/ai-providers/tokenify)** - OpenAI-compatible access to DeepSeek V4 and GLM models
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 - **[Eden AI](/docs/ai-providers/edenai)** - EU-based gateway with one key across vendors
 
