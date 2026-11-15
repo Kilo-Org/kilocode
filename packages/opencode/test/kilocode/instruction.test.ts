@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { describe, expect } from "bun:test"
+import { describe, expect, spyOn } from "bun:test"
 import path from "path"
 import { Effect, FileSystem, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
@@ -14,6 +14,7 @@ import { TestConfig } from "../fixture/config"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { Config } from "../../src/config/config"
+import * as Log from "@opencode-ai/core/util/log"
 
 const it = testEffect(
   Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), NodeFileSystem.layer, RuntimeFlags.layer(), testInstanceStoreLayer),
@@ -121,6 +122,113 @@ describe("Instruction.systemPaths KILO_CONFIG_DIR profile fallback", () => {
         provideInstruction({ home: globalTmp, config: globalTmp }),
         withConfigDir(undefined),
       )
+    }),
+  )
+})
+
+const withInstructions = (
+  global: Partial<Global.Interface>,
+  instructions: string[],
+  origins: Record<string, { trusted: boolean; source: string }>,
+) =>
+  <A, E, R>(self: Effect.Effect<A, E, R>) =>
+    self.pipe(
+      Effect.provide(
+        AppNodeBuilder.build(Instruction.node, [
+          [Config.node, TestConfig.layer({ get: () => Effect.succeed({ instructions, instruction_origins: origins }) })],
+          [Global.node, Global.layerWith(global)],
+        ]),
+      ),
+    )
+
+const warnings = () => {
+  const spy = spyOn(Log.create({ service: "instruction" }), "warn").mockImplementation(() => {})
+  return {
+    spy,
+    calls: (): Record<string, unknown>[] => spy.mock.calls.map((call) => ({ message: call[0], ...call[1] })),
+  }
+}
+
+describe("Instruction same-basename files", () => {
+  it.live("loads two MEMORY.md files at different paths", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpWithFiles({ ".agents/memory/MEMORY.md": "global memory" })
+      const project = yield* tmpWithFiles({ ".agents/memory/MEMORY.md": "project memory" })
+      const globalFile = path.join(home, ".agents/memory/MEMORY.md")
+      const projectFile = path.join(project, ".agents/memory/MEMORY.md")
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([
+          `Instructions from: ${globalFile}\nglobal memory`,
+          `Instructions from: ${projectFile}\nproject memory`,
+        ])
+      }).pipe(
+        provideInstance(project),
+        withInstructions(
+          { home, config: home },
+          ["~/.agents/memory/MEMORY.md", ".agents/memory/MEMORY.md"],
+          {
+            "~/.agents/memory/MEMORY.md": { trusted: true, source: "global" },
+            ".agents/memory/MEMORY.md": { trusted: false, source: "project" },
+          },
+        ),
+        withConfigDir(undefined),
+      )
+    }),
+  )
+})
+
+describe("Instruction skipped file warnings", () => {
+  it.live("warns when a project entry points outside the project root", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const outside = yield* tmpWithFiles({ "MEMORY.md": "outside memory" })
+      const project = yield* tmpdirScoped()
+      const file = path.join(outside, "MEMORY.md")
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([])
+      }).pipe(
+        provideInstance(project),
+        withInstructions({ home, config: home }, [file], { [file]: { trusted: false, source: "project" } }),
+        withConfigDir(undefined),
+      )
+
+      expect(logged.calls().filter((item) => item.path === file)).toStrictEqual([
+        {
+          message: "instruction file skipped",
+          path: file,
+          reason: "blocked: outside project config scope",
+          detail: expect.stringContaining("blocked file reference outside project config scope"),
+        },
+      ])
+    }),
+  )
+
+  it.live("warns when a configured entry matches no file", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const project = yield* tmpdirScoped()
+      const entry = path.join(project, "missing", "NOPE.md")
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([])
+      }).pipe(
+        provideInstance(project),
+        withInstructions({ home, config: home }, [entry], { [entry]: { trusted: true, source: "global" } }),
+        withConfigDir(undefined),
+      )
+
+      expect(logged.calls().filter((item) => item.path === entry)).toStrictEqual([
+        { message: "instruction file skipped", path: entry, reason: "no matching file" },
+      ])
     }),
   )
 })

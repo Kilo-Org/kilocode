@@ -111,7 +111,7 @@ const layer: Layer.Layer<
 
     const read = Effect.fnUntraced(function* (filepath: string, origin?: KilocodeMarkdown.Source) {
       const opts = yield* options(filepath, origin)
-      return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts).catch(() => ""))
+      return yield* Effect.promise(() => KilocodeInstruction.readOrWarn(filepath, opts))
     })
     // kilocode_change end
 
@@ -179,6 +179,7 @@ const layer: Layer.Layer<
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
           matches.forEach((item) => add(item, origin))
+          if (matches.length === 0) KilocodeInstruction.unmatched(raw) // kilocode_change
         }
       }
 
