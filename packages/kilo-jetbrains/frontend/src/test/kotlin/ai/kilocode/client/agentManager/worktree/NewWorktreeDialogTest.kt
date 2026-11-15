@@ -663,12 +663,12 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertNull(taken().section)
     }
 
-    fun `test section renderer uses titles and palette colors and clears the root icon`() {
+    fun `test section renderer uses titles and palette colors and reserves the root icon width`() {
         open(sections = sections)
 
         edt {
             assertEquals(0, section().selectedIndex)
-            sections.forEachIndexed { index, item ->
+            val widths = sections.mapIndexed { index, item ->
                 val cell = sectionCell(index + 1)
                 assertEquals(item.title, cell.toString())
                 val icon = requireNotNull(cell.icon)
@@ -680,14 +680,12 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                     graphics.dispose()
                 }
                 assertEquals(ActiveTreeColors.color(item.color)?.rgb, image.getRGB(image.width / 2, image.height / 2))
+                icon.iconWidth
             }
             val root = sectionCell(0)
+            val rootIcon = requireNotNull(root.icon)
             assertEquals(KiloBundle.message("agentManager.section.none"), root.toString())
-            assertEquals(
-                "The root option reserves the section icon width",
-                requireNotNull(sectionCell(1).icon).iconWidth,
-                requireNotNull(root.icon).iconWidth,
-            )
+            assertEquals("The root option reserves the section icon width", widths.first(), rootIcon.iconWidth)
         }
     }
 
