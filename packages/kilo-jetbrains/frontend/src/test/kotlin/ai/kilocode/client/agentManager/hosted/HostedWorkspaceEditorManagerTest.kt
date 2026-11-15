@@ -134,9 +134,6 @@ class HostedWorkspaceEditorManagerTest : BasePlatformTestCase() {
     }
 
     private class RecordingHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
-        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
-        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
-
         val starts = mutableListOf<Pair<HostedWorkspaceRefDto, HostedStartSessionDto>>()
         val session = HostedWorkspaceSessionDto(
             id = HostedIDs.session(ref.providerID, ref.workspaceID, "ses_new"),

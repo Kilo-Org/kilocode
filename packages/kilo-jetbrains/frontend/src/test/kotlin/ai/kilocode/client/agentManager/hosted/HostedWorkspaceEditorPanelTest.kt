@@ -844,9 +844,6 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     }
 
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
-        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
-        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
-
         val events = MutableSharedFlow<HostedSystemEventDto>(replay = 16)
         var collectors = 0
         var active = 0

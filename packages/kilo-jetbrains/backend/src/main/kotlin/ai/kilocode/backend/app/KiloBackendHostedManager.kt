@@ -24,7 +24,6 @@ import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
-import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -476,16 +475,6 @@ class KiloBackendHostedManager(
                 effectiveDefaultProfileID = root.string("effectiveDefaultProfileID"),
             )
         }
-
-    suspend fun workspacePullRequest(
-        ref: HostedWorkspaceRefDto,
-        organizationID: String?,
-    ): HostedWorkspacePullRequestDto = pullRequest(http, base, ref, organizationID, refresh = false)
-
-    suspend fun refreshWorkspacePullRequest(
-        ref: HostedWorkspaceRefDto,
-        organizationID: String?,
-    ): HostedWorkspacePullRequestDto = pullRequest(http, base, ref, organizationID, refresh = true)
 
     suspend fun setPersonalDefaultProfile(profileID: String, organizationID: String?): HostedProfileDefaultDto =
         withContext(Dispatchers.IO) {
