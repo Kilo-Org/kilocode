@@ -626,6 +626,10 @@ class PromptPanel(
     @RequiresEdt
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
+    /** A cleared editor can still own a submission being prepared or awaiting persistence. */
+    @RequiresEdt
+    fun hasInput(): Boolean = hasDraft() || submitting || lastSubmission != null
+
     @RequiresEdt
     fun attachments(): List<PromptAttachment> = attachments.toList()
 
@@ -702,9 +706,14 @@ class PromptPanel(
         syncHighlights()
     }
 
-    // Puts the most recently submitted prompt back in the editor after the server rejected it
-    // or the send failed, so the user doesn't lose what they typed. A no-op once consumed, or
-    // if the user already started a new draft in the meantime (we must not clobber that).
+    // Programmatic sends must retain the same fallback as submissions from the editor.
+    @RequiresEdt
+    fun retainSubmission(text: String, items: List<PromptAttachment> = emptyList()) {
+        lastSubmission = text to items
+        restoredSubmission = null
+    }
+
+    // Restore after rejection without clobbering a draft the user has already started.
     @RequiresEdt
     fun restoreLastSubmission() {
         val (text, items) = lastSubmission ?: return
@@ -1030,7 +1039,7 @@ class PromptPanel(
                     if (project.isDisposed) return@withContext
                     val parts = files + mentioned
                     LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
-                    lastSubmission = txt to items
+                    retainSubmission(txt, items)
                     onSend(txt, parts)
                 }
             } catch (e: CancellationException) {

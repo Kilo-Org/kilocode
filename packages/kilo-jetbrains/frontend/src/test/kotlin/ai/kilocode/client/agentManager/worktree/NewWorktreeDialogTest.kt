@@ -27,6 +27,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
+import com.intellij.openapi.components.service
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
@@ -39,6 +40,7 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.ui.tabs.JBTabs
 import com.intellij.ui.tabs.TabInfo
 import com.intellij.util.ui.UIUtil
+import com.intellij.util.xmlb.XmlSerializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -83,6 +85,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         sessionRpc = FakeSessionRpcApi()
         KiloPluginSettings.unsetAgent()
         KiloPluginSettings.unsetFetchWorktreeBase()
+        edt { service<PendingWorktreePrompt>().loadState(PendingWorktreePrompt.State()) }
     }
 
     override fun tearDown() {
@@ -93,6 +96,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             dialog = null
             scope.cancel()
             KiloPluginSettings.unsetAgent()
+            edt { service<PendingWorktreePrompt>().loadState(PendingWorktreePrompt.State()) }
         } finally {
             super.tearDown()
         }
@@ -233,6 +237,56 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
         open()
         edt { assertFalse(fetch().isSelected) }
+    }
+
+    fun `test submission journals prompt and selection before returning to the caller`() {
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            mode().onSelect(ModePicker.Item("plan", "Plan"))
+            reasoning().onSelect(ReasoningPicker.Item("high", "High"))
+            prompt().setText("keep this creation draft")
+            submit()
+        }
+
+        val plan = taken() as NewWorktreePlan.Create
+        val draft = edt { requireNotNull(service<PendingWorktreePrompt>().draft("/test")) }
+        assertEquals(plan.prompt, draft.prompt)
+        assertEquals(plan.branch, draft.branch)
+        assertEquals(plan.base, draft.base)
+        assertNull(draft.path)
+    }
+
+    fun `test failed creation draft restores exact choices after IDE state round trip`() {
+        val payload = PendingPrompt("retry after restart", "plan", "kilo", "gpt-5", "high")
+        val id = edt {
+            val store = service<PendingWorktreePrompt>()
+            val id = store.remember("/test", "feature/retry", "release", payload, false)
+            val xml = XmlSerializer.serialize(store.getState())
+            store.loadState(XmlSerializer.deserialize(xml, PendingWorktreePrompt.State::class.java))
+            id
+        }
+        KiloPluginSettings.setAgent("build")
+        app.selectModel("build", "kilo", "opus")
+        app.selectModel("plan", "kilo", "opus")
+        app.selectVariant("kilo/gpt-5", "low")
+
+        open(branches = listOf("main", "release"))
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            assertEquals(payload.text, prompt().text())
+            assertEquals("plan", mode().selectedForTest()?.id)
+            assertEquals("kilo/gpt-5", model().selectionKeyForTest())
+            assertEquals("high", reasoning().selectedForTest()?.id)
+            assertEquals("release", (combo() as BranchPicker).resolve())
+            assertFalse(fetch().isSelected)
+            submit()
+        }
+
+        val plan = taken() as NewWorktreePlan.Create
+        assertEquals("feature/retry", plan.branch)
+        assertEquals(payload, plan.prompt)
+        assertEquals(id, edt { service<PendingWorktreePrompt>().draft("/test")?.id })
     }
 
     fun `test creating sends the visible reasoning fallback instead of an invalid saved value`() {
@@ -706,8 +760,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 origin,
                 app,
                 workspaces,
-                sections,
-                section,
+                sections = sections,
+                section = section,
             )
         }
     }

@@ -290,7 +290,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertSame(view.hierarchy.entries.getValue(section.key), view.hierarchy.entries.getValue(created.id).parent)
             assertEquals(created.id, (view.hierarchy.entries.getValue(section.key).firstChild as ActiveEntry).key)
             assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(created.id))
-            assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text)
+            assertEquals("build it", service<PendingWorktreePrompt>().peek(created.path)?.prompt?.text)
         }
         assertFalse(PropertiesComponent.getInstance(project).getValue("kilo.agentManager.layout")!!.contains(pending.id))
     }
@@ -361,6 +361,44 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("show"), order)
         assertEquals(0, edt { controller.model.size })
         assertTrue(rpc.creates.isEmpty())
+    }
+
+    fun `test queued base update belongs to its repository and is pruned after external deletion`() {
+        val store = PendingWorktreePrompt()
+        ApplicationManager.getApplication()
+            .replaceService(PendingWorktreePrompt::class.java, store, testRootDisposable)
+        project.replaceService(
+            KiloSessionService::class.java,
+            KiloSessionService(project, coroutines.scope, FakeSessionRpcApi()),
+            testRootDisposable,
+        )
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val item = WorktreeDto(
+            "/checkout/feature", "feature", "feature", "/checkout/feature", parentBranch = "main",
+        )
+        rpc.listed += listOf(main, item)
+        val controller = WorktreeController(service, "/repo/", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            project.service<KiloVfsManager>().close(WorktreeSessionEditorKind.ID, worktreeSessionParams(item))
+            assertTrue(panel.canUpdateFromBase(item))
+            panel.updateFromBase(item)
+        }
+
+        val queued = edt { requireNotNull(store.peek(item.path)) }
+        assertEquals("/repo", queued.directory)
+        assertEquals("Update from main", queued.injectedTitle)
+        assertTrue(queued.text.contains("main"))
+        rpc.listed.remove(item)
+        edt { controller.reload() }
+        flush()
+
+        assertNull(edt { store.peek(item.path) })
+        assertEquals(main, edt { controller.current })
+        assertTrue(edt { controller.model.isEmpty })
     }
 
     fun `test Add Local opens the existing worktree dialog`() {

@@ -85,6 +85,7 @@ internal class NewWorktreeDialog @RequiresEdt constructor(
     private val origin: String? = null,
     app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
+    private val draft: PendingWorktreePrompt.Entry? = service<PendingWorktreePrompt>().draft(directory),
     private val sections: List<AgentManagerLayout.Section> = emptyList(),
     private val section: String? = null,
 ) : AgentManagerDialog(parent, project, directory, true, app, workspaces), NewWorktreeHandle {
@@ -93,11 +94,11 @@ internal class NewWorktreeDialog @RequiresEdt constructor(
     private val name = JBTextField(NAME_COLUMNS).apply {
         emptyText.text = KiloBundle.message("worktree.dialog.name.placeholder")
     }
-    private val branch = JBTextField(suggestedName)
-    private val base = BranchPicker(branches, defaultBase)
+    private val branch = JBTextField(draft?.branch ?: suggestedName)
+    private val base = BranchPicker(branches, draft?.base ?: defaultBase)
     private val fetch = JBCheckBox(
         KiloBundle.message("worktree.configure.fetchBase"),
-        KiloPluginSettings.getFetchWorktreeBase(),
+        draft?.fetchBase ?: KiloPluginSettings.getFetchWorktreeBase(),
     )
     private val url = JBTextField().apply {
         emptyText.text = KiloBundle.message("worktree.import.pr.placeholder")
@@ -177,7 +178,7 @@ internal class NewWorktreeDialog @RequiresEdt constructor(
         return tabs.component
     }
 
-    private fun newContent(): JComponent = content(name, fields())
+    private fun newContent(): JComponent = content(name, fields(), draft?.prompt)
 
     private fun prContent(): JComponent = importContent(SettingsStackedRow(
         KiloBundle.message("worktree.import.pr.section"),
@@ -229,7 +230,9 @@ internal class NewWorktreeDialog @RequiresEdt constructor(
         val target = base.resolve()
         if (!validBase(target)) return
         KiloPluginSettings.setFetchWorktreeBase(fetch.isSelected)
-        plan = NewWorktreePlan.Create(resolved, target, pending(text), fetch.isSelected, selectedSection)
+        val payload = pending(text)
+        payload?.let { service<PendingWorktreePrompt>().remember(directory, resolved, target, it, fetch.isSelected) }
+        plan = NewWorktreePlan.Create(resolved, target, payload, fetch.isSelected, selectedSection)
         close(OK_EXIT_CODE)
     }
 
