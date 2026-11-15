@@ -1,9 +1,16 @@
 import { describe, expect, it } from "bun:test"
-import fs from "node:fs"
-import path from "node:path"
-import { refreshPanelProjectDirectory, resolvePanelProjectDirectory } from "../../src/project-directory"
+import { PanelProjectDirectory, resolvePanelProjectDirectory } from "../../src/project-directory"
 
-const SETTINGS = fs.readFileSync(path.resolve(import.meta.dir, "../../src/SettingsEditorProvider.ts"), "utf-8")
+/** Mimics the provider: records every directory applied to the panel. */
+function setup(initial: string | null, state: { resolved: string | null }) {
+  const applied: string[] = []
+  const panel = new PanelProjectDirectory(
+    initial,
+    () => state.resolved,
+    (dir) => applied.push(dir),
+  )
+  return { panel, applied }
+}
 
 describe("settings panel project directory refresh (#16179)", () => {
   it("a panel restored with no workspace folders resolves null", () => {
@@ -11,21 +18,44 @@ describe("settings panel project directory refresh (#16179)", () => {
     expect(resolvePanelProjectDirectory(undefined, [])).toBeNull()
   })
 
-  it("adopts the single workspace folder once it becomes available", () => {
-    const resolved = resolvePanelProjectDirectory(undefined, [{ uri: { fsPath: "/repo" } }])
-    expect(refreshPanelProjectDirectory(resolved)).toBe("/repo")
+  it("adopts the directory once it becomes resolvable (null to resolved)", () => {
+    const state = { resolved: null as string | null }
+    const { panel, applied } = setup(null, state)
+    panel.refresh()
+    expect(applied).toEqual([])
+    state.resolved = "/repo"
+    panel.refresh()
+    expect(applied).toEqual(["/repo"])
   })
 
-  it("never downgrades to null for an ambiguous multi-root workspace", () => {
-    const resolved = resolvePanelProjectDirectory(undefined, [{ uri: { fsPath: "/a" } }, { uri: { fsPath: "/b" } }])
-    expect(refreshPanelProjectDirectory(resolved)).toBeUndefined()
+  it("does not apply anything while still unresolved", () => {
+    const { panel, applied } = setup(null, { resolved: null })
+    panel.refresh()
+    panel.refresh()
+    expect(applied).toEqual([])
   })
 
-  it("SettingsEditorProvider re-resolves on webviewReady and workspace folder changes", () => {
-    const ready = SETTINGS.indexOf('msg.type === "webviewReady"')
-    expect(ready).toBeGreaterThan(-1)
-    expect(SETTINGS.slice(ready, ready + 120)).toContain("this.refreshProjectDirectory(view)")
-    expect(SETTINGS).toContain("vscode.workspace.onDidChangeWorkspaceFolders(() => this.refreshProjectDirectory(view))")
-    expect(SETTINGS).toContain("foldersDisposable.dispose()")
+  it("keeps an already-resolved project bound when the active editor moves to another project", () => {
+    const state = { resolved: "/b" as string | null }
+    const { panel, applied } = setup("/a", state)
+    panel.refresh()
+    expect(applied).toEqual([])
+  })
+
+  it("keeps the recovered project bound on later refreshes", () => {
+    const state = { resolved: "/a" as string | null }
+    const { panel, applied } = setup(null, state)
+    panel.refresh()
+    state.resolved = "/b"
+    panel.refresh()
+    expect(applied).toEqual(["/a"])
+  })
+
+  it("an explicit bind() of null re-enables recovery", () => {
+    const state = { resolved: "/b" as string | null }
+    const { panel, applied } = setup("/a", state)
+    panel.bind(null)
+    panel.refresh()
+    expect(applied).toEqual(["/b"])
   })
 })

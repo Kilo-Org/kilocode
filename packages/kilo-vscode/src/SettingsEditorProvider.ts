@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
-import { refreshPanelProjectDirectory, resolvePanelProjectDirectory } from "./project-directory"
+import { PanelProjectDirectory, resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import type { AgentManagerSettingsHandler } from "./kilo-provider/options"
@@ -32,6 +32,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
   /** Pending deep-link focus (e.g. an MCP server name), consumed after the first navigate it is sent with. */
   private focuses = new Map<PanelView, string>()
   private projects = new Map<PanelView, string>()
+  private directories = new Map<PanelView, PanelProjectDirectory>()
   private remoteService: RemoteStatusService | null = null
 
   constructor(
@@ -49,19 +50,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
         ? vscode.workspace.getWorkspaceFolder(editor.document.uri)?.uri.fsPath
         : undefined
     return resolvePanelProjectDirectory(active, vscode.workspace.workspaceFolders)
-  }
-
-  /**
-   * Re-resolve the project directory of an open panel. A panel created or
-   * restored before the workspace or Agent Manager project was resolvable
-   * captured null, which disables project scope (e.g. Project memory). Only
-   * upgrade to a resolved directory; never downgrade to null, so a genuinely
-   * ambiguous multi-root workspace keeps its last known project.
-   */
-  private refreshProjectDirectory(view: PanelView): void {
-    const directory = refreshPanelProjectDirectory(this.getProjectDirectory(this.projects.get(view)))
-    if (directory === undefined) return
-    this.providers.get(view)?.setProjectDirectory(directory)
   }
 
   /** Extract the PanelView from a viewType string like "kilo-code.new.settingsPanel". */
@@ -83,6 +71,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     const projectDirectory = this.getProjectDirectory(projectId)
     const existing = this.panels.get(view)
     if (existing) {
+      this.directories.get(view)?.bind(projectDirectory)
       this.providers.get(view)?.setProjectDirectory(projectDirectory)
       existing.reveal(vscode.ViewColumn.Active)
       this.providers.get(view)?.postMessage({
@@ -152,6 +141,15 @@ export class SettingsEditorProvider implements vscode.Disposable {
     }
     provider.resolveWebviewPanel(panel)
 
+    // A panel restored before its project was resolvable holds null. Recover
+    // only from that state; a resolved project stays bound until openPanel().
+    const directory = new PanelProjectDirectory(
+      projectDirectory,
+      () => this.getProjectDirectory(this.projects.get(view)),
+      (next) => provider.setProjectDirectory(next),
+    )
+    this.directories.set(view, directory)
+
     // Listen for closePanel from the webview (back button in panel mode)
     const closePanelDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "closePanel") {
@@ -163,7 +161,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // "Developer: Reload Webviews" which re-creates the JS context).
     const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "webviewReady") {
-        this.refreshProjectDirectory(view)
+        directory.refresh()
         const focus = this.focuses.get(view)
         this.focuses.delete(view)
         provider.postMessage({
@@ -178,7 +176,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     })
 
     // Workspace folders can arrive after a panel was restored at startup.
-    const foldersDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => this.refreshProjectDirectory(view))
+    const foldersDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => directory.refresh())
 
     // Remember the active settings tab so it survives webview reloads.
     const tabDisposable = panel.webview.onDidReceiveMessage((msg) => {
@@ -204,6 +202,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       this.subtabs.delete(view)
       this.focuses.delete(view)
       this.projects.delete(view)
+      this.directories.delete(view)
     })
   }
 
@@ -225,5 +224,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.subtabs.clear()
     this.focuses.clear()
     this.projects.clear()
+    this.directories.clear()
   }
 }

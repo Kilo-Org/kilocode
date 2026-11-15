@@ -69,12 +69,32 @@ export function resolveProjectDirectory(
 }
 
 /**
- * Decide whether an open panel should adopt a freshly resolved project
- * directory. A panel created or restored before the workspace or project was
- * resolvable holds `null` (project scope disabled). Adopt any resolved
- * directory, but never downgrade to `null`, so an ambiguous multi-root
- * workspace keeps the last known project.
+ * Tracks the project directory bound to an open standalone panel.
+ *
+ * A panel created or restored before the workspace or Agent Manager project
+ * was resolvable holds `null` (project scope disabled). `refresh()` recovers
+ * only from that unresolved state. Once a directory is bound it stays bound
+ * until an explicit open request calls `bind()`, so background events never
+ * move a panel to another project or invalidate its Settings draft.
  */
-export function refreshPanelProjectDirectory(resolved: string | null): string | undefined {
-  return resolved ?? undefined
+export class PanelProjectDirectory {
+  constructor(
+    private current: string | null,
+    private readonly resolve: () => string | null,
+    private readonly apply: (directory: string) => void,
+  ) {}
+
+  /** Record an explicitly requested directory (initial open or openPanel). */
+  bind(directory: string | null): void {
+    this.current = directory
+  }
+
+  /** Adopt a newly resolvable directory, only while the panel is unresolved. */
+  refresh(): void {
+    if (this.current !== null) return
+    const next = this.resolve()
+    if (next === null) return
+    this.current = next
+    this.apply(next)
+  }
 }
