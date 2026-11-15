@@ -46,7 +46,7 @@ open class WorktreeSessionEditorManager(
     project: Project,
     private val worktree: Workspace,
     private val list: WorktreeSessionListController,
-    private val session: String? = null,
+    private var session: String? = null,
     private val del: (String, (Boolean, String?) -> Unit) -> Unit = list::delete,
     create: (Project, Workspace, SessionManager, SessionRef?, UiTimerSource) -> SessionUi =
         { project, workspace, manager, ref, timers ->
@@ -159,26 +159,49 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     private fun startSessions() {
-        list.reload(failed = {
-            if (Disposer.isDisposed(this)) return@reload
-            if (currentUi() == null) showBlank()
-            onListChanged?.invoke()
-        }) {
-            if (Disposer.isDisposed(this)) return@reload
-            val target = service<PendingWorktreePrompt>().peek(worktree.directory)?.session ?: session
-            if (target != null) {
-                openSession(SessionRef.Local(target), false)
-                consumeStartupPrompts()
-                return@reload
-            }
-            val dto = latest()
-            if (dto != null) {
-                openSession(SessionRef.Local(dto), false)
-                consumeStartupPrompts()
-            } else {
-                newSession(false)
-            }
+        list.reload(failed = { restoreSessions(false) }) { restoreSessions(true) }
+    }
+
+    @RequiresEdt
+    private fun restoreSessions(listed: Boolean) {
+        if (Disposer.isDisposed(this)) return
+        val store = service<PendingWorktreePrompt>()
+        val entry = store.peek(worktree.directory)
+        val saved = entry?.session
+        if (saved == null || (listed && list.session(saved) != null)) {
+            openStartup(session ?: saved, listed)
+            return
         }
+        session?.takeUnless { it == saved || it in deleting }?.let { openSession(SessionRef.Local(it), false) }
+        // Root-only lists can omit a live session. Verify it before trusting the persisted binding.
+        list.get(saved) { dto ->
+            if (Disposer.isDisposed(this)) return@get
+            val current = store.peek(worktree.directory)
+            if (current?.id == entry.id && dto == null) {
+                store.release(worktree.directory, saved)
+                forceSession(saved)
+                if (session == saved) session = null
+            }
+            val target = dto?.id?.takeIf { store.peek(worktree.directory)?.session == it }
+            openStartup(session ?: target, listed)
+        }
+    }
+
+    @RequiresEdt
+    private fun openStartup(target: String?, listed: Boolean) {
+        val ref = target?.takeUnless { it in deleting }?.let { SessionRef.Local(it) }
+            ?: latest()?.takeIf { listed }?.let { SessionRef.Local(it) }
+        if (ref != null) {
+            openSession(ref, false)
+            consumeStartupPrompts()
+            return
+        }
+        if (listed) {
+            newSession(false)
+            return
+        }
+        if (currentUi() == null) showBlank()
+        onListChanged?.invoke()
     }
 
     /**
@@ -413,6 +436,12 @@ open class WorktreeSessionEditorManager(
         active.forEach { id ->
             val name = names[id] ?: title(id)
             del(id) { ok, err ->
+                val store = service<PendingWorktreePrompt>()
+                if (ok && session == id) session = null
+                if (ok && store.peek(worktree.directory)?.session == id) {
+                    store.release(worktree.directory, id)
+                    if (currentUi()?.id !in active) consumePendingPrompt()
+                }
                 deleting.remove(id)
                 onListChanged?.invoke()
                 if (!ok) notify(KiloBundle.message("worktree.session.delete.failed.title", name), err)
@@ -420,7 +449,10 @@ open class WorktreeSessionEditorManager(
         }
         active.forEach(::forceSession)
         if (key in active) {
-            if (target != null) openSession(SessionRef.Local(target)) else newSession()
+            if (target != null) {
+                openSession(SessionRef.Local(target))
+                consumePendingPrompt()
+            } else newSession()
         }
     }
 

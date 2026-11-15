@@ -37,6 +37,8 @@ import com.intellij.testFramework.replaceService
 import java.awt.GraphicsEnvironment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.swing.event.ListDataEvent
@@ -524,6 +526,27 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test cancellation before creation starts releases its draft protection`() {
+        val job = Job().apply { cancel() }
+        val scope = CoroutineScope(coroutines.scope.coroutineContext + job)
+        val controller = WorktreeController(service, "/test", scope, telemetry = { _, _ -> })
+        val prompt = PendingPrompt("cancelled before start")
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.create("cancelled", "main", prompt = prompt)
+        }
+        flush()
+
+        assertTrue(controller.model.isEmpty)
+        assertTrue(rpc.creates.isEmpty())
+        ApplicationManager.getApplication().invokeAndWait {
+            val store = service<PendingWorktreePrompt>()
+            assertEquals(prompt, store.draft("/test")?.prompt)
+            store.remember("/test", "retry", "main", PendingPrompt("replacement"))
+            assertEquals(1, store.getState().entries.size)
+        }
+    }
+
     fun `test failed creation retains its complete draft across reload and retry`() {
         val prompt = PendingPrompt("retry this creation", "plan", "kilo", "gpt-5", "high")
         val created = WorktreeDto("/wt/retry-prompt", "retry-prompt", "retry-prompt", "/wt/retry-prompt")
@@ -656,6 +679,9 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         val controller = controller()
         controller.reload()
         flush()
+        ApplicationManager.getApplication().invokeAndWait {
+            service<PendingWorktreePrompt>().put(item.path, PendingPrompt("obsolete after deletion"))
+        }
 
         var success = false
         val removed = mutableListOf<WorktreeDto>()
@@ -668,6 +694,9 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(0, controller.model.size)
         assertTrue(success)
         assertEquals(listOf(item), removed)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(service<PendingWorktreePrompt>().peek(item.path))
+        }
     }
 
     fun `test remove waits for process release and ignores duplicate removal`() {
@@ -729,6 +758,9 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         val controller = controller()
         controller.reload()
         flush()
+        ApplicationManager.getApplication().invokeAndWait {
+            service<PendingWorktreePrompt>().put(item.path, PendingPrompt("retain after failed deletion"))
+        }
 
         val failures = mutableListOf<RemoveWorktreeResultDto>()
         controller.remove(controller.model.getElementAt(0), onFailure = { failures.add(it) })
@@ -740,6 +772,72 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertNull(controller.progress(item.id))
         assertEquals(1, failures.size)
         assertTrue(failures.first().locked)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals("retain after failed deletion", service<PendingWorktreePrompt>().peek(item.path)?.text)
+        }
+    }
+
+    fun `test only authoritative repository listings prune missing worktree prompts`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val controller = controller()
+        val store = service<PendingWorktreePrompt>()
+        ApplicationManager.getApplication().invokeAndWait {
+            val id = requireNotNull(store.remember("/test", "removed", "main", PendingPrompt("obsolete")))
+            store.bind(id, "/checkout/removed")
+        }
+        controller.reload()
+        flush()
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNotNull(store.peek("/checkout/removed"))
+        }
+
+        rpc.listed += main
+        controller.reload()
+        flush()
+
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(store.peek("/checkout/removed"))
+        }
+    }
+
+    fun `test an older listing from another controller cannot prune a newly created prompt`() {
+        val created = WorktreeDto("/checkout/new", "new", "new", "/checkout/new")
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val listing = CompletableDeferred<Unit>()
+        val entered = CompletableDeferred<Unit>()
+        rpc.beforeList = { entered.complete(Unit); listing.await() }
+        rpc.createResult = { CreateWorktreeResultDto(created) }
+        val first = controller()
+        first.reload()
+        flush()
+        assertTrue(entered.isCompleted)
+        val second = controller()
+        val prompt = PendingPrompt("keep the newer prompt", "plan", "kilo", "gpt-5", "high")
+        ApplicationManager.getApplication().invokeAndWait { second.create("new", "main", prompt = prompt) }
+        flush()
+        listing.complete(Unit)
+        flush()
+
+        assertEquals(listOf(created), second.model.items)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals(prompt, service<PendingWorktreePrompt>().peek(created.path)?.prompt)
+        }
+    }
+
+    fun `test creating without a prompt clears any old checkout incarnation prompt`() {
+        val created = WorktreeDto("/checkout/reused", "reused", "reused", "/checkout/reused")
+        val controller = controller()
+        rpc.createResult = { CreateWorktreeResultDto(created) }
+        ApplicationManager.getApplication().invokeAndWait {
+            service<PendingWorktreePrompt>().put(created.path, PendingPrompt("obsolete incarnation"))
+            controller.create("reused", "main")
+        }
+        flush()
+
+        assertEquals(listOf(created), controller.model.items)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertNull(service<PendingWorktreePrompt>().peek(created.path))
+        }
     }
 
     fun `test refused nested remove keeps the row and surfaces the error`() {
@@ -932,6 +1030,32 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("feature/x", req.branch)
         assertTrue("should check out an existing branch", req.existingBranch)
         assertEquals(1, controller.model.size)
+    }
+
+    fun `test successful import reconciles branch choices before callbacks and rejects older metadata`() {
+        val gate = CompletableDeferred<Unit>()
+        val entered = CompletableDeferred<Unit>()
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.branchesList += listOf("main", "feature/x", "develop")
+        val controller = controller()
+        controller.reload()
+        flush()
+        assertTrue("the imported branch starts eligible", "feature/x" in controller.branches)
+        rpc.beforeList = { entered.complete(Unit); gate.await() }
+        controller.reload()
+        flush()
+        assertTrue(entered.isCompleted)
+        val choices = mutableListOf<List<String>>()
+        controller.onCreated = { choices += controller.branches }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.importBranch("feature/x") }
+        flush()
+        assertEquals(listOf(listOf("main", "develop")), choices)
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf("main", "develop"), controller.branches)
+        assertEquals("feature/x", controller.model.items.single().branch)
     }
 
     fun `test import pr creates a worktree from the pr url`() {

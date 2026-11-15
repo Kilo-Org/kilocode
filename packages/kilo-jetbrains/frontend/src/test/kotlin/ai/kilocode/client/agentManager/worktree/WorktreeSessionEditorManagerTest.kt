@@ -21,7 +21,11 @@ import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
+import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.testing.pumpEdt
+import ai.kilocode.rpc.KiloSessionRpcApi
+import ai.kilocode.rpc.dto.AgentDto
+import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -35,6 +39,10 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ProviderDto
+import ai.kilocode.rpc.dto.ProvidersDto
+import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -243,6 +251,241 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         edt { manager.start() }
         waitUntil { rpc.prompts.size == 1 }
         assertEquals("initial prompt", rpc.prompts.single().third.parts.first().text)
+    }
+
+    fun `test list failure opens the explicitly supplied continued fork without a rival session`() {
+        val fork = session("ses_continued", updated = 1.0)
+        rpc.forked = fork
+        rpc.listThrows = IllegalStateException("list unavailable")
+        val controller = WorktreeSessionListController(sessions, DIR, coroutines.scope, telemetry = { _, _ -> })
+        lateinit var editor: WorktreeSessionEditorManager
+
+        edt {
+            controller.fork("ses_source", null) { dto, err ->
+                assertNull(err)
+                editor = manager(controller = controller, session = requireNotNull(dto).id)
+                editor.start()
+            }
+        }
+        flush()
+
+        assertEquals(listOf(FakeSessionRpcApi.ForkCall("ses_source", DIR, null)), rpc.forks)
+        assertEquals(fork.id, edt { editor.currentKey() })
+        assertEquals(listOf(DIR to fork.id), created)
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test supplied startup session takes priority over a valid journal binding`() {
+        val entry = bound("ses_saved")
+        rpc.listed += session("ses_saved", updated = 1.0)
+        rpc.listed += session("ses_supplied", updated = 2.0)
+        val manager = manager(session = "ses_supplied")
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals("ses_supplied", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_supplied"), created)
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test list failure still prioritizes supplied session over a resolved journal binding`() {
+        val entry = bound(rpc.session.id)
+        rpc.listThrows = IllegalStateException("list unavailable")
+        val gate = CompletableDeferred<Unit>()
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun get(id: String, directory: String): SessionDto {
+                if (id == entry.session) gate.await()
+                return rpc.get(id, directory)
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+        val manager = manager(session = "ses_supplied")
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals("ses_supplied", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_supplied"), created)
+        assertTrue(rpc.prompts.isEmpty())
+        gate.complete(Unit)
+        flush()
+
+        assertEquals("ses_supplied", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_supplied"), created)
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test saved session omitted from root list is resolved before opening`() {
+        val entry = bound(rpc.session.id)
+        rpc.listed += session("ses_unrelated", updated = 100.0)
+        val manager = manager()
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals(entry.session, edt { manager.currentKey() })
+        assertEquals(listOf(DIR to entry.session), created)
+        assertEquals("initial prompt", edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test deleted bound session recovers selected prompt in existing session without automatic resend`() {
+        val payload = PendingPrompt("recover this draft", "plan", "kilo", "gpt-5", "high")
+        val agents = listOf(AgentDto("code", mode = "code"), AgentDto("plan", mode = "plan"))
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(
+            agents = AgentsDto(agents, agents, "code"),
+            providers = ProvidersDto(
+                listOf(ProviderDto("kilo", "Kilo", models = mapOf(
+                    "gpt-5" to ModelDto("gpt-5", "GPT-5", variants = listOf("low", "high")),
+                ))),
+                listOf("kilo"),
+                emptyMap(),
+            ),
+        )
+        val entry = bound("ses_deleted", payload, attempted = false)
+        val sending = CompletableDeferred<Unit>()
+        missing("ses_deleted", sending)
+        rpc.session = session("ses_existing", updated = 2.0)
+        rpc.listed += rpc.session
+        val manager = manager()
+
+        edt { manager.start() }
+        flush()
+
+        val recovered = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertEquals(rpc.session.id, edt { manager.currentKey() })
+        assertEquals(listOf(DIR to rpc.session.id), created)
+        assertEquals(payload.text, edt { prompt().text() })
+        assertEquals(payload, recovered.prompt)
+        assertEquals(rpc.session.id, recovered.session)
+        assertTrue(recovered.attempted)
+        assertFalse(entry.id == recovered.id)
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, entry.id)))
+        assertNotNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+
+        edt {
+            assertTrue(prompt().isSendEnabled)
+            prompt().send()
+        }
+        await(sending)
+
+        val sent = rpc.prompts.single()
+        assertEquals(rpc.session.id, sent.first)
+        assertEquals(recovered.id, sent.third.messageID)
+        assertEquals(payload.text, sent.third.parts.first().text)
+        assertEquals(payload.agent, sent.third.agent)
+        assertEquals(payload.provider, sent.third.providerID)
+        assertEquals(payload.model, sent.third.modelID)
+        assertEquals(payload.variant, sent.third.variant)
+        emit(ChatEventDto.MessageUpdated(rpc.session.id, message(rpc.session.id, recovered.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+    }
+
+    fun `test deleted bound session recovers into supplied session ahead of latest session`() {
+        val entry = bound("ses_deleted", attempted = false)
+        missing("ses_deleted")
+        rpc.listed += session("ses_supplied", updated = 1.0)
+        rpc.listed += session("ses_latest", updated = 10.0)
+        val manager = manager(session = "ses_supplied")
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals("ses_supplied", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_supplied"), created)
+        assertEquals(entry.prompt, edt { service<PendingWorktreePrompt>().peek(DIR)?.prompt })
+        assertEquals("ses_supplied", edt { service<PendingWorktreePrompt>().peek(DIR)?.session })
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test deleted bound session creates one recovery session and requires explicit retry`() {
+        val entry = bound("ses_deleted", attempted = false)
+        missing("ses_deleted")
+        rpc.session = session("ses_recovery", updated = 1.0)
+        val manager = manager()
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals(listOf(DIR to rpc.session.id), created)
+        assertEquals(rpc.session.id, edt { manager.currentKey() })
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(entry.prompt, edt { service<PendingWorktreePrompt>().peek(DIR)?.prompt })
+        assertTrue(edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)).attempted })
+        assertEquals(1, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+
+        rpc.listed += rpc.session
+        edt { manager.start() }
+        flush()
+
+        assertEquals(1, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+        assertEquals(entry.text, edt { prompt().text() })
+    }
+
+    fun `test deleted journal target is not reopened when it was also the supplied session`() {
+        val entry = bound("ses_deleted", attempted = false)
+        missing("ses_deleted")
+        rpc.listed += session("ses_existing", updated = 1.0)
+        val manager = manager(session = "ses_deleted")
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals("ses_existing", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_existing"), created)
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals("ses_existing", edt { manager.currentKey() })
+        assertEquals(listOf(DIR to "ses_existing"), created)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test missing bound session closes its waiting UI before recovering the draft`() {
+        queue()
+        missing("ses_deleted")
+        val gate = CompletableDeferred<Unit>()
+        rpc.historyGate = gate
+        rpc.listed += session("ses_deleted", updated = 1.0)
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+        val entry = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertFalse(entry.attempted)
+
+        rpc.session = session("ses_existing", updated = 2.0)
+        rpc.listed.clear()
+        rpc.listed += rpc.session
+        edt { manager.start() }
+        flush()
+
+        assertEquals(listOf(DIR to "ses_deleted", DIR to rpc.session.id), created)
+        assertEquals(listOf(rpc.session.id), edt { ui.map { it.id } })
+        assertEquals(entry.text, edt { prompt().text() })
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(rpc.session.id, edt { manager.currentKey() })
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
     }
 
     fun `test failed first session creation retains prompt for retry`() {
@@ -748,6 +991,71 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(notified.toString(), notified.isEmpty())
     }
 
+    fun `test deleting pending prompt session releases binding into the replacement as explicit draft`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.deleteGate = gate
+        val first = session("ses_first", updated = 3.0)
+        val second = session("ses_second", updated = 2.0)
+        rpc.listed += first
+        rpc.listed += second
+        val entry = bound(first.id)
+        val manager = manager(session = first.id)
+        edt { manager.start() }
+        flush()
+
+        edt { manager.deleteSessions(listOf(first.id)) }
+        flush()
+
+        assertEquals(second.id, edt { manager.currentKey() })
+        assertEquals(first.id, edt { service<PendingWorktreePrompt>().peek(DIR)?.session })
+        gate.complete(Unit)
+        flush()
+
+        val recovered = edt { requireNotNull(service<PendingWorktreePrompt>().peek(DIR)) }
+        assertEquals(second.id, recovered.session)
+        assertEquals(entry.prompt, recovered.prompt)
+        assertFalse(entry.id == recovered.id)
+        assertTrue(recovered.attempted)
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+        assertEquals(listOf(first.id to DIR), rpc.deletes)
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals(second.id, edt { manager.currentKey() })
+        assertEquals(listOf(DIR to first.id, DIR to second.id), created)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test deleting only prompt session recovers in newly created session without resend`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.deleteGate = gate
+        val first = session("ses_first", updated = 1.0)
+        rpc.listed += first
+        val entry = bound(first.id)
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+        rpc.session = session("ses_recovery", updated = 2.0)
+
+        edt { manager.deleteSessions(listOf(first.id)) }
+        flush()
+
+        assertEquals(rpc.session.id, edt { manager.currentKey() })
+        assertEquals(first.id, edt { service<PendingWorktreePrompt>().peek(DIR)?.session })
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(DIR to first.id, DIR to rpc.session.id), created)
+        assertEquals(rpc.session.id, edt { service<PendingWorktreePrompt>().peek(DIR)?.session })
+        assertEquals(entry.prompt, edt { service<PendingWorktreePrompt>().peek(DIR)?.prompt })
+        assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(1, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
     fun `test deleting middle shown session falls back to next visible session`() {
         val top = session("ses_top", updated = 3.0)
         val mid = session("ses_mid", updated = 2.0)
@@ -1179,12 +1487,14 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         moveHost: (String?, String, String) -> Unit = { id, dir, surface -> movedTo += Triple(id, dir, surface) },
         newWorktreeHost: () -> Unit = { newWorktreeCalls++ },
         open: () -> Unit = {},
+        session: String? = null,
     ): WorktreeSessionEditorManager {
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
             project = project,
             worktree = workspace,
             list = controller,
+            session = session,
             del = del,
             create = { project, workspace, owner, ref, timers ->
                 open()
@@ -1247,6 +1557,44 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private fun flush() = coroutines.drain()
 
     private fun queue(text: String = "initial prompt") = edt { service<PendingWorktreePrompt>().put(DIR, PendingPrompt(text)) }
+
+    private fun bound(
+        id: String,
+        payload: PendingPrompt = PendingPrompt("initial prompt"),
+        attempted: Boolean = true,
+    ) = edt {
+        val store = service<PendingWorktreePrompt>()
+        store.put(DIR, payload)
+        val entry = requireNotNull(store.claim(DIR, id, testRootDisposable))
+        if (attempted) store.attempted(entry.id, entry.text)
+        store.loadState(store.getState())
+        requireNotNull(store.peek(DIR))
+    }
+
+    private fun missing(gone: String, sent: CompletableDeferred<Unit>? = null) {
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun get(id: String, directory: String): SessionDto {
+                if (id == gone) error("session deleted")
+                return rpc.get(id, directory)
+            }
+
+            override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
+                rpc.prompt(id, directory, prompt)
+                sent?.complete(Unit)
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+    }
+
+    private fun await(signal: CompletableDeferred<Unit>) {
+        val deadline = System.nanoTime() + TEST_WAIT_MS * 1_000_000
+        while (!signal.isCompleted && System.nanoTime() < deadline) {
+            flush()
+            Thread.yield()
+        }
+        assertTrue("prompt RPC never completed; created=$created, prompts=${rpc.prompts}", signal.isCompleted)
+        flush()
+    }
 
     private fun prompt(): PromptPanel {
         fun find(root: Container): PromptPanel? {

@@ -519,7 +519,10 @@ class SessionUi(
         if (handoff?.automatic == true || handing != null) return
         // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
         // then send the first turn carrying it too (so it applies before workspace-ready resolves).
-        select?.let { controller.applySelection(it) }
+        select?.let {
+            controller.applySelection(it)
+            handoff = handoff?.copy(select = it)
+        }
         if (clearDraft) prompt.retainSubmission(text)
         sendPrompt(text, emptyList(), select, clearDraft, injectedTitle)
     }
@@ -560,15 +563,29 @@ class SessionUi(
             return
         }
         val ready = historyReady && loaded != null
-        if (item.automatic && ready && controller.model.state !is SessionState.Error) {
+        val failed = controller.model.state is SessionState.Error
+        if (item.automatic && (ready || failed)) {
             handoff = item.copy(automatic = false)
-            // Client-only actions have no persisted message, so require an explicit user gesture.
+            // Failed reconciliation and client-only actions both require an explicit user gesture.
             val action = completion.clientAction(item.text)
-            if (action != null) prompt.restoreLastSubmission()
-            if (action == null) {
+            if (failed || action != null) prompt.restoreLastSubmission()
+            if (!failed && action == null) {
                 sendPrompt(item.text, emptyList(), item.select, clearDraft = false, injectedTitle = item.title)
             }
         }
+    }
+
+    @RequiresEdt
+    private fun retainSelection() {
+        val item = handoff ?: return
+        val state = controller.model
+        val key = state.model
+        handoff = item.copy(select = PromptSelection(
+            state.agent,
+            key?.substringBefore('/'),
+            key?.substringAfter('/'),
+            state.variant,
+        ))
     }
 
     @RequiresEdt
@@ -941,13 +958,23 @@ class SessionUi(
 
     private fun bindUi() {
         if (!readonly) {
-            prompt.mode.onSelect = { item -> controller.selectAgent(item.id) }
+            prompt.mode.onSelect = { item ->
+                controller.selectAgent(item.id)
+                retainSelection()
+            }
             prompt.model.onSelect = { item ->
                 prompt.setAttachmentEnabled(item.attachment)
                 controller.selectModel(item.provider, item.id)
+                retainSelection()
             }
-            prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
-            prompt.onReset = { controller.clearModelOverride() }
+            prompt.reasoning.onSelect = { item ->
+                controller.selectVariant(item.id)
+                retainSelection()
+            }
+            prompt.onReset = {
+                controller.clearModelOverride()
+                retainSelection()
+            }
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
@@ -1008,6 +1035,7 @@ class SessionUi(
                     prompt.reasoning.setItems(m.variants.map { ReasoningPicker.Item(it, variantTitle(it)) }, m.variant)
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
+                    syncHandoff()
                     prompt.refreshHighlights()
                     if (!hosted && !hostedRef) cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
                 }
@@ -1033,6 +1061,7 @@ class SessionUi(
                 is SessionControllerEvent.AppChanged -> {
                     if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
+                    syncHandoff()
                     // Config carries the Swarm toggle, so the entry points follow it without a restart.
                     refreshBoard()
                 }
@@ -1040,6 +1069,7 @@ class SessionUi(
                 is SessionControllerEvent.WorkspaceChanged -> {
                     if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
+                    syncHandoff()
                 }
 
                 is SessionControllerEvent.RecentsChanged -> {
@@ -1206,8 +1236,11 @@ class SessionUi(
         })
     }
 
+    @RequiresEdt
     private fun onSessionLoaded(show: Boolean) {
         loaded = show
+        // History resolves preferences after HistoryLoaded; retain the handoff's latest explicit picks.
+        handoff?.let { controller.applySelection(it.select) }
         syncHandoff()
         if (!this::scroll.isInitialized) return
         finishOpen(show)
@@ -1792,6 +1825,7 @@ class SessionUi(
         return "scheme=$scheme chars=${url.length} embedded=${isEmbeddedAttachment(url)}"
     }
 
+    @RequiresEdt
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
@@ -1828,6 +1862,7 @@ class SessionUi(
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
+        syncHandoff()
         manager?.activityChanged()
         refresh()
     }

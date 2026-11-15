@@ -138,9 +138,9 @@ class WorktreeController(
 
     fun kind(path: String): SessionActivityKind? = kinds[normalizeWorktreePath(path)]
 
-    fun reload() = reload(null)
+    fun reload() = reload(null, service<PendingWorktreePrompt>().bound(directory))
 
-    private fun reload(snapshot: WorktreeListDto?) {
+    private fun reload(snapshot: WorktreeListDto?, before: Set<String>) {
         val gen = generation.incrementAndGet()
         cs.launch {
             val listing = async { snapshot ?: service.list(directory) }
@@ -159,6 +159,9 @@ class WorktreeController(
                     !row.main && pending.values.none { it.branch.isNotBlank() && it.branch == row.branch }
                 }
                 val rows = pending.values.toList().asReversed() + extra
+                if (main != null) {
+                    service<PendingWorktreePrompt>().reconcile(directory, result.worktrees.map { it.path }, before)
+                }
                 current = main
                 model.replaceAll(rows)
                 cache().putAll(rows)
@@ -188,6 +191,7 @@ class WorktreeController(
     fun refreshBranches() {
         if (branchJob?.isActive == true) return
         val gen = generation.get()
+        val before = service<PendingWorktreePrompt>().bound(directory)
         branchJob = cs.launch {
             val listing = service.list(directory)
             edt {
@@ -195,7 +199,7 @@ class WorktreeController(
                 if (gen != generation.get()) return@edt
                 if (branchesMoved(listing) == null) return@edt
                 LOG.info("worktree branches changed, reloading the list")
-                reload(listing)
+                reload(listing, before)
             }
         }
     }
@@ -253,7 +257,8 @@ class WorktreeController(
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
             val token = prompt?.let {
-                service<PendingWorktreePrompt>().remember(directory, branch, base, it, fetchBase)
+                val store = service<PendingWorktreePrompt>()
+                store.remember(directory, branch, base, it, fetchBase)?.also(store::begin)
             }
             pending[temp.id] = temp
             tasks[temp.id] = KiloBundle.message("worktree.progress.creating")
@@ -273,6 +278,11 @@ class WorktreeController(
                     CreateWorktreeResultDto(error = err.message)
                 }
                 finishCreate(temp, branch, token, result, kind)
+            }.invokeOnCompletion { err ->
+                // A cancelled owner can prevent the coroutine body (and its cleanup) from starting.
+                if (err != null) {
+                    finishCreate(temp, branch, token, CreateWorktreeResultDto(error = err.message), kind)
+                }
             }
         }
     }
@@ -311,7 +321,12 @@ class WorktreeController(
                     (it.id == created.id || normalizeWorktreePath(it.path) == normalizeWorktreePath(created.path)))
             }
             if (created != null) {
+                if (token == null) service<PendingWorktreePrompt>().forget(created.path)
                 token?.let { service<PendingWorktreePrompt>().bind(it, created.path) }
+                token?.let { service<PendingWorktreePrompt>().finish(it) }
+                // Completion is authoritative even when the preceding metadata reload was discarded.
+                branches = branches.filterNot { it == created.branch }
+                known = known + created.branch
                 publish { cache().put(created) }
                 publish { model.replaceAll(listOf(created) + rows) }
                 publish { onSelect?.invoke(created.id) }
@@ -319,6 +334,7 @@ class WorktreeController(
                 telemetry("Worktree Created", mapOf("branch" to branch))
                 return@edt
             }
+            token?.let { service<PendingWorktreePrompt>().finish(it) }
             publish { model.replaceAll(rows) }
             // A reload may have hidden a pre-existing same-branch checkout while this request
             // was pending. Failure must restore git's list without requiring a manual refresh.
@@ -353,6 +369,7 @@ class WorktreeController(
                 LOG.info("worktree delete: path=${dto.path} force=$force ok=true ms=$ms")
                 edt {
                     tasks.remove(dto.id)
+                    service<PendingWorktreePrompt>().forget(dto.path)
                     val index = model.getElementIndex(dto)
                     model.remove(dto)
                     cache().remove(dto.path)

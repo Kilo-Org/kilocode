@@ -89,6 +89,17 @@ class WorktreeSessionListController(
         }
     }
 
+    /** Resolve a saved session that may be absent from the root-only list. */
+    fun get(id: String, done: (SessionDto?) -> Unit) {
+        cs.launch {
+            val result = runCatching { service.get(id, dir) }
+            result.exceptionOrNull()?.let { err ->
+                LOG.warn("worktree session lookup failed id=$id dir=$dir message=${err.message}", err)
+            }
+            edt { done(result.getOrNull()) }
+        }
+    }
+
     fun create(done: (SessionDto?) -> Unit) {
         cs.launch {
             try {

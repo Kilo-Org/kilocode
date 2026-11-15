@@ -28,10 +28,14 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
     fun `test out of order same branch completions bind only their own prompt`() = edtWait {
         val store = PendingWorktreePrompt()
         val first = requireNotNull(store.remember("/repo", "feature", "main", PendingPrompt("first")))
+        store.begin(first)
         val second = requireNotNull(store.remember("/repo", "feature", "main", PendingPrompt("second")))
+        store.begin(second)
 
         store.bind(second, "/checkout/second")
+        store.finish(second)
         store.bind(first, "/checkout/first")
+        store.finish(first)
 
         assertEquals("first", store.peek("/checkout/first")?.text)
         assertEquals("second", store.peek("/checkout/second")?.text)
@@ -80,6 +84,201 @@ class PendingWorktreePromptTest : BasePlatformTestCase() {
         assertEquals("edited retry", pending.text)
         assertEquals(entry.prompt.copy(text = "edited retry"), pending.prompt)
         assertTrue(pending.attempted)
+    }
+
+    fun `test binding a recreated checkout evicts its previous prompt and claim`() = edtWait {
+        val store = PendingWorktreePrompt()
+        store.put("/checkout", PendingPrompt("obsolete"))
+        val owner = Disposer.newDisposable(testRootDisposable)
+        val old = requireNotNull(store.claim("/checkout", "ses_old", owner))
+        val prompt = PendingPrompt("replacement", "plan", "kilo", "opus", "high")
+        val id = requireNotNull(store.remember("/repo", "feature", "main", prompt))
+
+        store.bind(id, "/checkout/")
+        assertEquals(listOf(id), store.getState().entries.keys.toList())
+        store.acknowledge("/checkout", old.id, "ses_old")
+        assertEquals(prompt, store.peek("/checkout")?.prompt)
+        assertNotNull(store.claim("/checkout", "ses_new", owner))
+        store.acknowledge("/checkout", id, "ses_new")
+
+        assertNull(store.peek("/checkout"))
+        assertNull(restart(store).peek("/checkout"))
+    }
+
+    fun `test late older completion cannot replace a newer checkout prompt`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val first = requireNotNull(store.remember("/repo", "feature", "main", PendingPrompt("old")))
+        store.begin(first)
+        val second = requireNotNull(store.remember("/repo", "feature", "main", PendingPrompt("new")))
+        store.begin(second)
+
+        store.bind(second, "/checkout")
+        store.finish(second)
+        store.bind(first, "/checkout/")
+        store.finish(first)
+
+        assertEquals(second, store.peek("/checkout")?.id)
+        assertEquals("new", store.peek("/checkout")?.text)
+        assertEquals(1, store.getState().entries.size)
+    }
+
+    fun `test late completion cannot resurrect a prompt after newer acknowledgement or removal`() = edtWait {
+        for (ack in listOf(true, false)) {
+            val store = PendingWorktreePrompt()
+            val first = requireNotNull(store.remember("/repo", "feature", "main", PendingPrompt("old")))
+            store.begin(first)
+            val second = requireNotNull(store.remember("/repo", "feature", "main", PendingPrompt("new")))
+            store.begin(second)
+            store.bind(second, "/checkout")
+            store.finish(second)
+            val owner = Disposer.newDisposable(testRootDisposable)
+            assertNotNull(store.claim("/checkout", "ses_new", owner))
+            if (ack) store.acknowledge("/checkout", second, "ses_new")
+            if (!ack) store.forget("/checkout")
+
+            val restored = restart(store)
+            restored.bind(first, "/checkout")
+            restored.finish(first)
+
+            assertNull(restored.peek("/checkout"))
+            assertTrue(restored.getState().entries.isEmpty())
+        }
+    }
+
+    fun `test identical concurrent submissions own independent tokens`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val prompt = PendingPrompt("identical", "plan", "kilo", "opus", "high")
+        val first = requireNotNull(store.remember("/repo", "feature", "main", prompt))
+        store.begin(first)
+        val second = requireNotNull(store.remember("/repo", "feature", "main", prompt))
+        store.begin(second)
+        assertFalse(first == second)
+
+        store.finish(first)
+        store.remember("/repo", "retry", "main", PendingPrompt("replacement draft"))
+        store.bind(second, "/checkout")
+        store.finish(second)
+
+        assertEquals(prompt, store.peek("/checkout")?.prompt)
+        assertEquals("replacement draft", store.draft("/repo")?.text)
+    }
+
+    fun `test restart preserves both submitted in flight creation prompts`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val first = requireNotNull(store.remember("/repo", "first", "main", PendingPrompt("first")))
+        store.begin(first)
+        val second = requireNotNull(store.remember("/repo", "second", "main", PendingPrompt("second")))
+        store.begin(second)
+
+        val restored = restart(store)
+
+        assertEquals(setOf(first, second), restored.getState().entries.keys)
+        assertTrue(restored.getState().entries.values.all { it.creating })
+        assertEquals(second, restored.draft("/repo")?.id)
+        restored.bind(second, "/checkout/second")
+        assertEquals(first, restored.draft("/repo")?.id)
+        restored.bind(first, "/checkout/first")
+        assertEquals("first", restored.peek("/checkout/first")?.text)
+        assertEquals("second", restored.peek("/checkout/second")?.text)
+    }
+
+    fun `test superseded drafts are pruned while active creation tokens survive`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val active = requireNotNull(store.remember("/repo", "first", "main", PendingPrompt("in flight")))
+        store.begin(active)
+        repeat(32) {
+            store.remember("/repo", "retry", "base-$it", PendingPrompt("retry $it"), it % 2 == 0)
+            assertEquals(2, store.getState().entries.size)
+        }
+        assertEquals("retry 31", store.draft("/repo")?.text)
+        store.finish(active)
+
+        val restored = restart(store)
+        assertEquals(1, restored.getState().entries.size)
+        assertEquals("retry 31", restored.draft("/repo")?.text)
+    }
+
+    fun `test retrying a submitted draft promotes a new independent latest intent`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val prompt = PendingPrompt("first")
+        val id = requireNotNull(store.remember("/repo", "first", "main", prompt))
+        store.begin(id)
+        store.remember("/repo", "second", "main", PendingPrompt("second"))
+
+        val retry = requireNotNull(store.remember("/repo", "first", "main", prompt))
+
+        assertFalse(id == retry)
+        assertEquals(retry, store.draft("/repo")?.id)
+        assertEquals(setOf(id, retry), store.getState().entries.keys)
+    }
+
+    fun `test loading legacy duplicate paths and superseded drafts keeps only the latest`() = edtWait {
+        val store = PendingWorktreePrompt()
+        store.put("/checkout", PendingPrompt("old bound"))
+        val state = store.getState()
+        state.entries["new"] = state.entries.values.single().copy(id = "new", text = "new bound")
+        state.entries["first"] = PendingWorktreePrompt.Entry(id = "first", directory = "/repo", text = "old draft")
+        state.entries["last"] = PendingWorktreePrompt.Entry(id = "last", directory = "/repo", text = "latest draft")
+        store.loadState(state)
+
+        val restored = restart(store)
+        assertEquals(2, restored.getState().entries.size)
+        assertEquals("new bound", restored.peek("/checkout")?.text)
+        assertEquals("latest draft", restored.draft("/repo")?.text)
+    }
+
+    fun `test releasing a deleted session rotates correlation and preserves explicit recovery`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val prompt = PendingPrompt("keep choices", "plan", "kilo", "opus", "high")
+        val owner = Disposer.newDisposable(testRootDisposable)
+        store.put("/checkout", prompt)
+        val old = requireNotNull(store.claim("/checkout", "ses_deleted", owner))
+
+        store.release("/checkout/", "ses_other")
+        assertEquals(old.id, store.peek("/checkout")?.id)
+        store.release("/checkout/", "ses_deleted")
+        val recovered = requireNotNull(store.peek("/checkout"))
+        assertFalse(old.id == recovered.id)
+        assertNull(recovered.session)
+        assertTrue(recovered.attempted)
+        assertEquals(prompt, recovered.prompt)
+        store.attempted(old.id, "stale callback")
+        store.acknowledge("/checkout", old.id, "ses_deleted")
+        assertEquals(recovered, store.peek("/checkout"))
+        assertNotNull(store.claim("/checkout", "ses_new", owner))
+        store.acknowledge("/checkout", old.id, "ses_new")
+        assertNotNull(store.peek("/checkout"))
+        store.acknowledge("/checkout", recovered.id, "ses_new")
+        assertNull(store.peek("/checkout"))
+    }
+
+    fun `test reconciliation only forgets missing bound checkouts in its own repository`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val missing = requireNotNull(store.remember("/repo", "missing", "main", PendingPrompt("missing")))
+        store.bind(missing, "/checkout/missing")
+        val other = requireNotNull(store.remember("/other", "other", "main", PendingPrompt("other")))
+        store.bind(other, "/checkout/other")
+        val draft = requireNotNull(store.remember("/repo", "draft", "main", PendingPrompt("retry")))
+
+        store.reconcile("/repo/", listOf("/repo"), store.bound("/repo"))
+
+        assertNull(store.peek("/checkout/missing"))
+        assertEquals(other, store.peek("/checkout/other")?.id)
+        assertEquals(draft, store.draft("/repo")?.id)
+        store.forget("/checkout/other/")
+        assertNull(store.peek("/checkout/other"))
+        assertEquals(draft, restart(store).draft("/repo")?.id)
+    }
+
+    fun `test old listing cannot prune a prompt bound after it started`() = edtWait {
+        val store = PendingWorktreePrompt()
+        val before = store.bound("/repo")
+        val id = requireNotNull(store.remember("/repo", "new", "main", PendingPrompt("new prompt")))
+        store.bind(id, "/checkout/new")
+
+        store.reconcile("/repo", listOf("/repo"), before)
+
+        assertEquals(id, store.peek("/checkout/new")?.id)
     }
 
     private fun restart(store: PendingWorktreePrompt): PendingWorktreePrompt {

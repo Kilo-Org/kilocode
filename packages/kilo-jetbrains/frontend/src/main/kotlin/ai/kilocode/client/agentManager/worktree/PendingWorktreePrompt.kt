@@ -44,6 +44,9 @@ class PendingWorktreePrompt : PersistentStateComponent<PendingWorktreePrompt.Sta
         var path: String? = null,
         var session: String? = null,
         var attempted: Boolean = false,
+        var creating: Boolean = false,
+        var obsolete: List<String> = emptyList(),
+        var order: Long = 0,
         var text: String = "",
         var agent: String? = null,
         var provider: String? = null,
@@ -57,12 +60,18 @@ class PendingWorktreePrompt : PersistentStateComponent<PendingWorktreePrompt.Sta
 
     @Volatile private var state = State()
     private val claims = HashMap<String, Disposable>()
+    private var clock = 0L
 
-    override fun getState(): State = State(LinkedHashMap(state.entries.mapValues { it.value.copy() }))
+    override fun getState(): State = State(LinkedHashMap(state.entries.mapValues { it.value.snapshot() }))
 
     override fun loadState(state: State) {
-        this.state = State(LinkedHashMap(state.entries.mapValues { it.value.copy() }))
         claims.clear()
+        clock = state.entries.values.maxOfOrNull { it.order } ?: 0
+        update {
+            clear()
+            // XML map serialization does not preserve insertion order.
+            state.entries.entries.sortedBy { it.value.order }.forEach { put(it.key, it.value.snapshot()) }
+        }
     }
 
     /** Called before publishing creation, including by callers that bypass the dialog. */
@@ -78,40 +87,65 @@ class PendingWorktreePrompt : PersistentStateComponent<PendingWorktreePrompt.Sta
         val dir = normalizeWorktreePath(directory)
         val prior = state.entries.values.lastOrNull { it.directory == dir && it.branch == branch && it.path == null }
         val body = prompt.copy(text = prompt.text.trim())
-        val entry = prior?.takeIf { it.prompt == body && it.base == base && it.fetchBase == fetchBase }
+        val saved = prior?.takeIf { !it.creating && it.prompt == body && it.base == base && it.fetchBase == fetchBase }
             ?: entry(body).copy(directory = dir, branch = branch, base = base, fetchBase = fetchBase)
+        val entry = saved.copy(obsolete = emptyList(), order = ++clock)
         update {
+            remove(entry.id)
             put(entry.id, entry)
         }
         return entry.id
     }
 
+    /** In-flight creations retain their own tokens even when another dialog supersedes its draft. */
+    @RequiresEdt
+    fun begin(id: String) {
+        val entry = state.entries[id] ?: return
+        update { put(id, entry.copy(creating = true)) }
+    }
+
+    @RequiresEdt
+    fun finish(id: String) {
+        val entry = state.entries[id] ?: return
+        update { put(id, entry.copy(creating = false)) }
+    }
+
     @RequiresEdt
     fun draft(directory: String): Entry? = state.entries.values.lastOrNull {
         it.directory == normalizeWorktreePath(directory) && it.path == null
-    }?.copy()
+    }?.snapshot()
 
     /** Bind only to the backend's actual checkout path, never a guessed path or placeholder id. */
     @RequiresEdt
     fun bind(id: String, path: String) {
-        val entry = state.entries[id] ?: return
-        if (entry.path != null) return
-        update { put(entry.id, entry.copy(path = normalizeWorktreePath(path))) }
+        val entry = state.entries[id]?.takeIf { it.path == null } ?: return
+        val key = normalizeWorktreePath(path)
+        if (key in entry.obsolete) {
+            update { remove(id) }
+            return
+        }
+        update {
+            supersede(key, id)
+            entries.removeIf { it.value.path == key }
+            put(entry.id, entry.copy(path = key, creating = false, obsolete = emptyList()))
+        }
     }
 
     @RequiresEdt
     fun put(path: String, prompt: PendingPrompt) {
         if (prompt.text.isBlank()) return
         val key = normalizeWorktreePath(path)
-        val entry = entry(prompt.copy(text = prompt.text.trim())).copy(path = key)
+        val entry = entry(prompt.copy(text = prompt.text.trim())).copy(path = key, order = ++clock)
         update {
+            supersede(key)
             entries.removeIf { it.value.path == key }
             put(entry.id, entry)
         }
     }
 
     @RequiresEdt
-    fun peek(path: String): Entry? = state.entries.values.lastOrNull { it.path == normalizeWorktreePath(path) }?.copy()
+    fun peek(path: String): Entry? =
+        state.entries.values.lastOrNull { it.path == normalizeWorktreePath(path) }?.snapshot()
 
     /** The owner holds a non-destructive lease; closing a failed editor makes the draft recoverable. */
     @RequiresEdt
@@ -141,12 +175,67 @@ class PendingWorktreePrompt : PersistentStateComponent<PendingWorktreePrompt.Sta
         claims.remove(id)
     }
 
+    /** A deleted/unavailable session must not strand the draft or reuse its old message identity. */
+    @RequiresEdt
+    fun release(path: String, session: String) {
+        val entry = peek(path)?.takeIf { it.session == session } ?: return
+        val recovered = entry.copy(id = hostedMessageID(), session = null, attempted = true)
+        update {
+            remove(entry.id)
+            put(recovered.id, recovered)
+        }
+    }
+
+    @RequiresEdt
+    fun forget(path: String) {
+        val key = normalizeWorktreePath(path)
+        update {
+            supersede(key)
+            entries.removeIf { it.value.path == key }
+        }
+    }
+
+    /** Immutable identities eligible for pruning by a subsequently started listing. */
+    fun bound(directory: String): Set<String> {
+        val dir = normalizeWorktreePath(directory)
+        return state.entries.values.filter { it.directory == dir && it.path != null }.mapTo(HashSet()) { it.id }
+    }
+
+    /** A listing cannot remove records bound while it was in flight, including from another controller. */
+    @RequiresEdt
+    fun reconcile(directory: String, paths: Collection<String>, before: Set<String>) {
+        val dir = normalizeWorktreePath(directory)
+        val present = paths.mapTo(HashSet(), ::normalizeWorktreePath)
+        update {
+            entries.removeIf {
+                it.key in before && it.value.directory == dir && it.value.path?.let { path -> path !in present } == true
+            }
+        }
+    }
+
     private fun entry(prompt: PendingPrompt) = Entry(
         id = hostedMessageID(), text = prompt.text, agent = prompt.agent, provider = prompt.provider,
         model = prompt.model, variant = prompt.variant, injectedTitle = prompt.injectedTitle,
     )
 
+    private fun Entry.snapshot() = copy(obsolete = obsolete.toList())
+
+    /** Retain invalidation only on older unresolved operations, not a growing global tombstone map. */
+    private fun MutableMap<String, Entry>.supersede(path: String, before: String? = null) {
+        values.toList().takeWhile { it.id != before }.filter { it.creating && it.path == null }.forEach {
+            put(it.id, it.copy(obsolete = (it.obsolete + path).distinct()))
+        }
+    }
+
     private fun update(block: MutableMap<String, Entry>.() -> Unit) {
-        state = State(LinkedHashMap(state.entries).apply(block))
+        val entries = LinkedHashMap(state.entries).apply(block)
+        val paths = HashSet<String>()
+        val drafts = HashSet<String>()
+        entries.values.toList().asReversed().forEach {
+            val keep = it.path?.let(paths::add) ?: drafts.add(it.directory)
+            if (!keep && !it.creating) entries.remove(it.id)
+        }
+        claims.keys.retainAll(entries.keys)
+        state = State(entries)
     }
 }
