@@ -1414,6 +1414,10 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
 
 function modeOptions(model: Model, body: Record<string, unknown> | undefined) {
   if (!body) return model.options
+  // kilocode_change start
+  // @ai-sdk/openai maps serviceTier to service_tier. Other SDKs send keys as written.
+  if (model.api.npm !== "@ai-sdk/openai") return { ...body }
+  // kilocode_change end
   const options = Object.fromEntries(
     Object.entries(body).map(([key, value]) => [key.replace(/_([a-z])/g, (_, char) => char.toUpperCase()), value]),
   )

@@ -1434,6 +1434,43 @@ test("mode options and cost are derived from the base model", () => {
   })
 })
 
+// kilocode_change start
+test("openai-compatible mode options keep catalog service_tier", () => {
+  const provider = {
+    id: "compat",
+    name: "Compat",
+    env: [],
+    npm: "@ai-sdk/openai-compatible",
+    api: "https://api.example.com/v1",
+    models: {
+      flash: {
+        id: "flash",
+        name: "Flash",
+        attachment: false,
+        reasoning: false,
+        temperature: true,
+        tool_call: true,
+        cost: { input: 0.1, output: 0.4 },
+        limit: { context: 128_000, output: 32_000 },
+        experimental: {
+          modes: {
+            priority: {
+              provider: {
+                body: { service_tier: "priority" },
+              },
+            },
+          },
+        },
+      },
+    },
+  } as unknown as ModelsDev.Provider
+
+  const model = Provider.fromModelsDevProvider(provider).models["flash-priority"]
+  expect(model.api.npm).toBe("@ai-sdk/openai-compatible")
+  expect(model.options).toEqual({ service_tier: "priority" })
+})
+// kilocode_change end
+
 test("models.dev normalization fills required response fields", () => {
   const provider = {
     id: "gateway",
