@@ -1354,7 +1354,7 @@ describe("session.message-v2.toModelMessage", () => {
     expect((result[1].content as any[]).find((p) => p.type === "text").text).toBe("the answer")
   })
 
-  test("leaves empty text alone when reasoning signature is under 'bedrock' namespace", async () => {
+  test("drops empty text when reasoning signature is under 'bedrock' namespace", async () => {
     // Bedrock signed reasoning is preserved as reasoning metadata, but unlike the
     // direct Anthropic path we do not preserve empty text separators for Bedrock.
     const assistantID = "m-assistant-bedrock"
@@ -1378,10 +1378,10 @@ describe("session.message-v2.toModelMessage", () => {
 
     expect(result).toHaveLength(1)
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
-    expect(texts.map((t) => t.text)).toStrictEqual(["", "answer"])
+    expect(texts.map((t) => t.text)).toStrictEqual(["answer"])
   })
 
-  test("leaves empty text alone when reasoning has no Anthropic signature", async () => {
+  test("drops empty text when reasoning has no Anthropic signature", async () => {
     // Non-Anthropic providers' reasoning doesn't position-validate, so empty text
     // should be filtered normally rather than substituted.
     const assistantID = "m-assistant-unsigned"
@@ -1400,10 +1400,10 @@ describe("session.message-v2.toModelMessage", () => {
 
     expect(result).toHaveLength(1)
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
-    expect(texts.map((t) => t.text)).toStrictEqual(["", "answer"])
+    expect(texts.map((t) => t.text)).toStrictEqual(["answer"])
   })
 
-  test("leaves empty text alone in assistant messages without reasoning", async () => {
+  test("drops empty text in assistant messages without reasoning", async () => {
     const assistantID = "m-assistant-no-reasoning"
     const input: SessionV1.WithParts[] = [
       {
@@ -1419,7 +1419,25 @@ describe("session.message-v2.toModelMessage", () => {
 
     expect(result).toHaveLength(1)
     const texts = (result[0].content as any[]).filter((p) => p.type === "text")
-    expect(texts.map((t) => t.text)).toStrictEqual(["", "hello"])
+    expect(texts.map((t) => t.text)).toStrictEqual(["hello"])
+  })
+
+  test("drops assistant message that only has an empty text part (issue 16139)", async () => {
+    const assistantID = "m-assistant-only-empty"
+    const input: SessionV1.WithParts[] = [
+      {
+        info: assistantInfo(assistantID, "m-parent"),
+        parts: [{ ...basePart(assistantID, "p1"), type: "text", text: "" }] as SessionV1.Part[],
+      },
+    ]
+
+    const result = await MessageV2.toModelMessages(input, model)
+
+    expect(JSON.stringify(result)).not.toContain('"text":""')
+    for (const m of result) {
+      if (typeof m.content === "string") continue
+      expect((m.content as any[]).filter((p) => p.type === "text" && p.text === "")).toHaveLength(0)
+    }
   })
 })
 

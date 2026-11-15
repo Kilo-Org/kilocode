@@ -409,7 +409,10 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         if (KiloPartLifecycle.transient(part)) continue // kilocode_change - never replay transient UI parts
         // kilocode_change - !part.ignored keeps local UI warnings out of future prompts
         if (part.type === "text" && !part.ignored) {
-          const text = part.text === "" && hasSignedReasoning ? " " : part.text
+          // kilocode_change start - empty text blocks (left by aborted/failed streams) are rejected by Anthropic
+          if (part.text === "" && !hasSignedReasoning) continue
+          // kilocode_change end
+          const text = part.text === "" ? " " : part.text
           assistantMessage.parts.push({
             type: "text",
             text,
