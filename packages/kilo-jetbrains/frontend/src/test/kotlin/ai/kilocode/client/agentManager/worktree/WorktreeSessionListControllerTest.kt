@@ -76,6 +76,27 @@ class WorktreeSessionListControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("ses_main"), sessions.sessions.value.map { it.id })
     }
 
+    fun `test only successful passive reloads notify the observer on EDT`() {
+        var refreshed = 0
+        var completed = 0
+        controller.onReload = {
+            assertTrue(ApplicationManager.getApplication().isDispatchThread)
+            refreshed++
+        }
+
+        controller.reload()
+        drain()
+        assertEquals(1, refreshed)
+        controller.reload { completed++ }
+        drain()
+        assertEquals(1, refreshed)
+        assertEquals(1, completed)
+        rpc.listThrows = IllegalStateException("still unavailable")
+        controller.reload()
+        drain()
+        assertEquals(1, refreshed)
+    }
+
     fun `test lookup resolves child without changing root model and calls back on EDT`() {
         rpc.listed += session("ses_root", "Root")
         controller.reload()

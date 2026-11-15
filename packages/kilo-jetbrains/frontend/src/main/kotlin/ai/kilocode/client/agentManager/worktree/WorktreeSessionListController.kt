@@ -27,6 +27,8 @@ class WorktreeSessionListController(
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<SessionDto>()
+    /** Successful passive reloads, including reconnects and changes from other surfaces. */
+    var onReload: (() -> Unit)? = null
 
     /** Coalescing hop: many session changes in, at most one reload per quiet period out. */
     private val pings = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
@@ -81,7 +83,7 @@ class WorktreeSessionListController(
                 edt {
                     model.replaceAll(result.sessions)
                     capture("Worktree Session List Loaded", mapOf("count" to result.sessions.size.toString()))
-                    done?.invoke()
+                    (done ?: onReload)?.invoke()
                 }
             } catch (e: CancellationException) {
                 throw e

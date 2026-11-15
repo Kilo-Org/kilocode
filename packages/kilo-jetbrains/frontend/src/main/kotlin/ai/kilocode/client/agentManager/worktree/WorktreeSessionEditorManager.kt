@@ -113,11 +113,15 @@ open class WorktreeSessionEditorManager(
     private var adopted = false
     private var adopting = false
     private var startedOnce = false
+    private val refresh: () -> Unit = {
+        if (startedOnce && baseResolved && currentUi()?.replaceable() != false) restoreSessions(true)
+    }
     private var migrationActive = false
     private var migrationJob: Job? = null
     init {
         Disposer.register(parent, this)
         project.service<WorktreeBaseUpdatePrompts>().register(worktree.directory, this)
+        list.onReload = refresh
         bindMigration()
     }
 
@@ -159,7 +163,10 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     private fun startSessions() {
-        list.reload(failed = { restoreSessions(false) }) { restoreSessions(true) }
+        val ui = currentUi()
+        val id = ui?.id
+        val restore: (Boolean) -> Unit = { listed -> if (accepts(ui, id)) restoreSessions(listed) }
+        list.reload(failed = { restore(false) }) { restore(true) }
     }
 
     @RequiresEdt
@@ -173,23 +180,41 @@ open class WorktreeSessionEditorManager(
             return
         }
         session?.takeUnless { it == saved || it in deleting }?.let { openSession(SessionRef.Local(it), false) }
+        val ui = currentUi()
+        val id = ui?.id
         // Root-only lists can omit a live session. Verify it before trusting the persisted binding.
         list.get(saved) { result ->
-            if (Disposer.isDisposed(this)) return@get
+            if (!accepts(ui, id)) return@get
             val dto = result.getOrElse {
                 if (currentUi() == null) showBlank()
                 onListChanged?.invoke()
                 return@get
             }
-            val current = store.peek(worktree.directory)
-            if (current?.id == entry.id && dto == null) {
-                store.release(worktree.directory, saved)
-                forceSession(saved)
-                if (session == saved) session = null
-            }
-            val target = dto?.id?.takeIf { store.peek(worktree.directory)?.session == it }
-            openStartup(session ?: target, listed)
+            restoreBound(entry.id, saved, dto, listed)
         }
+    }
+
+    /** Delayed startup responses must not replace a session opened in the meantime. */
+    @RequiresEdt
+    private fun accepts(ui: SessionUi?, id: String?): Boolean {
+        if (Disposer.isDisposed(this)) return false
+        val current = currentUi()
+        val blank = current?.id == null && current?.replaceable() != false
+        val same = id != null && current === ui && current?.id == id
+        return blank || same
+    }
+
+    @RequiresEdt
+    private fun restoreBound(id: String, saved: String, dto: SessionDto?, listed: Boolean) {
+        val store = service<PendingWorktreePrompt>()
+        if (store.peek(worktree.directory)?.id != id) return
+        if (dto == null) {
+            store.release(worktree.directory, saved)
+            forceSession(saved)
+            if (session == saved) session = null
+        }
+        val target = dto?.id?.takeIf { store.peek(worktree.directory)?.session == it }
+        openStartup(session ?: target, listed)
     }
 
     @RequiresEdt
@@ -233,6 +258,7 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun dispose() {
+        if (list.onReload === refresh) list.onReload = null
         project.service<WorktreeBaseUpdatePrompts>().unregister(worktree.directory, this)
         migrationJob?.cancel()
         super.dispose()

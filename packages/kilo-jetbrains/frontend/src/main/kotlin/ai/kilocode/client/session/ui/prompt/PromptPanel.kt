@@ -621,6 +621,10 @@ class PromptPanel(
     @RequiresEdt
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
+    /** A cleared editor can still own a submission being prepared or awaiting persistence. */
+    @RequiresEdt
+    fun hasInput(): Boolean = hasDraft() || submitting || lastSubmission != null
+
     @RequiresEdt
     fun attachments(): List<PromptAttachment> = attachments.toList()
 

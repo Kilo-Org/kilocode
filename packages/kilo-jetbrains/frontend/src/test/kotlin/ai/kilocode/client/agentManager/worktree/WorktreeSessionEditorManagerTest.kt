@@ -14,6 +14,7 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -45,6 +46,7 @@ import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.components.service
@@ -58,6 +60,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.xmlb.XmlSerializer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -436,6 +439,279 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(entry.session, edt { manager.currentKey() })
         assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
         assertEquals(entry.text, edt { prompt().text() })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test reconnect recovers a bound child draft without restarting the tab`() {
+        reconnect(attempted = true, listed = false)
+    }
+
+    fun `test reconnect sends an unattempted child prompt exactly once`() {
+        reconnect(attempted = false, listed = true)
+    }
+
+    private fun reconnect(attempted: Boolean, listed: Boolean) {
+        val payload = PendingPrompt("recover after reconnect", "plan", "kilo", "gpt-5", "high")
+        val entry = bound("ses_child", payload, attempted)
+        val agents = listOf(AgentDto("code", mode = "code"), AgentDto("plan", mode = "plan"))
+        workspaceRpc.state.value = workspaceRpc.state.value.copy(
+            agents = AgentsDto(agents, agents, "code"),
+            providers = ProvidersDto(
+                listOf(ProviderDto("kilo", "Kilo", models = mapOf(
+                    "gpt-5" to ModelDto("gpt-5", "GPT-5", variants = listOf("low", "high")),
+                ))),
+                listOf("kilo"), emptyMap(),
+            ),
+        )
+        rpc.session = session("ses_child", updated = 1.0).copy(parentID = "ses_root")
+        rpc.listed += session("ses_root", updated = 2.0)
+        rpc.listThrows = if (listed) null else IllegalStateException("list unavailable")
+        rpc.findThrows = IllegalStateException("lookup unavailable")
+        val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.ERROR))
+        val list = WorktreeSessionListController(sessions, DIR, coroutines.scope, state, telemetry = { _, _ -> })
+        val manager = manager(controller = list)
+        edt { manager.start() }
+        flush()
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(listOf(DIR to null), created)
+        assertEquals(0, rpc.creates)
+
+        rpc.listThrows = null
+        rpc.findThrows = null
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { manager.currentKey() == entry.session }
+        flush()
+
+        assertEquals(listOf(DIR to null, DIR to entry.session), created)
+        assertEquals(0, rpc.creates)
+        assertEquals(entry.id, edt { service<PendingWorktreePrompt>().peek(DIR)?.id })
+        if (attempted) {
+            assertTrue(rpc.prompts.isEmpty())
+            assertEquals(payload.text, edt { prompt().text() })
+            edt { prompt().send() }
+        }
+        waitUntil { rpc.prompts.size == 1 }
+        val sent = rpc.prompts.single()
+        assertEquals(entry.session, sent.first)
+        assertEquals(entry.id, sent.third.messageID)
+        assertEquals(payload.text, sent.third.parts.single().text)
+        assertEquals(payload.agent, sent.third.agent)
+        assertEquals(payload.provider, sent.third.providerID)
+        assertEquals(payload.model, sent.third.modelID)
+        assertEquals(payload.variant, sent.third.variant)
+        emit(ChatEventDto.MessageUpdated(sent.first, message(sent.first, entry.id)))
+        assertNull(edt { service<PendingWorktreePrompt>().peek(DIR) })
+
+        state.value = KiloAppStateDto(KiloAppStatusDto.ERROR)
+        flush()
+        val before = rpc.lists.size
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { rpc.lists.size > before }
+        flush()
+        assertEquals(entry.session, edt { manager.currentKey() })
+        assertEquals(2, created.size)
+        assertEquals(1, rpc.prompts.size)
+        assertEquals(0, rpc.creates)
+    }
+
+    fun `test reconnect recovery ignores a late missing lookup after the child was opened`() {
+        val entry = bound("ses_child")
+        rpc.session = session("ses_child", updated = 1.0).copy(parentID = "ses_root")
+        rpc.listed += session("ses_root", updated = 2.0)
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun find(id: String, directory: String): SessionDto? {
+                if (!entered.isCompleted) {
+                    entered.complete(Unit)
+                    gate.await()
+                    return null
+                }
+                return rpc.find(id, directory)
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+        val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.ERROR))
+        val list = WorktreeSessionListController(sessions, DIR, coroutines.scope, state, telemetry = { _, _ -> })
+        val manager = manager(controller = list)
+        edt { manager.start() }
+        waitUntil { entered.isCompleted }
+
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { manager.currentKey() == entry.session }
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(DIR to entry.session), created)
+        assertEquals(entry.session, edt { manager.currentKey() })
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(entry.text, edt { prompt().text() })
+        assertTrue(rpc.prompts.isEmpty())
+        assertEquals(0, rpc.creates)
+    }
+
+    fun `test late initial listing cannot replace a session recovered by reconnect`() {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun list(directory: String): SessionListDto {
+                val snapshot = rpc.list(directory)
+                if (!entered.isCompleted) {
+                    entered.complete(Unit)
+                    gate.await()
+                }
+                return snapshot
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+        val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.ERROR))
+        val list = WorktreeSessionListController(sessions, DIR, coroutines.scope, state, telemetry = { _, _ -> })
+        val manager = manager(controller = list)
+        edt { manager.start() }
+        waitUntil { entered.isCompleted }
+
+        rpc.listed += session("ses_recovered", updated = 1.0)
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { manager.currentKey() == "ses_recovered" }
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(DIR to "ses_recovered"), created)
+        assertEquals("ses_recovered", edt { manager.currentKey() })
+        assertEquals(0, rpc.creates)
+    }
+
+    fun `test reconnect lookup cannot replace a session started in the blank composer`() {
+        pendingCreation(programmatic = false)
+    }
+
+    fun `test reconnect lookup cannot cancel a programmatic send while session creation is pending`() {
+        pendingCreation(programmatic = true)
+    }
+
+    private fun pendingCreation(programmatic: Boolean) {
+        val entry = bound("ses_child")
+        val child = session("ses_child", updated = 1.0).copy(parentID = "ses_root")
+        rpc.listed += session("ses_root", updated = 2.0)
+        rpc.findThrows = IllegalStateException("lookup unavailable")
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun find(id: String, directory: String): SessionDto? {
+                rpc.findThrows?.let { throw it }
+                entered.complete(Unit)
+                gate.await()
+                return child
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+        val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.ERROR))
+        val list = WorktreeSessionListController(sessions, DIR, coroutines.scope, state, telemetry = { _, _ -> })
+        val manager = manager(controller = list)
+        edt { manager.start() }
+        flush()
+        val blank = edt { ui.single() }
+
+        rpc.findThrows = null
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { entered.isCompleted }
+        rpc.session = session("ses_user", updated = 3.0)
+        val create = CompletableDeferred<Unit>()
+        rpc.createGate = create
+        edt {
+            if (programmatic) manager.submitPrompt("start a different conversation", "New conversation")
+            if (!programmatic) {
+                prompt().setDraft("start a different conversation", emptyList())
+                prompt().send()
+            }
+        }
+        waitUntil { rpc.creates == 1 }
+        gate.complete(Unit)
+        flush()
+
+        assertSame(blank, edt { ui.single() })
+        assertNull(edt { blank.id })
+        assertTrue(rpc.prompts.isEmpty())
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        create.complete(Unit)
+        waitUntil { rpc.prompts.size == 1 }
+        assertSame(blank, edt { ui.single() })
+        assertEquals("ses_user", edt { blank.id })
+        assertEquals("ses_user", rpc.prompts.single().first)
+        assertEquals("start a different conversation", rpc.prompts.single().third.parts.single().text)
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(1, rpc.creates)
+    }
+
+    fun `test reconnect lookup preserves an unsent blank draft and its attachments`() {
+        val entry = bound("ses_child")
+        val child = session("ses_child", updated = 1.0).copy(parentID = "ses_root")
+        rpc.listed += session("ses_root", updated = 2.0)
+        rpc.findThrows = IllegalStateException("lookup unavailable")
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val api = object : KiloSessionRpcApi by rpc {
+            override suspend fun find(id: String, directory: String): SessionDto? {
+                rpc.findThrows?.let { throw it }
+                entered.complete(Unit)
+                gate.await()
+                return child
+            }
+        }
+        sessions = KiloSessionService(project, coroutines.scope, api)
+        val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.ERROR))
+        val list = WorktreeSessionListController(sessions, DIR, coroutines.scope, state, telemetry = { _, _ -> })
+        val manager = manager(controller = list)
+        edt { manager.start() }
+        flush()
+        val blank = edt { ui.single() }
+        rpc.findThrows = null
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { entered.isCompleted }
+        val attachment = PromptAttachment("notes", "notes.txt", "text/plain", "file:///notes.txt", reference = true)
+        edt { prompt().setDraft("my newer draft", listOf(attachment)) }
+
+        gate.complete(Unit)
+        flush()
+
+        assertSame(blank, edt { ui.single() })
+        assertNull(edt { blank.id })
+        assertEquals("my newer draft", edt { prompt().text() })
+        assertEquals(listOf(attachment), edt { prompt().attachments() })
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
+        assertEquals(0, rpc.creates)
+        assertTrue(rpc.prompts.isEmpty())
+    }
+
+    fun `test passive reload does not open a background or disposed manager`() {
+        val entry = bound("ses_child")
+        val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.ERROR))
+        val list = WorktreeSessionListController(sessions, DIR, coroutines.scope, state, telemetry = { _, _ -> })
+        val manager = manager(controller = list)
+        flush()
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { rpc.lists.isNotEmpty() }
+        flush()
+        assertTrue(created.isEmpty())
+        assertTrue(rpc.finds.isEmpty())
+
+        rpc.findThrows = IllegalStateException("lookup unavailable")
+        edt { manager.start() }
+        flush()
+        assertEquals(listOf(DIR to null), created)
+        edt { Disposer.dispose(manager) }
+        assertNull(list.onReload)
+        state.value = KiloAppStateDto(KiloAppStatusDto.ERROR)
+        flush()
+        rpc.findThrows = null
+        val before = rpc.lists.size
+        state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        waitUntil { rpc.lists.size > before }
+        flush()
+
+        assertEquals(listOf(DIR to null), created)
+        assertEquals(entry, edt { service<PendingWorktreePrompt>().peek(DIR) })
         assertEquals(0, rpc.creates)
         assertTrue(rpc.prompts.isEmpty())
     }

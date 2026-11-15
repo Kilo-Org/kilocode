@@ -502,6 +502,10 @@ class SessionUi(
 
     internal val promptFocusedComponent: JComponent get() = if (readonly) scroll.component else prompt.defaultFocusedComponent
 
+    /** Automatic startup may only replace a blank composer with no draft or pending submission. */
+    @RequiresEdt
+    internal fun replaceable(): Boolean = id == null && !readonly && !prompt.hasInput()
+
     /**
      * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
      * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
@@ -523,7 +527,7 @@ class SessionUi(
             controller.applySelection(it)
             handoff = handoff?.copy(select = it)
         }
-        if (clearDraft) prompt.retainSubmission(text)
+        prompt.retainSubmission(text)
         sendPrompt(text, emptyList(), select, clearDraft, injectedTitle)
     }
 
