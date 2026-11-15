@@ -36,6 +36,10 @@ const ACCOUNT = "oauth/account-wire"
 const NEW_ONE = "ses_0000000000000000000000000a"
 const MESSAGE = "msg_00000000000000000000000009"
 const TOKEN = "kilo-test-bearer-value"
+const ORG = "22222222-2222-4222-8222-222222222222"
+const HEAD = "1111111111111111111111111111111111111111"
+const OTHER_HEAD = "2222222222222222222222222222222222222222"
+const BASE = "3333333333333333333333333333333333333333"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(SessionHostApi)
 
@@ -87,11 +91,54 @@ function workspaceStatus(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function comparison() {
+  return { baseRef: "main", mergeBase: BASE, head: HEAD }
+}
+
+function workspaceChanges(files: Array<Record<string, unknown>>, revision = 12) {
+  return {
+    status: "captured",
+    workspaceId: WORKSPACE,
+    revision,
+    capturedAt: "2026-11-14T00:00:00.000Z",
+    truncated: false,
+    comparisons: [
+      {
+        repository: null,
+        comparison: comparison(),
+        truncated: false,
+        files,
+      },
+    ],
+  }
+}
+
+function changeFile(path: string, scope?: string) {
+  return {
+    path,
+    status: "modified",
+    ...(scope === undefined ? {} : { scope }),
+    additions: 2,
+    deletions: 1,
+    tracked: true,
+    binary: false,
+    countsComplete: true,
+    revision: 12,
+    repository: null,
+    diff: { status: "available" },
+    content: { status: "available", source: "current" },
+  }
+}
+
 type State = {
   token: "ok" | "invalid"
   catalog: "single" | "two"
   workspace: "ok" | "missing"
   status: "ok" | "missing"
+  changes: "captured" | "empty" | "missing" | "failure"
+  file: "available" | "stale" | "omitted"
+  pull: "linked" | "not_linked" | "unavailable"
+  pullFile: "available" | "omitted" | "stale"
   remove: "ok" | "invalid" | "unauthorized" | "conflict" | "unavailable"
   continuation: "ok" | "balance" | "mismatch"
 }
@@ -134,12 +181,23 @@ function workspaceSummary(overrides: Record<string, unknown> = {}) {
 }
 
 function harness(initial: Partial<State> = {}) {
-  const calls: Array<{ method: string; path: string; search: string; auth: string | null; body: string }> = []
+  const calls: Array<{
+    method: string
+    path: string
+    search: string
+    auth: string | null
+    org: string | null
+    body: string
+  }> = []
   const state: State = {
     token: "ok",
     catalog: "single",
     workspace: "ok",
     status: "ok",
+    changes: "captured",
+    file: "available",
+    pull: "linked",
+    pullFile: "available",
     remove: "ok",
     continuation: "ok",
     ...initial,
@@ -155,6 +213,7 @@ function harness(initial: Partial<State> = {}) {
         path: url.pathname,
         search: url.search,
         auth: request.headers.get("authorization"),
+        org: request.headers.get("x-kilocode-organizationid"),
         body,
       })
       if (url.pathname === "/api/profile") {
@@ -306,6 +365,196 @@ function harness(initial: Partial<State> = {}) {
         }
         return Response.json({ result: { data: workspaceStatus() } })
       }
+      if (url.pathname === "/trpc/getHostedWorkspaceChanges") {
+        if (state.changes === "failure") return Response.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 })
+        if (state.changes === "missing") {
+          return Response.json({
+            result: {
+              data: {
+                status: "not_captured",
+                workspaceId: WORKSPACE,
+                revision: null,
+                capturedAt: null,
+                truncated: false,
+                comparisons: null,
+              },
+            },
+          })
+        }
+        return Response.json({
+          result: {
+            data: workspaceChanges(
+              state.changes === "empty"
+                ? []
+                : [changeFile("src/committed.ts", "against-base-branch"), changeFile("src/working.ts", "uncommitted")],
+            ),
+          },
+        })
+      }
+      if (url.pathname === "/trpc/refreshHostedWorkspaceChanges") {
+        return Response.json({
+          result: {
+            data: {
+              status: "offline",
+              changes: workspaceChanges([changeFile("src/committed.ts", "against-base-branch")]),
+            },
+          },
+        })
+      }
+      if (url.pathname === "/trpc/getHostedWorkspaceChangeFile") {
+        if (state.file === "stale") {
+          return Response.json({
+            result: {
+              data: {
+                status: "stale",
+                file: null,
+                capturedAt: null,
+                comparison: null,
+                currentRevision: 13,
+              },
+            },
+          })
+        }
+        if (state.file === "omitted") {
+          return Response.json({
+            result: {
+              data: {
+                status: "omitted",
+                file: {
+                  schemaVersion: 1,
+                  revision: 12,
+                  path: "src/binary.png",
+                  diff: { status: "omitted", reason: "binary" },
+                  content: { status: "unavailable", reason: "too_large" },
+                },
+                capturedAt: "2026-11-14T00:00:00.000Z",
+                comparison: comparison(),
+                currentRevision: null,
+              },
+            },
+          })
+        }
+        return Response.json({
+          result: {
+            data: {
+              status: "available",
+              file: {
+                schemaVersion: 1,
+                revision: 12,
+                path: "src/committed.ts",
+                scope: "against-base-branch",
+                diff: { status: "available", patch: "@@ -1 +1 @@" },
+                content: { status: "available", source: "current", text: "next\n" },
+              },
+              capturedAt: "2026-11-14T00:00:00.000Z",
+              comparison: comparison(),
+              currentRevision: null,
+            },
+          },
+        })
+      }
+      if (url.pathname === "/trpc/getHostedWorkspacePullRequest") {
+        if (state.pull === "unavailable") {
+          return Response.json({
+            result: {
+              data: {
+                status: "unavailable",
+                workspaceId: WORKSPACE,
+                reason: "github_unavailable",
+                pullRequest: null,
+                truncated: false,
+                files: [],
+              },
+            },
+          })
+        }
+        if (state.pull === "not_linked") {
+          return Response.json({
+            result: {
+              data: {
+                status: "not_linked",
+                workspaceId: WORKSPACE,
+                reason: "no_pull_request",
+                pullRequest: null,
+                truncated: false,
+                files: [],
+              },
+            },
+          })
+        }
+        return Response.json({
+          result: {
+            data: {
+              status: "linked",
+              workspaceId: WORKSPACE,
+              reason: null,
+              pullRequest: {
+                number: 123,
+                url: "https://github.com/Kilo-Org/kilocode/pull/123",
+                state: "open",
+                draft: false,
+                headSha: HEAD,
+                baseRef: "main",
+                repository: { path: "", repoFullName: "Kilo-Org/kilocode" },
+                cacheStale: false,
+              },
+              truncated: false,
+              files: [
+                {
+                  path: "src/committed.ts",
+                  previousPath: null,
+                  status: "modified",
+                  additions: 2,
+                  deletions: 1,
+                  patchAvailable: true,
+                },
+              ],
+            },
+          },
+        })
+      }
+      if (url.pathname === "/trpc/getHostedWorkspacePullRequestFile") {
+        if (state.pullFile === "stale") {
+          return Response.json({
+            result: {
+              data: {
+                status: "stale",
+                path: "src/committed.ts",
+                reason: null,
+                omissionReason: null,
+                headSha: OTHER_HEAD,
+                patch: null,
+              },
+            },
+          })
+        }
+        if (state.pullFile === "omitted") {
+          return Response.json({
+            result: {
+              data: {
+                status: "omitted",
+                path: "src/committed.ts",
+                reason: null,
+                omissionReason: "provider_omitted",
+                headSha: HEAD,
+                patch: null,
+              },
+            },
+          })
+        }
+        return Response.json({
+          result: {
+            data: {
+              status: "available",
+              path: "src/committed.ts",
+              reason: null,
+              omissionReason: null,
+              headSha: HEAD,
+              patch: "@@ -1 +1 @@",
+            },
+          },
+        })
+      }
       if (url.pathname === "/trpc/deleteWorktree") {
         if (state.remove === "unauthorized") return Response.json({ error: "UNAUTHORIZED" }, { status: 401 })
         if (state.remove === "conflict") return Response.json({ error: "CONFLICT" }, { status: 409 })
@@ -391,6 +640,10 @@ afterEach(() => {
   app.state.catalog = "single"
   app.state.workspace = "ok"
   app.state.status = "ok"
+  app.state.changes = "captured"
+  app.state.file = "available"
+  app.state.pull = "linked"
+  app.state.pullFile = "available"
   app.state.remove = "ok"
   app.state.continuation = "ok"
 })
@@ -405,6 +658,18 @@ const statusPath = (workspaceID = WORKSPACE) =>
   SessionHostPaths.workspaceStatus.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
 const sessionsPath = (workspaceID = WORKSPACE) =>
   SessionHostPaths.workspaceSession.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const changesPath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspaceChanges.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const changesRefreshPath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspaceChangesRefresh.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const changeFilePath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspaceChangeFile.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const pullPath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspacePullRequestDiff.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const pullFilePath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspacePullRequestDiffFile
+    .replace(":providerID", "kilo-cloud")
+    .replace(":workspaceID", workspaceID)
 const attachPath = (sessionID = SESSION) =>
   SessionHostPaths.attach.replace(":providerID", "kilo-cloud").replace(":sessionID", sessionID)
 
@@ -925,18 +1190,18 @@ describe("session host HttpApi", () => {
                 db.db
                   .insert(ContinuationIntentTable)
                   .values({
-              account_id: ACCOUNT,
-              operation_key: operationKey,
-              selection_json: selection,
-              cloud_origin: app.url,
-              provider: PROVIDER,
-              prepared_json: JSON.stringify({
-                operationKey,
-                clientProvenance: "agent-manager",
-                repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
-                activeSourceKiloSessionId: SESSION,
-                sessions: [{ sourceKiloSessionId: SESSION, agent: { mode: "build", model: "test/fake" } }],
-              }),
+                    account_id: ACCOUNT,
+                    operation_key: operationKey,
+                    selection_json: selection,
+                    cloud_origin: app.url,
+                    provider: PROVIDER,
+                    prepared_json: JSON.stringify({
+                      operationKey,
+                      clientProvenance: "agent-manager",
+                      repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
+                      activeSourceKiloSessionId: SESSION,
+                      sessions: [{ sourceKiloSessionId: SESSION, agent: { mode: "build", model: "test/fake" } }],
+                    }),
                     created_at: Date.now(),
                     expires_at: Date.now() + 60_000,
                   })
@@ -981,6 +1246,143 @@ describe("session host HttpApi", () => {
           else process.env[key] = value
         }
       }
+    }),
+  )
+
+  it.live("serves committed and uncommitted workspace changes as passive reads", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClient.get(`${changesPath()}?organizationID=${ORG}`)
+      expect(response.status).toBe(200)
+      const body = Object(yield* response.json)
+      expect(body.status).toBe("captured")
+      expect(body.revision).toBe(12)
+      expect(
+        body.comparisons[0].files.map((file: { path: string; scope?: string }) => [file.path, file.scope]),
+      ).toEqual([
+        ["src/committed.ts", "against-base-branch"],
+        ["src/working.ts", "uncommitted"],
+      ])
+      const call = app.calls.findLast((entry) => entry.path === "/trpc/getHostedWorkspaceChanges")
+      expect(call).toMatchObject({ method: "GET", org: ORG })
+      expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(0)
+    }),
+  )
+
+  it.live("keeps an offline refresh on the previous snapshot and distinguishes an unavailable read", () =>
+    Effect.gen(function* () {
+      const refresh = yield* HttpClient.post(`${changesRefreshPath()}?organizationID=${ORG}`)
+      expect(refresh.status).toBe(200)
+      expect(yield* refresh.json).toMatchObject({
+        status: "offline",
+        changes: { status: "captured", revision: 12 },
+      })
+
+      app.state.changes = "missing"
+      const missing = yield* HttpClient.get(changesPath())
+      expect(yield* missing.json).toMatchObject({
+        status: "not_captured",
+        revision: null,
+        capturedAt: null,
+        comparisons: null,
+      })
+
+      app.state.changes = "empty"
+      const empty = yield* HttpClient.get(changesPath())
+      expect(yield* empty.json).toMatchObject({
+        status: "captured",
+        comparisons: [{ files: [] }],
+      })
+    }),
+  )
+
+  it.live("fences per-file reads by the expected revision", () =>
+    Effect.gen(function* () {
+      const file = yield* HttpClient.get(
+        `${changeFilePath()}?path=src%2Fcommitted.ts&scope=against-base-branch&expectedRevision=12`,
+      )
+      expect(file.status).toBe(200)
+      expect(yield* file.json).toMatchObject({
+        status: "available",
+        file: { revision: 12, path: "src/committed.ts", scope: "against-base-branch" },
+      })
+
+      app.state.file = "stale"
+      const stale = yield* HttpClient.get(`${changeFilePath()}?path=src%2Fcommitted.ts&expectedRevision=12`)
+      expect(yield* stale.json).toEqual({
+        status: "stale",
+        file: null,
+        capturedAt: null,
+        comparison: null,
+        currentRevision: 13,
+      })
+
+      app.state.file = "omitted"
+      const omitted = yield* HttpClient.get(`${changeFilePath()}?path=src%2Fbinary.png&expectedRevision=12`)
+      expect(yield* omitted.json).toMatchObject({
+        status: "omitted",
+        file: { diff: { status: "omitted", reason: "binary" } },
+      })
+    }),
+  )
+
+  it.live("returns no linked PR without failing the workspace changes read", () =>
+    Effect.gen(function* () {
+      app.state.pull = "not_linked"
+      const none = yield* HttpClient.get(pullPath())
+      expect(none.status).toBe(200)
+      expect(yield* none.json).toMatchObject({
+        status: "not_linked",
+        reason: "no_pull_request",
+        pullRequest: null,
+        files: [],
+      })
+
+      const changes = yield* HttpClient.get(changesPath())
+      expect(changes.status).toBe(200)
+      expect(yield* changes.json).toMatchObject({ status: "captured" })
+
+      app.state.pull = "linked"
+      const linked = yield* HttpClient.get(pullPath())
+      expect(yield* linked.json).toMatchObject({
+        status: "linked",
+        pullRequest: { number: 123, headSha: HEAD },
+        files: [{ path: "src/committed.ts", patchAvailable: true }],
+      })
+    }),
+  )
+
+  it.live("serves PR patches fenced by the verified head and preserves omissions", () =>
+    Effect.gen(function* () {
+      const patch = yield* HttpClient.get(`${pullFilePath()}?path=src%2Fcommitted.ts&expectedHeadSha=${HEAD}`)
+      expect(patch.status).toBe(200)
+      expect(yield* patch.json).toEqual({
+        status: "available",
+        path: "src/committed.ts",
+        reason: null,
+        omissionReason: null,
+        headSha: HEAD,
+        patch: "@@ -1 +1 @@",
+      })
+
+      app.state.pullFile = "omitted"
+      const omitted = yield* HttpClient.get(`${pullFilePath()}?path=src%2Fcommitted.ts&expectedHeadSha=${HEAD}`)
+      expect(yield* omitted.json).toMatchObject({
+        status: "omitted",
+        omissionReason: "provider_omitted",
+        patch: null,
+      })
+
+      app.state.pullFile = "stale"
+      const stale = yield* HttpClient.get(`${pullFilePath()}?path=src%2Fcommitted.ts&expectedHeadSha=${HEAD}`)
+      expect(yield* stale.json).toMatchObject({ status: "stale", headSha: OTHER_HEAD, patch: null })
+    }),
+  )
+
+  it.live("maps a provider failure to a typed local error", () =>
+    Effect.gen(function* () {
+      app.state.changes = "failure"
+      const response = yield* HttpClient.get(changesPath())
+      expect(response.status).toBe(503)
     }),
   )
 })
