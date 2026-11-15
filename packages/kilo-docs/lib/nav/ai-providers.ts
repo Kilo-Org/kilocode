@@ -53,6 +53,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/gmicloud", children: "GMI Cloud" },
       { href: "/ai-providers/mixlayer", children: "Mixlayer" },
       { href: "/ai-providers/nebius", children: "Nebius Token Factory" },
+      { href: "/ai-providers/obscurify", children: "Obscurify.ai" },
     ],
   },
   {
@@ -78,7 +79,6 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/inception", children: "Inception" },
       { href: "/ai-providers/minimax", children: "MiniMax" },
       { href: "/ai-providers/moonshot", children: "Moonshot" },
-      { href: "/ai-providers/obscurify", children: "Obscurify.ai" },
       { href: "/ai-providers/ovhcloud", children: "OVHcloud" },
       { href: "/ai-providers/sap-ai-core", children: "SAP AI Core" },
       { href: "/ai-providers/venice", children: "Venice AI" },

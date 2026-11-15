@@ -56,19 +56,24 @@ export OBSCURIFY_API_KEY="your-api-key"
 
 ## Models not in the picker
 
-The model picker lists the Obscurify.ai models in Kilo's provider catalog. The full model list is at `https://obscurify.ai/v1/models`, with prices on the [model cards](https://obscurify.ai/models) page. To use a model that is not in the picker, add its ID to `~/.config/kilo/kilo.json` or `./kilo.json`:
+The model picker lists the Obscurify.ai models in Kilo's provider catalog. The full model list is at `https://obscurify.ai/v1/models`, with prices on the [model cards](https://obscurify.ai/models) page. To use a model that is not in the picker, add its ID to `~/.config/kilo/kilo.json` or `./kilo.json` with a name and limits:
 
 ```jsonc
 {
   "provider": {
     "obscurify": {
       "models": {
-        "qwen/qwen3-coder-next": {},
+        "qwen/qwen3-coder-next": {
+          "name": "Qwen3 Coder Next",
+          "limit": { "context": 262144, "output": 65536 },
+        },
       },
     },
   },
 }
 ```
+
+Take `context` from the model's `context_length` in `/v1/models`, and `output` from the model's own documentation. Without `limit`, both default to `0`, which turns off automatic compaction for that model. Kilo shows a cost of $0 for a model added this way.
 
 ## API compatibility
 
