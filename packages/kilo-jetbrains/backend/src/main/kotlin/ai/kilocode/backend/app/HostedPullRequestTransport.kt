@@ -173,6 +173,7 @@ private data class WireSummary(
 ) {
     fun dto(): HostedPullRequestSummaryDto {
         val link = url.toHttpUrl()
+        // Session Host is provider-neutral; adapters enforce provider-specific PR hosts.
         require(link.scheme == "https" && link.username.isEmpty() && link.password.isEmpty())
         require(url.length <= URL_LIMIT && number in 1..INTEGER)
         require(state in setOf("open", "draft", "merged", "closed", "unknown"))

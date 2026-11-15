@@ -47,6 +47,7 @@ class KiloHostedManagementTest {
     companion object {
         private const val WAIT = 10_000L
         private const val PATH = "/kilocode/session-host/workspace/cloud/wrk_1/pull-request"
+        private const val LIMIT = 65_536
     }
 
     private val mock = MockCliServer()
@@ -234,6 +235,33 @@ class KiloHostedManagementTest {
     }
 
     @Test
+    fun `PR transport preserves provider-neutral HTTPS links and rejects unsafe schemes and userinfo`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloHostedRpcApiImpl(app)
+        listOf(
+            "https://gitlab.com/group/project/-/merge_requests/142",
+            "https://git.example.test:8443/team/repo/pulls/142",
+        ).forEach { url ->
+            mock.hostedPullRequest = result(summary = JsonObject(summary() + ("url" to JsonPrimitive(url))))
+            val actual = api.workspacePullRequest(ref, null)
+            assertEquals("available", actual.state, url)
+            assertEquals(url, actual.pullRequest?.url)
+        }
+        listOf(
+            "http://github.com/Kilo-Org/cloud/pull/142",
+            "javascript:alert(1)",
+            "file:///private/repo/pull/142",
+            "https://token:secret@github.com/Kilo-Org/cloud/pull/142",
+        ).forEach { url ->
+            mock.hostedPullRequest = result(summary = JsonObject(summary() + ("url" to JsonPrimitive(url))))
+            val actual = api.workspacePullRequest(ref, null)
+            assertEquals("unavailable", actual.state, url)
+            assertNull(actual.pullRequest, url)
+        }
+    }
+
+    @Test
     fun `PR organization query uses explicit then current scope while personal calls omit it`() = runBlocking(Dispatchers.Default) {
         mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_current"}"""
         val app = app(TestLog())
@@ -299,8 +327,28 @@ class KiloHostedManagementTest {
             assertEquals("unavailable", actual.state, value)
             assertNull(actual.pullRequest, value)
         }
-        mock.hostedPullRequest = " ".repeat(65_537)
-        assertEquals("unavailable", api.workspacePullRequest(ref, null).state)
+    }
+
+    @Test
+    fun `PR response byte limit accepts valid JSON at the boundary and rejects one extra byte`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloHostedRpcApiImpl(app)
+        val body = result().padEnd(LIMIT, ' ')
+        val oversized = "$body "
+        assertEquals(LIMIT, body.toByteArray(Charsets.UTF_8).size)
+        assertEquals(LIMIT + 1, oversized.toByteArray(Charsets.UTF_8).size)
+        assertEquals(Json.parseToJsonElement(body), Json.parseToJsonElement(oversized))
+
+        mock.hostedPullRequest = body
+        val accepted = api.workspacePullRequest(ref, null)
+        assertEquals("available", accepted.state)
+        assertNotNull(accepted.pullRequest)
+
+        mock.hostedPullRequest = oversized
+        val rejected = api.workspacePullRequest(ref, null)
+        assertEquals("unavailable", rejected.state)
+        assertNull(rejected.pullRequest)
     }
 
     @Test
