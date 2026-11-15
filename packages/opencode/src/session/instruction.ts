@@ -179,7 +179,7 @@ const layer: Layer.Layer<
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
           matches.forEach((item) => add(item, origin))
-          if (matches.length === 0) KilocodeInstruction.unmatched(raw) // kilocode_change
+          if (matches.length === 0) KilocodeInstruction.unmatched(raw, declared.source, root) // kilocode_change
         }
       }
 

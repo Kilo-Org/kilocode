@@ -226,9 +226,92 @@ describe("Instruction skipped file warnings", () => {
         withConfigDir(undefined),
       )
 
-      expect(logged.calls().filter((item) => item.path === entry)).toStrictEqual([
-        { message: "instruction file skipped", path: entry, reason: "no matching file" },
+      expect(logged.calls().filter((item) => item.directory === project)).toStrictEqual([
+        {
+          message: "instruction file skipped",
+          source: "global",
+          entry: expect.stringMatching(/^sha256:[0-9a-f]{8}$/),
+          directory: project,
+          reason: "no matching file",
+        },
       ])
+    }),
+  )
+
+  it.live("does not log the value of an unmatched entry", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const project = yield* tmpdirScoped()
+      const secret = "sk-test-SECRET-value-1234567890"
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([])
+      }).pipe(
+        provideInstance(project),
+        withInstructions({ home, config: home }, [secret], { [secret]: { trusted: false, source: "project" } }),
+        withConfigDir(undefined),
+      )
+
+      expect(logged.calls().length).toBe(1)
+      expect(JSON.stringify(logged.calls())).not.toContain(secret)
+    }),
+  )
+
+  it.live("warns once per project for the same relative entry", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const first = yield* tmpdirScoped()
+      const second = yield* tmpdirScoped()
+      const entry = "rules-unmatched-per-project/*.md"
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      for (const project of [first, second, first]) {
+        yield* Effect.gen(function* () {
+          const svc = yield* Instruction.Service
+          yield* svc.system()
+        }).pipe(
+          provideInstance(project),
+          withInstructions({ home, config: home }, [entry], { [entry]: { trusted: false, source: "project" } }),
+          withConfigDir(undefined),
+        )
+      }
+
+      expect(logged.calls().map((item) => item.directory)).toStrictEqual([first, second])
+    }),
+  )
+
+  it.live("reports the blocked file reference inside an instruction file without leaking its contents", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const outside = yield* tmpWithFiles({ ".env": "API_KEY=sk-leak-me" })
+      const project = yield* tmpWithFiles({ "rules.md": `use {file:${path.join(outside, ".env")}}` })
+      const file = path.join(project, "rules.md")
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([])
+      }).pipe(
+        provideInstance(project),
+        withInstructions({ home, config: home }, [file], { [file]: { trusted: false, source: "project" } }),
+        withConfigDir(undefined),
+      )
+
+      const calls = logged.calls().filter((item) => item.path === file)
+      expect(calls).toStrictEqual([
+        {
+          message: "instruction file skipped",
+          path: file,
+          reason: "blocked: outside project config scope",
+          detail: expect.stringContaining("blocked file reference outside project config scope"),
+        },
+      ])
+      expect(JSON.stringify(calls)).not.toContain("sk-leak-me")
     }),
   )
 })

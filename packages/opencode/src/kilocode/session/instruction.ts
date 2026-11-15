@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import { InvalidError } from "@opencode-ai/core/v1/config/error"
 import * as Log from "@opencode-ai/core/util/log"
 import { ConfigVariableGuard } from "../config/variable"
 import { KilocodeMarkdown } from "../config/markdown"
@@ -22,22 +24,33 @@ export namespace KilocodeInstruction {
     return content(await KilocodeMarkdown.read(item, options), item, options)
   }
 
+  // Reasons are built from guard messages that quote only the reference token (never file or env values).
+  function detail(err: unknown) {
+    if (InvalidError.isInstance(err)) return err.data.message ?? err.name
+    if (ConfigVariableGuard.isBlocked(err)) return err.message
+    if (err instanceof Error) return err.name
+    return "unknown error"
+  }
+
   // Same as read(), but a failure yields "" and is logged instead of dropping the file silently.
   export async function readOrWarn(item: string, options: KilocodeMarkdown.Options) {
     return read(item, options).catch((err: unknown) => {
-      const blocked = ConfigVariableGuard.isBlocked(err)
-      const detail = err instanceof Error ? err.message : String(err)
+      const blocked =
+        ConfigVariableGuard.isBlocked(err) ||
+        (InvalidError.isInstance(err) && ConfigVariableGuard.isBlocked(err.cause))
       warn(`read:${item}`, {
         path: item,
         reason: blocked ? "blocked: outside project config scope" : "unreadable",
-        detail,
+        detail: detail(err),
       })
       return ""
     })
   }
 
-  // A configured instructions entry that resolves to no file.
-  export function unmatched(entry: string) {
-    warn(`unmatched:${entry}`, { path: entry, reason: "no matching file" })
+  // A configured instructions entry that resolves to no file. Entries are expanded config values and may
+  // hold secrets ({env:...}, {file:...}), so log only the config source and a short fingerprint, never the value.
+  export function unmatched(entry: string, source: string, dir: string) {
+    const id = createHash("sha256").update(entry).digest("hex").slice(0, 8)
+    warn(`unmatched:${dir}:${entry}`, { source, entry: `sha256:${id}`, directory: dir, reason: "no matching file" })
   }
 }
