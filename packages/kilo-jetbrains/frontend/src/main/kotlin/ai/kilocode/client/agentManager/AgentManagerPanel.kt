@@ -160,17 +160,7 @@ class AgentManagerPanel(
     parent: Disposable,
     private val controller: WorktreeController,
     private val project: Project? = null,
-    private val dialog: (Component, Project) -> NewWorktreeHandle = { anchor, target ->
-        NewWorktreeDialog(
-            anchor,
-            target,
-            controller.directory,
-            controller.suggestName(),
-            controller.defaultBranch,
-            controller.branches,
-            controller.origin,
-        )
-    },
+    private val dialog: ((Component, Project) -> NewWorktreeHandle)? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = RowDeleteProvider()
     private val edit = RenameAction()
@@ -470,27 +460,68 @@ class AgentManagerPanel(
      * dialog closes, so [onCreate] — e.g. the chat dock switching the tool window to this panel —
      * never competes with the modal dialog for focus.
      */
+    @RequiresEdt
     fun configure(anchor: Component = this, onCreate: () -> Unit = {}) {
         val target = project ?: return
-        val handle = dialog(anchor, target)
+        val handle = dialog?.invoke(anchor, target) ?: NewWorktreeDialog(
+            anchor,
+            target,
+            controller.directory,
+            controller.suggestName(),
+            controller.defaultBranch,
+            controller.branches,
+            controller.origin,
+            sections = sections(),
+            section = section(),
+        )
         if (!handle.showAndGet()) return
         val plan = handle.result() ?: return
         onCreate()
+        val place = fun(key: String, previous: String?) {
+            if (previous != null) return ordering.replace(previous, key)
+            ordering.insert(key, plan.section?.takeIf { ordering.section(it) != null })
+        }
         when (plan) {
-            is NewWorktreePlan.Create -> controller.create(plan.branch, plan.base, prompt = plan.prompt, fetchBase = plan.fetchBase)
+            is NewWorktreePlan.Create -> controller.create(
+                plan.branch, plan.base, prompt = plan.prompt, fetchBase = plan.fetchBase, place = place,
+            )
             is NewWorktreePlan.Branch -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "branch"))
-                controller.importBranch(plan.branch)
+                controller.importBranch(plan.branch, place = place)
             }
             is NewWorktreePlan.Pr -> {
                 Telemetry.send("Worktree Import Submitted", mapOf("kind" to "pr"))
-                controller.importPr(plan.url)
+                controller.importPr(plan.url, place = place)
             }
         }
     }
 
     internal fun move(sessionId: String?, directory: String, surface: String = "sidebar") =
         controller.move(sessionId, directory, surface)
+
+    @RequiresEdt
+    internal fun sections(): List<AgentManagerLayout.Section> = ordering.sections()
+
+    @RequiresEdt
+    internal fun section(key: String? = tree.selected()?.key): String? = key?.let {
+        ordering.section(it)?.key ?: ordering.parent(it)
+    }
+
+    @RequiresEdt
+    internal fun canMove(key: String?): Boolean {
+        if (key == null) return false
+        val local = item(key)?.let { !it.main && controller.progress(key) == null }
+        return local ?: (key !in pendingHosted && key !in deletingHosted &&
+            (key in createdHosted || hostedState.items.any { it.ref.key == key }))
+    }
+
+    @RequiresEdt
+    internal fun relocate(key: String, section: String) {
+        if (!canMove(key) || ordering.section(section) == null) return
+        ordering.move(key, section)
+        sync()
+        tree.select(key)
+    }
 
     @RequiresEdt
     internal fun createSection() {
@@ -526,6 +557,8 @@ class AgentManagerPanel(
             target,
             controller.directory,
             repo,
+            sections = sections(),
+            section = section(),
         )
         if (!dialog.showAndGet()) return
         val plan = dialog.plan() ?: return
@@ -537,11 +570,11 @@ class AgentManagerPanel(
             operationKey = java.util.UUID.randomUUID().toString(),
             messageID = hostedMessageID(),
         )
-        createHosted(request)
+        createHosted(request, plan.section)
     }
 
     @RequiresEdt
-    internal fun createHosted(request: HostedCreateWorkspaceDto) {
+    internal fun createHosted(request: HostedCreateWorkspaceDto, section: String? = null) {
         val target = project ?: return
         if (hostedState.signedOut) {
             KiloNotifications.info(target, KiloBundle.message("hosted.workspace.signInRequired"))
@@ -556,6 +589,7 @@ class AgentManagerPanel(
             profileID = request.profileID,
         )
         pendingHosted[pending.ref.key] = pending
+        ordering.insert(pending.ref.key, section?.takeIf { ordering.section(it) != null })
         sync()
         tree.select(pending.ref.key)
         tree.focus()
@@ -579,11 +613,12 @@ class AgentManagerPanel(
                         KiloBundle.message("hosted.workspace.create.failed"),
                         failure?.message,
                         KiloBundle.message("common.retry"),
-                    ) { createHosted(request) }
+                    ) { createHosted(request, section) }
                     return@edt
                 }
                 createdHosted[workspace.ref.key] = workspace
                 missedHosted.remove(workspace.ref.key)
+                ordering.replace(pending.ref.key, workspace.ref.key)
                 sync()
                 target.service<HostedManagementService>().select(workspace.ref, session.id)
                 tree.select(workspace.ref.key)
