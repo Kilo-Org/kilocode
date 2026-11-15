@@ -129,13 +129,13 @@ describe("Instruction.systemPaths KILO_CONFIG_DIR profile fallback", () => {
 const withInstructions = (
   global: Partial<Global.Interface>,
   instructions: string[],
-  origins: Record<string, { trusted: boolean; source: string }>,
+  origins?: Record<string, { trusted: boolean; source: string }>,
 ) =>
   <A, E, R>(self: Effect.Effect<A, E, R>) =>
     self.pipe(
       Effect.provide(
         AppNodeBuilder.build(Instruction.node, [
-          [Config.node, TestConfig.layer({ get: () => Effect.succeed({ instructions, instruction_origins: origins }) })],
+          [Config.node, TestConfig.layer({ get: () => Effect.succeed({ instructions, ...(origins ? { instruction_origins: origins } : {}) }) })],
           [Global.node, Global.layerWith(global)],
         ]),
       ),
@@ -252,6 +252,46 @@ describe("Instruction skipped file warnings", () => {
       }).pipe(
         provideInstance(project),
         withInstructions({ home, config: home }, [secret], { [secret]: { trusted: false, source: "project" } }),
+        withConfigDir(undefined),
+      )
+
+      expect(logged.calls().length).toBe(1)
+      expect(JSON.stringify(logged.calls())).not.toContain(secret)
+    }),
+  )
+
+  it.live("does not log an unmatched secret entry when instruction_origins is absent", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const project = yield* tmpdirScoped()
+      const secret = "sk-test-SECRET-fallback-1234567890"
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([])
+      }).pipe(provideInstance(project), withInstructions({ home, config: home }, [secret], undefined), withConfigDir(undefined))
+
+      expect(logged.calls().length).toBe(1)
+      expect(JSON.stringify(logged.calls())).not.toContain(secret)
+    }),
+  )
+
+  it.live("does not log an unmatched secret entry missing from instruction_origins", () =>
+    Effect.gen(function* () {
+      const home = yield* tmpdirScoped()
+      const project = yield* tmpdirScoped()
+      const secret = "sk-test-SECRET-missing-1234567890"
+      const logged = warnings()
+      yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        expect(yield* svc.system()).toStrictEqual([])
+      }).pipe(
+        provideInstance(project),
+        withInstructions({ home, config: home }, [secret], { other: { trusted: false, source: "project" } }),
         withConfigDir(undefined),
       )
 

@@ -51,6 +51,8 @@ export namespace KilocodeInstruction {
   // hold secrets ({env:...}, {file:...}), so log only the config source and a short fingerprint, never the value.
   export function unmatched(entry: string, source: string, dir: string) {
     const id = createHash("sha256").update(entry).digest("hex").slice(0, 8)
-    warn(`unmatched:${dir}:${entry}`, { source, entry: `sha256:${id}`, directory: dir, reason: "no matching file" })
+    // When no origin was recorded the caller falls back to the entry itself as the source, so never echo it.
+    const origin = source === entry ? "unknown" : source
+    warn(`unmatched:${dir}:${entry}`, { source: origin, entry: `sha256:${id}`, directory: dir, reason: "no matching file" })
   }
 }
