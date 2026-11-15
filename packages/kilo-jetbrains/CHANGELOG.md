@@ -680,6 +680,21 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.7] - 2026-11-15
+
+### Added
+- feat(jetbrains): organize Agent Manager sections and add dictation by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16182
+- feat(jetbrains): add section selection and voice input to dialogs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16174
+
+### Fixed
+- fix(jetbrains): reconcile worktree creation and preserve prompts by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16181
+
+### Changed
+- release(jetbrains): v7.2.1-rc.6 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16170
+- docs(kilo-docs): update Kilo Desktop docs for 0.1.16 by @MihaelaStoica in https://github.com/Kilo-Org/kilocode/pull/16172
+- docs: reference organization analytics API by @alexkgold in https://github.com/Kilo-Org/kilocode/pull/16162
+
+
 ## [7.2.1-rc.6] - 2026-11-13
 
 ### Added
