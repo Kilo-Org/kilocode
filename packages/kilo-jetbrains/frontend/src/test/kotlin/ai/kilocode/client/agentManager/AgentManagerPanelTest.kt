@@ -275,6 +275,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(pending.id, view.selected()?.key)
             assertEquals(section.key, panel.section())
             assertSame(view.hierarchy.entries.getValue(section.key), view.hierarchy.entries.getValue(pending.id).parent)
+            assertEquals(pending.id, (view.hierarchy.entries.getValue(section.key).firstChild as ActiveEntry).key)
             assertTrue(view.select(other.key))
         }
         gate.complete(Unit)
@@ -287,6 +288,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             assertEquals(created.id, view.selected()?.key)
             assertEquals(section.key, panel.section())
             assertSame(view.hierarchy.entries.getValue(section.key), view.hierarchy.entries.getValue(created.id).parent)
+            assertEquals(created.id, (view.hierarchy.entries.getValue(section.key).firstChild as ActiveEntry).key)
             assertEquals(section.key, AgentManagerLayout(PropertiesComponent.getInstance(project)).parent(created.id))
             assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text)
         }

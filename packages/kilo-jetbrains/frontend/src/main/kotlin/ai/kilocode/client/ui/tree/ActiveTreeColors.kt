@@ -11,6 +11,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.ColorIcon
+import java.awt.Color
 import javax.swing.Icon
 
 internal object ActiveTreeColors {
@@ -21,6 +22,9 @@ internal object ActiveTreeColors {
     fun icon(key: String?): Icon? = color(key)?.let { color ->
         JBUIScale.scaleIcon(ColorIcon(SIZE, SIZE, DOT, DOT, color, false, DOT))
     }
+
+    /** Transparent icon that keeps unmarked rows aligned with colored section rows. */
+    fun blank(): Icon = JBUIScale.scaleIcon(ColorIcon(SIZE, SIZE, 0, 0, Color(0, 0, 0, 0), false, 0))
 
     @RequiresEdt
     fun group(data: DataKey<String>, current: (String) -> String?, change: (String, String) -> Unit): ActionGroup =

@@ -196,9 +196,15 @@ class HostedWorkspaceDialogTest : BasePlatformTestCase() {
             assertEquals(0, picker.selectedIndex)
             @Suppress("UNCHECKED_CAST")
             val renderer = picker.renderer as ListCellRenderer<Any>
-            val cell = renderer.getListCellRendererComponent(JList<Any>(), picker.getItemAt(0), 0, false, false)
-            assertEquals(KiloBundle.message("agentManager.section.none"), (cell as SimpleColoredComponent).toString())
-            assertNull(cell.icon)
+            val sectionCell = renderer.getListCellRendererComponent(
+                JList<Any>(), picker.getItemAt(1), 1, false, false,
+            ) as SimpleColoredComponent
+            val width = requireNotNull(sectionCell.icon).iconWidth
+            val cell = renderer.getListCellRendererComponent(
+                JList<Any>(), picker.getItemAt(0), 0, false, false,
+            ) as SimpleColoredComponent
+            assertEquals(KiloBundle.message("agentManager.section.none"), cell.toString())
+            assertEquals("The root option reserves the section icon width", width, requireNotNull(cell.icon).iconWidth)
             submit()
         }
 

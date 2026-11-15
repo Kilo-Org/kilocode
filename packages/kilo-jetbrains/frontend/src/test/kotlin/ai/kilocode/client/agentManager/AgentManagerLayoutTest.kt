@@ -214,6 +214,25 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(current.key, first.key, second.key, local.key), keys(restored.nodes(items)))
     }
 
+    fun `test inserting created rows places them first in their destination`() = edtWait {
+        val section = layout.create("Section")
+        layout.nodes(items, pin = current.key)
+        layout.move(cloud.key, section.key)
+        layout.nodes(items, pin = current.key)
+
+        layout.insert(local.key, section.key)
+        layout.insert("new-root", null)
+        layout.insert(current.key, section.key)
+
+        val nodes = layout.nodes(items + Row("new-root"), pin = current.key)
+        assertEquals(listOf(local.key, cloud.key), keys(children(nodes, section)))
+        assertEquals(listOf(current.key, "new-root"), nodes.map { it.item.key }.take(2))
+        val restored = AgentManagerLayout(PropertiesComponent.getInstance(project))
+        assertEquals(section.key, restored.parent(local.key))
+        assertNull(restored.parent(current.key))
+        assertNull(restored.parent("new-root"))
+    }
+
     fun `test section choices follow visual order and membership resolves after deletion`() = edtWait {
         val first = layout.create("First")
         val second = layout.create("Second")

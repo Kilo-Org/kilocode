@@ -101,7 +101,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
                 hasFocus: Boolean,
             ) {
                 val item = value as? AgentManagerLayout.Section
-                icon = ActiveTreeColors.icon(item?.color)
+                icon = ActiveTreeColors.icon(item?.color) ?: ActiveTreeColors.blank()
                 append(item?.title ?: KiloBundle.message("agentManager.section.none"))
             }
         }

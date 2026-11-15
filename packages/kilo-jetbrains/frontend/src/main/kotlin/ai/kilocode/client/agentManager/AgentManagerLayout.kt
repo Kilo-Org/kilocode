@@ -112,6 +112,17 @@ internal class AgentManagerLayout(private val properties: PropertiesComponent? =
         ))
     }
 
+    /** Adds a newly created row at the top of [section], or at the top of the root list. */
+    @RequiresEdt
+    fun insert(key: String, section: String?) {
+        if (key == pinned || this.section(key) != null) return
+        if (section != null && this.section(section) == null) return
+        val target = section ?: ROOT
+        val membership = if (section == null) state.membership - key else state.membership + (key to section)
+        val order = order.mapValues { (_, keys) -> keys.filterNot { it == key } }
+        save(state.copy(membership = membership, order = order + (target to (listOf(key) + order[target].orEmpty()))))
+    }
+
     @RequiresEdt
     fun move(key: String, section: String?) {
         if (parent(key) == section) return

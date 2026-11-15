@@ -683,7 +683,11 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
             }
             val root = sectionCell(0)
             assertEquals(KiloBundle.message("agentManager.section.none"), root.toString())
-            assertNull(root.icon)
+            assertEquals(
+                "The root option reserves the section icon width",
+                requireNotNull(sectionCell(1).icon).iconWidth,
+                requireNotNull(root.icon).iconWidth,
+            )
         }
     }
 

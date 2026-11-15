@@ -479,7 +479,7 @@ class AgentManagerPanel(
         onCreate()
         val place = fun(key: String, previous: String?) {
             if (previous != null) return ordering.replace(previous, key)
-            ordering.move(key, plan.section?.takeIf { ordering.section(it) != null })
+            ordering.insert(key, plan.section?.takeIf { ordering.section(it) != null })
         }
         when (plan) {
             is NewWorktreePlan.Create -> controller.create(
@@ -589,7 +589,7 @@ class AgentManagerPanel(
             profileID = request.profileID,
         )
         pendingHosted[pending.ref.key] = pending
-        ordering.move(pending.ref.key, section?.takeIf { ordering.section(it) != null })
+        ordering.insert(pending.ref.key, section?.takeIf { ordering.section(it) != null })
         sync()
         tree.select(pending.ref.key)
         tree.focus()
