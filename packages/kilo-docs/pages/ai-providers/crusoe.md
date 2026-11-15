@@ -1,6 +1,6 @@
 ---
 title: "Using Crusoe with Kilo Code | Managed Inference for Open Models"
-description: "Run open models like GLM 5.2 on Crusoe Managed Inference's OpenAI-compatible API in Kilo Code. Setup guide for VS Code and the CLI."
+description: "Run open-weight models on Crusoe Managed Inference's OpenAI-compatible API in Kilo Code. Setup guide for VS Code and the CLI."
 ---
 
 # Using Crusoe With Kilo Code
@@ -55,7 +55,7 @@ export CRUSOE_API_KEY="your-api-key"
       "env": ["CRUSOE_API_KEY"],
     },
   },
-  "model": "crusoe/zai/GLM-5.2",
+  "model": "crusoe/openai/gpt-oss-120b",
 }
 ```
 
@@ -64,22 +64,17 @@ export CRUSOE_API_KEY="your-api-key"
 
 ## Models
 
-Crusoe Managed Inference serves open models including:
+Kilo Code lists Crusoe's models in the model picker. Good starting points:
 
-- `zai/GLM-5.2` (1M context) and `zai/GLM-5.1`
-- `moonshotai/Kimi-K2.6`
-- `deepseek-ai/DeepSeek-V3-0324`
-- `Qwen/Qwen3-235B-A22B-Instruct-2507`
-- `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B`, `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, and `nvidia/Nemotron-3-Nano-Omni-Reasoning-30B-A3B`
-- `google/gemma-4-31b-it`
 - `openai/gpt-oss-120b`
-- `meta-llama/Llama-3.3-70B-Instruct`
+- `google/gemma-4-31b-it`
+- `nvidia/Nemotron-3-Nano-Omni-Reasoning-30B-A3B`
 
-Tool calling and reasoning are supported across most of the model line. See the [Crusoe Managed Inference docs](https://docs.crusoecloud.com/managed-inference/overview) for the full, current model list and supported parameters.
+Crusoe adds and retires models regularly. See [Available models](https://docs.crusoecloud.com/serverless-inference/available-models) for the current catalog, and the [Crusoe Managed Inference docs](https://docs.crusoecloud.com/managed-inference/overview) for supported parameters.
 
 ## Tips and Notes
 
 - **Model list:** The current catalog is always available from the `/v1/models` endpoint at `https://api.inference.crusoecloud.com/v1/models`.
 - **Pricing:** See [Crusoe pricing](https://crusoe.ai/cloud/pricing) for current per-model rates.
-- **Reasoning:** Reasoning models such as GLM 5.2 return their thinking alongside responses; `openai/gpt-oss-120b` additionally supports low/medium/high reasoning effort levels. Reasoning tokens count against the output budget, so give responses enough room when reasoning is enabled.
+- **Reasoning:** Reasoning models return their thinking alongside responses; `openai/gpt-oss-120b` additionally supports low/medium/high reasoning effort levels. Reasoning tokens count against the output budget, so give responses enough room when reasoning is enabled.
 - **Rate limits:** Serverless endpoints enforce per-project, per-model token and request limits and return `429` when exceeded. See [Serverless rate limits](https://docs.crusoecloud.com/serverless-inference/rate-limits) for defaults and how to raise them.
