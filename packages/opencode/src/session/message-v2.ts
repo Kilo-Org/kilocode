@@ -40,6 +40,7 @@ import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloPartLifecycle } from "@/kilocode/session/part-lifecycle" // kilocode_change
+import { KiloMessageV2 } from "@/kilocode/session/message-v2" // kilocode_change
 import * as TextStream from "@/kilocode/text-stream" // kilocode_change
 import { BoardNotice } from "@/kilocode/board/notice" // kilocode_change
 import { Effect, Schema } from "effect"
@@ -409,10 +410,8 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         if (KiloPartLifecycle.transient(part)) continue // kilocode_change - never replay transient UI parts
         // kilocode_change - !part.ignored keeps local UI warnings out of future prompts
         if (part.type === "text" && !part.ignored) {
-          // kilocode_change start - empty text blocks (left by aborted/failed streams) are rejected by Anthropic
-          if (part.text === "" && !hasSignedReasoning) continue
-          // kilocode_change end
-          const text = part.text === "" ? " " : part.text
+          if (KiloMessageV2.skipEmptyText(part, hasSignedReasoning)) continue // kilocode_change - empty text is rejected by Anthropic
+          const text = part.text === "" && hasSignedReasoning ? " " : part.text
           assistantMessage.parts.push({
             type: "text",
             text,
