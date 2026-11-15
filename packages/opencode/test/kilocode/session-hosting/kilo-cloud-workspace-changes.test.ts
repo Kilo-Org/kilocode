@@ -423,6 +423,15 @@ it.effect("preserves omission reasons, deleted content, and refresh snapshots", 
     expect(file.file?.diff).toEqual({ status: "omitted", reason: "binary" })
     expect(file.file?.content).toEqual({ status: "unavailable", reason: "too_large" })
 
+    app.state.file = "available"
+    const unscoped = yield* cloud.getWorkspaceChangeFile({
+      id,
+      path: "src/committed.ts",
+      expectedRevision: 12,
+    })
+    expect(unscoped.status).toBe("available")
+    expect(unscoped.file?.scope).toBe("against-base-branch")
+
     app.state.file = "deleted"
     const deleted = yield* cloud.getWorkspaceChangeFile({
       id,

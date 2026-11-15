@@ -135,7 +135,7 @@ type State = {
   catalog: "single" | "two"
   workspace: "ok" | "missing"
   status: "ok" | "missing"
-  changes: "captured" | "empty" | "missing" | "failure"
+  changes: "captured" | "empty" | "missing" | "notfound" | "failure"
   file: "available" | "stale" | "omitted"
   pull: "linked" | "not_linked" | "unavailable"
   pullFile: "available" | "omitted" | "stale"
@@ -367,6 +367,7 @@ function harness(initial: Partial<State> = {}) {
       }
       if (url.pathname === "/trpc/getHostedWorkspaceChanges") {
         if (state.changes === "failure") return Response.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 })
+        if (state.changes === "notfound") return Response.json({ error: "NOT_FOUND" }, { status: 404 })
         if (state.changes === "missing") {
           return Response.json({
             result: {
@@ -1383,6 +1384,17 @@ describe("session host HttpApi", () => {
       app.state.changes = "failure"
       const response = yield* HttpClient.get(changesPath())
       expect(response.status).toBe(503)
+    }),
+  )
+
+  it.live("disposes attachments when a workspace diff read reports not found", () =>
+    Effect.gen(function* () {
+      yield* attach()
+      expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(1)
+      app.state.changes = "notfound"
+      const response = yield* HttpClient.get(changesPath())
+      expect(response.status).toBe(404)
+      expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(0)
     }),
   )
 })

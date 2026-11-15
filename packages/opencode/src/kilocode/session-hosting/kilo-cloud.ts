@@ -1133,9 +1133,9 @@ export function provider(options: Options): Provider {
         (result.file === null ||
           result.file.revision !== input.expectedRevision ||
           result.file.path !== input.path ||
-          result.file.scope !== input.scope)
+          (input.scope !== undefined && result.file.scope !== input.scope))
       ) {
-        return yield* Effect.fail(invalid("Kilo Cloud returned a file from a different revision"))
+        return yield* Effect.fail(invalid("Kilo Cloud returned a file for a different path or revision"))
       }
       return yield* decode(
         WorkspaceChangeFileResult,

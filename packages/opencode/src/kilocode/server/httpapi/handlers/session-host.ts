@@ -413,24 +413,25 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
     }) {
       const provider = yield* require(ctx.params.providerID)
       const id = workspaceID(ctx.params)
-      return yield* provider
-        .getWorkspaceChanges({
+      return yield* invalidate(
+        id,
+        provider.getWorkspaceChanges({
           id,
           ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
-        })
-        .pipe(
-          Effect.flatMap((result) =>
-            Effect.try({
-              try: () => {
-                const parsed = Schema.decodeUnknownSync(WorkspaceChanges)(result)
-                if (!sameWorkspace(parsed, id)) throw new Error("Workspace identity does not match")
-                return parsed
-              },
-              catch: unsupportedWorkspaceDiff,
-            }),
-          ),
-          Effect.mapError(mapFailure),
-        )
+        }),
+      ).pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => {
+              const parsed = Schema.decodeUnknownSync(WorkspaceChanges)(result)
+              if (!sameWorkspace(parsed, id)) throw new Error("Workspace identity does not match")
+              return parsed
+            },
+            catch: unsupportedWorkspaceDiff,
+          }),
+        ),
+        Effect.mapError(mapFailure),
+      )
     })
 
     const refreshWorkspaceChanges = Effect.fn("SessionHostHttpApi.refreshWorkspaceChanges")(function* (ctx: {
@@ -439,24 +440,25 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
     }) {
       const provider = yield* require(ctx.params.providerID)
       const id = workspaceID(ctx.params)
-      return yield* provider
-        .refreshWorkspaceChanges({
+      return yield* invalidate(
+        id,
+        provider.refreshWorkspaceChanges({
           id,
           ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
-        })
-        .pipe(
-          Effect.flatMap((result) =>
-            Effect.try({
-              try: () => {
-                const parsed = Schema.decodeUnknownSync(WorkspaceChangesRefresh)(result)
-                if (!sameWorkspace(parsed.changes, id)) throw new Error("Workspace identity does not match")
-                return parsed
-              },
-              catch: unsupportedWorkspaceDiff,
-            }),
-          ),
-          Effect.mapError(mapFailure),
-        )
+        }),
+      ).pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => {
+              const parsed = Schema.decodeUnknownSync(WorkspaceChangesRefresh)(result)
+              if (!sameWorkspace(parsed.changes, id)) throw new Error("Workspace identity does not match")
+              return parsed
+            },
+            catch: unsupportedWorkspaceDiff,
+          }),
+        ),
+        Effect.mapError(mapFailure),
+      )
     })
 
     const getWorkspaceChangeFile = Effect.fn("SessionHostHttpApi.getWorkspaceChangeFile")(function* (ctx: {
@@ -469,23 +471,25 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       }
     }) {
       const provider = yield* require(ctx.params.providerID)
-      return yield* provider
-        .getWorkspaceChangeFile({
-          id: workspaceID(ctx.params),
+      const id = workspaceID(ctx.params)
+      return yield* invalidate(
+        id,
+        provider.getWorkspaceChangeFile({
+          id,
           path: ctx.query.path,
           ...(ctx.query.scope === undefined ? {} : { scope: ctx.query.scope }),
           expectedRevision: ctx.query.expectedRevision,
           ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
-        })
-        .pipe(
-          Effect.flatMap((result) =>
-            Effect.try({
-              try: () => Schema.decodeUnknownSync(WorkspaceChangeFileResult)(result),
-              catch: unsupportedWorkspaceDiff,
-            }),
-          ),
-          Effect.mapError(mapFailure),
-        )
+        }),
+      ).pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => Schema.decodeUnknownSync(WorkspaceChangeFileResult)(result),
+            catch: unsupportedWorkspaceDiff,
+          }),
+        ),
+        Effect.mapError(mapFailure),
+      )
     })
 
     const getWorkspacePullRequestDiff = Effect.fn("SessionHostHttpApi.getWorkspacePullRequestDiff")(function* (ctx: {
@@ -494,24 +498,25 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
     }) {
       const provider = yield* require(ctx.params.providerID)
       const id = workspaceID(ctx.params)
-      return yield* provider
-        .getWorkspacePullRequestDiff({
+      return yield* invalidate(
+        id,
+        provider.getWorkspacePullRequestDiff({
           id,
           ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
-        })
-        .pipe(
-          Effect.flatMap((result) =>
-            Effect.try({
-              try: () => {
-                const parsed = Schema.decodeUnknownSync(WorkspacePullRequestDiff)(result)
-                if (!sameWorkspace(parsed, id)) throw new Error("Workspace identity does not match")
-                return parsed
-              },
-              catch: unsupportedWorkspaceDiff,
-            }),
-          ),
-          Effect.mapError(mapFailure),
-        )
+        }),
+      ).pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => {
+              const parsed = Schema.decodeUnknownSync(WorkspacePullRequestDiff)(result)
+              if (!sameWorkspace(parsed, id)) throw new Error("Workspace identity does not match")
+              return parsed
+            },
+            catch: unsupportedWorkspaceDiff,
+          }),
+        ),
+        Effect.mapError(mapFailure),
+      )
     })
 
     const getWorkspacePullRequestDiffFile = Effect.fn("SessionHostHttpApi.getWorkspacePullRequestDiffFile")(
@@ -520,22 +525,24 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
         query: { path: string; expectedHeadSha: string; organizationID?: OrganizationID }
       }) {
         const provider = yield* require(ctx.params.providerID)
-        return yield* provider
-          .getWorkspacePullRequestDiffFile({
-            id: workspaceID(ctx.params),
+        const id = workspaceID(ctx.params)
+        return yield* invalidate(
+          id,
+          provider.getWorkspacePullRequestDiffFile({
+            id,
             path: ctx.query.path,
             expectedHeadSha: ctx.query.expectedHeadSha,
             ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
-          })
-          .pipe(
-            Effect.flatMap((result) =>
-              Effect.try({
-                try: () => Schema.decodeUnknownSync(WorkspacePullRequestDiffFileResult)(result),
-                catch: unsupportedWorkspaceDiff,
-              }),
-            ),
-            Effect.mapError(mapFailure),
-          )
+          }),
+        ).pipe(
+          Effect.flatMap((result) =>
+            Effect.try({
+              try: () => Schema.decodeUnknownSync(WorkspacePullRequestDiffFileResult)(result),
+              catch: unsupportedWorkspaceDiff,
+            }),
+          ),
+          Effect.mapError(mapFailure),
+        )
       },
     )
 
