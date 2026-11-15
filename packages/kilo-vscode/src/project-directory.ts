@@ -67,3 +67,14 @@ export function resolveProjectDirectory(
   if (override !== undefined) return override ?? undefined
   return fallback()
 }
+
+/**
+ * Decide whether an open panel should adopt a freshly resolved project
+ * directory. A panel created or restored before the workspace or project was
+ * resolvable holds `null` (project scope disabled). Adopt any resolved
+ * directory, but never downgrade to `null`, so an ambiguous multi-root
+ * workspace keeps the last known project.
+ */
+export function refreshPanelProjectDirectory(resolved: string | null): string | undefined {
+  return resolved ?? undefined
+}
