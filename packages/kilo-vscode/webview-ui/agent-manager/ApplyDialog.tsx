@@ -5,7 +5,12 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { AgentManagerApplyWorktreeDiffStatus, WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "../diff-viewer/FileTree"
-import { hasDirtyBaseConflict, mapApplyConflictReason, type ApplyConflictRow } from "./apply-conflicts"
+import {
+  applyConflictAlerts,
+  mapApplyConflictReason,
+  primaryConflictReason,
+  type ApplyConflictRow,
+} from "./apply-conflicts"
 
 interface ApplyDialogProps {
   diffs: WorktreeFileDiff[]
@@ -28,6 +33,8 @@ interface ApplyDialogProps {
 
 export const ApplyDialog: Component<ApplyDialogProps> = (props) => {
   const { t } = useLanguage()
+
+  const alerts = () => applyConflictAlerts(props.conflictRows, props.message)
 
   const conflictReason = (reason: string) => {
     const mapped = mapApplyConflictReason(reason)
@@ -107,21 +114,17 @@ export const ApplyDialog: Component<ApplyDialogProps> = (props) => {
         <Show when={props.status === "conflict" && props.conflictRows.length > 0}>
           <div class="am-apply-conflicts">
             <div class="am-apply-conflicts-title">{t("agentManager.apply.conflictsTitle")}</div>
-            <Show
-              when={hasDirtyBaseConflict(props.conflictRows)}
-              fallback={
-                <Show when={props.message}>
-                  <div class="am-apply-alert">{props.message}</div>
-                </Show>
-              }
-            >
+            <Show when={alerts().hint}>
               <div class="am-apply-alert">{t("agentManager.apply.dirtyBaseHint")}</div>
+            </Show>
+            <Show when={alerts().message}>
+              <div class="am-apply-alert">{alerts().message}</div>
             </Show>
             <For each={props.conflictRows}>
               {(entry) => (
                 <div class="am-apply-conflict">
                   <span class="am-apply-conflict-file">{entry.file ?? t("agentManager.apply.unknownFile")}</span>
-                  <span class="am-apply-conflict-reason">{conflictReason(entry.reasons[0] ?? "")}</span>
+                  <span class="am-apply-conflict-reason">{conflictReason(primaryConflictReason(entry))}</span>
                 </div>
               )}
             </For>
