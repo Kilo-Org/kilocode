@@ -252,7 +252,9 @@ export const dict = {
   "agentManager.apply.error": "La aplicación falló",
   "agentManager.apply.conflictsTitle": "Conflictos",
   "agentManager.apply.unknownFile": "Archivo no resuelto",
-  "agentManager.apply.reason.index": "El archivo local difiere de la versión esperada",
+  "agentManager.apply.reason.index": "Tiene cambios sin confirmar en el checkout local",
+  "agentManager.apply.dirtyBaseHint":
+    "El checkout local tiene cambios sin confirmar en los archivos listados abajo que se superponen con este worktree. Haz commit o stash de ellos en el checkout local y vuelve a aplicar.",
   "agentManager.apply.reason.patch": "El parche no se puede aplicar limpiamente",
   "agentManager.apply.reason.contents": "No se puede leer el contenido del archivo local actual",
   "agentManager.apply.reason.unknown": "Conflicto detectado",

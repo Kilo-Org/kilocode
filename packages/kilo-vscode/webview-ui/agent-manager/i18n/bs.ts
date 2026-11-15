@@ -247,7 +247,9 @@ export const dict = {
   "agentManager.apply.error": "Primjena nije uspjela",
   "agentManager.apply.conflictsTitle": "Konflikti",
   "agentManager.apply.unknownFile": "Nerazriješena datoteka",
-  "agentManager.apply.reason.index": "Lokalna datoteka se razlikuje od očekivane verzije",
+  "agentManager.apply.reason.index": "Ima nekomitovane promjene u lokalnom checkoutu",
+  "agentManager.apply.dirtyBaseHint":
+    "Lokalni checkout ima nekomitovane promjene u datotekama navedenim ispod koje se preklapaju s ovim worktreeom. Komitujte ih ili stashujte u lokalnom checkoutu, pa ponovo primijenite.",
   "agentManager.apply.reason.patch": "Zakrpa se ne može čisto primijeniti",
   "agentManager.apply.reason.contents": "Nije moguće pročitati sadržaj trenutne lokalne datoteke",
   "agentManager.apply.reason.unknown": "Otkriven konflikt",

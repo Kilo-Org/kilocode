@@ -248,7 +248,9 @@ export const dict = {
   "agentManager.apply.error": "適用に失敗しました",
   "agentManager.apply.conflictsTitle": "競合",
   "agentManager.apply.unknownFile": "未解決のファイル",
-  "agentManager.apply.reason.index": "ローカルファイルが期待されるバージョンと異なります",
+  "agentManager.apply.reason.index": "ローカルチェックアウトにコミットされていない変更があります",
+  "agentManager.apply.dirtyBaseHint":
+    "ローカルチェックアウトの下記ファイルに、このワークツリーと重複するコミットされていない変更があります。ローカルチェックアウトでコミットまたはスタッシュしてから、もう一度適用してください。",
   "agentManager.apply.reason.patch": "パッチをクリーンに適用できません",
   "agentManager.apply.reason.contents": "現在のローカルファイルの内容を読み取れません",
   "agentManager.apply.reason.unknown": "競合が検出されました",

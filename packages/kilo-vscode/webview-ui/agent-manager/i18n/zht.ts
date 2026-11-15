@@ -236,7 +236,9 @@ export const dict = {
   "agentManager.apply.error": "套用失敗",
   "agentManager.apply.conflictsTitle": "衝突",
   "agentManager.apply.unknownFile": "未解決的檔案",
-  "agentManager.apply.reason.index": "本地檔案與預期版本不同",
+  "agentManager.apply.reason.index": "本機檢出中有未提交的變更",
+  "agentManager.apply.dirtyBaseHint":
+    "本機檢出中下列檔案存在與此工作樹重疊的未提交變更。請先在本機檢出中提交或暫存（stash）這些變更，然後重新套用。",
   "agentManager.apply.reason.patch": "修補程式無法乾淨地套用",
   "agentManager.apply.reason.contents": "無法讀取目前本地檔案內容",
   "agentManager.apply.reason.unknown": "偵測到衝突",

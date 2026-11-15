@@ -29,3 +29,8 @@ export function mapApplyConflictReason(reason: string): "index" | "patch" | "con
   if (text.includes("cannot read the current contents")) return "contents"
   return undefined
 }
+
+/** True when any conflict is git refusing to apply over uncommitted local changes ("does not match index"). */
+export function hasDirtyBaseConflict(rows: ApplyConflictRow[]): boolean {
+  return rows.some((row) => row.reasons.some((reason) => mapApplyConflictReason(reason) === "index"))
+}

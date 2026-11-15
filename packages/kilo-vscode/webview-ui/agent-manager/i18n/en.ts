@@ -292,7 +292,9 @@ export const dict = {
   "agentManager.apply.error": "Apply failed",
   "agentManager.apply.conflictsTitle": "Conflicts",
   "agentManager.apply.unknownFile": "Unresolved file",
-  "agentManager.apply.reason.index": "Local file differs from expected version",
+  "agentManager.apply.reason.index": "Has uncommitted changes in the local checkout",
+  "agentManager.apply.dirtyBaseHint":
+    "The local checkout has uncommitted changes in the files listed below that overlap this worktree. Commit or stash them in the local checkout, then apply again.",
   "agentManager.apply.reason.patch": "Patch cannot be applied cleanly",
   "agentManager.apply.reason.contents": "Cannot read current local file contents",
   "agentManager.apply.reason.unknown": "Conflict detected",

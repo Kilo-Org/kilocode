@@ -236,7 +236,9 @@ export const dict = {
   "agentManager.apply.error": "应用失败",
   "agentManager.apply.conflictsTitle": "冲突",
   "agentManager.apply.unknownFile": "未解决的文件",
-  "agentManager.apply.reason.index": "本地文件与预期版本不同",
+  "agentManager.apply.reason.index": "本地检出中有未提交的更改",
+  "agentManager.apply.dirtyBaseHint":
+    "本地检出中下列文件存在与此工作树重叠的未提交更改。请先在本地检出中提交或暂存（stash）这些更改，然后重新应用。",
   "agentManager.apply.reason.patch": "补丁无法干净地应用",
   "agentManager.apply.reason.contents": "无法读取当前本地文件内容",
   "agentManager.apply.reason.unknown": "检测到冲突",

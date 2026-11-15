@@ -259,7 +259,9 @@ export const dict = {
   "agentManager.apply.error": "Застосування не вдалося",
   "agentManager.apply.conflictsTitle": "Конфлікти",
   "agentManager.apply.unknownFile": "Нерозв'язаний файл",
-  "agentManager.apply.reason.index": "Локальний файл відрізняється від очікуваної версії",
+  "agentManager.apply.reason.index": "Є незакомічені зміни в локальній копії",
+  "agentManager.apply.dirtyBaseHint":
+    "У локальній копії є незакомічені зміни у файлах нижче, які перетинаються з цим worktree. Закомітьте їх або приберіть у stash у локальній копії, потім застосуйте знову.",
   "agentManager.apply.reason.patch": "Патч неможливо застосувати без конфліктів",
   "agentManager.apply.reason.contents": "Неможливо прочитати вміст поточного локального файлу",
   "agentManager.apply.reason.unknown": "Виявлено конфлікт",

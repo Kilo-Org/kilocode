@@ -250,7 +250,9 @@ export const dict = {
   "agentManager.apply.error": "اعمال ناموفق بود",
   "agentManager.apply.conflictsTitle": "تعارض‌ها",
   "agentManager.apply.unknownFile": "فایل نامشخص",
-  "agentManager.apply.reason.index": "فایل محلی با نسخه مورد انتظار تفاوت دارد",
+  "agentManager.apply.reason.index": "تغییرات کامیت‌نشده در چک‌اوت محلی دارد",
+  "agentManager.apply.dirtyBaseHint":
+    "چک‌اوت محلی در فایل‌های فهرست‌شده زیر تغییرات کامیت‌نشده‌ای دارد که با این worktree همپوشانی دارند. آن‌ها را در چک‌اوت محلی کامیت یا stash کنید و دوباره اعمال کنید.",
   "agentManager.apply.reason.patch": "پچ به‌درستی قابل اعمال نیست",
   "agentManager.apply.reason.contents": "خواندن محتوای فایل محلی فعلی ممکن نیست",
   "agentManager.apply.reason.unknown": "تعارض شناسایی شد",

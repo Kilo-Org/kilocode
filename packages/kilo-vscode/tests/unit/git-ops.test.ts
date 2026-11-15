@@ -3,6 +3,7 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as nodePath from "path"
 import { GitOps, parseConflictPaths } from "../../src/agent-manager/GitOps"
+import { mapApplyConflictReason } from "../../webview-ui/agent-manager/apply-conflicts"
 import { Semaphore } from "../../src/agent-manager/semaphore"
 
 function ops(handler: (args: string[], cwd: string) => Promise<string>, semaphore?: Semaphore): GitOps {
@@ -491,6 +492,49 @@ describe("GitOps", () => {
         expect(result.ok).toBe(false)
         expect(result.conflicts.length).toBeGreaterThan(0)
         expect(result.message).toBeTruthy()
+      })
+    })
+  })
+
+  describe("checkApplyPatch with a dirty base checkout", () => {
+    const commit = (cwd: string) =>
+      runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+
+    async function setup(cwd: string, git: GitOps): Promise<string> {
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+      await fs.writeFile(nodePath.join(cwd, "b.txt"), "base\n", "utf8")
+      runGit(cwd, ["add", "-A"])
+      commit(cwd)
+      await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+      const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+      const patch = await git.buildWorktreePatch(cwd, branch)
+      runGit(cwd, ["checkout", "--", "a.txt"])
+      return patch
+    }
+
+    it("names the overlapping dirty file with a reason that maps to the index conflict", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        const patch = await setup(cwd, git)
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "uncommitted\n", "utf8")
+
+        const result = await git.checkApplyPatch(cwd, patch)
+        expect(result.ok).toBe(false)
+        const hit = result.conflicts.find((c) => c.file === "a.txt")
+        expect(hit).toBeDefined()
+        expect(mapApplyConflictReason(hit?.reason ?? "")).toBe("index")
+      })
+    })
+
+    it("ignores dirty files that the patch does not touch", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        const patch = await setup(cwd, git)
+        await fs.writeFile(nodePath.join(cwd, "b.txt"), "uncommitted\n", "utf8")
+
+        const result = await git.checkApplyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+        expect(result.conflicts).toEqual([])
       })
     })
   })

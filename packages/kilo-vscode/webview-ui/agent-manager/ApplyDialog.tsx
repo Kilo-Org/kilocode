@@ -5,7 +5,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import type { AgentManagerApplyWorktreeDiffStatus, WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "../diff-viewer/FileTree"
-import { mapApplyConflictReason, type ApplyConflictRow } from "./apply-conflicts"
+import { hasDirtyBaseConflict, mapApplyConflictReason, type ApplyConflictRow } from "./apply-conflicts"
 
 interface ApplyDialogProps {
   diffs: WorktreeFileDiff[]
@@ -107,8 +107,15 @@ export const ApplyDialog: Component<ApplyDialogProps> = (props) => {
         <Show when={props.status === "conflict" && props.conflictRows.length > 0}>
           <div class="am-apply-conflicts">
             <div class="am-apply-conflicts-title">{t("agentManager.apply.conflictsTitle")}</div>
-            <Show when={props.message}>
-              <div class="am-apply-alert">{props.message}</div>
+            <Show
+              when={hasDirtyBaseConflict(props.conflictRows)}
+              fallback={
+                <Show when={props.message}>
+                  <div class="am-apply-alert">{props.message}</div>
+                </Show>
+              }
+            >
+              <div class="am-apply-alert">{t("agentManager.apply.dirtyBaseHint")}</div>
             </Show>
             <For each={props.conflictRows}>
               {(entry) => (
