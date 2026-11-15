@@ -474,6 +474,8 @@ class AgentManagerLayoutTest : BasePlatformTestCase() {
         assertEquals(listOf(cloud.key), keys(children(nodes, second)))
         assertEquals(AgentManagerLayout.Section("first", "Planning", "cyan"), first)
         assertEquals(AgentManagerLayout.Section("second", "Other", "magenta"), second)
+        assertTrue("Section headers keep the selected backdrop", nodes.single { it.item.key == first.key }.item.alwaysSelected)
+        assertTrue(nodes.single { it.item.key == second.key }.item.alwaysSelected)
         assertEquals(ActiveTreeColors.color("cyan"), nodes.single { it.item.key == first.key }.color)
         assertEquals(ActiveTreeColors.color("magenta"), nodes.single { it.item.key == second.key }.color)
         val saved = props.getValue(STORAGE)!!
