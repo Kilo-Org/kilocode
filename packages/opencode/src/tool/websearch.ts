@@ -77,6 +77,7 @@ function callProvider(
   keys: { exa: string | undefined; parallel: string | undefined }, // kilocode_change
 ) {
   if (provider === "parallel") {
+    const model = keys.parallel ? undefined : webSearchModelName(ctx.extra) // kilocode_change
     return McpWebSearch.call(
       http,
       McpWebSearch.PARALLEL_URL,
@@ -85,8 +86,8 @@ function callProvider(
       {
         objective: params.query,
         search_queries: [params.query],
-        session_id: ctx.sessionID,
-        model_name: webSearchModelName(ctx.extra),
+        ...(keys.parallel ? {} : { session_id: ctx.sessionID }), // kilocode_change
+        ...(model === undefined ? {} : { client_model: model }), // kilocode_change
       },
       "25 seconds",
       parallelAuthHeaders(keys.parallel), // kilocode_change
