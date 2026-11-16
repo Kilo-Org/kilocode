@@ -22,9 +22,16 @@ export const transient =
         `Token refresh could not reach ${host}: ${error instanceof Error ? error.message : String(error)} (temporarily_unavailable)`,
       )
     })
-    if (retryable(response.status))
-      return unavailable(`Token refresh at ${host} failed with HTTP ${response.status} (temporarily_unavailable)`)
-    return response
+    if (!retryable(response.status)) return response
+    // The transport below reports a refresh it could not complete as this OAuth error itself, with the cause and
+    // the status it saw. Relabelling that answer would report its 503 instead.
+    const answer: unknown = await response
+      .clone()
+      .json()
+      .catch(() => undefined)
+    if (typeof answer === "object" && answer !== null && "error" in answer && answer.error === "temporarily_unavailable")
+      return response
+    return unavailable(`Token refresh at ${host} failed with HTTP ${response.status} (temporarily_unavailable)`)
   }
 
 /**

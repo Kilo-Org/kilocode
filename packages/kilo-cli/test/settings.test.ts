@@ -11,6 +11,7 @@ import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // The kilocode.settings RPC through the real host and the generated client, with real global and project kilo2.json
 // files. The settings plugin resolves each write to the reader's effective document, so the round trip, the revision
@@ -90,6 +91,7 @@ const boot =
               ),
             })
             const request = (url: string, init?: RequestInit) => handler(new Request(new URL(url, "http://kilo.local"), init))
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(() => body(client, { ...filePaths, request }))
           }),
         ).pipe(Effect.provideService(References.MinimumLogLevel, "Error")),

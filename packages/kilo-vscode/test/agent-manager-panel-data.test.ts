@@ -23,6 +23,8 @@ const { createSessions } = await import("../webview-ui/agent-manager/v2/sessions
 const ROOT = "/repo"
 const WORKTREE = "/repo/.kilo/worktrees/one"
 const OTHER = "/other"
+/** A worktree whose folder is gone: the fake server cannot open its Location. */
+const MISSING = "/repo/.kilo/worktrees/missing"
 
 const encoder = new TextEncoder()
 const streams = new Set<ReadableStreamDefaultController<Uint8Array>>()
@@ -51,7 +53,13 @@ function emit(event: unknown) {
   }
 }
 
-const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } })
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
+
+/** How many handshake calls the fake server answers with a page instead of JSON. */
+let unreadableHandshakes = 0
+/** How many session list calls the fake server answers with a page instead of JSON. */
+let unreadableLists = 0
 
 const server = Bun.serve({
   port: 0,
@@ -62,6 +70,13 @@ const server = Bun.serve({
       directory: url.searchParams.get("directory"),
       location: url.searchParams.get("location[directory]"),
     })
+    if (url.pathname === "/api/rpc/kilocode.handshake/get") {
+      if (unreadableHandshakes > 0) {
+        unreadableHandshakes--
+        return new Response("<html>not the server</html>", { headers: { "content-type": "text/html" } })
+      }
+      return json({ output: { product: "kilo", version: "test", channel: "local" } })
+    }
     if (url.pathname === "/api/event") {
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
@@ -91,15 +106,33 @@ const server = Bun.serve({
           location: { directory },
         },
       })
-    if (url.pathname === "/api/session") return json({ data: [], location: { directory: ROOT } })
+    if (url.pathname === "/api/session/active") return json({ data: {} })
+    if (url.pathname === "/api/location" && url.searchParams.get("location[directory]") === MISSING)
+      return json(
+        { _tag: "LocationNotFoundError", location: { directory: MISSING }, message: `Location not found: ${MISSING}` },
+        404,
+      )
+    if (url.pathname === "/api/location")
+      return json({ directory: ROOT, project: { id: "prj_1", directory: ROOT, canonical: ROOT } })
+    if (url.pathname === "/api/vcs")
+      return json({ location: { directory: ROOT }, data: { branch: { current: "main", default: "main" } } })
+    if (url.pathname === "/api/project")
+      return json([{ id: "prj_1", canonical: ROOT, time: { created: 1, updated: 1 }, sandboxes: [] }])
+    if (url.pathname === "/api/session") {
+      if (unreadableLists > 0) {
+        unreadableLists--
+        return new Response("<html>not the server</html>", { headers: { "content-type": "text/html" } })
+      }
+      return json({ data: [], location: { directory: ROOT } })
+    }
     return new Response(JSON.stringify({ _tag: "NotFound", message: "not found" }), { status: 404 })
   },
 })
 
 afterAll(() => server.stop(true))
 
-async function until(check: () => boolean) {
-  for (let attempt = 0; attempt < 100; attempt++) {
+async function until(check: () => boolean, attempts = 100) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     if (check()) return
     await Bun.sleep(20)
   }
@@ -141,6 +174,40 @@ describe("createPanelData", () => {
       await Bun.sleep(50)
       expect(requests.filter((item) => item.path.includes("kilocode.handshake"))).toHaveLength(1)
       expect(requests.filter((item) => item.path.includes("catalog.status"))).toHaveLength(1)
+      dispose()
+    })
+  })
+
+  test("retries a handshake the server answered with a response the client cannot read", async () => {
+    requests.length = 0
+    unreadableHandshakes = 1
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const scope = panel.store(ROOT)
+      await until(() => scope.handshake() !== undefined)
+      expect(scope.handshake()?.key).toBe("error.failure.notKilo")
+      // The banner clears on its own once a later read succeeds, without a window reload.
+      await until(() => scope.handshake() === undefined)
+      expect(scope.version()).toBe("test")
+      dispose()
+    })
+  })
+
+  test("clears the failure a failed session list reported once a later read succeeds", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const scope = panel.store(ROOT)
+      // Hydration reads of this fake answer 404 and report their own failure; start from a clean banner.
+      await until(() => panel.connection.status() === "connected")
+      await Bun.sleep(100)
+      scope.clearError()
+      unreadableLists = 1
+      panel.show([ROOT])
+      await until(() => scope.failure()?.key === "error.failure.unreadable")
+      // The list retries after one second; the banner it reported clears with the data.
+      await until(() => scope.failure() === undefined, 200)
       dispose()
     })
   })
@@ -262,6 +329,26 @@ describe("createPanelData", () => {
     })
   })
 
+  test("reads a session from the store of its directory when only another store loaded it", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      // The host files the session under the root, but the server runs it in the worktree.
+      const sessions = createSessions({ panel, directories: () => [ROOT, WORKTREE], directoryOf: () => ROOT })
+      panel.store(ROOT).data.session.remember({
+        id: "ses_elsewhere",
+        projectID: "prj_1",
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { created: 1, updated: 1 },
+        location: { directory: WORKTREE },
+      })
+      await until(() => sessions.sessions().length > 0)
+      expect(sessions.scope("ses_elsewhere")).toBe(panel.store(WORKTREE))
+      dispose()
+    })
+  })
+
   test("forwards shift-click so the host opens the system browser", async () => {
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {
@@ -273,6 +360,27 @@ describe("createPanelData", () => {
         { type: "open", url: "https://kilo.ai/a", external: true },
         { type: "open", url: "https://kilo.ai/b", external: undefined },
       ])
+      dispose()
+    })
+  })
+
+  // A worktree folder deleted on disk fails every load of its store. Once the folder is restored, the store clears the
+  // failure and loads its location again instead of keeping both until the panel reopens.
+  test("reloads a directory after its folder was restored", async () => {
+    requests.length = 0
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const store = panel.store(MISSING)
+      panel.show([MISSING])
+      const located = () => requests.filter((item) => item.path === "/api/location" && item.location === MISSING)
+      await until(() => located().length > 0 && store.failure()?.message === `Location not found: ${MISSING}`)
+      const before = located().length
+
+      panel.reload(MISSING)
+      expect(store.failure()).toBeUndefined()
+      await until(() => located().length > before)
+      panel.reload(OTHER)
       dispose()
     })
   })

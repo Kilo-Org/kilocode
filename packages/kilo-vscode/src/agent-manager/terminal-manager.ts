@@ -85,6 +85,8 @@ interface Entry {
   revision: number
   closing?: Promise<boolean>
   worktreeId: string | null
+  /** The Agent Manager project that opened the terminal, so removing the project closes it. */
+  projectId?: string
   cwd: string
   title: string
   /** Last known dimensions, reused when a restart does not carry a new size. */
@@ -118,6 +120,7 @@ export class TerminalManager {
   async create(params: {
     terminalId: string
     worktreeId: string | null
+    projectId?: string
     cwd: string
     title: string
     cols?: number
@@ -142,11 +145,30 @@ export class TerminalManager {
     return block(target, this.blocked, this.creates.get(target))
   }
 
-  async closeDirectory(directory: string): Promise<void> {
+  /** Close every terminal rooted in a directory, reporting each one that closed so the webview drops its tab. */
+  async closeDirectory(directory: string, closed: (terminalId: string) => void = () => undefined): Promise<void> {
     const target = key(directory)
     const entries = [...this.owned].filter((entry) => key(entry.cwd) === target)
-    const results = await Promise.all(entries.map((entry) => this.closeEntry(entry)))
-    if (results.some((result) => !result)) throw new Error(`Failed to close terminals in ${directory}`)
+    if (!(await this.closeAll(entries, closed))) throw new Error(`Failed to close terminals in ${directory}`)
+  }
+
+  /** Close every terminal a project opened, for example when the project is removed from the Agent Manager. */
+  async closeProject(projectId: string, closed: (terminalId: string) => void): Promise<boolean> {
+    return this.closeAll(
+      [...this.owned].filter((entry) => entry.projectId === projectId),
+      closed,
+    )
+  }
+
+  private async closeAll(entries: Entry[], closed: (terminalId: string) => void): Promise<boolean> {
+    const results = await Promise.all(
+      entries.map(async (entry) => {
+        const ok = await this.closeEntry(entry)
+        if (ok) closed(entry.terminalId)
+        return ok
+      }),
+    )
+    return results.every(Boolean)
   }
 
   /** The server PTY behind a webview terminal, or undefined when it is gone. */
@@ -159,6 +181,7 @@ export class TerminalManager {
   private async createImpl(params: {
     terminalId: string
     worktreeId: string | null
+    projectId?: string
     cwd: string
     title: string
     cols?: number
@@ -191,6 +214,7 @@ export class TerminalManager {
       ptys: new Set([data.id]),
       revision: 0,
       worktreeId: params.worktreeId,
+      projectId: params.projectId,
       cwd: params.cwd,
       title: data.title ?? params.title,
       size: initial,

@@ -256,6 +256,7 @@ export const dict = {
   "ui.messagePart.board.route": "จาก {{from}} ถึง {{to}}",
   "ui.messagePart.board.empty": "ไม่มีข้อความจากเอเจนต์",
   "ui.messagePart.board.stored": "จัดเก็บไว้เท่านั้น ยังไม่มีการยืนยันการส่งถึงหรือการอ่าน",
+  "ui.messagePart.board.more": "มีข้อความเพิ่มเติม",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "เปลี่ยนแปลงแล้ว",

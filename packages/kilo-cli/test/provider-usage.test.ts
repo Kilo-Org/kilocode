@@ -9,6 +9,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // `/usage` data end to end: the `kilocode.provider-usage` RPC of packages/kilo-plugin, registered by the host, called
 // through the generated client. It reads the Kilo coding plans through the `kilocode.gateway` RPC from a local
@@ -63,6 +64,7 @@ const boot =
                 { preconnect: fetch.preconnect },
               ),
             })
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(() => body({ usage: rpc(client, directory), backend }))
           }),
         ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),

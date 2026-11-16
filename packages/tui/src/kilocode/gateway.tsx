@@ -168,6 +168,14 @@ export default Plugin.define({
         }))
         privacyLayer(context)
         caffeinateLayer(context)
+        // Upstream's `location.reload` (`/reload`) is removed: the config watcher hot-reloads every location after a
+        // save. The keymap reaches only the first command of an ID, so this shadow wins the ID with no slash entry,
+        // palette entry or binding, and `dispatch("location.reload")` does nothing.
+        context.keymap.layer(() => ({
+          mode: "global",
+          priority: 1,
+          commands: [{ id: "location.reload", bind: false, run: () => undefined }],
+        }))
         return null
       },
     })

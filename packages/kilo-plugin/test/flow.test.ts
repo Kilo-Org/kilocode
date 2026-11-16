@@ -1223,7 +1223,11 @@ it.live("pauses a scheduled Flow whose directory no longer exists instead of ret
     )
     expect(listed).toMatchObject({
       status: "paused",
-      health: { status: "error", message: "Flow directory /definitely/missing/flow/directory no longer exists" },
+      health: {
+        status: "error",
+        message: "Flow directory /definitely/missing/flow/directory no longer exists",
+        reason: "directory-missing",
+      },
       latestRun: { status: "failed", error: "Flow directory /definitely/missing/flow/directory no longer exists" },
     })
   }),

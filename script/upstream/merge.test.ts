@@ -3,6 +3,7 @@ import path from "node:path"
 import { linkUpstream, repo, type Repo } from "./utils/testing"
 
 const tool = path.join(import.meta.dir, "merge.ts")
+const check = path.join(import.meta.dir, "..", "check-mirrors.ts")
 const guard = path.join(import.meta.dir, "..", "check-workflows.ts")
 
 /** Upstream at v2.0.26, and a Kilo `v2` branch from it that deleted `deploy.yml` */
@@ -25,6 +26,17 @@ async function fixture() {
 
 async function run(r: Repo, ...args: string[]) {
   const proc = Bun.spawn(["bun", tool, "--base-branch", "HEAD", "--no-fetch", "--no-worktrees", "--no-install", ...args], {
+    cwd: r.dir,
+    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" },
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const output = (await new Response(proc.stdout).text()) + (await new Response(proc.stderr).text())
+  return { code: await proc.exited, output }
+}
+
+async function mirrors(r: Repo, ...args: string[]) {
+  const proc = Bun.spawn(["bun", check, ...args], {
     cwd: r.dir,
     env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" },
     stdout: "pipe",
@@ -132,6 +144,53 @@ test("reconciles Kilo's marked root .gitignore rules with upstream .gitignore ch
     ].join("\n"),
   )
   expect(await r.git("status", "--porcelain")).toBe("")
+})
+
+test("a --commit sync checks mirrors against the merged commit, not the previous release", async () => {
+  await using r = await fixture()
+  const release = await r.git("rev-parse", "v2.0.26^{commit}")
+  const sha = await r.git("rev-parse", `${release}:src/a.ts`)
+  await r.git("switch", "-q", "v2")
+  await r.write("packages/kilo-probe/src/a.ts", "// kilo_mirror: src/a.ts\nexport const kilo = 1\n")
+  await r.write(
+    "script/upstream/mirrors.json",
+    JSON.stringify(
+      {
+        mirrors: {
+          "src/a.ts": {
+            mirror: "packages/kilo-probe/src/a.ts",
+            sha,
+            why: "a test mirror",
+            invariants: ["keep the kilo copy"],
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  )
+  await r.commit("test: register a mirror")
+  // The release sync in the history is what `pinned()` reads; without it the check falls back.
+  await r.git("merge", "--no-ff", "-m", `chore(upstream): sync v2.0.26 (${release.slice(0, 11)})`, release)
+  await r.git("switch", "-q", "dev")
+  await r.write("src/a.ts", "export const a = 2\n")
+  const target = await r.commit("fix: unreleased change")
+  await linkUpstream(r)
+  await r.git("switch", "-q", "-c", "sync-commit", "v2")
+
+  const result = await run(r, "--commit", target)
+  expect(result.code).toBe(1)
+  expect(result.output).toContain("Mirrors touched: 1")
+  expect(result.output).toContain("changed upstream")
+  expect(result.output).toContain("The sync is incomplete")
+  expect(await r.git("log", "-1", "--format=%s")).toContain(`sync dev-${target.slice(0, 11)}`)
+  expect(
+    await Bun.file(path.join(r.dir, ".git", "upstream-sync", `report-dev-${target.slice(0, 11)}.md`)).text(),
+  ).toContain("`check-mirrors.ts --drift` fails")
+
+  // The release pin is what the gate would have used: it does not see this drift.
+  expect((await mirrors(r, "--drift", "--pin", release)).code).toBe(0)
+  expect((await mirrors(r, "--drift", "--pin", target)).code).toBe(1)
 })
 
 test("dry run reports the conflicts without changing the branch", async () => {

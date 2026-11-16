@@ -13,6 +13,9 @@ import { createWakeups } from "./wakeups"
 type Connection = ReturnType<typeof createClientConnection>
 type Events = ReturnType<typeof events>
 
+/** Retry delays for a failed session list; a longer window than the handshake covers a server that is restarted. */
+const LIST_RETRY = [1_000, 3_000, 10_000] as const
+
 /**
  * The data of one directory over a shared client and event stream: the sidebar has one, the Agent Manager one per
  * project and worktree. Call it inside a reactive owner; disposing the owner releases the store.
@@ -91,7 +94,42 @@ export function createV2Scope(input: {
           directories: () => [directory],
           connected: () => connection.status() === "connected",
         })
-  const state = { listed: false }
+  const state = {
+    listed: false,
+    retry: undefined as ReturnType<typeof setTimeout> | undefined,
+    reported: undefined as Failure | undefined,
+  }
+  onCleanup(() => clearTimeout(state.retry))
+  // A failed read must not leave the list empty for the life of the connection: it releases the latch so the next
+  // connected or visible transition retries, and a short backoff covers one bad response on a healthy connection.
+  const list = (attempt = 0) => {
+    clearTimeout(state.retry)
+    state.listed = true
+    setLoading(true)
+    void api.session
+      .list({ directory, parentID: null, order: "desc", limit: 50 })
+      .then((response) => {
+        response.data.forEach(data.session.remember)
+        // Clear the failure this list reported, not one a later action owns.
+        const reported = state.reported
+        if (reported === undefined) return
+        state.reported = undefined
+        setFailure((current) => (current === reported ? undefined : current))
+      })
+      .catch((err: unknown) => {
+        const failure = toFailure(err)
+        state.listed = false
+        state.reported = failure
+        setFailure(failure)
+        const delay = LIST_RETRY[attempt]
+        if (delay === undefined) return
+        state.retry = setTimeout(() => {
+          if (state.listed || connection.status() !== "connected" || !visible()) return
+          list(attempt + 1)
+        }, delay)
+      })
+      .finally(() => setLoading(false))
+  }
   createEffect(
     on(connection.status, (status) => {
       if (status !== "connected") state.listed = false
@@ -106,13 +144,7 @@ export function createV2Scope(input: {
           return
         }
         if (status !== "connected" || !show || state.listed) return
-        state.listed = true
-        setLoading(true)
-        void api.session
-          .list({ directory, parentID: null, order: "desc", limit: 50 })
-          .then((response) => response.data.forEach(data.session.remember))
-          .catch((err: unknown) => setFailure(toFailure(err)))
-          .finally(() => setLoading(false))
+        list()
       },
     ),
   )

@@ -9,6 +9,7 @@ import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promis
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // The kilocode.agent RPC through the real host: a markdown agent discovered by the config agent plugin is
 // removable, removing it deletes only that file, and the registry drops it. The neighbouring agent stays.
@@ -33,6 +34,7 @@ async function withHost(
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
+        const global = path.join(directory, "global")
         const context = yield* Layer.build(
           createRoutes(
             {
@@ -40,7 +42,7 @@ async function withHost(
               database: { path: ":memory:" },
               models: { fetch: false },
               fs: { filewatcher: false },
-              config: { directory: path.join(directory, "global"), project: true },
+              config: { directory: global, project: true },
             },
             () => [],
             KiloHost.overrides,
@@ -58,6 +60,8 @@ async function withHost(
             { preconnect: fetch.preconnect },
           ),
         })
+        // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+        yield* loadPlugins(context, directory)
         yield* Effect.promise(() => run(client, { location: { directory } }))
       }),
     ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
@@ -104,6 +108,8 @@ test(
                 { preconnect: fetch.preconnect },
               ),
             })
+            // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(async () => {
               const options = { location: { directory } }
               const rpc = client.rpc(KiloAgentRpc.Definition)
@@ -177,6 +183,8 @@ test(
                 { preconnect: fetch.preconnect },
               ),
             })
+            // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(async () => {
               const options = { location: { directory } }
               const rpc = client.rpc(KiloAgentRpc.Definition)
@@ -241,6 +249,8 @@ test(
                 { preconnect: fetch.preconnect },
               ),
             })
+            // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(async () => {
               const options = { location: { directory } }
               const rpc = client.rpc(KiloAgentRpc.Definition)
@@ -299,6 +309,8 @@ test(
                 { preconnect: fetch.preconnect },
               ),
             })
+            // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+            yield* loadPlugins(context, directory)
             yield* Effect.promise(async () => {
               const options = { location: { directory } }
               const rpc = client.rpc(KiloAgentRpc.Definition)

@@ -21,6 +21,7 @@ import {
 import { useLanguage } from "../context/language"
 import { getVSCodeAPI } from "../context/vscode"
 import { useV2 } from "./client"
+import { readListed } from "./plugin-inventory"
 import { visibleMessages } from "./revert"
 
 const EMPTY: readonly SessionMessageInfo[] = []
@@ -70,8 +71,9 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
     if (unsupported) return
     const token = ++reads
     touched = new Set()
-    void rpc
-      .list({ sessionID }, { location })
+    // A newer read, another session, a dropped connection and a disposed owner end this one.
+    const active = () => token === reads && input.session() === sessionID && v2.connection.status() === "connected"
+    void readListed({ api: v2.api, directory: v2.directory, active, read: () => rpc.list({ sessionID }, { location }) })
       .then((value) => {
         if (token !== reads || input.session() !== sessionID) return
         setLoaded((current) => ({
@@ -81,10 +83,13 @@ export function createBackgroundJobs(input: { session: Accessor<string | undefin
       })
       .catch((error: unknown) => {
         // The transcript stands in: a server without the plugin, or a new session the server does not have yet.
-        if (errorType(error) === "rpc.unavailable") unsupported = true
+        if (active() && errorType(error) === "rpc.unavailable") unsupported = true
       })
   }
 
+  onCleanup(() => {
+    reads++
+  })
   onCleanup(
     rpc.events.on("changed", (event) => {
       const sessionID = input.session()

@@ -1,3 +1,4 @@
+// kilo_mirror: packages/cli/src/commands/handlers/serve.ts
 // Mirror of packages/cli/src/commands/handlers/serve.ts (v2.2.6). The only difference: the server gets the Kilo overrides.
 import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
