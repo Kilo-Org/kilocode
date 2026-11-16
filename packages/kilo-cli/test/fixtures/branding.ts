@@ -5,6 +5,8 @@ const exported = await import("@opencode/core/oauth/page")
 const { cliErrorMessage } = await import("../../../tui/src/util/error")
 const { epilogue } = await import("../../../tui/src/util/presentation")
 const { default: prompt } = await import("../../../core/src/session/runner/prompt/system.txt")
+const { ClaudeSystemPrompt } = await import("@opencode/core/plugin/provider/claude-agent/language-model/system-prompt")
+const { CatchUp } = await import("@opencode/core/plugin/provider/claude-agent/sync/catch-up")
 const options = { provider: "OpenCode <script>unsafe</script>", autoClose: false }
 console.log(
   JSON.stringify({
@@ -15,6 +17,13 @@ console.log(
     error: exported.error("<img src=x onerror=alert(1)>", options),
     bootstrap: exported.bootstrap({ provider: "</script><script>unsafe</script>", tokenPath: "/callback" }),
     prompt,
+    claude: ClaudeSystemPrompt.make("role").append,
+    catchUp: CatchUp.content([
+      { role: "assistant", content: [{ type: "text", text: "earlier" }] },
+      { role: "user", content: [{ type: "text", text: "next" }] },
+    ])
+      .map((block) => ("text" in block ? block.text : ""))
+      .join("\n"),
     modelError: cliErrorMessage({ _tag: "ProviderModelNotFoundError", providerID: "test", modelID: "missing" }),
   }),
 )

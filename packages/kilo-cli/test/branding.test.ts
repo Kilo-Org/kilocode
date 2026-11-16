@@ -6,7 +6,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { KiloBrandingStructural } from "../src/branding/structural"
 import { compileDefine } from "./fixtures/compile-define"
-import { repo, run, serverText, temporary } from "./fixtures/branding-run"
+import { coreText, repo, run, serverText, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
@@ -83,15 +83,69 @@ test("brands the lowercase prompt names to Kilo and the tool namespace, not the 
   }
 })
 
-test("brands the text the server answers with, and nothing else in those modules", async () => {
-  for (const [file, from, to] of serverText) {
+test("brands the listed server and core text, and nothing else in those modules", async () => {
+  const text = [...serverText, ...coreText]
+  for (const file of new Set(text.map(([file]) => file))) {
     const filename = path.join(repo, "packages", file)
     const original = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
-    expect(original.split(from), file).toHaveLength(2)
-    // The one replacement is the whole difference: the basic-auth username, wire IDs and every other string stay as
-    // upstream wrote them.
-    expect(KiloBranding.transform(filename, original), file).toBe(original.replace(from, to))
+    const listed = text.filter(([name]) => name === file)
+    for (const [, from] of listed) expect(original.split(from), `${file}: ${from}`).toHaveLength(2)
+    // The listed replacements are the whole difference: the basic-auth username, wire IDs, provider and SaaS names
+    // and every other string stay as upstream wrote them.
+    expect(KiloBranding.transform(filename, original), file).toBe(
+      listed.reduce((out, [, from, to]) => out.replace(from, to), original),
+    )
   }
+})
+
+test("names the product, not the kilo2 command, in the branded core text", () => {
+  // The command rule turns a lowercase `opencode` into `kilo2` and the product rule leaves "an" before Kilo; both
+  // read wrong where the product is meant, so those two texts have an override.
+  for (const [file, , to] of coreText) {
+    expect(to, file).toContain("Kilo")
+    expect(to, file).not.toMatch(/kilo2|\ban Kilo\b/)
+  }
+})
+
+test("leaves the identities that provider plugins send untouched", async () => {
+  // What a provider, an MCP server or the Claude Code harness is sent is not host branding: KiloRequestIdentity
+  // recognises the upstream referer and title by value, and the rest needs a check against the real service. Adding
+  // a provider module to KiloBranding.files runs the domain, product and command rules over the whole module, so the
+  // reviewed set is pinned here and the identity lines are compared for every module.
+  const reviewed = coreText.map(([file]) => file).filter((file) => file.startsWith("core/src/plugin/provider/"))
+  expect(KiloBranding.files.filter((file) => file.startsWith("core/src/plugin/provider/")).toSorted()).toEqual(
+    [...new Set(reviewed)].toSorted(),
+  )
+  const identity =
+    /opencode\.ai|"opencode"|mcp__opencode__|x-opencode-|HTTP-Referer|X-Title|X-Source|X-BILLING-INVOKE-ORIGIN|X-Cerebras-3rd-Party-Integration|referrer|User-Agent/i
+  const sent: string[] = []
+  for (const file of new Bun.Glob("core/src/plugin/provider/**/*.ts").scanSync(path.join(repo, "packages"))) {
+    const filename = path.join(repo, "packages", file)
+    const original = (await Bun.file(filename).text()).replaceAll("\r\n", "\n").split("\n")
+    const branded = KiloBranding.transform(filename, original.join("\n")).split("\n")
+    original.forEach((line, index) => {
+      if (!identity.test(line)) return
+      sent.push(line.trim())
+      expect(branded[index], `${file}:${index + 1}`).toBe(line)
+    })
+  }
+  // The values the check exists for are among the compared lines, including the ones in intercepted modules.
+  for (const value of [
+    '"HTTP-Referer": "https://opencode.ai/"',
+    '"X-Title": "opencode"',
+    '"X-Source": "opencode"',
+    '"X-Cerebras-3rd-Party-Integration": "opencode"',
+    'referrer: "opencode"',
+    '?? "OpenCode"',
+    'const agentName = "OpenCode"',
+    'new Server({ name: "opencode"',
+    'server.name === "opencode"',
+    'export const PREFIX = "mcp__opencode__"',
+  ])
+    expect(
+      sent.some((line) => line.includes(value)),
+      value,
+    ).toBe(true)
 })
 
 test("does not rewrite CLI or ACP executable selection", async () => {
@@ -272,10 +326,18 @@ function checkPages(output: string, hosted: boolean) {
     update: string
     updateSession: string
     prompt: string
+    claude: string
+    catchUp: string
   }
   // Proves the .txt loader branch runs in the source and compiled paths, not only KiloBranding.transform.
   expect(pages.prompt).toContain(`running in ${hosted ? "Kilo" : "OpenCode"}, a coding agent harness`)
   expect(pages.prompt).not.toContain(`running in ${hosted ? "OpenCode" : "Kilo"}`)
+  // Core modules reached through the `@opencode/core/...` workspace specifier, as the server imports them.
+  const product = hosted ? "Kilo" : "OpenCode"
+  expect(pages.claude).toBe(
+    `<runtime_info>You are running in ${product} through the Claude Code harness. Mention this only when asked.</runtime_info>\n\n# Agent role (from ${product})\nrole`,
+  )
+  expect(pages.catchUp).toContain(`conversation history from ${product} that you have not seen`)
   for (const output of [pages.update, pages.updateSession]) {
     const text = Bun.stripANSI(output)
     expect(text).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)

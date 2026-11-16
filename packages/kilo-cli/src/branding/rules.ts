@@ -30,6 +30,14 @@ export const overrides = [
     from: "You are opencode, an interactive",
     to: "You are Kilo, an interactive",
   },
+  // The lowercase product name as the caller of a model API, in an error a person reads.
+  { file: "core/src/generate.ts", from: "API opencode can call", to: "API Kilo can call" },
+  // The article follows the product name.
+  {
+    file: "core/src/plugin/provider/claude-agent/tools/pending.ts",
+    from: "invoked an OpenCode tool",
+    to: "invoked a Kilo tool",
+  },
 ] as const satisfies ReadonlyArray<{ file: string; from: string; to: string }>
 
 // Exact fragments that are not a simple word swap: domains, the upstream repo,
