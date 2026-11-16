@@ -1226,7 +1226,7 @@ function managed(
   }
   const health: KiloFlowRpc.Health =
     missing && record.context.directory
-      ? { status: "error", message: missingDirectory(record.context.directory) }
+      ? { status: "error", message: missingDirectory(record.context.directory), reason: "directory-missing" }
       : { status: "healthy" }
   if (!record.scheduleID)
     return {

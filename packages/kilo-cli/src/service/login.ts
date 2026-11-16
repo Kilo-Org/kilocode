@@ -77,7 +77,7 @@ export interface State {
 export type Run = (
   command: string,
   args: ReadonlyArray<string>,
-) => Effect.Effect<{ readonly exitCode: number; readonly stderr: string }, Error>
+) => Effect.Effect<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }, Error>
 
 export function unit(target: Target): Unit | undefined {
   const app = safe(target.app)
@@ -225,9 +225,21 @@ export const uninstall = Effect.fn("KiloLoginService.uninstall")(function* (targ
 
 export const status = Effect.fn("KiloLoginService.status")(function* (target: Target, run: Run) {
   const found = yield* supported(target)
+  if (found.check.type === "run") {
+    const content = yield* definition(found, run)
+    if (Option.isNone(content)) {
+      return { kind: found.kind, name: found.name, installed: false, stale: false } satisfies State
+    }
+    return {
+      kind: found.kind,
+      name: found.name,
+      installed: true,
+      stale: missingExecutable(found.kind, content.value),
+    } satisfies State
+  }
   const installed = yield* exists(found, run)
   // Finishing an install elsewhere, or an upgrade that moved the executable, leaves a unit that cannot start.
-  const stale = installed ? yield* staleUnit(found) : false
+  const stale = installed ? yield* staleUnit(found, run) : false
   return { kind: found.kind, name: found.name, installed, stale } satisfies State
 })
 
@@ -252,6 +264,14 @@ export const target = Effect.gen(function* () {
   } satisfies Target
 })
 
+/** Decodes process output, including UTF-16 output emitted by Windows `schtasks /Query /XML`. */
+export function decodeOutput(bytes: Uint8Array) {
+  if (bytes.at(0) === 0xff && bytes.at(1) === 0xfe) return new TextDecoder("utf-16le").decode(bytes.subarray(2))
+  if (bytes.at(0) === 0xfe && bytes.at(1) === 0xff) return new TextDecoder("utf-16be").decode(bytes.subarray(2))
+  if (bytes.length >= 2 && bytes.at(0) !== 0 && bytes.at(1) === 0) return new TextDecoder("utf-16le").decode(bytes)
+  return new TextDecoder("utf-8").decode(bytes)
+}
+
 /** Runs launchctl, systemctl and schtasks for real. */
 export const processRunner = Effect.gen(function* () {
   const appProcess = yield* AppProcess.Service
@@ -262,7 +282,13 @@ export const processRunner = Effect.gen(function* () {
         maxOutputBytes: 65_536,
         maxErrorBytes: 65_536,
       })
-      .pipe(Effect.map((result) => ({ exitCode: result.exitCode, stderr: result.stderr.toString("utf8") })))
+      .pipe(
+        Effect.map((result) => ({
+          exitCode: result.exitCode,
+          stdout: decodeOutput(result.stdout),
+          stderr: decodeOutput(result.stderr),
+        })),
+      )
   return run
 })
 
@@ -334,9 +360,12 @@ function schtasks(name: string): Unit {
         command: "schtasks",
         args: ["/Create", "/F", "/SC", "ONLOGON", "/RL", "LIMITED", "/TN", name, "/TR", taskCommand(input.command)],
       },
+      // `/Create` already persisted the task; `/Run` exits non-zero when an earlier instance of the task is still
+      // running `serve --service` in the foreground, so a reinstall must not fail on that return code.
+      { type: "run", command: "schtasks", args: ["/Run", "/TN", name], optional: true },
     ],
     uninstall: [{ type: "run", command: "schtasks", args: ["/Delete", "/F", "/TN", name] }],
-    // The task only starts at logon and the server is an ordinary process, so there is nothing to unload.
+    // The task has no restart policy and the server is an ordinary process, so there is nothing to unload.
     stop: [],
   }
 }
@@ -354,17 +383,29 @@ const exists = Effect.fnUntraced(function* (found: Unit, run: Run) {
   return yield* fs.exists(found.check.path)
 })
 
-/** Whether the written unit names an executable that is gone. A Windows task stores its own definition, so it never is. */
-const staleUnit = Effect.fnUntraced(function* (found: Unit) {
-  if (found.check.type !== "file") return false
-  const fs = yield* FileSystem.FileSystem
-  const content = yield* fs.readFileString(found.check.path).pipe(Effect.option)
-  if (Option.isNone(content)) return false
-  const executable = recordedExecutable(found.kind, content.value)
-  return executable !== undefined && !existsSync(executable)
+/** Reads the unit definition: the written file on POSIX, or the Task Scheduler XML on Windows. */
+const definition = Effect.fnUntraced(function* (found: Unit, run: Run) {
+  if (found.check.type === "file") {
+    const fs = yield* FileSystem.FileSystem
+    return yield* fs.readFileString(found.check.path).pipe(Effect.option)
+  }
+  const result = yield* run("schtasks", ["/Query", "/TN", found.name, "/XML"])
+  return result.exitCode === 0 ? Option.some(result.stdout) : Option.none()
 })
 
-/** The executable a written unit starts: launchd's first ProgramArguments string, or systemd's first ExecStart word. */
+/** Whether the installed unit names an executable that is gone. */
+const staleUnit = Effect.fnUntraced(function* (found: Unit, run: Run) {
+  const content = yield* definition(found, run)
+  if (Option.isNone(content)) return false
+  return missingExecutable(found.kind, content.value)
+})
+
+function missingExecutable(kind: Kind, content: string) {
+  const executable = recordedExecutable(kind, content)
+  return executable !== undefined && !existsSync(executable)
+}
+
+/** The executable a unit starts: launchd's first ProgramArguments string, systemd's first ExecStart word, or schtasks' Exec Command. */
 function recordedExecutable(kind: Kind, content: string) {
   if (kind === "launchd") {
     const match = /<key>ProgramArguments<\/key>\s*<array>\s*<string>([\s\S]*?)<\/string>/.exec(content)
@@ -374,7 +415,12 @@ function recordedExecutable(kind: Kind, content: string) {
     const match = /^ExecStart="((?:[^"\\]|\\.)*)"/m.exec(content)
     return match?.[1] === undefined ? undefined : match[1].replace(/\\(.)/g, "$1")
   }
-  return undefined
+  const match = /<Exec\b[^>]*>[\s\S]*?<Command\b[^>]*>([\s\S]*?)<\/Command>/i.exec(content)
+  if (match?.[1] === undefined) return undefined
+  const raw = unescapeXml(match[1]).trim()
+  if (raw.length === 0) return undefined
+  const quoted = /^"([^"]+)"/.exec(raw)
+  return quoted ? quoted[1] : raw
 }
 
 function execute(steps: ReadonlyArray<Step>, run: Run) {
@@ -419,6 +465,7 @@ function unescapeXml(value: string) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
     .replace(/&amp;/g, "&")
 }
 
