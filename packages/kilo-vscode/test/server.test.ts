@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -290,6 +290,72 @@ test("refuses a local server that accepts any credential", async () => {
     env: process.env,
   })
   await expect(started).rejects.toThrow("/api/info accepted a wrong credential")
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("retries a printed URL after a transient verification failure", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-retry-"))
+  // The first request of the child this test starts fails; the URL line is the same, so the retry must use it again.
+  const script = `
+    const http = require("node:http")
+    ${CREDENTIAL}
+    let first = true
+    const server = http.createServer((request, response) => {
+      if (first) {
+        first = false
+        response.writeHead(500, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "Boom" }))
+      }
+      if (request.headers.authorization !== authorization) {
+        response.writeHead(401, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "UnauthorizedError" }))
+      }
+      response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify({ version: "test", pid: process.pid }))
+    })
+    server.listen(0, "127.0.0.1", () => {
+      console.log(JSON.stringify({ url: "http://127.0.0.1:" + server.address().port }))
+    })
+    process.stdin.resume()
+    process.stdin.on("end", () => process.exit(0))
+  `
+  const server = await start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  expect(server.url).toStartWith("http://127.0.0.1:")
+  const exited = new Promise<void>((resolve) => server.process.once("exit", () => resolve()))
+  stop(server.process)
+  await exited
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("never sends the generated credential to a server that fails the probe", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-leak-"))
+  const marker = path.join(root, "credential-sent")
+  // A page server that records any request carrying the password. The probe must reject it before that header is sent.
+  const script = `
+    const http = require("node:http")
+    const fs = require("node:fs")
+    ${CREDENTIAL}
+    const server = http.createServer((request, response) => {
+      if (request.headers.authorization === authorization) fs.writeFileSync(${JSON.stringify(marker)}, "1")
+      response.setHeader("content-type", "text/html")
+      response.end("<html>not the server</html>")
+    })
+    server.listen(0, "127.0.0.1", () => {
+      console.log(JSON.stringify({ url: "http://127.0.0.1:" + server.address().port }))
+      setTimeout(() => process.exit(0), 500)
+    })
+  `
+  const started = start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  await expect(started).rejects.toThrow("did not answer as the Kilo server")
+  expect(existsSync(marker)).toBe(false)
   await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 }, 15_000)
 

@@ -17,6 +17,9 @@ const TIMEOUT = 60_000
 const OUTPUT_LIMIT = 4096
 const RETRY = 10_000
 const IDENTITY = 5_000
+/** Attempts per printed URL: a transient failure must not discard the line the server just printed. */
+const VERIFY_ATTEMPTS = 2
+const VERIFY_RETRY = 500
 /** The stdio server binds a numeric loopback address; the credential goes only to these. */
 const LOOPBACK: ReadonlySet<string> = new Set(["127.0.0.1", "[::1]"])
 const JSON_TYPE = /^application\/(?:[\w.-]+\+)?json\b/i
@@ -146,27 +149,37 @@ function candidates(output: string) {
     .filter((value) => value !== undefined)
 }
 
-type Answer = { value: unknown } | { failure: string }
+type Answer =
+  | { ok: true }
+  | { ok: false; failure: string; status?: number; json?: boolean }
 
-/** One authenticated GET of a JSON document from the printed server. */
+/**
+ * One GET of `/api/info` from the printed server with the given credential. The body is discarded: the credential this
+ * child alone was given is the identity, and an unverified server must not make the extension host buffer a document.
+ */
 async function call(target: URL, authorization: string): Promise<Answer> {
   const response = await local(target, {
     headers: { authorization },
     signal: AbortSignal.timeout(IDENTITY),
   }).catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))))
-  if (response instanceof Error) return { failure: response.message }
+  if (response instanceof Error) return { ok: false, failure: response.message }
   const type = response.headers.get("content-type") ?? ""
-  if (response.status !== 200 || !JSON_TYPE.test(type)) {
-    await response.body?.cancel().catch(() => undefined)
-    return { failure: `${target.pathname} returned ${response.status} (${type || "no content type"})` }
-  }
-  // Read the small document so the connection is released rather than left open for the agent.
-  return { value: await response.json().catch(() => undefined) }
+  const json = JSON_TYPE.test(type)
+  await response.body?.cancel().catch(() => undefined)
+  if (response.status !== 200 || !json)
+    return {
+      ok: false,
+      failure: `${target.pathname} returned ${response.status} (${type || "no content type"})`,
+      status: response.status,
+      json,
+    }
+  return { ok: true }
 }
 
 /**
- * Confirms a printed URL is the server this extension started: it must refuse a wrong credential and accept the one
- * only that child was given, as JSON. Returns why it does not, or undefined when it does.
+ * Confirms a printed URL is the server this extension started: it must refuse a wrong credential the way the Kilo
+ * server does, and accept the one only that child was given, as JSON. Returns why it does not, or undefined when it
+ * does.
  */
 async function verify(url: string, authorization: string) {
   const base = URL.canParse(url) ? new URL(url) : undefined
@@ -179,9 +192,13 @@ async function verify(url: string, authorization: string) {
   // A local server that answers without the generated password is not the one this child started, even when it
   // serves the same JSON document.
   const probe = await call(target, wrong)
-  if ("value" in probe) return `${url} did not answer as the Kilo server: /api/info accepted a wrong credential.`
+  if (probe.ok) return `${url} did not answer as the Kilo server: /api/info accepted a wrong credential.`
+  // Only a server that refuses the credential the way the Kilo server does (a JSON 401) may receive the generated
+  // one. Any other answer is an unrelated service, and its request log would keep the header.
+  if (probe.status !== 401 || probe.json !== true)
+    return `${url} did not answer as the Kilo server: ${probe.failure}.`
   const answer = await call(target, authorization)
-  if ("failure" in answer) return `${url} did not answer as the Kilo server: ${answer.failure}.`
+  if (!answer.ok) return `${url} did not answer as the Kilo server: ${answer.failure}.`
   return undefined
 }
 
@@ -217,11 +234,15 @@ export function start(input: {
     started: false,
     verifying: false,
     tried: new Set<string>(),
+    attempts: new Map<string, number>(),
+    seen: new Set<string>(),
+    retry: undefined as ReturnType<typeof setTimeout> | undefined,
   }
   const fail = (message: string) => {
     if (state.done) return
     state.done = true
     clearTimeout(timer)
+    clearTimeout(state.retry)
     ready.reject(new Error([message, ...state.errors.slice(-20)].join("\n").trim()))
   }
   // A printed URL is used only once `/api/info` answers with the password this child alone was given. A line printed
@@ -229,9 +250,21 @@ export function start(input: {
   // client only reports an unreadable response, and both views keep it until the window reloads.
   const identify = async () => {
     if (state.done || state.verifying) return
-    const found = candidates(state.output).find((value) => !state.tried.has(value))
-    if (found === undefined) return
-    state.tried.add(found)
+    const all = candidates(state.output)
+    const found = all.find((value) => !state.tried.has(value) && !state.seen.has(value))
+    if (found === undefined) {
+      // Every candidate of this pass failed. A transient failure must not discard the line the server printed, so
+      // retry the candidates that still have an attempt left; a later line starts the next pass at once.
+      if (!all.some((value) => !state.tried.has(value))) return
+      state.seen.clear()
+      clearTimeout(state.retry)
+      state.retry = setTimeout(() => {
+        if (state.done || state.verifying) return
+        void identify()
+      }, VERIFY_RETRY)
+      return
+    }
+    state.seen.add(found)
     state.verifying = true
     // A candidate that throws is a candidate that failed: releasing the guard lets a later line be read.
     const failure = await verify(found, authorization).catch((error: unknown) => {
@@ -241,12 +274,16 @@ export function start(input: {
     if (state.done) return
     if (failure !== undefined) {
       // Another line may still name the server this child started; the start fails on exit or the timeout above.
+      const attempts = (state.attempts.get(found) ?? 0) + 1
+      state.attempts.set(found, attempts)
+      if (attempts >= VERIFY_ATTEMPTS) state.tried.add(found)
       state.errors = [...state.errors.slice(-19), failure]
       return void identify()
     }
     state.done = true
     state.started = true
     clearTimeout(timer)
+    clearTimeout(state.retry)
     ready.resolve({ url: found, authorization, process: child })
   }
   const timer = setTimeout(() => {
