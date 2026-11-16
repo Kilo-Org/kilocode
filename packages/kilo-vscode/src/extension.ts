@@ -282,21 +282,25 @@ export function activate(context: ExtensionContext) {
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
   agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
-  // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it once at startup.
+  // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it at startup until the
+  // user imports or chooses "Don't Ask Again"; closing the notification only postpones it to the next start.
   const importFromV1 = async (days: number) => {
     const found = serverCommand()
     if (!found) return void window.showErrorMessage(l10n.t("No Kilo v2 server found."))
     const result = await window.withProgress(
-      { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…") },
-      async () => {
+      { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…"), cancellable: true },
+      async (_progress, token) => {
+        const abort = new AbortController()
+        token.onCancellationRequested(() => abort.abort())
         const run = await importV1({
           command: found,
           cwd: directory,
           env: process.env,
           days,
           log: (text) => output.append(text),
+          signal: abort.signal,
         })
-        if (!run.ok) return { ...run, sessions: 0 }
+        if (!run.ok || abort.signal.aborted) return { ...run, ok: false, cancelled: abort.signal.aborted, sessions: 0 }
         // The CLI imported every v1 session updated in the window, which includes every session created in it.
         const sessions = await agentManager
           .importLegacySessions(Date.now() - days * 86_400_000)
@@ -304,9 +308,10 @@ export function activate(context: ExtensionContext) {
             output.appendLine(`Agent Manager v1 import failed: ${String(error)}`)
             return 0
           })
-        return { ...run, sessions }
+        return { ...run, cancelled: false, sessions }
       },
     )
+    if (result.cancelled) return
     if (!result.ok) {
       const show = l10n.t("Show Output")
       const message = result.output.split("\n").at(-1) || l10n.t("The Kilo v1 import failed.")

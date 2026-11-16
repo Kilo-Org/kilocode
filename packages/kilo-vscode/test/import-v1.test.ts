@@ -46,3 +46,19 @@ it("finds the v1 store in the XDG data directory, then in the home default", asy
   expect(v1Store({ XDG_DATA_HOME: dir }, home)).toBe(path.join(dir, "kilo", "kilo.db"))
   await rm(dir, { recursive: true, force: true })
 })
+
+it("stops the import when the signal aborts", async () => {
+  const abort = new AbortController()
+  const started = Date.now()
+  const result = importV1({
+    command: { cmd: process.execPath, args: ["-e", "setTimeout(() => {}, 60_000)", "serve"], env: {} },
+    cwd: process.cwd(),
+    env: process.env,
+    days: 14,
+    log: () => undefined,
+    signal: abort.signal,
+  })
+  setTimeout(() => abort.abort(), 200)
+  expect((await result).ok).toBe(false)
+  expect(Date.now() - started).toBeLessThan(10_000)
+})

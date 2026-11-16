@@ -533,6 +533,26 @@ test("an existing store gets only the v1 sessions it does not have, in the proje
   })
   expect(await KiloDatabase.mergeV1({ store, file, data })).toBe(0)
   expect((await readdir(data)).filter((name) => name.includes(".import"))).toEqual([])
+  // A window without v1 activity adds nothing instead of failing, so the import can run again at any time.
+  expect(await KiloDatabase.mergeV1({ store, file, data, since: now + 86_400_000 })).toBe(0)
+})
+
+test("a private store left behind by an earlier merge is removed instead of merged", async () => {
+  const { dir, data } = await root()
+  const store = KiloDatabase.v1Store(data)
+  const now = Date.now()
+  await windowStore(store, path.join(dir, "work"), now)
+  const file = await importStore(data, now - 7 * 86_400_000)
+  // A converted store of an earlier process with this PID, holding a session that is not in v1.
+  const stale = `${file}.${process.pid}.import`
+  await copyFile(file, stale)
+  read(stale, (db) => db.run("UPDATE session_v2 SET id = 'ses_stale' WHERE id = 'ses_recent'"))
+  await writeFile(`${file}.999999999.import-wal`, "")
+  expect(await KiloDatabase.mergeV1({ store, file, data })).toBe(1)
+  read(file, (db) =>
+    expect(db.query("SELECT count(*) AS n FROM session_v2 WHERE id = 'ses_stale'").get()).toEqual({ n: 0 }),
+  )
+  expect((await readdir(data)).filter((name) => name.includes(".import"))).toEqual([])
 })
 
 test("--config copies the v1 global config without overwriting kilo2 files", async () => {
@@ -543,13 +563,21 @@ test("--config copies the v1 global config without overwriting kilo2 files", asy
   await mkdir(path.join(from, "skills", "v1-only"), { recursive: true })
   await mkdir(path.join(from, "plugins"), { recursive: true })
   await mkdir(path.join(to, "skills", "shared"), { recursive: true })
-  await writeFile(path.join(from, "kilo.jsonc"), '{ "model": "kilo/v1" }')
+  await writeFile(
+    path.join(from, "kilo.jsonc"),
+    '{\n  // v1 model\n  "model": "kilo/v1",\n  "plugin": ["v1-plugin"],\n  "plugins": ["other"]\n}',
+  )
   await writeFile(path.join(from, "skills", "shared", "SKILL.md"), "v1")
   await writeFile(path.join(from, "skills", "v1-only", "SKILL.md"), "v1")
   await writeFile(path.join(from, "plugins", "plugin.ts"), "")
   await writeFile(path.join(to, "skills", "shared", "SKILL.md"), "kilo2")
   expect(copyConfig(from, to)).toEqual(["kilo.jsonc", "skills"])
-  expect(await readFile(path.join(to, "kilo2.jsonc"), "utf8")).toBe('{ "model": "kilo/v1" }')
+  const copied = await readFile(path.join(to, "kilo2.jsonc"), "utf8")
+  expect(copied).toContain("// v1 model")
+  expect(copied).toContain('"model": "kilo/v1"')
+  expect(copied).not.toContain("plugin")
+  // The v1 file stays as it is.
+  expect(await readFile(path.join(from, "kilo.jsonc"), "utf8")).toContain("v1-plugin")
   expect(await readFile(path.join(to, "skills", "shared", "SKILL.md"), "utf8")).toBe("kilo2")
   expect(await readFile(path.join(to, "skills", "v1-only", "SKILL.md"), "utf8")).toBe("v1")
   expect(existsSync(path.join(to, "plugins"))).toBe(false)

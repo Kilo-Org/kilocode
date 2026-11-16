@@ -13,6 +13,7 @@ export function importV1(input: {
   env: NodeJS.ProcessEnv
   days: number
   log: (text: string) => void
+  signal?: AbortSignal
 }): Promise<{ ok: boolean; output: string }> {
   const prefix = input.command.args.slice(0, input.command.args.indexOf("serve"))
   const args = [...prefix, "import", "v1", "--since", `${input.days}d`, "--config"]
@@ -20,6 +21,14 @@ export function importV1(input: {
     cwd: input.cwd,
     env: environment(input.env, { ...input.command.env, INIT_CWD: input.cwd }),
     stdio: ["ignore", "pipe", "pipe"],
+    // Its own process group, so a stop also reaches the CLI that the dev entry of a checkout starts.
+    detached: process.platform !== "win32",
+  })
+  // The CLI converts into a private store and merges in one transaction, so stopping it leaves kilo2 as it was.
+  input.signal?.addEventListener("abort", () => {
+    if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined) return
+    if (process.platform === "win32") return void child.kill()
+    process.kill(-child.pid, "SIGTERM")
   })
   const result = Promise.withResolvers<{ ok: boolean; output: string }>()
   const lines: string[] = []
@@ -31,7 +40,8 @@ export function importV1(input: {
   child.stdout?.on("data", collect)
   child.stderr?.on("data", collect)
   child.on("error", (error) => result.resolve({ ok: false, output: error.message }))
-  child.on("exit", (code) => result.resolve({ ok: code === 0, output: lines.join("").trim() }))
+  // `close` comes after both output streams ended, so the summary line is never cut off.
+  child.on("close", (code) => result.resolve({ ok: code === 0, output: lines.join("").trim() }))
   return result.promise
 }
 
