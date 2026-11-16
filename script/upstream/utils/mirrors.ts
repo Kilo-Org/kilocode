@@ -190,7 +190,7 @@ export function problems(registry: Mirrors, states: MirrorState[], marked: Marke
       ),
     ...marked.flatMap((item) => {
       const mirror = entries.get(item.upstream)?.mirror
-      if (typeof mirror !== "string" || mirror === "" || mirror === item.file) return []
+      if (typeof mirror !== "string" || mirror.trim() === "" || mirror === item.file) return []
       return [`${item.file} declares ${item.upstream}, which is registered to ${mirror}`]
     }),
   ]

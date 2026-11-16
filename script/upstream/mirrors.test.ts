@@ -174,6 +174,12 @@ test("an entry needs a why and an invariant to guide a re-merge", async () => {
   // An empty path must not be read as the repo root and turn into a marker error.
   expect(empty.output).not.toContain("must start with")
   expect(empty.output).not.toContain("unregistered mirror")
+
+  await registry(r, { "packages/cli/src/thing.ts": { mirror: "   ", sha, why: "a reason", invariants: ["a rule"] } })
+  const blank = await run(r)
+  expect(blank.code).toBe(1)
+  expect(blank.output).toContain("missing `mirror`")
+  expect(blank.output).not.toContain("which is registered to")
 })
 
 test("analysis lists mirrors whose upstream file changed", async () => {
