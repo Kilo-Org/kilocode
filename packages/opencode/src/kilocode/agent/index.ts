@@ -404,6 +404,9 @@ export function cacheKey(cfg: Config.Info) {
     shared_agent_board: cfg.shared_agent_board,
     references: cfg.references,
     reference: cfg.reference,
+    // #34 - the cached agents bake this budget into `steps`, so a live change to
+    // it must invalidate the cache or the new value is silently ignored.
+    subagent_steps: cfg.subagent_steps,
   })
 }
 

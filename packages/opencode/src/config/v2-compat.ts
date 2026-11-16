@@ -193,15 +193,28 @@ function normalizeExperimental(
   if (Option.isNone(experimental)) return
   if (Object.hasOwn(experimental.value, "portable_shell_scanner"))
     unsupported(["experimental", "portable_shell_scanner"], diagnostics)
-  if (!Object.hasOwn(experimental.value, "subagent_depth")) return
-  const depth = decodeValue(
-    NonNegativeInt,
-    experimental.value.subagent_depth,
-    ["experimental", "subagent_depth"],
-    diagnostics,
-  )
-  if (depth !== undefined)
-    preferLegacy(result, "subagent_depth", depth, ["experimental", "subagent_depth"], diagnostics)
+  // kilocode_change start - #34: normalize subagent_depth and subagent_steps independently
+  if (Object.hasOwn(experimental.value, "subagent_depth")) {
+    const depth = decodeValue(
+      NonNegativeInt,
+      experimental.value.subagent_depth,
+      ["experimental", "subagent_depth"],
+      diagnostics,
+    )
+    if (depth !== undefined)
+      preferLegacy(result, "subagent_depth", depth, ["experimental", "subagent_depth"], diagnostics)
+  }
+  if (Object.hasOwn(experimental.value, "subagent_steps")) {
+    const steps = decodeValue(
+      NonNegativeInt,
+      experimental.value.subagent_steps,
+      ["experimental", "subagent_steps"],
+      diagnostics,
+    )
+    if (steps !== undefined)
+      preferLegacy(result, "subagent_steps", steps, ["experimental", "subagent_steps"], diagnostics)
+  }
+  // kilocode_change end
 }
 
 function normalizeAgents(input: Record<string, unknown>, result: Record<string, unknown>, diagnostics: Diagnostic[]) {

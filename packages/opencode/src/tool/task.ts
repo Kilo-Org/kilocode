@@ -290,11 +290,21 @@ export const TaskTool = Tool.define(
           }
           // kilocode_change end
           // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)
-          return (
-            result.parts
-              .filter((item): item is MessageV2.TextPart => item.type === "text")
-              .findLast((item) => !item.synthetic && !item.ignored && item.text.length > 0)?.text ?? ""
-          )
+          // #34: Treat empty sub-agent output as a failure, not as NO_FINDINGS.
+          // When a sub-agent produces no text (e.g. reasoning loop or context
+          // exhaustion), the parent agent must see the failure so it can retry
+          // or report the error, instead of silently treating it as success.
+          const taskText = result.parts
+            .filter((item): item is MessageV2.TextPart => item.type === "text")
+            .findLast((item) => !item.synthetic && !item.ignored && item.text.length > 0)?.text
+          if (!taskText) {
+            return yield* Effect.fail(
+              new Error(
+                `Sub-agent "${next.name}" produced no text output. The agent may have hit a context limit or entered a reasoning loop.\n${resumeHint(nextSession.id)}`,
+              ),
+            )
+          }
+          return taskText
           // kilocode_change end
         },
         Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id)),
