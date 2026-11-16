@@ -89,6 +89,8 @@ test("flags the opencode namespace named in prose in a non-intercepted asset", (
 test("audits packages/server/src", async () => {
   const surface = await KiloBrandingAudit.surface()
   for (const [file] of serverText) expect(surface).toContain(`packages/${file}`)
+  // A module the loader does not intercept: the scope is the whole package, not the three branded modules.
+  expect(surface).toContain("packages/server/src/auth.ts")
 })
 
 test("flags each branded server module when it is not intercepted", async () => {
