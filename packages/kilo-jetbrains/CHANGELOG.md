@@ -680,6 +680,98 @@
 
 ## [Unreleased]
 
+## [7.2.1-rc.7] - 2026-11-15
+
+### Added
+
+- Agent Manager worktrees can now be moved into an existing section from the row context menu with a new **Move To** submenu.
+- New Worktree, branch/PR import, and Create Cloud Workspace dialogs offer a section picker, defaulting to the selected section or the selected workspace's parent so new tasks land where you are working.
+- Both creation dialogs support prompt dictation, so you can speak the initial prompt instead of typing it.
+
+### Fixed
+
+- Successful worktree creations no longer stay stuck spinning or showing a temporary lock when a background reload discovers the checkout first.
+- Initial prompts now keep their selected mode, model, and reasoning level through failures, reopening the session, and IDE restarts, without overwriting newer composer drafts.
+- Failed or uncertain prompts are recovered as editable drafts instead of being silently lost.
+- New Agent Manager rows are inserted at the top of their section, keeping the newest work in view.
+- **Move To** is hidden when no other section exists, and worktree startup resumes after an IDE reconnect.
+- Voice input no longer takes over the global action shortcut, and Create cannot discard an active recording or pending transcription.
+- Section headers keep the selected background instead of flickering under hover and selection, and toggle on mouse release.
+
+### Changed
+
+- Agent Manager section headers now render as persistent structure: they ignore hover and stay on the selection background, making groups easier to scan.
+
+## [7.2.1-rc.6] - 2026-11-13
+
+### Added
+
+- Voice dictation input in the prompt, with a configurable shortcut, speech model discovery, and clear recording limits.
+- Agent Manager sections: group worktrees into color-coded sections you can drag to reorder.
+
+### Fixed
+
+- Fixed freezes and crashes reported from IDE logs, including hosted workspace freezes and uninitialized editor background lookups.
+- Markdown and overlay hover could crash the IDE; both now render safely.
+- Agent Manager branch state now stays in sync: superseded branch polls are ignored, PR badges refresh after accepted branch reloads, and branch picker popups no longer update while closing.
+- Worktree placement is retained across transient branch reloads, and removed Agent Manager layout entries are pruned.
+- Section drag targets are more stable while reordering.
+- Prompt highlight ownership is preserved when multiple controllers handle the same prompt.
+- Telemetry no longer fails during plugin unload, and unavailable Windows native cleanup no longer logs failures.
+- Fixed a platform API usage that failed plugin verification, so releases publish again.
+
+### Changed
+
+- Kilo charges are now settled from `usage.cost`, with upstream cost used only for BYOK requests.
+- Mercury autocomplete models are retired; Codestral is now the default autocomplete model.
+
+## [7.2.1-rc.5] - 2026-11-13
+
+### Added
+
+- Voice dictation input in the prompt, with a configurable shortcut, speech model discovery, and clear recording limits.
+- Agent Manager sections: group worktrees into color-coded sections you can drag to reorder.
+
+### Fixed
+
+- Fixed freezes and crashes reported from IDE logs, including hosted workspace freezes and uninitialized editor background lookups.
+- Markdown and overlay hover could crash the IDE; both now render safely.
+- Agent Manager branch state now stays in sync: superseded branch polls are ignored, PR badges refresh after accepted branch reloads, and branch picker popups no longer update while closing.
+- Worktree placement is retained across transient branch reloads, and removed Agent Manager layout entries are pruned.
+- Section drag targets are more stable while reordering.
+- Prompt highlight ownership is preserved when multiple controllers handle the same prompt.
+- Telemetry no longer fails during plugin unload, and unavailable Windows native cleanup no longer logs failures.
+
+### Changed
+
+- Kilo charges are now settled from `usage.cost`, with upstream cost used only for BYOK requests.
+- Mercury autocomplete models are retired; Codestral is now the default autocomplete model.
+
+## [7.2.1-rc.3] - 2026-11-11
+
+### Added
+
+- Cloud workspace management: create, switch, and delete Cloud (hosted) workspaces, remember the profile per repository, and apply organization profile defaults.
+- Cloud sessions now share the worktree editor UI, with session titles and activity kept in sync and a running indicator for Cloud turns like local ones.
+- Transcript find: search the session transcript with match highlighting and next/previous navigation that keeps working while a response is streaming.
+- Worktrees are organized in a shared active tree, with an **Update from Base** action and row buttons that highlight on hover.
+- Questions appear in the prompt navigator so pending agent questions are easier to find.
+- Transcript messages are labeled for screen readers.
+
+### Fixed
+
+- The plugin now uses public platform APIs for tree hover painting, so Marketplace publishing passes plugin verification again.
+- Cloud workspace delete confirmation is simplified, and **Set as default** is removed from the Cloud workspace dialog.
+- Local MCP issues are hidden in Cloud sessions.
+- Plugin tools whose arguments cannot be converted to JSON Schema no longer break tool loading.
+- Questions stay open when background results arrive.
+- Cloud agent control tokens are exchanged correctly from stored credentials.
+
+### Changed
+
+- Bundled Kilo Core CLI updated to 7.8.28.
+- JetBrains and build dependencies updated (OkHttp, Markdown, Kodein DI, Gradle wrapper) with security floors for transitive build dependencies.
+
 ## [7.2.1-rc.2] - 2026-11-11
 
 ### Added

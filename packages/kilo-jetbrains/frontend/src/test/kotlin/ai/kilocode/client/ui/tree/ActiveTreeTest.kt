@@ -13,6 +13,8 @@ import ai.kilocode.client.ui.active.ActiveCell
 import ai.kilocode.client.ui.active.activeHitCells
 import ai.kilocode.client.ui.active.activeLayout
 import java.awt.event.MouseEvent
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import javax.swing.tree.DefaultMutableTreeNode
 
 class ActiveTreeTest : BasePlatformTestCase() {
     private data class Row(override val key: String, override val title: String, override val description: String? = null) : ActiveItem
@@ -298,6 +300,527 @@ class ActiveTreeTest : BasePlatformTestCase() {
         assertFalse(view.placeholder(view.hierarchy.entries.getValue("a")))
         view.drop()
         assertEquals(1, moves.size)
+    }
+
+    fun `test root leaves reorder with default sibling only options`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = ActiveReorder(onMove = { moves += it }))
+        tree.update(listOf("a", "b", "c").map { ActiveTreeNode(Row(it, it)) })
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("c")
+
+        view.over("c", Point(100, 0))
+
+        assertEquals(listOf("c", "a", "b"), keys(view.hierarchy.root))
+        assertSame(entry, view.getPathForRow(0).lastPathComponent)
+        assertEquals(listOf("c"), tree.selectedKeys())
+        view.drop()
+        assertEquals(ActiveMove("c", 2, 0, listOf("c", "a", "b")), moves.single())
+    }
+
+    fun `test legacy branches remain immovable and leaves stay with their siblings`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = ActiveReorder(onMove = { moves += it }))
+        tree.update(listOf(section("first", "a", "b"), section("second", "c")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val first = view.hierarchy.entries.getValue("first")
+
+        assertNull(view.pickable(body(view, "first")))
+        view.over("first", body(view, "second"))
+        assertFalse(view.placeholder(first))
+        view.over("a", body(view, "second"))
+        view.drop()
+
+        assertEquals(listOf("b", "a"), keys(first))
+        assertEquals(listOf("c"), keys(view.hierarchy.entries.getValue("second")))
+        assertEquals("first", moves.single().parent)
+        assertEquals("first", moves.single().previous)
+    }
+
+    fun `test leaf crosses sections while retaining its original root source`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("first", "b"), section("second", "c")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("a")
+
+        view.over("a", body(view, "first"))
+        assertEquals(listOf("b", "a"), keys(view.hierarchy.entries.getValue("first")))
+        view.over("a", body(view, "second"))
+
+        assertEquals(listOf("b"), keys(view.hierarchy.entries.getValue("first")))
+        assertEquals(listOf("c", "a"), keys(view.hierarchy.entries.getValue("second")))
+        assertSame(entry, view.selectionPath.lastPathComponent)
+        view.drop()
+        assertEquals(ActiveMove("a", 0, 1, listOf("c", "a"), "second", null), moves.single())
+    }
+
+    fun `test leaf gutter drop leaves a section after another expanded section as a unit`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        tree.update(listOf(section("first", "a"), section("second", "b", "c"), ActiveTreeNode(Row("d", "D"))))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        view.setSize(400, 300)
+        val second = view.hierarchy.entries.getValue("second")
+        val point = body(view, "b")
+
+        view.over("a", Point(view.insets.left, point.y))
+        view.drop()
+
+        assertEquals(listOf("first", "second", "a", "d"), keys(view.hierarchy.root))
+        assertEquals(listOf("b", "c"), keys(second))
+        assertTrue(view.isExpanded(TreePath(second.path)))
+        assertEquals(ActiveMove("a", 0, 2, listOf("first", "second", "a", "d"), null, "first"), moves.single())
+    }
+
+    fun `test leaf enters another section at the pointed sibling position`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        tree.update(listOf(section("first", "a", "b"), section("second", "c", "d")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue("c"))
+
+        view.over("a", Point(bounds.x + bounds.width / 2, bounds.y))
+        view.drop()
+
+        assertEquals(listOf("b"), keys(view.hierarchy.entries.getValue("first")))
+        assertEquals(ActiveMove("a", 0, 0, listOf("a", "c", "d"), "second", "first"), moves.single())
+    }
+
+    fun `test disclosure gutter inserts beside a section instead of into it`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("section", "b")))
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("section")
+        val control = requireNotNull(view.regions.control(entry))
+
+        view.over("a", Point(control.x + control.width - 1, control.y + control.height / 2))
+        view.drop()
+
+        assertEquals(listOf("b"), keys(entry))
+        assertEquals(ActiveMove("a", 0, 1, listOf("section", "a")), moves.single())
+    }
+
+    fun `test branch header strips insert beside the whole expanded section`() {
+        for (bottom in listOf(false, true)) {
+            val moves = mutableListOf<ActiveMove>()
+            val tree = ActiveTree("", reorder = sections(moves))
+            tree.update(listOf(section("section", "b", "c"), ActiveTreeNode(Row("a", "A"))))
+            val view = tree.preferredFocus() as ActiveTreeView
+            view.setSize(400, 300)
+            val entry = view.hierarchy.entries.getValue("section")
+            val cell = view.regions.cell(entry)
+
+            view.over("a", Point(cell.x + cell.width / 2, cell.y + if (bottom) cell.height - 1 else 0))
+
+            assertSame(view.hierarchy.root, view.hierarchy.entries.getValue("a").parent)
+            assertEquals(if (bottom) listOf("section", "a") else listOf("a", "section"), keys(view.hierarchy.root))
+            assertEquals(listOf("b", "c"), keys(entry))
+            assertTrue(view.isExpanded(TreePath(entry.path)))
+            view.drop()
+            assertEquals(if (bottom) 0 else 1, moves.size)
+        }
+    }
+
+    fun `test empty or collapsed section keeps its target across repeated hover events`() {
+        for (empty in listOf(true, false)) {
+            val moves = mutableListOf<ActiveMove>()
+            val tree = ActiveTree("", reorder = sections(moves))
+            val view = tree.preferredFocus() as ActiveTreeView
+            view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+            tree.update(listOf(ActiveTreeNode(Row("a", "A")),
+                if (empty) section("section") else section("section", "b")))
+            view.setSize(400, 300)
+            val entry = view.hierarchy.entries.getValue("section")
+            val path = TreePath(entry.path)
+            view.collapsePath(path)
+            val point = body(view, "section")
+
+            for (offset in listOf(0, 1, 0, -1)) {
+                view.over("a", Point(point.x + offset, point.y))
+
+                val leaf = view.hierarchy.entries.getValue("a")
+                assertSame(entry, leaf.parent)
+                assertEquals(if (empty) listOf("a") else listOf("b", "a"), keys(entry))
+                assertTrue(view.isExpanded(path))
+                assertTrue(view.getRowForPath(TreePath(leaf.path)) >= 0)
+                assertTrue(view.placeholder(leaf))
+                assertEquals(listOf("a"), tree.selectedKeys())
+            }
+            view.drop()
+            assertEquals(ActiveMove("a", 0, if (empty) 0 else 1, keys(entry), "section", null), moves.single())
+            assertTrue("A successful drop leaves the receiving section expanded", view.isExpanded(path))
+        }
+    }
+
+    fun `test branch header hover releases its original target when moving to a sibling`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("section", "b", "c")))
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("section")
+        val point = body(view, "section")
+
+        for (offset in listOf(0, 1, -1, 0)) {
+            view.over("a", Point(point.x + offset, point.y + offset))
+            assertEquals(listOf("b", "c", "a"), keys(entry))
+        }
+        val outside = view.regions.cell(view.hierarchy.entries.getValue("c"))
+        view.over("a", Point(outside.x + outside.width / 2, outside.y))
+        assertEquals(listOf("b", "a", "c"), keys(entry))
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue("b"))
+        view.over("a", Point(bounds.x + bounds.width / 2, bounds.y))
+        assertEquals(listOf("a", "b", "c"), keys(entry))
+        view.over("a", point)
+        assertEquals(listOf("a", "b", "c"), keys(entry))
+        view.drop()
+
+        assertEquals(ActiveMove("a", 0, 0, listOf("a", "b", "c"), "section", null), moves.single())
+    }
+
+    fun `test cancelling repeated hover into an empty section restores its collapsed state`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("section")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("section")
+        val path = TreePath(entry.path)
+        view.collapsePath(path)
+        val point = body(view, "section")
+        for (offset in listOf(0, 1, 0)) {
+            view.over("a", Point(point.x + offset, point.y))
+            assertSame(entry, view.hierarchy.entries.getValue("a").parent)
+            assertTrue(view.isExpanded(path))
+        }
+
+        tree.setLocked(true)
+
+        assertEquals(listOf("a", "section"), keys(view.hierarchy.root))
+        assertEmpty(keys(entry))
+        assertFalse(view.isExpanded(path))
+        assertEquals(listOf("a"), tree.selectedKeys())
+        assertFalse(view.placeholder(view.hierarchy.entries.getValue("a")))
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    fun `test reparenting detour cannot bypass an original fixed root sibling`() {
+        for (collapsed in listOf(false, true)) {
+            val moves = mutableListOf<ActiveMove>()
+            val tree = ActiveTree("", reorder = sections(moves) { it.key != "fixed" })
+            val view = tree.preferredFocus() as ActiveTreeView
+            view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+            tree.update(listOf(ActiveTreeNode(Row("a", "A")), ActiveTreeNode(Row("fixed", "Fixed")),
+                section("section", "b")))
+            view.setSize(400, 300)
+            val entry = view.hierarchy.entries.getValue("a")
+            val section = view.hierarchy.entries.getValue("section")
+            val path = TreePath(section.path)
+            if (collapsed) view.collapsePath(path)
+
+            view.over("a", Point(view.insets.left, view.height))
+            assertEquals(listOf("a", "fixed", "section"), keys(view.hierarchy.root))
+            assertFalse(view.placeholder(entry))
+
+            val point = body(view, "section")
+            for (offset in listOf(0, 1, 0)) {
+                view.over("a", Point(point.x + offset, point.y))
+                assertSame(section, entry.parent)
+                assertEquals(listOf("fixed", "section"), keys(view.hierarchy.root))
+                assertEquals(listOf("b", "a"), keys(section))
+            }
+            val gutter = Point(view.insets.left, body(view, "b").y)
+            repeat(2) {
+                view.over("a", gutter)
+                assertEquals(listOf("a", "fixed", "section"), keys(view.hierarchy.root))
+                assertEquals(listOf("b"), keys(section))
+                assertFalse(view.placeholder(entry))
+                assertEquals(!collapsed, view.isExpanded(path))
+            }
+            view.drop()
+            assertEmpty(moves)
+        }
+    }
+
+    fun `test refresh replaces the original barrier snapshot before returning from a section`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves) { it.key != "fixed" })
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        val leaf = ActiveTreeNode(Row("a", "A"))
+        tree.update(listOf(leaf, section("section", "b")))
+        view.setSize(400, 300)
+        val point = body(view, "section")
+        for (offset in listOf(0, 1)) view.over("a", Point(point.x + offset, point.y))
+
+        tree.update(listOf(leaf, ActiveTreeNode(Row("fixed", "Fixed")), section("section", "b")))
+
+        val entry = view.hierarchy.entries.getValue("a")
+        assertSame(view.hierarchy.entries.getValue("section"), entry.parent)
+        view.over("a", Point(view.insets.left, body(view, "b").y))
+        assertEquals(listOf("a", "fixed", "section"), keys(view.hierarchy.root))
+        assertFalse(view.placeholder(entry))
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    fun `test returning from a section can reorder within the original fixed sibling segment`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves) { it.key != "fixed" })
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), ActiveTreeNode(Row("c", "C")),
+            ActiveTreeNode(Row("fixed", "Fixed")), section("section", "b")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val point = body(view, "section")
+        for (offset in listOf(0, 1)) view.over("a", Point(point.x + offset, point.y))
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue("fixed"))
+        val target = Point(bounds.x + bounds.width / 2, bounds.y)
+
+        for (offset in listOf(0, 1, 0)) view.over("a", Point(target.x + offset, target.y))
+        view.drop()
+
+        assertEquals(ActiveMove("a", 0, 1, listOf("c", "a", "fixed", "section")), moves.single())
+        assertEquals(listOf("b"), keys(view.hierarchy.entries.getValue("section")))
+    }
+
+    fun `test sections cannot nest and move their expanded children together`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(section("first", "a", "b"), section("second", "c", "d")))
+        view.setSize(400, 300)
+        val first = view.hierarchy.entries.getValue("first")
+        val second = view.hierarchy.entries.getValue("second")
+        val child = view.hierarchy.entries.getValue("a")
+        assertEquals("first", view.pickable(body(view, "first")))
+
+        view.over("first", body(view, "c"))
+
+        assertEquals(listOf("second", "first"), keys(view.hierarchy.root))
+        assertEquals(listOf("a", "b"), keys(first))
+        assertEquals(listOf("c", "d"), keys(second))
+        assertSame(child, first.getChildAt(0))
+        assertTrue(view.isExpanded(TreePath(first.path)))
+        assertTrue(view.isExpanded(TreePath(second.path)))
+        assertEquals(listOf("second", "c", "d", "first", "a", "b"), (0 until view.rowCount).map {
+            (view.getPathForRow(it).lastPathComponent as ActiveEntry).key
+        })
+        view.drop()
+        assertEquals(ActiveMove("first", 0, 1, listOf("second", "first")), moves.single())
+    }
+
+    fun `test cancelling a cross parent preview restores selection and expansion without callbacks`() {
+        var selections = 0
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", actions = ActiveTreeActions(select = { selections++ }), reorder = sections(moves))
+        tree.update(listOf(section("first", "a", "b"), section("second", "c")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val first = view.hierarchy.entries.getValue("first")
+        val second = view.hierarchy.entries.getValue("second")
+        val path = TreePath(second.path)
+        view.collapsePath(path)
+        tree.select("a", false)
+        val point = body(view, "second")
+        for (offset in listOf(0, 1, 0)) view.over("a", Point(point.x + offset, point.y))
+        val entry = view.hierarchy.entries.getValue("a")
+        assertSame(second, entry.parent)
+        assertTrue(view.placeholder(entry))
+        assertTrue(view.isExpanded(path))
+        selections = 0
+
+        tree.setLocked(true)
+
+        assertEquals(listOf("a", "b"), keys(first))
+        assertEquals(listOf("c"), keys(second))
+        assertEquals(listOf("a"), tree.selectedKeys())
+        assertSame(entry, view.selectionPath.lastPathComponent)
+        assertFalse(view.placeholder(entry))
+        assertTrue(view.isExpanded(TreePath(first.path)))
+        assertFalse(view.isExpanded(path))
+        assertEquals(0, selections)
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    fun `test refresh reapplies a cross parent preview using the refreshed source index`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("section", "b")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val entry = view.hierarchy.entries.getValue("a")
+        val point = body(view, "section")
+        view.over("a", point)
+
+        tree.update(listOf(ActiveTreeNode(Row("new", "New")), ActiveTreeNode(Row("a", "Renamed")),
+            section("section", "b", "c")))
+
+        assertEquals(listOf("new", "section"), keys(view.hierarchy.root))
+        assertEquals(listOf("b", "a", "c"), keys(view.hierarchy.entries.getValue("section")))
+        assertSame(entry, view.selectionPath.lastPathComponent)
+        assertEquals("Renamed", entry.item.title)
+        assertTrue(view.placeholder(entry))
+        assertEmpty(moves)
+        for (offset in listOf(0, 1, 0)) view.over("a", Point(point.x + offset, point.y))
+        assertEquals(listOf("b", "a", "c"), keys(view.hierarchy.entries.getValue("section")))
+        view.drop()
+        assertEquals(ActiveMove("a", 1, 1, listOf("b", "a", "c"), "section", null), moves.single())
+    }
+
+    fun `test authoritative parent changes invalidate a drag on refresh`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        tree.update(listOf(ActiveTreeNode(Row("a", "A")), section("first", "b"), section("second", "c")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val first = TreePath(view.hierarchy.entries.getValue("first").path)
+        view.collapsePath(first)
+        view.over("a", body(view, "first"))
+        assertTrue(view.isExpanded(first))
+
+        tree.update(listOf(section("first", "b"), section("second", "a", "c")))
+
+        val entry = view.hierarchy.entries.getValue("a")
+        assertFalse(view.placeholder(entry))
+        assertFalse(view.isExpanded(first))
+        assertEquals("second", (entry.parent as ActiveEntry).key)
+        assertEquals(listOf("a"), tree.selectedKeys())
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    fun `test removing the destination section on refresh cancels its preview`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        val leaf = ActiveTreeNode(Row("a", "A"))
+        tree.update(listOf(leaf, section("first", "b"), section("second", "c")))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        view.over("a", body(view, "first"))
+
+        tree.update(listOf(leaf, section("second", "c")))
+
+        val entry = view.hierarchy.entries.getValue("a")
+        assertSame(view.hierarchy.root, entry.parent)
+        assertFalse(view.placeholder(entry))
+        assertEquals(listOf("a"), tree.selectedKeys())
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    fun `test refresh and cancellation preserve expansion while moving a root section`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves))
+        val nodes = listOf(section("first", "a"), section("second", "b"))
+        tree.update(nodes)
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 300)
+        val first = view.hierarchy.entries.getValue("first")
+        val second = view.hierarchy.entries.getValue("second")
+        view.collapsePath(TreePath(second.path))
+        view.over("first", body(view, "second"))
+        assertEquals(listOf("second", "first"), keys(view.hierarchy.root))
+
+        tree.update(listOf(section("first", "a", "c"), nodes.last()))
+
+        assertEquals(listOf("second", "first"), keys(view.hierarchy.root))
+        assertEquals(listOf("a", "c"), keys(first))
+        assertTrue(view.isExpanded(TreePath(first.path)))
+        assertFalse(view.isExpanded(TreePath(second.path)))
+        tree.setLocked(true)
+        assertEquals(listOf("first", "second"), keys(view.hierarchy.root))
+        assertTrue(view.isExpanded(TreePath(first.path)))
+        assertFalse(view.isExpanded(TreePath(second.path)))
+        assertEquals(listOf("first"), tree.selectedKeys())
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    fun `test pinned root stays first through root section and cross parent drag targets`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves, pinned = { it.key == "main" }))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("main", "Main")), ActiveTreeNode(Row("local", "Local")),
+            section("section", "child")))
+        view.setSize(400, 300)
+        val main = view.hierarchy.entries.getValue("main")
+        val section = view.hierarchy.entries.getValue("section")
+        val bounds = view.regions.cell(main)
+
+        assertNull(view.pickable(body(view, "main")))
+        assertEquals("local", view.pickable(body(view, "local")))
+        assertEquals("child", view.pickable(body(view, "child")))
+        for (key in listOf("local", "section", "child")) {
+            view.over(key, Point(bounds.x + bounds.width / 2, bounds.y))
+            assertEquals(listOf("main", "local", "section"), keys(view.hierarchy.root))
+            assertSame(section, view.hierarchy.entries.getValue("child").parent)
+            view.drop()
+            assertEmpty(moves)
+        }
+
+        view.over("child", Point(bounds.x + bounds.width / 2, bounds.y + bounds.height - 1))
+        assertEquals(listOf("main", "child", "local", "section"), keys(view.hierarchy.root))
+        view.drop()
+        assertEquals(ActiveMove("child", 0, 1, listOf("main", "child", "local", "section"), null, "section"),
+            moves.single())
+    }
+
+    fun `test discovering a pinned root cancels a cross parent preview above it`() {
+        val moves = mutableListOf<ActiveMove>()
+        val tree = ActiveTree("", reorder = sections(moves, pinned = { it.key == "main" }))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(com.intellij.ui.tree.ui.DefaultTreeUI())
+        tree.update(listOf(ActiveTreeNode(Row("local", "Local")), section("section", "child")))
+        view.setSize(400, 300)
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue("local"))
+        view.over("child", Point(bounds.x + bounds.width / 2, bounds.y))
+        assertEquals(listOf("child", "local", "section"), keys(view.hierarchy.root))
+
+        tree.update(listOf(ActiveTreeNode(Row("main", "Main")), ActiveTreeNode(Row("local", "Local")),
+            section("section", "child")))
+
+        assertEquals(listOf("main", "local", "section"), keys(view.hierarchy.root))
+        assertSame(view.hierarchy.entries.getValue("section"), view.hierarchy.entries.getValue("child").parent)
+        assertEquals(listOf("child"), tree.selectedKeys())
+        view.drop()
+        assertEmpty(moves)
+    }
+
+    private fun section(key: String, vararg children: String) = ActiveTreeNode(Row(key, key), children.map {
+        ActiveTreeNode(Row(it, it))
+    })
+
+    private fun sections(moves: MutableList<ActiveMove>, pinned: (ActiveItem) -> Boolean = { false },
+        movable: (ActiveItem) -> Boolean = { true }) = ActiveReorder(
+        movable = movable,
+        pinned = pinned,
+        onMove = { moves += it },
+        reparent = { row, parent -> parent == null || parent.key in listOf("first", "second", "section") &&
+            row.key !in listOf("first", "second", "section") },
+    )
+
+    @RequiresEdt
+    private fun keys(parent: DefaultMutableTreeNode): List<String> =
+        (0 until parent.childCount).map { (parent.getChildAt(it) as ActiveEntry).key }
+
+    @RequiresEdt
+    private fun body(view: ActiveTreeView, key: String): Point {
+        val bounds = view.regions.cell(view.hierarchy.entries.getValue(key))
+        return Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
     }
 
     fun `test disclosure press toggles once without selecting or activating group`() {

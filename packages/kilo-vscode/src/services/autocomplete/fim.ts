@@ -1,14 +1,8 @@
 import { ResponseMetaData } from "./types"
 import type { KiloConnectionService } from "../cli-backend"
-import { getAutocompleteModel, getAutocompleteModelById } from "../../shared/autocomplete-models"
+import { getAutocompleteModelById } from "../../shared/autocomplete-models"
 
 const FIM_MAX_TOKENS = 256
-
-export function fimModel(provider?: string, model?: string) {
-  const info = getAutocompleteModel(provider, model)
-  if (info.kind !== "edit") return info
-  return getAutocompleteModelById(info.fimModelID)
-}
 
 /**
  * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.

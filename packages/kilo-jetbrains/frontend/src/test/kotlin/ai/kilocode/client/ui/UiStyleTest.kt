@@ -1,12 +1,20 @@
 package ai.kilocode.client.ui
 
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.GhState
+import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.editor.colors.impl.EditorColorsSchemeImpl
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.image.BufferedImage
 
 @Suppress("UnstableApiUsage")
 class UiStyleTest : BasePlatformTestCase() {
@@ -74,6 +82,56 @@ class UiStyleTest : BasePlatformTestCase() {
         assertEquals(hover.green, hover.blue)
     }
 
+    fun `test retained editor background follows custom active schemes`() {
+        val manager = EditorColorsManager.getInstance()
+        val original = manager.globalScheme
+        val first = original.clone() as EditorColorsScheme
+        val second = original.clone() as EditorColorsScheme
+        first.setAttributes(HighlighterColors.TEXT, TextAttributes(Color.WHITE, Color.BLUE, null, null, 0))
+        second.setAttributes(HighlighterColors.TEXT, TextAttributes(Color.BLACK, Color.YELLOW, null, null, 0))
+        try {
+            manager.setGlobalScheme(first)
+            val color = UiStyle.Colors.editorBackground()
+            assertEquals(Color.BLUE.rgb, color.rgb)
+
+            manager.setGlobalScheme(second)
+            assertEquals(Color.YELLOW.rgb, color.rgb)
+        } finally {
+            manager.setGlobalScheme(original)
+        }
+    }
+
+    fun `test editor background falls back while editable default is unavailable`() {
+        val color = UiStyle.Colors.editorBackground()
+        val original = color.rgb
+
+        unavailable {
+            assertEquals(UIUtil.getPanelBackground().rgb, color.rgb)
+        }
+
+        assertEquals(original, color.rgb)
+    }
+
+    fun `test session backdrop paints while editable default is unavailable`() {
+        val root = SessionRootPanel().apply { setSize(120, 80) }
+        val count = root.componentCount
+        val image = BufferedImage(120, 80, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        try {
+            unavailable {
+                repeat(200) {
+                    root.paint(graphics)
+                    assertEquals(root.background.rgb, image.getRGB(1, 1))
+                    assertEquals(count, root.componentCount)
+                }
+            }
+            root.paint(graphics)
+            assertEquals(root.background.rgb, image.getRGB(1, 1))
+        } finally {
+            graphics.dispose()
+        }
+    }
+
     fun `test session layout constants provide shared geometry`() {
         assertTrue(JBUI.scale(SessionUiStyle.SessionLayout.GAP) > 0)
         assertTrue(JBUI.scale(SessionUiStyle.View.Layout.GAP) > 0)
@@ -110,6 +168,33 @@ class UiStyleTest : BasePlatformTestCase() {
         styles.forEach { style ->
             assertTrue(style.bg().alpha < Color.WHITE.alpha)
             assertEquals(Color.WHITE.alpha, style.fg().alpha)
+        }
+    }
+
+    private fun unavailable(block: () -> Unit) {
+        val manager = EditorColorsManager.getInstance()
+        val original = manager.globalScheme
+        val base = requireNotNull(manager.getScheme(EditorColorsManager.getDefaultSchemeName()))
+        val hidden = (base.clone() as EditorColorsSchemeImpl).apply {
+            setName("KiloUnavailableFixture")
+            setVisible(false)
+        }
+        try {
+            manager.setGlobalScheme(base)
+            val editable = requireNotNull(manager.activeVisibleScheme)
+            val name = editable.name
+            try {
+                // Recreate the reload gap using public scheme APIs, without removing registered schemes.
+                editable.setName("KiloUnavailableScheme")
+                manager.setGlobalScheme(hidden)
+                assertNull(manager.getScheme(name))
+                assertNull(manager.activeVisibleScheme)
+                block()
+            } finally {
+                editable.setName(name)
+            }
+        } finally {
+            manager.setGlobalScheme(original)
         }
     }
 }

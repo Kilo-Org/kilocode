@@ -60,6 +60,8 @@ With the Kilo Code provider, if you sign up with Google you can also connect oth
 3. Under "Link a New account" select the type of account to link
 4. Complete the OAuth authorization, and you'll see your connected accounts!
 
+If you sign in with a new method whose email already belongs to a Kilo account, Kilo creates a short-lived pending link instead of stopping with an error. It asks you to confirm that you own the existing account before adding the method, using a code sent to the account's email address or a sign-in with a method the account already has. Nothing is attached until you confirm from the same browser or app; an email alone cannot approve the link.
+
 <!-- <img src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="600" /> -->
 
 ## Tips and Notes

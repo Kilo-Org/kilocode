@@ -19,7 +19,6 @@ function probe(env: Record<string, string>) {
     const models = await import(${JSON.stringify(`${src}/api/models.ts`)})
     const embedding = await import(${JSON.stringify(`${src}/api/embedding-models.ts`)})
     const fim = await import(${JSON.stringify(`${src}/fim.ts`)})
-    const edit = await import(${JSON.stringify(`${src}/edit.ts`)})
     await models.fetchKiloModels({})
     await models.fetchKiloModels({ kilocodeOrganizationId: "org-1" })
     await models.fetchKiloTranscriptionModels({})
@@ -30,7 +29,6 @@ function probe(env: Record<string, string>) {
       router: url.resolveKiloOpenRouterBaseUrl(),
       audio: url.resolveKiloGatewayUrl("audio/transcriptions"),
       fim: fim.resolveFimTarget().url,
-      edit: edit.resolveEditTarget().url,
       calls,
     }))
   `
@@ -75,7 +73,6 @@ describe("gateway traffic by environment", () => {
       router: "https://ai-gateway.kilo.ai/api/v1/",
       audio: "https://ai-gateway.kilo.ai/api/v1/audio/transcriptions",
       fim: "https://ai-gateway.kilo.ai/api/v1/fim/completions",
-      edit: "https://ai-gateway.kilo.ai/api/v1/edit/completions",
       calls: [
         "https://ai-gateway.kilo.ai/api/v1/models",
         "https://ai-gateway.kilo.ai/api/v1/organizations/org-1/models",
@@ -92,7 +89,6 @@ describe("gateway traffic by environment", () => {
       router: "http://localhost:3000/api/gateway/v1/",
       audio: "http://localhost:3000/api/gateway/v1/audio/transcriptions",
       fim: "http://localhost:3000/api/gateway/v1/fim/completions",
-      edit: "http://localhost:3000/api/gateway/v1/edit/completions",
       calls: [
         "http://localhost:3000/api/gateway/v1/models",
         "http://localhost:3000/api/gateway/v1/organizations/org-1/models",
@@ -109,7 +105,6 @@ describe("gateway traffic by environment", () => {
       router: "http://localhost:3001/gw/",
       audio: "http://localhost:3001/gw/audio/transcriptions",
       fim: "http://localhost:3001/gw/fim/completions",
-      edit: "http://localhost:3001/gw/edit/completions",
       calls: [
         "http://localhost:3001/gw/models",
         "http://localhost:3001/gw/organizations/org-1/models",

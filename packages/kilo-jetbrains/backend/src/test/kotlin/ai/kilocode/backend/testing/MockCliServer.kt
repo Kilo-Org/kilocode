@@ -43,6 +43,15 @@ class MockCliServer : AutoCloseable {
     @Volatile var profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":null}"""
     @Volatile var path = """{"home":"/tmp","state":"${createTempDirectory("kilo-model-state").toAbsolutePath()}","config":"/tmp","worktree":"/tmp","directory":"/tmp"}"""
     @Volatile var profileStatus = 200
+    @Volatile var transcriptionModels = """[{"id":"openai/whisper-1","name":"Whisper"}]"""
+    @Volatile var transcriptionModelsStatus = 200
+    @Volatile var transcription = """{"text":"transcribed prompt"}"""
+    @Volatile var transcriptionStatus = 200
+    @Volatile var lastTranscriptionModelsPath: String? = null
+    @Volatile var lastTranscriptionPath: String? = null
+    @Volatile var lastTranscriptionBody: String? = null
+    @Volatile var transcriptionEntered: CountDownLatch? = null
+    @Volatile var transcriptionRelease: CountDownLatch? = null
     @Volatile var configStatus = 200
     @Volatile var workspaceConfigStatus = 200
     @Volatile var warningsStatus = 200
@@ -176,6 +185,7 @@ class MockCliServer : AutoCloseable {
     // Session REST responses
     @Volatile var sessions = "[]"
     @Volatile var recentSessions = "[]"
+    @Volatile var recentGate: CountDownLatch? = null
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionFork = """{"id":"ses_forked","slug":"forked","projectID":"prj_test","directory":"/worktree","title":"Forked Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionForkStatus = 200
@@ -495,6 +505,17 @@ class MockCliServer : AutoCloseable {
                         respond(output, profileStatus, profile)
                     }
                 }
+                bare == "/kilo/models/transcriptions" && method == "GET" -> {
+                    lastTranscriptionModelsPath = path
+                    respond(output, transcriptionModelsStatus, transcriptionModels)
+                }
+                bare == "/kilo/audio/transcriptions" && method == "POST" -> {
+                    lastTranscriptionPath = path
+                    lastTranscriptionBody = body
+                    transcriptionEntered?.countDown()
+                    transcriptionRelease?.await(10, TimeUnit.SECONDS)
+                    respond(output, transcriptionStatus, transcription)
+                }
                 path.matches(Regex("/provider/[^/]+/oauth/authorize.*")) && method == "POST" -> {
                     lastAuthorizeBody = body
                     respond(output, authorizeStatus, authorizeResponse)
@@ -616,6 +637,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path
+                    recentGate?.await()
                     respond(output, recentSessionsStatus, recentSessions)
                 }
                 bare == "/experimental/capabilities" -> {

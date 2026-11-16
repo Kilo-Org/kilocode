@@ -17,6 +17,10 @@ This usage overview includes all of your usage of the Kilo Gateway provider. It 
 Sign in with ChatGPT requests routed through Kilo are included. Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and token totals. Cost is **$0** for every Sign in with ChatGPT request.
 {% /callout %}
 
+## Analytics API
+
+You can also use the Analytics API to retrieve your organization's usage data programmatically, including costs, requests, and token usage. Organization-wide data is available to Owners, Admins, and Billing Managers. See the [API reference](https://app.kilo.ai/api/docs) for authentication, parameters, and available endpoints.
+
 ## Summary Metrics
 
 The dashboard displays five key metrics at the top:
@@ -102,6 +106,10 @@ To set the project identifier to `my-project`, create a `.kilo/config.json` file
 }
 ```
 
+### Compute usage
+
+Cloud Agent compute usage appears in its own section of the dashboard, separate from model inference, so you can track container usage and its cost over the selected period. Compute is billed per second while a container is awake; see [Cloud Agent cost](/docs/code-with-ai/platforms/cloud-agent#cost) for the rates. Compute also counts toward [spend alerts](/docs/collaborate/teams/billing#spend-alerts).
+
 ## Understanding the Data
 
 ### Model Information
@@ -128,6 +136,12 @@ All costs are displayed in USD with detailed precision, helping you:
 - Monitor spending patterns over time
 - Identify high-usage periods or models
 - Track individual team member contributions to costs
+
+## Request Logs
+
+Owners, Admins, and Billing Managers can open **Request Logs** from the organization sidebar to inspect individual Kilo Gateway requests. The **Requests** tab lists the organization's requests from the hour before the selected start time, newest first, showing the time, user, model, provider, cost, input and output tokens, and whether the request used a user's own key (BYOK). Filter by start time, user, or model prefix, and select a request to see how it was routed.
+
+Request Logs are available to every organization. If your organization has Enkrypt enabled, an **Enkrypt** tab appears next to **Requests**.
 
 ## Next Steps
 

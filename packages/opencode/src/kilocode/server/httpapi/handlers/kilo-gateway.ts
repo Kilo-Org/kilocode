@@ -18,8 +18,6 @@ import {
   fetchProfile,
 } from "@kilocode/kilo-gateway"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
-import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
-import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { Effect, Schema } from "effect"
 import * as Stream from "effect/Stream"
@@ -39,7 +37,7 @@ import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { AudioTranscriptionsBody, CloudSessionImportError, EditBody, FimBody } from "../groups/kilo-gateway"
+import { AudioTranscriptionsBody, CloudSessionImportError, FimBody } from "../groups/kilo-gateway"
 
 const FIM_TIMEOUT_MS = 30_000
 const log = Log.create({ service: "kilo-gateway" })
@@ -185,105 +183,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
           },
         },
       )
-    })
-
-    const edit = Effect.fn("KiloGatewayHttpApi.edit")(function* (ctx: { payload: typeof EditBody.Type }) {
-      const target = resolveEditTarget(ctx.payload.provider, ctx.payload.model)
-      if (target.provider === "kilo" && !target.url) {
-        return yield* Effect.fail(new HttpApiError.BadRequest({}))
-      }
-      const proxy = target.provider === "kilo" ? yield* proxyAuth() : undefined
-      const token = yield* Effect.gen(function* () {
-        if (target.provider === "kilo") return proxy?.token
-        const item = yield* auth.get(target.provider).pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
-        if (item?.type === "api") return item.key
-        return DIRECT_EDIT_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
-      })
-      if (target.provider === "kilo" && !proxy?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-
-      const request = yield* HttpServerRequest.HttpServerRequest
-      const signal =
-        request.source instanceof Request
-          ? AbortSignal.any([request.source.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
-          : AbortSignal.timeout(FIM_TIMEOUT_MS)
-
-      // Assemble the Mercury sentinel prompt from the structured context the
-      // client sent — same builder every editor frontend shares.
-      const content = buildMercuryEditPrompt({
-        currentFilePath: ctx.payload.currentFilePath,
-        currentFileContent: ctx.payload.currentFileContent,
-        cursorLine: ctx.payload.cursorLine,
-        cursorCharacter: ctx.payload.cursorCharacter,
-        editableRegionStartLine: ctx.payload.editableRegionStartLine,
-        editableRegionEndLine: ctx.payload.editableRegionEndLine,
-        recentlyViewedSnippets: [...ctx.payload.recentlyViewedSnippets],
-        editDiffHistory: [...ctx.payload.editDiffHistory],
-      })
-
-      const response = yield* Effect.promise(async () => {
-        try {
-          return await fetch(target.url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-              ...(target.provider === "kilo"
-                ? buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy?.organizationId })
-                : {}),
-              ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
-            },
-            signal,
-            body: JSON.stringify({
-              model: target.model,
-              max_tokens: ctx.payload.maxTokens ?? 512,
-              // Mercury rejects role:"system" on this endpoint — must be a single user message.
-              messages: [{ role: "user", content }],
-            }),
-          })
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "TimeoutError")
-            return Response.json({ error: "Edit request timed out" }, { status: 504 })
-          if (signal.aborted) return Response.json({ error: "Edit request canceled" }, { status: 499 })
-          throw err
-        }
-      })
-
-      if (!response.ok) {
-        // Pass the upstream status through (mirrors the FIM handler) so the
-        // client can distinguish auth/credit/rate-limit/server failures
-        // instead of collapsing everything to 400.
-        const text = yield* Effect.promise(async () => {
-          try {
-            return await response.text()
-          } catch {
-            return "<unreadable>"
-          }
-        })
-        return HttpServerResponse.jsonUnsafe(
-          { error: `Edit request failed: ${response.status} ${text}` },
-          { status: response.status },
-        )
-      }
-
-      const json = yield* Effect.promise(
-        () =>
-          response.json() as Promise<{
-            choices?: Array<{ message?: { content?: string } }>
-            usage?: { prompt_tokens?: number; completion_tokens?: number }
-          }>,
-      )
-      const raw = json.choices?.[0]?.message?.content ?? ""
-      const body = extractFencedBody(raw)
-      return {
-        content: body,
-        usage: json.usage
-          ? {
-              prompt_tokens: json.usage.prompt_tokens,
-              completion_tokens: json.usage.completion_tokens,
-            }
-          : undefined,
-      }
     })
 
     const audioTranscriptions = Effect.fn("KiloGatewayHttpApi.audioTranscriptions")(function* (ctx: {
@@ -496,7 +395,6 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("authStatus", authStatus)
       .handle("modes", modes)
       .handle("fim", fim)
-      .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
       .handle("imageModels", imageModels)
       .handle("transcriptionModels", transcriptionModels)

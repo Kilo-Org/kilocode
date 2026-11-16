@@ -192,6 +192,12 @@ internal interface ActiveItem {
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
 
+    /**
+     * Paints the selection background even when the row is not selected, and leaves it unchanged
+     * under the pointer. Structural rows such as section headers use this instead of hover feedback.
+     */
+    val alwaysSelected: Boolean get() = false
+
     /** Next frame delay for visible AnimationIcon glyphs; return null to leave the shared clock. */
     @RequiresEdt
     fun animation(time: Long, actions: Boolean): Int? = activeAnimation(this, time, actions)
@@ -283,13 +289,22 @@ internal sealed interface ActiveSelection {
 internal class ActiveReorder(
     val movable: (ActiveItem) -> Boolean = { true },
     val onMove: (ActiveMove) -> Unit,
+    /** Opt into tree branch moves and parent changes; a null parent is the invisible root. */
+    val reparent: ((ActiveItem, ActiveItem?) -> Boolean)? = null,
+    /** Reserve leading tree rows: they cannot move or accept insertions above them. */
+    val pinned: (ActiveItem) -> Boolean = { false },
 )
 
 internal data class ActiveMove(
     val key: String,
     val from: Int,
     val to: Int,
+    /** Destination sibling order, including the moved row. */
     val keys: List<String>,
+    /** Destination parent key, or null for a root row or flat list. */
+    val parent: String? = null,
+    /** Source parent before the preview, or null for a root row. */
+    val previous: String? = null,
 )
 
 

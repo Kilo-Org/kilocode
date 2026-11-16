@@ -16,6 +16,10 @@ import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Point
 import java.awt.event.MouseEvent
+import java.awt.event.ActionEvent
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
+import javax.swing.KeyStroke
 import javax.swing.plaf.metal.MetalTreeUI
 import javax.swing.tree.TreePath
 
@@ -151,7 +155,7 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test unsupported delegate owns disclosure and group body clicks`() {
+    fun `test section bodies toggle on release while disclosure stays delegated`() {
         var selections = 0
         val actions = ActiveTreeActions(select = { selections++ })
         val tree = ActiveTree("", actions = actions)
@@ -185,12 +189,70 @@ class ActiveTreeInteractionTest : BasePlatformTestCase() {
 
         val body = Point(bounds.x + bounds.width / 2, y)
         assertFalse(ui.contains(path, body))
-        for (count in 1..2) {
-            assertFalse("Unknown delegate owns group body clicks", pointer.process(event(MouseEvent.MOUSE_CLICKED, body, count)))
-            assertTrue(view.isExpanded(path))
+        if (view.isExpanded(path)) view.collapsePath(path)
+        for (expanded in listOf(true, false)) {
+            assertTrue(pointer.process(event(MouseEvent.MOUSE_PRESSED, body)))
+            assertEquals(!expanded, view.isExpanded(path))
+            assertTrue(pointer.process(event(MouseEvent.MOUSE_RELEASED, body)))
+            assertEquals(expanded, view.isExpanded(path))
+            for (count in 1..2) {
+                assertTrue("Section clicks are consumed", pointer.process(event(MouseEvent.MOUSE_CLICKED, body, count)))
+                assertEquals("Clicks must not toggle again", expanded, view.isExpanded(path))
+            }
         }
-        assertEquals(listOf("main"), tree.selectedKeys())
-        assertEquals(0, selections)
+        assertEquals(listOf("group"), tree.selectedKeys())
+        assertEquals(1, selections)
+    }
+
+    fun `test section body release toggles with the default tree UI`() {
+        val tree = ActiveTree("")
+        tree.update(listOf(ActiveTreeNode(Row("main")), nodes().single()))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setUI(DefaultTreeUI())
+        view.setSize(400, 300)
+        tree.select("main", false)
+        val entry = view.hierarchy.entries.getValue("group")
+        val path = TreePath(entry.path)
+        val bounds = view.getRowBounds(view.getRowForPath(path))
+        val control = requireNotNull(view.regions.control(entry))
+        val point = Point(control.x + control.width + 40, bounds.y + bounds.height / 2)
+        fun dispatch(id: Int, count: Int) = view.dispatchEvent(
+            MouseEvent(view, id, 0, 0, point.x, point.y, count, false, MouseEvent.BUTTON1),
+        )
+
+        if (view.isExpanded(path)) view.collapsePath(path)
+        assertFalse(view.isExpanded(path))
+        dispatch(MouseEvent.MOUSE_PRESSED, 1)
+        assertFalse(view.isExpanded(path))
+        dispatch(MouseEvent.MOUSE_RELEASED, 1)
+        assertTrue(view.isExpanded(path))
+        dispatch(MouseEvent.MOUSE_CLICKED, 1)
+        assertTrue("A consumed click must not toggle again", view.isExpanded(path))
+        dispatch(MouseEvent.MOUSE_PRESSED, 2)
+        dispatch(MouseEvent.MOUSE_RELEASED, 2)
+        assertFalse("Each release toggles; the click count is ignored", view.isExpanded(path))
+        dispatch(MouseEvent.MOUSE_CLICKED, 2)
+        assertFalse(view.isExpanded(path))
+    }
+
+    fun `test shift F10 checks branch menu eligibility`() {
+        val calls = mutableListOf<String>()
+        val menu = ActiveMenu(DataKey.create<String>("test.menu.branch.keyboard"), DefaultActionGroup(), { it.key },
+            eligible = {
+                calls += it.key
+                false
+            })
+        val tree = ActiveTree("", menu = menu)
+        tree.update(nodes())
+        tree.select("group", false)
+        val view = tree.preferredFocus() as ActiveTreeView
+        calls.clear()
+
+        val action = view.getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_F10, InputEvent.SHIFT_DOWN_MASK))
+        assertNotNull(action)
+        action.actionPerformed(ActionEvent(view, ActionEvent.ACTION_PERFORMED, "menu"))
+
+        assertEquals(listOf("group"), calls)
     }
 
     @RequiresEdt

@@ -521,3 +521,78 @@ test("omits cost when pricing contains negative values (dynamic/auto-routed pric
     cache_read: 0.3,
   })
 })
+
+test("derives variants from reasoning_options and keeps legacy variants only without them", async () => {
+  const orig = globalThis.fetch
+  const legacy = { custom: { reasoning: { enabled: true, effort: "high" } } }
+  const model = (id: string, opencode: Record<string, unknown>) => ({
+    id,
+    name: id,
+    context_length: 128000,
+    supported_parameters: ["tools", "reasoning"],
+    opencode,
+  })
+  stubFetch(
+    async () =>
+      new Response(
+        JSON.stringify({
+          data: [
+            model("test/anthropic-effort", {
+              ai_sdk_provider: "anthropic",
+              variants: legacy,
+              reasoning_options: [{ type: "effort", values: ["none", "minimal", "high", "unknown", null] }],
+            }),
+            model("test/toggle", { variants: legacy, reasoning_options: [{ type: "toggle" }] }),
+            model("test/toggle-effort", {
+              reasoning_options: [{ type: "toggle" }, { type: "effort", values: ["low", "high"] }],
+            }),
+            model("test/always-on", { variants: legacy, reasoning_options: [] }),
+            model("test/no-efforts", {
+              variants: legacy,
+              reasoning_options: [{ type: "effort", values: ["unknown"] }],
+            }),
+            model("test/legacy", { variants: legacy }),
+            model("test/mixed", {
+              variants: legacy,
+              reasoning_options: [
+                null,
+                { type: "budget_tokens", max: 1000 },
+                { type: "effort" },
+                { type: "effort", values: ["high"] },
+              ],
+            }),
+            model("test/unknown-only", { variants: legacy, reasoning_options: [{ type: "budget_tokens", max: 1000 }] }),
+            model("test/malformed", { variants: legacy, reasoning_options: "invalid" }),
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+  )
+
+  const result = await fetchKiloModels({})
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  const variants = (id: string) => result.models[id].variants
+  expect(variants("test/anthropic-effort")).toEqual({
+    none: { reasoning: { enabled: false, effort: "none" } },
+    minimal: { reasoning: { enabled: true, effort: "minimal" } },
+    high: { reasoning: { enabled: true, effort: "high" }, verbosity: "high" },
+  })
+  expect(variants("test/toggle")).toEqual({
+    instant: { reasoning: { enabled: false, effort: "none" } },
+    thinking: { reasoning: { enabled: true, effort: "high" } },
+  })
+  expect(variants("test/toggle-effort")).toEqual({
+    none: { reasoning: { enabled: false, effort: "none" } },
+    low: { reasoning: { enabled: true, effort: "low" } },
+    high: { reasoning: { enabled: true, effort: "high" } },
+  })
+  expect(variants("test/always-on")).toEqual({ thinking: { reasoning: { enabled: true, effort: "high" } } })
+  expect(variants("test/no-efforts")).toBeUndefined()
+  expect(variants("test/legacy")).toEqual(legacy)
+  expect(variants("test/mixed")).toEqual({ high: { reasoning: { enabled: true, effort: "high" } } })
+  expect(variants("test/unknown-only")).toBeUndefined()
+  expect(variants("test/malformed")).toEqual(legacy)
+})

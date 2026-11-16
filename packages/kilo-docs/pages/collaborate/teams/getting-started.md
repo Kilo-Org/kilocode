@@ -5,7 +5,7 @@ description: "Set up your Kilo Code team account"
 
 # Get Started with Kilo Seats in 10 Minutes
 
-Seats for Kilo in the Teams or Enterprise subscription bring transparent AI coding to your entire engineering organization. Model inference is charged at provider rates with no markup, while credit purchases have a separate 5% payment-processing fee.
+Seats for Kilo in the Teams or Enterprise subscription bring transparent AI coding to your entire engineering organization. Model inference is charged at provider rates with no markup.
 
 ## Before You Begin
 

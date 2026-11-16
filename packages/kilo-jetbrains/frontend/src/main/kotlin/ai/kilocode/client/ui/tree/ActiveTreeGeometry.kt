@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.tree
 
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.active.ActiveHit
 import ai.kilocode.client.ui.active.activeLayout
 import ai.kilocode.client.ui.active.activePlaceholder
@@ -10,7 +11,6 @@ import com.intellij.ui.render.RenderingUtil
 import com.intellij.ui.tree.ui.CustomBoundsTreeUI
 import com.intellij.ui.tree.ui.DefaultControl
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import java.awt.Component
 import java.awt.Graphics
@@ -44,15 +44,19 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         val state = view.state(entry, view.isRowSelected(row), view.hasFocus())
         val frame = frame(entry)
         val content = bounds(entry)
-        if (frame == null || content == null || g.clipBounds?.intersects(frame) == false) return
-        if (view.placeholder(entry)) {
-            activePlaceholder(g, cell(entry))
+        if (frame == null || content == null) return
+        val placeholder = view.placeholder(entry)
+        if (placeholder || g.clipBounds?.intersects(frame) == false) {
+            if (placeholder) activePlaceholder(g, area(entry, cell(entry)))
+            rail(g, entry, frame)
             return
         }
         if (state.selectionColor != null) {
             surface.update(view.background, state.selectionColor, true, true)
-            paintLocal(g, surface, frame)
+            if (entry.allowsChildren) surface.selectionArc = 0
+            paintLocal(g, surface, area(entry, frame))
         }
+        rail(g, entry, frame)
         val path = TreePath(entry.path)
         ActiveTreePainter.paint(
             view, g, view.insets.left, frame.y, frame.width, frame.height,
@@ -69,8 +73,30 @@ internal class ActiveTreeGeometry(private val view: ActiveTreeView, private val 
         paintLocal(g, stamp, cell)
         val lead = !SystemInfo.isMac && !state.selected && view.leadSelectionPath?.lastPathComponent === entry
         if (lead && RenderingUtil.isFocused(view) && g is Graphics2D) {
+            val bounds = area(entry, frame)
             g.color = RenderingUtil.getSelectionBackground(view)
-            RectanglePainter.DRAW.paint(g, frame.x, frame.y, frame.width, frame.height, 0)
+            RectanglePainter.DRAW.paint(g, bounds.x, bounds.y, bounds.width, bounds.height, 0)
+        }
+    }
+
+    /** Section spacing affects paint only, never native row sizes or hit regions. */
+    @RequiresEdt
+    private fun area(entry: ActiveEntry, bounds: Rectangle) = Rectangle(bounds).apply {
+        if (entry.allowsChildren) grow(0, -UiStyle.Gap.xs())
+    }
+
+    @RequiresEdt
+    private fun rail(g: Graphics, entry: ActiveEntry, bounds: Rectangle) {
+        for (section in generateSequence(entry) { it.parent as? ActiveEntry }) {
+            val color = section.color?.takeIf { section.allowsChildren } ?: continue
+            frame(section)?.let { frame ->
+                val box = area(section, frame)
+                val top = if (section === entry) box.y else bounds.y
+                val last = section === entry && (section.childCount == 0 || !view.isExpanded(TreePath(section.path)))
+                val bottom = if (last) box.y + box.height else bounds.y + bounds.height
+                g.color = color
+                g.fillRect(box.x, top, UiStyle.Gap.xs(), (bottom - top).coerceAtLeast(0))
+            }
         }
     }
 

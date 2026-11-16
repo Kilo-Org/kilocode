@@ -3,11 +3,16 @@ package ai.kilocode.client.ui
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
+import java.awt.GraphicsEnvironment
+import java.awt.HeadlessException
+import java.awt.MouseInfo
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JLayeredPane
+import org.junit.Assume.assumeTrue
+import kotlin.test.assertFailsWith
 
 @Suppress("UnstableApiUsage")
 class LayeredOverlayPanelTest : BasePlatformTestCase() {
@@ -154,6 +159,21 @@ class LayeredOverlayPanelTest : BasePlatformTestCase() {
         root.setBlocked(true)
         root.releaseHover(Point(20, 10))
 
+        assertEquals(1, hovered.exits)
+    }
+
+    fun `test unavailable pointer lookup is non fatal and does not prevent later hover release`() {
+        assumeTrue(GraphicsEnvironment.isHeadless())
+        assertFailsWith<HeadlessException> { MouseInfo.getPointerInfo() }
+        val root = LayeredOverlayPanel().apply { setSize(400, 260) }
+        val hovered = Hovered()
+        root.content.add(hovered)
+        root.setBlocked(true)
+        val pointer = LayeredOverlayPanel::class.java.getDeclaredMethod("pointer").apply { isAccessible = true }
+
+        repeat(2) { assertNull(pointer.invoke(root)) }
+        assertEquals(0, hovered.exits)
+        root.releaseHover(Point(20, 10))
         assertEquals(1, hovered.exits)
     }
 

@@ -122,19 +122,6 @@ function board(ctx: ScenarioContext) {
   }).pipe(Effect.provide(Database.layerFromPath(exerciseDatabasePath)), Effect.orDie)
 }
 
-const edit = {
-  provider: "kilo",
-  model: "inception/mercury-next-edit",
-  currentFilePath: "src/index.ts",
-  currentFileContent: "export const value = 1\n",
-  cursorLine: 0,
-  cursorCharacter: 0,
-  editableRegionStartLine: 0,
-  editableRegionEndLine: 0,
-  recentlyViewedSnippets: [],
-  editDiffHistory: [],
-}
-
 export const kiloScenarios: Scenario[] = [
   ...anacondaDesktopScenarios,
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
@@ -441,10 +428,6 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/kilo/fim", headers: ctx.headers(), body: { prefix: "const value = ", suffix: "\n" } }))
     .status(401),
   http.protected
-    .post("/kilo/edit", "kilo.edit")
-    .at((ctx) => ({ path: "/kilo/edit", headers: ctx.headers(), body: edit }))
-    .status(401),
-  http.protected
     .post("/kilo/audio/transcriptions", "kilo.audio.transcriptions")
     .at((ctx) => ({
       path: "/kilo/audio/transcriptions",
@@ -623,6 +606,119 @@ export const kiloScenarios: Scenario[] = [
         providerID: "kilo-cloud",
         workspaceID: "httpapi-missing",
       }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request",
+      "sessionHost.getWorkspacePullRequest",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.id)
+      check(body.id.providerID === "kilo-cloud", "PR read should preserve the provider identity")
+      check(
+        body.id.workspaceID === "worktree_00000000-0000-4000-8000-000000000001",
+        "PR read should preserve the workspace identity",
+      )
+      check(body.state === "signed_out", "PR read should distinguish missing local credentials from no PR")
+      check(body.pullRequest === null, "signed-out PR read should contain an explicit nullable projection")
+      check(body.refresh === undefined, "passive PR read must not request a refresh")
+    }),
+  http.protected
+    .post(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh",
+      "sessionHost.refreshWorkspacePullRequest",
+    )
+    .mutating()
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.id)
+      check(body.id.providerID === "kilo-cloud", "PR refresh should preserve the provider identity")
+      check(
+        body.id.workspaceID === "worktree_00000000-0000-4000-8000-000000000001",
+        "PR refresh should preserve the workspace identity",
+      )
+      check(body.state === "signed_out", "bodyless PR refresh should distinguish missing credentials from no PR")
+      check(body.pullRequest === null, "signed-out PR refresh should contain an explicit nullable projection")
+      check(body.refresh === undefined, "signed-out PR refresh must not fabricate an upstream refresh outcome")
+    }),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes", "sessionHost.getWorkspaceChanges")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh",
+      "sessionHost.refreshWorkspaceChanges",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file",
+      "sessionHost.getWorkspaceChangeFile",
+    )
+    .at((ctx) => ({
+      path:
+        route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file", {
+          providerID: "kilo-cloud",
+          workspaceID: "httpapi-missing",
+        }) + "?path=src%2Findex.ts&expectedRevision=1",
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff",
+      "sessionHost.getWorkspacePullRequestDiff",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file",
+      "sessionHost.getWorkspacePullRequestDiffFile",
+    )
+    .at((ctx) => ({
+      path:
+        route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file", {
+          providerID: "kilo-cloud",
+          workspaceID: "httpapi-missing",
+        }) + "?path=src%2Findex.ts&expectedHeadSha=" + "a".repeat(40),
       headers: ctx.headers(),
     }))
     .status(401),
