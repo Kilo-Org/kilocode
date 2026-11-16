@@ -84,7 +84,9 @@ export function Chat() {
   // so a plan in the Agent Manager does not open its session here.
   trackPlanAnswers({
     directory: v2.directory,
-    forms: () => tabs.ids().flatMap((id) => v2.data.session.form.list(id) ?? []),
+    sessions: tabs.ids,
+    forms: (id) => v2.data.session.form.list(id),
+    created: (handler) => v2.data.on("form.created", handler),
     replied: (handler) => v2.data.on("form.replied", handler),
     cancelled: (handler) => v2.data.on("form.cancelled", handler),
   })

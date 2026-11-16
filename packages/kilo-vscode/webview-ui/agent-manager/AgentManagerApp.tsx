@@ -1443,10 +1443,9 @@ const AgentManagerContent: Component = () => {
       const store = panel.store(directory)
       trackPlanAnswers({
         directory: store.directory,
-        forms: () =>
-          [...localSessionIDs(), ...managedSessions().map((item) => item.id)].flatMap(
-            (id) => store.data.session.form.list(id) ?? [],
-          ),
+        sessions: () => [...localSessionIDs(), ...managedSessions().map((item) => item.id)],
+        forms: (id) => store.data.session.form.list(id),
+        created: (handler) => store.data.on("form.created", handler),
         replied: (handler) => store.data.on("form.replied", handler),
         cancelled: (handler) => store.data.on("form.cancelled", handler),
       })

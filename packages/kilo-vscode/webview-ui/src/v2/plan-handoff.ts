@@ -6,6 +6,9 @@
 import { createEffect, onCleanup } from "solid-js"
 
 const WINDOW = 10_000
+// A form can leave the store without a reply or cancel event (a deleted session, a resync), so only the newest forms
+// are remembered.
+const FORMS = 50
 const NEW_SESSION = "plan.followup.answer.newSession"
 
 const answers = new Map<string, number>()
@@ -37,18 +40,31 @@ export function startsPlanSession(form: Pick<Form, "metadata">, answer: Replied[
 
 /**
  * Watches the pending forms of the sessions this webview shows in `directory` and records a plan follow-up answered
- * with a new session. The store drops a form when it is replied, so the forms are remembered until their reply.
+ * with a new session. The store drops a form when it is replied, so the forms are remembered until their reply: the
+ * ones the store loaded, and the ones created while the webview runs.
  */
 export function trackPlanAnswers(input: {
   directory: string
-  forms: () => Form[]
+  sessions: () => string[]
+  forms: (sessionID: string) => Form[] | undefined
+  created: (handler: (event: { data: { form: Form } }) => void) => () => void
   replied: (handler: (event: Replied) => void) => () => void
   cancelled: (handler: (event: { data: { id: string } }) => void) => () => void
 }) {
   const known = new Map<string, Form>()
+  const remember = (form: Form) => {
+    if (known.has(form.id) || !optionHints(form.metadata)) return
+    known.set(form.id, form)
+    if (known.size > FORMS) known.delete(known.keys().next().value!)
+  }
   createEffect(() => {
-    for (const form of input.forms()) if (optionHints(form.metadata)) known.set(form.id, form)
+    for (const id of input.sessions()) for (const form of input.forms(id) ?? []) remember(form)
   })
+  onCleanup(
+    input.created((event) => {
+      if (input.sessions().includes(event.data.form.sessionID)) remember(event.data.form)
+    }),
+  )
   onCleanup(
     input.replied((event) => {
       const form = known.get(event.data.id)
