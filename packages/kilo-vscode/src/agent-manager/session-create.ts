@@ -1,4 +1,8 @@
 import type { JsonValue } from "@opencode/client"
+import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+
+/** The session metadata the Gateway reads from the root session to attribute usage to the Agent Manager. */
+export const PLATFORM_METADATA = { [KiloGatewayRpc.PLATFORM_METADATA_KEY]: "agent-manager" }
 
 /**
  * Build the `session.create` request body for a new Agent Manager session, in either a worktree or the caller's
@@ -12,7 +16,7 @@ export function sessionCreateBody(input: {
 }) {
   return {
     location: { directory: input.directory },
-    metadata: { ...input.metadata, kilocode: { platform: "agent-manager" } },
+    metadata: { ...input.metadata, ...PLATFORM_METADATA },
     ...(input.agent ? { agent: input.agent } : {}),
     ...(input.model
       ? {

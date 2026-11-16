@@ -139,6 +139,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
     dueAt: record.dueAt,
     recurring: info.when.type === "cron",
     schedule: record.schedule,
+    scheduleID: record.scheduleID,
   })
 
   const pendingFor = (sessionID: string, directory: string) =>
@@ -161,6 +162,14 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
       return live
         .map((item) => view(item.record, item.info))
         .toSorted((a, b) => rank(a.kind) - rank(b.kind) || (a.dueAt ?? 0) - (b.dueAt ?? 0) || a.id.localeCompare(b.id))
+    })
+
+  /** Prompts of the requested schedule rows, read without reconciling: a read must not retire a paused or finished row. */
+  const prompts = (scheduleIDs: readonly string[]) =>
+    Effect.gen(function* () {
+      const requested = new Set(scheduleIDs)
+      const records = (yield* scan).filter((record) => requested.has(record.scheduleID))
+      return Object.fromEntries(records.map((record) => [record.scheduleID, record.prompt]))
     })
 
   const pending = (directory: string) =>
@@ -369,7 +378,7 @@ export function makeService(ctx: Ctx, schedules: Schedule.Interface, emit: () =>
         yield* announce(sessionID, directory)
     })
 
-  return { list, pending, pendingFor, scheduleWakeup, scheduleCron, cancel, cancelSession, fire, recover }
+  return { list, prompts, pending, pendingFor, scheduleWakeup, scheduleCron, cancel, cancelSession, fire, recover }
 }
 
 export type WakeupService = ReturnType<typeof makeService>

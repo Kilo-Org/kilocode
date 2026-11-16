@@ -31,6 +31,7 @@ import { useI18n, type UiI18n } from "../context/i18n"
 import { Accordion } from "./accordion"
 import { AgentAvatar, taskStatus } from "./agent-avatar"
 import { BasicTool, initialOpen, rememberOpen, useToolApprovalLine } from "./basic-tool"
+import { BoardTool } from "./board-tool"
 import { Card } from "./card"
 import { ChartTool } from "./chart"
 import { attachmentUri, fileDiffs, relativizeProjectPath, toolOutput } from "./content-data"
@@ -144,6 +145,7 @@ export function ContentPart(props: ContentPartProps) {
         {(item) => (
           <ToolContent
             item={item()}
+            session={props.session}
             directory={props.directory}
             open={props.open}
             defaultOpen={props.defaultOpen}
@@ -437,6 +439,8 @@ export type ToolProps = {
   metadata: Record<string, unknown>
   tool: string
   partID: string
+  /** The session the tool part belongs to, for renderers that resolve related sessions. */
+  sessionID?: string
   output: string
   status: string
   /** Provisional additions and deletions from a streamed edit, write, or patch input; the final diff replaces them. */
@@ -468,6 +472,7 @@ export const ToolRegistry = {
 
 function ToolContent(props: {
   item: SessionMessageAssistantTool
+  session?: string
   directory?: string
   open?: (uri: string, external?: boolean) => void
   defaultOpen?: boolean
@@ -531,6 +536,7 @@ function ToolContent(props: {
                 metadata={metadata()}
                 tool={props.item.name}
                 partID={props.item.id}
+                sessionID={props.session}
                 output={toolOutput(props.item)}
                 status={state().status === "streaming" ? "pending" : state().status}
                 liveChanges={liveChanges()}
@@ -1150,21 +1156,27 @@ ToolRegistry.register({
                 <span data-slot="task-tool-title">{i18n.t("session.messages.taskStarting")}</span>
               </div>
             </Show>
+            <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
             <For each={tools()}>
               {(tool) => {
                 const info = () => childToolInfo(i18n, tool.name, record(tool.state.input) ? tool.state.input : {})
+                // A plugin tool's result carries its display title, such as a board post's `INFO to ALL`.
+                const subtitle = () => {
+                  const value = info().subtitle
+                  if (value) return value
+                  const state = tool.state
+                  if (state.status !== "completed" && state.status !== "running") return undefined
+                  return string(state.metadata?.title)
+                }
                 return (
                   <div data-slot="task-tool-item">
                     <Icon name={info().icon} size="small" />
                     <span data-slot="task-tool-title">{info().title}</span>
-                    <Show when={info().subtitle}>
-                      {(subtitle) => <span data-slot="task-tool-subtitle">{subtitle()}</span>}
-                    </Show>
+                    <Show when={subtitle()}>{(text) => <span data-slot="task-tool-subtitle">{text()}</span>}</Show>
                   </div>
                 )
               }}
             </For>
-            <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
           </div>
         </div>
       </BasicTool>
@@ -1938,6 +1950,10 @@ ToolRegistry.register({
 
 // The chart tool result is a Chart.js config that its own card draws.
 ToolRegistry.register({ name: "chart", render: ChartTool })
+
+// Kilo Swarm board calls draw the messages they stored or read, not the MCP input and output JSON.
+ToolRegistry.register({ name: "board_post", render: BoardTool })
+ToolRegistry.register({ name: "board_read", render: BoardTool })
 
 /** One control of a pending user message, for example to queue, steer or delete it. */
 export type UserMessagePendingAction = {

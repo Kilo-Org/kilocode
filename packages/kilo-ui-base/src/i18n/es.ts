@@ -263,6 +263,7 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}} a {{to}}",
   "ui.messagePart.board.empty": "No hay mensajes de los agentes",
   "ui.messagePart.board.stored": "Solo almacenado. La entrega y la lectura no están confirmadas.",
+  "ui.messagePart.board.more": "Hay más mensajes disponibles.",
   // kilocode_change end
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",

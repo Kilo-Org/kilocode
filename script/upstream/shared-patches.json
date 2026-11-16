@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 138,
-    "markedLines": 2366,
+    "files": 137,
+    "markedLines": 2378,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -123,7 +123,7 @@
     },
     "packages/core/src/schedule.ts": {
       "rung": 3,
-      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. Schedule.create accepts an internal optional requireEnabled flag so a host plugin can own a backing schedule without enabling OpenCode's native schedule UI; the default remains true. The hook runs before the native experimental.schedules check, and only unclaimed occurrences honor that flag, so a plugin-owned schedule keeps firing while the native UI is disabled; a hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows use the hook and option, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
+      "seam": "Generic due-schedule claim seam for location plugins. An experimental session hook receives a due time schedule before native prompt admission; claiming it suppresses that prompt while preserving the scheduler's existing leader election, advancement, retry and outcome bookkeeping. A hook-owned action remains suppressed when its owner is unavailable and rejects native conditions that could otherwise admit it. The hook runs after the native experimental.schedules check, which the Kilo host turns on through Flag.Overrides; a hook failure leaves the row unclaimed and uses the existing failed-retry backoff. Kilo managed Flows and the wakeup plugin use the hook, but no Kilo value lives here. Rungs 1 and 2 cannot reach the scheduler between its due-time claim and prompt admission, and a second plugin-owned timing loop would duplicate leader election and advancement behavior."
     },
     "packages/schema/src/schedule.ts": {
       "rung": 3,
@@ -175,7 +175,7 @@
     },
     "packages/core/src/mcp/client.ts": {
       "rung": 3,
-      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. Omitting the hook preserves upstream behavior."
+      "seam": "Apply the optional host `fetch` wrapper per transport attempt. The hook receives the URL that attempt dials, so a wrapper can scope itself to that endpoint (including the retry at the configured URL) instead of guessing it from the request stream; the Code Mode query is added before the hook runs. No plugin hook reaches the MCP transport; the host sets it through `Mcp.configured`. The optional host `transient` predicate also marks a failure that will pass, such as a token refresh that could not reach its authorization server, so the connect may retry it and `answered` stays false for it: a pooled server must not be recorded as refusing the shared connection because of an outage. Omitting the hooks preserves upstream behavior. The exact 14-line growth raises only the markedLines budget from 2366 to 2380; file and unmarked-line budgets are unchanged."
     },
     "packages/core/src/mcp/connection.ts": {
       "rung": 3,
@@ -236,10 +236,6 @@
     "packages/core/src/tool/plugin/shell.ts": {
       "rung": 4,
       "seam": "Two additions for the tool card. (1) Publish the running command's current output and running state while it executes. The shell tool exposes no progress stream for its own execution, and a plugin can wrap the whole execute but cannot read the shell output that execute owns. The marked block pages the shell's file-backed output on a short interval, publishes progress metadata, and stops before the call settles. (2) Add the optional `description` input the model fills with a 5-10 word summary, as the first property so models write it before the command and the card can show it while the command streams, then copy it to `metadata.description` and to the background completion notice. Upstream has no title channel on a tool result, so the card shows the raw first command line, which Kilo sessions fill with a `cd <worktree> &&` prefix that identifies nothing. Both additions are optional: omitted input, every upstream default, and the rest of the result and metadata are unchanged."
-    },
-    "packages/core/src/tool/plugin/schedule.ts": {
-      "rung": 4,
-      "seam": "The `/schedule` command's prompt carries the Kilo `injected-prompt` label from `core/src/kilocode/session/injected.ts`, so a transcript can show `/schedule <request>` instead of the expanded template the model receives. The command registers through an editor that offers only `add`, its `execute` builds its own prompt, and the invocation carries no metadata channel, so no plugin hook reaches the prompt call. The label is UI metadata only: prompt text, delivery and every upstream default are unchanged."
     },
     "packages/core/test/tool-shell.test.ts": {
       "rung": 4,
@@ -328,7 +324,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 4,
-      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
+      "seam": "Register the Kilo built-in TUI plugins, including `KiloMarketplace` (`/marketplace`, partial U-E2-23), `KiloCopySession` (`/copy-session`), `KiloTerminalActivity` (OSC 777 session activity for terminals that set KILO_TERMINAL_ACTIVITY), `KiloPeriodic` (`/periodic`, local scheduled Flows) and `KiloRemote` (`/remote` and the remote-control header indicator, registered only by the kilo2 host identity). The TUI loads its built-in list in its own process, which server-side host/plugin registration cannot reach. Config-driven plugins load npm packages or local files, unavailable in compiled binaries. A generic registration API would require more shared lines for this single list. The behavior stays in tui/src/kilocode/; each plugin adds one import and one list entry."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,

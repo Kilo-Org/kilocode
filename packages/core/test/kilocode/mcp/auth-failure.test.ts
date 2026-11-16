@@ -49,6 +49,16 @@ describe("authFailure", () => {
     for (const message of cases) expect(authFailure(message)).toBe(false)
   })
 
+  test("never treats a transient refresh failure as a sign-in request", () => {
+    // The message names the token host, and an authorization host often contains "oauth".
+    const cases = [
+      "Token refresh could not reach oauth.example.com: ECONNREFUSED (temporarily_unavailable)",
+      "Token refresh at authorization.oauth.example.com failed with HTTP 503 (temporarily_unavailable)",
+    ]
+
+    for (const message of cases) expect(authFailure(message)).toBe(false)
+  })
+
   test("does not match a missing error", () => {
     expect(authFailure(undefined)).toBe(false)
   })

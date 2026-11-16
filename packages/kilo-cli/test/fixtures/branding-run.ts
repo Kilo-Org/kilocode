@@ -37,7 +37,9 @@ export async function run(command: string[], root: string, hosted: boolean, exit
     },
     stdout: "pipe",
     stderr: "pipe",
-    timeout: 15_000,
+    // A cold source run transpiles the TUI and takes more than 15 s on loaded Windows runners. Stay below the 60 s
+    // test timeout so a stuck child still fails with its stderr.
+    timeout: 50_000,
     killSignal: "SIGKILL",
   })
   const [stdout, stderr, code] = await Promise.all([

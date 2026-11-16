@@ -255,6 +255,7 @@ export const dict = {
   "ui.messagePart.board.route": "{{from}} から {{to}} へ",
   "ui.messagePart.board.empty": "エージェントのメッセージはありません",
   "ui.messagePart.board.stored": "保存のみです。配信や読み取りは確認されていません。",
+  "ui.messagePart.board.more": "さらにメッセージがあります。",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.diffs.changed": "変更あり",

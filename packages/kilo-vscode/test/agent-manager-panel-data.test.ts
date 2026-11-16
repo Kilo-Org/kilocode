@@ -276,4 +276,19 @@ describe("createPanelData", () => {
       dispose()
     })
   })
+
+  // The host sends a cycle shortcut as an action, which a dialog can consume. Without a dialog it must reach the
+  // mounted views as the same command the sidebar receives, so a composer without a session still cycles its agent.
+  test("dispatches a host command to the mounted views", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const names: string[] = []
+      panel.store(ROOT).onCommand((name) => names.push(name))
+      panel.command("cycleAgentMode")
+      panel.receive({ type: "command", name: "cyclePreviousAgentMode" })
+      expect(names).toEqual(["cycleAgentMode", "cyclePreviousAgentMode"])
+      dispose()
+    })
+  })
 })
