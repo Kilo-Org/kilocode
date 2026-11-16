@@ -14,6 +14,7 @@ import type { AppDirectories } from "./app-directories"
 import { createPanelData } from "./v2/panel-data"
 import { createSessions } from "./v2/sessions"
 import { dispatchInitialPrompt } from "./initial-message"
+import { reloadRestoredDirectories } from "./restored-directories"
 
 export function createAppSession(opts: {
   vscode: VSCodeContext
@@ -66,12 +67,7 @@ export function createAppSession(opts: {
   createEffect(() => panel.retain(opts.directories.retained()))
 
   // A restored worktree folder loads again; its store failed while the folder was gone.
-  createEffect(
-    on(opts.directories.missingDirectories, (missing, previous) => {
-      const known = new Set(opts.directories.sessionDirectories())
-      previous?.filter((dir) => known.has(dir) && !missing.includes(dir)).forEach(panel.reload)
-    }),
-  )
+  reloadRestoredDirectories(panel, opts.directories)
 
   const models = (): ModelInfo[] => rootStore()?.data.location.model.list() ?? []
   const providers = (): ProviderInfo[] => rootStore()?.data.location.provider.list() ?? []

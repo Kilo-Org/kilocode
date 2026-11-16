@@ -23,6 +23,10 @@ import { markNoIndex } from "../../util/spotlight"
  * Per-user pool home next to the kilo2 CLI data. Honors `XDG_DATA_HOME` and is never roaming on Windows. Kilo v1 keeps
  * its own pool in `kilo/worktree-pool` and marks its slots with the extension host pid, which v2 shares when both
  * extensions run in one window, so a shared home would let each extension adopt and remove the other's slots.
+ *
+ * Slots an earlier v2 build warmed in that v1 home are not cleaned up here: the slot metadata is identical for both
+ * extensions, so a sweep cannot tell them apart, and v2 never writes the v1 data directory. They stay until v1's own
+ * sweep collects them or the user removes them.
  */
 export function poolHome(): string {
   const data = process.env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share")
