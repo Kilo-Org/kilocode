@@ -25,7 +25,7 @@ import {
 } from "../constants"
 import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
-import { extractStatusCode, sanitizeErrorMessage } from "../shared/validation-helpers"
+import { rejectionStatus, sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
@@ -642,7 +642,7 @@ export class DirectoryScanner implements IDirectoryScanner {
         } catch (embedError) {
           // The provider refused this exact input (e.g. over the model's max input tokens).
           // Retrying cannot succeed, so stop and let the caller split the batch.
-          if (REJECTED_STATUSES.has(extractStatusCode(embedError) ?? 0)) rejected = true
+          if (REJECTED_STATUSES.has(rejectionStatus(embedError) ?? 0)) rejected = true
           throw embedError
         }
         log.debug(`Successfully created ${embeddings.length} embeddings`)
@@ -708,6 +708,8 @@ export class DirectoryScanner implements IDirectoryScanner {
     }
 
     if (!success && lastError && rejected) {
+      // Stopping a scan must not start more network requests (probe or splits).
+      if (this._cancelled) return
       if (await this.rejectsEverything(run, lastError)) return
 
       if (batchBlocks.length > 1) {
@@ -769,9 +771,11 @@ export class DirectoryScanner implements IDirectoryScanner {
   private async rejectsEverything(run: ScanRun, cause: Error): Promise<boolean> {
     run.probe ??= this.embedder.createEmbeddings([PROBE_TEXT]).then(
       () => false,
-      (probeError: unknown) => REJECTED_STATUSES.has(extractStatusCode(probeError) ?? 0),
+      (probeError: unknown) => REJECTED_STATUSES.has(rejectionStatus(probeError) ?? 0),
     )
-    if (!(await run.probe)) return false
+    const refused = await run.probe
+    if (this._cancelled) return true
+    if (!refused) return false
     if (run.rejectsAll) return true
 
     run.rejectsAll = true

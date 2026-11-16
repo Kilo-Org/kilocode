@@ -98,10 +98,6 @@ export function extractStatusCode(error: any): number | undefined {
   // Response status property
   if (error?.response?.status) return error.response.status
 
-  // AWS SDK errors (Bedrock) carry the HTTP status under $metadata
-  const sdkStatus = error?.$metadata?.httpStatusCode
-  if (typeof sdkStatus === "number" && sdkStatus > 0) return sdkStatus
-
   // Extract from error message (e.g., "HTTP 404: Not Found")
   if (error?.message) {
     const match = error.message.match(/HTTP (\d+):/)
@@ -111,6 +107,21 @@ export function extractStatusCode(error: any): number | undefined {
   }
 
   return undefined
+}
+
+/**
+ * Status used by the scanner to decide whether a provider refused a request.
+ * Also reads the AWS SDK (Bedrock) status under `$metadata`. This is kept out of
+ * `extractStatusCode` so validation errors keep their specific AWS message.
+ */
+export function rejectionStatus(error: unknown): number | undefined {
+  const status = extractStatusCode(error)
+  if (status) return status
+  if (typeof error !== "object" || error === null || !("$metadata" in error)) return undefined
+  const metadata = error.$metadata
+  if (typeof metadata !== "object" || metadata === null || !("httpStatusCode" in metadata)) return undefined
+  const sdkStatus = metadata.httpStatusCode
+  return typeof sdkStatus === "number" && sdkStatus > 0 ? sdkStatus : undefined
 }
 
 /**
@@ -209,7 +220,7 @@ export async function withValidationErrorHandling<T extends { valid: boolean; er
  */
 export function formatEmbeddingError(error: any, maxRetries: number): Error {
   const errorMessage = extractErrorMessage(error)
-  const statusCode = extractStatusCode(error)
+  const statusCode = rejectionStatus(error)
 
   if (statusCode === 401) {
     return Object.assign(new Error("Authentication failed. Please check your API key."), { status: statusCode })

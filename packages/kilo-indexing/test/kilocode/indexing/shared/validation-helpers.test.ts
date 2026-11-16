@@ -2,7 +2,9 @@ import { describe, test, expect } from "bun:test"
 import {
   extractStatusCode,
   formatEmbeddingError,
+  rejectionStatus,
   sanitizeErrorMessage,
+  withValidationErrorHandling,
 } from "../../../../src/indexing/shared/validation-helpers"
 
 describe("sanitizeErrorMessage", () => {
@@ -101,9 +103,9 @@ describe("extractStatusCode", () => {
     { name: "status property", error: { status: 400 }, expected: 400 },
     { name: "response status", error: { response: { status: 422 } }, expected: 422 },
     {
-      name: "AWS SDK $metadata",
+      name: "AWS SDK $metadata (ignored, so validation keeps the AWS message)",
       error: { name: "ValidationException", $metadata: { httpStatusCode: 400 } },
-      expected: 400,
+      expected: undefined,
     },
     { name: "HTTP message", error: new Error("HTTP 413: too large"), expected: 413 },
     { name: "no status", error: new Error("boom"), expected: undefined },
@@ -115,5 +117,27 @@ describe("extractStatusCode", () => {
     const sdkError = Object.assign(new Error("Too many input tokens"), { $metadata: { httpStatusCode: 400 } })
 
     expect(extractStatusCode(formatEmbeddingError(sdkError, 3))).toBe(400)
+  })
+})
+
+describe("rejectionStatus", () => {
+  test("reads the AWS SDK $metadata status in addition to the usual sources", () => {
+    expect(rejectionStatus({ $metadata: { httpStatusCode: 400 } })).toBe(400)
+    expect(rejectionStatus({ status: 422 })).toBe(422)
+    expect(rejectionStatus(new Error("HTTP 413: too large"))).toBe(413)
+    expect(rejectionStatus({ $metadata: { httpStatusCode: 0 } })).toBeUndefined()
+    expect(rejectionStatus("boom")).toBeUndefined()
+  })
+
+  test("validation keeps the specific message of a Bedrock ValidationException", async () => {
+    const aws = Object.assign(new Error("The provided model identifier is invalid"), {
+      name: "ValidationException",
+      $metadata: { httpStatusCode: 400 },
+    })
+
+    const result = await withValidationErrorHandling(() => Promise.reject(aws), "bedrock")
+
+    expect(result).toEqual({ valid: false, error: "The provided model identifier is invalid" })
+    expect(rejectionStatus(aws)).toBe(400)
   })
 })

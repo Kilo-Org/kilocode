@@ -689,4 +689,37 @@ describe("DirectoryScanner", () => {
       await cleanup()
     }
   })
+
+  test("sends no probe or split request when cancelled while a batch is being rejected", async () => {
+    const content = Array.from({ length: 10 }, (_, index) => `chunk${index}`).join("\n")
+    const { root, cache, cleanup } = await fixture({ "a.ts": content })
+    try {
+      const store = new RecordStore()
+      const calls: string[][] = []
+      let scan: DirectoryScanner | undefined
+      const emb: IEmbedder = {
+        async createEmbeddings(texts) {
+          calls.push(texts)
+          scan?.cancel()
+          throw Object.assign(new Error("input too large"), { status: 400 })
+        },
+        async validateConfiguration() {
+          return { valid: true }
+        },
+        get embedderInfo() {
+          return { name: "openai" as const }
+        },
+      }
+      scan = new DirectoryScanner(emb, store, new SizedParser(), cache, ignore(), 10, 3)
+      const errors: Error[] = []
+
+      await scan.scanDirectory(root, (error) => errors.push(error))
+
+      expect(calls).toHaveLength(1)
+      expect(store.chunks).toEqual([])
+      expect(errors).toEqual([])
+    } finally {
+      await cleanup()
+    }
+  })
 })
