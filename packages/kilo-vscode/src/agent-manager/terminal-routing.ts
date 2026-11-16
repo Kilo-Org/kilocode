@@ -65,6 +65,8 @@ export class TerminalRouter {
    *  concurrent creates from grabbing the same "Terminal N" title. */
   private readonly reserved = new Map<string, Set<number>>()
   private generation = 0
+  /** Bumped when a project is removed, so a create that was in flight for it closes its PTY instead of posting a tab. */
+  private readonly removals = new Map<string, number>()
 
   constructor(private readonly deps: TerminalRoutingDeps) {
     this.manager = this.createManager()
@@ -90,16 +92,12 @@ export class TerminalRouter {
     }
     if (m.type === "agentManager.terminal.close") {
       void this.manager.close(m.terminalId).then((closed) => {
-        if (closed) this.deps.closed(m.terminalId)
-        this.deps.post(
-          closed
-            ? { type: "agentManager.terminal.closed", terminalId: m.terminalId }
-            : {
-                type: "agentManager.terminal.error",
-                terminalId: m.terminalId,
-                message: "Failed to close terminal; it remains available for retry",
-              },
-        )
+        if (closed) return this.closed(m.terminalId)
+        this.deps.post({
+          type: "agentManager.terminal.error",
+          terminalId: m.terminalId,
+          message: "Failed to close terminal; it remains available for retry",
+        })
       })
       return true
     }
@@ -154,12 +152,31 @@ export class TerminalRouter {
     }
   }
 
+  /** Close the terminals of a directory that is going away, such as a deleted worktree, and drop their tabs. */
   async closeDirectory(directory: string): Promise<void> {
     try {
-      await Promise.all([this.manager, ...this.retired].map((manager) => manager.closeDirectory(directory)))
+      await Promise.all(
+        [this.manager, ...this.retired].map((manager) => manager.closeDirectory(directory, (id) => this.closed(id))),
+      )
     } finally {
       this.prune()
     }
+  }
+
+  /** Close the terminals a removed project opened. Their shells would otherwise keep running with no tab to reach them. */
+  async closeProject(projectId: string): Promise<void> {
+    this.removals.set(projectId, (this.removals.get(projectId) ?? 0) + 1)
+    const results = await Promise.all(
+      [this.manager, ...this.retired].map((manager) => manager.closeProject(projectId, (id) => this.closed(id))),
+    )
+    this.prune()
+    if (results.some((ok) => !ok)) this.deps.log(`Some terminals of removed project ${projectId} could not be closed`)
+  }
+
+  /** A terminal closed on the host: its relay sockets end and the webview drops its tab. */
+  private closed(terminalId: string): void {
+    this.deps.closed(terminalId)
+    this.deps.post({ type: "agentManager.terminal.closed", terminalId })
   }
 
   private prune(): void {
@@ -181,6 +198,7 @@ export class TerminalRouter {
     // Captured synchronously: the project scope is only current while the
     // dispatch runs, not when the async create settles.
     const pid = this.deps.getProjectId()
+    const removal = pid ? this.removals.get(pid) : undefined
     if (!cwd) {
       this.deps.post({
         type: "agentManager.terminal.error",
@@ -198,9 +216,11 @@ export class TerminalRouter {
       // Join the shared server connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
       await this.deps.connection.client()
-      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title, cols, rows })
-      if (generation !== this.generation) {
+      const created = await manager.create({ terminalId: createId, worktreeId, projectId: pid, cwd, title, cols, rows })
+      if (generation !== this.generation || (pid && this.removals.get(pid) !== removal)) {
         await manager.close(created.terminalId)
+        // The webview already shows an optimistic tab for a side create; settle it without an error the user cannot act on.
+        if (generation === this.generation) this.deps.post({ type: "agentManager.terminal.cancelled", createId })
         return
       }
       this.deps.post({

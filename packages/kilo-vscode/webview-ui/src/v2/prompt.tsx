@@ -150,6 +150,15 @@ const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
 
 const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
+/** The agent and model a draft's first send creates its session with. */
+export type SendChoice = { agent: string | undefined; model: ModelRef | undefined }
+
+/**
+ * The tab a send was pressed in: its session, or the draft key and the draft's agent and model before a session
+ * exists. A tab switch resets the composer's draft choice, so the choice is taken with the tab.
+ */
+export type SendTarget = { session: string | undefined; key: string | undefined; choice?: SendChoice }
+
 export function PromptInput(props: {
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
@@ -170,9 +179,16 @@ export function PromptInput(props: {
   onSend: (
     text: string,
     mode: SendMode,
-    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
+    input?: {
+      items?: PromptAttachment[]
+      files?: MentionFile[]
+      metadata?: { [key: string]: JsonValue }
+      target?: SendTarget
+    },
   ) => Promise<boolean>
   onStop: () => void
+  /** The agent and model the draft shows, taken when a first send is pressed. */
+  choice?: () => SendChoice
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
   /** Auto-approve for permission requests. The toggle folds into the overflow menu like edge actions. */
@@ -207,6 +223,7 @@ export function PromptInput(props: {
       mode: SendMode,
       items: PromptAttachment[],
       files?: MentionFile[],
+      target?: SendTarget,
     ) => Promise<boolean>
   }
   /** Agent Manager worktrees the `@` menu can reference. The Worktrees entry is offered only when this is set. */
@@ -400,7 +417,9 @@ export function PromptInput(props: {
    */
   const mentionFiles = async (value: string): Promise<MentionFile[] | undefined> => {
     const known = mention.parseFileAttachments(value)
-    const output = await terminal
+    // Both requests start before the first wait, so a tab switch that unmounts this composer finds them open and keeps
+    // listening for their replies.
+    const terminalOutput = terminal
       .resolveAttachment(value, props.session, props.terminalContext?.())
       .catch((err: Error) => {
         showToast({
@@ -410,8 +429,7 @@ export function PromptInput(props: {
         })
         return undefined
       })
-    if (hasTerminalMention(value) && !output) return undefined
-    const diff = await changes.resolveAttachment(value).catch((err: Error) => {
+    const gitDiff = changes.resolveAttachment(value).catch((err: Error) => {
       showToast({
         variant: "error",
         title: language.t("prompt.mention.gitChangesUnavailable"),
@@ -419,6 +437,9 @@ export function PromptInput(props: {
       })
       return undefined
     })
+    const output = await terminalOutput
+    if (hasTerminalMention(value) && !output) return undefined
+    const diff = await gitDiff
     if (git() && hasGitChangesMention(value) && !diff) return undefined
     return [...known, ...(output ? [output] : []), ...(diff ? [diff] : [])]
   }
@@ -808,6 +829,12 @@ export function PromptInput(props: {
     if (key) mentionDrafts.delete(key)
   }
 
+  const sendTarget = (): SendTarget => ({
+    session: props.session,
+    key: props.draftKey,
+    choice: props.session ? undefined : props.choice?.(),
+  })
+
   const submit = (
     external?: { text: string; items: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
     mode: SendMode = "steer",
@@ -834,6 +861,8 @@ export function PromptInput(props: {
     const target = runner ? parseSlash(runner.entries(), sent) : undefined
     // The draft key identifies the conversation this send belongs to, even when the session is created first.
     const key = props.draftKey
+    // Resolving mentions can wait for the host, and the user can switch tabs meanwhile: the send stays bound to this tab.
+    const bound = sendTarget()
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
@@ -859,12 +888,13 @@ export function PromptInput(props: {
     const request = pendingFiles.then((files) => {
       // A mention whose context could not be read keeps the draft for another try.
       if (!files) return false
-      if (runner && target) return runner.run(target.entry, target.args, mode, items, files)
+      if (runner && target) return runner.run(target.entry, target.args, mode, items, files, bound)
       // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
       return props.onSend(review.text, mode, {
         items,
         files,
         metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
+        target: bound,
       })
     })
     void request
@@ -905,6 +935,7 @@ export function PromptInput(props: {
     const items = attachments()
     const sent = expandPastes(draft, pastes).trim()
     const key = props.draftKey
+    const bound = sendTarget()
     const restore = () => {
       setGoalMode(true)
       if (text().trim() || attachments().length > 0) return
@@ -923,7 +954,7 @@ export function PromptInput(props: {
     setSending(true)
     void files
       // `--` keeps an objective that is itself a control word, such as "pause", an objective, as in v1.
-      .then((list) => (list ? run(entry, `-- ${sent}`, mode, items, list) : false))
+      .then((list) => (list ? run(entry, `-- ${sent}`, mode, items, list, bound) : false))
       .then((ok) => {
         if (!ok) return restore()
         preEnhance = null

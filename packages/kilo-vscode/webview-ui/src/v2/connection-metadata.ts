@@ -15,6 +15,12 @@ type Connection = ReturnType<typeof createClientConnection>
 export type ConnectionMetadata = ReturnType<typeof createConnectionMetadata>
 
 /**
+ * Retry delays for a failed handshake. A server that just started can answer one request before it is ready, and the
+ * banner would otherwise stay until the window reloads.
+ */
+const HANDSHAKE_RETRY = [500, 1_000, 2_000, 5_000, 10_000] as const
+
+/**
  * Call inside a reactive owner. `subscribe` reaches the catalog event: the panel routes it from its shared stream, and
  * a store created alone subscribes to its own event stream.
  */
@@ -41,11 +47,13 @@ export function createConnectionMetadata(input: {
           status: input.connection.status,
           on: input.subscribe,
         })
-  const state = { handshake: 0 }
+  const state = { handshake: 0, retry: undefined as ReturnType<typeof setTimeout> | undefined }
+  onCleanup(() => clearTimeout(state.retry))
 
   // A Location that is still activating answers the handshake like a server without it, so the read waits for the
   // plugins of the Location first.
-  const readHandshake = (dir: string) => {
+  const readHandshake = (dir: string, attempt = 0) => {
+    clearTimeout(state.retry)
     const read = ++state.handshake
     void pluginsListed({ api: input.api, directory: dir, active: () => read === state.handshake })
       .then(() => {
@@ -67,6 +75,12 @@ export function createConnectionMetadata(input: {
           message: "Not a Kilo v2 server.",
           details: failure.details ?? failure.message,
         })
+        const delay = HANDSHAKE_RETRY[attempt]
+        if (delay === undefined) return
+        state.retry = setTimeout(() => {
+          if (read !== state.handshake || input.connection.status() !== "connected") return
+          readHandshake(dir, attempt + 1)
+        }, delay)
       })
   }
   // A disposed owner ends the wait and drops a late answer.

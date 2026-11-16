@@ -1,13 +1,21 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, indexingEnvironment, manager, parse, serverPlans, settingsEnvironment, start, stop } from "../src/server"
+import { command, environment, indexingEnvironment, manager, serverPlans, settingsEnvironment, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
+
+/**
+ * Inside a fake server script: the credential `start()` gives the child through `OPENCODE_PASSWORD`. A fake that
+ * accepts it passes the identity probe; one that accepts any credential is refused.
+ */
+const CREDENTIAL = `
+  const authorization = "Basic " + Buffer.from("opencode:" + process.env.OPENCODE_PASSWORD).toString("base64")
+`
 
 function checkout() {
   const dir = mkdtempSync(path.join(tmpdir(), "kilo-vscode-checkout-"))
@@ -17,20 +25,6 @@ function checkout() {
   writeFileSync(path.join(dir, "script", "dev-isolated.ts"), "")
   return { dir, extension }
 }
-
-describe("parse", () => {
-  test("reads the URL from a complete JSON line", () => {
-    expect(parse('kilo v2 dev profile: /tmp/x\n{"url":"http://127.0.0.1:4096"}\n')).toBe("http://127.0.0.1:4096")
-  })
-
-  test("waits for the end of the line", () => {
-    expect(parse('{"url":"http://127.0.0.1:40')).toBeUndefined()
-  })
-
-  test("ignores other JSON and broken lines", () => {
-    expect(parse('{"level":"info"}\n{not json\n{"url":"http://127.0.0.1:1"}\n')).toBe("http://127.0.0.1:1")
-  })
-})
 
 describe("command", () => {
   test("uses the repository dev entry with an isolated profile when bin/kilo2 is missing", () => {
@@ -190,8 +184,17 @@ test("manager reports every started and stopped server", async () => {
   const secondStop = Promise.withResolvers<void>()
   const script = `
     const http = require("node:http")
+    ${CREDENTIAL}
     const server = http.createServer((request, response) => {
       if (request.url === "/exit") return response.end("bye", () => setImmediate(() => process.exit(0)))
+      if (request.headers.authorization !== authorization) {
+        response.writeHead(401, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "UnauthorizedError" }))
+      }
+      if (request.url === "/api/info") {
+        response.setHeader("content-type", "application/json")
+        return response.end(JSON.stringify({ version: "test", pid: process.pid }))
+      }
       response.end("ok")
     })
     server.listen(0, "127.0.0.1", () => {
@@ -232,6 +235,205 @@ test("manager reports every started and stopped server", async () => {
   expect(stops).toBe(2)
   await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 }, 10_000)
+
+/** A script that serves `content-type` and one JSON body on `/api/info`, for the identity check of `start`. */
+const identityScript = (contentType: string, body: string) => `
+  const http = require("node:http")
+  const server = http.createServer((request, response) => {
+    response.setHeader("content-type", ${JSON.stringify(contentType)})
+    response.end(${JSON.stringify(body)})
+  })
+  server.listen(0, "127.0.0.1", () => {
+    console.log(JSON.stringify({ url: "http://127.0.0.1:" + server.address().port }))
+    // The extension must not use this URL, so quitting after it is printed ends the start.
+    setTimeout(() => process.exit(0), 500)
+  })
+`
+
+test("refuses a printed URL that does not answer as the server it started", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-"))
+  const started = start({
+    command: { cmd: process.execPath, args: ["-e", identityScript("text/html", "<html>not the server</html>")], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  await expect(started).rejects.toThrow("did not answer as the Kilo server")
+  await expect(started).rejects.toThrow("/api/info returned 200 (text/html)")
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("refuses a printed URL that is not loopback, without sending the credential", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-host-"))
+  const script = `
+    console.log(JSON.stringify({ url: "https://kilo.invalid" }))
+    setTimeout(() => process.exit(0), 300)
+    process.stdin.resume()
+  `
+  const started = start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  await expect(started).rejects.toThrow("not a loopback http address")
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("refuses a local server that accepts any credential", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-open-"))
+  const started = start({
+    command: {
+      cmd: process.execPath,
+      args: ["-e", identityScript("application/json", JSON.stringify({ version: "someone-else" }))],
+      env: {},
+    },
+    cwd: root,
+    env: process.env,
+  })
+  await expect(started).rejects.toThrow("/api/info accepted a wrong credential")
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("retries a printed URL after a transient verification failure", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-retry-"))
+  // The first request of the child this test starts fails; the URL line is the same, so the retry must use it again.
+  const script = `
+    const http = require("node:http")
+    ${CREDENTIAL}
+    let first = true
+    const server = http.createServer((request, response) => {
+      if (first) {
+        first = false
+        response.writeHead(500, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "Boom" }))
+      }
+      if (request.headers.authorization !== authorization) {
+        response.writeHead(401, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "UnauthorizedError" }))
+      }
+      response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify({ version: "test", pid: process.pid }))
+    })
+    server.listen(0, "127.0.0.1", () => {
+      console.log(JSON.stringify({ url: "http://127.0.0.1:" + server.address().port }))
+    })
+    process.stdin.resume()
+    process.stdin.on("end", () => process.exit(0))
+  `
+  const server = await start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  expect(server.url).toStartWith("http://127.0.0.1:")
+  const exited = new Promise<void>((resolve) => server.process.once("exit", () => resolve()))
+  stop(server.process)
+  await exited
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("never sends the generated credential to a server that fails the probe", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-leak-"))
+  const marker = path.join(root, "credential-sent")
+  // A page server that records any request carrying the password. The probe must reject it before that header is sent.
+  const script = `
+    const http = require("node:http")
+    const fs = require("node:fs")
+    ${CREDENTIAL}
+    const server = http.createServer((request, response) => {
+      if (request.headers.authorization === authorization) fs.writeFileSync(${JSON.stringify(marker)}, "1")
+      response.setHeader("content-type", "text/html")
+      response.end("<html>not the server</html>")
+    })
+    server.listen(0, "127.0.0.1", () => {
+      console.log(JSON.stringify({ url: "http://127.0.0.1:" + server.address().port }))
+      setTimeout(() => process.exit(0), 500)
+    })
+  `
+  const started = start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  await expect(started).rejects.toThrow("did not answer as the Kilo server")
+  expect(existsSync(marker)).toBe(false)
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("reads the URL line after other JSON and a split line", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-split-"))
+  const script = `
+    const http = require("node:http")
+    ${CREDENTIAL}
+    const server = http.createServer((request, response) => {
+      if (request.headers.authorization !== authorization) {
+        response.writeHead(401, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "UnauthorizedError" }))
+      }
+      response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify({ version: "test", pid: process.pid }))
+    })
+    server.listen(0, "127.0.0.1", () => {
+      // A log line in JSON, then the URL split across two writes.
+      process.stdout.write('{"level":"info"}\\n{"url":"http://127.0.0.1:')
+      setTimeout(() => process.stdout.write(server.address().port + '"}\\n'), 100)
+    })
+    process.stdin.resume()
+    process.stdin.on("end", () => process.exit(0))
+  `
+  const server = await start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  expect(server.url).toStartWith("http://127.0.0.1:")
+  const exited = new Promise<void>((resolve) => server.process.once("exit", () => resolve()))
+  stop(server.process)
+  // Windows locks the temp directory while the child still runs there, so wait for it before removing.
+  await exited
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
+
+test("keeps looking for the server when another process prints a URL line", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-identity-skip-"))
+  // The first line names a page server, as a stray log on stdout would; the second names the server that answers.
+  const script = `
+    const http = require("node:http")
+    ${CREDENTIAL}
+    const page = http.createServer((request, response) => {
+      response.setHeader("content-type", "text/html")
+      response.end("<html>not the server</html>")
+    })
+    const kilo = http.createServer((request, response) => {
+      if (request.headers.authorization !== authorization) {
+        response.writeHead(401, { "content-type": "application/json" })
+        return response.end(JSON.stringify({ _tag: "UnauthorizedError" }))
+      }
+      response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify({ version: "test", pid: process.pid }))
+    })
+    page.listen(0, "127.0.0.1", () => {
+      console.log(JSON.stringify({ url: "http://127.0.0.1:" + page.address().port }))
+      kilo.listen(0, "127.0.0.1", () => {
+        console.log(JSON.stringify({ url: "http://127.0.0.1:" + kilo.address().port }))
+      })
+    })
+    process.stdin.resume()
+    process.stdin.on("end", () => process.exit(0))
+  `
+  const server = await start({
+    command: { cmd: process.execPath, args: ["-e", script], env: {} },
+    cwd: root,
+    env: process.env,
+  })
+  const info = await fetch(new URL("/api/info", server.url), { headers: { authorization: server.authorization } })
+  expect(info.status).toBe(200)
+  expect(info.headers.get("content-type")).toBe("application/json")
+  const exited = new Promise<void>((resolve) => server.process.once("exit", () => resolve()))
+  stop(server.process)
+  // Windows locks the temp directory while the child still runs there, so wait for it before removing.
+  await exited
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}, 15_000)
 
 test("starts the real v2 server, passes the Kilo handshake and stops when stdin closes", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-server-"))
