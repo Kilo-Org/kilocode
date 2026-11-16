@@ -231,7 +231,11 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       push: () => this.pushProjects(),
       pushState: (ctx) => this.pushState(ctx),
       changed: () => this.onWorkspaceChanged(),
-      removed: (id) => this.browser.closeProject(id),
+      removed: (id) => {
+        this.browser.closeProject(id)
+        void this.terminalRouter.closeProject(id)
+        void this.scripts.manager.closeProject(id)
+      },
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
       post: (message) => this.postToWebview(message),
     })

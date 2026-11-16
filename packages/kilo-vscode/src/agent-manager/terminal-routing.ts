@@ -90,16 +90,12 @@ export class TerminalRouter {
     }
     if (m.type === "agentManager.terminal.close") {
       void this.manager.close(m.terminalId).then((closed) => {
-        if (closed) this.deps.closed(m.terminalId)
-        this.deps.post(
-          closed
-            ? { type: "agentManager.terminal.closed", terminalId: m.terminalId }
-            : {
-                type: "agentManager.terminal.error",
-                terminalId: m.terminalId,
-                message: "Failed to close terminal; it remains available for retry",
-              },
-        )
+        if (closed) return this.closed(m.terminalId)
+        this.deps.post({
+          type: "agentManager.terminal.error",
+          terminalId: m.terminalId,
+          message: "Failed to close terminal; it remains available for retry",
+        })
       })
       return true
     }
@@ -154,12 +150,30 @@ export class TerminalRouter {
     }
   }
 
+  /** Close the terminals of a directory that is going away, such as a deleted worktree, and drop their tabs. */
   async closeDirectory(directory: string): Promise<void> {
     try {
-      await Promise.all([this.manager, ...this.retired].map((manager) => manager.closeDirectory(directory)))
+      await Promise.all(
+        [this.manager, ...this.retired].map((manager) => manager.closeDirectory(directory, (id) => this.closed(id))),
+      )
     } finally {
       this.prune()
     }
+  }
+
+  /** Close the terminals a removed project opened. Their shells would otherwise keep running with no tab to reach them. */
+  async closeProject(projectId: string): Promise<void> {
+    const results = await Promise.all(
+      [this.manager, ...this.retired].map((manager) => manager.closeProject(projectId, (id) => this.closed(id))),
+    )
+    this.prune()
+    if (results.some((ok) => !ok)) this.deps.log(`Some terminals of removed project ${projectId} could not be closed`)
+  }
+
+  /** A terminal closed on the host: its relay sockets end and the webview drops its tab. */
+  private closed(terminalId: string): void {
+    this.deps.closed(terminalId)
+    this.deps.post({ type: "agentManager.terminal.closed", terminalId })
   }
 
   private prune(): void {
@@ -198,7 +212,7 @@ export class TerminalRouter {
       // Join the shared server connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
       await this.deps.connection.client()
-      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title, cols, rows })
+      const created = await manager.create({ terminalId: createId, worktreeId, projectId: pid, cwd, title, cols, rows })
       if (generation !== this.generation) {
         await manager.close(created.terminalId)
         return

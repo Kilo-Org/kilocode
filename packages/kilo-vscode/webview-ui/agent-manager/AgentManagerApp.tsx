@@ -1468,6 +1468,7 @@ const AgentManagerContent: Component = () => {
       selection: selection(),
       addPending: addPendingTab,
       postToWorktree: (worktreeId) => to({ type: "agentManager.addSessionToWorktree", worktreeId }),
+      clearTerminal: () => terms.setActiveId(undefined),
     })
   const tabs = createSessionRestore({
     terminal: terms.activeId,
