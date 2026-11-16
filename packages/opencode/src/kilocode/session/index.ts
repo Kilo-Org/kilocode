@@ -134,6 +134,11 @@ export namespace KiloSession {
   // Project family resolution (worktree-aware)
   // ---------------------------------------------------------------------------
 
+  // Decoded directories (platform separators) back to their stored form, so SQLite compares equal bytes.
+  export function directoryParam(directories: string[]) {
+    return JSON.stringify(directories.map((dir) => SessionTable.directory.mapToDriverValue(dir)))
+  }
+
   function family(
     id: string,
     rows: Array<Pick<typeof ProjectTable.$inferSelect, "id" | "worktree" | "sandboxes">>,
@@ -216,7 +221,8 @@ export namespace KiloSession {
   }): number | undefined {
     if ((input.provider?.id ?? input.providerID) === "kilo") {
       const raw = input.usage?.providerMetadata?.["aiSdk"] as
-        { cost?: unknown; is_byok?: unknown; cost_details?: { upstream_inference_cost?: unknown } | null } | undefined
+        | { cost?: unknown; is_byok?: unknown; cost_details?: { upstream_inference_cost?: unknown } | null }
+        | undefined
       const cost = raw?.is_byok === true ? raw.cost_details?.upstream_inference_cost : raw?.cost
       return typeof cost === "number" && Number.isFinite(cost) && cost >= 0 ? cost : undefined
     }
@@ -229,7 +235,8 @@ export namespace KiloSession {
 
     // 1. OpenRouter chat completions
     const orUsage = input.metadata?.["openrouter"]?.["usage"] as
-      { cost?: number; costDetails?: { upstreamInferenceCost?: number } } | undefined
+      | { cost?: number; costDetails?: { upstreamInferenceCost?: number } }
+      | undefined
     if (orUsage) {
       const upstream = num(orUsage.costDetails?.upstreamInferenceCost)
       const regular = num(orUsage.cost)
@@ -457,7 +464,19 @@ export namespace KiloSession {
       const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
       const accepts = (raw: string) => {
-        const root = worktree(Filesystem.resolve(raw))
+        const resolved = (() => {
+          try {
+            return Filesystem.resolve(raw)
+          } catch (err) {
+            const code = typeof err === "object" && err !== null && "code" in err ? err.code : undefined
+            if (code !== "EPERM" && code !== "EACCES") throw err
+            // An inaccessible historical directory must not fail the whole page.
+            log.warn("Ignoring inaccessible session directory", { dir: raw, code })
+            return undefined
+          }
+        })()
+        if (!resolved) return false
+        const root = worktree(resolved)
         if (!root) return false
         if (input.currentDirectory) return root === current
         return true
@@ -505,7 +524,7 @@ export namespace KiloSession {
                 .all()
               const accepted = seen.map((row) => row.directory).filter(allowed)
               if (accepted.length === 0) return []
-              const members = sql`${SessionTable.directory} IN (SELECT value FROM json_each(${JSON.stringify(accepted)}))`
+              const members = sql`${SessionTable.directory} IN (SELECT value FROM json_each(${directoryParam(accepted)}))`
               return yield* tx
                 .select()
                 .from(SessionTable)

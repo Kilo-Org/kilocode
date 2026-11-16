@@ -1,6 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import path from "path"
 import { seedProject, tmpdirScoped } from "../fixture/fixture"
@@ -272,6 +272,39 @@ describe("Kilo Session.list", () => {
         time_updated: row.time_updated + 1,
       })
       expect((yield* run()).map((item) => String(item.id))).toEqual(["ses_newer"])
+    }),
+  )
+
+  test("binds accepted directories in their stored representation", () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!
+    Object.defineProperty(process, "platform", { value: "win32" })
+    try {
+      expect(KiloSession.directoryParam(["C:\\repo\\a", "\\\\srv\\share\\b", ""])).toBe(
+        JSON.stringify(["C:/repo/a", "//srv/share/b", ""]),
+      )
+    } finally {
+      Object.defineProperty(process, "platform", platform)
+    }
+  })
+
+  it.instance("skips a directory that cannot be resolved instead of failing the page", () =>
+    Effect.gen(function* () {
+      const { ctx, db } = yield* instance
+      const denied = path.join(ctx.directory, "denied")
+      yield* Effect.promise(() => fs.mkdir(denied, { recursive: true }))
+      const now = Date.now()
+      // The inaccessible directory holds the oldest session, beyond the requested page.
+      yield* seedRows(db, 3, (i) => ({
+        directory: i === 2 ? denied : path.join(ctx.directory, `d${i}`),
+        time_updated: now - i,
+      }))
+      const original = Filesystem.resolve
+      const resolve = spyOn(Filesystem, "resolve").mockImplementation((input) => {
+        if (input === denied) throw Object.assign(new Error("denied"), { code: "EACCES" })
+        return original(input)
+      })
+      const list = yield* listIn(ctx, { limit: 2 }).pipe(Effect.ensuring(Effect.sync(() => resolve.mockRestore())))
+      expect(ids(list)).toEqual([sid(0), sid(1)])
     }),
   )
 })
