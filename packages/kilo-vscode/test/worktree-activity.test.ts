@@ -1,8 +1,16 @@
-import { describe, expect, it, mock } from "bun:test"
+import { afterAll, describe, expect, it, mock } from "bun:test"
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import { WorktreeActivity, createWorktreeActivity } from "../src/agent-manager/worktree-activity"
 import { samePath } from "../src/agent-manager/project/paths"
 
 const WT = "/repo/worktrees/feature"
+// The factory only loads worktree folders that exist on disk.
+const HOME = mkdtempSync(path.join(tmpdir(), "kilo-activity-"))
+const LIVE = path.join(HOME, "feature")
+mkdirSync(LIVE)
+afterAll(() => rmSync(HOME, { recursive: true, force: true }))
 
 type Snapshot = {
   sessions?: string[]
@@ -185,16 +193,16 @@ describe("WorktreeActivity", () => {
     const statuses: Array<[string, boolean]> = []
     const activity = createWorktreeActivity({
       connection: connection as never,
-      paths: () => [WT],
+      paths: () => [LIVE],
       post: (active) => posts.push(active),
       status: (id, running) => statuses.push([id, running]),
       log: () => {},
     })
 
     await activity.sync()
-    expect(posts.at(-1)?.map((dir) => (samePath(dir, WT) ? dir : undefined))).toEqual([WT])
+    expect(posts.at(-1)?.map((dir) => (samePath(dir, LIVE) ? dir : undefined))).toEqual([LIVE])
 
-    listener.fn?.({ type: "session.idle", data: { sessionID: "s1" }, location: { directory: WT } })
+    listener.fn?.({ type: "session.idle", data: { sessionID: "s1" }, location: { directory: LIVE } })
     expect(statuses).toContainEqual(["s1", false])
     activity.dispose()
   })
@@ -222,7 +230,7 @@ describe("WorktreeActivity", () => {
     const posts: string[][] = []
     const activity = createWorktreeActivity({
       connection: connection as never,
-      paths: () => [WT],
+      paths: () => [LIVE],
       post: (active) => posts.push(active),
       status: () => {},
       log: () => {},
@@ -246,6 +254,49 @@ describe("WorktreeActivity", () => {
     const deadline = Date.now() + 1000
     while (loads < 2 && Date.now() < deadline) await Bun.sleep(5)
     expect(loads).toBe(2)
+    activity.dispose()
+  })
+
+  it("does not load a worktree folder deleted on disk until it is restored", async () => {
+    const gone = path.join(HOME, "deleted")
+    const loaded: string[] = []
+    const errors: unknown[] = []
+    const connection = {
+      client: async () => ({
+        session: {
+          list: async (input: { directory: string }) => {
+            loaded.push(input.directory)
+            // The server answers a missing folder with LocationNotFoundError.
+            if (!existsSync(input.directory)) throw new Error(`Location not found: ${input.directory}`)
+            return { data: [] }
+          },
+          active: async () => ({}),
+        },
+        permission: { request: { list: async () => ({ data: [] }) } },
+        form: { list: async () => ({ data: [] }) },
+      }),
+      state: () => "connected",
+      onState: () => () => undefined,
+      onEvent: () => () => undefined,
+    }
+    const activity = createWorktreeActivity({
+      connection: connection as never,
+      paths: () => [LIVE, gone],
+      post: () => {},
+      status: () => {},
+      log: (err) => errors.push(err),
+    })
+
+    // Every state push syncs; a missing folder used to fail and log on each of them.
+    await activity.sync()
+    await activity.sync()
+    await activity.sync()
+    expect(loaded).toEqual([LIVE])
+    expect(errors).toEqual([])
+
+    mkdirSync(gone)
+    await activity.sync()
+    expect(loaded).toEqual([LIVE, gone])
     activity.dispose()
   })
 })
