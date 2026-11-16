@@ -23,6 +23,8 @@ const { createSessions } = await import("../webview-ui/agent-manager/v2/sessions
 const ROOT = "/repo"
 const WORKTREE = "/repo/.kilo/worktrees/one"
 const OTHER = "/other"
+/** A worktree whose folder is gone: the fake server cannot open its Location. */
+const MISSING = "/repo/.kilo/worktrees/missing"
 
 const encoder = new TextEncoder()
 const streams = new Set<ReadableStreamDefaultController<Uint8Array>>()
@@ -51,7 +53,8 @@ function emit(event: unknown) {
   }
 }
 
-const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } })
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
 
 /** How many handshake calls the fake server answers with a page instead of JSON. */
 let unreadableHandshakes = 0
@@ -104,6 +107,11 @@ const server = Bun.serve({
         },
       })
     if (url.pathname === "/api/session/active") return json({ data: {} })
+    if (url.pathname === "/api/location" && url.searchParams.get("location[directory]") === MISSING)
+      return json(
+        { _tag: "LocationNotFoundError", location: { directory: MISSING }, message: `Location not found: ${MISSING}` },
+        404,
+      )
     if (url.pathname === "/api/location")
       return json({ directory: ROOT, project: { id: "prj_1", directory: ROOT, canonical: ROOT } })
     if (url.pathname === "/api/vcs")
@@ -363,13 +371,13 @@ describe("createPanelData", () => {
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {
       const panel = createPanelData({ post: () => {}, api })
-      const store = panel.store(WORKTREE)
-      panel.show([WORKTREE])
-      const located = () => requests.filter((item) => item.path === "/api/location" && item.location === WORKTREE)
-      await until(() => located().length > 0 && store.failure() !== undefined)
+      const store = panel.store(MISSING)
+      panel.show([MISSING])
+      const located = () => requests.filter((item) => item.path === "/api/location" && item.location === MISSING)
+      await until(() => located().length > 0 && store.failure()?.message === `Location not found: ${MISSING}`)
       const before = located().length
 
-      panel.reload(WORKTREE)
+      panel.reload(MISSING)
       expect(store.failure()).toBeUndefined()
       await until(() => located().length > before)
       panel.reload(OTHER)
