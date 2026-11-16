@@ -91,6 +91,27 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "post" as const, path: SessionHostPaths.workspaceContinue, id: "sessionHost.continueWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.getWorkspaceStatus" },
+      { method: "get" as const, path: SessionHostPaths.workspaceChanges, id: "sessionHost.getWorkspaceChanges" },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspaceChangesRefresh,
+        id: "sessionHost.refreshWorkspaceChanges",
+      },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspaceChangeFile,
+        id: "sessionHost.getWorkspaceChangeFile",
+      },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspacePullRequestDiff,
+        id: "sessionHost.getWorkspacePullRequestDiff",
+      },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspacePullRequestDiffFile,
+        id: "sessionHost.getWorkspacePullRequestDiffFile",
+      },
       { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.listWorkspaceSessions" },
       { method: "post" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.startWorkspaceSession" },
@@ -159,6 +180,43 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(status?.deletion?.properties?.startedAt).toEqual({
       anyOf: [{ type: "number" }, { type: "null" }],
     })
+  })
+
+  test("keeps hosted workspace diff fields nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    type Node = { properties?: Record<string, Node>; anyOf?: unknown[] }
+    const nullable = { anyOf: [expect.objectContaining({}), { type: "null" }] }
+
+    const changes = (spec.components?.schemas?.SessionHostWorkspaceChanges as Node | undefined)?.properties
+    expect(changes?.revision).toEqual(nullable)
+    expect(changes?.capturedAt).toEqual(nullable)
+    expect(changes?.comparisons).toEqual(nullable)
+
+    const changeResult = (spec.components?.schemas?.SessionHostWorkspaceChangeFileResult as Node | undefined)
+      ?.properties
+    expect(changeResult?.file).toEqual(nullable)
+    expect(changeResult?.capturedAt).toEqual(nullable)
+    expect(changeResult?.comparison).toEqual(nullable)
+    expect(changeResult?.currentRevision).toEqual(nullable)
+
+    const changeFile = (spec.components?.schemas?.SessionHostWorkspaceChangeFile as Node | undefined)?.properties
+    expect(changeFile?.repository).toEqual(nullable)
+
+    const comparison = (spec.components?.schemas?.SessionHostWorkspaceChangeComparison as Node | undefined)?.properties
+    expect(comparison?.repository).toEqual(nullable)
+
+    const pull = (spec.components?.schemas?.SessionHostWorkspacePullRequestDiff as Node | undefined)?.properties
+    expect(pull?.reason).toEqual(nullable)
+    expect(pull?.pullRequest).toEqual(nullable)
+
+    const pullFile = (spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFile as Node | undefined)?.properties
+    expect(pullFile?.previousPath).toEqual(nullable)
+
+    const pullResult = (spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFileResult as Node | undefined)
+      ?.properties
+    for (const field of ["reason", "omissionReason", "headSha", "patch"]) {
+      expect(pullResult?.[field]).toEqual(nullable)
+    }
   })
 
   test("publishes hosted availability and keeps native turn events off the global stream", () => {

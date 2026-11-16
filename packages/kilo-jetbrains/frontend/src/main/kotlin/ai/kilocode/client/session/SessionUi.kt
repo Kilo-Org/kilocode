@@ -200,6 +200,19 @@ class SessionUi(
     // not treat the *previous* turn's message as confirmation, and a revert removes a message, so a
     // count baseline would be permanently too high for the next send.
     private var pendingSend: Set<String>? = null
+    private var pendingMessage: String? = null
+    private var historyReady = false
+    private data class Handoff(
+        val message: String,
+        val text: String,
+        val select: PromptSelection,
+        val title: String?,
+        val automatic: Boolean,
+        val started: (String) -> Unit,
+        val confirmed: () -> Unit,
+    )
+    private var handoff: Handoff? = null
+    private var handing: String? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -489,6 +502,10 @@ class SessionUi(
 
     internal val promptFocusedComponent: JComponent get() = if (readonly) scroll.component else prompt.defaultFocusedComponent
 
+    /** Automatic startup may only replace a blank composer with no draft or pending submission. */
+    @RequiresEdt
+    internal fun replaceable(): Boolean = id == null && !readonly && !prompt.hasInput()
+
     /**
      * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
      * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
@@ -502,12 +519,77 @@ class SessionUi(
         clearDraft: Boolean = true,
         injectedTitle: String? = null,
     ) {
-        if (readonly) return
-        if (text.isBlank()) return
+        if (readonly || text.isBlank()) return
+        if (handoff?.automatic == true || handing != null) return
         // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
         // then send the first turn carrying it too (so it applies before workspace-ready resolves).
-        select?.let { controller.applySelection(it) }
+        select?.let {
+            controller.applySelection(it)
+            handoff = handoff?.copy(select = it)
+        }
+        prompt.retainSubmission(text)
         sendPrompt(text, emptyList(), select, clearDraft, injectedTitle)
+    }
+
+    /** Reconcile an initial prompt against history before sending or offering an explicit retry. */
+    @Suppress("LongParameterList") // Keep the worktree boundary's correlation and lifecycle callbacks explicit.
+    @RequiresEdt
+    internal fun handoffPrompt(
+        text: String,
+        select: PromptSelection,
+        message: String,
+        automatic: Boolean,
+        injectedTitle: String?,
+        started: (String) -> Unit,
+        confirmed: () -> Unit,
+    ): Boolean {
+        if (disposed || readonly || text.isBlank()) return false
+        if (handoff?.message != message) {
+            controller.applySelection(select)
+            handoff = Handoff(message, text, select, injectedTitle, automatic, started, confirmed)
+            prompt.retainSubmission(text)
+            if (!automatic || controller.model.state is SessionState.Error) prompt.restoreLastSubmission()
+            syncHandoff()
+        }
+        return true
+    }
+
+    @RequiresEdt
+    private fun syncHandoff() {
+        val item = handoff ?: return
+        val message = controller.model.message(item.message)
+        if (message?.info?.role == "user" && !controller.model.isOptimistic(item.message)) {
+            handoff = null
+            handing = null
+            prompt.clearLastSubmission()
+            prompt.discardRestoredSubmission()
+            item.confirmed()
+            return
+        }
+        val ready = historyReady && loaded != null
+        val failed = controller.model.state is SessionState.Error
+        if (item.automatic && (ready || failed)) {
+            handoff = item.copy(automatic = false)
+            // Failed reconciliation and client-only actions both require an explicit user gesture.
+            val action = completion.clientAction(item.text)
+            if (failed || action != null) prompt.restoreLastSubmission()
+            if (!failed && action == null) {
+                sendPrompt(item.text, emptyList(), item.select, clearDraft = false, injectedTitle = item.title)
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun retainSelection() {
+        val item = handoff ?: return
+        val state = controller.model
+        val key = state.model
+        handoff = item.copy(select = PromptSelection(
+            state.agent,
+            key?.substringBefore('/'),
+            key?.substringAfter('/'),
+            state.variant,
+        ))
     }
 
     @RequiresEdt
@@ -880,13 +962,23 @@ class SessionUi(
 
     private fun bindUi() {
         if (!readonly) {
-            prompt.mode.onSelect = { item -> controller.selectAgent(item.id) }
+            prompt.mode.onSelect = { item ->
+                controller.selectAgent(item.id)
+                retainSelection()
+            }
             prompt.model.onSelect = { item ->
                 prompt.setAttachmentEnabled(item.attachment)
                 controller.selectModel(item.provider, item.id)
+                retainSelection()
             }
-            prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
-            prompt.onReset = { controller.clearModelOverride() }
+            prompt.reasoning.onSelect = { item ->
+                controller.selectVariant(item.id)
+                retainSelection()
+            }
+            prompt.onReset = {
+                controller.clearModelOverride()
+                retainSelection()
+            }
             prompt.onChange = { scroll.refresh() }
             prompt.onAutoApproveToggle = ::setAuto
             prompt.setAutoApprove(controller.autoApprove)
@@ -947,6 +1039,7 @@ class SessionUi(
                     prompt.reasoning.setItems(m.variants.map { ReasoningPicker.Item(it, variantTitle(it)) }, m.variant)
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
+                    syncHandoff()
                     prompt.refreshHighlights()
                     if (!hosted && !hostedRef) cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
                 }
@@ -972,6 +1065,7 @@ class SessionUi(
                 is SessionControllerEvent.AppChanged -> {
                     if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
+                    syncHandoff()
                     // Config carries the Swarm toggle, so the entry points follow it without a restart.
                     refreshBoard()
                 }
@@ -979,6 +1073,7 @@ class SessionUi(
                 is SessionControllerEvent.WorkspaceChanged -> {
                     if (readonly) return@addListener
                     prompt.setReady(controller.model.isReady())
+                    syncHandoff()
                 }
 
                 is SessionControllerEvent.RecentsChanged -> {
@@ -1012,6 +1107,7 @@ class SessionUi(
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared -> {
+                    if (event is SessionModelEvent.HistoryLoaded) historyReady = true
                     // A reload can surface the pending send's own message without a MessageAdded,
                     // so re-check here too; otherwise the retained draft would linger until the
                     // next submit.
@@ -1144,8 +1240,12 @@ class SessionUi(
         })
     }
 
+    @RequiresEdt
     private fun onSessionLoaded(show: Boolean) {
         loaded = show
+        // History resolves preferences after HistoryLoaded; retain the handoff's latest explicit picks.
+        handoff?.let { controller.applySelection(it.select) }
+        syncHandoff()
         if (!this::scroll.isInitialized) return
         finishOpen(show)
     }
@@ -1193,18 +1293,35 @@ class SessionUi(
     ) {
         if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
+        val item = handoff
+        if (item != null && (item.automatic || handing == item.message)) return
+        handing = item?.message
         val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
+            item?.started?.invoke(text)
             if (clearDraft) prompt.clear()
-            action.action()
+            runCatching { action.action() }.onFailure {
+                handing = null
+                // Restoring can create an editor, which needs the IDE event queue's write-intent lock.
+                ApplicationManager.getApplication().invokeLater {
+                    if (!disposed) prompt.restoreLastSubmission()
+                }
+            }.getOrThrow()
+            handoff = null
+            handing = null
+            prompt.clearLastSubmission()
+            item?.confirmed?.invoke()
             scroll.followBottom(follow)
             return
         }
         val command = completion.serverCommand(text)
         if (command != null) {
+            pendingSend = userMessageIds()
+            pendingMessage = item?.message
+            item?.started?.invoke(text)
             if (clearDraft) prompt.clear()
-            controller.command(command.first, command.second, files)
+            controller.command(command.first, command.second, files, select, item?.message)
             scroll.followBottom(follow)
             return
         }
@@ -1244,7 +1361,9 @@ class SessionUi(
                 preparationFailure = null
                 messageBody.setPreparationFailure(null)
             }
-            controller.prompt(text, allFiles, editor?.context, select, injectedTitle)
+            pendingMessage = item?.message
+            item?.started?.invoke(text)
+            controller.prompt(text, allFiles, editor?.context, select, injectedTitle, item?.message)
             scroll.followBottom(follow)
         }
     }
@@ -1263,9 +1382,17 @@ class SessionUi(
      */
     @RequiresEdt
     private fun confirmPendingSend() {
+        syncHandoff()
         val baseline = pendingSend ?: return
-        if (userMessageIds().all { it in baseline }) return
+        val message = pendingMessage
+        val confirmed = if (message == null) {
+            userMessageIds().any { it !in baseline }
+        } else {
+            controller.model.message(message)?.info?.role == "user" && !controller.model.isOptimistic(message)
+        }
+        if (!confirmed) return
         pendingSend = null
+        pendingMessage = null
         prompt.clearLastSubmission()
     }
 
@@ -1702,6 +1829,7 @@ class SessionUi(
         return "scheme=$scheme chars=${url.length} embedded=${isEmbeddedAttachment(url)}"
     }
 
+    @RequiresEdt
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
@@ -1724,6 +1852,7 @@ class SessionUi(
         // that is confirmed (see the turn-open branch below). A genuine failure never persists a
         // message, so its draft stays put.
         if (pendingSend != null && state is SessionState.Error) {
+            handing = null
             prompt.restoreLastSubmission()
         }
         // A restored draft is a duplicate only once this send's own message landed. That is exactly
@@ -1737,6 +1866,7 @@ class SessionUi(
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
+        syncHandoff()
         manager?.activityChanged()
         refresh()
     }
