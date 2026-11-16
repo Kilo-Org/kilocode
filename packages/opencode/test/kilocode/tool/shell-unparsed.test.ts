@@ -172,6 +172,49 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
   })
 })
 
+// Regression tests for Kilo-Org/kilocode#15938. A dot-prefixed bare token after
+// `--` or `,` made the grammar split one command in two; the tail was matched
+// as its own command and the head lost its arguments.
+describe("shell permission scanner joins tails split off by dot-prefixed tokens", () => {
+  const allow = Permission.fromConfig({
+    bash: { "*": "deny", "Write-Output *": "allow", "git ls-files*": "allow", "Get-FileHash *": "allow" },
+  })
+  const decide = (pattern: string) => Permission.evaluate("bash", pattern, allow).action
+
+  test("pwsh: '--' followed by a dot token stays one command", async () => {
+    await using tmp = await tmpdir()
+    for (const command of ["git ls-files -- .github/x", "Write-Output -- .agents/README.md"]) {
+      const found = patterns(await scan(tmp.path, command, "pwsh"))
+      expect(found).toEqual([command])
+      expect(found.map(decide)).toEqual(["allow"])
+    }
+  })
+
+  test("pwsh: ', ' followed by a dot token stays one command", async () => {
+    await using tmp = await tmpdir()
+    const found = patterns(await scan(tmp.path, "Get-FileHash a, .gitattributes", "pwsh"))
+    expect(found).toEqual(["Get-FileHash a, .gitattributes"])
+    expect(found.map(decide)).toEqual(["allow"])
+  })
+
+  test("pwsh: deny rules on later arguments see the dot-prefixed token", async () => {
+    await using tmp = await tmpdir()
+    const rules = Permission.fromConfig({ bash: { "*": "allow", "git push * -f*": "deny" } })
+    const found = patterns(await scan(tmp.path, "git push origin -- .x -f", "pwsh"))
+    expect(found.map((pattern) => Permission.evaluate("bash", pattern, rules).action)).toContain("deny")
+  })
+
+  test("pwsh: a dot-source on a new statement is still its own command", async () => {
+    await using tmp = await tmpdir()
+    const semi = patterns(await scan(tmp.path, "git log -- .x; . ./y", "pwsh"))
+    expect(semi).toContain("git log -- .x")
+    expect(semi).toContain(". ./y")
+    const line = patterns(await scan(tmp.path, "git log --\n. ./x", "pwsh"))
+    expect(line).toContain(". ./x")
+    expect(patterns(await scan(tmp.path, ". ./script.ps1", "pwsh"))).toEqual([". ./script.ps1"])
+  })
+})
+
 const execLayer = Layer.mergeAll(
   AppNodeBuilder.build(CrossSpawnSpawner.node),
   AppNodeBuilder.build(FSUtil.node),

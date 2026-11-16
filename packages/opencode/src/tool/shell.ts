@@ -21,7 +21,7 @@ import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
-import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import { stray, unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import { pattern } from "@/kilocode/tool/shell-pattern" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -381,7 +381,9 @@ export const ShellPermission = Effect.gen(function* () {
     }
     const kind = ShellID.toKind(Shell.name(shell))
 
-    const nodes = commands(root)
+    const nodes = commands(root).filter(
+      (node) => !stray(root).some((item) => item.command.id === node.id || item.error.id === node.parent?.id),
+    ) // kilocode_change - join tails split off by the grammar (#15938)
     if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
     if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
