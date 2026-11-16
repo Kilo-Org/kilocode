@@ -92,12 +92,16 @@ export function newTabForSelection(opts: {
   selection: string | null
   addPending: () => string
   postToWorktree: (worktreeId: string) => void
+  /** Leave an active terminal tab, which covers the session area, so the new session shows when it opens. */
+  clearTerminal: () => void
 }): "ready" | "pending" {
   if (opts.selection === LOCAL) {
     opts.addPending()
     return "ready"
   }
-  if (opts.selection) opts.postToWorktree(opts.selection)
+  if (!opts.selection) return "pending"
+  opts.clearTerminal()
+  opts.postToWorktree(opts.selection)
   return "pending"
 }
 
