@@ -84,7 +84,7 @@ import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
 import { createSessionCreated } from "./session-created"
-import { takesHandoff } from "../src/v2/plan-handoff"
+import { takesHandoff, trackPlanAnswers } from "../src/v2/plan-handoff"
 import {
   createSessionRestore,
   createTabMemory,
@@ -1441,6 +1441,15 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     for (const directory of directories.sessionDirectories()) {
       const store = panel.store(directory)
+      trackPlanAnswers({
+        directory: store.directory,
+        forms: () =>
+          [...localSessionIDs(), ...managedSessions().map((item) => item.id)].flatMap(
+            (id) => store.data.session.form.list(id) ?? [],
+          ),
+        replied: (handler) => store.data.on("form.replied", handler),
+        cancelled: (handler) => store.data.on("form.cancelled", handler),
+      })
       onCleanup(
         store.data.on("tui.session.select", (event) => {
           if (event.location && event.location.directory !== directory) return
@@ -1448,8 +1457,10 @@ const AgentManagerContent: Component = () => {
           const id = event.data.sessionID
           const origin = sessionOrigin(store.directory)
           // The server created the session; load it first, or the tab reconciliation drops a tab it does not know.
+          // The event is not replayed, so a failed load is tried once more before the handoff is given up.
           void store.data.session
             .sync(id)
+            .catch(() => store.data.session.sync(id))
             .then(() => handleSessionCreated(id, origin))
             .catch((err: unknown) => store.report(err))
         }),

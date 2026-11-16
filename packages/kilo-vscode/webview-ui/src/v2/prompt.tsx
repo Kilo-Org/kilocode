@@ -150,8 +150,14 @@ const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
 
 const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
-/** The tab a send was pressed in: its session, or the draft key before a session exists. */
-export type SendTarget = { session: string | undefined; key: string | undefined }
+/** The agent and model a draft's first send creates its session with. */
+export type SendChoice = { agent: string | undefined; model: ModelRef | undefined }
+
+/**
+ * The tab a send was pressed in: its session, or the draft key and the draft's agent and model before a session
+ * exists. A tab switch resets the composer's draft choice, so the choice is taken with the tab.
+ */
+export type SendTarget = { session: string | undefined; key: string | undefined; choice?: SendChoice }
 
 export function PromptInput(props: {
   session?: string
@@ -181,6 +187,8 @@ export function PromptInput(props: {
     },
   ) => Promise<boolean>
   onStop: () => void
+  /** The agent and model the draft shows, taken when a first send is pressed. */
+  choice?: () => SendChoice
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
   /** Auto-approve for permission requests. The toggle folds into the overflow menu like edge actions. */
@@ -409,7 +417,9 @@ export function PromptInput(props: {
    */
   const mentionFiles = async (value: string): Promise<MentionFile[] | undefined> => {
     const known = mention.parseFileAttachments(value)
-    const output = await terminal
+    // Both requests start before the first wait, so a tab switch that unmounts this composer finds them open and keeps
+    // listening for their replies.
+    const terminalOutput = terminal
       .resolveAttachment(value, props.session, props.terminalContext?.())
       .catch((err: Error) => {
         showToast({
@@ -419,8 +429,7 @@ export function PromptInput(props: {
         })
         return undefined
       })
-    if (hasTerminalMention(value) && !output) return undefined
-    const diff = await changes.resolveAttachment(value).catch((err: Error) => {
+    const gitDiff = changes.resolveAttachment(value).catch((err: Error) => {
       showToast({
         variant: "error",
         title: language.t("prompt.mention.gitChangesUnavailable"),
@@ -428,6 +437,9 @@ export function PromptInput(props: {
       })
       return undefined
     })
+    const output = await terminalOutput
+    if (hasTerminalMention(value) && !output) return undefined
+    const diff = await gitDiff
     if (git() && hasGitChangesMention(value) && !diff) return undefined
     return [...known, ...(output ? [output] : []), ...(diff ? [diff] : [])]
   }
@@ -817,6 +829,12 @@ export function PromptInput(props: {
     if (key) mentionDrafts.delete(key)
   }
 
+  const sendTarget = (): SendTarget => ({
+    session: props.session,
+    key: props.draftKey,
+    choice: props.session ? undefined : props.choice?.(),
+  })
+
   const submit = (
     external?: { text: string; items: PromptAttachment[]; metadata?: { [key: string]: JsonValue } },
     mode: SendMode = "steer",
@@ -844,7 +862,7 @@ export function PromptInput(props: {
     // The draft key identifies the conversation this send belongs to, even when the session is created first.
     const key = props.draftKey
     // Resolving mentions can wait for the host, and the user can switch tabs meanwhile: the send stays bound to this tab.
-    const bound = { session: props.session, key }
+    const bound = sendTarget()
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
@@ -917,7 +935,7 @@ export function PromptInput(props: {
     const items = attachments()
     const sent = expandPastes(draft, pastes).trim()
     const key = props.draftKey
-    const bound = { session: props.session, key }
+    const bound = sendTarget()
     const restore = () => {
       setGoalMode(true)
       if (text().trim() || attachments().length > 0) return

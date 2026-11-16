@@ -251,13 +251,6 @@ export function SessionView(props: {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
-  // The agent and model each draft tab shows. A tab switch resets the composer's draft choice, and a first send that
-  // is still resolving its mentions or sandbox default must create its session with the choice of its own tab.
-  const choices = new Map<string, ReturnType<typeof selection.choice>>()
-  createEffect(() => {
-    const key = draftKey()
-    if (key && !session()) choices.set(key, selection.choice())
-  })
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
   const sandbox = createSandbox({ session, gate: selection.created })
@@ -394,8 +387,7 @@ export function SessionView(props: {
     // The composer passes the tab it captured on submit, before it resolved its mentions.
     const existing = target ? target.session : session()
     const key = target ? (target.key ?? existing ?? "new") : draftKey()
-    const choice = existing ? undefined : (choices.get(key) ?? selection.choice())
-    choices.delete(key)
+    const choice = existing ? undefined : (target?.choice ?? selection.choice())
     reverts.sent(existing)
     await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
@@ -677,6 +669,7 @@ export function SessionView(props: {
                   blocked={blocked()}
                   questioning={questioning()}
                   onSend={send}
+                  choice={selection.choice}
                   onStop={stop}
                   onAppendReady={(append) => {
                     composer = append

@@ -7,7 +7,6 @@ import { isTextControl } from "../utils/focus"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useV2 } from "./client"
 import { type Draft, formAnswer } from "./form"
-import { recordAnswer } from "./plan-handoff"
 
 export function QuestionDock(props: { form: FormInfo }) {
   const v2 = useV2()
@@ -141,8 +140,6 @@ export function QuestionDock(props: { form: FormInfo }) {
       return
     }
     setSending(true)
-    // The plan follow-up answers with a new session; this webview shows it.
-    recordAnswer(v2.directory)
     void v2.data.session.form
       .reply({ sessionID: props.form.sessionID, formID: props.form.id, answer: result().answer })
       .then(focus)

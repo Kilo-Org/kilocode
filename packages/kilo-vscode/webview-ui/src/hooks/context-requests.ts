@@ -6,10 +6,13 @@ type Pending = {
   timer: ReturnType<typeof setTimeout>
 }
 
+// Every composer shares one counter: a composer that waits for a reply after it unmounted would otherwise hold the
+// same request ID as the composer that replaced it, and the host broadcasts each reply to both.
+let counter = 0
+
 export function createContextRequests(prefix: string, timeout: number, expired: string) {
   const [pending, setPending] = createSignal(false)
   const requests = new Map<string, Pending>()
-  let counter = 0
   let drained: (() => void) | undefined
 
   const settle = (id: string, run: (req: Pending) => void) => {

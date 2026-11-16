@@ -195,7 +195,10 @@ export function createSelection(
       return { agent: agent()?.id, model: model() }
     },
     /** Creates a session with the given or the current selection, then writes the metadata the caller passes. */
-    create(metadata?: Record<string, JsonValue>, choice = { agent: agent()?.id, model: model() }) {
+    create(
+      metadata?: Record<string, JsonValue>,
+      choice: { agent: string | undefined; model: ModelRef | undefined } = { agent: agent()?.id, model: model() },
+    ) {
       const created = v2.data.session.create(choice)
       // The server reads the sandbox metadata when it first resolves the session state, so write it before the first
       // prompt or status call, which both wait for this request.

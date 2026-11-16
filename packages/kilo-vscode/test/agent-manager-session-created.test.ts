@@ -164,7 +164,13 @@ describe("fileInOrigin", () => {
 })
 
 describe("createSessionCreated", () => {
-  const setup = (input: { selection: string; active?: string; owner?: string | null; local?: string[] }) => {
+  const setup = (input: {
+    selection: string
+    active?: string
+    owner?: string | null
+    local?: string[]
+    now?: () => number
+  }) => {
     const calls: string[] = []
     const created = createSessionCreated({
       project: () => "prj-a",
@@ -188,6 +194,7 @@ describe("createSessionCreated", () => {
       placeLocal: (id, replace) => calls.push(`place:${id}:${replace}`),
       setActivePending: () => calls.push("active"),
       setSelection: (id) => calls.push(`selection:${id}`),
+      now: input.now,
     })
     return { calls, created }
   }
@@ -215,6 +222,14 @@ describe("createSessionCreated", () => {
     test.created.handle("ses_new", { project: "prj-a", worktree: "wt-1" }, { key: undefined })
     expect(test.calls).toEqual(["order:wt-1:ses_new", "post:agentManager.addSessionToWorktree"])
     expect(test.created.quiet("ses_new")).toBe(true)
+    expect(test.created.quiet("ses_new")).toBe(false)
+  })
+
+  it("lets a quiet mark expire when the host never answers the filing", () => {
+    let now = 1_000
+    const test = setup({ selection: "local", owner: "wt-1", now: () => now })
+    test.created.handle("ses_new", { project: "prj-a", worktree: "wt-1" }, { key: undefined })
+    now += 60_000
     expect(test.created.quiet("ses_new")).toBe(false)
   })
 })

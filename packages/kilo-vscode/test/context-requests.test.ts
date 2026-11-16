@@ -48,3 +48,14 @@ test("a drained composer keeps an open request until it settles, then stops list
   ctx.drain(() => done.push("idle"))
   expect(done).toEqual(["done", "idle"])
 })
+
+test("request IDs stay unique across composers, so a drained composer never settles another one's request", () => {
+  const ids: string[] = []
+  const first = createContextRequests("unique", 10_000, "Timed out")
+  const second = createContextRequests("unique", 10_000, "Timed out")
+  void first.request((id) => ids.push(id)).catch(() => undefined)
+  void second.request((id) => ids.push(id)).catch(() => undefined)
+  expect(new Set(ids).size).toBe(2)
+  first.dispose("done")
+  second.dispose("done")
+})

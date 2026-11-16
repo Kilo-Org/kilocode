@@ -93,6 +93,8 @@ export function fileInOrigin(input: {
 
 type Origin = { project: string | undefined; worktree: string | null }
 
+const QUIET = 30_000
+
 /**
  * The panel's handler for a session a chat view created or sent a prompt to (`onSession`), and for the plan handoff.
  * It files the session in the context of its server directory (`sendFiling`) and places its tab with `createdTab`.
@@ -117,9 +119,11 @@ export function createSessionCreated(deps: {
   placeLocal: (id: string, pending: string | undefined, active: string | undefined) => void
   setActivePending: (id: string | undefined) => void
   setSelection: (id: string) => void
+  now?: () => number
 }) {
   // Sessions filed in a worktree without taking the view; the host's sessionAdded reply must not focus them either.
-  const quiet = new Set<string>()
+  // The host can drop the request without a reply, so a mark expires instead of quieting a later open of the session.
+  const quiet = new Map<string, number>()
   const addToWorktree = (project: string | undefined, worktreeId: string, sessionId: string) =>
     deps.post({ type: "agentManager.addSessionToWorktree", projectId: project, worktreeId, sessionId })
   const persist = (project: string | undefined, sessionId: string) =>
@@ -162,7 +166,7 @@ export function createSessionCreated(deps: {
       if (tab.append) deps.appendOrder(tab.worktree, id)
       // Adopting a session the worktree already owns would end its branch auto-naming.
       if (filed !== tab.worktree) {
-        if (!tab.show) quiet.add(id)
+        if (!tab.show) quiet.set(id, deps.now?.() ?? Date.now())
         addToWorktree(origin.project, tab.worktree, id)
       }
       if (!tab.show) return
@@ -178,5 +182,14 @@ export function createSessionCreated(deps: {
     deps.select(id)
   }
 
-  return { handle, quiet: (id: string) => quiet.delete(id) }
+  return {
+    handle,
+    quiet: (id: string) => {
+      const now = deps.now?.() ?? Date.now()
+      const time = quiet.get(id)
+      quiet.delete(id)
+      for (const [key, value] of quiet) if (now - value > QUIET) quiet.delete(key)
+      return time !== undefined && now - time <= QUIET
+    },
+  }
 }

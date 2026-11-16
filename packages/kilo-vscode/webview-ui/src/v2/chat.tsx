@@ -32,7 +32,7 @@ import { createReviewAppendQueue } from "./review-queue"
 import { createComposerQueue } from "./composer"
 import { createPlanOpener } from "./open-plan"
 import { openSubagent } from "./open-subagent"
-import { takesHandoff } from "./plan-handoff"
+import { takesHandoff, trackPlanAnswers } from "./plan-handoff"
 import { showTabStrip } from "../utils/local-tabs"
 import { focusPrompt } from "../utils/tab-navigation"
 
@@ -80,8 +80,14 @@ export function Chat() {
     requestAnimationFrame(focusPrompt)
   }
   // The plan handoff creates a new session on the server and asks the client to show it. The TUI and the
-  // VS Code sidebar both consume this event; the new Code session opens in the webview that answered the plan question,
+  // VS Code sidebar both consume this event; the new Code session opens in the webview that shows the plan session,
   // so a plan in the Agent Manager does not open its session here.
+  trackPlanAnswers({
+    directory: v2.directory,
+    forms: () => tabs.ids().flatMap((id) => v2.data.session.form.list(id) ?? []),
+    replied: (handler) => v2.data.on("form.replied", handler),
+    cancelled: (handler) => v2.data.on("form.cancelled", handler),
+  })
   onCleanup(
     v2.data.on("tui.session.select", (event) => {
       if (event.location && event.location.directory !== v2.directory) return
