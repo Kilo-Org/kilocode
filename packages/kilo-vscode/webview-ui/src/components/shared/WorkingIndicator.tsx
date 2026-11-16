@@ -15,7 +15,7 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { StatusText } from "./StatusText"
-import { tracksElapsed } from "./working-indicator-utils"
+import { statusTitle, tracksElapsed } from "./working-indicator-utils"
 import { active as activeTiming, running } from "../../context/session-timing"
 
 interface WorkingIndicatorProps {
@@ -105,7 +105,13 @@ export const WorkingIndicator: Component<WorkingIndicatorProps> = (props) => {
 
   return (
     <div class="working-indicator">
-      <Button variant="ghost" size="small" class="working-indicator-scroll" onClick={() => props.onScrollToBottom?.()}>
+      <Button
+        variant="ghost"
+        size="small"
+        class="working-indicator-scroll"
+        title={statusTitle(session.statusInfo())}
+        onClick={() => props.onScrollToBottom?.()}
+      >
         <Spinner />
         <StatusText text={statusText()} />
         {/* Kept out of the label: a countdown inside the morphing text would swap it

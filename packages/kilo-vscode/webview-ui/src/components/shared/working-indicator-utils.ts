@@ -23,3 +23,15 @@ export function showsWorking(status: SessionStatus, submitting: boolean, blocked
   if (blocked) return false
   return submitting || status !== "idle" || goal
 }
+
+/**
+ * Full text for the hover title of the working indicator. The visible label is a
+ * single clipped line, so a long retry or offline message (for example a provider
+ * HTTP 503 body) is otherwise unreachable. Returns undefined when there is nothing
+ * to add beyond the label.
+ */
+export function statusTitle(info: { type: string; message?: string }): string | undefined {
+  if (info.type !== "retry" && info.type !== "offline") return undefined
+  const text = info.message?.trim()
+  return text ? text : undefined
+}

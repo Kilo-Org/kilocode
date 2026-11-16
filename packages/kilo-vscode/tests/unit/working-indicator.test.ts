@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { tracksElapsed } from "../../webview-ui/src/components/shared/working-indicator-utils"
+import { statusTitle, tracksElapsed } from "../../webview-ui/src/components/shared/working-indicator-utils"
 
 const timing = { active: 0, since: 1 }
 
@@ -26,5 +26,18 @@ describe("tracksElapsed", () => {
     expect(tracksElapsed("idle", false, timing)).toBe(false)
     expect(tracksElapsed("busy", false, undefined)).toBe(false)
     expect(tracksElapsed("idle", true, undefined)).toBe(false)
+  })
+})
+
+describe("statusTitle", () => {
+  const long = "HTTP 503: ".padEnd(300, "x")
+  it.each([
+    [{ type: "retry", message: long }, long],
+    [{ type: "offline", message: " no network " }, "no network"],
+    [{ type: "retry", message: "" }, undefined],
+    [{ type: "retry" }, undefined],
+    [{ type: "busy", message: "x" }, undefined],
+  ])("%j -> %j", (info, want) => {
+    expect(statusTitle(info)).toBe(want)
   })
 })
