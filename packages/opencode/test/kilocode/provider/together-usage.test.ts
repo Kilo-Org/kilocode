@@ -19,7 +19,7 @@ function capture() {
     const opts = calls.at(-1)!.body["stream_options"] as { include_usage?: boolean } | undefined
     return new Response(sse(opts?.include_usage === true), { headers: { "content-type": "text/event-stream" } })
   }
-  return { calls, fetchFn }
+  return { calls, fetchFn: Object.assign(fetchFn, { preconnect: globalThis.fetch.preconnect }) }
 }
 
 describe("together streaming usage", () => {
