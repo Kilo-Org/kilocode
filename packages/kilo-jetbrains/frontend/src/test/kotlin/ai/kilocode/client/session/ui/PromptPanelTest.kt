@@ -1910,14 +1910,16 @@ class PromptPanelTest : BasePlatformTestCase() {
         editor.selectionModel.setSelection(5, 12)
         val speech = speechButton(panel)
         val items = speech.parent.components.toList()
+        val idleIcon = speech.icon
 
         assertEquals(2, items.indexOf(panel.buttonForTest()) - items.indexOf(speech))
 
         speech.doClick()
         waitForSend { speech.toolTipText == speechTooltip("prompt.speech.stop") }
-        assertSame(AllIcons.CodeWithMe.CwmMicOn, speech.icon)
+        assertNotSame(idleIcon, speech.icon)
         speech.doClick()
         waitForSend { panel.text() == "keep dictated prompt keep" }
+        assertSame(idleIcon, speech.icon)
 
         assertEquals(1, capture.starts)
         assertEquals(1, capture.stops)
