@@ -171,7 +171,109 @@ class RetryStore extends Store {
   }
 }
 
+/** Embedder that, like a provider with a small context window, answers 400 for any input over the limit. */
+class LimitEmb implements IEmbedder {
+  public calls: string[][] = []
+
+  constructor(private readonly limit: number) {}
+
+  public async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.calls.push(texts)
+    if (texts.some((text) => text.length > this.limit)) {
+      throw Object.assign(new Error("Embedding request failed after 3 attempts with status 400: input too large"), {
+        status: 400,
+      })
+    }
+    return { embeddings: texts.map(() => [0.1]) }
+  }
+
+  public async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
+    return { valid: true }
+  }
+
+  public get embedderInfo() {
+    return { name: "openai" as const }
+  }
+}
+
+class SizedParser implements ICodeParser {
+  public async parseFile(filePath: string, options?: { content?: string; fileHash?: string }): Promise<CodeBlock[]> {
+    return (options?.content ?? "")
+      .split("\n")
+      .filter(Boolean)
+      .map((line, index) => ({
+        file_path: filePath,
+        identifier: null,
+        type: "definition.function",
+        start_line: index + 1,
+        end_line: index + 1,
+        content: line,
+        fileHash: options?.fileHash ?? "",
+        segmentHash: `${filePath}:${index}`,
+      }))
+  }
+}
+
+class RecordStore extends Store {
+  public chunks: string[] = []
+
+  public override async upsertPoints(points: PointStruct[]): Promise<void> {
+    this.chunks.push(...points.map((point) => point.payload.codeChunk))
+    await super.upsertPoints(points)
+  }
+}
+
 describe("DirectoryScanner", () => {
+  test.each([
+    {
+      name: "one oversized chunk among small ones",
+      files: { "a.ts": "ok1\nTOOLONGCHUNK\nok2", "b.ts": "ok3\nok4" },
+      bad: ["TOOLONGCHUNK"],
+    },
+    {
+      name: "an oversized chunk in each file",
+      files: { "a.ts": "ok1\nBADBADBAD1", "b.ts": "BADBADBAD2\nok2" },
+      bad: ["BADBADBAD1", "BADBADBAD2"],
+    },
+  ])("never silently drops chunks when the provider rejects oversized input: $name", async ({ files, bad }) => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      for (const [name, content] of Object.entries(files)) await Bun.write(join(root, name), content)
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const emb = new LimitEmb(8)
+      const store = new RecordStore()
+      const scan = new DirectoryScanner(emb, store, new SizedParser(), cache, ignore(), 10, 3)
+      const errors: Error[] = []
+      const indexed: number[] = []
+
+      await scan.scanDirectory(
+        root,
+        (error) => errors.push(error),
+        (count) => indexed.push(count),
+      )
+
+      const all = Object.values(files).flatMap((content) => content.split("\n"))
+      const good = all.filter((chunk) => !bad.includes(chunk))
+      expect(store.chunks.toSorted()).toEqual(good.toSorted())
+      expect(errors).toHaveLength(bad.length)
+      const badFiles = Object.entries(files)
+        .filter(([, content]) => bad.some((chunk) => content.split("\n").includes(chunk)))
+        .map(([name]) => join(root, name))
+      for (const file of badFiles) {
+        expect(errors.some((error) => error.message.includes(`Skipped ${file} lines`))).toBe(true)
+      }
+      expect(indexed.reduce((sum, count) => sum + count, 0)).toBeLessThanOrEqual(Object.keys(files).length)
+      // A deterministic rejection is never retried verbatim: each distinct batch is sent at most once.
+      const keys = emb.calls.map((call) => call.join("|"))
+      expect(new Set(keys).size).toBe(keys.length)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
   test("uses seeded baseline hashes to index only worktree changes", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))

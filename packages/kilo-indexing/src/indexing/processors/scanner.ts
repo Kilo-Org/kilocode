@@ -25,12 +25,15 @@ import {
 } from "../constants"
 import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
-import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import { extractStatusCode, sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
 
 const log = Log.create({ service: "indexing-scanner" })
+
+// Deterministic client errors: the provider refuses this exact input, so identical retries cannot succeed.
+const REJECTED_STATUSES = new Set([400, 413, 422])
 
 export class DirectoryScanner implements IDirectoryScanner {
   private _cancelled = false
@@ -551,6 +554,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     let attempts = 0
     let success = false
     let lastError: Error | null = null
+    let rejected = false
 
     while (attempts < this.maxBatchRetries && !success) {
       attempts++
@@ -604,7 +608,15 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         log.debug(`Creating embeddings for ${batchTexts.length} texts`)
 
-        const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
+        let embeddings: number[][]
+        try {
+          ;({ embeddings } = await this.embedder.createEmbeddings(batchTexts))
+        } catch (embedError) {
+          // The provider refused this exact input (e.g. over the model's max input tokens).
+          // Retrying cannot succeed, so stop and let the caller split the batch.
+          if (REJECTED_STATUSES.has(extractStatusCode(embedError) ?? 0)) rejected = true
+          throw embedError
+        }
         log.debug(`Successfully created ${embeddings.length} embeddings`)
 
         // Prepare points for Qdrant
@@ -656,6 +668,8 @@ export class DirectoryScanner implements IDirectoryScanner {
           batchSize: batchBlocks.length,
         })
 
+        if (rejected) break
+
         if (attempts < this.maxBatchRetries) {
           this.emitRetry(mode, attempts, batchBlocks.length, error)
           const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempts - 1)
@@ -663,6 +677,39 @@ export class DirectoryScanner implements IDirectoryScanner {
           await new Promise((resolve) => setTimeout(resolve, delay))
         }
       }
+    }
+
+    if (!success && lastError && rejected) {
+      if (batchBlocks.length > 1) {
+        await this.splitBatch(
+          batchBlocks,
+          batchTexts,
+          batchFileInfos,
+          scanWorkspace,
+          mode,
+          onError,
+          onFilesIndexed,
+          onBatchFailed,
+        )
+        return
+      }
+
+      // A single chunk the provider refuses: skip it, but report which file and lines were dropped.
+      const block = batchBlocks[0]
+      const reason = sanitizeErrorMessage(lastError.message || "Unknown error")
+      log.error("skipping chunk rejected by embedding provider", {
+        location: "processBatch:rejected",
+        error: reason,
+        lines: `${block.start_line}-${block.end_line}`,
+      })
+      this.emitError(mode, "scanner:processBatch", lastError, attempts)
+      onBatchFailed?.()
+      onError?.(
+        new Error(
+          `Skipped ${block.file_path} lines ${block.start_line}-${block.end_line}: the embedding provider rejected the chunk. ${lastError.message || "Unknown error"}`,
+        ),
+      )
+      return
     }
 
     if (!success && lastError) {
@@ -675,6 +722,49 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         onError(new Error(`Failed to process batch after ${this.maxBatchRetries} retries: ${errorMessage}`))
       }
+    }
+  }
+
+  /**
+   * Halves a batch the provider rejected so one oversized chunk cannot take the rest down with it.
+   * File infos go with the first half that contains the file, so each file is deleted and counted once.
+   */
+  private async splitBatch(
+    blocks: CodeBlock[],
+    texts: string[],
+    infos: { filePath: string; fileHash: string; isNew: boolean }[],
+    scanWorkspace: string,
+    mode: IndexingTelemetryMode,
+    onError?: (error: Error) => void,
+    onFilesIndexed?: (indexedCount: number) => void,
+    onBatchFailed?: () => void,
+  ): Promise<void> {
+    const mid = Math.ceil(blocks.length / 2)
+    const left = new Set(blocks.slice(0, mid).map((block) => block.file_path))
+    const halves = [
+      {
+        blocks: blocks.slice(0, mid),
+        texts: texts.slice(0, mid),
+        infos: infos.filter((i) => left.has(i.filePath) || !blocks.some((b) => b.file_path === i.filePath)),
+      },
+      {
+        blocks: blocks.slice(mid),
+        texts: texts.slice(mid),
+        infos: infos.filter((i) => !left.has(i.filePath) && blocks.some((b) => b.file_path === i.filePath)),
+      },
+    ]
+    log.warn("embedding provider rejected batch, splitting", { size: blocks.length })
+    for (const half of halves) {
+      await this.processBatch(
+        half.blocks,
+        half.texts,
+        half.infos,
+        scanWorkspace,
+        mode,
+        onError,
+        onFilesIndexed,
+        onBatchFailed,
+      )
     }
   }
 }

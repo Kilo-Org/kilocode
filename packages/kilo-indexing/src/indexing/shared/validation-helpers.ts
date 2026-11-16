@@ -208,10 +208,14 @@ export function formatEmbeddingError(error: any, maxRetries: number): Error {
   const statusCode = extractStatusCode(error)
 
   if (statusCode === 401) {
-    return new Error("Authentication failed. Please check your API key.")
+    return Object.assign(new Error("Authentication failed. Please check your API key."), { status: statusCode })
   }
   if (statusCode) {
-    return new Error(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`)
+    // Keep the status on the error so callers can tell deterministic 4xx rejections from transient failures.
+    return Object.assign(
+      new Error(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`),
+      { status: statusCode },
+    )
   }
   return new Error(`Embedding request failed after ${maxRetries} attempts: ${errorMessage}`)
 }

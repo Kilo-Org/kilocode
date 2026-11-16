@@ -361,7 +361,13 @@ export class CodeIndexOrchestrator {
     await this.vectorStore.markIndexingComplete()
     await this.vectorStore.close?.()
     this.fileWatcher.setCollecting(true)
-    this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
+    const skipped = batchErrors.length
+    this.stateManager.setSystemState(
+      "Indexed",
+      skipped > 0
+        ? `File watcher started. Index up-to-date, but ${skipped} chunk(s) could not be indexed: ${batchErrors[0].message}`
+        : "File watcher started. Index up-to-date.",
+    )
     log.info("workspace scan finalized", {
       workspacePath: this.workspacePath,
       mode,
