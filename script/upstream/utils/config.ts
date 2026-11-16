@@ -134,6 +134,9 @@ export const defaultConfig: MergeConfig = {
     "salesforce/**",
     // opencode.ai site Worker: upstream v2.2.6 merged the docs (`services/www`) and `packages/console/app` into it
     "services/site/**",
+    // opencode.ai share Worker: upstream v2.2.7 moved the retired session-sharing host (opncd.ai) here. V2 has no
+    // sharing, so Kilo does not ship it. Kilo does ship services/files and services/update, so skip only this subtree.
+    "services/share/**",
     // Upstream VS Code extension (Kilo ships its own)
     "sdks/vscode/**",
     // Upstream's own project config for developing OpenCode: contributor agents, commands, skills, glossaries,

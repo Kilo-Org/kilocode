@@ -72,6 +72,7 @@ const emptyCredentialsLayer = Layer.effect(
           Effect.flatMap((resolved) => resolved ? emptyAuth(resolved) : Effect.undefined),
         ),
         resolveModel: (model, variant) => resolver.resolveModel(model, variant).pipe(Effect.flatMap(emptyAuth)),
+        fallback: () => resolver.fallback(),
         // Media routes have no auth override like `route.with` above. With an explicitly empty Kilo credential, a
         // Kilo image or decision model would fall back to a stale lower-priority key, so it fails closed instead.
         resolveImage: (ref) =>
@@ -143,8 +144,8 @@ const layer = Layer.effect(
         }),
       )
     return SessionRunnerModel.Service.of({
-      resolve: (session, available) =>
-        runner.resolve(session, available).pipe(
+      resolve: (session, available, request) =>
+        runner.resolve(session, available, request).pipe(
           Effect.catch((error) =>
             Effect.gen(function* () {
               if (

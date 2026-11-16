@@ -8,6 +8,7 @@ import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
   const deadline = performance.now() + 10_000
@@ -99,6 +100,7 @@ test("marketplace remote install uses native OAuth, reconnects and retains crede
               KiloHost.overrides,
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
+          yield* loadPlugins(context, directory)
           const handler = Context.get(context, HttpRouter.HttpRouter)
             .asHttpEffect()
             .pipe(HttpEffect.toWebHandlerWith(context))

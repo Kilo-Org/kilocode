@@ -18,6 +18,7 @@ import type {
 } from "../src/types/messages/agent-manager"
 import type { SetupState } from "./project/progress"
 import { clearMultiVersionBusy, markMultiVersionBusy, updateSetup } from "./project/progress"
+import { LOCAL } from "./navigate"
 import { isCurrent } from "./project/message-ownership"
 import type { ProjectStore } from "./project/store"
 
@@ -80,12 +81,18 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   appendOrder: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string) => void
   evictLocal: (id: string) => void
+  focusLocal: (id: string) => void
   applyDraft: (worktreeId: string, sessionId: string) => void
   selectSession: (id: string) => void
   requestChatFocus: (force?: boolean) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
   deps.saveTabMemory()
+  // The host files a session that runs outside every worktree under Local, where it reads from the root store.
+  if (msg.worktreeId === LOCAL) {
+    deps.focusLocal(msg.sessionId)
+    return
+  }
   deps.appendOrder(msg.worktreeId, msg.sessionId)
   deps.setSelection(msg.worktreeId)
   deps.evictLocal(msg.sessionId)

@@ -16,6 +16,7 @@ it.effect("an empty Kilo credential keeps image and decision models off the stal
     const calls: string[] = []
     const base = Layer.succeed(ModelResolver.Service, {
       resolve: () => Effect.undefined,
+      fallback: () => Effect.undefined,
       resolveModel: () => Effect.die("not used"),
       resolveImage: (ref) => Effect.sync(() => calls.push(`image:${ref.providerID}`)).pipe(Effect.as(undefined)),
       resolveDecision: (ref) => Effect.sync(() => calls.push(`decision:${ref.providerID}`)).pipe(Effect.as(undefined)),
@@ -55,6 +56,7 @@ it.effect("builds Kilo image models from the provider settings instead of a prov
     const calls: string[] = []
     const base = Layer.succeed(ModelResolver.Service, {
       resolve: () => Effect.undefined,
+      fallback: () => Effect.undefined,
       resolveModel: () => Effect.die("not used"),
       resolveImage: (ref) => Effect.sync(() => calls.push(`image:${ref.providerID}`)).pipe(Effect.as(undefined)),
       resolveDecision: (ref) => Effect.sync(() => calls.push(`decision:${ref.providerID}`)).pipe(Effect.as(undefined)),

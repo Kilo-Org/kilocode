@@ -10,6 +10,7 @@ import { mkdir, mkdtemp, realpath, rm, stat, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 const exists = (directory: string) =>
   stat(directory).then(
@@ -98,6 +99,11 @@ test("lists local schedules and creates managed definitions through the Kilo Flo
             ),
           })
 
+          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself for
+          // every Location the Kilo Flow RPC targets.
+          yield* loadPlugins(context, nested)
+          yield* loadPlugins(context, projects[1]!)
+          yield* loadPlugins(context, projects[2]!)
           yield* Effect.promise(async () => {
             const first = await client.session.create({
               title: "First automation",

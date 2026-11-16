@@ -181,7 +181,13 @@ async function local(
   state.addSession(session.id, wt?.id ?? null)
   if (wt) deps.registerWorktreeSession(session.id, wt.path)
   deps.push()
-  if (wt) deps.post({ type: "agentManager.sessionAdded", sessionId: session.id, worktreeId: wt.id })
+  if (wt)
+    deps.post({
+      type: "agentManager.sessionAdded",
+      projectId: deps.getProjectId?.(),
+      sessionId: session.id,
+      worktreeId: wt.id,
+    })
   await prompt(client, session.id, task, source)
   return true
 }

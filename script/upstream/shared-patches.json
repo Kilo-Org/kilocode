@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 138,
-    "markedLines": 2379,
-    "unmarkedLines": 332,
+    "files": 137,
+    "markedLines": 2417,
+    "unmarkedLines": 331,
     "deletedFiles": 0
   },
   "files": {
@@ -32,8 +32,8 @@
       "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it. Also pins `actions/setup-node` (v7.1.0) and `actions/cache` (v6.1.0) to current releases; upstream's pins lag and an action reference cannot be overridden from outside the composite action. Pull requests restore the newest Bun cache for the same OS, CPU and Bun version (they never save it), and the install stops an attempt after ten minutes and retries up to three times, because `bun install` has no network timeout and a stalled download held a job for its full hour."
     },
     ".github/actions/setup-git-committer/action.yml": {
-      "rung": 3,
-      "seam": "CI authentication: pin `actions/create-github-app-token` to the current release (v3.3.0) so Kilo CI uses a supported action. Upstream's pin lags, and an action reference cannot be overridden from outside the composite action."
+      "rung": 4,
+      "seam": "Upstream deleted this composite action in v2.2.7 (it only used it in `bot-docs-locale.yml`, a workflow Kilo removes), but Kilo's own `kilo-v2.yml` maintainer job still uses it, so Kilo retains the whole file. It also pins `actions/create-github-app-token` to the current release (v3.3.0). No seam: a workflow cannot carry a reusable composite action's steps, and Kilo needs the action. The file is now wholly Kilo-owned content against the pin; the first-line `# kilocode_change - new file` marker covers it. The deletion turned the former single marked pin line into 41 marked lines (the whole file), which is what raises the markedLines budget in the v2.2.7 sync; the file budget (the file already had an entry) and the deletion budget are unchanged."
     },
     ".github/workflows/check.yml": {
       "rung": 3,
@@ -252,10 +252,6 @@
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
       "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. Each activation builds a new list, because `internal.post` is shared across reloads. Provides the existing Location-service context to embedder plugins in both phases, as internal plugins already receive it. No boot-order or upstream default change. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself, and host-global registration cannot supply Location-scoped services such as Config."
-    },
-    "packages/core/src/plugin/skill/opencode.md": {
-      "rung": 4,
-      "seam": "The built-in OpenCode skill no longer tells the agent to run `/reload`: Kilo's TUI removes that slash command (the `location.reload` ID is shadowed by the Kilo command host, `tui/src/kilocode/gateway.tsx`) because a config save hot-reloads every location. One documentation line; a Markdown skill has no hook or host composition for product copy."
     },
     "packages/core/test/plugin/supervisor-reload.test.ts": {
       "rung": 3,

@@ -1,8 +1,9 @@
 import type { JsonValue, OpenCodeClient, SessionInfo } from "@opencode/client"
 import { getErrorMessage } from "./errors"
 import { isRunningStatus } from "../session-status"
-import type { AgentManagerOutMessage } from "./types"
+import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
+import { pathKey } from "./project/paths"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeManager } from "./WorktreeManager"
@@ -400,26 +401,40 @@ export async function promoteLifecycleSession(
   // Run setup script for new worktree (blocks until complete, shows in overlay)
   await host.runSetup(created.result.path, created.result.branch, created.worktree.id)
 
+  // File the session under the worktree only once the server runs it there: the worktree's view reads from the
+  // store of its directory and would never receive the session's events otherwise.
+  const client = await host
+    .client()
+    .then((value) => value.session.move({ sessionID: sessionId, directory: created.result.path }).then(() => value))
+    .catch((err: unknown) => {
+      host.log("Failed to move the session into the new worktree:", getErrorMessage(err))
+      return undefined
+    })
+  if (!client) {
+    // Ends the setup state the worktree creation started, so the new worktree does not stay "setting up".
+    host.post({
+      type: "agentManager.worktreeSetup",
+      status: "error",
+      message: "Failed to move the session into the new worktree",
+      branch: created.result.branch,
+      worktreeId: created.worktree.id,
+    })
+    host.push()
+    return null
+  }
   const state = ctx.peekState()!
   if (!state.getSession(sessionId)) {
     state.addSession(sessionId, created.worktree.id)
   } else {
     state.moveSession(sessionId, created.worktree.id)
   }
-
   host.register(sessionId, created.result.path)
-  try {
-    const client = await host.client()
-    await client.session.move({ sessionID: sessionId, directory: created.result.path })
-    await recordPromotionHandoff({
-      client,
-      sessionId,
-      directory: created.result.path,
-      branch: created.result.branch,
-    })
-  } catch (err) {
-    host.log("Failed to record worktree promotion handoff:", getErrorMessage(err))
-  }
+  await recordPromotionHandoff({
+    client,
+    sessionId,
+    directory: created.result.path,
+    branch: created.result.branch,
+  }).catch((err: unknown) => host.log("Failed to record worktree promotion handoff:", getErrorMessage(err)))
   host.notifyReady(sessionId, created.result, created.worktree.id)
   host.log(`Promoted session ${sessionId} to worktree ${created.worktree.id}`)
   return null
@@ -451,12 +466,29 @@ export async function addSessionToLifecycleWorktree(
   }
 
   if (sessionId) {
-    if (state.getSession(sessionId)) state.moveSession(sessionId, worktreeId)
-    else state.addSession(sessionId, worktreeId)
-    host.register(sessionId, worktree.path)
+    // The server runs a session in its own directory, and only the store of that directory receives its events.
+    // Tracking it under another worktree points that worktree's view at a store that never sees the session, so its
+    // prompts look unsent. File it under the worktree that owns its directory, or under Local for the project root.
+    // A failed read or a directory outside the project keeps the requested worktree, as before.
+    const info = await client.session.get({ sessionID: sessionId }).catch(() => undefined)
+    const directory = info?.location.directory
+    const root = directory !== undefined && pathKey(directory) === pathKey(ctx.root)
+    const owner = root ? undefined : ((directory ? state.findWorktreeByPath(directory) : undefined) ?? worktree)
+    if (owner?.id !== worktreeId) host.log(`Session ${sessionId} runs in ${directory}, not ${worktree.path}`)
+    if (!owner) {
+      if (state.getSession(sessionId)) state.moveSession(sessionId, null)
+      else state.addSession(sessionId, null)
+      host.push()
+      host.post({ type: "agentManager.sessionAdded", projectId: ctx.id, sessionId, worktreeId: LOCAL_TARGET })
+      host.log(`Added existing session ${sessionId} to Local`)
+      return null
+    }
+    if (state.getSession(sessionId)) state.moveSession(sessionId, owner.id)
+    else state.addSession(sessionId, owner.id)
+    host.register(sessionId, owner.path)
     host.push()
-    host.post({ type: "agentManager.sessionAdded", sessionId, worktreeId })
-    host.log(`Added existing session ${sessionId} to worktree ${worktreeId}`)
+    host.post({ type: "agentManager.sessionAdded", projectId: ctx.id, sessionId, worktreeId: owner.id })
+    host.log(`Added existing session ${sessionId} to worktree ${owner.id}`)
     return null
   }
 
@@ -472,7 +504,7 @@ export async function addSessionToLifecycleWorktree(
   state.addSession(session.id, worktreeId)
   host.register(session.id, worktree.path)
   host.push()
-  host.post({ type: "agentManager.sessionAdded", sessionId: session.id, worktreeId })
+  host.post({ type: "agentManager.sessionAdded", projectId: ctx.id, sessionId: session.id, worktreeId })
   host.log(`Added session ${session.id} to worktree ${worktreeId}`)
   return null
 }
