@@ -5,7 +5,7 @@
  * stays where the user is, as v1 did.
  */
 import { openSessionTab, replacePendingTab } from "../src/utils/local-tabs"
-import { LOCAL } from "./navigate"
+import { LOCAL, sendFiling } from "./navigate"
 import { replaceInTabOrder } from "./tab-order"
 
 export type CreatedTab =
@@ -89,4 +89,94 @@ export function fileInOrigin(input: {
   if (input.origin.worktree) return input.add(input.origin.worktree)
   if (input.origin.project) backgroundCreated(input.store(input.origin.project), input.id, input.key)
   input.persist()
+}
+
+type Origin = { project: string | undefined; worktree: string | null }
+
+/**
+ * The panel's handler for a session a chat view created or sent a prompt to (`onSession`), and for the plan handoff.
+ * It files the session in the context of its server directory (`sendFiling`) and places its tab with `createdTab`.
+ */
+export function createSessionCreated(deps: {
+  project: () => string | undefined
+  selection: () => string | null
+  filed: (id: string) => string | null | undefined
+  owner: (id: string) => string | null | undefined
+  local: () => string[]
+  worktreeTabs: (worktree: string) => string[]
+  activePending: () => string | undefined
+  shown: () => string | undefined
+  pending: (id: string) => boolean
+  store: (project: string) => BackgroundStore
+  appendOrder: (key: string, id: string) => void
+  post: (message: unknown) => void
+  clear: () => void
+  select: (id: string) => void
+  current: () => string | undefined
+  focusManaged: (worktree: string, id: string) => void
+  placeLocal: (id: string, pending: string | undefined, active: string | undefined) => void
+  setActivePending: (id: string | undefined) => void
+  setSelection: (id: string) => void
+}) {
+  // Sessions filed in a worktree without taking the view; the host's sessionAdded reply must not focus them either.
+  const quiet = new Set<string>()
+  const addToWorktree = (project: string | undefined, worktreeId: string, sessionId: string) =>
+    deps.post({ type: "agentManager.addSessionToWorktree", projectId: project, worktreeId, sessionId })
+  const persist = (project: string | undefined, sessionId: string) =>
+    deps.post({ type: "agentManager.persistSession", projectId: project, sessionId })
+
+  const handle = (id: string | undefined, origin: Origin, sent?: { key: string | undefined }) => {
+    if (!id) return deps.clear()
+    // The project changed during the send: file the session in the project that created it and leave this one alone.
+    if (origin.project !== deps.project())
+      return fileInOrigin({
+        id,
+        origin,
+        key: sent?.key,
+        store: deps.store,
+        add: (worktree) => addToWorktree(origin.project, worktree, id),
+        persist: () => persist(origin.project, id),
+      })
+    const selection = deps.selection()
+    const filed = deps.filed(id)
+    const known = deps.owner(id)
+    const worktree = sendFiling({
+      selection,
+      filed,
+      local: deps.local().includes(id),
+      owner: known === undefined ? origin.worktree : known,
+    })
+    const tab = createdTab({
+      id,
+      sent,
+      worktree,
+      worktreeTabs: worktree ? deps.worktreeTabs(worktree) : [],
+      selection,
+      local: deps.local(),
+      activePending: deps.activePending(),
+      shown: deps.shown(),
+      pending: deps.pending,
+    })
+    if (tab.kind === "keep") return
+    if (tab.kind === "worktree") {
+      if (tab.append) deps.appendOrder(tab.worktree, id)
+      // Adopting a session the worktree already owns would end its branch auto-naming.
+      if (filed !== tab.worktree) {
+        if (!tab.show) quiet.add(id)
+        addToWorktree(origin.project, tab.worktree, id)
+      }
+      if (!tab.show) return
+      if (tab.worktree === selection) return deps.select(id)
+      return deps.focusManaged(tab.worktree, id)
+    }
+    const active = deps.activePending()
+    deps.placeLocal(id, tab.replace, tab.replace ? active : (active ?? deps.current()))
+    persist(origin.project, id)
+    if (!tab.show) return
+    if (!tab.replace) deps.setActivePending(undefined)
+    deps.setSelection(LOCAL)
+    deps.select(id)
+  }
+
+  return { handle, quiet: (id: string) => quiet.delete(id) }
 }

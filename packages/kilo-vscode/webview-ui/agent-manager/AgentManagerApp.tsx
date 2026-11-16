@@ -52,7 +52,6 @@ import {
   adjacentHint,
   focusChatSearch,
   directoryOwner,
-  sendFiling,
   showsSession,
 } from "./navigate"
 import { useBridge } from "./v2/vscode"
@@ -84,7 +83,7 @@ import {
 import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
-import { createdTab, fileInOrigin } from "./session-created"
+import { createSessionCreated } from "./session-created"
 import { takesHandoff } from "../src/v2/plan-handoff"
 import {
   createSessionRestore,
@@ -1264,73 +1263,28 @@ const AgentManagerContent: Component = () => {
     project: currentProjectId(),
     worktree: directoryWorktree(directory, worktrees()),
   })
-  const handleSessionCreated = (
-    id: string | undefined,
-    origin: ReturnType<typeof sessionOrigin>,
-    sent?: { key: string | undefined },
-  ) => {
-    if (!id) {
-      sessions.clearCurrentSession()
-      return
-    }
-    // The project changed during the send: file the session in the project that created it and leave this one alone.
-    if (origin.project !== currentProjectId())
-      return fileInOrigin({
-        id,
-        origin,
-        key: sent?.key,
-        store: (pid) => registry.ensure(pid),
-        add: (worktreeId) =>
-          to({ type: "agentManager.addSessionToWorktree", projectId: origin.project, worktreeId, sessionId: id }),
-        persist: () => to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id }),
-      })
-    const sel = selection()
-    const filed = managedSessions().find((entry) => entry.id === id)?.worktreeId
-    const known = ownerOf(id)
-    const worktree = sendFiling({
-      selection: sel,
-      filed,
-      local: localSessionIDs().includes(id),
-      owner: known === undefined ? origin.worktree : known,
-    })
-    const tab = createdTab({
-      id,
-      sent,
-      worktree,
-      worktreeTabs: worktree ? sessionsForWorktree(worktree).map((session) => session.id) : [],
-      selection: sel,
-      local: localSessionIDs(),
-      activePending: activePendingId(),
-      shown: shownSession(),
-      pending: isPending,
-    })
-    if (tab.kind === "keep") return
-    if (tab.kind === "worktree") {
-      if (tab.append) appendToTabOrder(tab.worktree, id)
-      // Adopting a session the worktree already owns would end its branch auto-naming.
-      if (filed !== tab.worktree) {
-        if (!tab.show) quietSessions.add(id)
-        to({
-          type: "agentManager.addSessionToWorktree",
-          projectId: origin.project,
-          worktreeId: tab.worktree,
-          sessionId: id,
-        })
-      }
-      if (!tab.show) return
-      if (tab.worktree === sel) sessions.selectSession(id)
-      else focusManagedSession(tab.worktree, id)
-      return
-    }
-    placeLocal(id, tab.replace, tab.replace ? activePendingId() : (activePendingId() ?? sessions.currentSessionID()))
-    to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
-    if (!tab.show) return
-    if (!tab.replace) setActivePendingId(undefined)
-    setSelection(LOCAL)
-    sessions.selectSession(id)
-  }
-  // Sessions filed in a worktree without taking the view; the host's sessionAdded reply must not focus them either.
-  const quietSessions = new Set<string>()
+  const created = createSessionCreated({
+    project: currentProjectId,
+    selection,
+    filed: (id) => managedSessions().find((entry) => entry.id === id)?.worktreeId,
+    owner: ownerOf,
+    local: localSessionIDs,
+    worktreeTabs: (worktree) => sessionsForWorktree(worktree).map((session) => session.id),
+    activePending: activePendingId,
+    shown: shownSession,
+    pending: isPending,
+    store: (pid) => registry.ensure(pid),
+    appendOrder: appendToTabOrder,
+    post: to,
+    clear: () => sessions.clearCurrentSession(),
+    select: (id) => sessions.selectSession(id),
+    current: () => sessions.currentSessionID(),
+    focusManaged: focusManagedSession,
+    placeLocal,
+    setActivePending: setActivePendingId,
+    setSelection,
+  })
+  const handleSessionCreated = created.handle
 
   // Tool cards and edit permissions open their file changes in the edit preview, next to the session.
   const previewEdit = (files: EditPreviewDiff[], sessionID = sessions.currentSessionID()) => {
@@ -2128,7 +2082,7 @@ const AgentManagerContent: Component = () => {
       if (message.type === "agentManager.sessionAdded") {
         applySessionAdded(message, {
           currentProjectId,
-          quiet: (id) => quietSessions.delete(id),
+          quiet: created.quiet,
           placeLocal: (id) => placeLocal(id, undefined, activePendingId() ?? sessions.currentSessionID()),
           saveTabMemory,
           appendOrder: appendToTabOrder,

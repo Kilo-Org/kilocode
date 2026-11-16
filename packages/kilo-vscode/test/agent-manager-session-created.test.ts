@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { backgroundCreated, createdTab, fileInOrigin } from "../webview-ui/agent-manager/session-created"
+import {
+  backgroundCreated,
+  createSessionCreated,
+  createdTab,
+  fileInOrigin,
+} from "../webview-ui/agent-manager/session-created"
 
 const pending = (id: string) => id.startsWith("pending:")
 
@@ -155,5 +160,61 @@ describe("fileInOrigin", () => {
 
   it("leaves a prompt to an existing session alone", () => {
     expect(run({ id: "ses_old", key: "ses_old", worktree: "wt-1" }).calls).toEqual([])
+  })
+})
+
+describe("createSessionCreated", () => {
+  const setup = (input: { selection: string; active?: string; owner?: string | null; local?: string[] }) => {
+    const calls: string[] = []
+    const created = createSessionCreated({
+      project: () => "prj-a",
+      selection: () => input.selection,
+      filed: () => undefined,
+      owner: () => input.owner,
+      local: () => input.local ?? ["pending:a"],
+      worktreeTabs: () => [],
+      activePending: () => input.active,
+      shown: () => undefined,
+      pending,
+      store: () => {
+        throw new Error("not another project")
+      },
+      appendOrder: (key, id) => calls.push(`order:${key}:${id}`),
+      post: (message) => calls.push(`post:${(message as { type: string }).type}`),
+      clear: () => calls.push("clear"),
+      select: (id) => calls.push(`select:${id}`),
+      current: () => undefined,
+      focusManaged: (worktree, id) => calls.push(`focus:${worktree}:${id}`),
+      placeLocal: (id, replace) => calls.push(`place:${id}:${replace}`),
+      setActivePending: () => calls.push("active"),
+      setSelection: (id) => calls.push(`selection:${id}`),
+    })
+    return { calls, created }
+  }
+  const origin = { project: "prj-a", worktree: null }
+
+  it("fills the draft it was sent from without taking the view after the user moved on", () => {
+    const test = setup({ selection: "local", active: "pending:b", local: ["pending:a", "pending:b"] })
+    test.created.handle("ses_new", origin, { key: "pending:a" })
+    expect(test.calls).toEqual(["place:ses_new:pending:a", "post:agentManager.persistSession"])
+  })
+
+  it("shows the session when its draft is still the active tab", () => {
+    const test = setup({ selection: "local", active: "pending:a" })
+    test.created.handle("ses_new", origin, { key: "pending:a" })
+    expect(test.calls).toEqual([
+      "place:ses_new:pending:a",
+      "post:agentManager.persistSession",
+      "selection:local",
+      "select:ses_new",
+    ])
+  })
+
+  it("files a worktree send quietly after the user switched context, and its host reply stays quiet", () => {
+    const test = setup({ selection: "local", owner: "wt-1" })
+    test.created.handle("ses_new", { project: "prj-a", worktree: "wt-1" }, { key: undefined })
+    expect(test.calls).toEqual(["order:wt-1:ses_new", "post:agentManager.addSessionToWorktree"])
+    expect(test.created.quiet("ses_new")).toBe(true)
+    expect(test.created.quiet("ses_new")).toBe(false)
   })
 })
