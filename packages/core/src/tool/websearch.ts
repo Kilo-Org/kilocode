@@ -26,13 +26,13 @@ export const MAX_RESPONSE_BYTES = 256 * 1024
 
 /**
  * Provider-independent local web search retained in V2 core for launch parity.
- * This invokes the legacy Exa/Parallel product backends itself. It is distinct
+ * This invokes the legacy Exa/Parallel/Keenable product backends itself. It is distinct
  * from provider-hosted web search tools, which remain route-owned and execute
  * at the model provider. Ownership of this compromise can be revisited later.
  */
 export const description = `Search the web using the session's local web search provider. Use this for current information beyond knowledge cutoff.
 
-This is a provider-independent local tool backed by Exa or Parallel. Provider-hosted web search tools are separate and execute at the model provider.
+This is a provider-independent local tool backed by Exa, Parallel, or Keenable. Provider-hosted web search tools are separate and execute at the model provider.
 
 Optional controls support result count, live crawling ('fallback' or 'preferred'), search type ('auto', 'fast', or 'deep'), and maximum context characters.
 
