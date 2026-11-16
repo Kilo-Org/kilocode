@@ -118,7 +118,7 @@ describe("Kilo Session.list", () => {
       const calls = resolve.mock.calls.length
       resolve.mockRestore()
 
-      expect(first.map((item) => item.id)).toEqual(expected.slice(0, 21))
+      expect(first.map((item) => String(item.id))).toEqual(expected.slice(0, 21))
       // Cost is bounded by distinct directories, not by session count.
       expect(calls).toBeLessThanOrEqual(dirs.length * 3 + 4)
 
@@ -129,7 +129,7 @@ describe("Kilo Session.list", () => {
         const n = Number(id.slice(4))
         return now - Math.floor(n / 2) < cursor
       })
-      expect(next.map((item) => item.id)).toEqual(after.slice(0, 21))
+      expect(next.map((item) => String(item.id))).toEqual(after.slice(0, 21))
       expect(rest.length).toBeGreaterThan(0)
     }),
   )
