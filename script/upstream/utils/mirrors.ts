@@ -166,9 +166,13 @@ export function malformed(registry: Mirrors, file = REGISTRY): string[] {
   })
 }
 
-/** Problems the PR that adds or edits a copy can fix without knowing the pin. */
-export function problems(states: MirrorState[], marked: MarkedMirror[], file = REGISTRY): string[] {
-  const registered = new Map(states.map((state) => [state.upstream, state.entry.mirror]))
+/**
+ * Problems the PR that adds or edits a copy can fix without knowing the pin. The registry is the
+ * source for "this path has an entry", not `states`: an incomplete entry is already reported by
+ * `malformed`, and it must not also be reported as unregistered.
+ */
+export function problems(registry: Mirrors, states: MirrorState[], marked: MarkedMirror[], file = REGISTRY): string[] {
+  const entries = new Map(Object.entries(registry.mirrors))
   return [
     ...states.flatMap((state) => {
       if (!state.exists) return [`mirror is missing: ${state.entry.mirror}`]
@@ -179,14 +183,14 @@ export function problems(states: MirrorState[], marked: MarkedMirror[], file = R
       return []
     }),
     ...marked
-      .filter((item) => !registered.has(item.upstream))
+      .filter((item) => !entries.has(item.upstream))
       .map(
         (item) =>
           `unregistered mirror: ${item.file} declares ${item.upstream}. Add it to ${file} with its SHA, why and invariants`,
       ),
     ...marked.flatMap((item) => {
-      const mirror = registered.get(item.upstream)
-      if (!mirror || mirror === item.file) return []
+      const mirror = entries.get(item.upstream)?.mirror
+      if (typeof mirror !== "string" || mirror === "" || mirror === item.file) return []
       return [`${item.file} declares ${item.upstream}, which is registered to ${mirror}`]
     }),
   ]

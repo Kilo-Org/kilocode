@@ -158,11 +158,14 @@ test("an entry needs a why and an invariant to guide a re-merge", async () => {
   const why = await run(r)
   expect(why.code).toBe(1)
   expect(why.output).toContain("`why` is empty")
+  // The entry exists, so the copy's marker is not unregistered; only the empty field is the problem.
+  expect(why.output).not.toContain("unregistered mirror")
 
   await registry(r, { "packages/cli/src/thing.ts": { mirror, sha, why: "a reason", invariants: [] } })
   const invariants = await run(r)
   expect(invariants.code).toBe(1)
   expect(invariants.output).toContain("`invariants` needs at least one non-empty rule")
+  expect(invariants.output).not.toContain("unregistered mirror")
 
   await registry(r, { "packages/cli/src/thing.ts": { mirror: "", sha, why: "a reason", invariants: ["a rule"] } })
   const empty = await run(r)
@@ -170,6 +173,7 @@ test("an entry needs a why and an invariant to guide a re-merge", async () => {
   expect(empty.output).toContain("missing `mirror`")
   // An empty path must not be read as the repo root and turn into a marker error.
   expect(empty.output).not.toContain("must start with")
+  expect(empty.output).not.toContain("unregistered mirror")
 })
 
 test("analysis lists mirrors whose upstream file changed", async () => {

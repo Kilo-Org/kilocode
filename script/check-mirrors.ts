@@ -52,7 +52,7 @@ if (!(await Bun.file(path.resolve(root, registry)).exists())) {
   process.exit(1)
 }
 const { registry: entries, states, marked } = await inspect(root, registry, pin)
-const structure = [...malformed(entries, registry), ...problems(states, marked, registry)]
+const structure = [...malformed(entries, registry), ...problems(entries, states, marked, registry)]
 const changed = pin ? drift(states, registry) : []
 
 if (argv.includes("--json")) {
