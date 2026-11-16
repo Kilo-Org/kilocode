@@ -6,7 +6,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { KiloBrandingStructural } from "../src/branding/structural"
 import { compileDefine } from "./fixtures/compile-define"
-import { repo, run, temporary } from "./fixtures/branding-run"
+import { repo, run, serverText, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
@@ -84,33 +84,13 @@ test("brands the lowercase prompt names to Kilo and the tool namespace, not the 
 })
 
 test("brands the text the server answers with, and nothing else in those modules", async () => {
-  for (const [file, from, to] of [
-    ["server/src/handlers/server.ts", "Run `opencode pair` to get a new one.", "Run `kilo2 pair` to get a new one."],
-    ["server/src/process.ts", "Run `opencode service restart` after", "Run `kilo2 service restart` after"],
-    [
-      "server/src/handlers/persistent-pty.ts",
-      "after OpenCode's terminal service restarts",
-      "after Kilo's terminal service restarts",
-    ],
-  ] as const) {
+  for (const [file, from, to] of serverText) {
     const filename = path.join(repo, "packages", file)
     const original = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
     expect(original.split(from), file).toHaveLength(2)
-    // The one replacement is the whole difference: identifiers, wire IDs and every other string stay as upstream
-    // wrote them.
+    // The one replacement is the whole difference: the basic-auth username, wire IDs and every other string stay as
+    // upstream wrote them.
     expect(KiloBranding.transform(filename, original), file).toBe(original.replace(from, to))
-  }
-})
-
-test("does not rename the server's basic-auth username or service identities", async () => {
-  for (const [file, anchor] of [
-    ["server/src/process.ts", 'username: "opencode"'],
-    ["server/src/handlers/persistent-pty.ts", 'service: "opencode-pty"'],
-  ] as const) {
-    const filename = path.join(repo, "packages", file)
-    const original = await Bun.file(filename).text()
-    expect(original).toContain(anchor)
-    expect(KiloBranding.transform(filename, original)).toContain(anchor)
   }
 })
 

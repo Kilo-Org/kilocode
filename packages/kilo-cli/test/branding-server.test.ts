@@ -4,14 +4,12 @@ import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { brandingPlugin } from "../src/branding/plugin"
-import { repo } from "./fixtures/branding-run"
+import { repo, serverText } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "../src/index.ts")
-const modules = ["handlers/server.ts", "handlers/persistent-pty.ts", "process.ts"].map((file) =>
-  path.join(repo, "packages/server/src", file),
-)
-const upstream = ["Run `opencode pair`", "Run `opencode service restart`", "after OpenCode's terminal service restarts"]
-const kilo = ["Run `kilo2 pair`", "Run `kilo2 service restart`", "after Kilo's terminal service restarts"]
+const modules = serverText.map(([file]) => path.join(repo, "packages", file))
+const upstream = serverText.map(([, text]) => text)
+const kilo = serverText.map(([, , text]) => text)
 
 // The compiled build bundles the server through the same plugin (script/build.ts), so the loader's path filter has
 // to match the server modules in a bundle as well as in a source run.
@@ -41,9 +39,12 @@ test("the host's server names the Kilo command when a pairing link expired", asy
     // The package directory, so its bunfig.toml preload installs the branding loader.
     cwd: path.dirname(import.meta.dir),
     env: {
-      // The test preload isolates XDG for in-process tests; a host boot must not inherit it, or any directory override.
+      // The test preload isolates XDG for in-process tests; a host boot must not inherit it, a directory override or
+      // a developer's Kilo login.
       ...Object.fromEntries(
-        Object.entries(process.env).filter(([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO2?)_/.test(key)),
+        Object.entries(process.env).filter(
+          ([key]) => !key.startsWith("XDG_") && !/^(OPENCODE|KILO(2|CODE)?)_/.test(key),
+        ),
       ),
       BUN_OPTIONS: "",
       HOME: root,
@@ -57,7 +58,8 @@ test("the host's server names the Kilo command when a pairing link expired", asy
     },
     stdin: "pipe",
     stdout: "pipe",
-    stderr: "pipe",
+    // A child that dies before it prints its URL shows why.
+    stderr: "inherit",
   })
   try {
     const reader = child.stdout.getReader()

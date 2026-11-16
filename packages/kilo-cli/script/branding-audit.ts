@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 // Branding coverage audit. Runs the rule engine over the user-facing CLI/TUI/OAuth
-// surface, the server's responses and the core prompt templates the model reads, and hard-fails when it finds user-visible OpenCode text that would ship
+// surface, `packages/server/src` and the core prompt templates the model reads, and hard-fails when it finds user-visible OpenCode text that would ship
 // un-rebranded. Three failure modes:
 //
 //   - missing interception: a file the rules WOULD brand that is not in the loader's
@@ -35,7 +35,8 @@ const PATHSPECS = ["packages/cli/src", "packages/tui/src", "packages/core/src", 
 const INCLUDE = [
   /^packages\/cli\/src\/.*\.tsx?$/,
   /^packages\/tui\/src\/.*\.tsx?$/,
-  // Text the server answers with: the expired pairing link, error messages and recovery hints.
+  // The server package's own literals: the expired pairing link, error messages and recovery hints. Text a
+  // response takes from core or protocol modules is not scanned here.
   /^packages\/server\/src\/.*\.ts$/,
   /^packages\/core\/src\/oauth\/.*\.ts$/,
   // Prompt templates, bundled as strings: the model reads them as its own identity and instructions.

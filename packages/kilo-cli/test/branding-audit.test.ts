@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { KiloBrandingAudit } from "../script/branding-audit"
+import { serverText } from "./fixtures/branding-run"
 
 test("flags user-visible OpenCode in a file that is not intercepted", () => {
   const findings = KiloBrandingAudit.auditFile(
@@ -85,24 +86,15 @@ test("flags the opencode namespace named in prose in a non-intercepted asset", (
   expect(findings.map((f) => f.kind)).toEqual(["namespace-leak"])
 })
 
-test("audits the text the server answers with", async () => {
+test("audits packages/server/src", async () => {
   const surface = await KiloBrandingAudit.surface()
-  for (const file of [
-    "server/src/handlers/server.ts",
-    "server/src/handlers/persistent-pty.ts",
-    "server/src/process.ts",
-  ])
-    expect(surface).toContain(`packages/${file}`)
+  for (const [file] of serverText) expect(surface).toContain(`packages/${file}`)
 })
 
 test("flags each branded server module when it is not intercepted", async () => {
   // The real source under a key the loader does not intercept: what the audit reports when a module drops out of
   // KiloBranding.files, or when upstream moves it.
-  for (const [file, text] of [
-    ["server/src/handlers/server.ts", "opencode pair"],
-    ["server/src/handlers/persistent-pty.ts", "OpenCode's terminal service"],
-    ["server/src/process.ts", "opencode service restart"],
-  ] as const) {
+  for (const [file, text] of serverText) {
     const source = await Bun.file(new URL(`../../${file}`, import.meta.url)).text()
     expect(KiloBrandingAudit.auditFile(file, source), file).toEqual([])
     const findings = KiloBrandingAudit.auditFile(file.replace(".ts", ".moved.ts"), source)
@@ -110,7 +102,7 @@ test("flags each branded server module when it is not intercepted", async () => 
       findings.map((f) => f.kind),
       file,
     ).toEqual(["missing-interception"])
-    expect(findings[0]!.snippet, file).toContain(text)
+    expect(findings[0]!.line, file).toBe(source.slice(0, source.indexOf(text)).split("\n").length)
   }
 })
 

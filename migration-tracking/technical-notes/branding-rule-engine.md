@@ -167,8 +167,8 @@ The structural fix for hidden regressions. The audit:
    `git ls-files`, excluding tests, `.d.ts`, fixtures, snapshots, storybook and
    `kilocode/`, over two scopes:
    - the user-visible surface (`PATHSPECS`/`INCLUDE`): TS/TSX under
-     `packages/{cli,tui}/src`, TS under `packages/server/src` (the text the
-     server answers with) and `packages/core/src/oauth`, and the `.txt` prompt
+     `packages/{cli,tui}/src`, TS under `packages/server/src` (that package's
+     own literals) and `packages/core/src/oauth`, and the `.txt` prompt
      templates under `packages/core/src` (bundled as strings; the engine treats
      each as one span);
    - the tool-namespace scope (`NAMESPACE_PATHSPECS`/`NAMESPACE_INCLUDE`): TS/TSX
@@ -252,7 +252,7 @@ engine`. A byte-for-byte parity test proved the new pipeline reproduces the
    the `branding:audit` package script, the `kilo-packages` CI step, and the
    sync-checklist updates in the `v2-migration` / `v2-feature-placement` skills.
    The broader glob (decision 1) is the audit's scan scope (see §5: the
-   CLI/TUI/OAuth surface, the server's responses and the core prompt templates,
+   CLI/TUI/OAuth surface, `packages/server/src` and the core prompt templates,
    plus the tool-namespace
    scope over `packages/core/src` and `packages/kilo-plugin/src`, added later
    with the namespace-leak mode); the loader still intercepts
