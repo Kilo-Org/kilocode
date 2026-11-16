@@ -6,6 +6,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { KiloBrandingStructural } from "../src/branding/structural"
 import { compileDefine } from "./fixtures/compile-define"
+import { allow } from "../script/branding-audit-allow"
 import { coreText, repo, run, serverText, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
@@ -146,6 +147,28 @@ test("leaves the identities that provider plugins send untouched", async () => {
       sent.some((line) => line.includes(value)),
       value,
     ).toBe(true)
+})
+
+test("leaves every file with a reviewed identity untouched", async () => {
+  // An allowlisted file holds text that stays as upstream wrote it: a provider, SaaS or wire identity, or code the
+  // host replaces. The loader rewrites a whole module, so a file is either allowlisted or intercepted.
+  for (const file of allow.keys()) {
+    const filename = path.join(repo, "packages", file)
+    const original = await Bun.file(filename).text()
+    expect(KiloBranding.transform(filename, original), file).toBe(original)
+  }
+})
+
+test("does not rename a trace span", () => {
+  // The name of an Effect span is an identity telemetry groups by. Only the text a person reads changes.
+  const source = [
+    'const load = Effect.fn("OpenCode.load")(function* () {})',
+    'const traced = work.pipe(Effect.withSpan("opencode work"))',
+    'const label = "OpenCode work"',
+  ].join("\n")
+  expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", source)).toBe(
+    source.replace('"OpenCode work"', '"Kilo work"'),
+  )
 })
 
 test("does not rewrite CLI or ACP executable selection", async () => {

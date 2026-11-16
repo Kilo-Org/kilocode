@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 
-// Branding coverage audit. Runs the rule engine over the user-facing CLI/TUI/OAuth
-// surface, `packages/server/src` and the core prompt templates the model reads, and hard-fails when it finds user-visible OpenCode text that would ship
-// un-rebranded. Three failure modes:
+// Branding coverage audit. Runs the rule engine over the user-facing CLI/TUI surface,
+// `packages/server/src` and `packages/core/src` (its modules and the prompt templates
+// the model reads), and hard-fails when it finds user-visible OpenCode text that would
+// ship un-rebranded. Three failure modes:
 //
 //   - missing interception: a file the rules WOULD brand that is not in the loader's
 //     `files` list, so its OpenCode text ships raw;
@@ -19,7 +20,8 @@
 // actually ships: a shared file Kilo patches (for example mcp/add.ts, which uses
 // KiloConfigFiles through a kilocode_change seam) is audited as patched, not as
 // upstream wrote it. Known, reviewed non-branding occurrences live in the baseline
-// allowlist (branding-audit-allow.ts).
+// allowlist (branding-audit-allow.ts), by whole file or by exact identity snippet; an
+// entry that no longer accounts for a finding is stale and fails the run too.
 
 export * as KiloBrandingAudit from "./branding-audit"
 
@@ -38,9 +40,9 @@ const INCLUDE = [
   // The server package's own literals: the expired pairing link, error messages and recovery hints. Text a
   // response takes from core or protocol modules is not scanned here.
   /^packages\/server\/src\/.*\.ts$/,
-  /^packages\/core\/src\/oauth\/.*\.ts$/,
-  // Prompt templates, bundled as strings: the model reads them as its own identity and instructions.
-  /^packages\/core\/src\/.*\.txt$/,
+  // Every core module (tool descriptions, form and error text, the OAuth pages, what a provider plugin tells the
+  // model), and the prompt templates bundled as strings, which the model reads as its own identity and instructions.
+  /^packages\/core\/src\/.*\.(tsx?|txt)$/,
 ]
 // The built-in tool namespace is defined in core and named in model-facing text
 // across core and the Kilo plugin, including text assets bundled as strings
@@ -83,15 +85,24 @@ function position(source: string, offset: number) {
   return { line, column: offset - before.lastIndexOf("\n") }
 }
 
+/** The unbranded user-visible text of one file, before the allowlist. */
 export function auditFile(key: string, source: string): Finding[] {
+  return review(key, KiloBrandingEngine.userVisibleSpans(`packages/${key}`, source), [])
+}
+
+// `keep` lists reviewed identity snippets (exact source text): what they cover is ignored, and every other string of
+// the file is audited as usual.
+function review(key: string, parsed: ReturnType<typeof KiloBrandingEngine.userVisibleSpans>, keep: readonly string[]) {
   const intercepted = KiloBranding.files.includes(key)
-  const { normalized, spans } = KiloBrandingEngine.userVisibleSpans(`packages/${key}`, source)
-  return spans.flatMap((span) => {
-    const branded = KiloBrandingRules.brandSpan(span.raw, { bareStringLiteral: span.bareStringLiteral })
-    const miss = !intercepted && branded !== span.raw
+  // Blanked in place, so the offsets of the spans still hold and a kept name cannot join the text around it.
+  const kept = keep.reduce((text, snippet) => text.replaceAll(snippet, "\0".repeat(snippet.length)), parsed.normalized)
+  return parsed.spans.flatMap((span) => {
+    const text = kept.slice(span.start, span.end)
+    const branded = KiloBrandingRules.brandSpan(text, { bareStringLiteral: span.bareStringLiteral })
+    const miss = !intercepted && branded !== text
     const gap = intercepted && !deliberatelyBare(span) && LEFTOVER.test(branded)
     if (!miss && !gap) return []
-    const { line, column } = position(normalized, span.start)
+    const { line, column } = position(parsed.normalized, span.start)
     return [
       {
         file: key,
@@ -132,38 +143,78 @@ export function surface() {
   return scope(PATHSPECS, INCLUDE)
 }
 
+/**
+ * One file against its allowlist entry: every finding, the ones the entry does not account for, and the identity
+ * snippets that account for none. A snippet is stale when the audit reports the same without it: upstream moved or
+ * reworded the identity, the loader now intercepts the file, or another snippet already covers it.
+ */
+export function check(key: string, source: string, entry = allow.get(key)) {
+  const parsed = KiloBrandingEngine.userVisibleSpans(`packages/${key}`, source)
+  const findings = review(key, parsed, [])
+  if (entry === undefined) return { findings, unexpected: findings, stale: [] }
+  if (typeof entry === "string") return { findings, unexpected: [], stale: [] }
+  const snippets = entry.map(([snippet]) => snippet)
+  const places = (keep: readonly string[]) =>
+    review(key, parsed, keep)
+      .map((finding) => `${finding.line}:${finding.column}`)
+      .join()
+  const reviewed = places(snippets)
+  return {
+    findings,
+    unexpected: review(key, parsed, snippets),
+    stale: snippets.filter((snippet) => places(snippets.filter((item) => item !== snippet)) === reviewed),
+  }
+}
+
 /** Scan the committed working-tree surface and classify findings against the allowlist. */
 export async function run(): Promise<AuditResult> {
   const scoped = await surface()
   const namespaced = await scope(NAMESPACE_PATHSPECS, NAMESPACE_INCLUDE)
+  const read = async (file: string) => {
+    const key = file.slice("packages/".length)
+    return { key, source: await Bun.file(path.join(repo, file)).text() }
+  }
 
-  const findings: Finding[] = []
-  const unparseable: { file: string; error: string }[] = []
-  for (const [files, audit] of [
-    [scoped, auditFile],
-    [namespaced, auditNamespace],
-  ] as const)
-    for (const file of files) {
-      const key = file.slice("packages/".length)
-      const source = await Bun.file(path.join(repo, file)).text()
-      const result = safeAudit(() => audit(key, source))
-      if (Array.isArray(result)) findings.push(...result)
-      else unparseable.push({ file: key, error: result.error })
-    }
+  const text = (await Promise.all(scoped.map(read))).map((file) => ({
+    key: file.key,
+    result: safely(() => check(file.key, file.source)),
+  }))
+  // The identity snippets of a file name user-visible text, so they never account for a tool namespace.
+  const namespace = (await Promise.all(namespaced.map(read))).map((file) => ({
+    key: file.key,
+    result: safely(() => {
+      const findings = auditNamespace(file.key, file.source)
+      return { findings, unexpected: typeof allow.get(file.key) === "string" ? [] : findings, stale: [] }
+    }),
+  }))
+  const results = [...text, ...namespace].flatMap((item) => ("error" in item.result ? [] : [item.result]))
+  const findings = results.flatMap((result) => result.findings)
 
   return {
     scoped: new Set([...scoped, ...namespaced]).size,
     findings,
-    unexpected: findings.filter((f) => !allow.has(f.file)),
-    unparseable,
-    stale: [...allow.keys()].filter((file) => !findings.some((f) => f.file === file)),
+    unexpected: results.flatMap((result) => result.unexpected),
+    unparseable: [...text, ...namespace].flatMap((item) =>
+      "error" in item.result ? [{ file: item.key, error: item.result.error }] : [],
+    ),
+    stale: [
+      // A whole-file entry is stale without a finding in its file; a snippet entry, when its file left the surface.
+      ...[...allow].flatMap(([file, entry]) =>
+        (typeof entry === "string" ? findings.some((f) => f.file === file) : scoped.includes(`packages/${file}`))
+          ? []
+          : [file],
+      ),
+      ...text.flatMap((item) =>
+        "error" in item.result ? [] : item.result.stale.map((snippet) => `${item.key}: ${JSON.stringify(snippet)}`),
+      ),
+    ],
   }
 }
 
 // A parse failure is not skipped silently: a user-facing file the audit cannot
 // read leaves its branding unchecked, which is the regression the audit exists
 // to prevent. The error is surfaced and fails the run.
-function safeAudit(audit: () => Finding[]): Finding[] | { error: string } {
+function safely<A>(audit: () => A): A | { error: string } {
   try {
     return audit()
   } catch (error) {
@@ -179,13 +230,14 @@ async function scope(pathspecs: string[], include: RegExp[]) {
 async function main() {
   const { scoped, unexpected, unparseable, stale } = await run()
 
-  for (const file of stale) console.warn(`branding-audit: stale allowlist entry (no findings): ${file}`)
-
-  if (unexpected.length === 0 && unparseable.length === 0) {
+  if (unexpected.length === 0 && unparseable.length === 0 && stale.length === 0) {
     console.log(`branding-audit: ok (${scoped} files, ${allow.size} allowlisted)`)
     return
   }
 
+  // A stale entry fails too: the text it was reviewed for moved or changed, so a person looks at it again.
+  for (const entry of stale)
+    console.error(`branding-audit: stale allowlist entry (accounts for no finding): packages/${entry}`)
   for (const u of unparseable) console.error(`branding-audit: could not parse packages/${u.file}: ${u.error}`)
   if (unexpected.length > 0) {
     console.error(`\nbranding-audit: ${unexpected.length} unbranded user-visible OpenCode occurrence(s):\n`)
@@ -195,7 +247,8 @@ async function main() {
       `\nFix each: add the file to KiloBranding.files (missing-interception), extend the rules (rules.ts) or the` +
         ` protected contexts (isProtected in engine.ts) for a rule-gap, add a namespace transform to structural.ts` +
         ` (and the file to KiloBranding.files) or correct the Kilo-owned text for a namespace-leak, or add a reviewed entry to` +
-        ` branding-audit-allow.ts if the text is genuinely not Kilo branding.`,
+        ` branding-audit-allow.ts if the text is genuinely not Kilo branding: an exact identity snippet where the rest` +
+        ` of the file is product text, the whole file only when all of it is.`,
     )
   }
   process.exit(1)

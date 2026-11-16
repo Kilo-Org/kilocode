@@ -93,12 +93,15 @@ function isNode(value: unknown): value is Node {
 }
 
 // A string literal is protected when it is code data rather than display text:
-// a module specifier, an equality operand, or the search pattern of a string
-// search/replace call. These read like branding but are matched or emitted
-// verbatim at runtime, so renaming them changes behavior (for example the OAuth
-// seam's `.replaceAll("OpenCode", ...)` pattern, or a shell-rc marker compared
-// with `===`).
+// a module specifier, an equality operand, the search pattern of a string
+// search/replace call, or a trace span name. These read like branding but are
+// matched or emitted verbatim at runtime, so renaming them changes behavior (for
+// example the OAuth seam's `.replaceAll("OpenCode", ...)` pattern, or a shell-rc
+// marker compared with `===`).
 const EQUALITY = new Set(["===", "!==", "==", "!="])
+// `Effect.fn("OpenCodeTools.Plugin")` and `Effect.withSpan("...")` name a trace span: telemetry groups by it and no
+// person or model reads it as product text, so the name stays what upstream emits.
+const SPAN_METHODS = new Set(["fn", "withSpan"])
 const SEARCH_METHODS = new Set([
   "replace",
   "replaceAll",
@@ -128,12 +131,10 @@ function isProtected(node: Node, parent: Node | null): boolean {
   if (parent.type === "CallExpression") {
     const callee = parent.callee as Node | undefined
     const args = parent.arguments as Node[] | undefined
-    if (
-      callee?.type === "MemberExpression" &&
-      SEARCH_METHODS.has(((callee.property as Node | undefined)?.name as string) ?? "") &&
-      args?.[0] === node
-    )
-      return true
+    if (callee?.type !== "MemberExpression" || args?.[0] !== node) return false
+    const method = ((callee.property as Node | undefined)?.name as string) ?? ""
+    if (SEARCH_METHODS.has(method)) return true
+    return SPAN_METHODS.has(method) && (callee.object as Node | undefined)?.name === "Effect"
   }
   return false
 }

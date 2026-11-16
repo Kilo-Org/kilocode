@@ -168,9 +168,10 @@ The structural fix for hidden regressions. The audit:
    `kilocode/`, over two scopes:
    - the user-visible surface (`PATHSPECS`/`INCLUDE`): TS/TSX under
      `packages/{cli,tui}/src`, TS under `packages/server/src` (that package's
-     own literals) and `packages/core/src/oauth`, and the `.txt` prompt
-     templates under `packages/core/src` (bundled as strings; the engine treats
-     each as one span);
+     own literals) and `packages/core/src` (every module: tool descriptions,
+     form and error text, the OAuth pages, provider plugins), and the `.txt`
+     prompt templates under `packages/core/src` (bundled as strings; the engine
+     treats each as one span);
    - the tool-namespace scope (`NAMESPACE_PATHSPECS`/`NAMESPACE_INCLUDE`): TS/TSX
      and bundled `.txt`/`.md` assets under `packages/core/src` and
      `packages/kilo-plugin/src`.
@@ -191,8 +192,12 @@ The structural fix for hidden regressions. The audit:
    namespace after the transform — the rule engine leaves dotted IDs alone and
    the structural counts only guard known anchors, so a new upstream tool or
    reference needs this check);
-4. suppresses reviewed non-branding files via a file-level allowlist
-   (`branding-audit-allow.ts`), each with a reason, and warns on a stale entry;
+4. suppresses reviewed non-branding text via an allowlist
+   (`branding-audit-allow.ts`), each entry with a reason: a whole file, or a
+   list of exact source snippets (a provider or SaaS name, a wire identity
+   pinned with the code around it) that accounts for those identities only, so
+   the rest of the file stays audited. A stale entry (a file without findings,
+   a snippet that accounts for none) fails the run;
 5. exits non-zero on any unexpected finding, with `file:line:col` and the span.
 
 Wiring: the `branding:audit` package script, the `branding-audit.test.ts`
@@ -222,6 +227,9 @@ Final coverage after the rollout below:
 - **Audit** (`branding-audit.test.ts`): a non-intercepted fixture with OpenCode
   text is flagged, code that only looks like branding is not, and the real-surface
   baseline has no unexpected finding, stale allowlist entry, or unparseable file.
+  An identity snippet accounts for that identity only: new product text in the
+  same file, or in the same string, is still flagged, and a snippet that no
+  longer accounts for a finding is reported as stale.
 - **Protected-anchor tests** (`branding.test.ts`): provider identities, theme
   schema, wire IDs, `@opencode/*` imports, `command: "opencode"` and
   `OPENCODE_CLI_NAME` all unchanged.
@@ -252,8 +260,8 @@ engine`. A byte-for-byte parity test proved the new pipeline reproduces the
    the `branding:audit` package script, the `kilo-packages` CI step, and the
    sync-checklist updates in the `v2-migration` / `v2-feature-placement` skills.
    The broader glob (decision 1) is the audit's scan scope (see §5: the
-   CLI/TUI/OAuth surface, `packages/server/src` and the core prompt templates,
-   plus the tool-namespace
+   CLI/TUI surface, `packages/server/src` and `packages/core/src` (modules and
+   prompt templates), plus the tool-namespace
    scope over `packages/core/src` and `packages/kilo-plugin/src`, added later
    with the namespace-leak mode); the loader still intercepts
    the curated `files` set, and the audit's hard-fail forces that set to stay

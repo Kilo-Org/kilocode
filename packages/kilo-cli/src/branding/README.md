@@ -22,13 +22,24 @@ The engine never rewrites code that merely looks like branding:
 - module specifiers (`@opencode/*` imports);
 - the command token inside `@opencode`, a dotted ID (`opencode.app`, `opencode.ai`), a path, or a hyphenated name;
 - a string literal whose entire value is the bare executable name `"opencode"` (the `OPENCODE_CLI_NAME` fallback, the ACP `command: "opencode"`, the server's basic-auth `username: "opencode"`);
-- a string literal that is an equality operand (`=== "# opencode"`) or the search pattern of a `replace`/`replaceAll`/`split`/`includes`/... call (the OAuth seam's `.replaceAll("OpenCode", ...)`).
+- a string literal that is an equality operand (`=== "# opencode"`) or the search pattern of a `replace`/`replaceAll`/`split`/`includes`/... call (the OAuth seam's `.replaceAll("OpenCode", ...)`);
+- a trace span name (`Effect.fn("OpenCodeTools.Plugin")`, `Effect.withSpan("...")`): telemetry groups by it and nobody reads it as product text.
 
 ### Adding coverage
 
 New user-visible text is branded automatically by the rule engine — no list to update. Add an entry only for a genuine exception: a semantic rewrite goes in `overrides`, a non-word fragment (URL, filename) goes in `literals`, and an import/logic rewrite goes in `structural.ts`. If a protected string is being rebranded by mistake, extend the protection in `engine.ts`.
 
-The set of intercepted files is the `files` list in `text.ts`. Intercepted `.txt` prompt templates are bundled as strings, so the engine treats each one as a single user-visible span. The branding audit (see the design note) reports any user-visible OpenCode string the rules leave behind at each sync, including in `packages/server/src` and in core prompt templates, so a miss is a checked failure rather than a silent regression. It also runs the full transform over every core and Kilo plugin source, including the text assets bundled as strings (`.txt`/`.md` prompts and skills), and fails on any built-in tool still in the `opencode` namespace (`namespace: "opencode"`, `tools.opencode.*`), which the rule engine leaves alone as dotted IDs, so a new upstream tool or tool reference cannot ship un-rebranded.
+The set of intercepted files is the `files` list in `text.ts`. Intercepted `.txt` prompt templates are bundled as strings, so the engine treats each one as a single user-visible span. The branding audit (see the design note) reports any user-visible OpenCode string the rules leave behind at each sync, including in `packages/server/src` and in `packages/core/src` (its modules and its prompt templates), so a miss is a checked failure rather than a silent regression. It also runs the full transform over every core and Kilo plugin source, including the text assets bundled as strings (`.txt`/`.md` prompts and skills), and fails on any built-in tool still in the `opencode` namespace (`namespace: "opencode"`, `tools.opencode.*`), which the rule engine leaves alone as dotted IDs, so a new upstream tool or tool reference cannot ship un-rebranded.
+
+### What is not branded
+
+The loader rewrites a whole module, so a module is added to `files` only when every string the rules would change is host branding. These are not, and stay as upstream wrote them:
+
+- real OpenCode provider and SaaS names (OpenCode Console, Go, Zen, the `opencode` provider) and their endpoints;
+- what Kilo sends to a third party: the referer, title and billing headers of provider plugins, user agents, the MCP OAuth client metadata. `packages/kilo-plugin/src/request-identity.ts` recognises the upstream referer and title by value, so renaming them here would break it;
+- code the host replaces or removes (the updater, the upstream built-in skills, the default config file names).
+
+The audit still reads those modules. `script/branding-audit-allow.ts` records each exception with its reason, in one of two forms: a whole file, for a file whose OpenCode text is uniformly not branding, or a list of exact source snippets (`"HTTP-Referer": "https://opencode.ai/"`, `OpenCode Console`), which accounts for those identities only and leaves every other string of the file audited. Prefer the snippet form. A stale entry fails the audit: a file without findings, or a snippet that accounts for none because upstream moved or reworded the text, so a person reviews it again.
 
 ## How this differs from v1, and why
 
