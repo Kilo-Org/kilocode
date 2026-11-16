@@ -397,8 +397,6 @@ export namespace KiloSession {
     search?: string
     limit?: number
     archived?: boolean
-    /** Rows fetched per batch when filtering by `directories`; defaults to twice the limit. */
-    batch?: number
   }) {
     return Effect.gen(function* () {
       const { db } = yield* Database.Service
@@ -470,26 +468,25 @@ export namespace KiloSession {
         const all = extra ? [...conditions, extra] : conditions
         return all.length > 0 ? and(...all) : undefined
       }
-      const page = (extra?: SQL, size = limit) =>
-        db
-          .select()
-          .from(SessionTable)
-          .where(where(extra))
-          .orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
-          .limit(size)
-          .all()
-          .pipe(Effect.orDie)
+      const order = [desc(SessionTable.time_updated), desc(SessionTable.id)] as const
 
       const list: SessionRow[] = []
       if (dirs.length === 0) {
-        list.push(...(yield* page()))
+        list.push(
+          ...(yield* db
+            .select()
+            .from(SessionTable)
+            .where(where())
+            .orderBy(...order)
+            .limit(limit)
+            .all()
+            .pipe(Effect.orDie)),
+        )
       } else {
-        // Membership depends only on `directory`, so decide it once per distinct
-        // directory. Walk the ordered rows in keyset batches and stop once the page
-        // is full. Every batch reads the table directly, so there is no bind list
-        // that can exceed SQLite's variable limit and no separate directory
-        // snapshot that can go stale.
-        const size = Math.max(input.batch ?? limit * 2, 1)
+        // Membership depends only on `directory`, so scan only `id` and `directory` in
+        // one ordered query (a single SQLite snapshot, sorted once), decide each distinct
+        // directory once, and keep the first `limit` accepted ids. The full rows are then
+        // loaded for at most `limit` ids, which is safe to bind.
         const decided = new Map<string, boolean>()
         const allowed = (dir: string) => {
           const hit = decided.get(dir)
@@ -498,19 +495,30 @@ export namespace KiloSession {
           decided.set(dir, ok)
           return ok
         }
-        let after: SQL | undefined
-        while (list.length < limit) {
-          const rows = yield* page(after, size)
-          for (const row of rows) {
-            if (list.length >= limit) break
-            if (allowed(row.directory)) list.push(row)
+        const light = yield* db
+          .select({ id: SessionTable.id, directory: SessionTable.directory })
+          .from(SessionTable)
+          .where(where())
+          .orderBy(...order)
+          .all()
+          .pipe(Effect.orDie)
+        const picked: SessionRow["id"][] = []
+        for (const row of light) {
+          if (picked.length >= limit) break
+          if (allowed(row.directory)) picked.push(row.id)
+        }
+        if (picked.length > 0) {
+          const rows = yield* db
+            .select()
+            .from(SessionTable)
+            .where(inArray(SessionTable.id, picked))
+            .all()
+            .pipe(Effect.orDie)
+          const byID = new Map<string, SessionRow>(rows.map((row) => [row.id, row]))
+          for (const id of picked) {
+            const row = byID.get(id)
+            if (row) list.push(row)
           }
-          const last = rows.at(-1)
-          if (rows.length < size || !last) break
-          after = or(
-            lt(SessionTable.time_updated, last.time_updated),
-            and(eq(SessionTable.time_updated, last.time_updated), lt(SessionTable.id, last.id)),
-          )
         }
       }
 

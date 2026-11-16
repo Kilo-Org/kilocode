@@ -26,6 +26,64 @@ const layer = LayerNode.compile(
 )
 const it = testEffect(layer)
 
+type Db = Database.Interface["db"]
+type Row = typeof SessionTable.$inferSelect
+
+const ids = (items: readonly { id: unknown }[]) => items.map((item) => String(item.id))
+const sid = (i: number, width = 4) => `ses_${String(i).padStart(width, "0")}`
+
+// Replaces the default session with `total` generated rows and returns the template row.
+const seedRows = (
+  db: Db,
+  total: number,
+  make: (i: number) => { directory: string; time_updated: number },
+  width = 4,
+  chunk = 3000,
+) =>
+  Effect.gen(function* () {
+    const sessions = yield* Session.Service
+    const base = yield* sessions.create({ title: "base" })
+    const [row] = yield* db.select().from(SessionTable).where(eq(SessionTable.id, base.id)).all()
+    yield* db.delete(SessionTable).where(eq(SessionTable.id, base.id))
+    const now = Date.now()
+    for (let start = 0; start < total; start += chunk) {
+      yield* db.insert(SessionTable).values(
+        Array.from({ length: Math.min(chunk, total - start) }, (_, k): Row => {
+          const i = start + k
+          const item = make(i)
+          return {
+            ...row,
+            id: sid(i, width) as Row["id"],
+            directory: item.directory as Row["directory"],
+            path: null,
+            time_created: now,
+            time_updated: item.time_updated,
+            time_archived: null,
+            parent_id: null,
+          }
+        }),
+      )
+    }
+    return { row, now }
+  })
+
+const instance = Effect.gen(function* () {
+  yield* seedProject
+  const ctx = yield* InstanceRef
+  if (!ctx) return yield* Effect.die(new Error("missing test instance"))
+  const { db } = yield* Database.Service
+  return { ctx, db }
+})
+
+const listIn = (ctx: { directory: string; project: { id: string } }, input: { limit: number; cursor?: number }) =>
+  KiloSession.listGlobal<GlobalInfo>({
+    fromRow: Session.fromRow,
+    projectID: ctx.project.id,
+    directories: [ctx.directory],
+    roots: true,
+    ...input,
+  })
+
 describe("Kilo Session.list", () => {
   it.instance("includes directory matches from legacy project ids", () =>
     Effect.gen(function* () {
@@ -79,73 +137,34 @@ describe("Kilo Session.list", () => {
 
   it.instance("resolves each distinct directory once and keeps limit, order and cursor", () =>
     Effect.gen(function* () {
-      yield* seedProject
-      const ctx = yield* InstanceRef
-      if (!ctx) return yield* Effect.die(new Error("missing test instance"))
-      const sessions = yield* Session.Service
-      const { db } = yield* Database.Service
-      const base = yield* sessions.create({ title: "base" })
-      const [row] = yield* db.select().from(SessionTable).where(eq(SessionTable.id, base.id)).all()
+      const { ctx, db } = yield* instance
       const outside = yield* tmpdirScoped()
       const dirs = [ctx.directory, path.join(ctx.directory, "a"), path.join(ctx.directory, "b"), outside]
       yield* Effect.promise(() => Promise.all(dirs.slice(1).map((dir) => fs.mkdir(dir, { recursive: true }))))
       const total = 80
       const now = Date.now()
-      yield* db.delete(SessionTable).where(eq(SessionTable.id, base.id))
-      yield* db.insert(SessionTable).values(
-        Array.from({ length: total }, (_, i) => ({
-          ...row,
-          id: `ses_${String(i).padStart(4, "0")}` as typeof row.id,
-          directory: dirs[i % dirs.length] as typeof row.directory,
-          path: null,
-          time_created: now,
-          time_updated: now - Math.floor(i / 2), // ties exercise the id tiebreak
-          time_archived: null,
-          parent_id: null,
-        })),
-      )
+      // time_updated ties exercise the id tiebreak.
+      yield* seedRows(db, total, (i) => ({ directory: dirs[i % dirs.length]!, time_updated: now - Math.floor(i / 2) }))
       // Sessions in the root, a and b match; sessions in the outside dir do not.
       const expected = Array.from({ length: total }, (_, i) => i)
         .filter((i) => i % dirs.length !== 3)
         .sort((a, b) => Math.floor(a / 2) - Math.floor(b / 2) || (a < b ? 1 : -1))
-        .map((i) => `ses_${String(i).padStart(4, "0")}`)
+        .map((i) => sid(i))
 
       const resolve = spyOn(Filesystem, "resolve")
-      const run = (input: { limit: number; cursor?: number }) =>
-        Session.listGlobal({
-          projectID: ctx.project.id,
-          directories: [ctx.directory],
-          roots: true,
-          ...input,
-        })
-      const first = yield* run({ limit: 21 })
+      const first = yield* listIn(ctx, { limit: 21 })
       const calls = resolve.mock.calls.length
       resolve.mockRestore()
 
-      expect(first.map((item) => String(item.id))).toEqual(expected.slice(0, 21))
+      expect(ids(first)).toEqual(expected.slice(0, 21))
       // Cost is bounded by distinct directories, not by session count.
       expect(calls).toBeLessThanOrEqual(dirs.length * 3 + 4)
 
       const cursor = first.at(-1)!.time.updated
-      const next = yield* run({ limit: 21, cursor })
-      const rest = expected.filter((id) => !first.some((item) => item.id === id))
-      const after = expected.filter((id) => {
-        const n = Number(id.slice(4))
-        return now - Math.floor(n / 2) < cursor
-      })
-      expect(next.map((item) => String(item.id))).toEqual(after.slice(0, 21))
-      expect(rest.length).toBeGreaterThan(0)
-
-      // Tiny batches cross many keyset boundaries, including tied time_updated values.
-      const batched = yield* KiloSession.listGlobal<GlobalInfo>({
-        fromRow: Session.fromRow,
-        projectID: ctx.project.id,
-        directories: [ctx.directory],
-        roots: true,
-        limit: 21,
-        batch: 3,
-      })
-      expect(batched.map((item) => String(item.id))).toEqual(expected.slice(0, 21))
+      const next = yield* listIn(ctx, { limit: 21, cursor })
+      const after = expected.filter((id) => now - Math.floor(Number(id.slice(4)) / 2) < cursor)
+      expect(ids(next)).toEqual(after.slice(0, 21))
+      expect(after.length).toBeGreaterThan(0)
     }),
   )
 
@@ -153,47 +172,43 @@ describe("Kilo Session.list", () => {
     "pages past thousands of distinct directories without a bind list",
     () =>
       Effect.gen(function* () {
-        yield* seedProject
-        const ctx = yield* InstanceRef
-        if (!ctx) return yield* Effect.die(new Error("missing test instance"))
-        const sessions = yield* Session.Service
-        const { db } = yield* Database.Service
-        const base = yield* sessions.create({ title: "base" })
-        const [row] = yield* db.select().from(SessionTable).where(eq(SessionTable.id, base.id)).all()
-        yield* db.delete(SessionTable).where(eq(SessionTable.id, base.id))
+        const { ctx, db } = yield* instance
         const total = 33000
         const now = Date.now()
         // Every session has its own directory inside the project, so the allowed set is
         // larger than SQLite can bind in one IN list.
-        for (let start = 0; start < total; start += 3000) {
-          yield* db.insert(SessionTable).values(
-            Array.from({ length: 3000 }, (_, k) => {
-              const i = start + k
-              return {
-                ...row,
-                id: `ses_${String(i).padStart(6, "0")}` as typeof row.id,
-                directory: path.join(ctx.directory, `d${i}`) as typeof row.directory,
-                path: null,
-                time_created: now,
-                time_updated: now - i,
-                time_archived: null,
-                parent_id: null,
-              }
-            }),
-          )
-        }
-        const expected = Array.from({ length: total }, (_, i) => `ses_${String(i).padStart(6, "0")}`)
-        const run = (input: { limit: number; batch?: number }) =>
-          KiloSession.listGlobal<GlobalInfo>({
-            fromRow: Session.fromRow,
-            projectID: ctx.project.id,
-            directories: [ctx.directory],
-            roots: true,
-            ...input,
-          })
+        yield* seedRows(db, total, (i) => ({ directory: path.join(ctx.directory, `d${i}`), time_updated: now - i }), 6)
+        const expected = Array.from({ length: total }, (_, i) => sid(i, 6))
+        expect(ids(yield* listIn(ctx, { limit: 5 }))).toEqual(expected.slice(0, 5))
+      }),
+    60_000,
+  )
 
-        expect((yield* run({ limit: 5 })).map((item) => String(item.id))).toEqual(expected.slice(0, 5))
-        expect((yield* run({ limit: 3, batch: 1000 })).map((item) => String(item.id))).toEqual(expected.slice(0, 3))
+  it.instance(
+    "issues one light scan and one full-row load regardless of rejected rows",
+    () =>
+      Effect.gen(function* () {
+        const { ctx, db } = yield* instance
+        const outside = yield* tmpdirScoped()
+        const rejected = 5000
+        const now = Date.now()
+        // Newest rows belong to another worktree; the three accepted rows are the oldest.
+        yield* seedRows(db, rejected + 3, (i) => ({
+          directory: i < rejected ? outside : path.join(ctx.directory, `d${i}`),
+          time_updated: now - i,
+        }))
+        const select = spyOn(db, "select")
+        const result = yield* listIn(ctx, { limit: 3 })
+        const calls = select.mock.calls.map((call) => call as unknown[])
+        select.mockRestore()
+
+        expect(ids(result)).toEqual([sid(rejected), sid(rejected + 1), sid(rejected + 2)])
+        // Session queries: the light scan selects only id and directory, the load selects whole rows.
+        const light = calls.filter((call) => call.length > 0 && "directory" in (call[0] as object))
+        const full = calls.filter((call) => call.length === 0)
+        expect(light.length).toBe(1)
+        expect(Object.keys(light[0]![0] as object).sort()).toEqual(["directory", "id"])
+        expect(full.length).toBe(1)
       }),
     60_000,
   )
