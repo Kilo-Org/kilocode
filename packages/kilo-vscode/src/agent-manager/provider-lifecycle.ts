@@ -3,7 +3,8 @@ import { getErrorMessage } from "./errors"
 import { isRunningStatus } from "../session-status"
 import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
-import { pathKey } from "./project/paths"
+import { canonicalizePath, pathKey, samePath } from "./project/paths"
+import { moveSession } from "./session-move"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeManager } from "./WorktreeManager"
@@ -402,10 +403,18 @@ export async function promoteLifecycleSession(
   await host.runSetup(created.result.path, created.result.branch, created.worktree.id)
 
   // File the session under the worktree only once the server runs it there: the worktree's view reads from the
-  // store of its directory and would never receive the session's events otherwise.
+  // store of its directory and would never receive the session's events otherwise. The server applies a move at the
+  // next step boundary, so a running session is stopped first, as Continue in Worktree does.
+  await host.abort([sessionId])
   const client = await host
     .client()
-    .then((value) => value.session.move({ sessionID: sessionId, directory: created.result.path }).then(() => value))
+    .then(async (value) => {
+      const session = await value.session.get({ sessionID: sessionId })
+      const moved = await moveSession(value, session, created.result.path)
+      if (!samePath(canonicalizePath(moved.location.directory), canonicalizePath(created.result.path)))
+        throw new Error(`the session still runs in ${moved.location.directory}`)
+      return value
+    })
     .catch((err: unknown) => {
       host.log("Failed to move the session into the new worktree:", getErrorMessage(err))
       return undefined

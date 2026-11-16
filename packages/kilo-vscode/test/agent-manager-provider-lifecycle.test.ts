@@ -416,6 +416,32 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(synthetic).toHaveBeenCalled()
   })
 
+  it("stops a promoted session and files it only once the move landed, without starting a reply", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    state.addSession("promoted", null)
+    const moved = { done: false }
+    client.session.move.mockImplementation(async ({ sessionID }: { sessionID: string }) => {
+      calls.push(`move:${sessionID}`)
+      moved.done = true
+    })
+    client.session.get.mockImplementation(async ({ sessionID }: { sessionID: string }) => {
+      calls.push(`get:${state.getSession(sessionID)?.worktreeId ?? "local"}`)
+      return { id: sessionID, location: { directory: moved.done ? worktree : root } }
+    })
+    const synthetic = mock(async (_input: { resume?: boolean }) => ({}))
+    ;(client.session as unknown as { synthetic: typeof synthetic }).synthetic = synthetic
+
+    await promoteLifecycleSession(ctx, host, "promoted")
+
+    expect(calls.indexOf("abort:promoted")).toBeLessThan(calls.indexOf("move:promoted"))
+    // The session stays in Local until the server reports the worktree directory.
+    expect(calls.filter((call) => call.startsWith("get:"))).toEqual(["get:local", "get:local"])
+    expect(state.getSession("promoted")?.worktreeId).toBe(wt.id)
+    expect(synthetic.mock.calls[0]?.[0]?.resume).toBe(false)
+  })
+
   it("keeps a promoted session in Local when the server cannot move it", async () => {
     await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const wt = state.getWorktrees()[0]!

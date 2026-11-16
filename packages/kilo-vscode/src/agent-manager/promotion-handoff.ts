@@ -18,7 +18,6 @@ export function handoffText(input: Omit<PromoteHandoffInput, "client" | "session
 }
 
 export async function recordPromotionHandoff(input: PromoteHandoffInput): Promise<void> {
-  await input.client.session.synthetic(
-    { sessionID: input.sessionId, text: handoffText(input) },
-  )
+  // Admit the note without resuming: it reaches the model with the next instruction and must not start a reply.
+  await input.client.session.synthetic({ sessionID: input.sessionId, text: handoffText(input), resume: false })
 }
