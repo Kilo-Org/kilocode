@@ -8,6 +8,7 @@ export function resolve(input: {
   model: { providerID: string; modelID: string }
   selected: { variants?: Record<string, unknown> }
   input?: string
+  chat?: { providerID: string; modelID: string }
 }) {
   if (input.command.variant && input.selected.variants?.[input.command.variant]) return input.command.variant
 
@@ -24,6 +25,18 @@ export function resolve(input: {
   if (
     !input.command.model &&
     (!input.command.agent || !input.agent.model) &&
+    input.input &&
+    input.selected.variants?.[input.input]
+  ) {
+    return input.input
+  }
+
+  // The command or agent switched models but landed on the one already selected, so the chat variant still applies
+  if (
+    (input.command.model || (input.command.agent && input.agent.model)) &&
+    input.chat &&
+    input.chat.providerID === input.model.providerID &&
+    input.chat.modelID === input.model.modelID &&
     input.input &&
     input.selected.variants?.[input.input]
   ) {

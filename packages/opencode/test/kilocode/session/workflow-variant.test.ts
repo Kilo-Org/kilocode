@@ -70,4 +70,54 @@ describe("workflow variant resolution", () => {
       }),
     ).toBe("high")
   })
+
+  test("keeps the chat variant when the command or agent model is the selected model", () => {
+    expect(
+      resolve({
+        command: { model: "anthropic/claude-sonnet", agent: undefined, variant: undefined },
+        agent: { model: undefined, variant: undefined },
+        model,
+        selected,
+        input: "high",
+        chat: model,
+      }),
+    ).toBe("high")
+
+    expect(
+      resolve({
+        command: { model: undefined, agent: "reviewer", variant: undefined },
+        agent: { model, variant: undefined },
+        model,
+        selected,
+        input: "high",
+        chat: model,
+      }),
+    ).toBe("high")
+  })
+
+  test("drops the chat variant when the command model differs from the selected model", () => {
+    expect(
+      resolve({
+        command: { model: "anthropic/claude-sonnet", agent: undefined, variant: undefined },
+        agent: { model: undefined, variant: undefined },
+        model,
+        selected,
+        input: "high",
+        chat: { providerID: ProviderV2.ID.make("openai"), modelID: ModelV2.ID.make("gpt-5") },
+      }),
+    ).toBeUndefined()
+  })
+
+  test("command variant still wins over the chat variant for the same model", () => {
+    expect(
+      resolve({
+        command: { model: "anthropic/claude-sonnet", agent: undefined, variant: "max" },
+        agent: { model: undefined, variant: undefined },
+        model,
+        selected: { variants: { high: {}, max: {} } },
+        input: "high",
+        chat: model,
+      }),
+    ).toBe("max")
+  })
 })
