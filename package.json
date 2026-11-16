@@ -243,7 +243,8 @@
       "zod": "^4.6.6"
     },
     "@anthropic-ai/sandbox-runtime": {
-      "zod": "^4.6.6"
+      "zod": "^4.6.6",
+      "node-forge": "^1.4.3"
     },
     "@joshwooding/vite-plugin-react-docgen-typescript": {
       "glob": "^14.0.2"
