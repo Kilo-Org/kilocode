@@ -1,55 +1,59 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
-import path from "path"
-import { KilocodeMcpAuth } from "@/kilocode/cli/cmd/mcp"
+import { KilocodeMcpAuth } from "@/kilocode/cli/cmd/mcp-auth"
 import type { MCP } from "@/mcp"
 import { testEffect } from "../../../lib/effect"
 
 const it = testEffect(Layer.empty)
 
-const run = Effect.fn("test.run")(function* (stored: MCP.AuthStatus) {
+const run = Effect.fn("test.run")(function* (status: MCP.Status["status"], stored: MCP.AuthStatus) {
   const calls: string[] = []
-  yield* KilocodeMcpAuth.connected({
-    mcp: { getAuthStatus: () => Effect.succeed(stored) },
+  let lookups = 0
+  yield* KilocodeMcpAuth.report({
+    status: { status },
+    mcp: {
+      getAuthStatus: () => {
+        lookups++
+        return Effect.succeed(stored)
+      },
+    },
     serverName: "google_drive",
     spinner: { stop: (message, code) => calls.push(`stop:${message}:${code ?? 0}`) },
-    prompts: { log: { error: (message) => calls.push(`error:${message}`) } },
+    prompts: { log: { error: (m) => calls.push(`error:${m}`), warn: (m) => calls.push(`warn:${m}`) } },
   })
-  return calls
+  return { calls, lookups }
 })
 
-describe("KilocodeMcpAuth.connected", () => {
+describe("KilocodeMcpAuth.report", () => {
   it.effect("reports success when credentials are stored", () =>
     Effect.gen(function* () {
-      expect(yield* run("authenticated")).toStrictEqual(["stop:Authentication successful!:0"])
+      expect((yield* run("connected", "authenticated")).calls).toStrictEqual(["stop:Authentication successful!:0"])
     }),
   )
 
-  const cases: MCP.AuthStatus[] = ["not_authenticated", "expired"]
-  for (const stored of cases) {
-    it.effect(`reports no authentication when stored status is ${stored}`, () =>
+  const failures = [
+    { stored: "not_authenticated", level: "error", text: "no credentials were stored" },
+    { stored: "expired", level: "warn", text: "kilo mcp logout google_drive" },
+  ] as const
+  for (const item of failures) {
+    it.effect(`does not report success when connected with stored status ${item.stored}`, () =>
       Effect.gen(function* () {
-        const calls = yield* run(stored)
+        const { calls } = yield* run("connected", item.stored)
         expect(calls).toHaveLength(2)
-        expect(calls[0]).toBe("stop:Authentication not performed:1")
-        expect(calls[1]).toStartWith("error:MCP server google_drive connected without requesting OAuth")
-        expect(calls[1]).toContain("no credentials were stored")
+        expect(calls[0]).toBe("stop:Authentication not confirmed:1")
+        expect(calls[1]).toStartWith(`${item.level}:MCP server google_drive connected`)
+        expect(calls[1]).toContain(item.text)
         expect(calls.join("\n")).not.toContain("Authentication successful!")
       }),
     )
   }
-})
 
-describe("McpAuthCommand", () => {
-  // A subprocess test cannot reach the "connected without a 401" branch without a live OAuth-less
-  // MCP server, so guard the wiring of the shared command to the helper instead.
-  test("routes connected results through the credential check", async () => {
-    const source = await Bun.file(path.join(import.meta.dir, "../../../../src/cli/cmd/mcp.ts")).text()
-    const block = source.slice(
-      source.indexOf("Effect.tap((status)"),
-      source.indexOf("Effect.catchCause", source.indexOf("Effect.tap((status)")),
+  const others: MCP.Status["status"][] = ["needs_auth", "needs_client_registration", "failed", "disabled"]
+  for (const status of others) {
+    it.effect(`leaves ${status} to the caller without output or lookups`, () =>
+      Effect.gen(function* () {
+        expect(yield* run(status, "not_authenticated")).toStrictEqual({ calls: [], lookups: 0 })
+      }),
     )
-    expect(block).toContain('if (status.status === "connected") {\n            yield* KilocodeMcpAuth.connected(')
-    expect(block).not.toContain("Authentication successful!")
-  })
+  }
 })
