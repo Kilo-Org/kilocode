@@ -676,7 +676,7 @@ describe("Agent Manager terminal routing", () => {
     await router.dispose()
   })
 
-  function fleet() {
+  function fleet(gate?: Promise<void>) {
     const messages: AgentManagerOutMessage[] = []
     const released: string[] = []
     const live = new Set<string>()
@@ -686,6 +686,7 @@ describe("Agent Manager terminal routing", () => {
       pty: {
         create: async ({ title }: { title: string }) => {
           const id = `pty-${++count}`
+          await gate
           live.add(id)
           return { data: { id, title } }
         },
@@ -714,8 +715,23 @@ describe("Agent Manager terminal routing", () => {
     }
     const closed = () =>
       messages.flatMap((message) => (message.type === "agentManager.terminal.closed" ? [message.terminalId] : []))
-    return { router, live, released, create, closed, project: (id: string) => (project = id) }
+    return { router, live, released, messages, create, closed, project: (id: string) => (project = id) }
   }
+
+  it("closes a terminal whose create was still in flight when its project was removed", async () => {
+    const gate = Promise.withResolvers<void>()
+    const test = fleet(gate.promise)
+    test.router.handle({ type: "agentManager.terminal.create", createId: "late", placement: "tab", worktreeId: null })
+    await wait()
+
+    await test.router.closeProject("prj-1")
+    gate.resolve()
+    await until(() => test.router["creates"].size === 0)
+
+    expect(test.live.size).toBe(0)
+    expect(test.messages.some((message) => message.type === "agentManager.terminal.created")).toBe(false)
+    await test.router.dispose()
+  })
 
   it("drops the tabs of every terminal in a deleted worktree directory", async () => {
     const test = fleet()

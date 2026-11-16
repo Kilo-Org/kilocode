@@ -65,6 +65,8 @@ export class TerminalRouter {
    *  concurrent creates from grabbing the same "Terminal N" title. */
   private readonly reserved = new Map<string, Set<number>>()
   private generation = 0
+  /** Bumped when a project is removed, so a create that was in flight for it closes its PTY instead of posting a tab. */
+  private readonly removals = new Map<string, number>()
 
   constructor(private readonly deps: TerminalRoutingDeps) {
     this.manager = this.createManager()
@@ -163,6 +165,7 @@ export class TerminalRouter {
 
   /** Close the terminals a removed project opened. Their shells would otherwise keep running with no tab to reach them. */
   async closeProject(projectId: string): Promise<void> {
+    this.removals.set(projectId, (this.removals.get(projectId) ?? 0) + 1)
     const results = await Promise.all(
       [this.manager, ...this.retired].map((manager) => manager.closeProject(projectId, (id) => this.closed(id))),
     )
@@ -195,6 +198,7 @@ export class TerminalRouter {
     // Captured synchronously: the project scope is only current while the
     // dispatch runs, not when the async create settles.
     const pid = this.deps.getProjectId()
+    const removal = pid ? this.removals.get(pid) : undefined
     if (!cwd) {
       this.deps.post({
         type: "agentManager.terminal.error",
@@ -213,7 +217,7 @@ export class TerminalRouter {
       // client accessor when this is the first Kilo action in the window.
       await this.deps.connection.client()
       const created = await manager.create({ terminalId: createId, worktreeId, projectId: pid, cwd, title, cols, rows })
-      if (generation !== this.generation) {
+      if (generation !== this.generation || (pid && this.removals.get(pid) !== removal)) {
         await manager.close(created.terminalId)
         return
       }
