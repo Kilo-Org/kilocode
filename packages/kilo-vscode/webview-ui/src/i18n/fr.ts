@@ -293,13 +293,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Reconnectez-vous à ChatGPT, puis renvoyez votre message pour continuer à utiliser les modèles Codex.",
 
-  "provider.failure.unauthorized": "Identifiants refusés (HTTP {{status}}). Reconnectez-vous.",
-  "provider.failure.unauthorizedNoStatus": "Identifiants refusés. Reconnectez-vous.",
-  "provider.failure.unauthenticated": "Non connecté.",
-  "provider.failure.network": "Impossible de joindre le fournisseur. Vérifiez votre connexion.",
-  "provider.failure.http": "Erreur du fournisseur (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Erreur du fournisseur.",
-  "provider.failure.schema": "Réponse inattendue du fournisseur.",
+  "error.upstreamTimeout.title": "Le serveur du fournisseur d'IA a expiré",
+  "error.upstreamTimeout.description":
+    "Il s'agit généralement d'un problème temporaire côté serveur, et non d'un problème de configuration. Kilo réessaie automatiquement ces erreurs ; si cela continue, renvoyez votre message ou consultez la page d'état de votre fournisseur.",
 
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",

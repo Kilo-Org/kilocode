@@ -24,6 +24,15 @@
   overflow-wrap: anywhere;
 }
 
+.error-card-hint {
+  margin: 4px 0 0;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-normal);
+  color: var(--text-base);
+  line-height: var(--line-height-large);
+  overflow-wrap: anywhere;
+}
+
 .error-card [data-component="collapsible"] {
   margin-top: 0;
   padding-left: 24px;

@@ -56,15 +56,22 @@ const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|ex
 const RETRYABLE_TEXT =
   /rate increased too quickly|rate.?limit|too.?many.?requests|try again (?:later|in\b)|(?:currently|temporarily) at capacity|temporarily unavailable/i
 
+// Numeric coercion for either a literal number or a non-empty numeric string.
+// Returns undefined for NaN so callers can use `=== undefined` as a single
+// "no numeric code" check instead of repeating the Number.isNaN dance.
+function numericCode(value: unknown) {
+  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN
+  return Number.isNaN(n) ? undefined : n
+}
+
 // Must stay at least as permissive as the Session.retryable heuristics that
 // applied when these frames still surfaced as NamedError.Unknown, or
 // previously-retried provider errors silently become terminal
 function retryable(error: Frame["error"], message: string) {
-  const code = error?.code
-  const numeric = typeof code === "number" ? code : typeof code === "string" && code.trim() !== "" ? Number(code) : NaN
-  if (!Number.isNaN(numeric)) {
-    if (numeric === 429 || (numeric >= 500 && numeric < 600)) return true
-  } else if (typeof code === "string" && RETRYABLE.test(code)) {
+  const code = numericCode(error?.code)
+  if (code !== undefined) {
+    if (code === 429 || (code >= 500 && code < 600)) return true
+  } else if (typeof error?.code === "string" && RETRYABLE.test(error.code)) {
     return true
   }
   const type = error?.type
@@ -81,7 +88,16 @@ function retryable(error: Frame["error"], message: string) {
 export function fallback(body: Frame, responseBody: string) {
   const message = body.error?.message
   if (typeof message !== "string" || !message.trim()) return
-  return { type: "api_error" as const, message, isRetryable: retryable(body.error, message), responseBody }
+  // Propagate a numeric HTTP-like status so downstream retry logic and UI can
+  // classify the error without re-parsing the responseBody (#15042).
+  const code = numericCode(body.error?.code)
+  return {
+    type: "api_error" as const,
+    message,
+    isRetryable: retryable(body.error, message),
+    responseBody,
+    ...(code !== undefined ? { statusCode: code } : {}),
+  }
 }
 
 const AUTH_ERROR =

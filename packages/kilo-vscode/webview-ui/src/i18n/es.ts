@@ -293,13 +293,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Vuelve a iniciar sesión con ChatGPT y envía tu mensaje de nuevo para seguir usando los modelos Codex.",
 
-  "provider.failure.unauthorized": "Credenciales rechazadas (HTTP {{status}}). Vuelve a iniciar sesión.",
-  "provider.failure.unauthorizedNoStatus": "Credenciales rechazadas. Vuelve a iniciar sesión.",
-  "provider.failure.unauthenticated": "No has iniciado sesión.",
-  "provider.failure.network": "No se pudo conectar con el proveedor. Comprueba tu conexión.",
-  "provider.failure.http": "Error del proveedor (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Error del proveedor.",
-  "provider.failure.schema": "Respuesta inesperada del proveedor.",
+  "error.upstreamTimeout.title": "El servidor del proveedor de IA agotó el tiempo de espera",
+  "error.upstreamTimeout.description":
+    "Esto suele ser un problema temporal del servidor y no de tu configuración. Kilo reintenta estos errores automáticamente, pero si sigue ocurriendo, vuelve a enviar tu mensaje o consulta la página de estado de tu proveedor.",
 
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",

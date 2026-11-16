@@ -464,6 +464,32 @@ export namespace KiloSessionProcessor {
     return new MessageV2.APIError({ message, isRetryable: false }).toObject()
   }
 
+  // A provider refusal the retried request would hit again the same way
+  const REFUSAL = /\b429\b|rate.?limit|too many requests|quota/i
+
+  /**
+   * Whether the retry policy would retry `error` even though the failed attempt
+   * already produced output (#15042).
+   *
+   * Partial output normally blocks the retry so a retried attempt cannot layer
+   * new output on top of the failed attempt's parts. Transient server-side
+   * failures are the exception: the retried attempt drops those parts first and
+   * regenerates them from the same request.
+   *
+   * Delegates to `SessionRetry.retryable` so status codes, provider flags, and
+   * message patterns stay in lockstep with the policy that performs the retry —
+   * including the cases the message patterns alone cover, e.g. an "upstream idle
+   * timeout" with no numeric status code. Client-side refusals (rate limit,
+   * quota) keep blocking, with or without a status code.
+   */
+  export function transient(error: unknown) {
+    const data = isRecord(error) && isRecord(error.data) ? error.data : undefined
+    if (!data) return false
+    if (typeof data.statusCode === "number" && data.statusCode < 500) return false
+    if (typeof data.message === "string" && REFUSAL.test(data.message)) return false
+    return SessionRetry.retryable(error as never) !== undefined
+  }
+
   export function recover(input: {
     run: () => Effect.Effect<void, unknown>
     replayable: () => boolean

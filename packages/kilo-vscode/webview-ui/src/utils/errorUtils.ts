@@ -78,7 +78,7 @@ export function parseAssistantError(error: AssistantMessage["error"] | null | un
   const data = error.data
   if (!data) return null
 
-  const statusCode = typeof data.statusCode === "number" ? data.statusCode : undefined
+  let statusCode = typeof data.statusCode === "number" ? data.statusCode : undefined
   const message = typeof data.message === "string" ? data.message : undefined
 
   let code: string | undefined
@@ -86,6 +86,11 @@ export function parseAssistantError(error: AssistantMessage["error"] | null | un
     try {
       const body = JSON.parse(data.responseBody) as Record<string, unknown>
       const bodyError = body.error as Record<string, unknown> | undefined
+      if (statusCode === undefined) {
+        const rawCode = bodyError?.code ?? body.code
+        const numeric = typeof rawCode === "number" ? rawCode : Number(rawCode)
+        if (!Number.isNaN(numeric) && numeric >= 100 && numeric < 600) statusCode = numeric
+      }
       if (bodyError && typeof bodyError.code === "string") {
         code = bodyError.code
       } else if (typeof body.code === "string") {
@@ -127,4 +132,18 @@ export function isUnauthorizedPromotionLimitError(parsed: ParsedError | null): b
   return (
     (parsed.statusCode === 401 || parsed.statusCode === 429) && parsed.code === errorCodes.PROMOTION_MODEL_LIMIT_REACHED
   )
+}
+
+/**
+ * Returns true when the parsed error represents an upstream idle timeout
+ * (504 Gateway Timeout) or similar server-side timeout that is safe to
+ * retry. These errors are transient and caused by the AI provider's
+ * upstream server, not by the user's local network or configuration.
+ */
+export function isUpstreamTimeoutError(parsed: ParsedError | null): boolean {
+  if (!parsed) return false
+  if (parsed.statusCode === 504) return true
+  if (parsed.statusCode === 524) return true
+  if (parsed.message && /upstream\s+(?:idle\s+)?timeout/i.test(parsed.message)) return true
+  return false
 }
