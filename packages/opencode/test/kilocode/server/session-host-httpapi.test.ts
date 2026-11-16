@@ -1645,7 +1645,9 @@ describe("session host HttpApi", () => {
       expect(yield* set.json).toEqual({ success: true })
 
       const cleared = yield* HttpClient.execute(
-        HttpClientRequest.delete(SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE)),
+        HttpClientRequest.delete(
+          `${SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE)}?organizationID=${PROFILE}`,
+        ),
       )
       expect(cleared.status).toBe(200)
       expect(yield* cleared.json).toEqual({ success: true })
@@ -1657,6 +1659,7 @@ describe("session host HttpApi", () => {
       expect(assigned?.org).toBe(PROFILE)
       expect(assigned?.body).toBe(JSON.stringify({ profileId: PROFILE }))
       const removed = calls.find((call) => call.path === "/trpc/clearHostedWorkspacePersonalDefaultProfile")
+      expect(removed?.org).toBe(PROFILE)
       expect(removed?.body).toBe(JSON.stringify({ profileId: PROFILE }))
     }),
   )

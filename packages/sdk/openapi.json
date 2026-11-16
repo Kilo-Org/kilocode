@@ -20445,6 +20445,14 @@
               "format": "uuid"
             },
             "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
           }
         ],
         "responses": {

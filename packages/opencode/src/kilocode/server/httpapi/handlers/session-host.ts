@@ -279,14 +279,17 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       },
     )
 
-    const clearWorkspacePersonalDefaultProfile = Effect.fn(
-      "SessionHostHttpApi.clearWorkspacePersonalDefaultProfile",
-    )(function* (ctx: { params: { profileID: string } }) {
-      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
-      return yield* provider
-        .clearWorkspacePersonalDefaultProfile({ id: ctx.params.profileID })
-        .pipe(Effect.mapError(mapFailure))
-    })
+    const clearWorkspacePersonalDefaultProfile = Effect.fn("SessionHostHttpApi.clearWorkspacePersonalDefaultProfile")(
+      function* (ctx: { params: { profileID: string }; query: { organizationID?: OrganizationID } }) {
+        const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+        return yield* provider
+          .clearWorkspacePersonalDefaultProfile({
+            id: ctx.params.profileID,
+            ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+          })
+          .pipe(Effect.mapError(mapFailure))
+      },
+    )
 
     const createWorkspace = Effect.fn("SessionHostHttpApi.createWorkspace")(function* (ctx: {
       payload: CreateWorkspaceInput

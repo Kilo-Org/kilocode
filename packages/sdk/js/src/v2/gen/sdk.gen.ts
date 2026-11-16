@@ -9895,10 +9895,21 @@ export class SessionHost extends HeyApiClient {
   public clearWorkspacePersonalDefaultProfile<ThrowOnError extends boolean = false>(
     parameters: {
       profileID: string
+      organizationID?: SessionHostOrganizationId
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "profileID" }] }])
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "profileID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
     return (options?.client ?? this.client).delete<
       SessionHostClearWorkspacePersonalDefaultProfileResponses,
       SessionHostClearWorkspacePersonalDefaultProfileErrors,

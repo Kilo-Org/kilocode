@@ -19827,7 +19827,9 @@ export type SessionHostClearWorkspacePersonalDefaultProfileData = {
   path: {
     profileID: string
   }
-  query?: never
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
   url: "/kilocode/session-host/workspace/profiles/personal-default/{profileID}"
 }
 
