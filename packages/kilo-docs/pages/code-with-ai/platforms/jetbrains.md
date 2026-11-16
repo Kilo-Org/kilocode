@@ -24,7 +24,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.
 
-- **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**. Leave **Fetch latest base branch before creating** enabled (the default) to fetch the selected base branch from its configured remote before the worktree is created, so the new worktree branches from the latest commit instead of a stale local ref. Kilo remembers the choice across projects and IDEs.
+- **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**. Leave **Fetch latest base branch before creating** enabled (the default) to fetch the selected base branch from its configured remote before the worktree is created, so the new worktree branches from the latest commit instead of a stale local ref. Kilo remembers the choice across projects and IDEs. Use the **Section** list, on any tab, to create the worktree inside an existing section — it defaults to the section of the current **Agents** selection, and **No Section** keeps the worktree at the root. The New tab's prompt supports voice input, so you can dictate the initial prompt with its microphone button.
 - **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
 - In the **Agents** list, local worktrees, Cloud workspaces, and the primary checkout for the current branch share one list. Drag rows to reorder them, or to move a workspace into, out of, or between sections. The primary checkout stays pinned at the top and cannot be moved or grouped. See [Sections](#sections).
 - Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it.
@@ -38,6 +38,7 @@ Group local worktrees and Cloud workspaces into collapsible, color-coded section
 - Create a section with **New Section** in the tool window's **Add** menu. A new section gets an automatic color and starts in rename mode.
 - Right-click a section header to **Rename Section**, pick one of the eight section colors, or **Delete Section**. Deleting a section only ungroups its contents; it does not delete the workspaces.
 - Drag sections to reorder them, and drag workspaces into, out of, and between sections. Sections are single-level, so a section cannot be placed inside another.
+- To move a workspace into an existing section without dragging, right-click its row and choose **Move To**, then pick a section. The submenu lists the sections in tree order with their color icons.
 - The primary checkout for the current branch stays pinned at the top and cannot be moved or grouped.
 
 Organization is saved for each IDE project.
@@ -79,7 +80,7 @@ Search covers the conversation's user and assistant prose, including inline code
 
 When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in the same list as local worktrees, where you can group them with [sections](#sections). Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it.
 
-Use the tool window's **Add** menu to create work. **Local Worktree Task** opens the local worktree dialog, and **Cloud Task** opens the New Cloud Workspace dialog, which uses this repository and lets you set an optional branch or ref, an optional Cloud profile, and an initial prompt. **New Section** creates a [section](#sections) to organize the list. An empty prompt creates an empty workspace that you add sessions to later. Creating a Cloud workspace requires signing in to Kilo.
+Use the tool window's **Add** menu to create work. **Local Worktree Task** opens the local worktree dialog, and **Cloud Task** opens the New Cloud Workspace dialog, which uses this repository and lets you set an optional branch or ref, an optional Cloud profile, an initial prompt, and a **Section** to place the workspace in (defaulting to the current selection's section). Its prompt supports voice input. **New Section** creates a [section](#sections) to organize the list. An empty prompt creates an empty workspace that you add sessions to later. Creating a Cloud workspace requires signing in to Kilo.
 
 Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only. Use the workspace's **New Cloud Session** row to start another root session without repeating the repository or profile setup.
 
