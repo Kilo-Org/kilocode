@@ -1,26 +1,33 @@
 ---
 title: "General settings"
-description: "Manage the app version, your account, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts in Kilo Desktop."
+description: "Manage the app version, your accounts, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts in Kilo Desktop."
 ---
 
 # General settings
 
-Open settings from the gear at the bottom of the sidebar, and use the search box at the top to filter them. The **General** settings cover the app version and logs, your account, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts.
+Open settings from the gear at the bottom of the sidebar, and use the search box at the top to filter them. The **General** settings cover the app version and logs, your accounts, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts.
 
 ## About
 
 The **About** section shows the app's version and manages updates:
 
-- **Version** — the build you're running, marked **Beta**, with its update status. When a newer build has downloaded it reads *Version X is ready to install*; otherwise use **Check for updates** to look for one.
+- **Version** — the build you're running and its update status. On macOS and Windows, when a newer build has downloaded, it reads *Version X is ready to install*. On Linux, when one is available, it reads *Version X is available to download* and shows a **Download** button that opens the new `.deb` package in your browser. Otherwise use **Check for updates** to look for one.
 - **Support** — information to include when you contact support:
   - **Application logs** — shows the path to the app's log file. Select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find it.
   - **Kilo config** — shows the path to your global Kilo config file (for example `~/.config/kilo/kilo.json`), with the same button. If you haven't created one, it reads *No global config file has been created yet.*
+- **Legal** — select **View** next to **Third-party notices** to read the licenses of the third-party software Kilo Desktop includes. Next to **Chromium**, select **Show in Finder** (macOS), **Show in File Explorer** (Windows), or **Show in File Manager** (Linux) to find Chromium's notices.
 
-When an update is ready, select **Restart to update** to relaunch and apply it. When release notes are available, the **About** section also shows a **What's changed** section for the update.
+When an update is ready, select **Restart to update**, then **Install and restart**, to relaunch and apply it. The sidebar also shows **Restart to update** (on Linux, **Update available**, which opens **About**). When release notes are available, the **About** section also shows a **What's changed** section for the update; notes from earlier versions are labeled with their version. See [Updates](/docs/desktop/installation#updates).
 
 ## Account
 
-The **Account** section manages your **Kilo** account. When you're signed in, it shows your account email, your **Available balance** (with a refresh), an **Organization** selector, and **Top up** and **Kilo Dashboard** links. See [Usage & Billing](/docs/gateway/usage-and-billing) for how organizations and balances work.
+The **Account** section manages the accounts Kilo Desktop signs in to.
+
+**Kilo** — when you're signed in, it shows your account email, your **Available balance** (with a refresh), an **Organization** selector if you belong to an organization, and **Top up** and **Kilo Dashboard** links. Personal accounts also see Kilo Pass usage or a **Get Kilo Pass** link. See [Usage & Billing](/docs/gateway/usage-and-billing) for how organizations and balances work.
+
+**Anaconda** — sign in to browse and download models from the [Anaconda model catalog](/docs/desktop/settings/ai#model-catalog), and to install packages from authenticated channels like main-x. The row reads **Not signed in.** or **Signed in as** followed by your email. Select **Sign in** and complete the sign-in in your browser; the button reads **Waiting for browser…** until you do, and **Cancel** stops the sign-in. Select **Sign out** to sign out.
+
+Your Anaconda account is separate from your Kilo account. Kilo Desktop stores your Anaconda credentials where conda and the Anaconda CLI read them, so signing in with `anaconda login` also signs you in here, and signing out here also signs out those tools.
 
 ## Appearance
 
@@ -37,8 +44,8 @@ The **Appearance** section controls how the app looks:
 
 The **Notifications** section controls when Kilo plays a sound to get your attention. While Kilo is in the background, it also shows a system notification. Set each of these:
 
-- **When Kilo finishes** — Kilo completed its turn.
-- **When Kilo needs you** — an approval, a question, or an error.
+- **When Kilo finishes** — Kilo completed its turn, including any background subagents.
+- **When Kilo needs you** — an approval, a question, or an error. Requests answered by **Automatically approve** don't play a sound.
 
 For each, choose **Never**, **When I'm not looking** (skips the session you have open), or **Always**. Select the speaker button to preview the sound. To silence the system notifications entirely, use your operating system's notification settings.
 
@@ -65,8 +72,8 @@ It also explains data handling for **free models**: because they may route your 
 
 The **Shortcuts** section lets you see, change, or turn off the app's keyboard shortcuts.
 
-- **App Navigation** — numbered shortcuts for jumping to tabs (⌘1–9 / Ctrl+1–9) and sessions (⌃1–9 / Alt+1–9). Turn either set off, or choose which modifier key it uses.
-- **All shortcuts** — select a shortcut and press the new keys to change it (Esc cancels). Hover a shortcut and select × to turn it off. A new shortcut must include ⌘, ⌃, or ⌥ (Ctrl or Alt on Windows/Linux). Kilo tells you if a shortcut is reserved by the system or already used by another action.
+- **Tabs** and **Sessions** include numbered shortcuts: **Go to tab 1**–**8** (⌘1–8 on macOS, Ctrl+1–8 on Windows/Linux) and **Go to last tab** (⌘9 / Ctrl+9); **Go to session 1**–**8** (⌃1–8 on macOS, Alt+1–8 on Windows/Linux) and **Go to last session** (⌃9 / Alt+9). Change or turn off each one like any other shortcut.
+- **All shortcuts** — select a shortcut and press the new keys to change it (Esc cancels). Hover a shortcut and select × to turn it off. A new shortcut must include ⌘, ⌃, or ⌥ (Ctrl or Alt on Windows/Linux). Kilo tells you if a shortcut is reserved by the system or already used by another action. Select ↺ next to a changed shortcut to restore its default. Shortcuts you can't change, like Enter to send, are in the **full list**.
 - **Reset all** restores every default.
 
 Press ⌘/ (macOS) or Ctrl+/ (Windows/Linux) anywhere to open the searchable **Keyboard shortcuts** reference.

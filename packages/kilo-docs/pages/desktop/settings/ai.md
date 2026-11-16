@@ -33,7 +33,6 @@ The **Kilo Gateway** is the default path to models. When you're signed in it sho
 
 Other providers appear below the gateway:
 
-- **Local Model Server** — models running on your machine; **Manage** opens the [Local model server](#local-model-server) settings.
 - **Providers you add** — anything you connect with an API key, each with edit and delete actions.
 - **System credentials** — some providers (such as **Amazon Bedrock**) connect automatically using credentials already on your machine rather than a stored API key. Expand the card to see the environment variables that were detected (for example, `AWS_PROFILE`). These are managed outside the app, so they can't be edited or removed here.
 
