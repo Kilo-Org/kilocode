@@ -54,6 +54,25 @@ test("--json prints the sync status as one JSON object and nothing else", async 
   })
 })
 
+test("--json keeps a failure off stdout", async () => {
+  await using r = await repo()
+  await r.write("a.txt", "1\n")
+  await r.release("v2.0.26", "2026-10-08T00:00:00Z")
+
+  // No upstream remote.
+  const missing = await run(r.dir, "--json", "--base", "dev")
+  expect(missing.code).toBe(1)
+  expect(missing.stdout).toBe("")
+  expect(missing.stderr).toContain("No 'upstream' remote")
+
+  // A base that does not resolve is an error, not a base without releases.
+  await linkUpstream(r)
+  const unknown = await run(r.dir, "--json", "--base", "no-such-ref")
+  expect(unknown.code).toBe(1)
+  expect(unknown.stdout).toBe("")
+  expect(unknown.stderr).toContain("Base 'no-such-ref' is not a commit")
+})
+
 test("without --json the status is the table for people", async () => {
   await using r = await repo()
   await r.write("a.txt", "1\n")
