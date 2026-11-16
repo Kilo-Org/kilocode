@@ -83,7 +83,7 @@ import {
 import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
-import { createdTab } from "./session-created"
+import { createdTab, fileInOrigin } from "./session-created"
 import { takesHandoff } from "../src/v2/plan-handoff"
 import {
   createSessionRestore,
@@ -1273,17 +1273,16 @@ const AgentManagerContent: Component = () => {
       return
     }
     // The project changed during the send: file the session in the project that created it and leave this one alone.
-    if (origin.project !== currentProjectId()) {
-      if (origin.worktree)
-        to({
-          type: "agentManager.addSessionToWorktree",
-          projectId: origin.project,
-          worktreeId: origin.worktree,
-          sessionId: id,
-        })
-      else to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
-      return
-    }
+    if (origin.project !== currentProjectId())
+      return fileInOrigin({
+        id,
+        origin,
+        key: sent?.key,
+        store: (pid) => registry.ensure(pid),
+        add: (worktreeId) =>
+          to({ type: "agentManager.addSessionToWorktree", projectId: origin.project, worktreeId, sessionId: id }),
+        persist: () => to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id }),
+      })
     const sel = selection()
     const filed = managedSessions().find((entry) => entry.id === id)?.worktreeId
     const known = ownerOf(id)

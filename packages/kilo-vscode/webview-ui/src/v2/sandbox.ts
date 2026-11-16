@@ -94,8 +94,10 @@ export function createSandbox(input: {
   // A reply that predates the first prompt cannot seed it: the default may have changed while this composer was
   // unmounted, so `metadata` waits for a reply of its own request.
   let fresh = false
+  let disposed = false
   const settle = () => {
     if (preference() && (support() || unsupported) && fresh) for (const resolve of waiters.splice(0)) resolve()
+    release()
   }
   const defaultsReady = () =>
     new Promise<void>((resolve) => {
@@ -104,25 +106,34 @@ export function createSandbox(input: {
     })
   const desired = () => preference()?.explicit ?? support()?.enabled ?? false
 
-  const unsubscribe = vscode.onMessage((message) => {
-    if (message.type !== "sandboxDefaultLoaded") return
-    fresh = true
-    setPreference({ explicit: message.explicit })
-    remember({ preference: { explicit: message.explicit } })
-    settle()
-  })
-  onCleanup(unsubscribe)
+  let unsubscribe: (() => void) | undefined
+  const listen = () => {
+    unsubscribe ??= vscode.onMessage((message) => {
+      if (message.type !== "sandboxDefaultLoaded") return
+      fresh = true
+      setPreference({ explicit: message.explicit })
+      remember({ preference: { explicit: message.explicit } })
+      settle()
+    })
+  }
+  const release = () => {
+    if (!disposed || waiters.length > 0) return
+    unsubscribe?.()
+    unsubscribe = undefined
+  }
+  listen()
 
   const post = (message: ToHost) => vscode.postMessage(message as never)
 
   // A Location that is still activating answers like a server without the sandbox plugin, so both reads wait for its
-  // plugins before they take that answer. A dropped connection and a disposed owner end the wait.
-  let disposed = false
+  // plugins before they take that answer. A dropped connection and a disposed owner end the wait. A switch to another
+  // worktree or project disposes this composer while a first send can still wait for the default, so the reads and the
+  // host reply stay until that send has it; otherwise the send would never create its session.
   const listed = <T>(read: () => Promise<T>) =>
     readListed({
       api: v2.api,
       directory,
-      active: () => !disposed && v2.connection.status() === "connected",
+      active: () => (!disposed || waiters.length > 0) && v2.connection.status() === "connected",
       read,
     })
 
@@ -183,6 +194,7 @@ export function createSandbox(input: {
   onCleanup(subscribe)
   onCleanup(() => {
     disposed = true
+    release()
     if (retry) clearTimeout(retry)
   })
 
@@ -256,6 +268,7 @@ export function createSandbox(input: {
       // Always ask again: the remembered default is only a rendering hint, and the user may have changed it while
       // this composer was unmounted. The cached support still keeps the first prompt from waiting for a second read.
       fresh = false
+      listen()
       requestDefaults()
       if (!support()) readSupport()
       await defaultsReady()

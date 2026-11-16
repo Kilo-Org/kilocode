@@ -4,7 +4,9 @@
  * user can move to another tab or context meanwhile: the session then fills the draft tab it came from and the view
  * stays where the user is, as v1 did.
  */
+import { openSessionTab, replacePendingTab } from "../src/utils/local-tabs"
 import { LOCAL } from "./navigate"
+import { replaceInTabOrder } from "./tab-order"
 
 export type CreatedTab =
   | { kind: "keep" }
@@ -48,4 +50,43 @@ export function createdTab(input: {
   }
   if (input.local.includes(input.id)) return { kind: "keep" }
   return { kind: "local", show: !existing || input.shown === input.id }
+}
+
+type BackgroundStore = {
+  tabs: { ids: () => string[]; set: (ids: string[]) => void }
+  tabOrder: () => Record<string, string[]>
+  setTabOrder: (update: (prev: Record<string, string[]>) => Record<string, string[]>) => void
+}
+
+/**
+ * A Local session whose send resolved after the user switched to another project fills its draft tab in the project
+ * it was created in, as v1's `backgroundCreated`, instead of leaving that draft empty next to a new tab.
+ */
+export function backgroundCreated(store: BackgroundStore, id: string, key: string | undefined) {
+  const ids = store.tabs.ids()
+  const draft = key && key !== id && ids.includes(key) ? key : undefined
+  if (!draft && ids.includes(id)) return
+  store.tabs.set(draft ? replacePendingTab({ ids }, draft, id).ids : openSessionTab({ ids }, id).ids)
+  const order = store.tabOrder()[LOCAL] ?? []
+  const next = (draft ? replaceInTabOrder(order, draft, id) : undefined) ?? [...order.filter((item) => item !== id), id]
+  store.setTabOrder((prev) => ({ ...prev, [LOCAL]: next }))
+}
+
+/**
+ * Files a session whose send resolved after the user switched to another project, in the project and context it was
+ * created in, and leaves the current project alone.
+ */
+export function fileInOrigin(input: {
+  id: string
+  origin: { project: string | undefined; worktree: string | null }
+  key: string | undefined
+  store: (project: string) => BackgroundStore
+  add: (worktree: string) => void
+  persist: () => void
+}) {
+  // A prompt to a session that already had its tab needs no filing; adopting it again would end branch naming.
+  if (input.key === input.id) return
+  if (input.origin.worktree) return input.add(input.origin.worktree)
+  if (input.origin.project) backgroundCreated(input.store(input.origin.project), input.id, input.key)
+  input.persist()
 }
