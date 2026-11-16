@@ -3,6 +3,7 @@ export * as ToolRegistry from "./registry"
 import { ToolOutput, type ToolCall, type ToolDefinition, type ToolResultValue } from "@opencode-ai/llm"
 import { Context, Effect, Layer, Scope } from "effect"
 import { AgentV2 } from "../agent"
+import { PluginV2 } from "../plugin"
 import { PermissionV2 } from "../permission"
 import { SessionMessage } from "../session/message"
 import { SessionSchema } from "../session/schema"
@@ -105,12 +106,60 @@ const registryLayer = Layer.effect(
       }),
       materialize: Effect.fn("ToolRegistry.materialize")(function* (permissions = []) {
         const registrations = new Map(applications.entries())
+        const plugin = yield* Effect.serviceOption(PluginV2.Service)
         for (const [name, entries] of local) {
           const registration = entries.at(-1)?.registration
           if (registration) registrations.set(name, registration)
         }
-        for (const [name, registration] of registrations)
-          if (whollyDisabled(permission(registration.tool, name), permissions)) registrations.delete(name)
+        for (const [name, registration] of registrations) {
+          const action = permission(registration.tool, name)
+          const configDisabled = whollyDisabled(action, permissions)
+          const metadata: Record<string, unknown> = {}
+          const beforeInput = {
+            phase: "materialize" as const,
+            action,
+            resources: ["*"],
+            metadata,
+            rules: permissions,
+          }
+          const beforeOutput = { metadata, effect: undefined as typeof PermissionV2.Effect.Type | undefined }
+          const computedEffect = configDisabled ? ("deny" as const) : ("allow" as const)
+          const afterOutput = { effect: computedEffect }
+          if (plugin._tag === "Some") {
+            yield* plugin.value.trigger("permission.evaluate.before", beforeInput, beforeOutput).pipe(
+              Effect.catch(() => Effect.void),
+            )
+            if (beforeOutput.effect) {
+              yield* plugin.value.trigger(
+                "permission.evaluate.after",
+                {
+                  phase: "materialize",
+                  action,
+                  resources: ["*"],
+                  decision: beforeOutput.effect,
+                  metadata: beforeOutput.metadata,
+                  rules: permissions,
+                },
+                { effect: beforeOutput.effect },
+              ).pipe(Effect.catch(() => Effect.void))
+              if (beforeOutput.effect === "deny") registrations.delete(name)
+              continue
+            }
+            yield* plugin.value.trigger(
+              "permission.evaluate.after",
+              {
+                phase: "materialize",
+                action,
+                resources: ["*"],
+                decision: computedEffect,
+                metadata,
+                rules: permissions,
+              },
+              afterOutput,
+            ).pipe(Effect.catch(() => Effect.void))
+          }
+          if (configDisabled || afterOutput.effect === "deny") registrations.delete(name)
+        }
         return {
           definitions: Array.from(registrations, ([name, registration]) => definition(name, registration.tool)),
           settle: (input) => {
