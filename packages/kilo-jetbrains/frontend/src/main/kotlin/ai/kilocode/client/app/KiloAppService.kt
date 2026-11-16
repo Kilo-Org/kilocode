@@ -18,6 +18,8 @@ import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.RetentionStatusDto
 import ai.kilocode.rpc.dto.RetentionPatchDto
+import ai.kilocode.rpc.dto.SpeechModelDto
+import ai.kilocode.rpc.dto.SpeechRequestDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import ai.kilocode.client.settings.KiloLogSettingsService
@@ -52,9 +54,12 @@ class KiloAppService internal constructor(
     companion object {
         private val LOG = KiloLog.create(KiloAppService::class.java)
         private val init = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
+        private const val DEFAULT_SPEECH_MODEL = "openai/whisper-1"
     }
 
     private val started = AtomicBoolean(false)
+    @Volatile
+    private var speechModel: String? = null
 
     /** Core version and platform from the backend, or null if unknown. */
     @Volatile
@@ -136,6 +141,33 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("health check failed", e)
         null
+    }
+
+    suspend fun transcriptionModels(directory: String?): List<SpeechModelDto> =
+        call { transcriptionModels(directory) }
+
+    suspend fun transcribe(directory: String?, data: ByteArray): String {
+        val model = model(directory)
+        return call {
+            transcribe(directory, SpeechRequestDto(data = data, model = model)).text
+        }
+    }
+
+    private suspend fun model(directory: String?): String {
+        speechModel?.let { return it }
+        val models = try {
+            transcriptionModels(directory)
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: Exception) {
+            LOG.warn("speech model discovery failed; using default", err)
+            return DEFAULT_SPEECH_MODEL
+        }
+        val model = models.firstOrNull { it.id == DEFAULT_SPEECH_MODEL }?.id
+            ?: models.firstOrNull()?.id
+            ?: return DEFAULT_SPEECH_MODEL
+        speechModel = model
+        return model
     }
 
     suspend fun retry() {
@@ -484,6 +516,7 @@ class KiloAppService internal constructor(
     }
 
     private fun setProfile(profile: ProfileDto?) {
+        speechModel = null
         val current = _state.value
         val progress = current.progress?.copy(
             profile = if (profile == null) ProfileStatusDto.NOT_LOGGED_IN else ProfileStatusDto.LOADED,

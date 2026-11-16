@@ -9,6 +9,7 @@ import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeRegistry
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -23,7 +24,9 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Point
+import java.awt.Rectangle
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
@@ -31,7 +34,11 @@ import java.net.URI
 import javax.swing.Box
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingConstants
 import javax.swing.event.HyperlinkEvent
+import javax.swing.text.GlyphView
+import javax.swing.text.Position
+import javax.swing.text.View
 import javax.swing.text.html.HTML
 import javax.swing.text.html.HTMLDocument
 
@@ -312,6 +319,71 @@ class MdViewHybridTest : BasePlatformTestCase() {
         view.set("See [docs](https://example.com)")
 
         assertTrue(htmls().single().hyperlinkListeners.size > 1)
+    }
+
+    fun `test bidi markdown word breaks support visual navigation`() {
+        for (markdown in listOf(
+            "foo.bar \u05D0\u05D1\u05D2 [docs](https://example.com)",
+            "| name | value |\n|---|---|\n| foo.bar | \u05D0\u05D1\u05D2 |",
+        )) {
+            view.set(markdown)
+            val pane = htmls().singleOrNull() ?: scrolls().single().viewport.view as JBHtmlPane
+            render(pane, 420)
+            assertTrue(pane.document.getText(0, pane.document.length).contains('\u200B'))
+            navigate(pane)
+        }
+    }
+
+    fun `test bidi word breaks preserve wrapping and actual link hover`() {
+        view.set("${"segment/".repeat(30)}file.txt \u05D0\u05D1\u05D2 [docs](https://example.com)")
+        val pane = htmls().single()
+        render(pane, 480)
+        val wide = pane.height
+        render(pane, 160)
+        assertTrue("Word breaks must still wrap long paths", pane.height > wide)
+        val events = mutableListOf<HyperlinkEvent.EventType>()
+        pane.addHyperlinkListener {
+            if (it.description == "https://example.com") events.add(it.eventType)
+        }
+        val iter = (pane.document as HTMLDocument).getIterator(HTML.Tag.A)
+        while (iter.isValid && iter.attributes.getAttribute(HTML.Attribute.HREF) != "https://example.com") iter.next()
+        assertTrue(iter.isValid)
+        val cursor = pane.cursor.type
+        val link = pane.modelToView2D(iter.startOffset)!!.bounds
+        pane.dispatchEvent(MouseEvent(pane, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, link.x + 1, link.y + link.height / 2, 0, false, MouseEvent.NOBUTTON))
+        assertTrue(events.contains(HyperlinkEvent.EventType.ENTERED))
+        assertEquals(Cursor.HAND_CURSOR, pane.cursor.type)
+
+        val offset = pane.document.getText(0, pane.document.length).indexOf('\u05D0')
+        val text = pane.modelToView2D(offset)!!.bounds
+        pane.dispatchEvent(MouseEvent(pane, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, text.x + 1, text.y + text.height / 2, 0, false, MouseEvent.NOBUTTON))
+        assertTrue(events.contains(HyperlinkEvent.EventType.EXITED))
+        assertEquals(cursor, pane.cursor.type)
+    }
+
+    fun `test bidi word break updates retain the pane and stay bounded`() {
+        val baseline = EditorFactory.getInstance().allEditors.size
+        view.set("foo.bar \u05D0\u05D1\u05D2")
+        val pane = htmls().single()
+        val listeners = pane.mouseListeners.size
+        val motion = pane.mouseMotionListeners.size
+
+        repeat(200) { index ->
+            view.set("foo.bar value$index \u05D0\u05D1\u05D2 [docs](https://example.com)")
+            render(pane, 240)
+            navigate(pane)
+            pane.viewToModel2D(Point(pane.width - 1, pane.height - 1))
+            assertSame(pane, htmls().single())
+            assertEquals(1, (view.component as JPanel).componentCount)
+            assertEquals(listeners, pane.mouseListeners.size)
+            assertEquals(motion, pane.mouseMotionListeners.size)
+        }
+
+        view.clear()
+        drainEdt()
+        assertTrue(htmls().isEmpty())
+        assertEquals(0, (view.component as JPanel).componentCount)
+        assertEquals(baseline, EditorFactory.getInstance().allEditors.size)
     }
 
     fun `test scrolling clears hovered prose link`() {
@@ -1172,6 +1244,36 @@ class MdViewHybridTest : BasePlatformTestCase() {
     private fun struts(): List<Box.Filler> = (view.component as JPanel).components.filterIsInstance<Box.Filler>()
 
     private fun editors(): List<EditorTextField> = scrolls().mapNotNull { it.viewport.view as? EditorTextField }
+
+    private fun views(view: View): List<View> = listOf(view) +
+        (0 until view.viewCount).flatMap { views(view.getView(it)) }
+
+    private fun render(pane: JBHtmlPane, width: Int) {
+        layout(width)
+        pane.setSize(width, pane.preferredSize.height)
+        val graphics = BufferedImage(width, pane.height, BufferedImage.TYPE_INT_ARGB).createGraphics()
+        try {
+            pane.paint(graphics)
+        } finally {
+            graphics.dispose()
+        }
+    }
+
+    private fun navigate(pane: JBHtmlPane) {
+        val glyphs = views(pane.ui.getRootView(pane)).filterIsInstance<GlyphView>()
+        assertTrue(glyphs.any { it.glyphPainter?.javaClass?.simpleName == "GlyphPainter2" })
+        for (glyph in glyphs) {
+            for (direction in listOf(SwingConstants.WEST, SwingConstants.EAST)) {
+                glyph.getNextVisualPositionFrom(
+                    -1,
+                    Position.Bias.Forward,
+                    Rectangle(0, 0, pane.width, pane.height),
+                    direction,
+                    arrayOf(Position.Bias.Forward),
+                )
+            }
+        }
+    }
 
     private fun type(ext: String): FileType {
         val type = FileTypeRegistry.getInstance().getFileTypeByExtension(ext)

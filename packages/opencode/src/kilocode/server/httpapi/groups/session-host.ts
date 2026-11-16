@@ -21,9 +21,16 @@ import {
   StartResult,
   Transport,
   WorkspaceID,
+  WorkspaceChangeFileResult,
+  WorkspaceChangeScope,
+  WorkspaceChanges,
+  WorkspaceChangesRefresh,
+  WorkspacePullRequestDiff,
+  WorkspacePullRequestDiffFileResult,
   WorkspaceProfileDefaultInput,
   WorkspaceProfileDefaultResult,
   WorkspaceProfilePage,
+  WorkspacePullRequestResult,
   WorkspaceSessionStartBody,
   WorkspaceSessionStartResult,
 } from "@/kilocode/session-hosting/types"
@@ -56,6 +63,13 @@ export const SessionHostPaths = {
   workspaceProfilePersonalDefaultDetail: `${root}/workspace/profiles/personal-default/:profileID`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
   workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
+  workspacePullRequest: `${root}/workspace/:providerID/:workspaceID/pull-request`,
+  workspacePullRequestRefresh: `${root}/workspace/:providerID/:workspaceID/pull-request/refresh`,
+  workspaceChanges: `${root}/workspace/:providerID/:workspaceID/changes`,
+  workspaceChangesRefresh: `${root}/workspace/:providerID/:workspaceID/changes/refresh`,
+  workspaceChangeFile: `${root}/workspace/:providerID/:workspaceID/changes/file`,
+  workspacePullRequestDiff: `${root}/workspace/:providerID/:workspaceID/pull-request-diff`,
+  workspacePullRequestDiffFile: `${root}/workspace/:providerID/:workspaceID/pull-request-diff/file`,
   workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
 } as const
 
@@ -146,6 +160,23 @@ const WorkspaceGetQuery = Schema.Struct({
 const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
 const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceChangeFileQuery = Schema.Struct({
+  path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+  scope: Schema.optional(WorkspaceChangeScope),
+  expectedRevision: Schema.NumberFromString.check(
+    Schema.isInt(),
+    Schema.isGreaterThan(0),
+    Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER),
+  ),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspacePullRequestDiffFileQuery = Schema.Struct({
+  path: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+  expectedHeadSha: Schema.String.check(Schema.isPattern(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/)),
+  organizationID: Schema.optional(OrganizationID),
+})
 
 const WorkspaceSessionListQuery = Schema.Struct({
   limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
@@ -320,6 +351,7 @@ export const SessionHostApi = HttpApi.make("session-host")
           SessionHostPaths.workspaceProfilePersonalDefaultDetail,
           {
             params: { profileID: Schema.String.check(Schema.isUUID()) },
+            query: WorkspaceProfilesQuery,
             success: described(WorkspaceProfileDefaultResult, "Personal default profile cleared"),
             error: SessionErrors,
           },
@@ -353,6 +385,97 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.getWorkspaceStatus",
             summary: "Read hosted workspace status",
             description: "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequest", SessionHostPaths.workspacePullRequest, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestResult, "Hosted workspace PR observation"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequest",
+            summary: "Read hosted workspace PR status",
+            description:
+              "Read the cached linked PR without contacting GitHub or waking compute. Only no_pr means no eligible linked PR is known; unavailable or partial observations must not clear previous evidence.",
+          }),
+        ),
+        HttpApiEndpoint.post("refreshWorkspacePullRequest", SessionHostPaths.workspacePullRequestRefresh, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestResult, "Hosted workspace PR refresh observation"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.refreshWorkspacePullRequest",
+            summary: "Refresh hosted workspace PR status",
+            description:
+              "Explicitly refresh the linked PR observation. Preserve cached evidence, partial fields, cooldown status, and retry time; refresh failure is not no_pr and does not mutate the PR or wake compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspaceChanges", SessionHostPaths.workspaceChanges, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspaceChanges, "Saved hosted workspace changes"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspaceChanges",
+            summary: "Read hosted workspace changes",
+            description:
+              "Read the saved committed and uncommitted workspace comparison without waking compute. Every file reports explicit diff and content availability, and an omitted payload never looks like an empty diff.",
+          }),
+        ),
+        HttpApiEndpoint.post("refreshWorkspaceChanges", SessionHostPaths.workspaceChangesRefresh, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspaceChangesRefresh, "Refreshed hosted workspace changes"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.refreshWorkspaceChanges",
+            summary: "Refresh hosted workspace changes",
+            description:
+              "Explicitly refresh the saved workspace comparison. An offline or failed refresh preserves the previous durable snapshot.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspaceChangeFile", SessionHostPaths.workspaceChangeFile, {
+          params: WorkspaceParams,
+          query: WorkspaceChangeFileQuery,
+          success: described(WorkspaceChangeFileResult, "Hosted workspace file"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspaceChangeFile",
+            summary: "Read a hosted workspace file",
+            description:
+              "Read one captured file fenced by the expected snapshot revision. A stale or delisted result never returns another revision's patch.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequestDiff", SessionHostPaths.workspacePullRequestDiff, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspacePullRequestDiff, "Hosted workspace pull request diff"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequestDiff",
+            summary: "Read the hosted workspace pull request diff",
+            description:
+              "Read the verified linked PR and its published file comparison. This comparison is distinct from the committed and uncommitted workspace changes; not_linked is a successful result with no PR data.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspacePullRequestDiffFile", SessionHostPaths.workspacePullRequestDiffFile, {
+          params: WorkspaceParams,
+          query: WorkspacePullRequestDiffFileQuery,
+          success: described(WorkspacePullRequestDiffFileResult, "Hosted workspace pull request file"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspacePullRequestDiffFile",
+            summary: "Read a hosted workspace pull request file",
+            description:
+              "Read one PR patch fenced by the verified head SHA. A stale, delisted, or omitted file never returns a synthesized patch.",
           }),
         ),
         HttpApiEndpoint.delete("deleteWorkspace", SessionHostPaths.workspaceDetail, {

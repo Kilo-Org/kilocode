@@ -50,8 +50,9 @@ internal class ActiveTreeModel {
     @RequiresEdt
     private fun node(spec: ActiveTreeNode): ActiveEntry {
         val entry = entries.getOrPut(spec.item.key) { ActiveEntry(spec.item.key, spec.item, spec.branch) }
-        if (entry.item != spec.item) {
+        if (entry.item != spec.item || entry.color != spec.color) {
             entry.item = spec.item
+            entry.color = spec.color
             model.nodeChanged(entry)
         }
         if (entry.allowsChildren != spec.branch) {

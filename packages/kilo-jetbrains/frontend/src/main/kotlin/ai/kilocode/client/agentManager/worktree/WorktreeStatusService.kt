@@ -158,6 +158,27 @@ class WorktreeStatusService internal constructor(
     }
 
     /**
+     * Reloads PR state after the checkouts at [paths] moved to another branch.
+     *
+     * The badges those rows show were resolved against the old branch, so they are dropped at once
+     * instead of waiting for a lookup. A lookup already running resolved against that old branch
+     * too, so its answer is discarded and the fresh one runs as soon as it finishes — including past
+     * the throttle, because a branch change is exactly the external change the throttle must not let
+     * a recent poll hide.
+     */
+    fun branchChanged(paths: Collection<String>) {
+        if (project.isDisposed || refs == 0 || !github) return
+        if (paths.isEmpty()) return
+        val keys = paths.mapTo(LinkedHashSet(), ::normalizeWorktreePath)
+        prFlow.value = prFlow.value - keys
+        generation++
+        // Put the last lookup behind the floor rather than relying on the wall clock having advanced
+        // past it: a branch change is the one event that must not wait out a recent poll.
+        lastPr = timers.now() - PR_THROTTLE - 1
+        hold(0, keys)
+    }
+
+    /**
      * Records that the agent working in [path] has stopped, so the next lookup resolves that
      * worktree from `gh` rather than from anything cached for it.
      *
@@ -444,9 +465,11 @@ class WorktreeStatusService internal constructor(
         }
         prJob = job
         // Covers every way the lookup can end — answered, failed, cancelled, or returned early on an
-        // unresolved root — so a return held behind it is spent rather than left for the poll. A
-        // superseded generation means a newer lookup already owns the loop and will drain it instead.
-        job.invokeOnCompletion { edt { if (gen == generation) spend() } }
+        // unresolved root — so a request held behind it is spent rather than left for the poll. A
+        // superseded generation must still call this: [branchChanged] discards that answer and has no
+        // other completion to run the fresh lookup after it. If a newer lookup is active, spend()
+        // simply leaves the request held for that one.
+        job.invokeOnCompletion { edt { spend() } }
     }
 
     /**

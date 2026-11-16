@@ -5,11 +5,15 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.jetbrains.api.infrastructure.ClientException
+import ai.kilocode.jetbrains.api.infrastructure.ServerException
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
@@ -20,12 +24,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.SerializationException
+import java.net.URLDecoder
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -35,6 +45,7 @@ class KiloSessionRpcApiImplTest {
     private val mock = MockCliServer()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val apps = mutableListOf<KiloBackendAppService>()
+    private val timeout = 10_000L
 
     @AfterTest
     fun tearDown() = runBlocking {
@@ -52,6 +63,39 @@ class KiloSessionRpcApiImplTest {
         app.connect()
         withTimeout(10_000) {
             app.appState.first { it is KiloAppState.Ready }
+        }
+    }
+
+    @Test
+    fun `recent leaves caller dispatcher free while status and session responses wait`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+        val status = CountDownLatch(1)
+        val response = CountDownLatch(1)
+        mock.statusGate = status
+        mock.recentGate = response
+        val gates = listOf("/session/status" to status, "/experimental/session" to response)
+        val counts = gates.associate { (path, _) -> path to (mock.requestCount(path) + 1) }
+
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher().use { dispatcher ->
+            val call = async(dispatcher) { api.recent("/test", 5) }
+            try {
+                for ((path, gate) in gates) {
+                    assertTrue(mock.awaitRequestCount(path, counts.getValue(path), timeout), "Request did not reach $path")
+                    val progress = CountDownLatch(1)
+                    launch(dispatcher) { progress.countDown() }
+                    assertTrue(progress.await(timeout, TimeUnit.MILLISECONDS), "Caller dispatcher blocked while waiting for $path")
+                    assertFalse(call.isCompleted, "Recent sessions completed before releasing $path")
+                    gate.countDown()
+                }
+                assertTrue(withTimeout(timeout) { call.await() }.sessions.isEmpty())
+            } finally {
+                status.countDown()
+                response.countDown()
+                call.cancelAndJoin()
+            }
         }
     }
 
@@ -141,6 +185,68 @@ class KiloSessionRpcApiImplTest {
 
         assertFailsWith<IllegalStateException> { api.fork("ses_source", "/worktree", null) }
         assertNull(mock.lastForkPath)
+    }
+
+    @Test
+    fun `find loads a child omitted from root lists through its effective directory`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        mock.sessionCreate = """{"id":"ses_child","slug":"child","projectID":"prj","directory":"/work tree","parentID":"ses_root","title":"Child","version":"1","time":{"created":1,"updated":2},"share":{"url":"https://example.com/shared"}}"""
+        app.sessions.setDirectory("ses_child", "/work tree")
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        val session = assertNotNull(api.find("ses_child", "/fallback"))
+
+        assertEquals("ses_child", session.id)
+        assertEquals("ses_root", session.parentID)
+        assertEquals("/work tree", session.directory)
+        assertEquals("https://example.com/shared", session.share?.url)
+        assertEquals(1.0, session.time.created)
+        assertEquals(2.0, session.time.updated)
+        assertTrue(mock.paths.any { URLDecoder.decode(it, "UTF-8") == "/session/ses_child?directory=/work tree" })
+        assertEquals(1, mock.requestCount("/session/ses_child"))
+    }
+
+    @Test
+    fun `find returns null only for confirmed HTTP404`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        mock.sessionGetStatus = 404
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        assertNull(api.find("ses_deleted", "/test"))
+        assertEquals(1, mock.requestCount("/session/ses_deleted"))
+    }
+
+    @Test
+    fun `find propagates other HTTP failures even when body says not found`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        mock.sessionCreate = """{"message":"Session ses_live not found while backend unavailable"}"""
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        for (code in listOf(400, 401, 403)) {
+            mock.sessionGetStatus = code
+            assertEquals(code, assertFailsWith<ClientException> { api.find("ses_live", "/test") }.statusCode)
+        }
+        for (code in listOf(500, 503)) {
+            mock.sessionGetStatus = code
+            assertEquals(code, assertFailsWith<ServerException> { api.find("ses_live", "/test") }.statusCode)
+        }
+    }
+
+    @Test
+    fun `find propagates decoding failure rather than reporting absence`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        val app = app(log)
+        ready(app)
+        mock.sessionCreate = "invalid JSON"
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = log)
+
+        assertFailsWith<SerializationException> { api.find("ses_live", "/test") }
     }
 
     @Test

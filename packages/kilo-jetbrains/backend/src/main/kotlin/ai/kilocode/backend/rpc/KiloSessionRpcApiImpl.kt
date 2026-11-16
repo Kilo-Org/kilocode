@@ -99,7 +99,7 @@ class KiloSessionRpcApiImpl internal constructor(
         ready { workspaces.get(directory).sessions() }
 
     override suspend fun recent(directory: String, limit: Int): SessionListDto =
-        ready { sessions.recent(directory, limit) }
+        ready { withContext(Dispatchers.IO) { sessions.recent(directory, limit) } }
 
     override suspend fun create(directory: String): SessionDto {
         app.requireReady()
@@ -124,6 +124,13 @@ class KiloSessionRpcApiImpl internal constructor(
         if (hosted.isHosted(id)) return hosted.get(id, organization())
         val dir = sessions.getDirectory(id, directory)
         return sessions.get(id, dir)
+    }
+
+    override suspend fun find(id: String, directory: String): SessionDto? {
+        app.requireReady()
+        requireLocal(id, "find")
+        val dir = sessions.getDirectory(id, directory)
+        return withContext(Dispatchers.IO) { sessions.find(id, dir) }
     }
 
     override suspend fun delete(id: String, directory: String) {
