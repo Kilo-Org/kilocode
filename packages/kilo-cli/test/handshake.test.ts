@@ -44,6 +44,12 @@ test("a client starts the host, confirms a Kilo v2 server through the handshake 
     const client = OpenCode.make({ baseUrl: url, headers: { authorization: `Basic ${btoa("opencode:secret")}` } })
     const options = { location: { directory: root } }
 
+    // The server no longer waits for a Location's plugins in rpc.call, so this test waits for the Location's
+    // plugins to register before it calls their RPCs.
+    for (const deadline = performance.now() + 10_000; performance.now() < deadline; await Bun.sleep(25)) {
+      if ((await client.plugin.list(options)).data.length > 0) break
+    }
+
     expect(await client.rpc(KiloHandshakeRpc.Definition).get({}, options)).toEqual({
       product: "kilo",
       version: KiloApp.version,

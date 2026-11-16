@@ -2,6 +2,7 @@ import fs from "fs/promises"
 import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Environment } from "@opencode/core/environment/index"
 import { FileAccess } from "@opencode/core/file-access"
@@ -73,6 +74,7 @@ const withTool = <A, E, R>(
   }).pipe(
     Effect.provide(
       AppNodeBuilder.build(LayerNode.group([Tool.node, FileAccess.node, FileMutation.node, node(directory, worktree)]), [
+        Config.node.replace(Config.testLayer()),
         Environment.node.replace(transformEnvironmentFiles()),
         Location.node.replace(activeLocation),
         Formatter.node.replace(Layer.mock(Formatter.Service, { file: (target) => formatFile(target) })),

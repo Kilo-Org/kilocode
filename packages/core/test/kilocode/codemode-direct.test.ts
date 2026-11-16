@@ -1,6 +1,7 @@
 import { expect } from "bun:test"
 import { CodeModeCatalog } from "@opencode/core/codemode/catalog"
 import { CodeModeInstructions } from "@opencode/core/codemode/instructions"
+import { Config } from "@opencode/core/config"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Location } from "@opencode/core/location"
 import { AbsolutePath } from "@opencode/core/schema"
@@ -13,6 +14,7 @@ import { it } from "../lib/effect"
 import { codeModeListings, executeTool, toolIdentity } from "../lib/tool"
 
 const node = AppNodeBuilder.build(Tool.node, [
+  Config.node.replace(Config.testLayer()),
   Location.node.replace(Location.boundNode({ directory: AbsolutePath.make("/project") })),
 ])
 
@@ -129,7 +131,8 @@ it.effect("supersedes the catalog when a direct tool first appears", () =>
       current,
     )
     expect(added.text).not.toContain("This catalog supersedes the previous Code Mode tool catalog.")
-    expect(added.text).toContain("New tools are available in addition to those previously listed:")
+    // board_post is its own top-level namespace, so it is reported as a new namespace delta, not a supersede.
+    expect(added.text).toContain("New tools are available:")
     expect(added.text).toContain("// [direct] Post to the shared board")
   }),
 )

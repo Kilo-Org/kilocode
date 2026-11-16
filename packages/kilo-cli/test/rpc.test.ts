@@ -18,6 +18,7 @@ import { SessionProjector } from "@opencode/core/session/projector"
 import { Global } from "@opencode/util/global"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { SessionSync } from "../src/session-sync"
+import { loadPlugins } from "./lib/plugins"
 
 // The reference Kilo RPC end to end: the contract in @opencode/schema, the handlers in the Gateway plugin of
 // packages/kilo-plugin, the plugin registered by the host overrides, and the call through the generated client's
@@ -27,7 +28,7 @@ const boot =
   (
     env: Record<string, string>,
     body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>,
-    options: { syncBackground?: boolean } = {},
+    options: { syncBackground?: boolean; awaitActivation?: boolean } = {},
   ) =>
   async () => {
   using backend = fixture()
@@ -104,7 +105,14 @@ const boot =
               { preconnect: fetch.preconnect },
             ),
           })
-          yield* Effect.promise(() => body(gateway(client, directory, backend.url, syncOrganizations, syncScopes), backend))
+          // The server no longer waits for a Location's plugins in rpc.call, so a one-shot caller waits itself.
+          const ready = loadPlugins(context, directory)
+          // A test that asserts intermediate activation state opts out and awaits `gateway.ready()` itself once its
+          // fixture is in place.
+          if (options.awaitActivation !== false) yield* ready
+          yield* Effect.promise(() =>
+            body(gateway(client, directory, backend.url, syncOrganizations, syncScopes, ready), backend),
+          )
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
     )
@@ -136,6 +144,7 @@ function gateway(
   server: string,
   syncOrganizations: (string | null)[],
   syncScopes: (string | null | undefined)[],
+  ready: Effect.Effect<void, unknown>,
 ) {
   return {
     rpc: client.rpc(KiloGatewayRpc.Definition),
@@ -144,6 +153,8 @@ function gateway(
     server,
     syncOrganizations,
     syncScopes,
+    // Waits for the Location's plugins to finish registering, so a one-shot caller can dispatch the RPC.
+    ready: () => Effect.runPromise(ready),
   }
 }
 
@@ -231,15 +242,21 @@ test(
       selectedOrganizationId: "selected",
       hasPersonalAccount: false,
     }
-    const starting = gateway.rpc.authStatus({}, gateway.options)
+    // The server no longer waits for plugins in rpc.call, so this one-shot caller awaits activation before it calls.
+    // Activation registers the RPC and starts the login's catalog resolution, which blocks on the pending profile, so
+    // no organization resolves yet.
+    await gateway.ready()
     try {
       await until(() => backend.requests.some((request) => request.path === "/api/profile"), "the unresolved profile request reaches the peer")
       expect(gateway.syncScopes.length).toBeGreaterThan(0)
       expect(gateway.syncScopes.every((scope) => scope === undefined)).toBe(true)
       expect(gateway.syncOrganizations).toEqual([])
+      // rpc.call no longer waits for the login's catalog resolution, so authStatus reports no organization yet.
+      // Before upstream v2.2.7 this call waited and returned the organization.
+      expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: null })
       profileReady.resolve()
-      expect(await starting).toMatchObject({ authenticated: true, organizationID: "selected" })
       await until(() => gateway.syncOrganizations.includes("selected"), "automatic organization enrollment reaches the peer")
+      expect(await gateway.rpc.authStatus({}, gateway.options)).toMatchObject({ authenticated: true, organizationID: "selected" })
       const directory = gateway.options.location.directory
       const status = await gateway.sync.status({ directory }, gateway.options)
       expect(status).toMatchObject({ enabled: true, tenant: { type: "organization", id: "selected" } })
@@ -248,9 +265,8 @@ test(
       expect(gateway.syncScopes.filter((scope) => scope !== undefined)).toEqual(["selected"])
     } finally {
       profileReady.resolve()
-      await starting.catch(() => undefined)
     }
-  }, { syncBackground: true }),
+  }, { syncBackground: true, awaitActivation: false }),
   30_000,
 )
 

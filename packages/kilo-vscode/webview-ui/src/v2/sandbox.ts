@@ -10,6 +10,7 @@ import { useLanguage } from "../context/language"
 import { useVSCode } from "../context/vscode"
 import { sandboxControls } from "../components/settings/sandboxing"
 import { useV2 } from "./client"
+import { readListed } from "./plugin-inventory"
 import { failureHandling, mergeStatus, type SandboxStatus } from "./sandbox-status"
 
 export type SandboxSupport = KiloSandboxRpc.Support
@@ -114,9 +115,19 @@ export function createSandbox(input: {
 
   const post = (message: ToHost) => vscode.postMessage(message as never)
 
+  // A Location that is still activating answers like a server without the sandbox plugin, so both reads wait for its
+  // plugins before they take that answer. A dropped connection and a disposed owner end the wait.
+  let disposed = false
+  const listed = <T>(read: () => Promise<T>) =>
+    readListed({
+      api: v2.api,
+      directory,
+      active: () => !disposed && v2.connection.status() === "connected",
+      read,
+    })
+
   const readSupport = () => {
-    void rpc
-      .support({}, { location })
+    void listed(() => rpc.support({}, { location }))
       .then((value) => {
         unsupported = false
         setSupport(value)
@@ -139,7 +150,7 @@ export function createSandbox(input: {
     try {
       // A failed create or metadata write is reported by the prompt; the status read still answers.
       await Promise.resolve(input.gate?.(sessionID)).catch(() => undefined)
-      const value = await rpc.status({ sessionID }, { location })
+      const value = await listed(() => rpc.status({ sessionID }, { location }))
       if (token !== reads || input.session() !== sessionID) return
       attempts = 0
       storeStatus(sessionID, value)
@@ -171,6 +182,7 @@ export function createSandbox(input: {
   })
   onCleanup(subscribe)
   onCleanup(() => {
+    disposed = true
     if (retry) clearTimeout(retry)
   })
 
