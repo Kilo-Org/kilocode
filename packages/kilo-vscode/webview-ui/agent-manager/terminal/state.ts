@@ -1028,6 +1028,14 @@ export function createTerminalMessageHandler(deps: TerminalMessageHandlerDeps) {
       deps.showError(msg.message)
       return true
     }
+    if (msg.type === "agentManager.terminal.cancelled") {
+      // The host closed the PTY before it became a tab, so drop the optimistic record without an error.
+      const context = deps.state.contextFor(msg.createId)
+      const request = deps.state.completeSide(msg.createId)
+      if (context) deps.state.remove(msg.createId)
+      if (request) deps.onSideError?.(request.contextKey)
+      return true
+    }
     return false
   }
 }

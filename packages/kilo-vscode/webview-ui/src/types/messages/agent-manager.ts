@@ -442,6 +442,12 @@ export interface AgentManagerTerminalErrorMessage {
   message: string
 }
 
+/** A create request whose PTY was closed before it could become a tab, for example because its project was removed. */
+export interface AgentManagerTerminalCancelledMessage {
+  type: "agentManager.terminal.cancelled"
+  createId: string
+}
+
 /** Provider-owned script terminal (Run/Setup). Full snapshots replace only these terminal kinds. */
 export type ScriptTerminalKind = "run" | "setup"
 
@@ -801,6 +807,7 @@ export type AgentManagerExtensionMessage =
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
+  | AgentManagerTerminalCancelledMessage
   | AgentManagerScriptTerminalsMessage
   | AgentManagerTerminalSocketOpenedMessage
   | AgentManagerTerminalSocketMessage

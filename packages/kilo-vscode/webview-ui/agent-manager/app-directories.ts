@@ -61,6 +61,22 @@ export function createAppDirectories(opts: {
     return [...new Set([...expanded, ...sessionDirectories(), selected, ...open].filter((dir): dir is string => !!dir))]
   }
 
+  /** Worktree folders of the active project that the host found deleted on disk. */
+  const missingDirectories = () => {
+    const id = opts.activeProjectId()
+    if (!id) return []
+    const store = opts.store(id)
+    const health = store.worktreeHealth()
+    const stale = store.staleWorktreeIds()
+    return store
+      .worktrees()
+      .filter(
+        (worktree) =>
+          stale.has(worktree.id) || health[worktree.id] === "absent-restorable" || health[worktree.id] === "absent-gone",
+      )
+      .map((worktree) => worktree.path)
+  }
+
   /** The directory a tracked session reads from; undefined when the host has not named one. */
   const directoryOf = (sessionID: string) => {
     const managed = opts.managedSessions().find((session) => session.id === sessionID)
@@ -68,7 +84,16 @@ export function createAppDirectories(opts: {
     return root(opts.currentProjectId())
   }
 
-  return { root, worktreePath, worktreePathIn, sessionDirectories, visibleDirectories, retained, directoryOf }
+  return {
+    root,
+    worktreePath,
+    worktreePathIn,
+    sessionDirectories,
+    visibleDirectories,
+    retained,
+    missingDirectories,
+    directoryOf,
+  }
 }
 
 export type AppDirectories = ReturnType<typeof createAppDirectories>

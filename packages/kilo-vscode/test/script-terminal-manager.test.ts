@@ -205,6 +205,25 @@ describe("ScriptTerminalManager", () => {
     expect(ctx.manager.active("setup", "wt-1", "prj-b")).toBe(true)
   })
 
+  it("stops the script terminals of a removed project only", async () => {
+    let id = 0
+    const ctx = harness({
+      create: async () => ({ ...info(), id: `pty-${++id}` }),
+      list: async () => [{ ...info(), id: `pty-${id}` }],
+    })
+    const done: unknown[] = []
+
+    await ctx.manager.start("run", { ...config, projectId: "prj-a" }, (exit) => done.push(exit))
+    await ctx.manager.start("run", { ...config, projectId: "prj-b" }, () => undefined)
+    await ctx.manager.closeProject("prj-a")
+
+    expect(ctx.calls.remove).toEqual([{ ptyID: "pty-1", location: { directory: "/repo/worktree" } }])
+    expect(ctx.manager.active("run", "wt-1", "prj-a")).toBe(false)
+    expect(ctx.manager.active("run", "wt-1", "prj-b")).toBe(true)
+    expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ projectId: "prj-b" })])
+    expect(done).toEqual([{ stopped: true }])
+  })
+
   it("finishes once on a natural exit and retains the replayable terminal", async () => {
     const ctx = harness()
     const done: unknown[] = []
