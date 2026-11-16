@@ -5,6 +5,7 @@ import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import type { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { usable } from "@/session/overflow"
 import type { SessionProcessor } from "@/session/processor"
 import { MessageID, PartID, type SessionID } from "@/session/schema"
@@ -31,6 +32,17 @@ export namespace KiloCompactionChunks {
     "Compaction did not run: the model returned an empty summary. Retry with /compact. If it keeps failing, start a new session to continue."
   export const TRUNCATED_SUMMARY =
     "Compaction did not run: the summary was cut off at the output limit. Retry with /compact. If it keeps failing, start a new session to continue."
+
+  export const CONTENT_FILTER =
+    "Compaction did not run: the model provider's content filter blocked the summary. Retrying will likely fail the same way. Switch the compaction model, change the conversation, or start a new session to continue."
+
+  export function filtered(): NonNullable<MessageV2.Assistant["error"]> {
+    return new SessionV1.ContentFilterError({ message: CONTENT_FILTER }).toObject()
+  }
+
+  export function blocked(error: MessageV2.Assistant["error"]) {
+    return error?.name === "ContentFilterError"
+  }
 
   export function incomplete(
     error: MessageV2.Assistant["error"],
@@ -324,6 +336,9 @@ export namespace KiloCompactionChunks {
       )
       const result = out.result
       const output = out.output
+      // A content-filtered response is never a usable summary, even with text.
+      if (!out.error && out.finish === "content-filter")
+        return { result: "stop" as const, output: undefined, error: filtered() }
       if (out.error || (result !== "continue" && out.finish !== "length"))
         return { result, output: undefined, error: out.error }
       if (!output || out.finish === "length")

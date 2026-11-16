@@ -172,6 +172,23 @@ function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   }
 }
 
+function filteredReply(text?: string) {
+  return () => {
+    const usage = { inputTokens: 1, outputTokens: 0, totalTokens: 1 }
+    return Stream.fromIterable<Event>([
+      ...(text
+        ? [
+            LLMEvent.textStart({ id: "txt-0" }),
+            LLMEvent.textDelta({ id: "txt-0", text }),
+            LLMEvent.textEnd({ id: "txt-0" }),
+          ]
+        : []),
+      LLMEvent.stepFinish({ index: 0, reason: "content-filter", usage }),
+      LLMEvent.finish({ reason: "content-filter", usage }),
+    ])
+  }
+}
+
 function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false, truncated = false) {
   const calls: string[] = []
   const bus = Bus.layer
@@ -314,6 +331,7 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
         SessionNs.node,
         SessionProjector.node,
         Bus.node,
+        EventV2Bridge.node,
         SessionStatus.node,
       ]),
       [
@@ -845,4 +863,68 @@ describe("KiloCompactionChunks", () => {
       },
     })
   }, 30_000)
+
+  for (const text of [undefined, "partial summary"]) {
+    test(`reports a content-filtered compaction response as ContentFilterError${text ? " even with text" : ""}`, async () => {
+      const stub = llm()
+      stub.push(filteredReply(text))
+
+      await using tmp = await tmpdir()
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const session = await svc.create({})
+          const old = await user(session.id, "old context")
+          await assistant(session.id, old.id, tmp.path, "old reply")
+          await user(session.id, "latest request")
+          await Effect.runPromise(
+            KiloSessionCompaction.create({
+              session: store,
+              sessionID: session.id,
+              agent: "build",
+              model: ref,
+              auto: true,
+            }),
+          )
+
+          const rt = liveRuntime(stub.layer)
+          try {
+            const errors: Array<typeof SessionNs.Event.Error.data.Type> = []
+            const off = await rt.runPromise(
+              EventV2Bridge.Service.use((svc) =>
+                svc.listen((evt) => {
+                  if (evt.type !== SessionNs.Event.Error.type) return Effect.void
+                  const data = evt.data as typeof SessionNs.Event.Error.data.Type
+                  if (data.sessionID === session.id) errors.push(data)
+                  return Effect.void
+                }),
+              ),
+            )
+            const msgs = await svc.messages({ sessionID: session.id })
+            const parent = msgs.at(-1)?.info.id
+            expect(parent).toBeTruthy()
+            const result = await rt.runPromise(
+              SessionCompaction.Service.use((svc) =>
+                svc.process({ parentID: parent!, messages: msgs, sessionID: session.id, auto: true }),
+              ),
+            )
+            await rt.runPromise(off)
+
+            const all = await svc.messages({ sessionID: session.id })
+            const summary = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
+            expect(result).toBe("stop")
+            expect(summary?.info.role).toBe("assistant")
+            if (summary?.info.role !== "assistant") return
+            expect(summary.info.finish).toBe("error")
+            expect(summary.info.error).toEqual(KiloCompactionChunks.filtered())
+            expect(summary.info.error?.name).toBe("ContentFilterError")
+            expect(errors).toHaveLength(1)
+            expect(errors[0]?.error?.name).toBe("ContentFilterError")
+          } finally {
+            await rt.dispose()
+          }
+        },
+      })
+    })
+  }
 })

@@ -572,6 +572,16 @@ const layer = Layer.effect(
 
       // kilocode_change start - an empty worker response fails retryably and never replaces the session
       if (fallback === "continue") {
+        // A content-filtered response is not a usable summary, even if it has text.
+        if (processor.message.finish === "content-filter" && !processor.message.error) {
+          processor.message.error = KiloCompactionChunks.filtered()
+          processor.message.finish = "error"
+          processor.message.time.completed = Date.now()
+          yield* session.updateMessage(processor.message)
+          fallback = "stop"
+        }
+      }
+      if (fallback === "continue") {
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
         const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
         // A processor that returns "continue" without rendering any text
@@ -732,7 +742,7 @@ const layer = Layer.effect(
             text: error.data.message,
           })
         }
-        if (incomplete) {
+        if (incomplete || KiloCompactionChunks.blocked(error)) {
           yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error })
           yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error })
         }
