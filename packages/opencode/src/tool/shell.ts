@@ -381,16 +381,21 @@ export const ShellPermission = Effect.gen(function* () {
     }
     const kind = ShellID.toKind(Shell.name(shell))
 
-    const nodes = commands(root).filter(
-      (node) => !stray(root).some((item) => item.command.id === node.id || item.error.id === node.parent?.id),
-    ) // kilocode_change - join tails split off by the grammar (#15938)
+    // kilocode_change start - join tails split off by the grammar (#15938); path scans still cover every node
+    const joined = stray(root)
+    const nodes = commands(root)
+    const covered = (node: Node) =>
+      joined.some((item) => item.command.id === node.id || item.error.id === node.parent?.id)
+    const kept = nodes.filter((node) => !covered(node))
+    // kilocode_change end
     if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
-    if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
+    if (kept.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
     }
 
     for (const node of nodes) {
-      const command = parts(node)
+      const tail = joined.find((item) => item.error.id === node.parent?.id) // kilocode_change
+      const command = [...parts(node), ...(tail ? parts(tail.command) : [])] // kilocode_change - scan the joined tail as arguments
       const tokens = command.map((item) => item.text)
       const cmd = ps || kind === "cmd" ? tokens[0]?.toLowerCase() : tokens[0]
 
@@ -406,14 +411,15 @@ export const ShellPermission = Effect.gen(function* () {
         }
       }
 
-      if (tokens.length && (!cmd || !CWD.has(cmd))) {
+      if (tokens.length && (!cmd || !CWD.has(cmd)) && !covered(node)) {
+        // kilocode_change - the joined pattern covers it
         scan.patterns.add(pattern(node, kind, source(node))) // kilocode_change - mask inert operators (quoted, /dev/null) for read-only rules
         scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
       }
     }
 
     // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
-    const lost = unparsed(root, nodes.length)
+    const lost = unparsed(root, kept.length)
     if (lost.length > 0) scan.access = "unknown"
     for (const pattern of lost) {
       scan.patterns.add(pattern)

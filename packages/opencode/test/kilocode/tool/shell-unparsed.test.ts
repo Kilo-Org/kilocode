@@ -204,6 +204,29 @@ describe("shell permission scanner joins tails split off by dot-prefixed tokens"
     expect(found.map((pattern) => Permission.evaluate("bash", pattern, rules).action)).toContain("deny")
   })
 
+  test("pwsh: the joined tail is still scanned for external directories", async () => {
+    await using tmp = await tmpdir()
+    const outside = path.dirname(tmp.path)
+    const command = "Remove-Item a, ../outside/secret"
+    const requests = await scan(tmp.path, command, "pwsh")
+    const external = requests.find((req) => req.permission === "external_directory")
+    expect(external).toBeDefined()
+    expect(external!.patterns).toContain(FSUtil.normalizePathPattern(path.join(outside, "outside", "*")))
+    expect(patterns(requests)).toEqual([command])
+  })
+
+  test("pwsh: a recovered head keeps its external directory check", async () => {
+    await using tmp = await tmpdir()
+    const outside = await tmpdir()
+    const file = path.join(outside.path, "secret.txt").replaceAll("\\", "/")
+    const command = `Get-Content ${file}, .local.txt`
+    const requests = await scan(tmp.path, command, "pwsh")
+    const external = requests.find((req) => req.permission === "external_directory")
+    expect(external).toBeDefined()
+    expect(external!.patterns).toContain(FSUtil.normalizePathPattern(path.join(outside.path, "*")))
+    expect(patterns(requests)).toEqual([command])
+  })
+
   test("pwsh: a dot-source on a new statement is still its own command", async () => {
     await using tmp = await tmpdir()
     const semi = patterns(await scan(tmp.path, "git log -- .x; . ./y", "pwsh"))
