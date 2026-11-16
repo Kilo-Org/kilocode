@@ -772,6 +772,12 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
           const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
           return `<pre dir="auto"><code${attr}>${escaped}</code></pre>`
         },
+        blockquote({ tokens }) {
+          return `<blockquote dir="auto">\n${this.parser.parse(tokens)}</blockquote>\n`
+        },
+        listitem(item) {
+          return `<li dir="auto">${this.parser.parse(item.tokens)}</li>\n`
+        },
         // kilocode_change end
       },
       // kilocode_change start: Marked accepts a tilde preceded by an opening
