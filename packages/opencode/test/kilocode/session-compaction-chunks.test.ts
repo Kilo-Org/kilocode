@@ -987,6 +987,15 @@ describe("KiloCompactionChunks", () => {
         yield* addUser(sessionID, "latest request")
       })
 
+    const seedMany = (dir: string, sessionID: SessionID) =>
+      Effect.gen(function* () {
+        for (const label of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
+          const msg = yield* addUser(sessionID, big(label))
+          yield* addAssistant(sessionID, msg.id, dir, big(`${label} reply`))
+        }
+        yield* addUser(sessionID, "latest request")
+      })
+
     const expectBlocked = (out: Outcome) => {
       expect(out.result).toBe("stop")
       expect(out.summary?.finish).toBe("error")
@@ -1028,6 +1037,42 @@ describe("KiloCompactionChunks", () => {
         expect(blocked).toBe(true)
         expectBlocked(out)
         expect(out.summary?.parts.filter((part) => part.type === "text")).toEqual([])
+      }),
+    )
+
+    it.instance("skips remaining chunk workers once a chunk is filtered", () =>
+      Effect.gen(function* () {
+        let chunks = 0
+        for (let i = 0; i < 12; i++)
+          stub.push((input) => {
+            const text = JSON.stringify(input.messages)
+            if (text.includes("<partial-summary")) return reply("partial")(input)
+            const match = /chunk (\d+) of (\d+)/.exec(text)
+            chunks = Number(match?.[2])
+            return match?.[1] === "1" ? filteredReply()() : reply("partial")(input)
+          })
+        const out = yield* compact({ auto: false, seed: seedMany })
+        expect(chunks).toBeGreaterThan(3)
+        // Only the first wave of workers starts; queued chunks are skipped after the filter.
+        expect(stub.calls()).toBeLessThanOrEqual(3)
+        expectBlocked(out)
+      }),
+    )
+
+    it.instance("skips later reduce groups once a group is filtered", () =>
+      Effect.gen(function* () {
+        let reduces = 0
+        for (let i = 0; i < 40; i++)
+          stub.push((input) => {
+            if (!JSON.stringify(input.messages).includes("<partial-summary")) return reply("partial")(input)
+            reduces++
+            if (reduces === 1) return reply("")(input)
+            return reduces === 2 ? filteredReply()() : reply("partial")(input)
+          })
+        const out = yield* compact({ auto: false, seed: seedMany })
+        // The whole-set reduce and the first group run; the second group never does.
+        expect(reduces).toBe(2)
+        expectBlocked(out)
       }),
     )
 
