@@ -8,6 +8,7 @@ import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { generateText, jsonSchema, type ModelMessage } from "ai"
 import { createAmazonBedrock, type AmazonBedrockLanguageModelOptions } from "@ai-sdk/amazon-bedrock"
 import { createAnthropic } from "@ai-sdk/anthropic"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible" // kilocode_change
 import { createVertexAnthropic } from "@ai-sdk/google-vertex/anthropic"
 
 describe("ProviderTransform.options - setCacheKey", () => {
@@ -3387,6 +3388,99 @@ describe("ProviderTransform.message - providerOptions key remapping", () => {
     expect(result[0].providerOptions?.bedrock).toEqual({ someOption: "value" })
     expect(result[0].providerOptions?.["my-bedrock"]).toBeUndefined()
   })
+
+  // kilocode_change start - Gemini thought_signature replay through openai-compatible custom providers
+  const toolCall = (providerOptions?: Record<string, any>) =>
+    [
+      {
+        role: "assistant",
+        content: [
+          { type: "tool-call", toolCallId: "call_1", toolName: "read", input: { path: "a.txt" }, providerOptions },
+        ],
+      },
+    ] as any[]
+
+  test("openai-compatible copies thoughtSignature from a custom provider key to 'google' for tool calls", () => {
+    const model = createModel("litellm", "@ai-sdk/openai-compatible")
+
+    const result = ProviderTransform.message(toolCall({ litellm: { thoughtSignature: "sig-1" } }), model, {}) as any[]
+
+    expect(result[0].content[0].providerOptions.google).toEqual({ thoughtSignature: "sig-1" })
+    expect(result[0].content[0].providerOptions.litellm).toEqual({ thoughtSignature: "sig-1" })
+  })
+
+  test("openai-compatible uses the dot-split provider name the SDK stores signatures under", () => {
+    const model = createModel("proxy.ai", "@ai-sdk/openai-compatible")
+
+    const result = ProviderTransform.message(toolCall({ proxy: { thoughtSignature: "sig-2" } }), model, {}) as any[]
+
+    expect(result[0].content[0].providerOptions.google).toEqual({ thoughtSignature: "sig-2" })
+  })
+
+  test("openai-compatible leaves tool calls without a signature unchanged", () => {
+    const model = createModel("litellm", "@ai-sdk/openai-compatible")
+
+    const result = ProviderTransform.message(toolCall({ litellm: { other: true } }), model, {}) as any[]
+
+    expect(result[0].content[0].providerOptions).toEqual({ litellm: { other: true } })
+    expect((ProviderTransform.message(toolCall(), model, {}) as any[])[0].content[0].providerOptions).toBeUndefined()
+  })
+
+  test("openai-compatible keeps an existing google thoughtSignature", () => {
+    const model = createModel("litellm", "@ai-sdk/openai-compatible")
+
+    const result = ProviderTransform.message(
+      toolCall({ litellm: { thoughtSignature: "stored" }, google: { thoughtSignature: "existing" } }),
+      model,
+      {},
+    ) as any[]
+
+    expect(result[0].content[0].providerOptions.google).toEqual({ thoughtSignature: "existing" })
+  })
+
+  test("thoughtSignature is not copied for other SDKs", () => {
+    const model = createModel("litellm", "@ai-sdk/openai")
+
+    const result = ProviderTransform.message(toolCall({ litellm: { thoughtSignature: "sig-3" } }), model, {}) as any[]
+
+    expect(result[0].content[0].providerOptions.google).toBeUndefined()
+  })
+
+  test("replayed signature reaches the openai-compatible request body as extra_content", async () => {
+    const model = createModel("litellm", "@ai-sdk/openai-compatible")
+    const bodies: any[] = []
+    const provider = createOpenAICompatible({
+      name: "litellm",
+      baseURL: "http://localhost:4000/v1",
+      apiKey: "test",
+      fetch: (async (_url: any, init: any) => {
+        bodies.push(JSON.parse(init.body))
+        return Response.json({
+          id: "x",
+          created: 0,
+          model: "gemini",
+          choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        })
+      }) as any,
+    })
+    const msgs = [
+      { role: "user", content: "read a.txt" },
+      ...toolCall({ litellm: { thoughtSignature: "sig-4" } }),
+      {
+        role: "tool",
+        content: [
+          { type: "tool-result", toolCallId: "call_1", toolName: "read", output: { type: "text", value: "hi" } },
+        ],
+      },
+    ] as ModelMessage[]
+
+    await generateText({ model: provider("gemini"), messages: ProviderTransform.message(msgs, model, {}) })
+
+    const call = bodies[0].messages.find((m: any) => m.tool_calls).tool_calls[0]
+    expect(call.extra_content).toEqual({ google: { thought_signature: "sig-4" } })
+  })
+  // kilocode_change end
 })
 
 describe("ProviderTransform.message - claude w/bedrock custom inference profile", () => {

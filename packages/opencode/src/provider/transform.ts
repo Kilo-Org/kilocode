@@ -8,6 +8,7 @@ import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 import { imageModalities } from "@/kilocode/provider/image-output" // kilocode_change
+import { replayThoughtSignature } from "@/kilocode/provider/thought-signature" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -585,6 +586,10 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
 
     msgs = mapProviderOptions(msgs, remap)
   }
+
+  // kilocode_change start - replay Gemini thought_signature stored under a custom openai-compatible provider id
+  if (model.api.npm === "@ai-sdk/openai-compatible") msgs = replayThoughtSignature(msgs, model.providerID)
+  // kilocode_change end
 
   // Strip Responses item IDs before serialization, following Codex and keeping signed request bodies immutable.
   if (
