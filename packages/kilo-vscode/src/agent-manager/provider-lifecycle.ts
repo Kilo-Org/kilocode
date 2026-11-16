@@ -378,6 +378,21 @@ export async function removeStaleLifecycleWorktree(
   }
   host.forgetName(worktreeId)
   const kept = keepSessions ? state.getSessions(worktreeId) : []
+  // Local reads its sessions from the store of the project root, and the server runs a session only in its own
+  // directory: a kept session must move to the root, or it stays in the dead directory and every prompt fails.
+  // An `unregistered` worktree still has its directory, so a kept session can be running: stop it first, as a delete
+  // does, so the move does not land in the middle of a drain.
+  if (kept.length > 0) {
+    const ids = kept.map((session) => session.id)
+    const client = await host.client().catch((error: unknown) => {
+      host.log(`Failed to move kept sessions to Local: ${error}`)
+      return undefined
+    })
+    if (client) {
+      await host.abort(ids)
+      await moveSessionsToRoot(client, host, ctx.root, ids)
+    }
+  }
   // Detach before removing the row: removeWorktree() deletes the sessions that still point at it.
   for (const session of kept) state.moveSession(session.id, null)
   const orphaned = state.removeWorktree(worktreeId)

@@ -89,6 +89,7 @@ import {
   rememberSelectionTab,
   selectLocalAction,
   selectWorktreeAction,
+  vacantWorktreeTab,
 } from "./selection-actions"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
@@ -1067,6 +1068,22 @@ const AgentManagerContent: Component = () => {
     const id = sessions.currentSessionID()
     if (!id || isPending(id)) return undefined
     return showsSession(selection(), ownerOf(id)) ? id : undefined
+  })
+  createEffect(() => {
+    const sel = selection()
+    const current = sessions.currentSessionID()
+    const id = vacantWorktreeTab({
+      selection: sel,
+      // What the chat renders: a session that runs in another directory leaves the worktree as empty as no session.
+      current: shownSession() ?? (current && isPending(current) ? current : undefined),
+      pending: activePendingId(),
+      terminal: terms.activeId(),
+      review: reviewActive(),
+      history: history(),
+      tabs: activeWorktreeSessions().map((session) => session.id),
+      remembered: sel ? untrack(tabMemory)[sel] : undefined,
+    })
+    if (id) sessions.selectSession(id)
   })
   const draftTab = () => {
     const id = sessions.currentSessionID()

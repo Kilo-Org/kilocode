@@ -171,6 +171,28 @@ export function selectLocalAction<T extends SessionLike>(
   })
 }
 
+/**
+ * The session tab to show when a worktree is selected but shows nothing: no session, draft, terminal or review is
+ * active while the worktree has tabs. That happens when the session a restore or a remembered tab pointed at no longer
+ * exists on the server and closes before the worktree's session list loaded. Returns the remembered tab when the
+ * worktree still has it, else its first tab.
+ */
+export function vacantWorktreeTab(input: {
+  selection: string | null
+  current: string | undefined
+  pending: string | undefined
+  terminal: string | undefined
+  review: boolean
+  history: boolean
+  tabs: readonly string[]
+  remembered: string | undefined
+}): string | undefined {
+  if (!input.selection || input.selection === LOCAL) return
+  if (input.current || input.pending || input.terminal || input.review || input.history) return
+  if (input.remembered && input.tabs.includes(input.remembered)) return input.remembered
+  return input.tabs[0]
+}
+
 /** Select a worktree: restore its remembered tab or fall back to its first session. */
 export function selectWorktreeAction<T extends SessionLike>(
   deps: SelectionActionDeps<T>,
