@@ -330,6 +330,6 @@
     "@ai-sdk/groq@3.0.45": "patches/@ai-sdk%2Fgroq@3.0.45.patch",
     "babel-plugin-module-resolver@5.0.2": "patches/babel-plugin-module-resolver@5.0.2.patch"
   },
-  "version": "7.8.28",
+  "version": "7.8.30",
   "peerDependencies": {}
 }
