@@ -166,4 +166,37 @@ describe("continue-in-worktree steps", () => {
       fs.rmSync(root, { recursive: true, force: true })
     }
   })
+
+  it("continues from the project root when the server cannot report the session directory", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "am-continue-"))
+    const run = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" })
+    try {
+      run(root, "init", "-q", "-b", "main")
+      fs.writeFileSync(path.join(root, "a.txt"), "a\n")
+      run(root, "add", "-A")
+      run(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+      run(root, "worktree", "add", "-q", "-b", "feature", path.join(root, "wt"))
+      const create = mock(async (_opts: { baseBranch: string; baseRef: string }) => null)
+
+      await continueInWorktree(
+        ctx({
+          root,
+          client: async () =>
+            ({
+              session: {
+                interrupt: async () => undefined,
+                get: () => Promise.reject(new Error("not found")),
+              },
+            }) as never,
+          createWorktreeOnDisk: create,
+        }),
+        "session-1",
+        () => {},
+      )
+
+      expect(create.mock.calls[0]?.[0].baseBranch).toBe("main")
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
