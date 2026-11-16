@@ -700,8 +700,6 @@ export const dict = {
 
   "common.retry": "Prøv igen",
   "common.refresh": "Opdatér",
-  "common.reload": "Genindlæs",
-  "common.reloadDescription": "Genindlæs konfiguration, færdigheder, agenter og kommandoer fra disken",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",

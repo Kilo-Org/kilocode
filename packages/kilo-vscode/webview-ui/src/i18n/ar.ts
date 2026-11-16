@@ -646,8 +646,6 @@ export const dict = {
 
   "common.retry": "إعادة المحاولة",
   "common.refresh": "تحديث",
-  "common.reload": "إعادة التحميل",
-  "common.reloadDescription": "إعادة تحميل التكوين والمهارات والوكلاء والأوامر من القرص",
 
   "profile.title": "الملف الشخصي",
   "profile.notLoggedIn": "لم يتم تسجيل الدخول",
