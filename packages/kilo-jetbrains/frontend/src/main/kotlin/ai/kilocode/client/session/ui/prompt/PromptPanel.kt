@@ -360,6 +360,11 @@ class PromptPanel(
             }
         }
 
+    val isSpeechActive: Boolean
+        get() = speechState == SpeechInputState.STARTING ||
+            speechState == SpeechInputState.RECORDING ||
+            speechState == SpeechInputState.TRANSCRIBING
+
     @RequiresEdt
     override fun toggleSpeech() {
         val input = speech ?: return
@@ -436,16 +441,16 @@ class PromptPanel(
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
         if (showEnhance) bar.add(enhance)
-        if (showSubmit) {
+        if (showSubmit || speech != null) {
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(separator)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            if (speech != null) {
-                bar.add(speechButton)
-                bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-            }
-            bar.add(button)
         }
+        if (speech != null) {
+            bar.add(speechButton)
+            if (showSubmit) bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
+        if (showSubmit) bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         addComponentListener(resize)
@@ -621,6 +626,10 @@ class PromptPanel(
     @RequiresEdt
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
+    /** A cleared editor can still own a submission being prepared or awaiting persistence. */
+    @RequiresEdt
+    fun hasInput(): Boolean = hasDraft() || submitting || lastSubmission != null
+
     @RequiresEdt
     fun attachments(): List<PromptAttachment> = attachments.toList()
 
@@ -697,9 +706,14 @@ class PromptPanel(
         syncHighlights()
     }
 
-    // Puts the most recently submitted prompt back in the editor after the server rejected it
-    // or the send failed, so the user doesn't lose what they typed. A no-op once consumed, or
-    // if the user already started a new draft in the meantime (we must not clobber that).
+    // Programmatic sends must retain the same fallback as submissions from the editor.
+    @RequiresEdt
+    fun retainSubmission(text: String, items: List<PromptAttachment> = emptyList()) {
+        lastSubmission = text to items
+        restoredSubmission = null
+    }
+
+    // Restore after rejection without clobbering a draft the user has already started.
     @RequiresEdt
     fun restoreLastSubmission() {
         val (text, items) = lastSubmission ?: return
@@ -946,6 +960,7 @@ class PromptPanel(
             KiloNotifications.error(project, KiloBundle.message("prompt.speech.error.title"), null)
         }
         syncButton()
+        if (previous != state) onChange()
     }
 
     private fun speechLabel(state: SpeechInputState): String = when (state) {
@@ -1024,7 +1039,7 @@ class PromptPanel(
                     if (project.isDisposed) return@withContext
                     val parts = files + mentioned
                     LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
-                    lastSubmission = txt to items
+                    retainSubmission(txt, items)
                     onSend(txt, parts)
                 }
             } catch (e: CancellationException) {
@@ -1137,7 +1152,9 @@ class PromptPanel(
         if (speech == null) return
         val action = ActionManager.getInstance().getAction(SpeechInputAction.ID) ?: return
         val binding = Disposer.newDisposable("Kilo speech input shortcut")
-        action.registerCustomShortcutSet(
+        // Register the component-local shortcut on a wrapper so the globally registered action's
+        // shortcut set stays owned by KeymapManager.
+        ActionUtil.wrap(action).registerCustomShortcutSet(
             KeymapUtil.getActiveKeymapShortcuts(SpeechInputAction.ID),
             ed.contentComponent,
             binding,

@@ -2,12 +2,18 @@ package ai.kilocode.client.speech
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.TEST_WAIT_MS
 import ai.kilocode.client.util.edtWait
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
+import com.intellij.platform.ide.progress.runWithModalProgressBlocking
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 class SpeechInputTest : BasePlatformTestCase() {
     private lateinit var coroutines: TestCoroutines
@@ -58,6 +64,73 @@ class SpeechInputTest : BasePlatformTestCase() {
             ),
             states,
         )
+    }
+
+    fun `test recording and transcription complete while a modal dialog is open`() {
+        val capture = Capture()
+        val recording = CompletableDeferred<Unit>()
+        val finished = CompletableDeferred<Unit>()
+        val inserted = mutableListOf<String>()
+        val input = SpeechInput(
+            coroutines.scope,
+            capture,
+            transcribe = { "dictated prompt" },
+            insert = inserted::add,
+            change = { state, _ ->
+                if (state == SpeechInputState.RECORDING) recording.complete(Unit)
+                if (state == SpeechInputState.IDLE) finished.complete(Unit)
+            },
+        )
+
+        edtWait {
+            runWithModalProgressBlocking(project, "Voice input") {
+                withTimeout(TEST_WAIT_MS) {
+                    withContext(Dispatchers.EDT) {
+                        assertNotSame(ModalityState.nonModal(), ModalityState.current())
+                        input.start()
+                    }
+                    capture.started.complete("recording")
+                    recording.await()
+                    withContext(Dispatchers.EDT) { input.stop() }
+                    capture.stopped.complete(byteArrayOf(1))
+                    finished.await()
+                }
+            }
+        }
+
+        assertEquals(listOf("dictated prompt"), inserted)
+    }
+
+    fun `test recording limit and microphone failure callbacks honor dialog modality`() {
+        listOf(false, true).forEach { failure ->
+            val capture = Capture()
+            val recording = CompletableDeferred<Unit>()
+            val finished = CompletableDeferred<SpeechInputState>()
+            val input = SpeechInput(
+                coroutines.scope,
+                capture,
+                transcribe = { "dictated prompt" },
+                insert = {},
+                change = { state, _ ->
+                    if (state == SpeechInputState.RECORDING) recording.complete(Unit)
+                    if (state == SpeechInputState.IDLE || state == SpeechInputState.ERROR) finished.complete(state)
+                },
+            )
+
+            edtWait {
+                runWithModalProgressBlocking(project, "Voice input") {
+                    withTimeout(TEST_WAIT_MS) {
+                        withContext(Dispatchers.EDT) { input.start() }
+                        capture.started.complete("recording")
+                        recording.await()
+                        if (failure) capture.fail(IllegalStateException("microphone disconnected")) else capture.limit()
+                        capture.stopped.complete(byteArrayOf(1))
+                        assertEquals(if (failure) SpeechInputState.ERROR else SpeechInputState.IDLE, finished.await())
+                    }
+                }
+                input.cancel()
+            }
+        }
     }
 
     fun `test second toggle during startup waits for microphone then stops`() {

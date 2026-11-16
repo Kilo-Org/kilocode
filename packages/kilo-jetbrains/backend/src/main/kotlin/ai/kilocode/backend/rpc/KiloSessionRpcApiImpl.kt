@@ -126,6 +126,13 @@ class KiloSessionRpcApiImpl internal constructor(
         return sessions.get(id, dir)
     }
 
+    override suspend fun find(id: String, directory: String): SessionDto? {
+        app.requireReady()
+        requireLocal(id, "find")
+        val dir = sessions.getDirectory(id, directory)
+        return withContext(Dispatchers.IO) { sessions.find(id, dir) }
+    }
+
     override suspend fun delete(id: String, directory: String) {
         app.requireReady()
         requireLocal(id, "delete")
