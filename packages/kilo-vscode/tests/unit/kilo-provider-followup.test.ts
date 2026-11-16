@@ -381,6 +381,7 @@ describe("KiloProvider follow-up sessions", () => {
       session: {
         id: sharedID,
         title: "Session",
+        slug: `${sharedID}-slug`,
         createdAt: new Date(1).toISOString(),
         updatedAt: new Date(1).toISOString(),
         parentID: null,
@@ -550,6 +551,7 @@ describe("KiloProvider follow-up sessions", () => {
         session: {
           id: "ses-followup",
           title: "Session",
+          slug: "ses-followup-slug",
           createdAt: new Date(1).toISOString(),
           updatedAt: new Date(1).toISOString(),
           parentID: null,

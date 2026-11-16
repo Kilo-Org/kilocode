@@ -2,6 +2,8 @@
  * Pure tab-ordering logic for the agent manager.
  */
 
+import { displayTitle } from "../../src/shared/session-title"
+
 export { applyPinnedTabs, reorderTabs, togglePinnedTab } from "../src/utils/tab-order"
 
 /** Restore durable ordering without moving tabs that only exist in this webview. */
@@ -73,11 +75,12 @@ export function insertInTabOrderAfter(order: string[] | undefined, afterId: stri
 /**
  * Find the title of the first item according to a custom order.
  *
+ * Placeholder titles ("New session - <ISO>") are replaced by the session slug.
  * Falls back to the first titled item in `items` if the order
  * doesn't produce a match, then to `fallback`.
  */
 export function firstOrderedTitle(
-  items: { id: string; title?: string }[],
+  items: { id: string; title?: string; slug?: string }[],
   order: string[] | undefined,
   fallback: string,
 ): string {
@@ -85,9 +88,13 @@ export function firstOrderedTitle(
     const lookup = new Map(items.map((item) => [item.id, item]))
     for (const id of order) {
       const item = lookup.get(id)
-      if (item?.title) return item.title
+      const title = item && displayTitle(item, "")
+      if (title) return title
     }
   }
-  const first = items.find((item) => item.title)
-  return first?.title || fallback
+  for (const item of items) {
+    const title = displayTitle(item, "")
+    if (title) return title
+  }
+  return fallback
 }
