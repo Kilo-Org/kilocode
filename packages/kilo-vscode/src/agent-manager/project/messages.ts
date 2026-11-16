@@ -12,7 +12,7 @@ import type { AgentManagerInMessage, AgentManagerOutMessage } from "../types"
 import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
-import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import { canonicalizePath, pathKey, projectIdFor, resolveProjectRoot, samePath } from "./paths"
 import type { SidebarTarget, SessionRef } from "./route"
 import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
 import { runner } from "./prepare"
@@ -208,7 +208,7 @@ function fileSessionByDirectory(
 ): string | null | undefined {
   const state = ctx.peekState()
   if (!state) return undefined
-  const owner = samePath(directory, ctx.root) ? null : (state.findWorktreeByPath(directory)?.id ?? undefined)
+  const owner = pathKey(directory) === pathKey(ctx.root) ? null : (state.findWorktreeByPath(directory)?.id ?? undefined)
   if (owner === undefined) return undefined
   const filed = state.getSession(sessionId)
   if (!filed) state.addSession(sessionId, owner)
@@ -221,7 +221,11 @@ function fileSessionByDirectory(
  * link carries no project, so resolve it from the server directory first and fall back to the live catalog.
  */
 async function openSession(projectId: string | undefined, sessionId: string, deps: ProjectMessageDeps): Promise<void> {
+  // A link can resolve after the user clicked a sidebar row or another link. The newer selection owns the view.
+  const token = Symbol()
+  selections.set(deps, token)
   const directory = await deps.sessionDirectory?.(sessionId)
+  if (selections.get(deps) !== token) return
   const ctx =
     (projectId ? deps.contexts.resolve(projectId) : undefined) ??
     (directory ? deps.contexts.byDirectory(directory) : undefined) ??
@@ -232,6 +236,7 @@ async function openSession(projectId: string | undefined, sessionId: string, dep
     return
   }
   const result = await deps.ready(ctx, { warm: true })
+  if (selections.get(deps) !== token) return
   if (!result.current || !result.ok) {
     deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
     deps.push()
