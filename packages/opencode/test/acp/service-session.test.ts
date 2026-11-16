@@ -1174,6 +1174,35 @@ describe("ACP service sessions", () => {
     expect(error.data).toEqual({ service: "session", errorName: "APIError" })
   })
 
+  // kilocode_change start
+  it("maps unauthorized assistant prompt errors to auth required", async () => {
+    const { service } = makeService([], {
+      prompt: () =>
+        Promise.resolve({
+          data: {
+            info: assistantInfo(
+              { input: 8, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              {
+                name: "APIError",
+                data: { message: "You need to sign in to use this model.", statusCode: 401, isRetryable: false },
+              },
+            ),
+          },
+        }),
+    })
+    const session = await Effect.runPromise(service.newSession({ cwd: "/workspace", mcpServers: [] }))
+
+    const error = await Effect.runPromise(
+      service
+        .prompt({ sessionId: session.sessionId, prompt: [{ type: "text", text: "hello" }] })
+        .pipe(Effect.mapError(ACPError.toRequestError), Effect.flip),
+    )
+
+    expect(error.code).toBe(-32000)
+    expect(error.data).toEqual({ providerId: "test" })
+  })
+  // kilocode_change end
+
   it("maps aborted assistant prompt errors to cancelled", async () => {
     const { service } = makeService([], {
       prompt: () =>
