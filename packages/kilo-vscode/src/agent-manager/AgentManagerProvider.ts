@@ -62,6 +62,7 @@ import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { createLocalDiff } from "./local-diff"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
 import { pruneSubagents, sessionMissing } from "./prune-subagents"
+import { routeSession } from "./route-session"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { documentExists, readDocument } from "../documents/document-reader"
@@ -238,6 +239,14 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       },
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
       post: (message) => this.postToWebview(message),
+      routeSession: (_projectId, sessionId, directory) =>
+        this.connection
+          .client()
+          .then((client) => routeSession(client, sessionId, directory, (...args) => this.log(...args)))
+          .catch((err: unknown) => {
+            this.log(`Failed to move session ${sessionId}:`, err)
+            return false
+          }),
     })
     this.contexts = wiring.contexts
     // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.
