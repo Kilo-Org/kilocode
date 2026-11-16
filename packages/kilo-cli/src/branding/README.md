@@ -21,14 +21,14 @@ The engine never rewrites code that merely looks like branding:
 
 - module specifiers (`@opencode/*` imports);
 - the command token inside `@opencode`, a dotted ID (`opencode.app`, `opencode.ai`), a path, or a hyphenated name;
-- a string literal whose entire value is the bare executable name `"opencode"` (the `OPENCODE_CLI_NAME` fallback, the ACP `command: "opencode"`);
+- a string literal whose entire value is the bare executable name `"opencode"` (the `OPENCODE_CLI_NAME` fallback, the ACP `command: "opencode"`, the server's basic-auth `username: "opencode"`);
 - a string literal that is an equality operand (`=== "# opencode"`) or the search pattern of a `replace`/`replaceAll`/`split`/`includes`/... call (the OAuth seam's `.replaceAll("OpenCode", ...)`).
 
 ### Adding coverage
 
 New user-visible text is branded automatically by the rule engine — no list to update. Add an entry only for a genuine exception: a semantic rewrite goes in `overrides`, a non-word fragment (URL, filename) goes in `literals`, and an import/logic rewrite goes in `structural.ts`. If a protected string is being rebranded by mistake, extend the protection in `engine.ts`.
 
-The set of intercepted files is the `files` list in `text.ts`. Intercepted `.txt` prompt templates are bundled as strings, so the engine treats each one as a single user-visible span. The branding audit (see the design note) reports any user-visible OpenCode string the rules leave behind at each sync, including in core prompt templates, so a miss is a checked failure rather than a silent regression. It also runs the full transform over every core and Kilo plugin source, including the text assets bundled as strings (`.txt`/`.md` prompts and skills), and fails on any built-in tool still in the `opencode` namespace (`namespace: "opencode"`, `tools.opencode.*`), which the rule engine leaves alone as dotted IDs, so a new upstream tool or tool reference cannot ship un-rebranded.
+The set of intercepted files is the `files` list in `text.ts`. Intercepted `.txt` prompt templates are bundled as strings, so the engine treats each one as a single user-visible span. The branding audit (see the design note) reports any user-visible OpenCode string the rules leave behind at each sync, including in `packages/server/src` and in core prompt templates, so a miss is a checked failure rather than a silent regression. It also runs the full transform over every core and Kilo plugin source, including the text assets bundled as strings (`.txt`/`.md` prompts and skills), and fails on any built-in tool still in the `opencode` namespace (`namespace: "opencode"`, `tools.opencode.*`), which the rule engine leaves alone as dotted IDs, so a new upstream tool or tool reference cannot ship un-rebranded.
 
 ## How this differs from v1, and why
 

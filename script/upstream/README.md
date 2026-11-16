@@ -18,6 +18,7 @@ git remote add upstream https://github.com/anomalyco/opencode.git   # once
 bun install --cwd script/upstream                                     # once, for the codemods (ts-morph)
 
 bun script/upstream/list-versions.ts              # releases, which ones v2 has, next target, lag
+bun script/upstream/list-versions.ts --json       # the same as one JSON object, for scripts
 bun script/upstream/analyze.ts                    # dry run of the next sync: conflicts, new workflows, shared files and mirrors touched
 bun script/upstream/merge.ts                      # merge the next release into a new branch sync-v2-x-y from origin/v2
 bun script/upstream/merge.ts --version v2.0.27    # a given release
