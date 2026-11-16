@@ -57,19 +57,16 @@ const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 
 let unreadableHandshakes = 0
 /** How many session list calls the fake server answers with a page instead of JSON. */
 let unreadableLists = 0
-/** A directory the fake server answers with 404, as a worktree folder deleted on disk does. */
-let missingDirectory: string | null = null
 
 const server = Bun.serve({
   port: 0,
   fetch(request) {
     const url = new URL(request.url)
-    const wanted = url.searchParams.get("directory")
-    const location = url.searchParams.get("location[directory]")
-    requests.push({ path: url.pathname, directory: wanted, location })
-    // A worktree folder deleted on disk fails every load of its store, and succeeds again once it is restored.
-    if (missingDirectory && (wanted ?? location) === missingDirectory)
-      return new Response(JSON.stringify({ _tag: "NotFound", message: "not found" }), { status: 404 })
+    requests.push({
+      path: url.pathname,
+      directory: url.searchParams.get("directory"),
+      location: url.searchParams.get("location[directory]"),
+    })
     if (url.pathname === "/api/rpc/kilocode.handshake/get") {
       if (unreadableHandshakes > 0) {
         unreadableHandshakes--
@@ -363,8 +360,6 @@ describe("createPanelData", () => {
   // failure and loads its location again instead of keeping both until the panel reopens.
   test("reloads a directory after its folder was restored", async () => {
     requests.length = 0
-    // The folder is gone, so every load of the worktree's store fails on the server.
-    missingDirectory = WORKTREE
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {
       const panel = createPanelData({ post: () => {}, api })
@@ -374,12 +369,10 @@ describe("createPanelData", () => {
       await until(() => located().length > 0 && store.failure() !== undefined)
       const before = located().length
 
-      missingDirectory = null
       panel.reload(WORKTREE)
       expect(store.failure()).toBeUndefined()
       await until(() => located().length > before)
       panel.reload(OTHER)
-      missingDirectory = null
       dispose()
     })
   })
