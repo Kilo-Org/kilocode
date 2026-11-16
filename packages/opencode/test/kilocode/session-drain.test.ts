@@ -230,6 +230,7 @@ it.instance(
   }),
 )
 
+// it.instance runs on the live harness env, which has no TestClock, so this test provides its own.
 it.instance(
   "reports the holds that keep a drain open while it waits and when its caller cancels",
   Effect.gen(function* () {
@@ -243,23 +244,38 @@ it.instance(
       }),
     ])
     yield* drain.link(child, parent)
-    const runner = yield* drain.hold(parent, "runner")
+    const first = yield* drain.hold(parent, "task")
+    const second = yield* drain.hold(parent, "task")
     const background = yield* drain.hold(child, "background ses_drain_report_child")
-    runner()
     const waiting = yield* drain.wait(parent).pipe(Effect.provide(logs), Effect.forkChild({ startImmediately: true }))
     yield* TestClock.adjust("59 seconds")
     expect(messages).toEqual([])
     yield* TestClock.adjust("1 second")
     const report = {
       "session.id": parent,
-      count: 1,
-      pending: [{ session: child, owner: "background ses_drain_report_child", count: 1 }],
+      count: 3,
+      pending: [
+        { session: child, owner: "background ses_drain_report_child", count: 1 },
+        { session: parent, owner: "task", count: 2 },
+      ],
     }
     expect(messages).toEqual([["session drain pending", { ...report, elapsed: 60_000 }]])
+    first()
     yield* TestClock.adjust("1 minute")
+    const remaining = {
+      "session.id": parent,
+      count: 2,
+      pending: [
+        { session: child, owner: "background ses_drain_report_child", count: 1 },
+        { session: parent, owner: "task", count: 1 },
+      ],
+    }
     expect(messages).toHaveLength(2)
+    expect(messages.at(-1)).toEqual(["session drain pending", { ...remaining, elapsed: 120_000 }])
+    expect(waiting.pollUnsafe()).toBeUndefined()
     yield* Fiber.interrupt(waiting)
-    expect(messages.at(-1)).toEqual(["session drain cancelled", { ...report, elapsed: 120_000 }])
+    expect(messages.at(-1)).toEqual(["session drain cancelled", { ...remaining, elapsed: 120_000 }])
+    second()
     background()
     yield* drain.wait(parent)
   }).pipe(Effect.provide(TestClock.layer())),
