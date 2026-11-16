@@ -25,6 +25,16 @@ import {
   WorkspaceDeleteInput,
   WorkspaceGetInput,
   WorkspaceListInput,
+  WorkspaceChangeFileInput,
+  WorkspaceChanges,
+  WorkspaceChangesInput,
+  WorkspaceChangesRefresh,
+  WorkspaceChangeComparison,
+  WorkspaceChangeFileResult,
+  WorkspacePullRequestDiff,
+  WorkspacePullRequestDiffInput,
+  WorkspacePullRequestDiffFileInput,
+  WorkspacePullRequestDiffFileResult,
   WorkspaceProfileDefaultInput,
   WorkspaceProfileListInput,
   WorkspacePullRequestInput,
@@ -166,6 +176,178 @@ const CloudWorkspaceStatus = z.object({
     remainingRuntimeLocationCount: z.number(),
     deletedSessionIds: z.array(z.string()),
   }),
+})
+
+const CloudRevision = z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
+const CloudCommit = z.string().regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/)
+const CloudBaseRef = z
+  .string()
+  .min(1)
+  .max(1024)
+  .refine((ref) => !ref.startsWith("-") && !ref.includes("\0"), "Invalid comparison ref")
+const CloudCapturedAt = z.iso.datetime({ offset: true })
+const CloudOmissionReason = z.enum([
+  "binary",
+  "unsupported",
+  "invalid_utf8",
+  "too_large",
+  "line_limit",
+  "budget_exhausted",
+  "inconsistent",
+  "capture_failed",
+])
+const CloudChangeScope = z.enum(["uncommitted", "against-base-branch"])
+
+const CloudDiffAvailability = z.union([
+  z.object({ status: z.literal("available") }),
+  z.object({ status: z.literal("omitted"), reason: CloudOmissionReason }),
+])
+
+const CloudContentAvailability = z.union([
+  z.object({ status: z.literal("available"), source: z.enum(["current", "deleted-original"]) }),
+  z.object({ status: z.literal("unavailable"), reason: CloudOmissionReason }),
+])
+
+const CloudChangeRepository = z.object({
+  path: z.string().max(4096),
+  repoFullName: z.string().min(1).max(500),
+})
+
+const CloudComparison = z.object({
+  baseRef: CloudBaseRef,
+  mergeBase: CloudCommit,
+  head: CloudCommit,
+  baseRefFallback: z
+    .object({
+      requested: CloudBaseRef,
+      used: CloudBaseRef,
+    })
+    .optional(),
+})
+
+const CloudChangeFile = z.object({
+  path: z.string().min(1).max(4096),
+  status: z.enum(["added", "modified", "deleted"]),
+  scope: CloudChangeScope.optional(),
+  additions: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  deletions: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  tracked: z.boolean(),
+  binary: z.boolean(),
+  countsComplete: z.boolean(),
+  revision: CloudRevision,
+  repository: CloudChangeRepository.nullable(),
+  diff: CloudDiffAvailability,
+  content: CloudContentAvailability,
+})
+
+const CloudChangeComparison = z.object({
+  repository: CloudChangeRepository.nullable(),
+  comparison: CloudComparison,
+  truncated: z.boolean(),
+  files: z.array(CloudChangeFile),
+})
+
+const CloudWorkspaceChanges = z.object({
+  status: z.enum(["captured", "not_captured", "inconsistent"]),
+  workspaceId: z.string().min(1),
+  revision: CloudRevision.nullable(),
+  capturedAt: CloudCapturedAt.nullable(),
+  truncated: z.boolean(),
+  comparisons: z.array(CloudChangeComparison).nullable(),
+})
+
+const CloudWorkspaceChangesRefresh = z.object({
+  status: z.enum(["refreshed", "offline", "failed"]),
+  changes: CloudWorkspaceChanges,
+})
+
+const CloudFileRecord = z.object({
+  schemaVersion: z.literal(1),
+  revision: CloudRevision,
+  path: z.string().min(1).max(4096),
+  scope: CloudChangeScope.optional(),
+  diff: z.union([
+    z.object({ status: z.literal("available"), patch: z.string().min(1) }),
+    z.object({ status: z.literal("omitted"), reason: CloudOmissionReason }),
+  ]),
+  content: z.union([
+    z.object({
+      status: z.literal("available"),
+      source: z.enum(["current", "deleted-original"]),
+      text: z.string(),
+    }),
+    z.object({ status: z.literal("unavailable"), reason: CloudOmissionReason }),
+  ]),
+})
+
+const CloudWorkspaceChangeFileResult = z.object({
+  status: z.enum(["available", "omitted", "not_captured", "no_longer_listed", "stale"]),
+  file: CloudFileRecord.nullable(),
+  capturedAt: CloudCapturedAt.nullable(),
+  comparison: CloudComparison.nullable(),
+  currentRevision: CloudRevision.nullable(),
+})
+
+const CloudPullRequestReason = z.enum([
+  "no_pull_request",
+  "pull_request_not_found",
+  "head_ref_mismatch",
+  "repository_mismatch",
+  "installation_unavailable",
+  "connected_user_required",
+  "github_access_denied",
+  "github_rate_limited",
+  "github_unavailable",
+  "pull_request_changed",
+  "unsupported_repository",
+])
+
+const CloudPullRequestFile = z.object({
+  path: z.string().min(1).max(4096),
+  previousPath: z.string().min(1).max(4096).nullable(),
+  status: z.enum(["added", "removed", "modified", "renamed", "copied", "changed", "unchanged"]),
+  additions: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  deletions: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  patchAvailable: z.boolean(),
+})
+
+const CloudPullRequestIdentity = z.object({
+  number: z.number().int().positive(),
+  url: z.string().min(1).max(2048),
+  state: z.enum(["open", "closed"]),
+  draft: z.boolean(),
+  headSha: CloudCommit,
+  baseRef: CloudBaseRef,
+  repository: CloudChangeRepository,
+  cacheStale: z.boolean(),
+})
+
+const CloudWorkspacePullRequestDiff = z.object({
+  status: z.enum(["linked", "stale", "not_linked", "unverified", "credential_required", "unavailable", "not_github"]),
+  workspaceId: z.string().min(1),
+  reason: CloudPullRequestReason.nullable(),
+  pullRequest: CloudPullRequestIdentity.nullable(),
+  truncated: z.boolean(),
+  files: z.array(CloudPullRequestFile),
+})
+
+const CloudWorkspacePullRequestDiffFile = z.object({
+  status: z.enum([
+    "available",
+    "omitted",
+    "not_listed",
+    "stale",
+    "not_linked",
+    "unverified",
+    "credential_required",
+    "unavailable",
+    "not_github",
+  ]),
+  path: z.string().min(1).max(4096),
+  reason: CloudPullRequestReason.nullable(),
+  omissionReason: z.literal("provider_omitted").nullable(),
+  headSha: CloudCommit.nullable(),
+  patch: z.string().min(1).nullable(),
 })
 
 const WorkspaceCreate = z.object({
@@ -970,6 +1152,187 @@ export function provider(options: Options): Provider {
       }).pipe(Effect.catch((err) => Effect.succeed(pullRequestFailure(input.id, err))))
     })
 
+  const workspaceScope = (input: { id: HostedWorkspaceID; organizationID?: string }) => ({
+    workspaceId: input.id.workspaceID,
+    ...(input.organizationID === undefined ? {} : { kilocodeOrganizationId: input.organizationID }),
+  })
+
+  const providerMismatch = (id: HostedWorkspaceID) =>
+    id.providerID === PROVIDER
+      ? undefined
+      : new HostedFailure({
+          code: "invalid_request",
+          message: "Session host provider does not match",
+          retryable: false,
+        })
+
+  const changeComparison = (raw: z.infer<typeof CloudChangeComparison>): WorkspaceChangeComparison => ({
+    repository: raw.repository,
+    comparison: raw.comparison,
+    truncated: raw.truncated,
+    files: raw.files,
+  })
+
+  const changePayload = (id: HostedWorkspaceID, raw: z.infer<typeof CloudWorkspaceChanges>) => ({
+    id,
+    status: raw.status,
+    revision: raw.revision,
+    capturedAt: raw.capturedAt,
+    truncated: raw.truncated,
+    comparisons: raw.comparisons === null ? null : raw.comparisons.map(changeComparison),
+  })
+
+  const getWorkspaceChanges = (raw: WorkspaceChangesInput): Effect.Effect<WorkspaceChanges, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceChangesInput, raw)
+      const mismatch = providerMismatch(input.id)
+      if (mismatch !== undefined) return yield* Effect.fail(mismatch)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* query(auth, "getHostedWorkspaceChanges", workspaceScope(input))
+      const parsed = CloudWorkspaceChanges.safeParse(body)
+      if (!parsed.success || parsed.data.workspaceId !== input.id.workspaceID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace change snapshot"))
+      }
+      return yield* decode(
+        WorkspaceChanges,
+        changePayload(input.id, parsed.data),
+        "Kilo Cloud returned an inconsistent workspace change snapshot",
+      )
+    })
+
+  const refreshWorkspaceChanges = (raw: WorkspaceChangesInput): Effect.Effect<WorkspaceChangesRefresh, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceChangesInput, raw)
+      const mismatch = providerMismatch(input.id)
+      if (mismatch !== undefined) return yield* Effect.fail(mismatch)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* mutation(auth, "refreshHostedWorkspaceChanges", workspaceScope(input))
+      const parsed = CloudWorkspaceChangesRefresh.safeParse(body)
+      if (!parsed.success || parsed.data.changes.workspaceId !== input.id.workspaceID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace change refresh"))
+      }
+      return yield* decode(
+        WorkspaceChangesRefresh,
+        {
+          status: parsed.data.status,
+          changes: changePayload(input.id, parsed.data.changes),
+        },
+        "Kilo Cloud returned an inconsistent workspace change refresh",
+      )
+    })
+
+  const getWorkspaceChangeFile = (
+    raw: WorkspaceChangeFileInput,
+  ): Effect.Effect<WorkspaceChangeFileResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceChangeFileInput, raw)
+      const mismatch = providerMismatch(input.id)
+      if (mismatch !== undefined) return yield* Effect.fail(mismatch)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* query(auth, "getHostedWorkspaceChangeFile", {
+        ...workspaceScope(input),
+        path: input.path,
+        ...(input.scope === undefined ? {} : { scope: input.scope }),
+        expectedRevision: input.expectedRevision,
+      })
+      const parsed = CloudWorkspaceChangeFileResult.safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace file"))
+      const result = parsed.data
+      if (
+        (result.status === "available" || result.status === "omitted") &&
+        (result.file === null ||
+          result.file.revision !== input.expectedRevision ||
+          result.file.path !== input.path ||
+          (input.scope !== undefined && result.file.scope !== input.scope))
+      ) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a file for a different path or revision"))
+      }
+      return yield* decode(
+        WorkspaceChangeFileResult,
+        result,
+        "Kilo Cloud returned an inconsistent workspace file result",
+      )
+    })
+
+  const pullRequestURL = (url: string, number: number) => {
+    try {
+      const parsed = new URL(url)
+      const match = /^\/[^/]+\/[^/]+\/pull\/([1-9]\d*)$/.exec(parsed.pathname)
+      return (
+        parsed.origin === "https://github.com" &&
+        parsed.search === "" &&
+        parsed.hash === "" &&
+        url === `${parsed.origin}${parsed.pathname}` &&
+        Number(match?.[1]) === number
+      )
+    } catch {
+      return false
+    }
+  }
+
+  const getWorkspacePullRequestDiff = (
+    raw: WorkspacePullRequestDiffInput,
+  ): Effect.Effect<WorkspacePullRequestDiff, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspacePullRequestDiffInput, raw)
+      const mismatch = providerMismatch(input.id)
+      if (mismatch !== undefined) return yield* Effect.fail(mismatch)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* query(auth, "getHostedWorkspacePullRequest", workspaceScope(input))
+      const parsed = CloudWorkspacePullRequestDiff.safeParse(body)
+      if (!parsed.success || parsed.data.workspaceId !== input.id.workspaceID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace pull request diff"))
+      }
+      const pullRequest = parsed.data.pullRequest
+      if (pullRequest !== null && !pullRequestURL(pullRequest.url, pullRequest.number)) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported pull request URL"))
+      }
+      return yield* decode(
+        WorkspacePullRequestDiff,
+        {
+          id: input.id,
+          status: parsed.data.status,
+          reason: parsed.data.reason,
+          pullRequest,
+          truncated: parsed.data.truncated,
+          files: parsed.data.files,
+        },
+        "Kilo Cloud returned an inconsistent workspace pull request diff",
+      )
+    })
+
+  const getWorkspacePullRequestDiffFile = (
+    raw: WorkspacePullRequestDiffFileInput,
+  ): Effect.Effect<WorkspacePullRequestDiffFileResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspacePullRequestDiffFileInput, raw)
+      const mismatch = providerMismatch(input.id)
+      if (mismatch !== undefined) return yield* Effect.fail(mismatch)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* query(auth, "getHostedWorkspacePullRequestFile", {
+        ...workspaceScope(input),
+        path: input.path,
+        expectedHeadSha: input.expectedHeadSha,
+      })
+      const parsed = CloudWorkspacePullRequestDiffFile.safeParse(body)
+      if (!parsed.success) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported pull request file"))
+      }
+      const result = parsed.data
+      if (
+        result.path !== input.path ||
+        ((result.status === "available" || result.status === "omitted") &&
+          result.headSha?.toLowerCase() !== input.expectedHeadSha.toLowerCase())
+      ) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a pull request file from a different head"))
+      }
+      return yield* decode(
+        WorkspacePullRequestDiffFileResult,
+        result,
+        "Kilo Cloud returned an inconsistent pull request file result",
+      )
+    })
+
   const deleteWorkspace = (raw: WorkspaceDeleteInput): Effect.Effect<DeleteWorkspaceResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(WorkspaceDeleteInput, raw)
@@ -1226,6 +1589,11 @@ export function provider(options: Options): Provider {
     getWorkspaceStatus,
     getWorkspacePullRequest: (input) => pullRequest(input, false),
     refreshWorkspacePullRequest: (input) => pullRequest(input, true),
+    getWorkspaceChanges,
+    refreshWorkspaceChanges,
+    getWorkspaceChangeFile,
+    getWorkspacePullRequestDiff,
+    getWorkspacePullRequestDiffFile,
     deleteWorkspace,
     createWorkspace,
     continueWorkspace,

@@ -18,14 +18,20 @@ import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
+import ai.kilocode.client.speech.SpeechRecorder
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.tree.ActiveTreeColors
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.ColoredListCellRenderer
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -36,7 +42,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.awt.Component
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
+import javax.swing.JList
 
 /** Shared prompt and selection lifecycle for Local and Cloud workspace creation. */
 internal abstract class AgentManagerDialog @RequiresEdt constructor(
@@ -47,6 +55,8 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     private val app: KiloAppService,
     private val workspaces: KiloWorkspaceService,
 ) : DialogWrapper(parent, false) {
+    private object None
+
     protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     protected open val allowEmptyPrompt: Boolean get() = false
     protected open val ready: Boolean get() = workspace != null
@@ -65,6 +75,8 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
         onAbort = {},
         completion = completion,
         cs = scope,
+        speechCapture = service<SpeechRecorder>(),
+        onTranscribe = { data -> app.transcribe(directory.takeIf { local }, data) },
         rounded = false,
         showSubmit = false,
         approve = false,
@@ -77,23 +89,64 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     private var items: List<ModelPicker.Item> = emptyList()
     private var workspace: ModelsWorkspaceDto? = null
     private var variant: String? = null
+    private var restored: PendingPrompt? = null
     @Volatile private var disposed = false
+    private val picker = ComboBox<Any>().apply {
+        renderer = object : ColoredListCellRenderer<Any>() {
+            @RequiresEdt
+            override fun customizeCellRenderer(
+                list: JList<out Any>,
+                value: Any?,
+                index: Int,
+                selected: Boolean,
+                hasFocus: Boolean,
+            ) {
+                val item = value as? AgentManagerLayout.Section
+                icon = ActiveTreeColors.icon(item?.color) ?: ActiveTreeColors.blank()
+                append(item?.title ?: KiloBundle.message("agentManager.section.none"))
+            }
+        }
+    }
+    protected val selectedSection: String?
+        @RequiresEdt get() = (picker.selectedItem as? AgentManagerLayout.Section)?.key
 
     @RequiresEdt
-    protected fun content(above: JComponent?, below: JComponent): JComponent {
+    protected fun sectioned(
+        body: JComponent,
+        sections: List<AgentManagerLayout.Section>,
+        section: String?,
+    ): JComponent {
+        picker.model = DefaultComboBoxModel((listOf(None) + sections).toTypedArray())
+        picker.selectedItem = sections.firstOrNull { it.key == section } ?: None
+        val row = BorderLayoutPanel(UiStyle.Gap.md(), 0).apply {
+            border = JBUI.Borders.empty(UiStyle.Gap.sm())
+            addToLeft(JBLabel(KiloBundle.message("agentManager.section.label")).apply { labelFor = picker })
+            addToCenter(picker)
+        }
+        return BorderLayoutPanel().addToCenter(body).addToBottom(row)
+    }
+
+    @RequiresEdt
+    protected fun content(above: JComponent?, below: JComponent, draft: PendingPrompt? = null): JComponent {
+        restored = draft
+        restored?.let { prompt.setText(it.text) }
+        prompt.onChange = { syncValidation() }
         prompt.mode.onSelect = { item ->
+            restored = null
             agent = item.id
             syncSelection()
         }
         prompt.model.favorites = { app.favorites.value }
         prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
         prompt.model.onSelect = { item ->
+            restored = null
             model = item.key
             agent?.let { app.selectModel(it, item.provider, item.id) }
             syncReasoning(item)
             prompt.setAttachmentEnabled(local && item.attachment)
         }
         prompt.reasoning.onSelect = { item ->
+            restored = restored?.copy(variant = item.id)
             variant = item.id
             model?.let { app.selectVariant(it, item.id) }
         }
@@ -105,7 +158,7 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
             ui {
                 workspace = ws
                 items = modelItems(ws.providers).filter { local || it.provider == "kilo" }
-                agent = resolveSessionAgent(ws.agents, KiloPluginSettings.getAgent())
+                agent = resolveSessionAgent(ws.agents, restored?.agent ?: KiloPluginSettings.getAgent())
                 prompt.mode.setItems(modeItems(ws.agents?.agents), agent)
                 syncSelection()
                 prompt.setReady(ready)
@@ -135,7 +188,10 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
         val ws = workspace ?: return
         val first = items.firstOrNull() ?: return
         val id = agent
-        val current = if (id == null) {
+        val saved = restored?.let { draft ->
+            items.firstOrNull { it.provider == draft.provider && it.id == draft.model }
+        }
+        val current = saved ?: if (id == null) {
             first
         } else {
             val state = app.models.value
@@ -159,11 +215,14 @@ internal abstract class AgentManagerDialog @RequiresEdt constructor(
     }
 
     /** Re-runs dialog validation after the prompt, agent, or model selection changes. */
-    protected open fun syncValidation() {}
+    @RequiresEdt
+    protected open fun syncValidation() {
+        setOKActionEnabled(!prompt.isSpeechActive)
+    }
 
     @RequiresEdt
     private fun syncReasoning(item: ModelPicker.Item) {
-        val saved = app.models.value.variant[item.key]?.takeIf { it in item.variants }
+        val saved = (restored?.variant ?: app.models.value.variant[item.key])?.takeIf { it in item.variants }
         variant = saved ?: item.variants.firstOrNull()
         prompt.reasoning.setItems(
             item.variants.map { ReasoningPicker.Item(it, it.replaceFirstChar { char -> char.titlecase() }) },

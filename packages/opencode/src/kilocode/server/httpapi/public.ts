@@ -100,6 +100,39 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   const result = spec.components?.schemas?.SessionHostWorkspacePullRequestResult?.properties
   if (result?.pullRequest) result.pullRequest = nullable(result.pullRequest)
 
+  const workspaceChanges = spec.components?.schemas?.SessionHostWorkspaceChanges?.properties
+  for (const field of ["revision", "capturedAt", "comparisons"] as const) {
+    const value = workspaceChanges?.[field]
+    if (workspaceChanges && value) workspaceChanges[field] = nullable(value)
+  }
+
+  const changeFileResult = spec.components?.schemas?.SessionHostWorkspaceChangeFileResult?.properties
+  for (const field of ["file", "capturedAt", "comparison", "currentRevision"] as const) {
+    const value = changeFileResult?.[field]
+    if (changeFileResult && value) changeFileResult[field] = nullable(value)
+  }
+
+  const changeFile = spec.components?.schemas?.SessionHostWorkspaceChangeFile?.properties
+  if (changeFile?.repository) changeFile.repository = nullable(changeFile.repository)
+
+  const changeComparison = spec.components?.schemas?.SessionHostWorkspaceChangeComparison?.properties
+  if (changeComparison?.repository) changeComparison.repository = nullable(changeComparison.repository)
+
+  const pullRequestDiff = spec.components?.schemas?.SessionHostWorkspacePullRequestDiff?.properties
+  for (const field of ["reason", "pullRequest"] as const) {
+    const value = pullRequestDiff?.[field]
+    if (pullRequestDiff && value) pullRequestDiff[field] = nullable(value)
+  }
+
+  const pullRequestFile = spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFile?.properties
+  if (pullRequestFile?.previousPath) pullRequestFile.previousPath = nullable(pullRequestFile.previousPath)
+
+  const pullRequestFileResult = spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFileResult?.properties
+  for (const field of ["reason", "omissionReason", "headSha", "patch"] as const) {
+    const value = pullRequestFileResult?.[field]
+    if (pullRequestFileResult && value) pullRequestFileResult[field] = nullable(value)
+  }
+
   const body = spec.paths?.["/kilo/organization"]?.post?.requestBody?.content?.["application/json"]?.schema
   const ref = body?.$ref?.replace("#/components/schemas/", "")
   const props = ref ? spec.components?.schemas?.[ref]?.properties : body?.properties

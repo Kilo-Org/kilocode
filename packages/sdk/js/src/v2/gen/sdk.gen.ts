@@ -429,7 +429,15 @@ import type {
   SessionHostDetachResponses,
   SessionHostGetErrors,
   SessionHostGetResponses,
+  SessionHostGetWorkspaceChangeFileErrors,
+  SessionHostGetWorkspaceChangeFileResponses,
+  SessionHostGetWorkspaceChangesErrors,
+  SessionHostGetWorkspaceChangesResponses,
   SessionHostGetWorkspaceErrors,
+  SessionHostGetWorkspacePullRequestDiffErrors,
+  SessionHostGetWorkspacePullRequestDiffFileErrors,
+  SessionHostGetWorkspacePullRequestDiffFileResponses,
+  SessionHostGetWorkspacePullRequestDiffResponses,
   SessionHostGetWorkspacePullRequestErrors,
   SessionHostGetWorkspacePullRequestResponses,
   SessionHostGetWorkspaceResponses,
@@ -447,6 +455,8 @@ import type {
   SessionHostProviderId,
   SessionHostProvidersErrors,
   SessionHostProvidersResponses,
+  SessionHostRefreshWorkspaceChangesErrors,
+  SessionHostRefreshWorkspaceChangesResponses,
   SessionHostRefreshWorkspacePullRequestErrors,
   SessionHostRefreshWorkspacePullRequestResponses,
   SessionHostSetWorkspacePersonalDefaultProfileErrors,
@@ -458,6 +468,7 @@ import type {
   SessionHostStartWorkspaceSessionResponses,
   SessionHostTranscriptErrors,
   SessionHostTranscriptResponses,
+  SessionHostWorkspaceChangeScope,
   SessionHostWorkspaceId,
   SessionHostWorkspaceProfileDefaultInput,
   SessionHostWorkspaceSessionStartBody,
@@ -10078,6 +10089,196 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace changes
+   *
+   * Read the saved committed and uncommitted workspace comparison without waking compute. Every file reports explicit diff and content availability, and an omitted payload never looks like an empty diff.
+   */
+  public getWorkspaceChanges<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceChangesResponses,
+      SessionHostGetWorkspaceChangesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh hosted workspace changes
+   *
+   * Explicitly refresh the saved workspace comparison. An offline or failed refresh preserves the previous durable snapshot.
+   */
+  public refreshWorkspaceChanges<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostRefreshWorkspaceChangesResponses,
+      SessionHostRefreshWorkspaceChangesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted workspace file
+   *
+   * Read one captured file fenced by the expected snapshot revision. A stale or delisted result never returns another revision's patch.
+   */
+  public getWorkspaceChangeFile<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      path: string
+      scope?: SessionHostWorkspaceChangeScope
+      expectedRevision: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "path" },
+            { in: "query", key: "scope" },
+            { in: "query", key: "expectedRevision" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceChangeFileResponses,
+      SessionHostGetWorkspaceChangeFileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read the hosted workspace pull request diff
+   *
+   * Read the verified linked PR and its published file comparison. This comparison is distinct from the committed and uncommitted workspace changes; not_linked is a successful result with no PR data.
+   */
+  public getWorkspacePullRequestDiff<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspacePullRequestDiffResponses,
+      SessionHostGetWorkspacePullRequestDiffErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted workspace pull request file
+   *
+   * Read one PR patch fenced by the verified head SHA. A stale, delisted, or omitted file never returns a synthesized patch.
+   */
+  public getWorkspacePullRequestDiffFile<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      path: string
+      expectedHeadSha: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "path" },
+            { in: "query", key: "expectedHeadSha" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspacePullRequestDiffFileResponses,
+      SessionHostGetWorkspacePullRequestDiffFileErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file",
       ...options,
       ...params,
     })

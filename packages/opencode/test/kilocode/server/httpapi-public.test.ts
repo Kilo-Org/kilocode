@@ -27,6 +27,7 @@ type Schema = {
   maxLength?: number
   pattern?: string
   minimum?: number
+  maximum?: number
   exclusiveMinimum?: number
   required?: string[]
 }
@@ -105,6 +106,27 @@ describe("Kilo PublicApi OpenAPI contract", () => {
         method: "post" as const,
         path: SessionHostPaths.workspacePullRequestRefresh,
         id: "sessionHost.refreshWorkspacePullRequest",
+      },
+      { method: "get" as const, path: SessionHostPaths.workspaceChanges, id: "sessionHost.getWorkspaceChanges" },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspaceChangesRefresh,
+        id: "sessionHost.refreshWorkspaceChanges",
+      },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspaceChangeFile,
+        id: "sessionHost.getWorkspaceChangeFile",
+      },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspacePullRequestDiff,
+        id: "sessionHost.getWorkspacePullRequestDiff",
+      },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspacePullRequestDiffFile,
+        id: "sessionHost.getWorkspacePullRequestDiffFile",
       },
       { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.listWorkspaceSessions" },
@@ -271,7 +293,10 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const conversations = summary?.properties?.conversations
     expect(conversations?.required?.toSorted()).toEqual(["complete", "unresolved"])
     expect(conversations?.properties?.unresolved).toEqual({
-      anyOf: [{ type: "integer", minimum: 0 }, { type: "null" }],
+      anyOf: [
+        { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+        { type: "null" },
+      ],
     })
     const mergeability = summary?.properties?.mergeability
     expect(mergeability?.required?.toSorted()).toEqual(["complete", "mergeable", "state"])
@@ -309,6 +334,43 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     })
     expect(result?.properties?.refresh).toEqual({ $ref: "#/components/schemas/SessionHostWorkspacePullRequestRefresh" })
     expect(schemas.SessionHostWorkspace?.properties).not.toHaveProperty("pullRequest")
+  })
+
+  test("keeps hosted workspace diff fields nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    type Node = { properties?: Record<string, Node>; anyOf?: unknown[] }
+    const nullable = { anyOf: [expect.objectContaining({}), { type: "null" }] }
+
+    const changes = (spec.components?.schemas?.SessionHostWorkspaceChanges as Node | undefined)?.properties
+    expect(changes?.revision).toEqual(nullable)
+    expect(changes?.capturedAt).toEqual(nullable)
+    expect(changes?.comparisons).toEqual(nullable)
+
+    const changeResult = (spec.components?.schemas?.SessionHostWorkspaceChangeFileResult as Node | undefined)
+      ?.properties
+    expect(changeResult?.file).toEqual(nullable)
+    expect(changeResult?.capturedAt).toEqual(nullable)
+    expect(changeResult?.comparison).toEqual(nullable)
+    expect(changeResult?.currentRevision).toEqual(nullable)
+
+    const changeFile = (spec.components?.schemas?.SessionHostWorkspaceChangeFile as Node | undefined)?.properties
+    expect(changeFile?.repository).toEqual(nullable)
+
+    const comparison = (spec.components?.schemas?.SessionHostWorkspaceChangeComparison as Node | undefined)?.properties
+    expect(comparison?.repository).toEqual(nullable)
+
+    const pull = (spec.components?.schemas?.SessionHostWorkspacePullRequestDiff as Node | undefined)?.properties
+    expect(pull?.reason).toEqual(nullable)
+    expect(pull?.pullRequest).toEqual(nullable)
+
+    const pullFile = (spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFile as Node | undefined)?.properties
+    expect(pullFile?.previousPath).toEqual(nullable)
+
+    const pullResult = (spec.components?.schemas?.SessionHostWorkspacePullRequestDiffFileResult as Node | undefined)
+      ?.properties
+    for (const field of ["reason", "omissionReason", "headSha", "patch"]) {
+      expect(pullResult?.[field]).toEqual(nullable)
+    }
   })
 
   test("publishes hosted availability and keeps native turn events off the global stream", () => {

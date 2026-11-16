@@ -5260,6 +5260,184 @@ export type SessionHostWorkspacePullRequestResult = {
   refresh?: SessionHostWorkspacePullRequestRefresh
 }
 
+export type SessionHostWorkspaceChangeRepository = {
+  path: string
+  repoFullName: string
+}
+
+export type SessionHostWorkspaceComparison = {
+  baseRef: string
+  mergeBase: string
+  head: string
+  baseRefFallback?: {
+    requested: string
+    used: string
+  }
+}
+
+export type SessionHostWorkspaceChangeStatus = "added" | "modified" | "deleted"
+
+export type SessionHostWorkspaceChangeScope = "uncommitted" | "against-base-branch"
+
+export type SessionHostWorkspaceOmissionReason =
+  | "binary"
+  | "unsupported"
+  | "invalid_utf8"
+  | "too_large"
+  | "line_limit"
+  | "budget_exhausted"
+  | "inconsistent"
+  | "capture_failed"
+
+export type SessionHostWorkspaceDiffAvailability =
+  | {
+      status: "available"
+    }
+  | {
+      status: "omitted"
+      reason: SessionHostWorkspaceOmissionReason
+    }
+
+export type SessionHostWorkspaceContentAvailability =
+  | {
+      status: "available"
+      source: "current" | "deleted-original"
+    }
+  | {
+      status: "unavailable"
+      reason: SessionHostWorkspaceOmissionReason
+    }
+
+export type SessionHostWorkspaceChangeFile = {
+  path: string
+  status: SessionHostWorkspaceChangeStatus
+  scope?: SessionHostWorkspaceChangeScope
+  additions: number
+  deletions: number
+  tracked: boolean
+  binary: boolean
+  countsComplete: boolean
+  revision: number
+  repository: SessionHostWorkspaceChangeRepository | null
+  diff: SessionHostWorkspaceDiffAvailability
+  content: SessionHostWorkspaceContentAvailability
+}
+
+export type SessionHostWorkspaceChangeComparison = {
+  repository: SessionHostWorkspaceChangeRepository | null
+  comparison: SessionHostWorkspaceComparison
+  truncated: boolean
+  files: Array<SessionHostWorkspaceChangeFile>
+}
+
+export type SessionHostWorkspaceChanges = {
+  id: SessionHostWorkspaceIdentity
+  status: "captured" | "not_captured" | "inconsistent"
+  revision: number | null
+  capturedAt: string | null
+  truncated: boolean
+  comparisons: Array<SessionHostWorkspaceChangeComparison> | null
+}
+
+export type SessionHostWorkspaceChangesRefresh = {
+  status: "refreshed" | "offline" | "failed"
+  changes: SessionHostWorkspaceChanges
+}
+
+export type SessionHostWorkspaceFileRecord = {
+  schemaVersion: 1
+  revision: number
+  path: string
+  scope?: SessionHostWorkspaceChangeScope
+  diff:
+    | {
+        status: "available"
+        patch: string
+      }
+    | {
+        status: "omitted"
+        reason: SessionHostWorkspaceOmissionReason
+      }
+  content:
+    | {
+        status: "available"
+        source: "current" | "deleted-original"
+        text: string
+      }
+    | {
+        status: "unavailable"
+        reason: SessionHostWorkspaceOmissionReason
+      }
+}
+
+export type SessionHostWorkspaceChangeFileResult = {
+  status: "available" | "omitted" | "not_captured" | "no_longer_listed" | "stale"
+  file: SessionHostWorkspaceFileRecord | null
+  capturedAt: string | null
+  comparison: SessionHostWorkspaceComparison | null
+  currentRevision: number | null
+}
+
+export type SessionHostWorkspacePullRequestReason =
+  | "no_pull_request"
+  | "pull_request_not_found"
+  | "head_ref_mismatch"
+  | "repository_mismatch"
+  | "installation_unavailable"
+  | "connected_user_required"
+  | "github_access_denied"
+  | "github_rate_limited"
+  | "github_unavailable"
+  | "pull_request_changed"
+  | "unsupported_repository"
+
+export type SessionHostWorkspacePullRequestDiffIdentity = {
+  number: number
+  url: string
+  state: "open" | "closed"
+  draft: boolean
+  headSha: string
+  baseRef: string
+  repository: SessionHostWorkspaceChangeRepository
+  cacheStale: boolean
+}
+
+export type SessionHostWorkspacePullRequestDiffFile = {
+  path: string
+  previousPath: string | null
+  status: "added" | "removed" | "modified" | "renamed" | "copied" | "changed" | "unchanged"
+  additions: number
+  deletions: number
+  patchAvailable: boolean
+}
+
+export type SessionHostWorkspacePullRequestDiff = {
+  id: SessionHostWorkspaceIdentity
+  status: "linked" | "stale" | "not_linked" | "unverified" | "credential_required" | "unavailable" | "not_github"
+  reason: SessionHostWorkspacePullRequestReason | null
+  pullRequest: SessionHostWorkspacePullRequestDiffIdentity | null
+  truncated: boolean
+  files: Array<SessionHostWorkspacePullRequestDiffFile>
+}
+
+export type SessionHostWorkspacePullRequestDiffFileResult = {
+  status:
+    | "available"
+    | "omitted"
+    | "not_listed"
+    | "stale"
+    | "not_linked"
+    | "unverified"
+    | "credential_required"
+    | "unavailable"
+    | "not_github"
+  path: string
+  reason: SessionHostWorkspacePullRequestReason | null
+  omissionReason: "provider_omitted" | null
+  headSha: string | null
+  patch: string | null
+}
+
 export type SessionHostDeleteWorkspaceResult = {
   workspace: SessionHostWorkspaceIdentity
   success: true
@@ -19951,6 +20129,271 @@ export type SessionHostRefreshWorkspacePullRequestResponses = {
 
 export type SessionHostRefreshWorkspacePullRequestResponse =
   SessionHostRefreshWorkspacePullRequestResponses[keyof SessionHostRefreshWorkspacePullRequestResponses]
+
+export type SessionHostGetWorkspaceChangesData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes"
+}
+
+export type SessionHostGetWorkspaceChangesErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetWorkspaceChangesError =
+  SessionHostGetWorkspaceChangesErrors[keyof SessionHostGetWorkspaceChangesErrors]
+
+export type SessionHostGetWorkspaceChangesResponses = {
+  /**
+   * Saved hosted workspace changes
+   */
+  200: SessionHostWorkspaceChanges
+}
+
+export type SessionHostGetWorkspaceChangesResponse =
+  SessionHostGetWorkspaceChangesResponses[keyof SessionHostGetWorkspaceChangesResponses]
+
+export type SessionHostRefreshWorkspaceChangesData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh"
+}
+
+export type SessionHostRefreshWorkspaceChangesErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostRefreshWorkspaceChangesError =
+  SessionHostRefreshWorkspaceChangesErrors[keyof SessionHostRefreshWorkspaceChangesErrors]
+
+export type SessionHostRefreshWorkspaceChangesResponses = {
+  /**
+   * Refreshed hosted workspace changes
+   */
+  200: SessionHostWorkspaceChangesRefresh
+}
+
+export type SessionHostRefreshWorkspaceChangesResponse =
+  SessionHostRefreshWorkspaceChangesResponses[keyof SessionHostRefreshWorkspaceChangesResponses]
+
+export type SessionHostGetWorkspaceChangeFileData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query: {
+    path: string
+    scope?: SessionHostWorkspaceChangeScope
+    expectedRevision: string
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file"
+}
+
+export type SessionHostGetWorkspaceChangeFileErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetWorkspaceChangeFileError =
+  SessionHostGetWorkspaceChangeFileErrors[keyof SessionHostGetWorkspaceChangeFileErrors]
+
+export type SessionHostGetWorkspaceChangeFileResponses = {
+  /**
+   * Hosted workspace file
+   */
+  200: SessionHostWorkspaceChangeFileResult
+}
+
+export type SessionHostGetWorkspaceChangeFileResponse =
+  SessionHostGetWorkspaceChangeFileResponses[keyof SessionHostGetWorkspaceChangeFileResponses]
+
+export type SessionHostGetWorkspacePullRequestDiffData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff"
+}
+
+export type SessionHostGetWorkspacePullRequestDiffErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetWorkspacePullRequestDiffError =
+  SessionHostGetWorkspacePullRequestDiffErrors[keyof SessionHostGetWorkspacePullRequestDiffErrors]
+
+export type SessionHostGetWorkspacePullRequestDiffResponses = {
+  /**
+   * Hosted workspace pull request diff
+   */
+  200: SessionHostWorkspacePullRequestDiff
+}
+
+export type SessionHostGetWorkspacePullRequestDiffResponse =
+  SessionHostGetWorkspacePullRequestDiffResponses[keyof SessionHostGetWorkspacePullRequestDiffResponses]
+
+export type SessionHostGetWorkspacePullRequestDiffFileData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query: {
+    path: string
+    expectedHeadSha: string
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file"
+}
+
+export type SessionHostGetWorkspacePullRequestDiffFileErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetWorkspacePullRequestDiffFileError =
+  SessionHostGetWorkspacePullRequestDiffFileErrors[keyof SessionHostGetWorkspacePullRequestDiffFileErrors]
+
+export type SessionHostGetWorkspacePullRequestDiffFileResponses = {
+  /**
+   * Hosted workspace pull request file
+   */
+  200: SessionHostWorkspacePullRequestDiffFileResult
+}
+
+export type SessionHostGetWorkspacePullRequestDiffFileResponse =
+  SessionHostGetWorkspacePullRequestDiffFileResponses[keyof SessionHostGetWorkspacePullRequestDiffFileResponses]
 
 export type SessionHostListWorkspaceSessionsData = {
   body?: never

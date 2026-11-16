@@ -659,6 +659,70 @@ export const kiloScenarios: Scenario[] = [
       check(body.refresh === undefined, "signed-out PR refresh must not fabricate an upstream refresh outcome")
     }),
   http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes", "sessionHost.getWorkspaceChanges")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh",
+      "sessionHost.refreshWorkspaceChanges",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file",
+      "sessionHost.getWorkspaceChangeFile",
+    )
+    .at((ctx) => ({
+      path:
+        route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file", {
+          providerID: "kilo-cloud",
+          workspaceID: "httpapi-missing",
+        }) + "?path=src%2Findex.ts&expectedRevision=1",
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff",
+      "sessionHost.getWorkspacePullRequestDiff",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file",
+      "sessionHost.getWorkspacePullRequestDiffFile",
+    )
+    .at((ctx) => ({
+      path:
+        route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file", {
+          providerID: "kilo-cloud",
+          workspaceID: "httpapi-missing",
+        }) + "?path=src%2Findex.ts&expectedHeadSha=" + "a".repeat(40),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
     .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.listWorkspaceSessions")
     .probe({
       path:

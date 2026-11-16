@@ -21145,6 +21145,646 @@
         ]
       }
     },
+    "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.getWorkspaceChanges",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved hosted workspace changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceChanges"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read the saved committed and uncommitted workspace comparison without waking compute. Every file reports explicit diff and content availability, and an omitted payload never looks like an empty diff.",
+        "summary": "Read hosted workspace changes",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.getWorkspaceChanges({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/refresh": {
+      "post": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.refreshWorkspaceChanges",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed hosted workspace changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceChangesRefresh"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Explicitly refresh the saved workspace comparison. An offline or failed refresh preserves the previous durable snapshot.",
+        "summary": "Refresh hosted workspace changes",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.refreshWorkspaceChanges({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session-host/workspace/{providerID}/{workspaceID}/changes/file": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.getWorkspaceChangeFile",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "required": true
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceChangeScope"
+            },
+            "required": false
+          },
+          {
+            "name": "expectedRevision",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hosted workspace file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceChangeFileResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read one captured file fenced by the expected snapshot revision. A stale or delisted result never returns another revision's patch.",
+        "summary": "Read a hosted workspace file",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.getWorkspaceChangeFile({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.getWorkspacePullRequestDiff",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hosted workspace pull request diff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspacePullRequestDiff"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read the verified linked PR and its published file comparison. This comparison is distinct from the committed and uncommitted workspace changes; not_linked is a successful result with no PR data.",
+        "summary": "Read the hosted workspace pull request diff",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.getWorkspacePullRequestDiff({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request-diff/file": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.getWorkspacePullRequestDiffFile",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "required": true
+          },
+          {
+            "name": "expectedHeadSha",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+            },
+            "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hosted workspace pull request file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspacePullRequestDiffFileResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read one PR patch fenced by the verified head SHA. A stale, delisted, or omitted file never returns a synthesized patch.",
+        "summary": "Read a hosted workspace pull request file",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.getWorkspacePullRequestDiffFile({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session": {
       "get": {
         "tags": ["session-host"],
@@ -46407,27 +47047,33 @@
             "properties": {
               "total": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "passed": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "failed": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "pending": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "skipped": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "unknown": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "complete": {
                 "type": "boolean"
@@ -46446,7 +47092,8 @@
                 "anyOf": [
                   {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   },
                   {
                     "type": "null"
@@ -46563,6 +47210,662 @@
           }
         },
         "required": ["id", "state", "pullRequest"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceChangeRepository": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "repoFullName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": ["path", "repoFullName"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceComparison": {
+        "type": "object",
+        "properties": {
+          "baseRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "mergeBase": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+          },
+          "head": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+          },
+          "baseRefFallback": {
+            "type": "object",
+            "properties": {
+              "requested": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "used": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "required": ["requested", "used"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["baseRef", "mergeBase", "head"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceChangeStatus": {
+        "type": "string",
+        "enum": ["added", "modified", "deleted"]
+      },
+      "SessionHostWorkspaceChangeScope": {
+        "type": "string",
+        "enum": ["uncommitted", "against-base-branch"]
+      },
+      "SessionHostWorkspaceOmissionReason": {
+        "type": "string",
+        "enum": [
+          "binary",
+          "unsupported",
+          "invalid_utf8",
+          "too_large",
+          "line_limit",
+          "budget_exhausted",
+          "inconsistent",
+          "capture_failed"
+        ]
+      },
+      "SessionHostWorkspaceDiffAvailability": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["available"]
+              }
+            },
+            "required": ["status"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["omitted"]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/SessionHostWorkspaceOmissionReason"
+              }
+            },
+            "required": ["status", "reason"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SessionHostWorkspaceContentAvailability": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["available"]
+              },
+              "source": {
+                "type": "string",
+                "enum": ["current", "deleted-original"]
+              }
+            },
+            "required": ["status", "source"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["unavailable"]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/SessionHostWorkspaceOmissionReason"
+              }
+            },
+            "required": ["status", "reason"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "SessionHostWorkspaceChangeFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceChangeStatus"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceChangeScope"
+          },
+          "additions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "deletions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "tracked": {
+            "type": "boolean"
+          },
+          "binary": {
+            "type": "boolean"
+          },
+          "countsComplete": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "repository": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspaceChangeRepository"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diff": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceDiffAvailability"
+          },
+          "content": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceContentAvailability"
+          }
+        },
+        "required": [
+          "path",
+          "status",
+          "additions",
+          "deletions",
+          "tracked",
+          "binary",
+          "countsComplete",
+          "revision",
+          "repository",
+          "diff",
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceChangeComparison": {
+        "type": "object",
+        "properties": {
+          "repository": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspaceChangeRepository"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceComparison"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceChangeFile"
+            }
+          }
+        },
+        "required": ["repository", "comparison", "truncated", "files"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceChanges": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceIdentity"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["captured", "not_captured", "inconsistent"]
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capturedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "comparisons": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceChangeComparison"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["id", "status", "revision", "capturedAt", "truncated", "comparisons"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceChangesRefresh": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["refreshed", "offline", "failed"]
+          },
+          "changes": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceChanges"
+          }
+        },
+        "required": ["status", "changes"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceFileRecord": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "enum": [1]
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceChangeScope"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["available"]
+                  },
+                  "patch": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["status", "patch"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["omitted"]
+                  },
+                  "reason": {
+                    "$ref": "#/components/schemas/SessionHostWorkspaceOmissionReason"
+                  }
+                },
+                "required": ["status", "reason"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["available"]
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": ["current", "deleted-original"]
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": ["status", "source", "text"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["unavailable"]
+                  },
+                  "reason": {
+                    "$ref": "#/components/schemas/SessionHostWorkspaceOmissionReason"
+                  }
+                },
+                "required": ["status", "reason"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": ["schemaVersion", "revision", "path", "diff", "content"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceChangeFileResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["available", "omitted", "not_captured", "no_longer_listed", "stale"]
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspaceFileRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capturedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspaceComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currentRevision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["status", "file", "capturedAt", "comparison", "currentRevision"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspacePullRequestReason": {
+        "type": "string",
+        "enum": [
+          "no_pull_request",
+          "pull_request_not_found",
+          "head_ref_mismatch",
+          "repository_mismatch",
+          "installation_unavailable",
+          "connected_user_required",
+          "github_access_denied",
+          "github_rate_limited",
+          "github_unavailable",
+          "pull_request_changed",
+          "unsupported_repository"
+        ]
+      },
+      "SessionHostWorkspacePullRequestDiffIdentity": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed"]
+          },
+          "draft": {
+            "type": "boolean"
+          },
+          "headSha": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+          },
+          "baseRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "repository": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceChangeRepository"
+          },
+          "cacheStale": {
+            "type": "boolean"
+          }
+        },
+        "required": ["number", "url", "state", "draft", "headSha", "baseRef", "repository", "cacheStale"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspacePullRequestDiffFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "previousPath": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "removed", "modified", "renamed", "copied", "changed", "unchanged"]
+          },
+          "additions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "deletions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "patchAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["path", "previousPath", "status", "additions", "deletions", "patchAvailable"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspacePullRequestDiff": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceIdentity"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["linked", "stale", "not_linked", "unverified", "credential_required", "unavailable", "not_github"]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspacePullRequestReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pullRequest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspacePullRequestDiffIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionHostWorkspacePullRequestDiffFile"
+            }
+          }
+        },
+        "required": ["id", "status", "reason", "pullRequest", "truncated", "files"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspacePullRequestDiffFileResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "omitted",
+              "not_listed",
+              "stale",
+              "not_linked",
+              "unverified",
+              "credential_required",
+              "unavailable",
+              "not_github"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionHostWorkspacePullRequestReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "omissionReason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["provider_omitted"]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "headSha": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "patch": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["status", "path", "reason", "omissionReason", "headSha", "patch"],
         "additionalProperties": false
       },
       "SessionHostDeleteWorkspaceResult": {
