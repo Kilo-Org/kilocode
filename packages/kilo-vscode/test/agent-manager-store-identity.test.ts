@@ -46,6 +46,55 @@ describe("keepUnchanged", () => {
   })
 })
 
+describe("closed session suppression", () => {
+  function state(order: Record<string, string[]>, sessions = [{ id: "ses_a", worktreeId: "a", createdAt: "" }]) {
+    return {
+      type: "agentManager.state",
+      worktrees: [tree("a")],
+      sessions,
+      tabOrder: order,
+    } as AgentManagerStateMessage
+  }
+
+  it("keeps a closed tab out of a pushed tab order that still names it", () => {
+    createRoot((dispose) => {
+      const store = createProjectStore("project")
+      store.dismissSession("ses_a")
+
+      store.applyState(state({ a: ["ses_a", "ses_b"] }))
+
+      expect(store.tabOrder().a).toEqual(["ses_b"])
+      expect(store.closed().has("ses_a")).toBe(true)
+      dispose()
+    })
+  })
+
+  it("prunes the suppression once the host drops the session and its order", () => {
+    createRoot((dispose) => {
+      const store = createProjectStore("project")
+      store.dismissSession("ses_a")
+
+      store.applyState(state({}, []))
+
+      expect(store.closed().has("ses_a")).toBe(false)
+      expect(store.tabOrder().a).toBeUndefined()
+      dispose()
+    })
+  })
+
+  it("resumes a session the user opens again", () => {
+    createRoot((dispose) => {
+      const store = createProjectStore("project")
+      store.dismissSession("ses_a")
+
+      store.resumeSession("ses_a")
+
+      expect(store.closed().has("ses_a")).toBe(false)
+      dispose()
+    })
+  })
+})
+
 describe("project store state push", () => {
   it("keeps the identity of unchanged rows across pushes", () => {
     createRoot((dispose) => {
