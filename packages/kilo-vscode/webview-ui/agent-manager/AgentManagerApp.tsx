@@ -55,6 +55,7 @@ import {
   showsSession,
 } from "./navigate"
 import { useBridge } from "./v2/vscode"
+import { MissingWorktreeBanner } from "./MissingWorktreeBanner"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
 import { openSubagent } from "../src/v2/open-subagent"
@@ -2463,6 +2464,11 @@ const AgentManagerContent: Component = () => {
             </Button>
           </div>
         </Show>
+        <MissingWorktreeBanner
+          worktree={worktrees().find((worktree) => worktree.id === selection())}
+          health={registry.active().worktreeHealth()[selection() ?? ""]}
+          onRestore={(worktreeId) => to({ type: "agentManager.restoreWorktree", worktreeId })}
+        />
       </div>
     </div>
   )
