@@ -20,6 +20,7 @@ import { ServiceRegistration } from "@opencode/cli/services/service-registration
 import { RemoteTunnel } from "@opencode/cli/services/remote-tunnel"
 import { WebUi } from "@opencode/cli/services/web-ui"
 import { databasePath } from "@opencode/cli/database-path"
+import { KiloBinary } from "./binary"
 import { RemoteHttp } from "./remote/http"
 
 export type Mode = "default" | "service" | "stdio"
@@ -183,7 +184,8 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
             return yield* Effect.fail(
               new Error(
                 `Managed service port ${port} on ${hostname} is already in use by ${owner ?? "another process"}. ` +
-                  "Configure another port with `opencode service set port <port>` and start the service again.",
+                  // Kilo: the branding loader renames commands only in the upstream file, so the mirror names the binary.
+                  `Configure another port with \`${KiloBinary} service set port <port>\` and start the service again.`,
                 { cause: error },
               ),
             )

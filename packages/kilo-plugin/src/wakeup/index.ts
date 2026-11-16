@@ -31,6 +31,7 @@ export const KiloWakeupPlugin = define({
     const registration = yield* ctx.rpc
       .register(KiloWakeupRpc.Definition, {
         list: (input) => wake.list(input.sessionID).pipe(Effect.map((wakeups) => ({ wakeups }))),
+        prompts: (input) => wake.prompts(input.scheduleIDs).pipe(Effect.map((prompts) => ({ prompts }))),
         pending: (input) => wake.pending(input.directory).pipe(Effect.map((sessions) => ({ sessions }))),
       })
       .pipe(Effect.orDie)

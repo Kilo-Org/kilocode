@@ -271,6 +271,7 @@ export const dict: Record<string, string> = {
   "ui.messagePart.board.route": "Відправник: {{from}}, одержувач: {{to}}",
   "ui.messagePart.board.empty": "Немає повідомлень агентів",
   "ui.messagePart.board.stored": "Лише збережено. Доставлення та прочитання не підтверджено.",
+  "ui.messagePart.board.more": "Доступні додаткові повідомлення.",
   "ui.question.answer.dismissed": "Dismissed",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",

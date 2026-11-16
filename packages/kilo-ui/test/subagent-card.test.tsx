@@ -124,6 +124,36 @@ function mountChildCard(child: ToolChildSession, props: Partial<ToolProps> = {})
   ))
 }
 
+test("a child board post shows the recipient from its result title", async () => {
+  const boardPost = {
+    type: "tool",
+    id: "child-board-post",
+    name: "board_post",
+    state: {
+      status: "completed",
+      input: { to: "main", type: "RESULT", body: "Reply from the child" },
+      content: [{ type: "text", text: "{}" }],
+      metadata: { title: "RESULT to main" },
+    },
+    time: { created: 1, completed: 2 },
+  } as unknown as SessionMessageAssistantTool
+  const card = mountChildCard(
+    { tools: () => [boardPost], running: () => false, load: () => {} },
+    {
+      input: { agent: "general", description: "child reply test", prompt: "post" },
+      metadata: { sessionID: "ses_child", status: "completed" },
+      status: "completed",
+      partID: "subagent-board",
+      forceOpen: true,
+    },
+  )
+  mounted.push(card)
+
+  const row = await waitFor(() => card.host.querySelector('[data-slot="task-tool-item"]'))
+  expect(row.querySelector('[data-slot="task-tool-title"]')?.textContent).toBe("board_post")
+  expect(row.querySelector('[data-slot="task-tool-subtitle"]')?.textContent).toBe("RESULT to main")
+})
+
 test("a card asks for the child history again when its cached tools disappear", async () => {
   const [tools, setTools] = createSignal<SessionMessageAssistantTool[]>([])
   const loads: string[] = []
