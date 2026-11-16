@@ -8,7 +8,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { and, desc, eq, gte, inArray, isNull, like, lt, or, type SQL } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, isNull, like, lt, or, sql, type SQL } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { ProjectV2 } from "@opencode-ai/core/project"
@@ -216,8 +216,7 @@ export namespace KiloSession {
   }): number | undefined {
     if ((input.provider?.id ?? input.providerID) === "kilo") {
       const raw = input.usage?.providerMetadata?.["aiSdk"] as
-        | { cost?: unknown; is_byok?: unknown; cost_details?: { upstream_inference_cost?: unknown } | null }
-        | undefined
+        { cost?: unknown; is_byok?: unknown; cost_details?: { upstream_inference_cost?: unknown } | null } | undefined
       const cost = raw?.is_byok === true ? raw.cost_details?.upstream_inference_cost : raw?.cost
       return typeof cost === "number" && Number.isFinite(cost) && cost >= 0 ? cost : undefined
     }
@@ -230,8 +229,7 @@ export namespace KiloSession {
 
     // 1. OpenRouter chat completions
     const orUsage = input.metadata?.["openrouter"]?.["usage"] as
-      | { cost?: number; costDetails?: { upstreamInferenceCost?: number } }
-      | undefined
+      { cost?: number; costDetails?: { upstreamInferenceCost?: number } } | undefined
     if (orUsage) {
       const upstream = num(orUsage.costDetails?.upstreamInferenceCost)
       const regular = num(orUsage.cost)
@@ -483,10 +481,12 @@ export namespace KiloSession {
             .pipe(Effect.orDie)),
         )
       } else {
-        // Membership depends only on `directory`, so scan only `id` and `directory` in
-        // one ordered query (a single SQLite snapshot, sorted once), decide each distinct
-        // directory once, and keep the first `limit` accepted ids. The full rows are then
-        // loaded for at most `limit` ids, which is safe to bind.
+        // Membership depends only on `directory`. Inside one read transaction (one SQLite
+        // snapshot), list the distinct directories of the matching sessions, decide each
+        // once, then run a single ordered, limited query over full rows restricted to the
+        // accepted directories. They travel as one JSON bind parameter, so the number of
+        // directories can never hit SQLite's bind-variable limit. Memory is bounded by the
+        // distinct directories and `limit`, and the order is sorted once.
         const decided = new Map<string, boolean>()
         const allowed = (dir: string) => {
           const hit = decided.get(dir)
@@ -495,31 +495,28 @@ export namespace KiloSession {
           decided.set(dir, ok)
           return ok
         }
-        const light = yield* db
-          .select({ id: SessionTable.id, directory: SessionTable.directory })
-          .from(SessionTable)
-          .where(where())
-          .orderBy(...order)
-          .all()
+        const rows = yield* db
+          .transaction((tx) =>
+            Effect.gen(function* () {
+              const seen = yield* tx
+                .selectDistinct({ directory: SessionTable.directory })
+                .from(SessionTable)
+                .where(where())
+                .all()
+              const accepted = seen.map((row) => row.directory).filter(allowed)
+              if (accepted.length === 0) return []
+              const members = sql`${SessionTable.directory} IN (SELECT value FROM json_each(${JSON.stringify(accepted)}))`
+              return yield* tx
+                .select()
+                .from(SessionTable)
+                .where(where(members))
+                .orderBy(...order)
+                .limit(limit)
+                .all()
+            }),
+          )
           .pipe(Effect.orDie)
-        const picked: SessionRow["id"][] = []
-        for (const row of light) {
-          if (picked.length >= limit) break
-          if (allowed(row.directory)) picked.push(row.id)
-        }
-        if (picked.length > 0) {
-          const rows = yield* db
-            .select()
-            .from(SessionTable)
-            .where(inArray(SessionTable.id, picked))
-            .all()
-            .pipe(Effect.orDie)
-          const byID = new Map<string, SessionRow>(rows.map((row) => [row.id, row]))
-          for (const id of picked) {
-            const row = byID.get(id)
-            if (row) list.push(row)
-          }
-        }
+        list.push(...rows)
       }
 
       const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]

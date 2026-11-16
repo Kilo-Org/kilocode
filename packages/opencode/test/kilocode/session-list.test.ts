@@ -75,6 +75,46 @@ const instance = Effect.gen(function* () {
   return { ctx, db }
 })
 
+type Captured = { sql: string; params: unknown[] }
+
+// Runs `effect` with every select issued through `db.transaction` recorded as SQL text and params.
+const captureQueries = <A, E, R>(db: Db, effect: Effect.Effect<A, E, R>) =>
+  Effect.gen(function* () {
+    const original = db.transaction.bind(db)
+    const sql: Captured[] = []
+    // Wraps a query builder chain so `.all()` records the statement it is about to run.
+    const record = (builder: unknown): unknown => {
+      if (typeof builder !== "object" || builder === null) return builder
+      return new Proxy(builder, {
+        get(target, key, receiver) {
+          const value: unknown = Reflect.get(target, key, receiver)
+          if (typeof value !== "function") return value
+          if (key === "all" && "toSQL" in target) {
+            const query = (Reflect.get(target, "toSQL") as () => Captured).call(target)
+            sql.push({ sql: query.sql, params: query.params })
+          }
+          return (...args: unknown[]) => record(Reflect.apply(value, target, args))
+        },
+      })
+    }
+    const spy = spyOn(db, "transaction").mockImplementation(((fn: Parameters<Db["transaction"]>[0], config?: never) =>
+      original(
+        (tx) =>
+          fn(
+            new Proxy(tx, {
+              get(target, key, receiver) {
+                const value: unknown = Reflect.get(target, key, receiver)
+                if ((key !== "select" && key !== "selectDistinct") || typeof value !== "function") return value
+                return (...args: unknown[]) => record(Reflect.apply(value, target, args))
+              },
+            }),
+          ),
+        config,
+      )) as Db["transaction"])
+    const result = yield* effect.pipe(Effect.ensuring(Effect.sync(() => spy.mockRestore())))
+    return { result, sql }
+  })
+
 const listIn = (ctx: { directory: string; project: { id: string } }, input: { limit: number; cursor?: number }) =>
   KiloSession.listGlobal<GlobalInfo>({
     fromRow: Session.fromRow,
@@ -185,7 +225,7 @@ describe("Kilo Session.list", () => {
   )
 
   it.instance(
-    "issues one light scan and one full-row load regardless of rejected rows",
+    "reads distinct directories then one limited ordered query, bounded by the page",
     () =>
       Effect.gen(function* () {
         const { ctx, db } = yield* instance
@@ -197,18 +237,18 @@ describe("Kilo Session.list", () => {
           directory: i < rejected ? outside : path.join(ctx.directory, `d${i}`),
           time_updated: now - i,
         }))
-        const select = spyOn(db, "select")
-        const result = yield* listIn(ctx, { limit: 3 })
-        const calls = select.mock.calls.map((call) => call as unknown[])
-        select.mockRestore()
+        const queries = yield* captureQueries(db, listIn(ctx, { limit: 3 }))
 
-        expect(ids(result)).toEqual([sid(rejected), sid(rejected + 1), sid(rejected + 2)])
-        // Session queries: the light scan selects only id and directory, the load selects whole rows.
-        const light = calls.filter((call) => call.length > 0 && "directory" in (call[0] as object))
-        const full = calls.filter((call) => call.length === 0)
-        expect(light.length).toBe(1)
-        expect(Object.keys(light[0]![0] as object).sort()).toEqual(["directory", "id"])
-        expect(full.length).toBe(1)
+        expect(ids(queries.result)).toEqual([sid(rejected), sid(rejected + 1), sid(rejected + 2)])
+        // One snapshot, two statements: the directory scan returns one row per directory
+        // and the page query carries LIMIT, so rows read never scale with rejected sessions.
+        expect(queries.sql.length).toBe(2)
+        const [scan, page] = queries.sql
+        expect(scan!.sql).toMatch(/^select distinct "directory" from/)
+        expect(page!.sql).toMatch(/limit \?$/)
+        expect(page!.sql).toContain("json_each(?)")
+        expect(page!.params.at(-1)).toBe(3)
+        expect(page!.params.length).toBeLessThan(20)
       }),
     60_000,
   )
