@@ -26,6 +26,14 @@ export function canOpenRootSession(id: string, sessions: Pick<SessionLike, "id" 
 }
 
 /**
+ * The sessions the panel can open: the loaded stores first, then the host catalog. History lists the sessions of
+ * worktrees whose store has not loaded a session list, and only the catalog knows those.
+ */
+export function knownSessions<T extends SessionLike>(loaded: T[], catalog: T[] | undefined): T[] {
+  return catalog?.length ? [...loaded, ...catalog] : loaded
+}
+
+/**
  * The worktree that owns a session, from the directory the server runs it in. `null` means the session runs in the
  * project root, `undefined` that the session is not loaded yet or runs in a directory this comparison cannot place
  * (for example a path alias), so callers keep the host's filing. A session belongs to the worktree of its directory,
