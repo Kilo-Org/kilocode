@@ -264,7 +264,8 @@ be broken. Check every auto-merged file for:
   changed under "Mirrors touched". Upstream's change lands at the upstream path
   while the Kilo copy (`// kilo_mirror:` in `packages/kilo-*`) stays behind, so
   no conflict marks it. For each one: read
-  `git diff <recorded sha>..<pin> -- <upstream path>`, re-apply the entry's
+  `git diff <recorded sha> <pin>:<upstream path>` (the recorded value is a blob OID,
+  so the two-dot commit form does not work), re-apply the entry's
   `invariants` to the new upstream shape, then record the new upstream SHA in
   `script/upstream/mirrors.json`. If the divergence set changed, rewrite the
   entry's `why` and `invariants` too: they are what the next sync merges by, so

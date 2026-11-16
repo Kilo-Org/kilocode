@@ -183,9 +183,12 @@ export function problems(states: MirrorState[], marked: MarkedMirror[], file = R
 /** Copies whose upstream file changed or disappeared since the recorded SHA. Needs a pin. */
 export function drift(states: MirrorState[], file = REGISTRY): string[] {
   return states.flatMap((state) => {
-    if (state.current === null)
-      return [`${state.upstream} no longer exists at the pin. Remove ${state.entry.mirror} or update ${file}`]
-    if (state.current === undefined || state.current === state.entry.sha) return []
+    const problem = status(state)
+    if (problem === "removed")
+      return [
+        `${state.upstream} no longer exists at the pin (upstream deleted or renamed it). Record the new upstream path in ${file}, or remove the entry and the \`// ${MARKER} ${state.upstream}\` marker from ${state.entry.mirror}, which makes the copy Kilo-owned code.`,
+      ]
+    if (problem !== "changed" || !state.current) return []
     return [
       [
         `${state.upstream} changed upstream (recorded ${state.entry.sha.slice(0, 11)}, pin has ${state.current.slice(0, 11)}). Re-merge it into ${state.entry.mirror}.`,

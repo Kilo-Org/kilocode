@@ -112,7 +112,7 @@ The entry describes decisions, not an inventory: the upstream diff shows which l
 
 `bun script/check-mirrors.ts [--json] [--registry <file>]` checks the registry structure and needs no pin: a registered copy is missing, its `kilo_mirror` marker is missing or names another path, or a copy declares a marker with no registry entry. CI runs it in the `shared upstream patches` job, because a PR that adds a copy can fix all of that.
 
-`bun script/check-mirrors.ts --drift [--pin <ref>]` adds the pin comparison and fails when the pinned upstream file changed or disappeared since the recorded SHA. `--pin` implies `--drift`. Only a sync can act on that result, so the sync runs it and does not finish while a copy is behind: `merge.ts` stops after the merge commit, writes the report and exits non-zero before any push. The fix is to re-merge the upstream change into the copy, keep what the entry requires, then record the new SHA. The sync report lists the same files under "Mirrors touched".
+`bun script/check-mirrors.ts --drift [--pin <ref>]` adds the pin comparison and fails when the pinned upstream file changed or disappeared since the recorded SHA. `--pin` implies `--drift`. Only a sync can act on that result, so the sync runs it and does not finish while a copy is behind: `merge.ts` stops after the merge commit, writes the report and exits non-zero before any push. It passes the commit it merged with `--pin`, because a `--commit` sync's merge is not a release and `pinned()` would resolve the previous release. The fix is to re-merge the upstream change into the copy (``git diff <recorded sha> <pin>:<upstream path>``), keep what the entry requires, then record the new SHA. The sync report lists the same files under "Mirrors touched".
 
 ## Progress map
 

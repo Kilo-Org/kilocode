@@ -209,7 +209,7 @@ export async function main(argv: string[]) {
 
   logger.step(7, 7, "Finishing...")
   await guards(sync)
-  await mirrorDrift(sync, reportFile)
+  await mirrorDrift(sync, reportFile, target.commit)
   if (options.push) {
     await git.push(config.originRemote, branch, true)
     logger.success(`Pushed ${branch}`)
@@ -431,15 +431,18 @@ async function guards(sync: report.SyncReport) {
  * so the sync stops here: the merge is committed and the report is written, but the branch is not
  * pushed and not handed off as done. CI checks the registry structure instead, because a normal PR
  * cannot fix drift and must not be asked to.
+ *
+ * The pin is the commit this sync merged, passed explicitly: `pinned()` only recognises release
+ * merges, so a `--commit` sync would otherwise compare with the previous release.
  */
-async function mirrorDrift(sync: report.SyncReport, reportFile: string) {
+async function mirrorDrift(sync: report.SyncReport, reportFile: string, pin: string) {
   if (!(await Bun.file(REGISTRY).exists())) {
     sync.notes.push(`The branch has no \`${REGISTRY}\`: the mirror drift check was skipped`)
     return
   }
   const branch = "script/check-mirrors.ts"
   const script = (await Bun.file(branch).exists()) ? branch : new URL("../check-mirrors.ts", import.meta.url).pathname
-  const result = await $`bun ${script} --drift`.quiet().nothrow()
+  const result = await $`bun ${script} --drift --pin ${pin}`.quiet().nothrow()
   console.log(result.stdout.toString() + result.stderr.toString())
   if (result.exitCode === 0) {
     logger.success("check-mirrors.ts --drift: ok")
@@ -449,7 +452,7 @@ async function mirrorDrift(sync: report.SyncReport, reportFile: string) {
   await report.saveReport(sync, reportFile)
   logger.error("The sync is incomplete: upstream changed a file Kilo copies.")
   logger.info("Re-merge each copy listed above with the recorded `why` and `invariants` in script/upstream/mirrors.json,")
-  logger.info("record the new upstream SHA there, then run `bun script/check-mirrors.ts --drift`.")
+  logger.info(`record the new upstream SHA there, then run \`bun script/check-mirrors.ts --drift --pin ${pin}\`.`)
   logger.info(`Report saved to ${reportFile}`)
   process.exit(1)
 }
