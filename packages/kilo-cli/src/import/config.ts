@@ -4,7 +4,7 @@
 // installed per version.
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyEdits, modify } from "jsonc-parser"
-import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs"
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 
 const entries = ["AGENTS.md", "skill", "skills", "agent", "agents", "command", "commands", "mode", "modes", "rules"]
@@ -19,26 +19,30 @@ export function copyConfig(from: string, to: string) {
     : (["kilo.json", "kilo.jsonc"] as const).flatMap((name, index) =>
         existsSync(path.join(from, name)) ? [{ source: name, target: KiloConfigFiles.names[index] }] : [],
       )
-  const copied = [
-    ...config,
-    ...entries.filter((name) => existsSync(path.join(from, name))).map((name) => ({ source: name, target: name })),
-  ]
-  for (const entry of copied)
+  const directories = entries
+    .filter((name) => existsSync(path.join(from, name)))
+    .map((name) => ({ source: name, target: name }))
+  mkdirSync(to, { recursive: true })
+  // The config files are written as new regular files, so a symlinked or read-only v1 file is never followed or
+  // left read-only, and its plugin lists are removed before the file exists.
+  for (const entry of config)
+    writeFileSync(path.join(to, entry.target), withoutPlugins(readFileSync(path.join(from, entry.source), "utf8")), {
+      mode: 0o600,
+      flag: "wx",
+    })
+  for (const entry of directories)
     cpSync(path.join(from, entry.source), path.join(to, entry.target), {
       recursive: true,
       force: false,
       errorOnExist: false,
     })
-  for (const entry of config) withoutPlugins(path.join(to, entry.target))
-  return copied.map((entry) => entry.source)
+  return [...config, ...directories].map((entry) => entry.source)
 }
 
-/** Removes the plugin lists from a copied config file and keeps its comments and formatting. */
-function withoutPlugins(file: string) {
-  const text = readFileSync(file, "utf8")
-  const edited = ["plugin", "plugins"].reduce(
+/** The config text without its plugin lists, with its comments and formatting kept. */
+function withoutPlugins(text: string) {
+  return ["plugin", "plugins"].reduce(
     (current, key) => applyEdits(current, modify(current, [key], undefined, {})),
     text,
   )
-  if (edited !== text) writeFileSync(file, edited)
 }

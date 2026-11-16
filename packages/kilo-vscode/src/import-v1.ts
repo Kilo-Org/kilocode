@@ -28,7 +28,12 @@ export function importV1(input: {
   input.signal?.addEventListener("abort", () => {
     if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined) return
     if (process.platform === "win32") return void child.kill()
-    process.kill(-child.pid, "SIGTERM")
+    // The group can end between the check and the signal; there is nothing left to stop then.
+    try {
+      process.kill(-child.pid, "SIGTERM")
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
+    }
   })
   const result = Promise.withResolvers<{ ok: boolean; output: string }>()
   const lines: string[] = []

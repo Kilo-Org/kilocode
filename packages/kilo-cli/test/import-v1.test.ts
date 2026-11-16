@@ -2,7 +2,20 @@ import { Database as SQLite } from "bun:sqlite"
 import { afterEach, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
-import { copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm, utimes, writeFile } from "node:fs/promises"
+import {
+  chmod,
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloDatabase } from "../src/database"
@@ -581,6 +594,22 @@ test("--config copies the v1 global config without overwriting kilo2 files", asy
   expect(await readFile(path.join(to, "skills", "shared", "SKILL.md"), "utf8")).toBe("kilo2")
   expect(await readFile(path.join(to, "skills", "v1-only", "SKILL.md"), "utf8")).toBe("v1")
   expect(existsSync(path.join(to, "plugins"))).toBe(false)
+  // A symlinked, read-only v1 config is read, never written through, and the copy is a writable file of its own.
+  const dotfiles = path.join(dir, "dotfiles")
+  await mkdir(dotfiles)
+  await writeFile(path.join(dotfiles, "kilo.json"), '{ "plugin": ["v1-plugin"] }')
+  await chmod(path.join(dotfiles, "kilo.json"), 0o444)
+  const linked = path.join(dir, "config", "linked")
+  await mkdir(linked)
+  // Windows needs a privilege to create a symlink, so the read-only file is linked only elsewhere.
+  if (process.platform === "win32") await copyFile(path.join(dotfiles, "kilo.json"), path.join(linked, "kilo.json"))
+  else await symlink(path.join(dotfiles, "kilo.json"), path.join(linked, "kilo.json"))
+  const fresh = path.join(dir, "config", "fresh")
+  expect(copyConfig(linked, fresh)).toEqual(["kilo.json"])
+  expect(await readFile(path.join(dotfiles, "kilo.json"), "utf8")).toContain("v1-plugin")
+  expect((await lstat(path.join(fresh, "kilo2.json"))).isSymbolicLink()).toBe(false)
+  expect(await readFile(path.join(fresh, "kilo2.json"), "utf8")).not.toContain("plugin")
+  await chmod(path.join(dotfiles, "kilo.json"), 0o644)
   // Once kilo2 has its own config file, the v1 file stays out.
   await rm(path.join(to, "kilo2.jsonc"))
   await writeFile(path.join(to, "kilo2.json"), "{}")
