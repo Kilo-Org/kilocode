@@ -178,6 +178,7 @@ describe("Agent Manager worktree lifecycle", () => {
       ["first", null],
       ["second", null],
     ])
+    expect(calls).toContain("abort:first,second")
     expect(calls.indexOf("abort:first,second")).toBeLessThan(calls.indexOf("move:first"))
     expect(calls.indexOf("move:first")).toBeLessThan(calls.indexOf("push"))
   })

@@ -236,10 +236,13 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
       selected: (target) => this.postToWebview({ type: "agentManager.selectionActivated", target }),
       post: (message) => this.postToWebview(message),
       routeSession: (_projectId, sessionId, directory) =>
-        void this.connection
+        this.connection
           .client()
           .then((client) => routeSession(client, sessionId, directory, (...args) => this.log(...args)))
-          .catch((err: unknown) => this.log(`Failed to move session ${sessionId}:`, err)),
+          .catch((err: unknown) => {
+            this.log(`Failed to move session ${sessionId}:`, err)
+            return false
+          }),
     })
     this.contexts = wiring.contexts
     // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.

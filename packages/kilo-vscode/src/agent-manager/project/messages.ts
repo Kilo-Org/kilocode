@@ -64,8 +64,8 @@ export interface ProjectMessageDeps {
   openSettings: (tab?: string, projectId?: string) => void
   /** Ensure a context's repository state is ready (no-op once initialized). */
   ready: (ctx: ProjectContext, options?: { warm?: boolean }) => Promise<ProjectInitResult>
-  /** Route one session to a directory inside a project (session override + project route). */
-  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
+  /** Route one session to a directory inside a project; false when the server could not move it. */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<boolean>
   git?: GitOps
   log: (...args: unknown[]) => void
 }
@@ -199,8 +199,15 @@ async function openSessionLocally(projectId: string, sessionId: string, deps: Pr
     deps.log(`openSessionLocally: unknown session ${sessionId}`)
     return
   }
+  // Local reads the store of the project root, so the session must run there before it is filed there. A failed
+  // move keeps the filing, and the error says why, instead of showing a session Local cannot reach.
+  const moved = await deps.routeSession?.(projectId, sessionId, ctx.root, ctx.generation)
+  if (moved === false) {
+    deps.error("Could not move the conversation to Local. It still runs in its worktree.")
+    deps.pushState?.(ctx)
+    return
+  }
   state?.moveSession(sessionId, null)
-  deps.routeSession?.(projectId, sessionId, ctx.root, ctx.generation)
   deps.pushState?.(ctx)
   deps.push()
   finish({ projectId, kind: "session", sessionId }, deps)

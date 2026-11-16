@@ -27,7 +27,9 @@ import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { RunController } from "./run/controller"
 import type { RecoveryMessage } from "./worktree-recovery"
 import type { ProjectContexts } from "./project/contexts"
-import { routeSession } from "./route-session"
+import { fileSessionLocally } from "./route-session"
+
+const OPEN_LOCALLY_FAILED = "Could not move the conversation to Local. It still runs in its worktree."
 
 export interface MessageHost {
   connection: AgentManagerConnection
@@ -165,12 +167,20 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
   }
   if (m.type === "agentManager.openLocally") {
     const client = await host.lifecycle.client().catch(() => undefined)
-    if (client) await routeSession(client, m.sessionId, ctx.root, host.log)
-    const state = ctx.peekState()
-    if (state?.getSession(m.sessionId)) {
-      state.moveSession(m.sessionId, null)
-      host.pushState()
+    // Filing a session under Local while it still runs in a worktree shows the root checkout for its files and
+    // diff and hides its events from the worktree's view, so a session that could not move keeps its filing.
+    const filed = await fileSessionLocally({
+      client,
+      state: ctx.peekState(),
+      sessionId: m.sessionId,
+      root: ctx.root,
+      log: host.log,
+    })
+    if (!filed) {
+      host.post({ type: "error", message: OPEN_LOCALLY_FAILED })
+      return true
     }
+    host.pushState()
     return true
   }
   if (m.type === "agentManager.continueInWorktree") {
