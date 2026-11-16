@@ -10,6 +10,17 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
 })
 
+// A detached launch exits before the editor writes anything, so poll for its output.
+async function wait(path: string) {
+  const end = Date.now() + 10000
+  while (Date.now() < end) {
+    const file = Bun.file(path)
+    if (await file.exists()) return file
+    await Bun.sleep(50)
+  }
+  throw new Error(`timed out waiting for ${path}`)
+}
+
 async function fixture() {
   const repo = realpathSync(mkdtempSync(join(tmpdir(), "kilo-launch-")))
   dirs.push(repo)
@@ -23,19 +34,21 @@ async function fixture() {
   cpSync(join(source, "packages/kilo-vscode/script/launch.ts"), join(root, "script/launch.ts"))
   await Bun.write(join(root, "package.json"), JSON.stringify({ scripts: { "build:launch": "bun build.ts" } }))
   await Bun.write(join(root, "build.ts"), 'await Bun.write("dist/extension.js", "built")')
-  const workspace = join(repo, "workspace")
+  // A space in the workspace path is what broke the Windows launcher when it still
+  // used `shell: true`, so every case below runs against such a path.
+  const workspace = join(repo, "work space")
   await Bun.write(join(workspace, "package.json"), JSON.stringify({ main: "index.ts" }))
   await Bun.write(join(workspace, "index.ts"), 'await Bun.write("opened.json", JSON.stringify(process.argv.slice(2)))')
   return {
     root,
     workspace,
-    run: (args: string[] = ["--no-build"]) =>
+    run: (args: string[] = ["--no-build"], wait = true) =>
       Bun.spawnSync(
         [
           process.execPath,
           join(root, "script/launch.ts"),
           "--isolated",
-          "--wait",
+          ...(wait ? ["--wait"] : []),
           "--app-path",
           process.execPath,
           "--workspace",
@@ -84,4 +97,11 @@ describe("extension launch build", () => {
     expect(item.run().exitCode).toBe(1)
     expect(await Bun.file(join(item.workspace, "opened.json")).exists()).toBe(false)
   })
+
+  test("launches detached without --wait from a path containing a space", async () => {
+    const item = await fixture()
+    expect(item.run(["--no-build"], false).exitCode).toBe(0)
+    const opened = await wait(join(item.workspace, "opened.json"))
+    expect(await opened.json()).toContain(`--extensionDevelopmentPath=${item.root}`)
+  }, 15000)
 })
