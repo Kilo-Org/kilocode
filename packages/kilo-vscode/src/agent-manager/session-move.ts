@@ -18,6 +18,20 @@ export async function moveSession(
   limitMs = LIMIT_MS,
 ): Promise<SessionInfo> {
   await client.session.move({ sessionID: session.id, directory })
+  return (await settleMove(client, session, directory, limitMs)).session
+}
+
+/**
+ * Waits for a move that was already queued and reports whether it settled: the server runs the session in
+ * `directory` and no drain is active. A caller that admits input after the move needs this, since an unsettled record
+ * can already name the new directory while a drain still runs.
+ */
+export function settleMove(
+  client: OpenCodeClient,
+  session: SessionInfo,
+  directory: string,
+  limitMs = LIMIT_MS,
+): Promise<{ session: SessionInfo; settled: boolean }> {
   return settle(client, session, canonicalizePath(directory), Date.now() + limitMs, FIRST_DELAY_MS)
 }
 
@@ -27,13 +41,13 @@ async function settle(
   target: string,
   deadline: number,
   delay: number,
-): Promise<SessionInfo> {
+): Promise<{ session: SessionInfo; settled: boolean }> {
   const state = await Promise.all([client.session.get({ sessionID: latest.id }), client.session.active()])
     .then(([session, active]) => ({ session, active }))
     .catch(() => undefined)
-  const settled = state && samePath(canonicalizePath(state.session.location.directory), target)
-  if (settled && !(latest.id in state.active)) return state.session
-  if (Date.now() >= deadline) return state?.session ?? latest
+  const moved = state && samePath(canonicalizePath(state.session.location.directory), target)
+  if (moved && !(latest.id in state.active)) return { session: state.session, settled: true }
+  if (Date.now() >= deadline) return { session: state?.session ?? latest, settled: false }
   await new Promise((resolve) => setTimeout(resolve, Math.min(delay, Math.max(deadline - Date.now(), 0))))
   return settle(client, state?.session ?? latest, target, deadline, Math.min(delay * 2, MAX_DELAY_MS))
 }

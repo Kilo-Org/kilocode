@@ -1,6 +1,11 @@
 import { describe, expect, it, mock } from "bun:test"
+import { execFileSync } from "node:child_process"
+import * as fs from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
 import {
   abortSession,
+  continueInWorktree,
   forkSession,
   registerSession,
   type ContinueContext,
@@ -125,5 +130,73 @@ describe("continue-in-worktree steps", () => {
     expect(register).toHaveBeenCalledWith("forked", "/tmp/wt")
     expect(ready).toHaveBeenCalledWith("forked", expect.objectContaining({ path: "/tmp/wt" }), "wt-1")
     expect(forked).toHaveBeenCalledWith(expect.objectContaining({ id: "forked" }), "session-1", "wt-1")
+  })
+
+  it("continues from the directory the session runs in, not the project root", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "am-continue-"))
+    const run = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" })
+    try {
+      run(root, "init", "-q", "-b", "main")
+      fs.writeFileSync(path.join(root, "a.txt"), "a\n")
+      run(root, "add", "-A")
+      run(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+      const worktree = path.join(root, "wt")
+      run(root, "worktree", "add", "-q", "-b", "feature", worktree)
+      const create = mock(async (_opts: { baseBranch: string; baseRef: string }) => null)
+      const progress = mock((_status: string, _detail?: string, _error?: string) => {})
+
+      await continueInWorktree(
+        ctx({
+          root,
+          client: async () =>
+            ({
+              session: {
+                interrupt: async () => undefined,
+                get: async () => ({ id: "session-1", location: { directory: worktree } }),
+              },
+            }) as never,
+          createWorktreeOnDisk: create,
+        }),
+        "session-1",
+        progress,
+      )
+
+      expect(create.mock.calls[0]?.[0].baseBranch).toBe("feature")
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it("continues from the project root when the server cannot report the session directory", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "am-continue-"))
+    const run = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" })
+    try {
+      run(root, "init", "-q", "-b", "main")
+      fs.writeFileSync(path.join(root, "a.txt"), "a\n")
+      run(root, "add", "-A")
+      run(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init")
+      run(root, "worktree", "add", "-q", "-b", "feature", path.join(root, "wt"))
+      const create = mock(async (_opts: { baseBranch: string; baseRef: string }) => null)
+
+      await continueInWorktree(
+        ctx({
+          root,
+          client: async () =>
+            ({
+              session: {
+                interrupt: async () => undefined,
+                get: () => Promise.reject(new Error("not found")),
+              },
+            }) as never,
+          createWorktreeOnDisk: create,
+        }),
+        "session-1",
+        () => {},
+      )
+
+      expect(create.mock.calls[0]?.[0].baseBranch).toBe("main")
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
   })
 })
