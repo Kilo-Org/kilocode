@@ -262,6 +262,26 @@ describe("createPanelData", () => {
     })
   })
 
+  test("reads a session from the store of its directory when only another store loaded it", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      // The host files the session under the root, but the server runs it in the worktree.
+      const sessions = createSessions({ panel, directories: () => [ROOT, WORKTREE], directoryOf: () => ROOT })
+      panel.store(ROOT).data.session.remember({
+        id: "ses_elsewhere",
+        projectID: "prj_1",
+        cost: 0,
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { created: 1, updated: 1 },
+        location: { directory: WORKTREE },
+      })
+      await until(() => sessions.sessions().length > 0)
+      expect(sessions.scope("ses_elsewhere")).toBe(panel.store(WORKTREE))
+      dispose()
+    })
+  })
+
   test("forwards shift-click so the host opens the system browser", async () => {
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {

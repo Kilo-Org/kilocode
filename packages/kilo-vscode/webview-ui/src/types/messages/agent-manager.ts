@@ -919,6 +919,8 @@ export interface OpenSessionLocallyRequest {
 /** Add a new session to an existing worktree. */
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
+  /** The project that owns the worktree; the active project when omitted. */
+  projectId?: string
   worktreeId: string
   sessionId?: string
 }
