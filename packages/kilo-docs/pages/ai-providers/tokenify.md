@@ -22,7 +22,7 @@ You can use it from Kilo Code with the built-in Tokenify provider, which reads i
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open **Settings** (gear icon), go to the **Providers** tab, choose **Tokenify**, and enter your API key.
+Open **Settings** (gear icon), go to the **Providers** tab, click **Show more providers** if **Tokenify** is not listed, then choose **Tokenify** and enter your API key.
 
 Then select a Tokenify model such as `deepseek/deepseek-v4-pro` or `z-ai/glm-5.2`.
 
