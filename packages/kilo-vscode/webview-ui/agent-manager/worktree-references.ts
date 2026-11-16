@@ -15,7 +15,7 @@ export function worktreeReferences(
   current: string | null,
   recent: string[] = [],
 ): WorktreeReference[] {
-  const titles = new Map(sessions.map((session) => [session.id, session]))
+  const byId = new Map(sessions.map((session) => [session.id, session]))
   const updated = new Map(sessions.map((session) => [session.id, Date.parse(session.updatedAt ?? "") || 0]))
   const recency = new Map(recent.map((path, index) => [path, index]))
   const activity = new Map<string, number>()
@@ -23,13 +23,13 @@ export function worktreeReferences(
   for (const session of state.managedSessions()) {
     if (!session.worktreeId) continue
     const group = groups.get(session.worktreeId) ?? []
-    group.push({ id: session.id, title: titles.get(session.id)?.title })
+    group.push({ id: session.id, title: byId.get(session.id)?.title })
     groups.set(session.worktreeId, group)
   }
   return sortWorktrees(state.worktrees(), state.worktreeOrder())
     .map((worktree) => {
       const sessions = groups.get(worktree.id) ?? []
-      const labelled = sessions.map((session) => ({ ...session, slug: titles.get(session.id)?.slug }))
+      const labelled = sessions.map((session) => ({ ...session, slug: byId.get(session.id)?.slug }))
       const basename = worktree.path.replaceAll("\\", "/").replace(/\/+$/, "").split("/").pop()
       activity.set(
         worktree.path,
