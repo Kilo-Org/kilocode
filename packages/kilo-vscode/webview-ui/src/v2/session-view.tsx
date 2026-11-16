@@ -507,7 +507,6 @@ export function SessionView(props: {
       help: () => v2.open("https://kilo.ai/docs"),
       marketplace: () => getVSCodeAPI().postMessage({ type: "openMarketplace" } satisfies ToHost as never),
       settings: () => getVSCodeAPI().postMessage({ type: "openSettingsTab" } satisfies ToHost as never),
-      reload: () => void v2.api.location.reload().catch(v2.report),
     }
   }
   const slashEntries = createMemo(() =>

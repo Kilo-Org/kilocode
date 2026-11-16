@@ -29,7 +29,7 @@ Outside the managed system directory, Kilo does not read `kilo.json`, `kilo.json
 
 Do not guess a field name. Read the configuration file before editing it, preserve unrelated keys, and use the loaded configuration as the source of truth.
 
-Config changes apply without a restart. Kilo watches config files and reloads agents, commands, skills, MCP servers and plugins after a save; the TUI does the same for `cli.json`. `/reload` forces a full reload. Do not tell the user to restart Kilo after editing config.
+Config changes apply without a restart. Kilo watches config files and reloads agents, commands, skills, MCP servers and plugins after a save; the TUI does the same for `cli.json`. Do not tell the user to restart Kilo after editing config.
 
 `kilo2 debug config` prints the loaded config sources, `kilo2 debug agents` the effective agents, and `kilo2 debug paths` every data, config, state, cache, log and database path. Prefer them to guessing what is loaded.
 
@@ -129,7 +129,7 @@ Keybindings go under `keybinds`. The leader defaults to `ctrl+x` (`keybinds.lead
 
 The default theme is `kilo`. Custom themes are JSON files in `~/.config/kilo2/themes/` and appear in `/themes`.
 
-Common slash commands: `/sessions`, `/new`, `/models`, `/agents`, `/variants` (`/thinking` opens it), `/mcps`, `/connect`, `/settings`, `/themes`, `/status`, `/reload`, `/compact`, `/undo`, `/redo`, `/fork`, `/rename`, `/timeline`, `/copy`, `/copy-session`, `/export`, `/skills`, `/worktrees`, `/terminal`, `/diff`, `/stats`, `/help`, `/exit`. Kilo adds `/review`, `/periodic`, `/usage` (`/plans`, `/quota`), `/profile`, `/teams`, `/marketplace`, `/indexing`, `/sandbox`, `/privacy`, `/remote`, `/caffeinate` and `/about`. `/share`, `/timestamps` and `/summarize` no longer exist.
+Common slash commands: `/sessions`, `/new`, `/models`, `/agents`, `/variants` (`/thinking` opens it), `/mcps`, `/connect`, `/settings`, `/themes`, `/status`, `/compact`, `/undo`, `/redo`, `/fork`, `/rename`, `/timeline`, `/copy`, `/copy-session`, `/export`, `/skills`, `/worktrees`, `/terminal`, `/diff`, `/stats`, `/help`, `/exit`. Kilo adds `/review`, `/periodic`, `/usage` (`/plans`, `/quota`), `/profile`, `/teams`, `/marketplace`, `/indexing`, `/sandbox`, `/privacy`, `/remote`, `/caffeinate` and `/about`. `/share`, `/timestamps` and `/summarize` no longer exist.
 
 ## MCP servers
 

@@ -15,7 +15,6 @@ const ACTIONS = [
   { name: "caffeinate", key: "agentManager.caffeination.toggle", hints: ["caffenate", "keep-awake", "awake", "sleep"] },
   { name: "help", hints: [] },
   { name: "settings", key: "sidebar.topBar.settings", hints: [] },
-  { name: "reload", key: "common.reloadDescription", hints: ["refresh"] },
 ] as const
 
 export type SlashActionName = (typeof ACTIONS)[number]["name"]

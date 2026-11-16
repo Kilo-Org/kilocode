@@ -653,8 +653,6 @@ export const dict = {
 
   "common.retry": "Opnieuw proberen",
   "common.refresh": "Vernieuwen",
-  "common.reload": "Herladen",
-  "common.reloadDescription": "Herlaad configuratie, vaardigheden, agents en opdrachten vanaf schijf",
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",

@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+// kilo_mirror: packages/cli/script/pack.ts
 // Publishes the Kilo host that script/build.ts built to npm as `@kilocode/cli` with the `kilo-v2` dist-tag.
 //
 // Mirror of the npm part of upstream's publish script (packages/cli/script/publish.ts, replaced by pack.ts in v2.2).
