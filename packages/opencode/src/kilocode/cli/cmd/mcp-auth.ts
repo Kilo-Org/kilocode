@@ -5,7 +5,9 @@ export namespace KilocodeMcpAuth {
   export type Outcome = { ok: true } | { ok: false; level: "error" | "warn"; message: string }
 
   type Spinner = { stop: (message: string, code?: number) => void }
-  type Log = { log: { error: (message: string) => void; warn: (message: string) => void } }
+  type Log = {
+    log: { error: (message: string) => void; warn: (message: string) => void; info: (message: string) => void }
+  }
 
   /**
    * `MCP.authenticate` reports "connected" both after a completed OAuth flow and when the
@@ -23,7 +25,7 @@ export namespace KilocodeMcpAuth {
       return {
         ok: false,
         level: "warn",
-        message: `MCP server ${name} connected, but its stored credentials are already expired, so authentication could not be confirmed. Run \`kilo mcp auth ${name}\` again, or remove them with \`kilo mcp logout ${name}\`.`,
+        message: `MCP server ${name} connected, but its stored credentials are already expired, so authentication could not be confirmed. Run \`kilo mcp logout ${name}\` to remove them. Running \`kilo mcp auth ${name}\` again only helps if the server issues an OAuth challenge.`,
       }
     return {
       ok: false,
@@ -33,20 +35,44 @@ export namespace KilocodeMcpAuth {
   }
 
   /**
-   * Report the result of `MCP.authenticate` for the "connected" status, verifying that
-   * credentials were actually stored. Other statuses are left to the caller's own handlers.
+   * Report the result of `MCP.authenticate`. For "connected" it verifies that credentials were
+   * actually stored; every other status keeps the messages and exit codes of the upstream handler.
    */
   export const report = Effect.fn("KilocodeMcpAuth.report")(function* (input: {
-    status: Pick<MCP.Status, "status">
+    status: MCP.Status
     mcp: Pick<MCP.Interface, "getAuthStatus">
     serverName: string
+    serverUrl: string
     spinner: Spinner
     prompts: Log
   }) {
-    if (input.status.status !== "connected") return
-    const result = outcome(input.serverName, yield* input.mcp.getAuthStatus(input.serverName))
-    if (result.ok) return input.spinner.stop("Authentication successful!")
-    input.spinner.stop("Authentication not confirmed", 1)
-    input.prompts.log[result.level](result.message)
+    const { status, spinner, prompts, serverName } = input
+    if (status.status === "connected") {
+      const result = outcome(serverName, yield* input.mcp.getAuthStatus(serverName))
+      if (result.ok) return spinner.stop("Authentication successful!")
+      spinner.stop("Authentication not confirmed", 1)
+      return prompts.log[result.level](result.message)
+    }
+    if (status.status === "needs_client_registration") {
+      spinner.stop("Authentication failed", 1)
+      prompts.log.error(status.error)
+      prompts.log.info("Add clientId to your MCP server config:")
+      return prompts.log.info(`
+  "mcp": {
+    "${serverName}": {
+      "type": "remote",
+      "url": "${input.serverUrl}",
+      "oauth": {
+        "clientId": "your-client-id",
+        "clientSecret": "your-client-secret"
+      }
+    }
+  }`)
+    }
+    if (status.status === "failed") {
+      spinner.stop("Authentication failed", 1)
+      return prompts.log.error(status.error)
+    }
+    spinner.stop("Unexpected status: " + status.status, 1)
   })
 }
