@@ -48,6 +48,17 @@ export function terminalActivation(input: {
   return { focus: requested || input.focusOnActivate }
 }
 
+/**
+ * A session that becomes the current one is the main tab: Fork Session, a History click or a new tab select it while
+ * a main terminal tab may still be active, which would keep the session hidden behind the terminal.
+ */
+export function sessionReplacesTerminal(
+  session: string | undefined,
+  terms: { activeId: () => string | undefined; setActiveId: (id: undefined) => void },
+): void {
+  if (session && terms.activeId()) terms.setActiveId(undefined)
+}
+
 /** Resolve focus from the current DOM owner, not focus event order. */
 export function agentManagerFocusTarget(active: Element | null, promptPending = false): AgentManagerFocusTarget {
   if (promptPending || active?.matches("textarea.prompt-input")) return "prompt"
@@ -105,7 +116,8 @@ export const terminalHasFocus = (active: Element | null): boolean => {
 
 /**
  * The main tab surface of the visible context. The terminal counts only while it belongs to the selected context and
- * no History or review covers it; a selection change drops a terminal of the context it left.
+ * no History or review covers it. A selection change drops a terminal of the context it left, and a session that
+ * becomes the current one (fork, History, a new tab) replaces the terminal as the main tab.
  */
 export function createMainSurface(deps: {
   terms: {
@@ -116,6 +128,7 @@ export function createMainSurface(deps: {
     requestFocus: (id: string) => void
   }
   covered: () => boolean
+  session: () => string | undefined
   prompt: (force: boolean) => void
 }) {
   const terms = deps.terms
@@ -125,8 +138,11 @@ export function createMainSurface(deps: {
     return id
   }
   createEffect(on(terms.currentKey, () => dropForeignTerminal(terms), { defer: true }))
+  createEffect(on(deps.session, (id) => sessionReplacesTerminal(id, terms), { defer: true }))
   return {
     terminal,
+    covered: deps.covered,
+    focusTerminal: terms.requestFocus,
     focus: createMainFocus({
       terminal,
       focusTerminal: terms.requestFocus,
@@ -141,12 +157,12 @@ export function createFocusBridge(deps: {
   prompt: { active: () => boolean; focus: () => void }
   post: (target: AgentManagerFocusTarget) => void
   remember: () => void
-  terminal: () => string | undefined
-  focusTerminal: (id: string) => void
+  /** The main tab surface. While History or review covers it, the shortcut leaves it, and its terminal, as they are. */
+  surface: { terminal: () => string | undefined; focusTerminal: (id: string) => void; covered: () => boolean }
 }) {
   const main = createMainFocus({
-    terminal: deps.terminal,
-    focusTerminal: deps.focusTerminal,
+    terminal: deps.surface.terminal,
+    focusTerminal: deps.surface.focusTerminal,
     prompt: deps.prompt.focus,
   })
   const report = () => {
@@ -163,7 +179,9 @@ export function createFocusBridge(deps: {
       if (focused) deps.remember()
       report()
     },
-    focus: () => deps.post(main(true)),
+    focus: () => {
+      if (!deps.surface.covered()) deps.post(main(true))
+    },
   }
 }
 

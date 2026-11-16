@@ -1,5 +1,5 @@
 // A new worktree takes the selection from the context the user is in. That context remembers its tab first, so a
-// terminal main tab of Local comes back on return, and no main terminal stays active over the new worktree.
+// terminal main tab of Local comes back on return.
 import { describe, expect, it } from "bun:test"
 import { applySetupMessage } from "../webview-ui/agent-manager/app-messages"
 import type { SetupState } from "../webview-ui/agent-manager/project/progress"
@@ -31,7 +31,6 @@ function scene(selection: string | null) {
     evictLocal: () => undefined,
     requestChatFocus: () => calls.push("focus"),
     saveTabMemory: () => calls.push(`save:${current}`),
-    clearTerminal: () => calls.push("terminal:off"),
   }
   return { calls, deps }
 }
@@ -52,7 +51,7 @@ describe("worktree setup selection", () => {
     expect(test.calls).toEqual(["save:local", "select:wt-1", "select:wt-1"])
   })
 
-  it("shows the new session instead of a main terminal when the worktree is ready", () => {
+  it("saves the tab of the context it leaves before selecting the ready session", () => {
     const test = scene("local")
 
     applySetupMessage(
@@ -60,10 +59,10 @@ describe("worktree setup selection", () => {
       test.deps,
     )
 
-    expect(test.calls).toEqual(["save:local", "terminal:off", "session:ses_1", "select:wt-1", "focus"])
+    expect(test.calls).toEqual(["save:local", "session:ses_1", "select:wt-1", "focus"])
   })
 
-  it("clears a main terminal of the same worktree when its setup completes", () => {
+  it("does not overwrite the memory of the new worktree on a later ready message", () => {
     const test = scene("wt-1")
 
     applySetupMessage(
@@ -71,7 +70,6 @@ describe("worktree setup selection", () => {
       test.deps,
     )
 
-    // The selection does not change, so only this explicit clear removes the terminal from the main pane.
-    expect(test.calls).toEqual(["terminal:off", "session:ses_1", "select:wt-1", "focus"])
+    expect(test.calls).toEqual(["session:ses_1", "select:wt-1", "focus"])
   })
 })

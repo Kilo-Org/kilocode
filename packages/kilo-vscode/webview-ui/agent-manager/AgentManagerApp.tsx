@@ -528,13 +528,17 @@ const AgentManagerContent: Component = () => {
   const forgetContextFocus = (context: string) => {
     for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
   }
-  const main = createMainSurface({ terms, covered: () => history() || reviewActive(), prompt: requestChatFocus })
+  const main = createMainSurface({
+    terms,
+    covered: () => history() || reviewActive(),
+    session: () => sessions.currentSessionID(),
+    prompt: requestChatFocus,
+  })
   const focusCtl = createFocusBridge({
     prompt,
     post: (target) => to({ type: "agentManagerFocusChanged", target }),
     remember: () => focusMemory.set(focusKey(), "prompt"),
-    terminal: main.terminal,
-    focusTerminal: terms.requestFocus,
+    surface: main,
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
@@ -2097,7 +2101,6 @@ const AgentManagerContent: Component = () => {
           evictLocal,
           requestChatFocus,
           saveTabMemory,
-          clearTerminal: () => terms.setActiveId(undefined),
         })
         applyMultiVersionReady(message as AgentManagerWorktreeSetupMessage, {
           ensure: (pid) => registry.ensure(pid),
@@ -2122,7 +2125,6 @@ const AgentManagerContent: Component = () => {
           applyDraft: (worktreeId, sessionId) => drafts.apply(worktreeId, sessionId),
           selectSession: (id) => sessions.selectSession(id),
           requestChatFocus,
-          clearTerminal: () => terms.setActiveId(undefined),
         })
         return
       }

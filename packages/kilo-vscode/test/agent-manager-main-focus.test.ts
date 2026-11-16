@@ -7,18 +7,22 @@ import {
   createMainFocus,
   dropForeignTerminal,
   keepsFocus,
+  sessionReplacesTerminal,
   terminalActivation,
   terminalHasFocus,
 } from "../webview-ui/agent-manager/focus"
 
-function bridge(terminal: string | undefined) {
+function bridge(terminal: string | undefined, covered = false) {
   const calls: string[] = []
   const ctl = createFocusBridge({
     prompt: { active: () => false, focus: () => calls.push("prompt") },
     post: (target) => calls.push(`post:${target}`),
     remember: () => calls.push("remember"),
-    terminal: () => terminal,
-    focusTerminal: (id) => calls.push(`terminal:${id}`),
+    surface: {
+      terminal: () => terminal,
+      focusTerminal: (id) => calls.push(`terminal:${id}`),
+      covered: () => covered,
+    },
   })
   return { ctl, calls }
 }
@@ -38,6 +42,15 @@ describe("Agent Manager main focus", () => {
     test.ctl.focus()
 
     expect(test.calls).toEqual(["prompt", "post:prompt"])
+  })
+
+  it("leaves History or review and the terminal under it alone", () => {
+    // The covered terminal is not the focus target, and the composer path would drop the terminal tab.
+    const test = bridge(undefined, true)
+
+    test.ctl.focus()
+
+    expect(test.calls).toEqual([])
   })
 
   it("hands focus back to the main surface after a side panel closes", () => {
@@ -81,6 +94,35 @@ describe("Agent Manager main focus", () => {
     expect(focus(true)).toBe("prompt")
     expect(focus()).toBe("prompt")
     expect(calls).toEqual([true, false])
+  })
+})
+
+describe("sessionReplacesTerminal", () => {
+  const terms = () => {
+    let id: string | undefined = "terminal:main"
+    return {
+      activeId: () => id,
+      setActiveId: (next: undefined) => {
+        id = next
+      },
+    }
+  }
+
+  it("replaces a main terminal tab with a session that becomes the current one", () => {
+    // Fork Session, a History click or a new tab select a session while a main terminal tab is active.
+    const state = terms()
+
+    sessionReplacesTerminal("ses_fork", state)
+
+    expect(state.activeId()).toBeUndefined()
+  })
+
+  it("keeps the terminal when the session selection clears for it", () => {
+    const state = terms()
+
+    sessionReplacesTerminal(undefined, state)
+
+    expect(state.activeId()).toBe("terminal:main")
   })
 })
 
