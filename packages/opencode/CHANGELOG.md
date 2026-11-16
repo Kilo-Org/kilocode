@@ -1,5 +1,40 @@
 # @kilocode/cli
 
+## 7.8.30
+
+### Minor Changes
+
+- [#16198](https://github.com/Kilo-Org/kilocode/pull/16198) [`37b2900`](https://github.com/Kilo-Org/kilocode/commit/37b2900fcb6223fec33c2bd5f59263e93682c670) - Expose hosted workspace change snapshots, revision-fenced per-file reads, explicit refresh, and verified linked-pull-request diffs through Session Host and the generated SDK.
+
+- [#16184](https://github.com/Kilo-Org/kilocode/pull/16184) [`8a762f8`](https://github.com/Kilo-Org/kilocode/commit/8a762f8487734a5db566cbd8938f84dec9076379) - Expose hosted workspace pull request summaries and explicit refresh through Session Host, preserving partial observations and distinct authorization, connectivity, and rate-limit states.
+
+- [#16080](https://github.com/Kilo-Org/kilocode/pull/16080) [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121) - Retire the Mercury Edit 2 autocomplete models and Next Edit. Codestral is now the default autocomplete model, and saved Mercury or Inception selections use Codestral. The SDK no longer has `client.kilo.edit`, and `@kilocode/kilo-gateway` no longer exports `./edit` or `./edit-prompt`.
+
+### Patch Changes
+
+- [#15988](https://github.com/Kilo-Org/kilocode/pull/15988) [`b69e4d6`](https://github.com/Kilo-Org/kilocode/commit/b69e4d64e78d2c1ad18c5273a6f9f482d86adf37) - Fix Cloud Agent CLI authentication by exchanging login credentials for a Cloud Agent control token.
+
+- [#16210](https://github.com/Kilo-Org/kilocode/pull/16210) [`41b8ffa`](https://github.com/Kilo-Org/kilocode/commit/41b8ffae4f32b2f84b44b5fa6c2c7c9f8e9fddec) Thanks [@WebReflection](https://github.com/WebReflection)! - Update hono to 4.13.18 and @hono/node-server to 2.1.7 to fix security issues flagged by Dependabot alerts.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`c153a86`](https://github.com/Kilo-Org/kilocode/commit/c153a86705ad856843960f1339c5b973e56f56ce) - Create local and Cloud tasks from a unified Add menu in the JetBrains Agent Manager. Group Cloud workspaces, open them in the correct organization in your browser, close and reopen sessions, and delete whole workspaces with progress and retry. Allow Cloud workspaces without a profile, preselect and mark personal and organization default profiles, switch back to the default profile, show a standard border around the dialog prompt, and create a Cloud workspace with an empty prompt. Show submitted prompts immediately, show preparation progress while a Cloud workspace starts, wait for preparation to finish before loading chat history, and keep Cloud-generated session titles in sync in both the session header and the workspace list. Keep newly created Cloud workspaces visible while discovery catches up, and remove deleted ones immediately. Report setup failures with command output and retry even when chat history is unavailable, and show Cloud load failures in plain language with Retry for transient errors instead of Dismiss for permanent errors.
+
+- [#16098](https://github.com/Kilo-Org/kilocode/pull/16098) [`b11ecb4`](https://github.com/Kilo-Org/kilocode/commit/b11ecb4d7191585fe5059bcf03b43b06e34542ec) - Show what Kilo Gateway charged as the session cost, and the provider's inference cost only for requests that use your own API key.
+
+- [#16212](https://github.com/Kilo-Org/kilocode/pull/16212) [`83e2ae6`](https://github.com/Kilo-Org/kilocode/commit/83e2ae62ca5e69d986435f9a9ec2cd30b27d5203) Thanks [@WebReflection](https://github.com/WebReflection)! - Update node-forge to 1.4.3 to fix security issues flagged by Dependabot alerts.
+
+- [#15987](https://github.com/Kilo-Org/kilocode/pull/15987) [`2cf9750`](https://github.com/Kilo-Org/kilocode/commit/2cf9750397fe6c95d41378eecbca4bc527b0d405) - Keep questions open while background tasks finish so answers are not dismissed while typing.
+
+- Updated dependencies [[`37b2900`](https://github.com/Kilo-Org/kilocode/commit/37b2900fcb6223fec33c2bd5f59263e93682c670), [`8a762f8`](https://github.com/Kilo-Org/kilocode/commit/8a762f8487734a5db566cbd8938f84dec9076379), [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121)]:
+  - @kilocode/sdk@7.9.0
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/plugin@7.8.29
+  - @opencode-ai/tui@7.8.29
+  - @opencode-ai/ui@7.8.29
+  - @kilocode/kilo-indexing@7.8.29
+  - @kilocode/kilo-telemetry@7.8.29
+  - @kilocode/plugin-atomic-chat@7.8.29
+  - @opencode-ai/server@7.8.29
+
 ## 7.8.28
 
 ### Minor Changes
