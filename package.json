@@ -246,6 +246,9 @@
       "zod": "^4.6.6",
       "node-forge": "^1.4.3"
     },
+    "@azure/core-xml": {
+      "fast-xml-parser": "^5.12.0"
+    },
     "@joshwooding/vite-plugin-react-docgen-typescript": {
       "glob": "^14.0.2"
     },
