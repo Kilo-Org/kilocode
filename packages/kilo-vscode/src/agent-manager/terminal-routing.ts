@@ -219,6 +219,8 @@ export class TerminalRouter {
       const created = await manager.create({ terminalId: createId, worktreeId, projectId: pid, cwd, title, cols, rows })
       if (generation !== this.generation || (pid && this.removals.get(pid) !== removal)) {
         await manager.close(created.terminalId)
+        // The webview already shows an optimistic tab for a side create; settle it without an error the user cannot act on.
+        if (generation === this.generation) this.deps.post({ type: "agentManager.terminal.cancelled", createId })
         return
       }
       this.deps.post({

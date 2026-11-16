@@ -730,6 +730,8 @@ describe("Agent Manager terminal routing", () => {
 
     expect(test.live.size).toBe(0)
     expect(test.messages.some((message) => message.type === "agentManager.terminal.created")).toBe(false)
+    // The webview created an optimistic tab for this request and needs the answer to drop it again.
+    expect(test.messages.at(-1)).toEqual({ type: "agentManager.terminal.cancelled", createId: "late" })
     await test.router.dispose()
   })
 

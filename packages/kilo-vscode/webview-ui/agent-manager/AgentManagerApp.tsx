@@ -1561,6 +1561,15 @@ const AgentManagerContent: Component = () => {
     const placement = terms.sideFocusedId() || (!focused && terminalVisible()) ? "side" : "tab"
     return termHandlers.cycle(direction, placement)
   }
+  /**
+   * Previous/next tab: the side terminal strip owns the arrows while one of its
+   * terminals holds focus, so the shortcut never moves an invisible main tab and
+   * pulls focus out of the terminal the user is working in.
+   */
+  const stepTab = (direction: "previous" | "next") => {
+    if (terms.sideFocusedId()) return cycleTerminal(direction)
+    navigateTab(direction === "previous" ? "left" : "right")
+  }
   const activeTaskId = () => activeTask(activeTabs(), sessions.currentSessionID(), activePendingId())
   const closeActiveTab = () => {
     if (sidePanel() === SidePanel.Subagents && subagents.active()) {
@@ -1941,8 +1950,8 @@ const AgentManagerContent: Component = () => {
       handlers: {
         sessionPrevious: () => projectNav.step("up"),
         sessionNext: () => projectNav.step("down"),
-        tabPrevious: () => document.hasFocus() && navigateTab("left"),
-        tabNext: () => document.hasFocus() && navigateTab("right"),
+        tabPrevious: () => document.hasFocus() && stepTab("previous"),
+        tabNext: () => document.hasFocus() && stepTab("next"),
         terminalPrevious: () => cycleTerminal("previous"),
         terminalNext: () => cycleTerminal("next"),
         search: () => {
