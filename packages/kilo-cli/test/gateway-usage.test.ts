@@ -8,6 +8,7 @@ import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 const auto = { providerID: "kilo", id: "kilo-auto/frontier", variant: "default" }
 const steps = [
@@ -335,6 +336,7 @@ function server<A>(
             KiloHost.overrides,
           ).pipe(Layer.provide(HttpServer.layerServices)),
         )
+        yield* loadPlugins(context, directory)
         const handler = Context.get(context, HttpRouter.HttpRouter)
           .asHttpEffect()
           .pipe(HttpEffect.toWebHandlerWith(context))

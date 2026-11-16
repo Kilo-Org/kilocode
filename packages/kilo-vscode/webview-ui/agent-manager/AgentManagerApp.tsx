@@ -43,7 +43,17 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useLanguage } from "../src/context/language"
 import { fallbackFontSize } from "../src/v2/kilo-settings"
-import { LOCAL, canOpenRootSession, isKnownRootSession, adjacentHint, focusChatSearch } from "./navigate"
+import {
+  LOCAL,
+  directoryWorktree,
+  canOpenRootSession,
+  isKnownRootSession,
+  adjacentHint,
+  focusChatSearch,
+  directoryOwner,
+  sendFiling,
+  showsSession,
+} from "./navigate"
 import { useBridge } from "./v2/vscode"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
@@ -297,7 +307,7 @@ const AgentManagerContent: Component = () => {
   createEffect(() => {
     const id = appSession.sessions.currentSessionID()
     if (!id) return
-    const directory = directories.directoryOf(id)
+    const directory = appSession.sessions.scope(id)?.directory ?? directories.directoryOf(id)
     if (directory) panel.show([directory])
   })
   // Display layouts are Kilo-only config keys, so the host reads them. Ask on connect and after every config change.
@@ -868,14 +878,36 @@ const AgentManagerContent: Component = () => {
     title: () => t("agentManager.session.newSession"),
     directory: () => directories.root(currentProjectId()) ?? "",
   })
+  // The directory a session runs in decides its worktree. Both the live stores and the host catalog carry it, so a
+  // session that is not loaded in a store still resolves to the worktree that owns it. Built once per update, so
+  // resolving the owner of every tab stays linear.
+  const locations = createMemo(() => {
+    const pid = currentProjectId()
+    const result = new Map<string, string>()
+    for (const session of sessions.sessions()) result.set(session.id, session.location.directory)
+    for (const session of (pid ? projectSessionsLive()[pid] : undefined) ?? [])
+      if (!result.has(session.id)) result.set(session.id, session.location.directory)
+    return result
+  })
+  const ownerOf = (sid: string) => {
+    const directory = locations().get(sid)
+    if (directory === undefined) return undefined
+    return directoryOwner(directory, worktrees(), directories.root(currentProjectId()))
+  }
   // The host may not have stamped a freshly created worktree session yet, but its tab is already in the order.
   const sessionsForWorktree = (id: string) => {
     const order = worktreeTabOrder()[id] ?? []
-    const list = worktreeSessions(id, managedSessions(), sessions.sessions(), order)
+    // A session that runs in another directory is not a tab of this worktree, even while a stale host filing or tab
+    // order still names it: the worktree's chat could not show it, and a send there would start a new session.
+    const list = worktreeSessions(id, managedSessions(), sessions.sessions(), order).filter((session) =>
+      showsSession(id, ownerOf(session.id)),
+    )
     const known = new Set(list.map((session) => session.id))
+    // The tab order also names sessions the host has not filed yet, such as one just created here.
     const extra = order.flatMap((sessionID) => {
       const session = sessions.get(sessionID)
-      return session && !known.has(sessionID) && isKnownRootSession(session) ? [session] : []
+      if (!session || known.has(sessionID) || !isKnownRootSession(session)) return []
+      return showsSession(id, ownerOf(sessionID)) ? [session] : []
     })
     return extra.length > 0 ? applyTabOrder([...list, ...extra], order) : list
   }
@@ -1027,17 +1059,45 @@ const AgentManagerContent: Component = () => {
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId), ids)
     requestChatFocus()
   }
-  const addSessionToCurrentWorktree = (sid: string) => {
+  // The session the chat shows. A worktree reads from the store of its own directory, so it never shows a session
+  // that runs elsewhere: setup progress or a stale host entry can select a worktree while the current session belongs
+  // to Local or another worktree, and that session would render without ever receiving its events.
+  const shownSession = createMemo(() => {
+    const id = sessions.currentSessionID()
+    if (!id || isPending(id)) return undefined
+    return showsSession(selection(), ownerOf(id)) ? id : undefined
+  })
+  const draftTab = () => {
+    const id = sessions.currentSessionID()
+    return id && isPending(id) ? id : activePendingId()
+  }
+  // Opens a session that no worktree tracks in the worktree its directory belongs to, whichever context is selected:
+  // filing it under another worktree would point that worktree at a session the server runs elsewhere, and its
+  // prompts would never reach the transcript. Returns false for a session of the project root, so the caller opens it
+  // locally.
+  const openInWorktree = (sid: string) => {
     const sel = selection()
-    if (!sel || sel === LOCAL || !canOpenRootSession(sid, sessions.sessions())) return false
-    const current = managedSessions().find((entry) => entry.id === sid)
-    if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
+    if (!canOpenRootSession(sid, sessions.sessions())) return false
+    const current = managedSessions().find((entry) => entry.id === sid)?.worktreeId
+    const owner = ownerOf(sid)
+    if (current && (owner === undefined || owner === current)) return focusManagedSession(current, sid)
+    // A stale filing under a worktree the session does not run in: the host files it again where it runs.
+    if (owner === null) {
+      if (!current) return false
+      openLocally(sid)
+      return true
+    }
+    if (owner === undefined && (!sel || sel === LOCAL)) return false
     saveTabMemory()
     closeHistory()
     setReviewActive(false)
-    appendToTabOrder(sel, sid)
-    evictLocal(sid)
-    to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: sid })
+    // A loaded session is filed here. For one the panel has not loaded, the host reads its directory from the server
+    // and answers with the worktree that owns it, or with Local when it runs in the project root.
+    if (owner) {
+      appendToTabOrder(owner, sid)
+      evictLocal(sid)
+    }
+    to({ type: "agentManager.addSessionToWorktree", worktreeId: owner ?? sel, sessionId: sid })
     return true
   }
   const focusManagedSession = (worktreeId: string, sid: string, scrollToBottom = false) => {
@@ -1193,23 +1253,50 @@ const AgentManagerContent: Component = () => {
     },
   })
 
-  const handleSessionCreated = (id: string | undefined) => {
+  // Where a chat view creates sessions: its project and the worktree of its store's directory, or Local. Read when
+  // the view mounts, so a send that resolves after a project or worktree switch still knows where it started.
+  const sessionOrigin = (directory: string) => ({
+    project: currentProjectId(),
+    worktree: directoryWorktree(directory, worktrees()),
+  })
+  const handleSessionCreated = (id: string | undefined, origin: ReturnType<typeof sessionOrigin>) => {
     if (!id) {
       sessions.clearCurrentSession()
       return
     }
+    // The project changed during the send: file the session in the project that created it and leave this one alone.
+    if (origin.project !== currentProjectId()) {
+      if (origin.worktree)
+        to({
+          type: "agentManager.addSessionToWorktree",
+          projectId: origin.project,
+          worktreeId: origin.worktree,
+          sessionId: id,
+        })
+      else to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
+      return
+    }
     const sel = selection()
-    if (sel && sel !== LOCAL) {
-      appendToTabOrder(sel, id)
-      // Every send reports its session. Adopting a session the worktree already owns would end its branch auto-naming.
-      if (managedSessions().find((entry) => entry.id === id)?.worktreeId !== sel)
-        to({ type: "agentManager.addSessionToWorktree", worktreeId: sel, sessionId: id })
-      sessions.selectSession(id)
+    const filed = managedSessions().find((entry) => entry.id === id)?.worktreeId
+    const known = ownerOf(id)
+    const worktree = sendFiling({
+      selection: sel,
+      filed,
+      local: localSessionIDs().includes(id),
+      owner: known === undefined ? origin.worktree : known,
+    })
+    if (worktree) {
+      appendToTabOrder(worktree, id)
+      // Adopting a session the worktree already owns would end its branch auto-naming.
+      if (filed !== worktree)
+        to({ type: "agentManager.addSessionToWorktree", projectId: origin.project, worktreeId: worktree, sessionId: id })
+      if (worktree === sel) sessions.selectSession(id)
+      else focusManagedSession(worktree, id)
       return
     }
     placeLocal(id, activePendingId(), activePendingId() ?? sessions.currentSessionID())
     setSelection(LOCAL)
-    to({ type: "agentManager.persistSession", projectId: currentProjectId(), sessionId: id })
+    to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
     sessions.selectSession(id)
   }
 
@@ -1363,15 +1450,15 @@ const AgentManagerContent: Component = () => {
       selectSession: (sessionID) => sessions.selectSession(sessionID),
       setReviewActive,
     })
-  // The plan handoff creates a new session on the server and asks the client to show it. Select the new
-  // session in its worktree so the Agent Manager leaves the plan tab for the Code session.
+  // The plan handoff creates a new session on the server and asks the client to show it. File the new session in the
+  // context of its directory and select it there, so the Agent Manager leaves the plan tab for the Code session.
   createEffect(() => {
     for (const directory of directories.sessionDirectories()) {
       const store = panel.store(directory)
       onCleanup(
         store.data.on("tui.session.select", (event) => {
           if (event.location && event.location.directory !== directory) return
-          selectSessionTab(event.data.sessionID, false)
+          handleSessionCreated(event.data.sessionID, sessionOrigin(store.directory))
         }),
       )
     }
@@ -1565,7 +1652,7 @@ const AgentManagerContent: Component = () => {
     to({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
   }
   const selectChatSession = (id: string) => {
-    if (addSessionToCurrentWorktree(id)) return
+    if (openInWorktree(id)) return
     if (localSessionIDs().includes(id)) {
       sessions.selectSession(id)
       if (selection() === null) setSelection(LOCAL)
@@ -1996,6 +2083,7 @@ const AgentManagerContent: Component = () => {
           appendOrder: appendToTabOrder,
           setSelection: (id) => setSelection(id),
           evictLocal,
+          focusLocal: (id) => focusLocalSession(id, true),
           applyDraft: (worktreeId, sessionId) => drafts.apply(worktreeId, sessionId),
           selectSession: (id) => sessions.selectSession(id),
           requestChatFocus,
@@ -2233,7 +2321,7 @@ const AgentManagerContent: Component = () => {
       sessionIds={historySessionIds}
       worktreeSessionIds={historyProject() ? undefined : activeWorktreeSessionIds}
       onSelectSession={(id) => {
-        if (addSessionToCurrentWorktree(id)) return
+        if (openInWorktree(id)) return
         closeHistory()
         if (localSessionIDs().includes(id)) {
           saveTabMemory()
@@ -2299,56 +2387,55 @@ const AgentManagerContent: Component = () => {
             </div>
           }
         >
-          {(store) => (
-            <V2Scope value={store}>
-              <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
-                <SpeechToTextStatusProvider>
-                  <SessionView
-                    session={
-                      sessions.currentSessionID() && !isPending(sessions.currentSessionID()!)
-                        ? sessions.currentSessionID()
-                        : undefined
-                    }
-                    draftKey={sessions.currentSessionID() ?? activePendingId()}
-                    readOnly={readOnly()}
-                    onSession={handleSessionCreated}
-                    actions={toolActions}
-                    onShowHistory={() => openHistory()}
-                    row={sessionActions}
-                    rowWhenEmpty={!!transfer.branch()}
-                    onNewSession={handleNewTabForCurrentSelection}
-                    worktree={!!selection() && selection() !== LOCAL}
-                    manager={hints.manager}
-                    focusOnDraftChange={focusOnDraftChange}
-                    onFocusChange={focusCtl.prompt}
-                    empty={intro.render}
-                    onAppendReady={(append) => (promptAppend = append)}
-                    onReviewAppendReady={(append) => (promptReviewAppend = append)}
-                    onComposerReady={composerQueue.ready}
-                    onReferenceReady={(add) => (promptReference = add)}
-                    onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
-                    onViewTurnChanges={openTurnChanges}
-                    onForkMessage={handleForkSession}
-                    onMissing={(id) => handleCloseTab(id)}
-                    worktrees={references}
-                    git={isGitRepo}
-                    gitTarget={gitTarget}
-                    terminalContext={() => selection() ?? undefined}
-                    resolveEmbeddedTerminal={resolveTerminal}
-                    onPrompted={(sessionId, text, model) =>
-                      to({
-                        type: "agentManager.promptSent",
-                        sessionId,
-                        text,
-                        providerID: model?.providerID,
-                        modelID: model?.id,
-                      })
-                    }
-                  />
-                </SpeechToTextStatusProvider>
-              </ReviewCommentActionsContext.Provider>
-            </V2Scope>
-          )}
+          {(store) => {
+            const origin = untrack(() => sessionOrigin(store.directory))
+            return (
+              <V2Scope value={store}>
+                <ReviewCommentActionsContext.Provider value={reviewCommentActions}>
+                  <SpeechToTextStatusProvider>
+                    <SessionView
+                      session={shownSession()}
+                      draftKey={shownSession() ?? draftTab()}
+                      readOnly={readOnly()}
+                      onSession={(id) => handleSessionCreated(id, origin)}
+                      actions={toolActions}
+                      onShowHistory={() => openHistory()}
+                      row={sessionActions}
+                      rowWhenEmpty={!!transfer.branch()}
+                      onNewSession={handleNewTabForCurrentSelection}
+                      worktree={!!selection() && selection() !== LOCAL}
+                      manager={hints.manager}
+                      focusOnDraftChange={focusOnDraftChange}
+                      onFocusChange={focusCtl.prompt}
+                      empty={intro.render}
+                      onAppendReady={(append) => (promptAppend = append)}
+                      onReviewAppendReady={(append) => (promptReviewAppend = append)}
+                      onComposerReady={composerQueue.ready}
+                      onReferenceReady={(add) => (promptReference = add)}
+                      onPreviewEdit={(files, sessionID) => previewEdit(files, sessionID)}
+                      onViewTurnChanges={openTurnChanges}
+                      onForkMessage={handleForkSession}
+                      onMissing={(id) => handleCloseTab(id)}
+                      worktrees={references}
+                      git={isGitRepo}
+                      gitTarget={gitTarget}
+                      terminalContext={() => selection() ?? undefined}
+                      resolveEmbeddedTerminal={resolveTerminal}
+                      onPrompted={(sessionId, text, model) =>
+                        to({
+                          type: "agentManager.promptSent",
+                          sessionId,
+                          text,
+                          providerID: model?.providerID,
+                          modelID: model?.id,
+                        })
+                      }
+                    />
+                  </SpeechToTextStatusProvider>
+                </ReviewCommentActionsContext.Provider>
+              </V2Scope>
+            )
+          }}
         </Show>
         <Show when={readOnly()}>
           <div class="am-readonly-banner">

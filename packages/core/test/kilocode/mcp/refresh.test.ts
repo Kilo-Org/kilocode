@@ -71,7 +71,16 @@ const connect = (url: string, host?: McpHost.Host) => {
   ])
   const unused = () => Effect.die("unused credential method")
   const credentials = Credential.Service.of({
-    lock: unused,
+    // The stored-row rules of Credential.refresh, without the cross-process lock.
+    refresh: (id, input) =>
+      Effect.gen(function* () {
+        const current = rows.get(id)
+        if (current?.value.type !== "oauth") return undefined
+        if (!input.stale(current.value, Date.now())) return current.value
+        const value = yield* input.refresh(current.value)
+        rows.set(id, new Credential.Info({ ...current, value }))
+        return value
+      }),
     all: unused,
     create: unused,
     activate: unused,
@@ -106,8 +115,9 @@ const host: McpHost.Host = {
 test("an unreachable token endpoint fails the connect without asking to sign in again", async () => {
   const server = protectedServer(reservePort())
   try {
+    // Without the host the transport reports the outage itself and keeps the credential.
     const upstream = await connect(new URL("/mcp", server.url).href)
-    expect(Exit.isFailure(upstream.exit) && Cause.squash(upstream.exit.cause)).toBeInstanceOf(McpClient.NeedsAuthError)
+    expect(Exit.isFailure(upstream.exit) && Cause.squash(upstream.exit.cause)).toBeInstanceOf(McpClient.ConnectError)
 
     const kilo = await connect(new URL("/mcp", server.url).href, host)
     const error = Exit.isFailure(kilo.exit) ? Cause.squash(kilo.exit.cause) : undefined
@@ -117,6 +127,8 @@ test("an unreachable token endpoint fails the connect without asking to sign in 
     // The pool records a server that answered and then refused the shared handshake; an outage is not that.
     expect((error as McpClient.ConnectError).answered).not.toBe(true)
     expect((error as Error).message).toContain("temporarily_unavailable")
+    // The cause the transport saw, not the status of its own answer.
+    expect((error as Error).message).not.toContain("HTTP 503")
     const stored = kilo.rows.get(Credential.ID.make("cred_test"))?.value
     expect(stored?.type === "oauth" && stored.refresh).toBe("refresh")
   } finally {
@@ -173,6 +185,21 @@ test("a refresh failure whose host looks like an authorization endpoint is not a
   expect((error as Error).message).toContain("oauth.example.com")
   expect(KiloMcpRefresh.isTransient(error)).toBe(true)
   expect(authFailure((error as Error).message)).toBe(false)
+})
+
+test("a 408 from the token server asks to sign in without the host and is retryable with it", async () => {
+  const port = reservePort()
+  const server = protectedServer(port)
+  const token = Bun.serve({ hostname: "127.0.0.1", port, fetch: () => new Response(null, { status: 408 }) })
+  try {
+    const upstream = await connect(new URL("/mcp", server.url).href)
+    expect(Exit.isFailure(upstream.exit) && Cause.squash(upstream.exit.cause)).toBeInstanceOf(McpClient.NeedsAuthError)
+    const kilo = await connect(new URL("/mcp", server.url).href, host)
+    expect(Exit.isFailure(kilo.exit) && Cause.squash(kilo.exit.cause)).toBeInstanceOf(McpClient.ConnectError)
+  } finally {
+    token.stop(true)
+    server.stop(true)
+  }
 })
 
 test("treats a refresh the token server cannot serve yet as retryable", async () => {

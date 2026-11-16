@@ -13,7 +13,7 @@ import type { AgentManagerOutMessage } from "../types"
 import { restoreWorktrees } from "../state-recovery"
 import { reconcileWorktrees, summarize, type WorktreeHealthReport } from "../worktree-reconcile"
 import { trackOrphanSizes } from "../orphans/sizing"
-import { samePath } from "./paths"
+import { pathKey, samePath } from "./paths"
 import type { ProjectSessionView } from "./session-view"
 import type { ProjectContext, ProjectInitResult } from "./context"
 
@@ -170,8 +170,8 @@ export async function collectProjectSessions(
   ctx: ProjectContext,
   list: ((directory: string) => Promise<SessionInfo[]>) | undefined,
   log: (...args: unknown[]) => void,
-): Promise<ProjectSessionView[]> {
-  if (!list) return []
+): Promise<{ views: ProjectSessionView[]; moved: string[] }> {
+  if (!list) return { views: [], moved: [] }
   const generation = ctx.generation
   const byDirectory = await Promise.all(
     projectDirectories(ctx).map(async (entry) => ({
@@ -182,23 +182,55 @@ export async function collectProjectSessions(
       }),
     })),
   )
-  if (!ctx.isCurrent(generation)) return []
+  if (!ctx.isCurrent(generation)) return { views: [], moved: [] }
   const seen = new Set<string>()
   const views: ProjectSessionView[] = []
+  const state = ctx.peekState()
+  const home = homes(ctx)
+  const moved: string[] = []
   for (const entry of byDirectory) {
     for (const session of entry.sessions) {
       if (session.parentID !== undefined && session.parentID !== null) continue
       if (seen.has(session.id)) continue
       seen.add(session.id)
-      const managed = ctx.peekState()?.getSession(session.id)?.worktreeId
+      if (refile(ctx, session, home)) moved.push(session.id)
       views.push({
         ...session,
         parentID: undefined,
-        worktreeId: managed ?? entry.worktreeId,
+        worktreeId: state?.getSession(session.id)?.worktreeId ?? entry.worktreeId,
       })
     }
   }
-  return views
+  if (moved.length > 0) log(`Agent Manager: filed sessions under the worktree they run in: ${moved.join(", ")}`)
+  return { views, moved }
+}
+
+/**
+ * The context that owns a directory: a worktree id, `null` for the project root, or undefined when no tracked path
+ * matches. Canonical keys are built once per collection, since resolving a path touches the file system.
+ */
+function homes(ctx: ProjectContext): (directory: string) => string | null | undefined {
+  const root = pathKey(ctx.root)
+  const worktrees = new Map((ctx.peekState()?.getWorktrees() ?? []).map((item) => [pathKey(item.path), item.id]))
+  return (directory) => {
+    const key = pathKey(directory)
+    return key === root ? null : worktrees.get(key)
+  }
+}
+
+/**
+ * A worktree view reads from the store of its own directory, so a session filed under a worktree it does not run in
+ * (by an older build) never receives its events there. Files it under the worktree it runs in, or under Local. A
+ * Local filing stays: Local reads every session from the store of its own directory.
+ */
+function refile(ctx: ProjectContext, session: SessionInfo, home: ReturnType<typeof homes>): boolean {
+  const state = ctx.peekState()
+  const managed = state?.getSession(session.id)?.worktreeId
+  if (!state || !managed) return false
+  const target = home(session.location.directory)
+  if (target === undefined || target === managed) return false
+  state.moveSession(session.id, target)
+  return true
 }
 
 /** How long a collected catalog is reused before the next push re-lists from the backend. */
@@ -213,6 +245,7 @@ export async function pushProjectSessions(
   list: ((directory: string) => Promise<SessionInfo[]>) | undefined,
   post: (message: AgentManagerOutMessage) => void,
   log: (...args: unknown[]) => void,
+  repaired?: () => void,
 ): Promise<void> {
   const gone = () => ctx.lifecycle === "disposed" || ctx.lifecycle === "disposing"
   if (!list || gone()) return
@@ -221,9 +254,11 @@ export async function pushProjectSessions(
     return
   }
   const generation = ctx.generation
-  const views = await collectProjectSessions(ctx, list, log)
+  const collected = await collectProjectSessions(ctx, list, log)
   if (gone()) return
   if (!ctx.isCurrent(generation)) return
-  ctx.setSessions(views)
-  post({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...views] })
+  ctx.setSessions(collected.views)
+  post({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...collected.views] })
+  // The state push went out before the catalog listed the sessions, so a repaired filing needs a new one.
+  if (collected.moved.length > 0) repaired?.()
 }

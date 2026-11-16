@@ -261,7 +261,7 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const hooks = yield* PluginHooks.Service
     const transport = yield* SessionModelTransport.Service
-    const app = yield* App.Metadata
+    const app = yield* App.Service
     const resolver = yield* Effect.serviceOption(ModelResolver.Service) // kilocode_change(gateway) seam - route hook target
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
       S extends SessionRequest & { tools?: Definitions },

@@ -11,6 +11,7 @@ import os from "node:os"
 import path from "node:path"
 import { KiloApp } from "../src/app"
 import { KiloHost } from "../src/host"
+import { loadPlugins } from "./lib/plugins"
 
 // The identity headers that leave the process on a model request, per provider, with and without the Kilo host.
 // Only the HTTP peer is a stand-in: one loopback server takes the place of every provider and of the Kilo API. The
@@ -288,6 +289,9 @@ async function boot(
               { preconnect: fetch.preconnect },
             ),
           })
+          // The server no longer waits for a Location's plugins in rpc.call, so this one-shot caller waits itself
+          // for the Location the RPC targets before it dispatches the Gateway RPC.
+          yield* loadPlugins(context, directory)
           yield* Effect.promise(() => body(client, directory))
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Fatal")),

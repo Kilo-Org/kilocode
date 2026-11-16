@@ -8,6 +8,7 @@ import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { toFailure, type Failure } from "./error"
 import { catalogEvent, createKiloCatalog } from "./kilo-catalog"
 import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
+import { pluginsListed } from "./plugin-inventory"
 
 type Connection = ReturnType<typeof createClientConnection>
 
@@ -49,16 +50,22 @@ export function createConnectionMetadata(input: {
   const state = { handshake: 0, retry: undefined as ReturnType<typeof setTimeout> | undefined }
   onCleanup(() => clearTimeout(state.retry))
 
+  // A Location that is still activating answers the handshake like a server without it, so the read waits for the
+  // plugins of the Location first.
   const readHandshake = (dir: string, attempt = 0) => {
     clearTimeout(state.retry)
     const read = ++state.handshake
-    void input.api
-      .rpc(KiloHandshakeRpc.Definition)
-      .get({}, { location: { directory: dir } })
-      .then((info) => {
+    void pluginsListed({ api: input.api, directory: dir, active: () => read === state.handshake })
+      .then(() => {
         if (read !== state.handshake) return
-        setVersion(info.version)
-        setHandshake(undefined)
+        return input.api
+          .rpc(KiloHandshakeRpc.Definition)
+          .get({}, { location: { directory: dir } })
+          .then((info) => {
+            if (read !== state.handshake) return
+            setVersion(info.version)
+            setHandshake(undefined)
+          })
       })
       .catch((err: unknown) => {
         if (read !== state.handshake) return
@@ -76,11 +83,20 @@ export function createConnectionMetadata(input: {
         }, delay)
       })
   }
+  // A disposed owner ends the wait and drops a late answer.
+  onCleanup(() => {
+    state.handshake++
+  })
   createEffect(
     on(
       () => [input.connection.status(), directory()] as const,
       ([status, dir]) => {
-        if (status !== "connected" || !dir) return
+        if (status !== "connected" || !dir) {
+          // A request that fails on a dropped connection says nothing about the server: end the running read. The
+          // read starts again when the connection is back.
+          state.handshake++
+          return
+        }
         readHandshake(dir)
       },
     ),
