@@ -1,5 +1,13 @@
 import { createEffect, on } from "solid-js"
-import { focusQuestionOption, hasPopup, hasQuestionOption, isTextControl, ownsFocusRegion } from "../src/utils/focus"
+import {
+  focusQuestionOption,
+  hasPopup,
+  hasQuestionOption,
+  hasTextSelection,
+  isTextControl,
+  ownsFocusRegion,
+  promptFocusAllowed,
+} from "../src/utils/focus"
 
 export type AgentManagerFocusTarget = "prompt" | "mainTerminal" | "sideTerminal" | "other"
 
@@ -72,12 +80,21 @@ export function createMainFocus(deps: {
 }
 
 /**
- * Another control owns the keyboard: a text field such as the sidebar search or a worktree rename, a popup, or a
- * focus region such as the diff viewport. A terminal does not count, since the request picks between terminals.
+ * Another control owns the keyboard: a text field such as the sidebar search or a worktree rename, a popup, a focus
+ * region such as the diff viewport, or a text selection. The same policy as an automatic composer focus request; a
+ * terminal does not count, since the request picks between terminals.
  */
-export function keepsFocus(active: Element | null): boolean {
+export function keepsFocus(active: Element | null, doc: Document = document): boolean {
   if (terminalHasFocus(active)) return false
-  return hasPopup() || ownsFocusRegion() || (active !== null && isTextControl(active))
+  return !promptFocusAllowed({
+    force: false,
+    deferToQuestion: false,
+    questionOption: false,
+    ownsRegion: ownsFocusRegion(active),
+    popup: hasPopup(doc),
+    textControl: isTextControl(active),
+    selection: hasTextSelection(doc),
+  })
 }
 
 /** A main or side terminal holds the keyboard: chat shortcuts must not act on the composer behind it. */
@@ -127,7 +144,11 @@ export function createFocusBridge(deps: {
   terminal: () => string | undefined
   focusTerminal: (id: string) => void
 }) {
-  const main = createMainFocus({ terminal: deps.terminal, focusTerminal: deps.focusTerminal, prompt: deps.prompt.focus })
+  const main = createMainFocus({
+    terminal: deps.terminal,
+    focusTerminal: deps.focusTerminal,
+    prompt: deps.prompt.focus,
+  })
   const report = () => {
     const active = agentManagerFocusTarget(document.activeElement)
     deps.post(
@@ -199,4 +220,3 @@ export function createPromptFocus(
     },
   }
 }
-

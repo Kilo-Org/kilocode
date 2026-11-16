@@ -49,7 +49,12 @@ const { renderTab } = await import("../../webview-ui/agent-manager/tab-rendering
 const { createTerminalState } = await import("../../webview-ui/agent-manager/terminal/state")
 
 const terms = createTerminalState(() => "local")
-terms.add(null, { id: "terminal:one", title: "Terminal", font: { fontFamily: "monospace", fontSize: 12 }, placement: "tab" })
+terms.add(null, {
+  id: "terminal:one",
+  title: "Terminal",
+  font: { fontFamily: "monospace", fontSize: 12 },
+  placement: "tab",
+})
 const [visible, setVisible] = createSignal<string | undefined>("terminal:one")
 const noop = () => undefined
 const deps = {

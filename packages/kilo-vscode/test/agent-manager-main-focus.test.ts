@@ -1,10 +1,12 @@
 // Focus requests follow the main tab of the visible context: a terminal tab keeps or takes focus in its terminal, a
 // session tab focuses its composer, and no request switches tabs or creates a session to have a focus target.
-import { describe, expect, it } from "bun:test"
+import { afterAll, beforeAll, describe, expect, it } from "bun:test"
+import { Window } from "happy-dom"
 import {
   createFocusBridge,
   createMainFocus,
   dropForeignTerminal,
+  keepsFocus,
   terminalActivation,
   terminalHasFocus,
 } from "../webview-ui/agent-manager/focus"
@@ -134,6 +136,50 @@ describe("terminalActivation", () => {
 
   it("does nothing for a hidden terminal", () => {
     expect(terminalActivation({ ...base, active: false, serial: 5, previous: 4 })).toBeUndefined()
+  })
+})
+
+describe("keepsFocus", () => {
+  // A real DOM: the selection check walks from the anchor node to its element.
+  const window = new Window({ url: "http://localhost" })
+  const doc = window.document as unknown as Document
+  const element = (html: string) => {
+    doc.body.innerHTML = html
+    return doc.body.firstElementChild as Element
+  }
+  beforeAll(() => Object.assign(globalThis, { Element: window.Element }))
+  afterAll(() => {
+    delete (globalThis as { Element?: unknown }).Element
+  })
+
+  it("lets an automatic request focus the terminal from the page body", () => {
+    doc.body.innerHTML = ""
+    expect(keepsFocus(doc.body, doc)).toBe(false)
+  })
+
+  it("keeps a text field such as the sidebar search or a worktree rename", () => {
+    expect(keepsFocus(element("<input type=text>"), doc)).toBe(true)
+  })
+
+  it("keeps an open popup and a focus region", () => {
+    const popup = element('<div><div class="popup-selector" data-expanded></div><button></button></div>')
+    expect(keepsFocus(popup.querySelector("button"), doc)).toBe(true)
+    const region = element("<div data-focus-region><button></button></div>")
+    expect(keepsFocus(region.querySelector("button"), doc)).toBe(true)
+  })
+
+  it("keeps a text selection in the transcript", () => {
+    const text = element("<p>selected answer</p>")
+    doc.getSelection()!.selectAllChildren(text)
+    expect(keepsFocus(doc.body, doc)).toBe(true)
+    doc.getSelection()!.removeAllRanges()
+  })
+
+  it("does not treat a terminal textarea as a control to keep", () => {
+    const layer = element(
+      '<div class="am-side-terminal-layer"><div class="am-terminal-host"><textarea></textarea></div></div>',
+    )
+    expect(keepsFocus(layer.querySelector("textarea"), doc)).toBe(false)
   })
 })
 
