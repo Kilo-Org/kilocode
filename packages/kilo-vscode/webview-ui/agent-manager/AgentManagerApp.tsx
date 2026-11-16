@@ -1368,7 +1368,7 @@ const AgentManagerContent: Component = () => {
     openDiff: (diff) => previewEdit([diff]),
     openDiffs: (diffs) => previewEdit(diffs),
     openSession: (id) => {
-      if (!focusExistingSession(id)) to({ type: "agentManager.openSessionLocally", sessionId: id })
+      if (!focusExistingSession(id)) to({ type: "agentManager.openSession", sessionId: id })
     },
     // A subagent opens in the inspector beside its parent chat.
     openSubagent: (sessionID, title) =>
