@@ -3,10 +3,13 @@
  * List upstream v2 releases and show which ones a Kilo branch already has.
  *
  * Usage:
- *   bun script/upstream/list-versions.ts [--base <ref>] [--all] [--no-fetch]
+ *   bun script/upstream/list-versions.ts [--base <ref>] [--all] [--no-fetch] [--json]
  *
  * The default base is origin/v2. Each row shows the tag, the release commit (the parent of the tag,
  * which is the sync target), the release date and the status.
+ *
+ * `--json` prints one JSON object instead, for scripts: `base`, `merged` (the newest release in the base),
+ * `next` (the release to sync next), `pending` (the releases the base lacks, newest first) and `lag`.
  */
 
 import { defaultConfig } from "./utils/config"
@@ -19,8 +22,9 @@ async function main() {
   const config = defaultConfig
   const at = args.indexOf("--base")
   const base = (at === -1 ? undefined : args[at + 1]) ?? `${config.originRemote}/${config.baseBranch}`
+  const json = args.includes("--json")
 
-  header("Upstream v2 Releases")
+  if (!json) header("Upstream v2 Releases")
 
   if (!(await hasUpstreamRemote(config.upstreamRemote))) {
     error(`No '${config.upstreamRemote}' remote. Add it:`)
@@ -28,11 +32,23 @@ async function main() {
     process.exit(1)
   }
   if (!args.includes("--no-fetch")) {
-    info(`Fetching ${config.upstreamRemote}/${config.upstreamBranch} and tags...`)
+    if (!json) info(`Fetching ${config.upstreamRemote}/${config.upstreamBranch} and tags...`)
     await fetchUpstream(config.upstreamRemote, config.upstreamBranch)
   }
 
   const status = await getSyncStatus(base, config)
+  if (json) {
+    console.log(
+      JSON.stringify({
+        base,
+        merged: status.merged ?? null,
+        next: status.next ?? null,
+        pending: status.pending,
+        lag: status.lag,
+      }),
+    )
+    return
+  }
   const limit = args.includes("--all") ? status.releases.length : 20
   const merged = new Set(
     status.releases.filter((r) => !status.pending.includes(r)).map((r) => r.tag),
