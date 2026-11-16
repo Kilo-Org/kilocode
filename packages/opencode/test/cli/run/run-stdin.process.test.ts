@@ -14,26 +14,53 @@ import { Effect } from "effect"
 import { cliIt } from "../../lib/cli-process"
 
 describe("kilo run piped stdin (subprocess)", () => {
-  // THE regression: argv message + stdin pipe held open (never write, never
-  // end). Before the fix the child blocked in `Bun.stdin.text()` and this
-  // test died on the 60s bun timeout. After the fix the bounded read fires,
-  // the run proceeds, and the first step_start lands within 20s of spawn.
   cliIt.concurrent(
-    "completes with an argv message while piped stdin stays open (regression)",
+    "fails promptly without calling the model while piped stdin stays open",
     ({ llm, opencode }) =>
       Effect.gen(function* () {
-        yield* llm.text("hello from the test llm")
-        const spawnedAt = Date.now()
+        const start = Date.now()
         const run = yield* opencode.startRun("say hi", { stdin: "pipe", format: "json" })
         const result = yield* run.result
-        opencode.expectExit(result, 0)
-        expect(result.stdout).toContain("hello from the test llm")
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain("Piped stdin did not reach EOF")
+        expect(result.stderr).toContain("--stdin-timeout 0")
+        expect(result.stdout).not.toContain('"type":"step_start"')
+        expect(yield* llm.inputs).toHaveLength(0)
+        expect(Date.now() - start).toBeLessThan(20_000)
+      }),
+    60_000,
+  )
 
-        const events = opencode.parseJsonEvents(result.stdout)
-        const stepStart = events.find((event) => event.type === "step_start")
-        expect(stepStart).toBeDefined()
-        expect(typeof stepStart!.timestamp).toBe("number")
-        expect(Number(stepStart!.timestamp) - spawnedAt).toBeLessThanOrEqual(20_000)
+  cliIt.concurrent(
+    "preserves slow streamed input with an explicit wait for EOF",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.text("slow input received")
+        const run = yield* opencode.startRun("main", {
+          stdin: "pipe",
+          extraArgs: ["--stdin-timeout", "0"],
+        })
+        yield* Effect.promise(() => run.stdin.write("FIRST\n"))
+        yield* Effect.promise(() => Bun.sleep(4000))
+        yield* Effect.promise(() => run.stdin.write("LAST"))
+        run.stdin.end()
+        const result = yield* run.result
+        opencode.expectExit(result, 0)
+        expect(JSON.stringify(yield* llm.inputs)).toContain("main\\nFIRST\\nLAST")
+      }),
+    60_000,
+  )
+
+  cliIt.concurrent(
+    "rejects partial input instead of calling the model with an incomplete prompt",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        const run = yield* opencode.startRun("main", { stdin: "pipe" })
+        yield* Effect.promise(() => run.stdin.write("partial output"))
+        const result = yield* run.result
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain("No prompt was sent")
+        expect(yield* llm.inputs).toHaveLength(0)
       }),
     60_000,
   )

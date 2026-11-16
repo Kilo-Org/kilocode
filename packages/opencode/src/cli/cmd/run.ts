@@ -27,7 +27,7 @@ import { Filesystem } from "@/util/filesystem"
 import type { KiloClient, Session, ToolPart } from "@kilocode/sdk/v2"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { readPipedStdin } from "./run-stdin" // kilocode_change - bounded piped-stdin read
+import { PipedStdinTimeout, readPipedStdin } from "./run-stdin" // kilocode_change - bounded piped-stdin read
 // kilocode_change start - Kilo implementations (createKiloClient, run-message,
 // cloud-session, run-auto, headless, KiloRun) are dynamically imported inside the
 // handler so other CLI commands don't pay their module cost at startup.
@@ -191,6 +191,12 @@ export const RunCommand = effectCmd({
         default: "default",
         describe: "format: default (formatted) or json (raw JSON events)",
       })
+      // kilocode_change start - explicit EOF wait for slow pipelines
+      .option("stdin-timeout", {
+        type: "number",
+        describe: "piped stdin deadline in milliseconds when a prompt is supplied (default: 1000; 0 waits for EOF)",
+      })
+      // kilocode_change end
       .option("file", {
         alias: ["f"],
         type: "string",
@@ -442,9 +448,17 @@ export const RunCommand = effectCmd({
         if (input.loaded) return
         // Bound the stdin wait when argv already carries a
         // message or command; a launcher-held-open pipe never EOFs (see run-stdin.ts)
+        // kilocode_change start - fail visibly rather than dropping piped input
         const piped = process.stdin.isTTY
           ? undefined
-          : await readPipedStdin({ bound: rawMessage.trim().length > 0 || args.command !== undefined })
+          : await readPipedStdin({
+              bound: rawMessage.trim().length > 0 || args.command !== undefined,
+              timeoutMs: args["stdin-timeout"],
+            }).catch((err) => {
+              if (err instanceof PipedStdinTimeout) die(err.message)
+              throw err
+            })
+        // kilocode_change end
 
         message = resolveRunInput(message, piped) ?? ""
         input.initial = resolveRunInput(rawMessage, piped)
@@ -1252,6 +1266,8 @@ export async function runMini(input: MiniCommandInput) {
     model: input.model,
     agent: input.agent,
     format: "default",
+    "stdin-timeout": undefined, // kilocode_change
+    stdinTimeout: undefined, // kilocode_change
     file: undefined,
     title: undefined,
     attach: input.attach,
