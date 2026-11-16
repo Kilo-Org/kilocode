@@ -188,6 +188,7 @@ import {
   createPromptFocus,
   dropForeignTerminal,
   forgetTerminalFocus,
+  keepsFocus,
   terminalHasFocus,
 } from "./focus"
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
@@ -537,7 +538,12 @@ const AgentManagerContent: Component = () => {
     if (!id || history() || reviewActive() || terms.contextFor(id) !== terms.currentKey()) return undefined
     return id
   }
-  const focusMain = createMainFocus({ terminal: mainTerminal, focusTerminal: terms.requestFocus, prompt: requestChatFocus })
+  const focusMain = createMainFocus({
+    terminal: mainTerminal,
+    focusTerminal: terms.requestFocus,
+    prompt: requestChatFocus,
+    keeps: () => keepsFocus(document.activeElement),
+  })
   const focusCtl = createFocusBridge({
     prompt,
     post: (target) => to({ type: "agentManagerFocusChanged", target }),

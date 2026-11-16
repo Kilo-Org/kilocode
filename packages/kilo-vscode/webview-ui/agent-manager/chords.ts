@@ -1,7 +1,7 @@
 /**
  * Which modifier chords belong to the Agent Manager. Its shortcuts use Cmd on macOS and Ctrl elsewhere, like the
  * workbench keybindings in package.json. On macOS a Ctrl chord stays with the focused control: the terminal receives
- * Ctrl+E, Ctrl+W or Ctrl+D, and the composer keeps the native Ctrl+E or Ctrl+F caret movement.
+ * Ctrl+E, Ctrl+W or Ctrl+D, and the composer keeps the native Ctrl+E or Ctrl+D caret keys.
  */
 type Chord = Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">
 

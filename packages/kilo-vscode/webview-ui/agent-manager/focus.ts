@@ -55,16 +55,28 @@ export function createMainFocus(deps: {
   terminal: () => string | undefined
   focusTerminal: (id: string) => void
   prompt: (force: boolean) => void
+  /** An automatic request (window focus, context switch) leaves another control in charge. */
+  keeps?: () => boolean
 }) {
   return (force = false): "mainTerminal" | "prompt" => {
     const id = deps.terminal()
     if (id) {
+      if (!force && deps.keeps?.()) return "mainTerminal"
       deps.focusTerminal(id)
       return "mainTerminal"
     }
     deps.prompt(force)
     return "prompt"
   }
+}
+
+/**
+ * Another control owns the keyboard: a text field such as the sidebar search or a worktree rename, a popup, or a
+ * focus region such as the diff viewport. A terminal does not count, since the request picks between terminals.
+ */
+export function keepsFocus(active: Element | null): boolean {
+  if (terminalHasFocus(active)) return false
+  return hasPopup() || ownsFocusRegion() || (active !== null && isTextControl(active))
 }
 
 /** A main or side terminal holds the keyboard: chat shortcuts must not act on the composer behind it. */

@@ -63,7 +63,7 @@ describe("worktree setup selection", () => {
     expect(test.calls).toEqual(["save:local", "terminal:off", "session:ses_1", "select:wt-1", "focus"])
   })
 
-  it("does not overwrite the memory of the new worktree on a later ready message", () => {
+  it("clears a main terminal of the same worktree when its setup completes", () => {
     const test = scene("wt-1")
 
     applySetupMessage(
@@ -71,6 +71,7 @@ describe("worktree setup selection", () => {
       test.deps,
     )
 
-    expect(test.calls).not.toContain("save:wt-1")
+    // The selection does not change, so only this explicit clear removes the terminal from the main pane.
+    expect(test.calls).toEqual(["terminal:off", "session:ses_1", "select:wt-1", "focus"])
   })
 })

@@ -50,6 +50,24 @@ describe("Agent Manager main focus", () => {
     expect(calls).toEqual(["terminal:terminal:main"])
   })
 
+  it("leaves a focused text field alone on an automatic request, but not on the shortcut", () => {
+    const calls: string[] = []
+    const focus = createMainFocus({
+      terminal: () => "terminal:main",
+      focusTerminal: (id) => calls.push(id),
+      prompt: () => calls.push("prompt"),
+      keeps: () => true,
+    })
+
+    // Window refocus while the sidebar search or a worktree rename input has the caret.
+    focus()
+    expect(calls).toEqual([])
+
+    // Cmd+Shift+M is explicit.
+    focus(true)
+    expect(calls).toEqual(["terminal:main"])
+  })
+
   it("passes the force flag to the composer focus", () => {
     const calls: boolean[] = []
     const focus = createMainFocus({
