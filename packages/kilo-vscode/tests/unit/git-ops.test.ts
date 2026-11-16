@@ -526,6 +526,25 @@ describe("GitOps", () => {
       })
     })
 
+    it("does not treat a touched but unchanged file as dirty", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        const patch = await setup(cwd, git)
+        const file = nodePath.join(cwd, "a.txt")
+        const time = new Date(Date.now() + 5000)
+        await fs.utimes(file, time, time)
+
+        const check = await git.checkApplyPatch(cwd, patch)
+        expect(check.ok).toBe(true)
+        expect(check.conflicts).toEqual([])
+
+        await fs.utimes(file, new Date(Date.now() + 10000), new Date(Date.now() + 10000))
+        const result = await git.applyPatch(cwd, patch)
+        expect(result.ok).toBe(true)
+        expect(await fs.readFile(file, "utf8")).toBe("two\n")
+      })
+    })
+
     it("ignores dirty files that the patch does not touch", async () => {
       await withRepo(async (cwd) => {
         const git = new GitOps({ log: () => undefined })

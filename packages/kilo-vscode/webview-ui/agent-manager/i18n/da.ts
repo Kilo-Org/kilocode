@@ -247,9 +247,9 @@ export const dict = {
   "agentManager.apply.error": "Anvendelse mislykkedes",
   "agentManager.apply.conflictsTitle": "Konflikter",
   "agentManager.apply.unknownFile": "Uløst fil",
-  "agentManager.apply.reason.index": "Har ucommittede ændringer i det lokale checkout",
+  "agentManager.apply.reason.index": "Har ikke-committede ændringer i det lokale checkout",
   "agentManager.apply.dirtyBaseHint":
-    "Det lokale checkout har ucommittede ændringer i filerne herunder, som overlapper med dette worktree. Commit eller stash dem i det lokale checkout, og anvend derefter igen.",
+    "Det lokale checkout har ikke-committede ændringer i filerne herunder, som overlapper med dette worktree. Commit eller stash dem i det lokale checkout, og anvend derefter igen.",
   "agentManager.apply.reason.patch": "Patch kan ikke anvendes rent",
   "agentManager.apply.reason.contents": "Kan ikke læse det aktuelle lokale filindhold",
   "agentManager.apply.reason.unknown": "Konflikt opdaget",
