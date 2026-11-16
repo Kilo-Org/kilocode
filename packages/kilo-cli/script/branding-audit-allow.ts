@@ -28,8 +28,9 @@ const GO = "OpenCode Go is an upstream SaaS product name, not host branding."
 // Under the Kilo host a provider is sent Kilo's referer: KiloRequestIdentity (packages/kilo-plugin/src/request-identity.ts,
 // #16088) recognises this upstream default by value and puts its own in its place, so the literal stays as upstream
 // wrote it. packages/kilo-cli/test/request-identity.test.ts pins the hosted and the unhosted value for OpenRouter.
-const REFERER: Identity = [
-  '"HTTP-Referer": "https://opencode.ai/"',
+const REFERER = '"HTTP-Referer": "https://opencode.ai/"'
+const REPLACED: Identity = [
+  REFERER,
   "Upstream's default referer for the provider, a third-party identity. KiloRequestIdentity matches this exact value to replace it with Kilo's, so it is not rebranded here.",
 ]
 
@@ -138,14 +139,22 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
       ],
     ],
   ],
-  ["core/src/plugin/provider/kilo.ts", [REFERER]],
-  ["core/src/plugin/provider/llmgateway.ts", [REFERER]],
-  ["core/src/plugin/provider/openrouter.ts", [REFERER]],
-  ["core/src/plugin/provider/zenmux.ts", [REFERER]],
+  [
+    "core/src/plugin/provider/kilo.ts",
+    [
+      [
+        REFERER,
+        "Upstream's default referer for a provider on the Kilo Gateway address, a third-party identity. KiloRequestIdentity leaves provider `kilo` alone: the Kilo Gateway plugin writes Kilo's referer over that provider's headers itself (packages/kilo-plugin/src/gateway/index.ts, packages/kilo-gateway-core/src/headers.ts), which packages/kilo-cli/test/request-identity.test.ts pins.",
+      ],
+    ],
+  ],
+  ["core/src/plugin/provider/llmgateway.ts", [REPLACED]],
+  ["core/src/plugin/provider/openrouter.ts", [REPLACED]],
+  ["core/src/plugin/provider/zenmux.ts", [REPLACED]],
   [
     "core/src/plugin/provider/nvidia.ts",
     [
-      REFERER,
+      REPLACED,
       [
         '"X-BILLING-INVOKE-ORIGIN": provider.headers?.["X-BILLING-INVOKE-ORIGIN"] ?? "OpenCode"',
         "Billing origin sent to NVIDIA. A third-party identity, tracked in #16219 (NVIDIA).",

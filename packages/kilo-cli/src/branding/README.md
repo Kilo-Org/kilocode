@@ -41,6 +41,14 @@ The loader rewrites a whole module, so a module is added to `files` only when ev
 
 The audit still reads those modules. `script/branding-audit-allow.ts` records each exception with its reason, in one of two forms: a whole file, for a file whose OpenCode text is uniformly not branding, or a list of exact source snippets (`"HTTP-Referer": "https://opencode.ai/"`, `OpenCode Console`), which accounts for those identities only and leaves every other string of the file audited. Prefer the snippet form. A stale entry fails the audit: a file without findings, or a snippet that accounts for none because upstream moved or reworded the text, so a person reviews it again. So does a snippet that is only the product name (`OpenCode`): it would account for every later use of the name in that file, so a snippet names a longer identity (`OpenCode Console`) or includes the code around the string.
 
+### When the audit fails
+
+`bun run branding:audit` (from `packages/kilo-cli`, also a CI step) prints each finding as `packages/<file>:<line>:<column>` with the text around the place, also inside a prompt file. It reads upstream `packages/{cli,tui,server,core,plugin}/src` and Kilo's own `packages/kilo-plugin/src`. What to do depends on the file and on the text:
+
+- **A Kilo-owned file** (`packages/kilo-*`): correct the text in its source. Name Kilo, the `kilo2` command or the `kilo` tool namespace, not their upstream names.
+- **An upstream file**: add it to `files` in `text.ts` (see "Adding coverage"); never edit the upstream text.
+- **An identity, not branding** (a provider or SaaS name, a value sent to a third party, code the host replaces): add a reviewed entry to `script/branding-audit-allow.ts`, an exact snippet with its reason (see "What is not branded").
+
 ## How this differs from v1, and why
 
 Kilo v1 (`script/upstream/transforms/transform-take-theirs.ts`) rebrands at **merge time** and commits the rebranded upstream files. v2 keeps upstream files byte-identical to the pin and rebrands at **load/build time** here.

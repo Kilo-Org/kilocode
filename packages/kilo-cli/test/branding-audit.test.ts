@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { KiloBrandingAudit } from "../script/branding-audit"
 import { allow } from "../script/branding-audit-allow"
+import { KiloBranding } from "../src/branding/text"
 import { branded } from "./fixtures/branding-run"
 
 const read = (file: string) => Bun.file(new URL(`../../${file}`, import.meta.url)).text()
@@ -185,11 +186,20 @@ test("reports an identity snippet that no longer accounts for a finding", async 
   expect(moved.unexpected.map((f) => f.snippet)).toEqual(["https://opencode.ai/"])
   expect(moved.stale).toEqual([snippet])
   // An entry for a name the module does not hold.
-  const entry = [
-    [snippet, "reviewed"],
-    ["OpenCode Zen", "not in this module"],
-  ] as const
-  expect(KiloBrandingAudit.check(provider, source, entry).stale).toEqual(["OpenCode Zen"])
+  const entries = new Map([
+    [
+      provider,
+      [
+        [snippet, "reviewed"],
+        ["OpenCode Zen", "not in this module"],
+      ] as const,
+    ],
+  ])
+  expect(KiloBrandingAudit.check(provider, source, entries).stale).toEqual(["OpenCode Zen"])
+  // Without an entry, every finding is unexpected.
+  expect(KiloBrandingAudit.check(provider, source, new Map()).unexpected.map((f) => f.snippet)).toEqual([
+    "https://opencode.ai/",
+  ])
 })
 
 test("rejects an identity snippet that is only the product name", async () => {
@@ -197,11 +207,8 @@ test("rejects an identity snippet that is only the product name", async () => {
   const file = "core/src/plugin/provider/nvidia.ts"
   const source = await read(file)
   const check = (...snippets: string[]) =>
-    KiloBrandingAudit.check(
-      file,
-      source,
-      snippets.map((snippet) => [snippet, "reviewed"] as const),
-    ).bare
+    KiloBrandingAudit.check(file, source, new Map([[file, snippets.map((snippet) => [snippet, "reviewed"] as const)]]))
+      .bare
   expect(check("OpenCode", '"OpenCode"', "opencode", " OpenCode's ", "OpenCode.")).toEqual([
     "OpenCode",
     '"OpenCode"',
@@ -220,20 +227,81 @@ test("the command fails on a stale entry and on a bare snippet", async () => {
   const file = "core/src/usage-limits.ts"
   const reviewed = allow.get(file)
   if (typeof reviewed !== "object") throw new Error(`${file} is not allowlisted by snippet`)
-  const error = console.error
-  const lines: string[] = []
-  console.error = (...args: unknown[]) => void lines.push(args.join(" "))
-  try {
-    expect(await KiloBrandingAudit.main(new Map([...allow, [file, [...reviewed, ["OpenCode Zen", "gone"]]]]))).toBe(1)
-    expect(await KiloBrandingAudit.main(new Map([...allow, [file, [["OpenCode", "too wide"]]]]))).toBe(1)
-  } finally {
-    console.error = error
-  }
-  expect(lines).toEqual([
-    `branding-audit: stale allowlist entry (accounts for no finding): packages/${file}: "OpenCode Zen"`,
-    `branding-audit: allowlist snippet is only the product name and would hide every later use of it: packages/${file}: "OpenCode"`,
-  ])
+  expect(await KiloBrandingAudit.main(new Map([...allow, [file, [...reviewed, ["OpenCode Zen", "gone"]]]]))).toEqual({
+    code: 1,
+    lines: [`branding-audit: stale allowlist entry (accounts for no finding): packages/${file}: "OpenCode Zen"`],
+  })
+  const wide = await KiloBrandingAudit.main(new Map([...allow, [file, [["OpenCode", "too wide"]]]]))
+  expect(wide).toEqual({
+    code: 1,
+    lines: [
+      `branding-audit: allowlist snippet is only the product name and would hide every later use of it: packages/${file}: "OpenCode"`,
+    ],
+  })
 }, 120_000)
+
+test("the command says where a finding is and how to fix it", async () => {
+  // Without its entry, the referer of a provider plugin is a finding again.
+  const file = "core/src/plugin/provider/openrouter.ts"
+  const result = await KiloBrandingAudit.main(new Map([...allow].filter(([key]) => key !== file)))
+  expect(result.code).toBe(1)
+  expect(result.lines.slice(0, 2)).toEqual([
+    "\nbranding-audit: 1 unbranded user-visible OpenCode occurrence(s):\n",
+    `  [missing-interception] packages/${file}:12:78  "https://opencode.ai/"`,
+  ])
+  // Where each kind of text is fixed: Kilo-owned source, the loader's list, or a reviewed snippet.
+  const advice = result.lines.at(-1)
+  expect(advice).toContain("In a Kilo-owned file (packages/kilo-*), correct the text in its source.")
+  expect(advice).toContain("In an upstream file, add the file to KiloBranding.files")
+  expect(advice).toContain("an exact snippet with its reason")
+  expect(result.lines).toHaveLength(3)
+}, 120_000)
+
+test("reports product text in a text asset at its own line", async () => {
+  // A prompt file is one span. The finding points at the product name, not at the first line of the file.
+  const prompt = [
+    "# Guide",
+    "",
+    "This guide covers configuration, commands, agents, skills and permissions in detail.",
+    "After changing a provider, restart OpenCode so that the change applies.",
+    "",
+  ].join("\n")
+  expect(KiloBrandingAudit.auditFile("kilo-plugin/src/skill/example.txt", prompt)).toEqual([
+    {
+      file: "kilo-plugin/src/skill/example.txt",
+      line: 4,
+      column: 36,
+      kind: "missing-interception",
+      snippet: "changing a provider, restart OpenCode so that the change applies.",
+    },
+  ])
+  // The same in a real Kilo-owned prompt, next to the upstream names its allowlist entry keeps.
+  const file = "kilo-plugin/src/skill/kilo-config.txt"
+  const source = await read(file)
+  const added = source.replace(
+    "Use only the `kilo2` names.",
+    "Use only the `kilo2` names. Restart opencode afterwards.",
+  )
+  const line = added.split("\n").findIndex((text) => text.includes("Restart opencode afterwards.")) + 1
+  expect(line).toBeGreaterThan(20)
+  expect(KiloBrandingAudit.check(file, source).unexpected).toEqual([])
+  expect(KiloBrandingAudit.check(file, added).unexpected).toMatchObject([
+    { line, kind: "missing-interception", snippet: expect.stringContaining("Restart opencode afterwards.") },
+  ])
+  // A rule gap in an intercepted prompt points at the leftover name as well.
+  const intercepted = KiloBranding.files.find((name) => name.endsWith(".txt"))!
+  expect(
+    KiloBrandingAudit.auditFile(intercepted, "# Role\n\nYou use tools.\nReport to OpenCodeTools when done.\n"),
+  ).toEqual([
+    {
+      file: intercepted,
+      line: 4,
+      column: 11,
+      kind: "rule-gap",
+      snippet: "# Role  You use tools. Report to OpenCodeTools when done.",
+    },
+  ])
+})
 
 test("does not count a trace span name as user-visible text", async () => {
   // Effect.fn("OpenCodeTools.Plugin") names a span in an intercepted module. The name is an identity, so the engine
