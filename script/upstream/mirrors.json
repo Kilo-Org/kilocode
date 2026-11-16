@@ -1,0 +1,100 @@
+{
+  "$comment": "Mirror registry. Every Kilo-owned copy of an upstream file is listed here: the upstream path is the key, `mirror` is the Kilo file, `sha` is the upstream blob SHA at the last verified pinned release, `why` says why Kilo copies the file instead of using an upstream extension point, and `invariants` lists what a re-merge must keep. Upstream never edits Kilo-owned paths, so a change to a copied upstream file merges cleanly at its own path and the copy drifts with no conflict and no report line. Write decisions, not an inventory: the upstream diff shows which lines differ, so an invariant earns its place only by saying what must stay true after upstream reshapes the file (an import scheme, an ordering, a deliberate omission). script/check-mirrors.ts fails when the pinned upstream file no longer has `sha`; re-merge the upstream change into the copy with `why` and `invariants` in view, then record the new SHA here. It also fails for a copy without an entry, an entry without its `// kilo_mirror: <upstream path>` marker, and an entry with an empty `why` or `invariants`.",
+  "mirrors": {
+    "packages/cli/src/index.ts": {
+      "mirror": "packages/kilo-cli/src/main.ts",
+      "sha": "267bd24d9dbfe3509276a0b591a744fa380d47fe",
+      "why": "The host owns the CLI entry: it must run upstream's CLI with Kilo's plugins, service replacements, product identity and extra commands, and upstream's entry exposes no hook for any of that.",
+      "invariants": [
+        "Everything upstream's entry does to start a command still runs here, and upstream fixes to this file (teardown and exit codes, the shutdown deadline, observability, heap and CPU profiling) are taken as-is.",
+        "Upstream's commands and handlers are extended, never replaced: `KiloCommands` spreads `Commands`, so a command or handler upstream adds in a re-merge must be carried over.",
+        "Upstream modules import from `@opencode/cli/*`; only Kilo modules are relative (`./serve`, `./host`, `./service/*`, `./sync/*`, `./auto/*`, `./import/*`).",
+        "Kilo's composition points stay: `KiloCommands`, `KiloCliConfig`, `KiloUpdater`, `KiloPluginNpm`, `KiloApp.name`, the serve, remote, sync, import and auto handlers, and the Kilo wrappers for `upgrade`, `uninstall`, `session list`, `service status` and `service stop`.",
+        "`ensurePluginRuntime()` still runs before the first command, imported from the Kilo entry `./index`, which also imports `./env` first."
+      ]
+    },
+    "packages/cli/src/commands/handlers/serve.ts": {
+      "mirror": "packages/kilo-cli/src/serve.ts",
+      "sha": "5e1337a16aef4157c0f08e59d5b79609ea6eb40b",
+      "why": "Every server Kilo starts goes through this handler, and it must run with Kilo's plugin and service replacements; upstream's handler calls `ServerProcess.run` with no option for them.",
+      "invariants": [
+        "`overrides: KiloHost.overrides` is always passed to `ServerProcess.run`.",
+        "Upstream's flag mapping (`hostname`, `port`, `cors`) and the `Runtime.handler` shape are unchanged."
+      ]
+    },
+    "packages/cli/src/server-process.ts": {
+      "mirror": "packages/kilo-cli/src/server-process.ts",
+      "sha": "2f64e3ec7b86586cd8b87b20a2e16a12eb4865d2",
+      "why": "Kilo starts the server with its own service replacements and authenticated remote HTTP aliases; upstream's `ServerProcess.run` has no option for either.",
+      "invariants": [
+        "`Options.overrides` stays optional and reaches the server launch as its last argument, so a caller that omits it gets upstream's behavior.",
+        "The app transform applies upstream's `transform` first and then wraps the result with `RemoteHttp.transform`.",
+        "Upstream modules import from `@opencode/cli/*`; `./remote/http` is Kilo's."
+      ]
+    },
+    "packages/cli/src/acp/agent.ts": {
+      "mirror": "packages/kilo-cli/src/acp-agent.ts",
+      "sha": "bb2f7c809fd2b13c441521219eec729097ab8b68",
+      "why": "Kilo's ACP surface reports Kilo's name and adds Kilo's initialize metadata and auth methods; upstream builds both inside this module.",
+      "invariants": [
+        "The ACP agent name comes from `KiloBinary`, never a literal.",
+        "The ACP service is wrapped with `KiloACP.wrap(...)` before it is published as ready, so every initialize response carries Kilo's metadata and auth methods.",
+        "Upstream ACP modules import from `@opencode/cli/acp/*`; `./acp-service` and `./binary` are Kilo's."
+      ]
+    },
+    "packages/tui/src/theme/v1.ts": {
+      "mirror": "packages/kilo-cli/src/theme-v1.ts",
+      "sha": "5f76c654cc7dd4659d51dd3f10842f66833fc569",
+      "why": "The TUI's theme registry is the only place a theme is added and upstream exposes no registration hook, so Kilo's theme needs a copy of the registry.",
+      "invariants": [
+        "Every upstream theme stays imported and listed in `DEFAULT_THEMES`; a theme upstream adds in a re-merge is imported and listed here too.",
+        "`kilo` stays the last entry, loaded from `./theme.json`.",
+        "Theme assets and the v1 types import from `../../tui/src/theme/*` because `@opencode/theme` exports only `./tui` and `./tui/v1`, not the assets."
+      ]
+    },
+    "packages/tui/src/util/config-directories.ts": {
+      "mirror": "packages/kilo-cli/src/tui-config-directories.ts",
+      "sha": "da61a3451dc5bba7f3dd127d43a5d3b59eed3de3",
+      "why": "The TUI reads custom themes and local plugins from the project config directory, and upstream hardcodes `.opencode` in this module.",
+      "invariants": [
+        "The directory name is always `KiloConfigFiles.directories[0]` through `projectConfigName`; never add a `.opencode` fallback.",
+        "The exported functions keep upstream's signatures, because `./mirrors` loads this file in place of `packages/tui/src/util/config-directories.ts`.",
+        "Ancestor traversal and the project slice keep upstream's algorithm; only the joined directory name is Kilo's."
+      ]
+    },
+    "packages/tui/src/plugin/discovery.ts": {
+      "mirror": "packages/kilo-cli/src/tui-plugin-discovery.ts",
+      "sha": "9116a3e556a1b55d60072919a2abd49f970e0ff4",
+      "why": "The TUI and `plugin list` find local plugins with this module, and upstream hardcodes the project's `.opencode/plugins`.",
+      "invariants": [
+        "Local plugin directories come from `projectConfigName`, never a literal `.opencode`.",
+        "The directory helpers import from `./tui-config-directories`, the other mirror, so both files agree on the name.",
+        "The exported signatures stay identical to upstream's, because `./mirrors` loads this file in place of `packages/tui/src/plugin/discovery.ts`."
+      ]
+    },
+    "packages/cli/script/build.ts": {
+      "mirror": "packages/kilo-cli/script/build.ts",
+      "sha": "a9ae9e606975bb38fc3b324c435c8c783e094fd4",
+      "why": "Upstream's build compiles its own entry as `opencode` and takes no entry option, so compiling the Kilo host needs a copy of the script rather than a Kilo edit in an upstream file.",
+      "invariants": [
+        "`../../../script/kilocode/release-env` is imported before `@opencode/script`, which reads the `OPENCODE_*` names when it loads.",
+        "`hostMirrorsPlugin` and `brandingPlugin` stay in the plugin list, so the bundle resolves Kilo's copies of upstream files and Kilo's branding.",
+        "Upstream's entrypoints, plugins and steps stay: the app archive, solid transform, PTY binary, plugin runtime, ws re-export, artifact verification, simulation graph, native-arch check, release assets and the `upstreamBinary` target names that `--target` and the output layout depend on. New ones upstream adds must be carried over.",
+        "`define` keeps Kilo's values (`KILO2_CHANNEL`, `KILO_BRANDING_COMPILED`, `OPENCODE_CLI_NAME` as `kilo2`, `process.env.OPENCODE_APP_DIR_NAME`, `KILO_LIBC` and the sandbox helper paths) while upstream's `OPENCODE_*` values still come from `Script`.",
+        "Kilo's steps after upstream's verification stay in order: the sandbox helper copies and their smoke test, the tree-sitter wasms, then the Linux LICENSE union."
+      ]
+    },
+    "packages/cli/script/pack.ts": {
+      "mirror": "packages/kilo-cli/script/publish.ts",
+      "sha": "b66cfb2e34906236c47389b17ec3f5955f8213b0",
+      "why": "Upstream's publish script also ships its update artifacts, Docker image, AUR and Homebrew steps, while Kilo's release publishes only the npm packages that build produces, under its own dist-tag.",
+      "invariants": [
+        "The launcher publishes last, after the platform packages it depends on.",
+        "The dist-tag is `kilo-v2`, never the build channel, so a v2 publish cannot replace v1's `latest` or `rc`.",
+        "`targets` matches the targets `script/build.ts` builds; a target upstream adds or removes changes both scripts.",
+        "The launcher exposes only `kilo2` with no `kilo` alias, and `release-env` is imported before `@opencode/script`.",
+        "Upstream's `cli/script/postinstall.mjs` is read and its copy anchor asserted, so re-read that file when upstream changes it and keep the sandbox helper copy after the binary copy."
+      ]
+    }
+  }
+}
