@@ -9,6 +9,17 @@ import { logo } from "../../../tui/src/logo"
 
 export const repo = path.resolve(import.meta.dir, "../../../..")
 
+// The intercepted server modules: the upstream text each one answers with, and its Kilo form.
+export const serverText = [
+  ["server/src/handlers/server.ts", "Run `opencode pair` to get a new one.", "Run `kilo2 pair` to get a new one."],
+  ["server/src/process.ts", "Run `opencode service restart` after", "Run `kilo2 service restart` after"],
+  [
+    "server/src/handlers/persistent-pty.ts",
+    "after OpenCode's terminal service restarts",
+    "after Kilo's terminal service restarts",
+  ],
+] as const
+
 export async function temporary() {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-branding-"))
   return { path: directory, [Symbol.asyncDispose]: () => rm(directory, { recursive: true, force: true }) }

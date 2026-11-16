@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { KiloBrandingAudit } from "../script/branding-audit"
+import { serverText } from "./fixtures/branding-run"
 
 test("flags user-visible OpenCode in a file that is not intercepted", () => {
   const findings = KiloBrandingAudit.auditFile(
@@ -83,6 +84,44 @@ test("flags the opencode namespace named in prose in a non-intercepted asset", (
     "Use the schedule tools in the `opencode` namespace.",
   )
   expect(findings.map((f) => f.kind)).toEqual(["namespace-leak"])
+})
+
+test("audits packages/server/src", async () => {
+  const surface = await KiloBrandingAudit.surface()
+  for (const [file] of serverText) expect(surface).toContain(`packages/${file}`)
+  // A module the loader does not intercept: the scope is the whole package, not the three branded modules.
+  expect(surface).toContain("packages/server/src/auth.ts")
+})
+
+test("flags each branded server module when it is not intercepted", async () => {
+  // The real source under a key the loader does not intercept: what the audit reports when a module drops out of
+  // KiloBranding.files, or when upstream moves it.
+  for (const [file, text] of serverText) {
+    const source = await Bun.file(new URL(`../../${file}`, import.meta.url)).text()
+    expect(KiloBrandingAudit.auditFile(file, source), file).toEqual([])
+    const findings = KiloBrandingAudit.auditFile(file.replace(".ts", ".moved.ts"), source)
+    expect(
+      findings.map((f) => f.kind),
+      file,
+    ).toEqual(["missing-interception"])
+    expect(findings[0]!.line, file).toBe(source.slice(0, source.indexOf(text)).split("\n").length)
+  }
+})
+
+test("does not flag the server's wire identities", async () => {
+  // The basic-auth username, the session cookie, the request headers and the MCP client name are identities that
+  // clients and servers match on, not product text.
+  for (const [file, identity] of [
+    ["server/src/auth.ts", 'username: "opencode"'],
+    ["server/src/auth.ts", "opencode_session"],
+    ["server/src/location.ts", "x-opencode-directory"],
+    ["server/src/media-uri.ts", "x-opencode-capabilities"],
+    ["server/src/routes.ts", 'name: "opencode"'],
+  ] as const) {
+    const source = await Bun.file(new URL(`../../${file}`, import.meta.url)).text()
+    expect(source, file).toContain(identity)
+    expect(KiloBrandingAudit.auditFile(file, source), file).toEqual([])
+  }
 })
 
 test("baseline is clean: no unexpected unbranded OpenCode on the audited surface", async () => {
