@@ -1,6 +1,9 @@
 // The temporary "Import from Kilo v1" action for internal users until the release migration lands. It runs
 // `kilo2 import v1` with the same command and environment as the server, so it writes the store and config directory
 // that server reads, also from a repository checkout with its isolated profile.
+import { existsSync } from "node:fs"
+import { homedir } from "node:os"
+import path from "node:path"
 import { environment, type Command } from "./server"
 import { launch } from "./process"
 
@@ -30,4 +33,23 @@ export function importV1(input: {
   child.on("error", (error) => result.resolve({ ok: false, output: error.message }))
   child.on("exit", (code) => result.resolve({ ok: code === 0, output: lines.join("").trim() }))
   return result.promise
+}
+
+/**
+ * The Kilo v1 session store, when this machine has one: `kilo/kilo.db` in the XDG data directory, as v1 places it, or
+ * in the default one under the home directory, where the CLI looks too when the XDG directory has none.
+ */
+export function v1Store(env: NodeJS.ProcessEnv, home = homedir()) {
+  const fallback = path.join(home, ".local", "share")
+  return [env.XDG_DATA_HOME || fallback, fallback]
+    .map((dir) => path.join(dir, "kilo", "kilo.db"))
+    .find((file) => existsSync(file))
+}
+
+/** The counts of a successful `kilo2 import v1` run, read from its output lines. */
+export function summarize(output: string) {
+  return {
+    sessions: Number(/^Imported (\d+)/m.exec(output)?.[1] ?? 0),
+    config: /^Copied the Kilo v1 config (.+?) from /m.exec(output)?.[1].split(", ") ?? [],
+  }
 }

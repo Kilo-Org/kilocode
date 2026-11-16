@@ -53,13 +53,16 @@ import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
-import { importV1 } from "./import-v1"
+import { importV1, summarize, v1Store } from "./import-v1"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { tabShortcutTarget } from "./tab-shortcuts"
 
 let shutdownExtension: (() => Promise<void>) | undefined
+
+/** globalState key of the temporary Kilo v1 import offer: "imported" or "declined" once answered. */
+const V1_IMPORT = "kilo-code.v2.importV1"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
@@ -279,6 +282,74 @@ export function activate(context: ExtensionContext) {
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
   agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it once at startup.
+  const importFromV1 = async (days: number) => {
+    const found = serverCommand()
+    if (!found) return void window.showErrorMessage(l10n.t("No Kilo v2 server found."))
+    const result = await window.withProgress(
+      { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…") },
+      async () => {
+        const run = await importV1({
+          command: found,
+          cwd: directory,
+          env: process.env,
+          days,
+          log: (text) => output.append(text),
+        })
+        if (!run.ok) return { ...run, sessions: 0 }
+        // The CLI imported every v1 session updated in the window, which includes every session created in it.
+        const sessions = await agentManager
+          .importLegacySessions(Date.now() - days * 86_400_000)
+          .catch((error: unknown) => {
+            output.appendLine(`Agent Manager v1 import failed: ${String(error)}`)
+            return 0
+          })
+        return { ...run, sessions }
+      },
+    )
+    if (!result.ok) {
+      const show = l10n.t("Show Output")
+      const message = result.output.split("\n").at(-1) || l10n.t("The Kilo v1 import failed.")
+      if ((await window.showErrorMessage(message, show)) === show) output.show()
+      return
+    }
+    await context.globalState.update(V1_IMPORT, "imported")
+    const summary = summarize(result.output)
+    void window.showInformationMessage(
+      [
+        l10n.t("Imported {0} Kilo v1 sessions and {1} Agent Manager sessions.", summary.sessions, result.sessions),
+        ...(summary.config.length > 0 ? [l10n.t("Copied {0}.", summary.config.join(", "))] : []),
+      ].join(" "),
+    )
+  }
+  const pickV1Timespan = async () =>
+    (
+      await window.showQuickPick(
+        [
+          { label: l10n.t("Last 2 weeks"), days: 14 },
+          { label: l10n.t("Last week"), days: 7 },
+          { label: l10n.t("Last 4 weeks"), days: 28 },
+          { label: l10n.t("Last 3 months"), days: 90 },
+        ],
+        { placeHolder: l10n.t("How far back should Kilo import your v1 sessions?") },
+      )
+    )?.days
+  const offerV1Import = async () => {
+    if (context.globalState.get(V1_IMPORT) || !v1Store(process.env) || !serverCommand()) return
+    const recent = l10n.t("Import Last 2 Weeks")
+    const other = l10n.t("Other Timespan…")
+    const never = l10n.t("Don't Ask Again")
+    const choice = await window.showInformationMessage(
+      l10n.t("Bring your Kilo v1 sessions, Agent Manager sessions, skills and config into Kilo v2?"),
+      recent,
+      other,
+      never,
+    )
+    if (choice === never) return void context.globalState.update(V1_IMPORT, "declined")
+    const days = choice === recent ? 14 : choice === other ? await pickV1Timespan() : undefined
+    if (days) await importFromV1(days)
+  }
+  void offerV1Import()
   browserTab = new BrowserTabProvider(
     context.extensionUri,
     { browser: broker, version: (context.extension.packageJSON as { version?: string }).version },
@@ -451,52 +522,8 @@ export function activate(context: ExtensionContext) {
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     commands.registerCommand("kilo-code.v2.importV1", async () => {
-      const found = serverCommand()
-      if (!found) return void window.showErrorMessage(l10n.t("No Kilo v2 server found."))
-      const picked = await window.showQuickPick(
-        [
-          { label: l10n.t("Last 2 weeks"), days: 14 },
-          { label: l10n.t("Last week"), days: 7 },
-          { label: l10n.t("Last 4 weeks"), days: 28 },
-          { label: l10n.t("Last 3 months"), days: 90 },
-        ],
-        { placeHolder: l10n.t("Import Kilo v1 sessions, Agent Manager sessions and global config from") },
-      )
-      if (!picked) return
-      const result = await window.withProgress(
-        { location: ProgressLocation.Notification, title: l10n.t("Importing from Kilo v1…") },
-        async () => {
-          const run = await importV1({
-            command: found,
-            cwd: directory,
-            env: process.env,
-            days: picked.days,
-            log: (text) => output.append(text),
-          })
-          if (!run.ok) return { ...run, sessions: 0 }
-          // The CLI imported every v1 session updated in the window, which includes every session created in it.
-          const sessions = await agentManager
-            .importLegacySessions(Date.now() - picked.days * 86_400_000)
-            .catch((error: unknown) => {
-              output.appendLine(`Agent Manager v1 import failed: ${String(error)}`)
-              return 0
-            })
-          return { ...run, sessions }
-        },
-      )
-      const lines = result.output.split("\n")
-      if (!result.ok) {
-        const show = l10n.t("Show Output")
-        const choice = await window.showErrorMessage(lines.at(-1) || l10n.t("The Kilo v1 import failed."), show)
-        if (choice === show) output.show()
-        return
-      }
-      void window.showInformationMessage(
-        [
-          ...lines.filter((line) => line.startsWith("Imported") || line.startsWith("Copied")),
-          l10n.t("Agent Manager: {0} sessions added.", result.sessions),
-        ].join(" "),
-      )
+      const days = await pickV1Timespan()
+      if (days) await importFromV1(days)
     }),
     commands.registerCommand("kilo-code.v2.openBrowser", () => browserTab?.openFor(sidebarSession())),
     // Claude Code compatibility and the extra CA certificates are server start environment, so a change needs a new
