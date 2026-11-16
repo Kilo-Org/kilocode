@@ -1,7 +1,8 @@
 {
-  "$comment": "Startup ratchet budgets (#15244), read by script/startup.ts (`bun run startup`). Values are milliseconds. `plugins`: median activation time of each Kilo plugin while the local Kilo API answers after `latency` ms. `overhead`: median time until all Location plugins are active with the Kilo host overrides, minus the median without them. `modules`: median time for a fresh process to import the upstream server routes and the Kilo host (every Kilo server plugin and its dependencies), minus the median without the host. Each budget is the measured value plus a small margin. Raise a budget only with the reason in the PR that needs it, and lower it when a change makes startup faster.",
+  "$comment": "Startup ratchet budgets (#15244), read by script/startup.ts (`bun run startup`). Values are milliseconds. `plugins`: median activation time of each Kilo plugin while the local Kilo API answers after `latency` ms. `overhead`: median time until all Location plugins are active with the Kilo host overrides, minus the median without them. `modules`: median time for a fresh process to import the upstream server routes and the Kilo host (every Kilo server plugin and its dependencies), minus the median without the host. `warmups` boots of each kind run before the `runs` measured ones. Each budget is the measured value plus a small margin; `overhead` is a difference of two noisy medians, so its margin covers about three standard deviations of its spread on CI runners (mean 52 ms, standard deviation 12 ms, 10 of 42 runs over the former 60 ms budget, measured with 5 boots before the boot count rose to 25). Raise a budget only with the reason in the PR that needs it, and lower it when a change makes startup faster.",
   "latency": 300,
-  "runs": 5,
+  "warmups": 3,
+  "runs": 25,
   "loadRuns": 9,
   "plugins": {
     "kilocode.handshake": 50,
@@ -48,6 +49,6 @@
     "kilocode.sandbox": 10,
     "kilocode.soul": 10
   },
-  "overhead": 60,
+  "overhead": 75,
   "modules": 140
 }
