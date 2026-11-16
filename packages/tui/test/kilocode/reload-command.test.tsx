@@ -14,10 +14,14 @@ test("the reload slash command and its palette entry are removed", async () => {
   await Bun.sleep(100)
   await app.renderOnce()
   expect(app.captureCharFrame()).not.toContain("/reload")
+  // Clear the prompt before unmount. A leftover draft is restored by the next app fixture in this process, which
+  // would prepend it to the next test's command.
   app.mockInput.pressEscape()
+  app.mockInput.pressKey("u", { ctrl: true })
 
   app.mockInput.pressKey("p", { ctrl: true })
   await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
   app.mockInput.typeText("Reload configuration")
   await app.waitForFrame((frame) => frame.includes("No results found"))
+  app.mockInput.pressEscape()
 })
