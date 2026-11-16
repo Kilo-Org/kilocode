@@ -146,6 +146,18 @@ export function createPanelData(input: {
     }
   }
 
+  /**
+   * Loads a directory again, for example a worktree folder restored after it was deleted on disk. Its loads failed
+   * while the folder was gone, and the store would otherwise keep that failure and its empty catalogs.
+   */
+  const reload = (directory: string) => {
+    const scope = stores.get(key(directory))?.scope
+    if (!scope) return
+    scope.clearError()
+    scope.data.location.invalidate()
+    if (connection.status() === "connected") void scope.data.location.sync().catch(scope.report)
+  }
+
   const release = (directory: string) => {
     const id = key(directory)
     stores.get(id)?.dispose()
@@ -166,6 +178,7 @@ export function createPanelData(input: {
     store,
     find: (directory: string) => stores.get(key(directory))?.scope,
     show,
+    reload,
     release,
     retain,
     directories: () => [...stores.keys()],

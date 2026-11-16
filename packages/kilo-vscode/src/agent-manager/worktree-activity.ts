@@ -1,3 +1,4 @@
+import { existsSync } from "fs"
 import { samePath } from "./project/paths"
 import type { AgentManagerConnection } from "./connection"
 
@@ -400,7 +401,9 @@ export class WorktreeActivity {
 
 export function createWorktreeActivity(opts: FactoryOptions) {
   const activity = new WorktreeActivity({
-    paths: opts.paths,
+    // The server has no Location for a worktree folder deleted on disk, so its load would fail and be retried on
+    // every state push. Its sessions cannot run either; the folder loads again once it is restored.
+    paths: () => opts.paths().filter((dir) => existsSync(dir)),
     load: async (dir) => {
       const client = await opts.connection.client()
       const [sessions, active, permission, form] = await Promise.all([

@@ -87,18 +87,26 @@ describe("Agent Manager session filing", () => {
   it("keeps a worktree session the user opened in Local", async () => {
     state.addWorktree({ branch: "one", path: one, parentBranch: "main" })
     state.addSession("one-run", null)
+    const posts: AgentManagerOutMessage[] = []
     let repairs = 0
 
     await pushProjectSessions(
       ctx,
       async (directory) => (directory === one ? [info("one-run", one)] : []),
-      () => undefined,
+      (message) => posts.push(message),
       () => undefined,
       () => repairs++,
     )
 
     expect(state.getSession("one-run")?.worktreeId).toBeNull()
     expect(repairs).toBe(0)
+    // The catalog reports the Local filing too, so Local and background project views list the session under Local.
+    const catalog = posts.find((message) => message.type === "agentManager.projectSessions")
+    expect(
+      catalog?.type === "agentManager.projectSessions"
+        ? Object.fromEntries(catalog.sessions.map((item) => [item.id, item.worktreeId]))
+        : undefined,
+    ).toEqual({ "one-run": null })
   })
 
   it("leaves filings that match the server alone", async () => {
