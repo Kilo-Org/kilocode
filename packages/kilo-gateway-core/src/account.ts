@@ -55,6 +55,10 @@ export function authContent(env: Record<string, string | undefined> = process.en
  * The team of the Kilo v1 login on this machine: its `auth.json` in `<XDG data>/kilo`, beside the kilo2 data directory
  * `data` (the same directory once the release renames it). The file is only read. A team ID, `null` for the personal
  * account (an OAuth login without a team), or undefined without a v1 OAuth login.
+ *
+ * `data` must be `<XDG data>/<app>`, as the global data path is (`roots` in `packages/util/src/global-roots.ts`).
+ * With any other layout the sibling `kilo` directory is not v1's: the read finds nothing and a sign-in keeps the
+ * backend team.
  */
 export function v1Organization(data: string): Effect.Effect<string | null | undefined> {
   return Effect.promise(() =>
