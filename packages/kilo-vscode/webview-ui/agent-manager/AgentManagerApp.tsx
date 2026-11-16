@@ -55,6 +55,7 @@ import {
   showsSession,
 } from "./navigate"
 import { useBridge } from "./v2/vscode"
+import { MissingWorktreeBanner } from "./MissingWorktreeBanner"
 import { V2Scope } from "../src/v2/client"
 import { SessionView } from "../src/v2/session-view"
 import { openSubagent } from "../src/v2/open-subagent"
@@ -88,6 +89,7 @@ import {
   rememberSelectionTab,
   selectLocalAction,
   selectWorktreeAction,
+  vacantWorktreeTab,
 } from "./selection-actions"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
@@ -1067,6 +1069,22 @@ const AgentManagerContent: Component = () => {
     if (!id || isPending(id)) return undefined
     return showsSession(selection(), ownerOf(id)) ? id : undefined
   })
+  createEffect(() => {
+    const sel = selection()
+    const current = sessions.currentSessionID()
+    const id = vacantWorktreeTab({
+      selection: sel,
+      // What the chat renders: a session that runs in another directory leaves the worktree as empty as no session.
+      current: shownSession() ?? (current && isPending(current) ? current : undefined),
+      pending: activePendingId(),
+      terminal: terms.activeId(),
+      review: reviewActive(),
+      history: history(),
+      tabs: activeWorktreeSessions().map((session) => session.id),
+      remembered: sel ? untrack(tabMemory)[sel] : undefined,
+    })
+    if (id) sessions.selectSession(id)
+  })
   const draftTab = () => {
     const id = sessions.currentSessionID()
     return id && isPending(id) ? id : activePendingId()
@@ -1468,6 +1486,7 @@ const AgentManagerContent: Component = () => {
       selection: selection(),
       addPending: addPendingTab,
       postToWorktree: (worktreeId) => to({ type: "agentManager.addSessionToWorktree", worktreeId }),
+      clearTerminal: () => terms.setActiveId(undefined),
     })
   const tabs = createSessionRestore({
     terminal: terms.activeId,
@@ -1559,6 +1578,15 @@ const AgentManagerContent: Component = () => {
     const focused = terms.focusedId()
     const placement = terms.sideFocusedId() || (!focused && terminalVisible()) ? "side" : "tab"
     return termHandlers.cycle(direction, placement)
+  }
+  /**
+   * Previous/next tab: the side terminal strip owns the arrows while one of its
+   * terminals holds focus, so the shortcut never moves an invisible main tab and
+   * pulls focus out of the terminal the user is working in.
+   */
+  const stepTab = (direction: "previous" | "next") => {
+    if (terms.sideFocusedId()) return cycleTerminal(direction)
+    navigateTab(direction === "previous" ? "left" : "right")
   }
   const activeTaskId = () => activeTask(activeTabs(), sessions.currentSessionID(), activePendingId())
   const closeActiveTab = () => {
@@ -1940,8 +1968,8 @@ const AgentManagerContent: Component = () => {
       handlers: {
         sessionPrevious: () => projectNav.step("up"),
         sessionNext: () => projectNav.step("down"),
-        tabPrevious: () => document.hasFocus() && navigateTab("left"),
-        tabNext: () => document.hasFocus() && navigateTab("right"),
+        tabPrevious: () => document.hasFocus() && stepTab("previous"),
+        tabNext: () => document.hasFocus() && stepTab("next"),
         terminalPrevious: () => cycleTerminal("previous"),
         terminalNext: () => cycleTerminal("next"),
         search: () => {
@@ -2463,6 +2491,11 @@ const AgentManagerContent: Component = () => {
             </Button>
           </div>
         </Show>
+        <MissingWorktreeBanner
+          worktree={worktrees().find((worktree) => worktree.id === selection())}
+          health={registry.active().worktreeHealth()[selection() ?? ""]}
+          onRestore={(worktreeId) => to({ type: "agentManager.restoreWorktree", worktreeId })}
+        />
       </div>
     </div>
   )

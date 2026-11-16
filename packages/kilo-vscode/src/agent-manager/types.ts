@@ -261,6 +261,12 @@ interface TerminalErrorMessage {
   message: string
 }
 
+/** A create request whose PTY was closed before it could become a tab, for example because its project was removed. */
+interface TerminalCancelledMessage {
+  type: "agentManager.terminal.cancelled"
+  createId: string
+}
+
 interface TerminalFontChangedMessage {
   type: "agentManager.terminal.fontChanged"
   font: TerminalFont
@@ -635,6 +641,7 @@ export type AgentManagerOutMessage =
   | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
+  | TerminalCancelledMessage
   | TerminalFontChangedMessage
   | ScriptTerminalsMessage
   | TerminalSocketOpenedMessage
