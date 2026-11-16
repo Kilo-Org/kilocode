@@ -247,6 +247,21 @@ describe("shell permission scanner joins tails split off by dot-prefixed tokens"
     }),
   )
 
+  it.instance("pwsh: a recovered head keeps its always prefix and the tail adds none", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      for (const command of ["Get-FileHash a, .gitattributes", "git log -- .x"]) {
+        const requests = yield* scanEffect(test.directory, command, "pwsh")
+        const request = requests.find((req) => req.permission === "bash")
+        const head = command.split(" ")[0]
+        expect(request).toBeDefined()
+        expect(request!.always.length).toBeGreaterThan(0)
+        expect(request!.always.some((item) => item.startsWith(`${head} `))).toBe(true)
+        expect(request!.always.some((item) => item.startsWith("."))).toBe(false)
+      }
+    }),
+  )
+
   it.instance("pwsh: a dot-source on a new statement is still its own command", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance

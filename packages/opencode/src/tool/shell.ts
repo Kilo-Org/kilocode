@@ -411,8 +411,10 @@ export const ShellPermission = Effect.gen(function* () {
         // kilocode_change - the joined pattern covers it
         scan.patterns.add(pattern(node, kind, source(node))) // kilocode_change - mask inert operators (quoted, /dev/null) for read-only rules
         scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
-      }
+      } else if (tokens.length && recovered.head(node)) scan.always.add(BashArity.prefix(tokens).join(" ") + " *") // kilocode_change - the recovered head keeps its always prefix
     }
+
+    for (const tokens of recovered.bare) scan.always.add(BashArity.prefix(tokens).join(" ") + " *") // kilocode_change - bare recovered heads keep their always prefix
 
     // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
     const lost = unparsed(root, kept.length)
