@@ -395,29 +395,52 @@ describe("CodeIndexOrchestrator telemetry", () => {
   })
   test.each([
     {
-      name: "only counts rejected chunks",
-      errors: [new Error("Failed to process batch"), new RejectedChunkError("Skipped a.ts"), new Error("parse failed")],
+      name: "incremental whole-batch failure warns",
+      existing: true,
+      errors: [new Error("Failed to process batch\nafter retries")],
+      message:
+        "File watcher started. Index may be incomplete: 1 scan error(s), first: Failed to process batch after retries",
+    },
+    {
+      name: "incremental rejected chunks only",
+      existing: true,
+      errors: [new RejectedChunkError("Skipped a.ts")],
       message: "File watcher started. Index up-to-date, but 1 chunk(s) could not be indexed: Skipped a.ts",
     },
     {
-      name: "ignores other batch errors",
-      errors: [new Error("parse failed")],
+      name: "both kinds",
+      existing: false,
+      errors: [new Error("Failed to process batch"), new RejectedChunkError("Skipped a.ts"), new Error("parse failed")],
+      message:
+        "File watcher started. Index may be incomplete: 1 chunk(s) could not be indexed: Skipped a.ts; 2 scan error(s), first: Failed to process batch",
+    },
+    {
+      name: "long provider message is truncated",
+      existing: true,
+      errors: [new Error("x".repeat(500))],
+      message: `File watcher started. Index may be incomplete: 1 scan error(s), first: ${"x".repeat(200)}...`,
+    },
+    {
+      name: "no errors",
+      existing: true,
+      errors: [],
       message: "File watcher started. Index up-to-date.",
     },
-  ])("reports skipped chunks: $name", async ({ errors, message }) => {
+  ])("reports scan status: $name", async ({ existing, errors, message }) => {
     const state = new CodeIndexStateManager()
     const orchestrator = new CodeIndexOrchestrator(
       createConfig(),
       state,
       "/tmp/ws",
       { async clearCacheFile() {} } as unknown as CacheManager,
-      new Store(false) as unknown as IVectorStore,
+      new Store(existing) as unknown as IVectorStore,
       new Scanner(10, 10, 10, errors) as unknown as DirectoryScanner,
       new Watcher() as unknown as IFileWatcher,
     )
 
     await orchestrator.startIndexing("manual")
 
+    expect(state.getCurrentStatus().systemStatus).toBe("Indexed")
     expect(state.getCurrentStatus().message).toBe(message)
   })
 })

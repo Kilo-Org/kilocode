@@ -362,14 +362,7 @@ export class CodeIndexOrchestrator {
     await this.vectorStore.markIndexingComplete()
     await this.vectorStore.close?.()
     this.fileWatcher.setCollecting(true)
-    const rejected = batchErrors.filter((error) => error instanceof RejectedChunkError)
-    const skipped = rejected.length
-    this.stateManager.setSystemState(
-      "Indexed",
-      skipped > 0
-        ? `File watcher started. Index up-to-date, but ${skipped} chunk(s) could not be indexed: ${rejected[0].message}`
-        : "File watcher started. Index up-to-date.",
-    )
+    this.stateManager.setSystemState("Indexed", scanStatusMessage(batchErrors))
     log.info("workspace scan finalized", {
       workspacePath: this.workspacePath,
       mode,
@@ -462,4 +455,24 @@ export class CodeIndexOrchestrator {
   public get state(): IndexingState {
     return this.stateManager.state
   }
+}
+
+const MAX_STATUS_ERROR_LENGTH = 200
+
+function statusError(error: Error): string {
+  const text = error.message.replace(/\s+/g, " ").trim()
+  return text.length > MAX_STATUS_ERROR_LENGTH ? `${text.slice(0, MAX_STATUS_ERROR_LENGTH)}...` : text
+}
+
+function scanStatusMessage(errors: Error[]): string {
+  const rejected = errors.filter((error) => error instanceof RejectedChunkError)
+  const other = errors.filter((error) => !(error instanceof RejectedChunkError))
+  const skipped =
+    rejected.length > 0 ? `${rejected.length} chunk(s) could not be indexed: ${statusError(rejected[0])}` : ""
+  const failed = other.length > 0 ? `${other.length} scan error(s), first: ${statusError(other[0])}` : ""
+  if (!failed)
+    return skipped
+      ? `File watcher started. Index up-to-date, but ${skipped}`
+      : "File watcher started. Index up-to-date."
+  return `File watcher started. Index may be incomplete: ${[skipped, failed].filter(Boolean).join("; ")}`
 }
