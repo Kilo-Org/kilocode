@@ -102,13 +102,7 @@ export async function inspect(root: string, file = REGISTRY, pin?: string) {
   const registry = await readMirrors(root, file)
   const states = await Promise.all(
     Object.entries(registry.mirrors)
-      .filter(
-        ([, entry]) =>
-          typeof entry.mirror === "string" &&
-          typeof entry.sha === "string" &&
-          typeof entry.why === "string" &&
-          Array.isArray(entry.invariants),
-      )
+      .filter(([, entry]) => complete(entry))
       .map(async ([upstream, entry]): Promise<MirrorState> => {
         const handle = Bun.file(path.join(root, entry.mirror))
         const exists = await handle.exists()
@@ -122,6 +116,24 @@ export async function inspect(root: string, file = REGISTRY, pin?: string) {
       }),
   )
   return { registry, states, marked: await marked(root) }
+}
+
+/**
+ * An entry with every field filled: an empty `mirror` would make `inspect` read the repo root, and an
+ * empty `sha`, `why` or invariant cannot guide a re-merge.
+ */
+function complete(entry: MirrorEntry): boolean {
+  return (
+    typeof entry.mirror === "string" &&
+    entry.mirror.trim() !== "" &&
+    typeof entry.sha === "string" &&
+    entry.sha.trim() !== "" &&
+    typeof entry.why === "string" &&
+    entry.why.trim() !== "" &&
+    Array.isArray(entry.invariants) &&
+    entry.invariants.length > 0 &&
+    entry.invariants.every((rule) => typeof rule === "string" && rule.trim() !== "")
+  )
 }
 
 export function status(state: MirrorState): "ok" | "changed" | "removed" | "missing" | "unmarked" {
@@ -140,10 +152,10 @@ export function malformed(registry: Mirrors, file = REGISTRY): string[] {
   return Object.entries(registry.mirrors).flatMap(([upstream, entry]) => {
     const rules = Array.isArray(entry.invariants) ? entry.invariants : []
     return [
-      ...(typeof entry.mirror === "string" && entry.mirror !== ""
+      ...(typeof entry.mirror === "string" && entry.mirror.trim() !== ""
         ? []
         : [`${upstream}: missing \`mirror\` in ${file}`]),
-      ...(typeof entry.sha === "string" && entry.sha !== "" ? [] : [`${upstream}: missing \`sha\` in ${file}`]),
+      ...(typeof entry.sha === "string" && entry.sha.trim() !== "" ? [] : [`${upstream}: missing \`sha\` in ${file}`]),
       ...(typeof entry.why === "string" && entry.why.trim() !== ""
         ? []
         : [`${upstream}: \`why\` is empty in ${file}. Say why Kilo copies the file instead of using an upstream extension point`]),
