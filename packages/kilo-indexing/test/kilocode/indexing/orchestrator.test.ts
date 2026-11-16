@@ -13,6 +13,7 @@ import type {
   PointStruct,
   VectorStoreSearchResult,
 } from "../../../src/indexing/interfaces"
+import { RejectedChunkError } from "../../../src/indexing/processors/scanner"
 import { Emitter } from "../../../src/indexing/runtime"
 
 class Store {
@@ -74,17 +75,19 @@ class Scanner {
     private readonly discovered: number,
     private readonly indexed: number,
     private readonly blocks: number,
+    private readonly errors: Error[] = [],
   ) {}
 
   async scanDirectory(
     _directory: string,
-    _onError?: (error: Error) => void,
+    onError?: (error: Error) => void,
     onFilesIndexed?: (indexedCount: number) => void,
     onFileParsed?: () => void,
   ): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
     for (let i = 0; i < this.discovered; i += 1) {
       onFileParsed?.()
     }
+    for (const error of this.errors) onError?.(error)
     onFilesIndexed?.(this.indexed)
     return {
       stats: {
@@ -389,5 +392,32 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.clearCount).toBe(0)
     expect(store.deleteCount).toBe(0)
     expect(orchestrator.state).toBe("Error")
+  })
+  test.each([
+    {
+      name: "only counts rejected chunks",
+      errors: [new Error("Failed to process batch"), new RejectedChunkError("Skipped a.ts"), new Error("parse failed")],
+      message: "File watcher started. Index up-to-date, but 1 chunk(s) could not be indexed: Skipped a.ts",
+    },
+    {
+      name: "ignores other batch errors",
+      errors: [new Error("parse failed")],
+      message: "File watcher started. Index up-to-date.",
+    },
+  ])("reports skipped chunks: $name", async ({ errors, message }) => {
+    const state = new CodeIndexStateManager()
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      state,
+      "/tmp/ws",
+      { async clearCacheFile() {} } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(10, 10, 10, errors) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("manual")
+
+    expect(state.getCurrentStatus().message).toBe(message)
   })
 })

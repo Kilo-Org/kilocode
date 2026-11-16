@@ -1,5 +1,9 @@
 import { describe, test, expect } from "bun:test"
-import { sanitizeErrorMessage } from "../../../../src/indexing/shared/validation-helpers"
+import {
+  extractStatusCode,
+  formatEmbeddingError,
+  sanitizeErrorMessage,
+} from "../../../../src/indexing/shared/validation-helpers"
 
 describe("sanitizeErrorMessage", () => {
   test("should sanitize Unix-style file paths", () => {
@@ -89,5 +93,27 @@ describe("sanitizeErrorMessage", () => {
     const input = "Copy from /src/file1.js to /dest/file2.js failed"
     const expected = "Copy from [REDACTED_PATH] to [REDACTED_PATH] failed"
     expect(sanitizeErrorMessage(input)).toBe(expected)
+  })
+})
+
+describe("extractStatusCode", () => {
+  test.each([
+    { name: "status property", error: { status: 400 }, expected: 400 },
+    { name: "response status", error: { response: { status: 422 } }, expected: 422 },
+    {
+      name: "AWS SDK $metadata",
+      error: { name: "ValidationException", $metadata: { httpStatusCode: 400 } },
+      expected: 400,
+    },
+    { name: "HTTP message", error: new Error("HTTP 413: too large"), expected: 413 },
+    { name: "no status", error: new Error("boom"), expected: undefined },
+  ])("reads $name", ({ error, expected }) => {
+    expect(extractStatusCode(error)).toBe(expected)
+  })
+
+  test("formatEmbeddingError keeps the status of an AWS SDK error", () => {
+    const sdkError = Object.assign(new Error("Too many input tokens"), { $metadata: { httpStatusCode: 400 } })
+
+    expect(extractStatusCode(formatEmbeddingError(sdkError, 3))).toBe(400)
   })
 })

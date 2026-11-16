@@ -12,6 +12,7 @@ import type {
 } from "./interfaces/telemetry"
 import type { IVectorStore } from "./interfaces/vector-store"
 import { DirectoryScanner } from "./processors"
+import { RejectedChunkError } from "./processors/scanner"
 import type { CacheManager } from "./cache-manager"
 import type { Disposable } from "./runtime"
 import { Log } from "../util/log"
@@ -361,11 +362,12 @@ export class CodeIndexOrchestrator {
     await this.vectorStore.markIndexingComplete()
     await this.vectorStore.close?.()
     this.fileWatcher.setCollecting(true)
-    const skipped = batchErrors.length
+    const rejected = batchErrors.filter((error) => error instanceof RejectedChunkError)
+    const skipped = rejected.length
     this.stateManager.setSystemState(
       "Indexed",
       skipped > 0
-        ? `File watcher started. Index up-to-date, but ${skipped} chunk(s) could not be indexed: ${batchErrors[0].message}`
+        ? `File watcher started. Index up-to-date, but ${skipped} chunk(s) could not be indexed: ${rejected[0].message}`
         : "File watcher started. Index up-to-date.",
     )
     log.info("workspace scan finalized", {

@@ -98,6 +98,10 @@ export function extractStatusCode(error: any): number | undefined {
   // Response status property
   if (error?.response?.status) return error.response.status
 
+  // AWS SDK errors (Bedrock) carry the HTTP status under $metadata
+  const sdkStatus = error?.$metadata?.httpStatusCode
+  if (typeof sdkStatus === "number" && sdkStatus > 0) return sdkStatus
+
   // Extract from error message (e.g., "HTTP 404: Not Found")
   if (error?.message) {
     const match = error.message.match(/HTTP (\d+):/)

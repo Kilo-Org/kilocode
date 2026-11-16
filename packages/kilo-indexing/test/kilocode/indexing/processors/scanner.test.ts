@@ -15,7 +15,7 @@ import type {
   VectorStoreSearchResult,
 } from "../../../../src/indexing/interfaces"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
-import { DirectoryScanner } from "../../../../src/indexing/processors/scanner"
+import { DirectoryScanner, RejectedChunkError } from "../../../../src/indexing/processors/scanner"
 
 class Emb implements IEmbedder {
   public async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
@@ -222,6 +222,32 @@ class RecordStore extends Store {
     await super.upsertPoints(points)
   }
 }
+
+class DeleteStore extends RecordStore {
+  public removed: string[] = []
+
+  public override async deletePointsByFilePath(filePath: string): Promise<void> {
+    this.removed.push(filePath)
+  }
+}
+
+async function fixture(files: Record<string, string>) {
+  const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+  const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+  for (const [name, content] of Object.entries(files)) await Bun.write(join(root, name), content)
+  const cache = new CacheManager(cacheDir, root)
+  await cache.initialize()
+  return {
+    root,
+    cache,
+    cleanup: async () => {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    },
+  }
+}
+
+const sha = (content: string) => createHash("sha256").update(content).digest("hex")
 
 describe("DirectoryScanner", () => {
   test.each([
@@ -574,6 +600,93 @@ describe("DirectoryScanner", () => {
     } finally {
       await rm(root, { recursive: true, force: true })
       await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+  test.each([{ threshold: 10 }, { threshold: 1 }])(
+    "counts a file with a rejected chunk as indexed once when another chunk is written (threshold $threshold)",
+    async ({ threshold }) => {
+      const files = { "a.ts": "BADBADBAD1\nok1" }
+      const { root, cache, cleanup } = await fixture(files)
+      try {
+        const store = new RecordStore()
+        const scan = new DirectoryScanner(new LimitEmb(8), store, new SizedParser(), cache, ignore(), threshold, 3)
+        const indexed: number[] = []
+
+        await scan.scanDirectory(
+          root,
+          () => {},
+          (count) => indexed.push(count),
+        )
+
+        expect(store.chunks).toEqual(["ok1"])
+        expect(indexed.reduce((sum, count) => sum + count, 0)).toBe(1)
+      } finally {
+        await cleanup()
+      }
+    },
+  )
+
+  test("caches full files, marks partial files so the next scan reindexes them, and finds them when removed", async () => {
+    const partial = "ok1\nBADBADBAD1"
+    const full = "ok2\nok3"
+    const { root, cache, cleanup } = await fixture({ "a.ts": partial, "b.ts": full })
+    const a = join(root, "a.ts")
+    const b = join(root, "b.ts")
+    try {
+      const store = new DeleteStore()
+      const first = new DirectoryScanner(new LimitEmb(8), store, new SizedParser(), cache, ignore(), 10, 3)
+      const errors: Error[] = []
+      await first.scanDirectory(root, (error) => errors.push(error))
+
+      expect(errors).toHaveLength(1)
+      expect(cache.getHash(b)).toBe(sha(full))
+      expect(cache.getHash(a)).toBeDefined()
+      expect(cache.getHash(a)).not.toBe(sha(partial))
+
+      // The provider now accepts everything: the partial file is changed (not new), so its old points go first.
+      store.multi = []
+      const second = new DirectoryScanner(new LimitEmb(100), store, new SizedParser(), cache, ignore(), 10, 3)
+      await second.scanDirectory(root)
+
+      expect(store.multi).toEqual([[a]])
+      expect(cache.getHash(a)).toBe(sha(partial))
+
+      // Marked again by a rejecting scan, then removed from disk: the deletion pass must find it.
+      cache.updateHash(a, "partial:stale")
+      await rm(a)
+      await second.scanDirectory(root)
+
+      expect(store.removed).toEqual([a])
+      expect(cache.getHash(a)).toBeUndefined()
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test.each([
+    { name: "one batch", chunks: 10, batches: 1 },
+    { name: "several batches", chunks: 40, batches: 4 },
+  ])("stops splitting when the provider rejects every request: $name", async ({ chunks, batches }) => {
+    const content = Array.from({ length: chunks }, (_, index) => `chunk${index}`).join("\n")
+    const { root, cache, cleanup } = await fixture({ "a.ts": content })
+    try {
+      const emb = new LimitEmb(0)
+      const store = new RecordStore()
+      const scan = new DirectoryScanner(emb, store, new SizedParser(), cache, ignore(), 10, 3)
+      const errors: Error[] = []
+
+      await scan.scanDirectory(root, (error) => errors.push(error))
+
+      // One request per batch plus one shared probe, instead of 2N-1 per batch.
+      expect(emb.calls.length).toBeLessThanOrEqual(batches + 1)
+      if (batches === 1) expect(emb.calls.length).toBeLessThanOrEqual(3)
+      expect(store.chunks).toEqual([])
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain("rejected every request")
+      expect(errors[0]).not.toBeInstanceOf(RejectedChunkError)
+      expect(cache.getHash(join(root, "a.ts"))).toBeUndefined()
+    } finally {
+      await cleanup()
     }
   })
 })
