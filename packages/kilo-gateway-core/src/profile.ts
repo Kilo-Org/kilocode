@@ -121,9 +121,12 @@ export function get(server: string, token: string): Effect.Effect<Info, ProfileE
 
 // Same rule as v1 `defaultOrganizationId` (`packages/kilo-gateway/src/api/profile.ts`):
 // prefer the team selected on the backend; otherwise use the first team only when the
-// account has no personal account.
-export function defaultOrganizationID(profile: Info): string | null {
+// account has no personal account. A `preferred` choice that the profile allows comes first: a team it lists, or
+// `null` when it has a personal account.
+export function defaultOrganizationID(profile: Info, preferred?: string | null): string | null {
   const ids = new Set(profile.organizations.map((org) => org.id))
+  if (preferred && ids.has(preferred)) return preferred
+  if (preferred === null && profile.hasPersonalAccount !== false) return null
   if (profile.selectedOrganizationId && ids.has(profile.selectedOrganizationId)) {
     return profile.selectedOrganizationId
   }

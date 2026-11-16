@@ -28,7 +28,8 @@ const boot =
   (
     env: Record<string, string>,
     body: (rpc: ReturnType<typeof gateway>, backend: ReturnType<typeof fixture>) => Promise<void>,
-    options: { syncBackground?: boolean; awaitActivation?: boolean } = {},
+    // `data` is the server's global data directory, where a new store looks for an `auth.json` to import.
+    options: { syncBackground?: boolean; awaitActivation?: boolean; data?: string } = {},
   ) =>
   async () => {
   using backend = fixture()
@@ -89,6 +90,9 @@ const boot =
                   })),
                   deps: [Database.node, Bus.node, SessionProjector.node, Credential.node, Global.node],
                 })),
+                ...(options.data
+                  ? [Global.node.replace(Global.layerWith({ config: directory, data: options.data }))]
+                  : []),
               ],
             ).pipe(Layer.provide(HttpServer.layerServices)),
           )
@@ -147,6 +151,7 @@ function gateway(
   ready: Effect.Effect<void, unknown>,
 ) {
   return {
+    client,
     rpc: client.rpc(KiloGatewayRpc.Definition),
     sync: client.rpc(KiloSessionSyncRpc.Definition),
     options: { location: { directory } },
@@ -205,6 +210,92 @@ test(
   }),
   30_000,
 )
+
+// The team a Kilo v1 login on this machine used last, in v1's `auth.json`. The backend selects another one.
+const v1Login = (access: string) =>
+  JSON.stringify({ kilo: { type: "oauth", access, refresh: access, expires: 4_102_444_800_000, accountId: "first" } })
+
+for (const hasPersonalAccount of [true, false])
+  test(`a new store keeps the team of an imported Kilo v1 login (Personal: ${hasPersonalAccount})`, async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-import-"))
+    // Once the release renames the kilo2 data directory to `kilo`, it is v1's own, and a new store imports v1's
+    // auth.json through the upstream `import_legacy_credentials` migration.
+    const data = path.join(root, "kilo")
+    const auth = v1Login("fixture-token")
+    await Bun.write(path.join(data, "auth.json"), auth)
+    try {
+      await boot(
+        {},
+        async (gateway, backend) => {
+          backend.state.profile = {
+            user: { email: "profile@example.test" },
+            organizations: [
+              { id: "first", name: "First" },
+              { id: "selected", name: "Selected" },
+            ],
+            selectedOrganizationId: "selected",
+            hasPersonalAccount,
+          }
+          await gateway.ready()
+          await until(
+            () => backend.requests.some((request) => request.path.endsWith("/models")),
+            "the imported login loads its catalog",
+          )
+          expect(
+            backend.requests.filter((request) => request.path.endsWith("/models")).map((request) => request.path),
+          ).toEqual(["/api/gateway/v1/organizations/first/models"])
+          expect(await gateway.rpc.authStatus({}, gateway.options)).toEqual({
+            authenticated: true,
+            organizationID: "first",
+            server: gateway.server,
+          })
+        },
+        { data, awaitActivation: false },
+      )()
+      expect(await Bun.file(path.join(data, "auth.json")).text()).toBe(auth)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }, 30_000)
+
+test("a device sign-in starts on the team of the Kilo v1 login beside the kilo2 data directory", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-v1-signin-"))
+  const file = path.join(root, "kilo", "auth.json")
+  const auth = v1Login("v1-token")
+  await Bun.write(file, auth)
+  try {
+    await boot(
+      {},
+      async (gateway, backend) => {
+        backend.state.pending = 0
+        const input = { ...gateway.options, integrationID: "kilo" }
+        const attempt = await gateway.client.integration.oauth.connect({ ...input, methodID: "device" })
+        await eventually(
+          () => gateway.client.integration.oauth.status({ ...input, attemptID: attempt.data.attemptID }),
+          (status) => status.data.status !== "pending",
+          "the device sign-in completes",
+        )
+        expect((await gateway.client.credential.list()).map((credential) => credential.value)).toEqual([
+          expect.objectContaining({
+            access: "fixture-token",
+            metadata: expect.objectContaining({ organizationID: "first" }),
+          }),
+        ])
+        expect(
+          await eventually(
+            () => gateway.rpc.authStatus({}, gateway.options),
+            (status) => status.authenticated,
+            "the Gateway uses the new login",
+          ),
+        ).toEqual({ authenticated: true, organizationID: "first", server: gateway.server })
+      },
+      { data: path.join(root, "kilo2") },
+    )()
+    expect(await Bun.file(file).text()).toBe(auth)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+}, 30_000)
 
 test(
   "automatic sync enrollment follows the Gateway selection and pauses on an organization switch",
@@ -352,6 +443,14 @@ test(
 async function until(condition: () => boolean, what: string, timeout = 5_000) {
   for (const start = Date.now(); Date.now() - start < timeout; await Bun.sleep(5)) {
     if (condition()) return
+  }
+  throw new Error(`Timed out waiting until ${what}`)
+}
+
+async function eventually<A>(read: () => Promise<A>, done: (value: A) => boolean, what: string, timeout = 10_000) {
+  for (const start = Date.now(); Date.now() - start < timeout; await Bun.sleep(10)) {
+    const value = await read()
+    if (done(value)) return value
   }
   throw new Error(`Timed out waiting until ${what}`)
 }

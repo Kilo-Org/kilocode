@@ -1,6 +1,8 @@
 export * as KiloAccount from "./account.js"
 
-import { Schema } from "effect"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import { Effect, Option, Schema } from "effect"
 import { KiloServer } from "./server.js"
 
 export const ANONYMOUS_KEY = "anonymous"
@@ -47,6 +49,23 @@ export function authContent(env: Record<string, string | undefined> = process.en
   const token = kilo?.type === "oauth" ? kilo.access : (kilo?.key ?? kilo?.access)
   if (token === undefined) return null
   return { token, ...(kilo?.accountId !== undefined ? { organizationID: kilo.accountId } : {}) }
+}
+
+/**
+ * The team of the Kilo v1 login on this machine: its `auth.json` in `<XDG data>/kilo`, beside the kilo2 data directory
+ * `data` (the same directory once the release renames it). The file is only read. A team ID, `null` for the personal
+ * account (an OAuth login without a team), or undefined without a v1 OAuth login.
+ */
+export function v1Organization(data: string): Effect.Effect<string | null | undefined> {
+  return Effect.promise(() =>
+    readFile(path.join(path.dirname(data), "kilo", "auth.json"), "utf8").catch(() => undefined),
+  ).pipe(
+    Effect.map((content) => {
+      const kilo = content === undefined ? undefined : Option.getOrUndefined(decodeAuthContent(content))?.kilo
+      if (kilo?.type !== "oauth" || !kilo.access) return undefined
+      return kilo.accountId ?? null
+    }),
+  )
 }
 
 // The caller supplies saved/config precedence. A token URL overrides the server, but cannot silently change a
