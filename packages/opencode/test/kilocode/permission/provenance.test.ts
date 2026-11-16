@@ -186,9 +186,7 @@ describe("PermissionProvenance.tagOutsideWorkspace", () => {
 
 describe("PermissionProvenance.filepathOf", () => {
   test("reads the filepath an external_directory ask's metadata carries", () => {
-    expect(PermissionProvenance.filepathOf({ filepath: "/tmp/secret.txt", parentDir: "/tmp" })).toBe(
-      "/tmp/secret.txt",
-    )
+    expect(PermissionProvenance.filepathOf({ filepath: "/tmp/secret.txt", parentDir: "/tmp" })).toBe("/tmp/secret.txt")
   })
 
   test("returns undefined when there is no filepath, e.g. a bash directory scan", () => {
@@ -229,8 +227,14 @@ describe("askPermission returns provenance", () => {
       Effect.runPromise,
     )
 
-  test("manual reply reports the manual source", async () => {
-    expect(await run({ manual: true })).toEqual({ source: "manual" })
+  test("a reply a human gave reports the manual source", async () => {
+    expect(await run({ manual: true, interactive: true })).toEqual({ source: "manual" })
+  })
+
+  // Auto mode replies from the client without `interactive`; attributing that to the user would
+  // claim a decision they never made.
+  test("an auto-reply reports the auto source", async () => {
+    expect(await run({ manual: true })).toEqual({ source: "auto" })
   })
 
   test("agent-default rule classifies as agent with its name", async () => {
@@ -253,9 +257,15 @@ describe("askPermission returns provenance", () => {
   test("global and project patterns under the same key are attributed independently", async () => {
     // global: bash "git status" allow; project: bash "npm test" allow -> both live under bash.
     const origins = { bash: { "git status": "global" as const, "npm test": "local" as const } }
-    const fromGlobal = await run({ manual: false, rule: { permission: "bash", pattern: "git status", action: "allow" } }, origins)
+    const fromGlobal = await run(
+      { manual: false, rule: { permission: "bash", pattern: "git status", action: "allow" } },
+      origins,
+    )
     expect(fromGlobal.source).toBe("global")
-    const fromProject = await run({ manual: false, rule: { permission: "bash", pattern: "npm test", action: "allow" } }, origins)
+    const fromProject = await run(
+      { manual: false, rule: { permission: "bash", pattern: "npm test", action: "allow" } },
+      origins,
+    )
     expect(fromProject.source).toBe("project")
   })
 
@@ -269,7 +279,10 @@ describe("askPermission returns provenance", () => {
       permission: Permission.fromConfig({ bash: "allow" }),
       options: {},
     }
-    const planSession = { id: sessionID, permission: [{ permission: "edit", pattern: "*", action: "deny" }] } as unknown as Session.Info
+    const planSession = {
+      id: sessionID,
+      permission: [{ permission: "edit", pattern: "*", action: "deny" }],
+    } as unknown as Session.Info
     await Effect.gen(function* () {
       yield* KiloSessionPrompt.askPermission({
         permission: yield* Permission.Service,
