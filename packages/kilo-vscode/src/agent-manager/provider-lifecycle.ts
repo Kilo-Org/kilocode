@@ -4,7 +4,7 @@ import { isRunningStatus } from "../session-status"
 import { LOCAL_TARGET, type AgentManagerOutMessage } from "./types"
 import { initContextState } from "./project/init"
 import { canonicalizePath, pathKey, samePath } from "./project/paths"
-import { moveSessionSettled } from "./session-move"
+import { settleMove } from "./session-move"
 import type { ProjectContext } from "./project/context"
 import type { ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeManager } from "./WorktreeManager"
@@ -406,22 +406,22 @@ export async function promoteLifecycleSession(
   // store of its directory and would never receive the session's events otherwise. The server applies a move at the
   // next step boundary, so a running session is stopped first, as Continue in Worktree does.
   await host.abort([sessionId])
-  const moved = await host
+  const outcome = await host
     .client()
     .then(async (client) => {
       const session = await client.session.get({ sessionID: sessionId })
-      const result = await moveSessionSettled(client, session, created.result.path)
-      if (!samePath(canonicalizePath(result.session.location.directory), canonicalizePath(created.result.path)))
-        throw new Error(`the session still runs in ${result.session.location.directory}`)
-      return { client, settled: result.settled }
+      await client.session.move({ sessionID: session.id, directory: created.result.path })
+      return { client, result: await settleMove(client, session, created.result.path) }
     })
     .catch((err: unknown) => {
       host.log("Failed to move the session into the new worktree:", getErrorMessage(err))
       return undefined
     })
-  if (!moved) {
-    // Ends the setup state the worktree creation started, so the new worktree does not stay "setting up", and
-    // removes the worktree that nothing uses now.
+  const landed =
+    outcome &&
+    samePath(canonicalizePath(outcome.result.session.location.directory), canonicalizePath(created.result.path))
+  if (!landed) {
+    // Ends the setup state the worktree creation started, so the new worktree does not stay "setting up".
     host.post({
       type: "agentManager.worktreeSetup",
       status: "error",
@@ -429,7 +429,10 @@ export async function promoteLifecycleSession(
       branch: created.result.branch,
       worktreeId: created.worktree.id,
     })
-    await deleteLifecycleWorktree(ctx, host, created.worktree.id)
+    // A move the server never queued leaves the worktree unused. A queued move that did not land in time can still
+    // land later, so its worktree stays.
+    if (!outcome) await deleteLifecycleWorktree(ctx, host, created.worktree.id)
+    else host.log(`Kept worktree ${created.worktree.id}: the move of ${sessionId} is still pending`)
     host.push()
     return null
   }
@@ -442,9 +445,9 @@ export async function promoteLifecycleSession(
   host.register(sessionId, created.result.path)
   // A note admitted while a drain still runs is delivered into it and starts a reply, so it waits for a settled move.
   // Without it the model still learns the new directory from the location switch the server records.
-  if (moved.settled)
+  if (outcome.result.settled)
     await recordPromotionHandoff({
-      client: moved.client,
+      client: outcome.client,
       sessionId,
       directory: created.result.path,
       branch: created.result.branch,

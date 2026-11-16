@@ -461,6 +461,33 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getWorktree(wt.id)).toBeUndefined()
   })
 
+  it("keeps the new worktree when a queued move has not landed in time", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    host.notifyReady = mock(() => undefined)
+    state.addSession("promoted", null)
+    // The server queued the move, but the session still runs in the root when the deadline passes.
+    client.session.get.mockResolvedValue({ id: "promoted", location: { directory: root } })
+    client.session.active.mockImplementation(async () => {
+      setSystemTime(new Date(Date.now() + 60_000))
+      return { promoted: { type: "running" } }
+    })
+
+    try {
+      await promoteLifecycleSession(ctx, host, "promoted")
+    } finally {
+      setSystemTime()
+    }
+
+    expect(calls).toContain("move:promoted")
+    expect(calls).toContain("post:agentManager.worktreeSetup")
+    expect(calls).not.toContain("disk")
+    expect(state.getWorktree(wt.id)).toBeDefined()
+    expect(state.getSession("promoted")?.worktreeId).toBeNull()
+    expect(host.notifyReady).not.toHaveBeenCalled()
+  })
+
   it("files a promoted session whose move has not settled, without admitting the handoff note", async () => {
     await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const wt = state.getWorktrees()[0]!

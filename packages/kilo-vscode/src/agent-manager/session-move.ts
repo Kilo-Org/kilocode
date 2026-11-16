@@ -17,21 +17,21 @@ export async function moveSession(
   directory: string,
   limitMs = LIMIT_MS,
 ): Promise<SessionInfo> {
-  return (await moveSessionSettled(client, session, directory, limitMs)).session
+  await client.session.move({ sessionID: session.id, directory })
+  return (await settleMove(client, session, directory, limitMs)).session
 }
 
 /**
- * Like `moveSession`, and also reports whether the move settled: the server runs the session in `directory` and no
- * drain is active. A caller that admits input after the move needs this, since an unsettled record can already name
- * the new directory while a drain still runs.
+ * Waits for a move that was already queued and reports whether it settled: the server runs the session in
+ * `directory` and no drain is active. A caller that admits input after the move needs this, since an unsettled record
+ * can already name the new directory while a drain still runs.
  */
-export async function moveSessionSettled(
+export function settleMove(
   client: OpenCodeClient,
   session: SessionInfo,
   directory: string,
   limitMs = LIMIT_MS,
 ): Promise<{ session: SessionInfo; settled: boolean }> {
-  await client.session.move({ sessionID: session.id, directory })
   return settle(client, session, canonicalizePath(directory), Date.now() + limitMs, FIRST_DELAY_MS)
 }
 
