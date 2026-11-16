@@ -5,13 +5,16 @@
 // - the activation time of each Kilo plugin: a plugin that waits for the network during activation shows the
 //   fixture delay on every machine, a plugin that does not shows almost nothing;
 // - the median time until all plugins of a Location are active with the host overrides, minus the median without
-//   them. The runs alternate in one process, so the runner speed cancels out;
+//   them. The runs alternate in one process, so a runner that slows down affects both medians. Single boots still
+//   vary by about 15 ms (a GC pause, a slow activation), so the medians need many runs: with 5, one disturbed sample
+//   moved the difference by 30 ms and failed unchanged code;
 // - the module load cost of the Kilo host: fresh processes import the upstream server routes, with and without the
 //   host, which imports every Kilo server plugin (`KiloPlugins`) and their dependencies, and the ratchet compares
 //   the medians. A ported feature that loads heavy modules or runs slow top-level code shows up here, also when its
 //   activation is fast.
-// The first run of each kind warms up the process and stores the Gateway catalog; it is not measured. The measured
-// runs are later starts with the same database, as a user's second start is.
+// The first runs of each kind warm up the process and store the Gateway catalog; they are not measured. A single
+// warm-up boot left the next one about 10% slower than the rest. The measured runs are later starts with the same
+// database, as a user's second start is.
 import { fixture } from "@kilocode/gateway-core/testing"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
 import { Context, Effect, Layer, References } from "effect"
@@ -100,8 +103,10 @@ for (const _ of Array.from({ length: budget.loadRuns }))
   loads.push({ upstream: await load(false), host: await load(true) })
 const modules = median(loads.map((sample) => sample.host)) - median(loads.map((sample) => sample.upstream))
 
-await boot([])
-await boot(KiloHost.overrides)
+for (const _ of Array.from({ length: budget.warmups })) {
+  await boot([])
+  await boot(KiloHost.overrides)
+}
 const samples: { upstream: number; host: number; plugins: Map<string, number> }[] = []
 for (const _ of Array.from({ length: budget.runs })) {
   const upstream = await boot([])
@@ -138,7 +143,7 @@ const failures = [
 ]
 
 console.log(
-  `Kilo startup ratchet: Kilo API delay ${budget.latency} ms, ${budget.runs} boot runs, ${budget.loadRuns} module load runs, medians`,
+  `Kilo startup ratchet: Kilo API delay ${budget.latency} ms, ${budget.runs} boot runs after ${budget.warmups} warm-ups, ${budget.loadRuns} module load runs, medians`,
 )
 console.table([
   ...plugins.map((plugin) => ({ measure: plugin.id, median: ms(plugin.median), budget: ms(plugin.budget) })),
