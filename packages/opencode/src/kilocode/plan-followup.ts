@@ -214,11 +214,20 @@ export namespace PlanFollowup {
   }
 
   async function resolveCodeModel(input: Pick<MessageV2.User, "model">) {
-    const state = Flag.KILO_CLIENT === "cli" ? await KilocodeModelState.get().catch(() => undefined) : undefined
-    const saved = state?.model.code
+    const isCli = Flag.KILO_CLIENT === "cli"
+    const state = isCli ? await KilocodeModelState.get().catch(() => undefined) : undefined
+    // On CLI: use the persisted code-model preference from model.json.
+    // On non-CLI (e.g. VS Code): there is no persisted preference, so the
+    // session's current model IS the user's explicit choice and should take
+    // priority over the global code-agent default — same priority slot as
+    // the CLI saved preference, without reordering the resolution chain.
+    const saved = isCli ? state?.model.code : input.model
     const entry = await PlanFollowupRuntime.agent("code")
     const next =
-      (await pick(saved, saved && state.variant[`${saved.providerID}/${saved.modelID}`])) ??
+      (await pick(
+        saved,
+        isCli ? saved && state?.variant?.[`${saved.providerID}/${saved.modelID}`] : input.model?.variant,
+      )) ??
       (await pick(entry?.model, entry?.variant))
     if (next) return { model: next }
     return input
