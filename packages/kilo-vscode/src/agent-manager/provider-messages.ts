@@ -178,6 +178,8 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     })
     if (!filed) {
       host.post({ type: "error", message: OPEN_LOCALLY_FAILED })
+      // The webview already placed the session in Local's tabs, so push the kept filing to drop it again.
+      host.pushState()
       return true
     }
     host.pushState()

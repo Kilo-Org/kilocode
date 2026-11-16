@@ -247,6 +247,33 @@ describe("activateSelection — cross-project selection", () => {
     expect(calls.error).toEqual([])
   })
 
+  it("keeps the worktree filing and reports when the session cannot move locally", async () => {
+    const moved: Array<[string, string | null]> = []
+    const filing = {
+      getWorktree: () => undefined,
+      getSession: (id: string) => (id === "sess1" ? { id: "sess1", worktreeId: "wt1" } : undefined),
+      moveSession: (id: string, worktreeId: string | null) => moved.push([id, worktreeId]),
+    } as unknown as WorktreeStateManager
+    const { contexts, deps, calls, extra } = setup({ state: () => filing })
+    const ctx = contexts.expand(extra)!
+    ctx.stateManager()
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    contexts.activate(extra)
+    deps.routeSession = async () => false
+    let pushed = 0
+    deps.pushState = () => pushed++
+
+    await handleProjectMessage(
+      { type: "agentManager.openSessionLocally", projectId: extra, sessionId: "sess1" } as never,
+      deps,
+    )
+
+    expect(calls.error).toHaveLength(1)
+    expect(moved).toEqual([])
+    expect(pushed).toBe(1)
+    expect(calls.selected).toEqual([])
+  })
+
   it("restores the persisted target when the selection asks for it", async () => {
     const persisted = { current: undefined as unknown }
     const { contexts, deps, calls, extra } = setup({ state: () => fakeState(persisted) })
