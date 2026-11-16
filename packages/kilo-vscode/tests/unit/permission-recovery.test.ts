@@ -292,11 +292,63 @@ describe("handlePermissionResponse", () => {
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
   })
 
-  it("does not treat other SDK-wrapped errors as stale", async () => {
+  it("does not treat other SDK-wrapped errors as stale while the request is pending", async () => {
+    const error = new Error("Internal server error", {
+      cause: { status: 500, body: { name: "InternalServerError", _tag: "NotFound" } },
+    })
+    const { fake, messages, permDirs } = ctx({
+      tracked: ["s1"],
+      errors: { reply: error },
+      permsPerDir: { "/workspace/.kilo/worktrees/feature": [pending("p1", "s1")] },
+    })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
+    spy.mockRestore()
+
+    expect(permDirs.has("p1")).toBe(true)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1" }])
+  })
+
+  it("treats other SDK-wrapped errors as stale once the request has settled", async () => {
     const error = new Error("Internal server error", {
       cause: { status: 500, body: { name: "InternalServerError", _tag: "NotFound" } },
     })
     const { fake, messages, permDirs } = ctx({ tracked: ["s1"], errors: { reply: error } })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
+    spy.mockRestore()
+
+    expect(permDirs.has("p1")).toBe(false)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
+  })
+
+  it("treats a dropped reply as stale once the request has settled", async () => {
+    const { fake, messages, replies, permDirs } = ctx({ tracked: ["s1"], errors: { reply: terminated() } })
+    const spy = spyOn(console, "error").mockImplementation(() => {})
+    permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
+
+    await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
+    spy.mockRestore()
+
+    expect(replies).toEqual([
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
+    expect(permDirs.has("p1")).toBe(false)
+    expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
+  })
+
+  it("keeps a dropped reply retryable while the request is still pending", async () => {
+    const { fake, messages, permDirs } = ctx({
+      tracked: ["s1"],
+      errors: { reply: terminated() },
+      permsPerDir: { "/workspace/.kilo/worktrees/feature": [pending("p1", "s1")] },
+    })
     const spy = spyOn(console, "error").mockImplementation(() => {})
     permDirs.set("p1", "/workspace/.kilo/worktrees/feature")
 
