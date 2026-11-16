@@ -4,6 +4,7 @@ import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
 import { isKiloError } from "@/kilocode/kilo-errors" // kilocode_change
 import { SessionNetwork } from "./network" // kilocode_change
+import { SessionRetryKilo } from "@/kilocode/session/retry" // kilocode_change
 import { iife } from "@/util/iife"
 import { isRecord } from "@/util/record"
 
@@ -70,8 +71,21 @@ export function delay(attempt: number, error?: SessionV1.APIError, random = Math
         }
       }
 
+      // kilocode_change start - honor rate-limit reset headers
+      // Providers rate-limiting by requests per minute advertise the window reset in
+      // x-ratelimit-* headers instead of retry-after; exponential backoff would retry
+      // inside the window and burn every attempt, so wait out the advertised reset.
+      const reset = SessionRetryKilo.reset(error)
+      if (reset !== undefined) return cap(reset)
+      // kilocode_change end
+
       return cap(exponential(attempt, random))
     }
+
+    // kilocode_change start - the reset can also be advertised in the message alone
+    const reset = SessionRetryKilo.reset(error)
+    if (reset !== undefined) return cap(reset)
+    // kilocode_change end
   }
 
   return cap(Math.min(exponential(attempt, random), RETRY_MAX_DELAY_NO_HEADERS))
