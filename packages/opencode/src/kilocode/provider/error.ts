@@ -49,8 +49,7 @@ export function frame(body: unknown): Frame {
   return { ...body, error: isRecord(body.error) ? body.error : undefined }
 }
 
-const RETRYABLE =
-  /rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
+const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
 // Keep free-form message matching narrow: Session.retryable only applied
 // rate-limit phrases to prose; the wider pattern above is for structured
 // code/type fields only
