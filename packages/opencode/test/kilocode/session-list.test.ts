@@ -192,11 +192,15 @@ describe("Kilo Session.list", () => {
         .map((i) => sid(i))
 
       const resolve = spyOn(Filesystem, "resolve")
-      const first = yield* listIn(ctx, { limit: 21 }).pipe(Effect.ensuring(Effect.sync(() => resolve.mockRestore())))
-      const calls = resolve.mock.calls.length
+      // Read the count while the spy is active: mockRestore clears recorded calls.
+      const { list: first, calls } = yield* listIn(ctx, { limit: 21 }).pipe(
+        Effect.map((list) => ({ list, calls: resolve.mock.calls.length })),
+        Effect.ensuring(Effect.sync(() => resolve.mockRestore())),
+      )
 
       expect(ids(first)).toEqual(expected.slice(0, 21))
       // Cost is bounded by distinct directories, not by session count.
+      expect(calls).toBeGreaterThan(0)
       expect(calls).toBeLessThanOrEqual(dirs.length * 3 + 4)
 
       const cursor = first.at(-1)!.time.updated
