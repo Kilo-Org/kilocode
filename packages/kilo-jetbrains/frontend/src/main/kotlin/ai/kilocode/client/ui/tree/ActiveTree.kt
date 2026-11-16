@@ -783,8 +783,9 @@ internal class ActiveTreeView(
         val fg = UIUtil.getTreeForeground(active, active || focused)
         val background = background
         val selection = UIUtil.getTreeBackground(true, !entry.allowsChildren && active)
-        val hover = if (hovered) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
-        val backdrop = if (selected) selection else hover ?: background
+        val fixed = entry.item.alwaysSelected
+        val hover = if (hovered && !fixed) JBUI.CurrentTheme.Tree.Hover.background(active || focused) else null
+        val backdrop = if (fixed || selected) selection else hover ?: background
         val actions = actionsVisible(enabled, selected, hovered, active)
         return ActiveRenderState(
             item = entry.item,
@@ -794,7 +795,7 @@ internal class ActiveTreeView(
             hovered = hovered,
             enabled = enabled,
             background = background,
-            selectionColor = if (selected) selection else hover,
+            selectionColor = if (fixed || selected) selection else hover,
             paintSelection = false,
             backdrop = backdrop,
             foreground = fg,

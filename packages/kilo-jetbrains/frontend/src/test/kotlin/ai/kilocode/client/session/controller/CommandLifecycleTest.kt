@@ -37,6 +37,25 @@ class CommandLifecycleTest : SessionControllerTestBase() {
         assertEquals("ses_test", rpc.commands.single().id)
     }
 
+    fun `test command preserves explicit correlation and selection before workspace defaults resolve`() {
+        val m = controller()
+        edt {
+            m.command(
+                "review", "src/",
+                select = PromptSelection("plan", "kilo", "gpt-5", "high"),
+                messageID = "msg_initial",
+            )
+        }
+        flush()
+
+        val prompt = rpc.commands.single().prompt
+        assertEquals("msg_initial", prompt.messageID)
+        assertEquals("plan", prompt.agent)
+        assertEquals("kilo", prompt.providerID)
+        assertEquals("gpt-5", prompt.modelID)
+        assertEquals("high", prompt.variant)
+    }
+
     fun `test command records telemetry`() {
         appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady().copy(commands = listOf(CommandDto("deploy")))
