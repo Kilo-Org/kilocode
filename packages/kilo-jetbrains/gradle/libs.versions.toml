@@ -1,6 +1,6 @@
 [versions]
 intellij-platform = "2026.1"
-intellij-gradle-plugin = "2.19.0"
+intellij-gradle-plugin = "2.20.0"
 # Starter/Driver artifacts are published per IntelliJ Platform build number. 261.22158.277 is the
 # 2026.1 release build used by the UI e2e adapter; keep it aligned with intellij-platform.
 intellij-starter = "261.22158.277"
