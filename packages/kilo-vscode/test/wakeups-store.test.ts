@@ -22,7 +22,7 @@ async function until(check: () => boolean, timeout = 2_000) {
 /**
  * `plugins` answers each inventory read of a Location that starts cold: the wakeup RPC is unavailable until a read
  * lists a plugin, as on a real server. Without it the Location has its plugins from the start. `unavailable` is a
- * server without the wakeup plugin.
+ * server without the wakeup plugin. `answers` gives each pending read its own answer, which can stay open.
  */
 function scene(
   input: {
@@ -31,6 +31,7 @@ function scene(
     unavailable?: boolean
     home?: string
     plugins?: (call: number) => unknown[]
+    answers?: (call: number) => Pending[] | Promise<Pending[]>
   } = {},
 ) {
   const handler: { current?: (event: { data: Pending }) => void } = {}
@@ -41,6 +42,7 @@ function scene(
     pending: async (value: { directory: string }, options: { location: { directory: string } }) => {
       calls.push({ directory: value.directory, location: options.location.directory })
       if (input.unavailable || !state.listed) throw { type: "rpc.unavailable", message: "no plugin" }
+      if (input.answers) return { sessions: await input.answers(calls.length) }
       return { sessions: input.sessions ?? [] }
     },
     events: {
@@ -135,6 +137,71 @@ describe("wakeup store", () => {
     await tick()
     expect(app.value.scheduled("ses_a")).toBe(false)
     app.dispose()
+  })
+
+  test("an answer of a dropped connection does not replace the reseed of the next one", async () => {
+    const first = Promise.withResolvers<Pending[]>()
+    const app = scene({ answers: (call) => (call === 1 ? first.promise : []) })
+    try {
+      await tick()
+      app.connect(false)
+      app.connect(true)
+      await until(() => app.calls.length === 2)
+      await tick()
+      expect(app.value.scheduled("ses_a")).toBe(false)
+
+      // The first read answers late, with the wakeup that was cancelled while the connection was down.
+      first.resolve([{ sessionID: "ses_a", directory: "/repo", pending: 1, dueAt: Date.now() + 60_000 }])
+      await tick()
+      expect(app.value.scheduled("ses_a")).toBe(false)
+    } finally {
+      app.dispose()
+    }
+  })
+
+  test("a changed event that arrives during the seed read outlives its older snapshot", async () => {
+    const due = Date.now() + 60_000
+    const first = Promise.withResolvers<Pending[]>()
+    const app = scene({ answers: () => first.promise })
+    try {
+      await tick()
+      // ses_a is scheduled and ses_b is cancelled while the read is open; its snapshot predates both.
+      app.emit({ sessionID: "ses_a", directory: "/repo", pending: 1, dueAt: due })
+      app.emit({ sessionID: "ses_b", directory: "/repo", pending: 0 })
+      first.resolve([
+        { sessionID: "ses_b", directory: "/repo", pending: 1, dueAt: due },
+        { sessionID: "ses_c", directory: "/repo", pending: 1, dueAt: due },
+      ])
+      await tick()
+      expect(app.value.scheduled("ses_a")).toBe(true)
+      expect(app.value.scheduled("ses_b")).toBe(false)
+      // A session without an event keeps the state of the snapshot.
+      expect(app.value.scheduled("ses_c")).toBe(true)
+    } finally {
+      app.dispose()
+    }
+  })
+
+  test("an event of one connection does not outlive the reseed of the next one", async () => {
+    const first = Promise.withResolvers<Pending[]>()
+    const app = scene({ answers: (call) => (call === 1 ? first.promise : []) })
+    try {
+      await tick()
+      app.emit({ sessionID: "ses_a", directory: "/repo", pending: 1, dueAt: Date.now() + 60_000 })
+      expect(app.value.scheduled("ses_a")).toBe(true)
+
+      // The wakeup is cancelled while the connection is down, so the reseed is the newer state.
+      app.connect(false)
+      app.connect(true)
+      await until(() => app.calls.length === 2)
+      await tick()
+      expect(app.value.scheduled("ses_a")).toBe(false)
+      first.resolve([])
+      await tick()
+      expect(app.value.scheduled("ses_a")).toBe(false)
+    } finally {
+      app.dispose()
+    }
   })
 
   test("a directory added later is seeded", async () => {

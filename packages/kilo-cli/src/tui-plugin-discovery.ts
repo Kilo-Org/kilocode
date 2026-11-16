@@ -1,3 +1,4 @@
+// kilo_mirror: packages/tui/src/plugin/discovery.ts
 // Kilo: mirror of packages/tui/src/plugin/discovery.ts, which the TUI and `plugin list` use to find local plugins.
 // Upstream always lists the project root's `.opencode/plugins`; under the Kilo host it is the plugins directory of
 // Kilo's project config directory. ./mirrors loads this file in place of the upstream one. Keep it in step with the

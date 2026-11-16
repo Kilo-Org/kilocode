@@ -662,8 +662,6 @@ export const dict = {
 
   "common.retry": "Prøv igjen",
   "common.refresh": "Oppdater",
-  "common.reload": "Last inn på nytt",
-  "common.reloadDescription": "Last inn konfigurasjon, ferdigheter, agenter og kommandoer fra disk på nytt",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke pålogget",
