@@ -44,6 +44,18 @@ export namespace KiloCompactionChunks {
     return error?.name === "ContentFilterError"
   }
 
+  // A content-filtered response is never a usable summary, even if it has text.
+  export function refuse(input: { message: MessageV2.Assistant; session: Pick<Session.Interface, "updateMessage"> }) {
+    return Effect.gen(function* () {
+      if (input.message.finish !== "content-filter" || input.message.error) return false
+      input.message.error = filtered()
+      input.message.finish = "error"
+      input.message.time.completed = Date.now()
+      yield* input.session.updateMessage(input.message)
+      return true
+    })
+  }
+
   export function incomplete(
     error: MessageV2.Assistant["error"],
   ): error is Extract<NonNullable<MessageV2.Assistant["error"]>, { name: "APIError" }> {
@@ -140,6 +152,11 @@ export namespace KiloCompactionChunks {
       const size = budget({ cfg: input.cfg, model: input.model, outputTokenMax: input.outputTokenMax })
       if (!(yield* large({ messages: chunk.messages, model: input.model, size }))) return input.replay
       const result = yield* summarize({ ...input, chunk, total: 1 })
+      // A blocked replay summary stops compaction instead of replaying the oversized request.
+      if (blocked(result.error)) {
+        yield* fail(input, result)
+        return undefined
+      }
       if (result.result !== "continue" || !result.output) return input.replay
       return {
         info: input.replay.info,
@@ -411,6 +428,7 @@ export namespace KiloCompactionChunks {
         (result.error?.name === "APIError" && result.error.data.message === TRUNCATED_SUMMARY)
       )
         return result
+      if (blocked(result.error)) return result
       if (input.depth >= DEPTH || input.summaries.length <= 1) return result
 
       const size = Math.ceil(input.summaries.length / 2)

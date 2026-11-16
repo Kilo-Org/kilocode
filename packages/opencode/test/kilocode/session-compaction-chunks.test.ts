@@ -1,5 +1,5 @@
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import fs from "fs/promises"
 import os from "os"
@@ -31,7 +31,8 @@ import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
-import { tmpdir } from "../fixture/fixture"
+import { tmpdir, TestInstance } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
@@ -140,8 +141,14 @@ async function assistant(sessionID: SessionID, parentID: MessageID, root: string
 
 function llm() {
   const queue: Array<Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)> = []
+  let count = 0
 
   return {
+    calls: () => count,
+    clear() {
+      queue.length = 0
+      count = 0
+    },
     push(stream: Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)) {
       queue.push(stream)
     },
@@ -149,6 +156,7 @@ function llm() {
       LLM.Service,
       LLM.Service.of({
         stream: (input) => {
+          count++
           const item = queue.shift() ?? Stream.empty
           const stream = typeof item === "function" ? item(input) : item
           return stream.pipe(Stream.mapEffect((event) => Effect.succeed(event)))
@@ -321,34 +329,128 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false, trun
   })
 }
 
-function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
+function liveLayer(layer: Layer.Layer<LLM.Service>, context = 10_000) {
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context, output: 1_000 } })
-  return ManagedRuntime.make(
-    LayerNode.compile(
-      LayerNode.group([
-        SessionCompaction.node,
-        SessionProcessorModule.SessionProcessor.node,
-        SessionNs.node,
-        SessionProjector.node,
-        Bus.node,
-        EventV2Bridge.node,
-        SessionStatus.node,
-      ]),
+  return LayerNode.compile(
+    LayerNode.group([
+      SessionCompaction.node,
+      SessionProcessorModule.SessionProcessor.node,
+      SessionNs.node,
+      SessionProjector.node,
+      Bus.node,
+      EventV2Bridge.node,
+      SessionStatus.node,
+    ]),
+    [
+      [SessionSummary.node, summary],
+      [Provider.node, ProviderTest.fake({ model }).layer],
+      [LLM.node, layer],
+      [RuntimeFlags.node, RuntimeFlags.layer()],
       [
-        [SessionSummary.node, summary],
-        [Provider.node, ProviderTest.fake({ model }).layer],
-        [LLM.node, layer],
-        [RuntimeFlags.node, RuntimeFlags.layer()],
-        [
-          Config.node,
-          Layer.mock(Config.Service)({
-            get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
-            directories: () => Effect.succeed([]),
-          }),
-        ],
+        Config.node,
+        Layer.mock(Config.Service)({
+          get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
+          directories: () => Effect.succeed([]),
+        }),
       ],
-    ),
+    ],
   )
+}
+
+function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
+  return ManagedRuntime.make(liveLayer(layer, context))
+}
+
+const stub = llm()
+const it = testEffect(liveLayer(stub.layer))
+
+const addUser = (sessionID: SessionID, text: string) =>
+  Effect.gen(function* () {
+    const ssn = yield* SessionNs.Service
+    const msg = yield* ssn.updateMessage({
+      id: MessageID.ascending(),
+      role: "user",
+      sessionID,
+      agent: "build",
+      model: ref,
+      time: { created: Date.now() },
+    })
+    yield* ssn.updatePart({ id: PartID.ascending(), messageID: msg.id, sessionID, type: "text", text })
+    return msg
+  })
+
+const addAssistant = (sessionID: SessionID, parentID: MessageID, root: string, text: string) =>
+  Effect.gen(function* () {
+    const ssn = yield* SessionNs.Service
+    const msg = yield* ssn.updateMessage({
+      id: MessageID.ascending(),
+      role: "assistant",
+      sessionID,
+      mode: "build",
+      agent: "build",
+      path: { cwd: root, root },
+      cost: 0,
+      tokens: { output: 0, input: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      modelID,
+      providerID,
+      parentID,
+      time: { created: Date.now() },
+      finish: "stop",
+    })
+    yield* ssn.updatePart({ id: PartID.ascending(), messageID: msg.id, sessionID, type: "text", text })
+    return msg
+  })
+
+type Outcome = {
+  result: "continue" | "stop"
+  summary: ((MessageV2.WithParts["info"] & { role: "assistant" }) & { parts: MessageV2.Part[] }) | undefined
+  errors: Array<typeof SessionNs.Event.Error.data.Type>
+  all: MessageV2.WithParts[]
+}
+
+// Seeds a session, creates a compaction request, runs it, and collects the outcome.
+function compact(input: {
+  auto: boolean
+  overflow?: boolean
+  seed: (dir: string, sessionID: SessionID) => Effect.Effect<unknown, never, SessionNs.Service>
+}) {
+  return Effect.gen(function* () {
+    const test = yield* TestInstance
+    const ssn = yield* SessionNs.Service
+    const events = yield* EventV2Bridge.Service
+    const session = yield* ssn.create({})
+    yield* input.seed(test.directory, session.id)
+    yield* KiloSessionCompaction.create({
+      session: ssn,
+      sessionID: session.id,
+      agent: "build",
+      model: ref,
+      auto: input.auto,
+      overflow: input.overflow,
+    })
+    const errors: Outcome["errors"] = []
+    const off = yield* events.listen((evt) => {
+      if (evt.type !== SessionNs.Event.Error.type) return Effect.void
+      const data = evt.data as typeof SessionNs.Event.Error.data.Type
+      if (data.sessionID === session.id) errors.push(data)
+      return Effect.void
+    })
+    yield* Effect.addFinalizer(() => off)
+    const msgs = yield* ssn.messages({ sessionID: session.id })
+    const parent = msgs.at(-1)?.info.id
+    expect(parent).toBeTruthy()
+    const result = yield* SessionCompaction.use.process({
+      parentID: parent!,
+      messages: msgs,
+      sessionID: session.id,
+      auto: input.auto,
+      overflow: input.overflow,
+    })
+    const all = yield* ssn.messages({ sessionID: session.id })
+    const found = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
+    const summary = found?.info.role === "assistant" ? { ...found.info, parts: found.parts } : undefined
+    return { result, summary, errors, all } satisfies Outcome
+  })
 }
 
 afterEach(() => {
@@ -864,67 +966,90 @@ describe("KiloCompactionChunks", () => {
     })
   }, 30_000)
 
-  for (const text of [undefined, "partial summary"]) {
-    test(`reports a content-filtered compaction response as ContentFilterError${text ? " even with text" : ""}`, async () => {
-      const stub = llm()
-      stub.push(filteredReply(text))
+  describe("content filter", () => {
+    beforeEach(() => stub.clear())
 
-      await using tmp = await tmpdir()
-      await provideTestInstance({
-        directory: tmp.path,
-        fn: async () => {
-          const session = await svc.create({})
-          const old = await user(session.id, "old context")
-          await assistant(session.id, old.id, tmp.path, "old reply")
-          await user(session.id, "latest request")
-          await Effect.runPromise(
-            KiloSessionCompaction.create({
-              session: store,
-              sessionID: session.id,
-              agent: "build",
-              model: ref,
-              auto: true,
-            }),
-          )
+    const big = (label: string) => `${label} ${"x".repeat(20_000)}`
 
-          const rt = liveRuntime(stub.layer)
-          try {
-            const errors: Array<typeof SessionNs.Event.Error.data.Type> = []
-            const off = await rt.runPromise(
-              EventV2Bridge.Service.use((svc) =>
-                svc.listen((evt) => {
-                  if (evt.type !== SessionNs.Event.Error.type) return Effect.void
-                  const data = evt.data as typeof SessionNs.Event.Error.data.Type
-                  if (data.sessionID === session.id) errors.push(data)
-                  return Effect.void
-                }),
-              ),
-            )
-            const msgs = await svc.messages({ sessionID: session.id })
-            const parent = msgs.at(-1)?.info.id
-            expect(parent).toBeTruthy()
-            const result = await rt.runPromise(
-              SessionCompaction.Service.use((svc) =>
-                svc.process({ parentID: parent!, messages: msgs, sessionID: session.id, auto: true }),
-              ),
-            )
-            await rt.runPromise(off)
-
-            const all = await svc.messages({ sessionID: session.id })
-            const summary = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
-            expect(result).toBe("stop")
-            expect(summary?.info.role).toBe("assistant")
-            if (summary?.info.role !== "assistant") return
-            expect(summary.info.finish).toBe("error")
-            expect(summary.info.error).toEqual(KiloCompactionChunks.filtered())
-            expect(summary.info.error?.name).toBe("ContentFilterError")
-            expect(errors).toHaveLength(1)
-            expect(errors[0]?.error?.name).toBe("ContentFilterError")
-          } finally {
-            await rt.dispose()
-          }
-        },
+    const seedOld = (dir: string, sessionID: SessionID) =>
+      Effect.gen(function* () {
+        const old = yield* addUser(sessionID, "old context")
+        yield* addAssistant(sessionID, old.id, dir, "old reply")
+        yield* addUser(sessionID, "latest request")
       })
-    })
-  }
+    const seedOversized = (_dir: string, sessionID: SessionID) => addUser(sessionID, big("single request").repeat(4))
+    const seedChunks = (dir: string, sessionID: SessionID) =>
+      Effect.gen(function* () {
+        for (const label of ["first", "second", "third", "fourth"]) {
+          const msg = yield* addUser(sessionID, big(label))
+          yield* addAssistant(sessionID, msg.id, dir, big(`${label} reply`))
+        }
+        yield* addUser(sessionID, "latest request")
+      })
+
+    const expectBlocked = (out: Outcome) => {
+      expect(out.result).toBe("stop")
+      expect(out.summary?.finish).toBe("error")
+      expect(out.summary?.error).toEqual(KiloCompactionChunks.filtered())
+      expect(out.errors).toHaveLength(1)
+      expect(out.errors[0]?.error?.name).toBe("ContentFilterError")
+    }
+
+    for (const text of [undefined, "partial summary"]) {
+      it.instance(`reports a filtered summary response as ContentFilterError${text ? " even with text" : ""}`, () =>
+        Effect.gen(function* () {
+          stub.push(filteredReply(text))
+          const out = yield* compact({ auto: true, seed: seedOld })
+          expectBlocked(out)
+          expect(stub.calls()).toBe(1)
+        }),
+      )
+
+      it.instance(`reports a filtered chunk worker as ContentFilterError${text ? " even with text" : ""}`, () =>
+        Effect.gen(function* () {
+          stub.push(filteredReply(text))
+          const out = yield* compact({ auto: false, seed: seedOversized })
+          expectBlocked(out)
+          expect(stub.calls()).toBe(1)
+        }),
+      )
+    }
+
+    it.instance("stops reduce on a filtered result instead of splitting into smaller calls", () =>
+      Effect.gen(function* () {
+        let blocked = false
+        for (let i = 0; i < 12; i++)
+          stub.push((input) => {
+            if (!JSON.stringify(input.messages).includes("<partial-summary") || blocked) return reply("partial")(input)
+            blocked = true
+            return filteredReply()()
+          })
+        const out = yield* compact({ auto: false, seed: seedChunks })
+        expect(blocked).toBe(true)
+        expectBlocked(out)
+        expect(out.summary?.parts.filter((part) => part.type === "text")).toEqual([])
+      }),
+    )
+
+    it.instance("stops before creating a replay message when the replay summary is filtered", () =>
+      Effect.gen(function* () {
+        stub.push(reply("history summary"))
+        stub.push(filteredReply())
+        const out = yield* compact({
+          auto: true,
+          overflow: true,
+          seed: (dir, sessionID) =>
+            Effect.gen(function* () {
+              const old = yield* addUser(sessionID, "old context")
+              yield* addAssistant(sessionID, old.id, dir, "old reply")
+              yield* addUser(sessionID, "large replay " + "x".repeat(40_000))
+            }),
+        })
+        expectBlocked(out)
+        expect(stub.calls()).toBe(2)
+        const last = out.all.at(-1)
+        expect(last?.info.role === "assistant" && last.info.summary).toBe(true)
+      }),
+    )
+  })
 })

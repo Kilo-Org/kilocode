@@ -570,17 +570,12 @@ const layer = Layer.effect(
         return "stop"
       }
 
+      // kilocode_change start - a content-filtered response fails without replacing the session
+      if (fallback === "continue" && (yield* KiloCompactionChunks.refuse({ message: processor.message, session })))
+        fallback = "stop"
+      // kilocode_change end
+
       // kilocode_change start - an empty worker response fails retryably and never replaces the session
-      if (fallback === "continue") {
-        // A content-filtered response is not a usable summary, even if it has text.
-        if (processor.message.finish === "content-filter" && !processor.message.error) {
-          processor.message.error = KiloCompactionChunks.filtered()
-          processor.message.finish = "error"
-          processor.message.time.completed = Date.now()
-          yield* session.updateMessage(processor.message)
-          fallback = "stop"
-        }
-      }
       if (fallback === "continue") {
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
         const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
@@ -618,7 +613,7 @@ const layer = Layer.effect(
         // kilocode_change end
         if (replay) {
           // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
-          replay = yield* KiloCompactionChunks.replay({
+          const next = yield* KiloCompactionChunks.replay({
             processors,
             session,
             user: userMessage,
@@ -634,6 +629,15 @@ const layer = Layer.effect(
             updatePart: session.updatePart,
             replay,
           }).pipe(Effect.provideService(Database.Service, database)) // kilocode_change
+          if (!next) {
+            yield* Effect.logError("compaction failed", {
+              "session.id": input.sessionID,
+              error: processor.message.error,
+            })
+            yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: processor.message.error })
+            return "stop"
+          }
+          replay = next
           // kilocode_change end
           const original = replay.info
           const replayMsg = yield* session.updateMessage({
