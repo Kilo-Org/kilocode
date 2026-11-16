@@ -21,7 +21,8 @@ import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
-import { stray, unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
+import { recover } from "@/kilocode/tool/shell" // kilocode_change
 import { pattern } from "@/kilocode/tool/shell-pattern" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -381,21 +382,16 @@ export const ShellPermission = Effect.gen(function* () {
     }
     const kind = ShellID.toKind(Shell.name(shell))
 
-    // kilocode_change start - join tails split off by the grammar (#15938); path scans still cover every node
-    const joined = stray(root)
     const nodes = commands(root)
-    const covered = (node: Node) =>
-      joined.some((item) => item.command.id === node.id || item.error.id === node.parent?.id)
-    const kept = nodes.filter((node) => !covered(node))
-    // kilocode_change end
+    const recovered = recover(root, nodes) // kilocode_change - join tails split off by the grammar (#15938)
+    const kept = recovered.kept // kilocode_change
     if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
     if (kept.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
       scan.access = "unknown"
     }
 
     for (const node of nodes) {
-      const tail = joined.find((item) => item.error.id === node.parent?.id) // kilocode_change
-      const command = [...parts(node), ...(tail ? parts(tail.command) : [])] // kilocode_change - scan the joined tail as arguments
+      const command = [...parts(node), ...recovered.tail(node).flatMap(parts)] // kilocode_change - scan the joined tail as arguments
       const tokens = command.map((item) => item.text)
       const cmd = ps || kind === "cmd" ? tokens[0]?.toLowerCase() : tokens[0]
 
@@ -411,7 +407,7 @@ export const ShellPermission = Effect.gen(function* () {
         }
       }
 
-      if (tokens.length && (!cmd || !CWD.has(cmd)) && !covered(node)) {
+      if (tokens.length && (!cmd || !CWD.has(cmd)) && !recovered.covered(node)) {
         // kilocode_change - the joined pattern covers it
         scan.patterns.add(pattern(node, kind, source(node))) // kilocode_change - mask inert operators (quoted, /dev/null) for read-only rules
         scan.always.add(BashArity.prefix(tokens).join(" ") + " *")

@@ -26,7 +26,15 @@ import { Plugin } from "../../../src/plugin"
 import { Truncate } from "../../../src/tool/truncate"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { SessionID, MessageID } from "../../../src/session/schema"
-import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../../fixture/fixture"
+import {
+  disposeAllInstances,
+  provideInstance,
+  TestInstance,
+  testInstanceStoreLayer,
+  tmpdir,
+  tmpdirScoped,
+} from "../../fixture/fixture"
+import { testEffect } from "../../lib/effect"
 import { afterEach } from "bun:test"
 
 const layer = Layer.mergeAll(
@@ -35,9 +43,11 @@ const layer = Layer.mergeAll(
   testInstanceStoreLayer,
 )
 
+const it = testEffect(layer)
+
 type ScanRequest = Omit<PermissionV1.Request, "id" | "sessionID" | "tool">
 
-async function scan(dir: string, command: string, shell: string, sandbox = false) {
+function scanEffect(dir: string, command: string, shell: string, sandbox = false) {
   const requests: ScanRequest[] = []
   const ctx = {
     sessionID: SessionID.make("ses_test"),
@@ -52,15 +62,15 @@ async function scan(dir: string, command: string, shell: string, sandbox = false
         requests.push(req)
       }),
   }
-  await Effect.runPromise(
-    provideInstance(dir)(
-      Effect.gen(function* () {
-        const permission = yield* ShellPermission
-        yield* permission.ask(ctx, { command, cwd: dir, shell, description: "test", escalate: sandbox })
-      }),
-    ).pipe(Effect.provide(layer)),
-  )
-  return requests
+  return Effect.gen(function* () {
+    const permission = yield* ShellPermission
+    yield* permission.ask(ctx, { command, cwd: dir, shell, description: "test", escalate: sandbox })
+    return requests
+  })
+}
+
+async function scan(dir: string, command: string, shell: string, sandbox = false) {
+  return Effect.runPromise(provideInstance(dir)(scanEffect(dir, command, shell, sandbox)).pipe(Effect.provide(layer)))
 }
 
 function patterns(requests: ScanRequest[]) {
@@ -181,61 +191,73 @@ describe("shell permission scanner joins tails split off by dot-prefixed tokens"
   })
   const decide = (pattern: string) => Permission.evaluate("bash", pattern, allow).action
 
-  test("pwsh: '--' followed by a dot token stays one command", async () => {
-    await using tmp = await tmpdir()
-    for (const command of ["git ls-files -- .github/x", "Write-Output -- .agents/README.md"]) {
-      const found = patterns(await scan(tmp.path, command, "pwsh"))
-      expect(found).toEqual([command])
+  it.instance("pwsh: '--' followed by a dot token stays one command", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      for (const command of ["git ls-files -- .github/x", "Write-Output -- .agents/README.md"]) {
+        const found = patterns(yield* scanEffect(test.directory, command, "pwsh"))
+        expect(found).toEqual([command])
+        expect(found.map(decide)).toEqual(["allow"])
+      }
+    }),
+  )
+
+  it.instance("pwsh: ', ' followed by a dot token stays one command", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const found = patterns(yield* scanEffect(test.directory, "Get-FileHash a, .gitattributes", "pwsh"))
+      expect(found).toEqual(["Get-FileHash a, .gitattributes"])
       expect(found.map(decide)).toEqual(["allow"])
-    }
-  })
+    }),
+  )
 
-  test("pwsh: ', ' followed by a dot token stays one command", async () => {
-    await using tmp = await tmpdir()
-    const found = patterns(await scan(tmp.path, "Get-FileHash a, .gitattributes", "pwsh"))
-    expect(found).toEqual(["Get-FileHash a, .gitattributes"])
-    expect(found.map(decide)).toEqual(["allow"])
-  })
+  it.instance("pwsh: deny rules on later arguments see the dot-prefixed token", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const rules = Permission.fromConfig({ bash: { "*": "allow", "git push * -f*": "deny" } })
+      const found = patterns(yield* scanEffect(test.directory, "git push origin -- .x -f", "pwsh"))
+      expect(found.map((pattern) => Permission.evaluate("bash", pattern, rules).action)).toContain("deny")
+    }),
+  )
 
-  test("pwsh: deny rules on later arguments see the dot-prefixed token", async () => {
-    await using tmp = await tmpdir()
-    const rules = Permission.fromConfig({ bash: { "*": "allow", "git push * -f*": "deny" } })
-    const found = patterns(await scan(tmp.path, "git push origin -- .x -f", "pwsh"))
-    expect(found.map((pattern) => Permission.evaluate("bash", pattern, rules).action)).toContain("deny")
-  })
+  it.instance("pwsh: the joined tail is still scanned for external directories", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const outside = path.dirname(test.directory)
+      const command = "Remove-Item a, ../outside/secret"
+      const requests = yield* scanEffect(test.directory, command, "pwsh")
+      const external = requests.find((req) => req.permission === "external_directory")
+      expect(external).toBeDefined()
+      expect(external!.patterns).toContain(FSUtil.normalizePathPattern(path.join(outside, "outside", "*")))
+      expect(patterns(requests)).toEqual([command])
+    }),
+  )
 
-  test("pwsh: the joined tail is still scanned for external directories", async () => {
-    await using tmp = await tmpdir()
-    const outside = path.dirname(tmp.path)
-    const command = "Remove-Item a, ../outside/secret"
-    const requests = await scan(tmp.path, command, "pwsh")
-    const external = requests.find((req) => req.permission === "external_directory")
-    expect(external).toBeDefined()
-    expect(external!.patterns).toContain(FSUtil.normalizePathPattern(path.join(outside, "outside", "*")))
-    expect(patterns(requests)).toEqual([command])
-  })
+  it.instance("pwsh: a recovered head keeps its external directory check", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const outside = yield* tmpdirScoped()
+      const file = path.join(outside, "secret.txt").replaceAll("\\", "/")
+      const command = `Get-Content ${file}, .local.txt`
+      const requests = yield* scanEffect(test.directory, command, "pwsh")
+      const external = requests.find((req) => req.permission === "external_directory")
+      expect(external).toBeDefined()
+      expect(external!.patterns).toContain(FSUtil.normalizePathPattern(path.join(outside, "*")))
+      expect(patterns(requests)).toEqual([command])
+    }),
+  )
 
-  test("pwsh: a recovered head keeps its external directory check", async () => {
-    await using tmp = await tmpdir()
-    const outside = await tmpdir()
-    const file = path.join(outside.path, "secret.txt").replaceAll("\\", "/")
-    const command = `Get-Content ${file}, .local.txt`
-    const requests = await scan(tmp.path, command, "pwsh")
-    const external = requests.find((req) => req.permission === "external_directory")
-    expect(external).toBeDefined()
-    expect(external!.patterns).toContain(FSUtil.normalizePathPattern(path.join(outside.path, "*")))
-    expect(patterns(requests)).toEqual([command])
-  })
-
-  test("pwsh: a dot-source on a new statement is still its own command", async () => {
-    await using tmp = await tmpdir()
-    const semi = patterns(await scan(tmp.path, "git log -- .x; . ./y", "pwsh"))
-    expect(semi).toContain("git log -- .x")
-    expect(semi).toContain(". ./y")
-    const line = patterns(await scan(tmp.path, "git log --\n. ./x", "pwsh"))
-    expect(line).toContain(". ./x")
-    expect(patterns(await scan(tmp.path, ". ./script.ps1", "pwsh"))).toEqual([". ./script.ps1"])
-  })
+  it.instance("pwsh: a dot-source on a new statement is still its own command", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const semi = patterns(yield* scanEffect(test.directory, "git log -- .x; . ./y", "pwsh"))
+      expect(semi).toContain("git log -- .x")
+      expect(semi).toContain(". ./y")
+      const line = patterns(yield* scanEffect(test.directory, "git log --\n. ./x", "pwsh"))
+      expect(line).toContain(". ./x")
+      expect(patterns(yield* scanEffect(test.directory, ". ./script.ps1", "pwsh"))).toEqual([". ./script.ps1"])
+    }),
+  )
 })
 
 const execLayer = Layer.mergeAll(
