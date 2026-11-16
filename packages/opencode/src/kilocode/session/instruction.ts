@@ -7,10 +7,11 @@ import { KilocodeMarkdown } from "../config/markdown"
 const log = Log.create({ service: "instruction" })
 
 export namespace KilocodeInstruction {
-  // Instructions are rebuilt for every prompt, so report each skipped entry once per process.
-  const warned = new Set<string>()
+  // Instructions are rebuilt for every prompt, so report each skipped entry once. The caller owns the set
+  // (per-instance state) so it is released with the project instead of growing for the process lifetime.
+  export type Warned = Set<string>
 
-  function warn(key: string, extra: Record<string, string>) {
+  function warn(warned: Warned, key: string, extra: Record<string, string>) {
     if (warned.has(key)) return
     warned.add(key)
     log.warn("instruction file skipped", extra)
@@ -33,14 +34,13 @@ export namespace KilocodeInstruction {
   }
 
   // Same as read(), but a failure yields "" and is logged instead of dropping the file silently.
-  export async function readOrWarn(item: string, options: KilocodeMarkdown.Options) {
+  export async function readOrWarn(item: string, options: KilocodeMarkdown.Options, warned: Warned) {
     return read(item, options).catch((err: unknown) => {
       const blocked =
-        ConfigVariableGuard.isBlocked(err) ||
-        (InvalidError.isInstance(err) && ConfigVariableGuard.isBlocked(err.cause))
-      warn(`read:${item}`, {
+        ConfigVariableGuard.isBlocked(err) || (InvalidError.isInstance(err) && ConfigVariableGuard.isBlocked(err.cause))
+      warn(warned, `read:${item}`, {
         path: item,
-        reason: blocked ? "blocked: outside project config scope" : "unreadable",
+        reason: blocked ? "blocked" : "unreadable",
         detail: detail(err),
       })
       return ""
@@ -49,10 +49,16 @@ export namespace KilocodeInstruction {
 
   // A configured instructions entry that resolves to no file. Entries are expanded config values and may
   // hold secrets ({env:...}, {file:...}), so log only the config source and a short fingerprint, never the value.
-  export function unmatched(entry: string, source: string, dir: string) {
+  export function unmatched(entry: string, source: string, dir: string, warned: Warned) {
     const id = createHash("sha256").update(entry).digest("hex").slice(0, 8)
     // When no origin was recorded the caller falls back to the entry itself as the source, so never echo it.
     const origin = source === entry ? "unknown" : source
-    warn(`unmatched:${dir}:${entry}`, { source: origin, entry: `sha256:${id}`, directory: dir, reason: "no matching file" })
+    // Key on the logged fingerprint so the raw entry is not retained.
+    warn(warned, `unmatched:${id}`, {
+      source: origin,
+      entry: `sha256:${id}`,
+      directory: dir,
+      reason: "no matching file",
+    })
   }
 }

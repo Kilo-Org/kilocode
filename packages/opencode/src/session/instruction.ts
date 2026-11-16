@@ -82,6 +82,7 @@ const layer: Layer.Layer<
         Effect.succeed({
           // Track which instruction files have already been attached for a given assistant message.
           claims: new Map<MessageID, Set<string>>(),
+          warned: new Set<string>(), // kilocode_change - skipped-instruction warnings are deduped per instance
         }),
       ),
     )
@@ -111,7 +112,8 @@ const layer: Layer.Layer<
 
     const read = Effect.fnUntraced(function* (filepath: string, origin?: KilocodeMarkdown.Source) {
       const opts = yield* options(filepath, origin)
-      return yield* Effect.promise(() => KilocodeInstruction.readOrWarn(filepath, opts))
+      const s = yield* InstanceState.get(state)
+      return yield* Effect.promise(() => KilocodeInstruction.readOrWarn(filepath, opts, s.warned))
     })
     // kilocode_change end
 
@@ -179,7 +181,12 @@ const layer: Layer.Layer<
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
           matches.forEach((item) => add(item, origin))
-          if (matches.length === 0) KilocodeInstruction.unmatched(raw, declared.source, root) // kilocode_change
+          // kilocode_change start
+          if (matches.length === 0) {
+            const s = yield* InstanceState.get(state)
+            KilocodeInstruction.unmatched(raw, declared.source, root, s.warned)
+          }
+          // kilocode_change end
         }
       }
 

@@ -17,7 +17,12 @@ import { Config } from "../../src/config/config"
 import * as Log from "@opencode-ai/core/util/log"
 
 const it = testEffect(
-  Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), NodeFileSystem.layer, RuntimeFlags.layer(), testInstanceStoreLayer),
+  Layer.mergeAll(
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    NodeFileSystem.layer,
+    RuntimeFlags.layer(),
+    testInstanceStoreLayer,
+  ),
 )
 
 const configLayer = TestConfig.layer()
@@ -126,16 +131,22 @@ describe("Instruction.systemPaths KILO_CONFIG_DIR profile fallback", () => {
   )
 })
 
-const withInstructions = (
-  global: Partial<Global.Interface>,
-  instructions: string[],
-  origins?: Record<string, { trusted: boolean; source: string }>,
-) =>
+const withInstructions =
+  (
+    global: Partial<Global.Interface>,
+    instructions: string[],
+    origins?: Record<string, { trusted: boolean; source: string }>,
+  ) =>
   <A, E, R>(self: Effect.Effect<A, E, R>) =>
     self.pipe(
       Effect.provide(
         AppNodeBuilder.build(Instruction.node, [
-          [Config.node, TestConfig.layer({ get: () => Effect.succeed({ instructions, ...(origins ? { instruction_origins: origins } : {}) }) })],
+          [
+            Config.node,
+            TestConfig.layer({
+              get: () => Effect.succeed({ instructions, ...(origins ? { instruction_origins: origins } : {}) }),
+            }),
+          ],
           [Global.node, Global.layerWith(global)],
         ]),
       ),
@@ -165,14 +176,10 @@ describe("Instruction same-basename files", () => {
         ])
       }).pipe(
         provideInstance(project),
-        withInstructions(
-          { home, config: home },
-          ["~/.agents/memory/MEMORY.md", ".agents/memory/MEMORY.md"],
-          {
-            "~/.agents/memory/MEMORY.md": { trusted: true, source: "global" },
-            ".agents/memory/MEMORY.md": { trusted: false, source: "project" },
-          },
-        ),
+        withInstructions({ home, config: home }, ["~/.agents/memory/MEMORY.md", ".agents/memory/MEMORY.md"], {
+          "~/.agents/memory/MEMORY.md": { trusted: true, source: "global" },
+          ".agents/memory/MEMORY.md": { trusted: false, source: "project" },
+        }),
         withConfigDir(undefined),
       )
     }),
@@ -202,7 +209,7 @@ describe("Instruction skipped file warnings", () => {
         {
           message: "instruction file skipped",
           path: file,
-          reason: "blocked: outside project config scope",
+          reason: "blocked",
           detail: expect.stringContaining("blocked file reference outside project config scope"),
         },
       ])
@@ -271,7 +278,11 @@ describe("Instruction skipped file warnings", () => {
       yield* Effect.gen(function* () {
         const svc = yield* Instruction.Service
         expect(yield* svc.system()).toStrictEqual([])
-      }).pipe(provideInstance(project), withInstructions({ home, config: home }, [secret], undefined), withConfigDir(undefined))
+      }).pipe(
+        provideInstance(project),
+        withInstructions({ home, config: home }, [secret], undefined),
+        withConfigDir(undefined),
+      )
 
       expect(logged.calls().length).toBe(1)
       expect(JSON.stringify(logged.calls())).not.toContain(secret)
@@ -309,16 +320,16 @@ describe("Instruction skipped file warnings", () => {
       const logged = warnings()
       yield* Effect.addFinalizer(() => Effect.sync(() => logged.spy.mockRestore()))
 
-      for (const project of [first, second, first]) {
-        yield* Effect.gen(function* () {
-          const svc = yield* Instruction.Service
-          yield* svc.system()
-        }).pipe(
-          provideInstance(project),
-          withInstructions({ home, config: home }, [entry], { [entry]: { trusted: false, source: "project" } }),
-          withConfigDir(undefined),
-        )
-      }
+      // One service instance serves both projects, so the dedupe state must be keyed per project.
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        for (const project of [first, second, first, second]) {
+          yield* svc.system().pipe(provideInstance(project))
+        }
+      }).pipe(
+        withInstructions({ home, config: home }, [entry], { [entry]: { trusted: false, source: "project" } }),
+        withConfigDir(undefined),
+      )
 
       expect(logged.calls().map((item) => item.directory)).toStrictEqual([first, second])
     }),
@@ -347,7 +358,7 @@ describe("Instruction skipped file warnings", () => {
         {
           message: "instruction file skipped",
           path: file,
-          reason: "blocked: outside project config scope",
+          reason: "blocked",
           detail: expect.stringContaining("blocked file reference outside project config scope"),
         },
       ])
