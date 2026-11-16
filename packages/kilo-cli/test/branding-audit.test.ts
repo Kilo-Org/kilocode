@@ -93,6 +93,8 @@ test("flags the opencode namespace named in prose in a non-intercepted asset", (
 test("audits the server, core and plugin packages, and Kilo's own plugins", async () => {
   const surface = await KiloBrandingAudit.surface()
   for (const { file } of branded) expect(surface).toContain(`packages/${file}`)
+  // A module the loader does not intercept: the scope is the whole package, not the three branded modules.
+  expect(surface).toContain("packages/server/src/auth.ts")
   // Core modules outside the OAuth pages and the prompt templates, the plugin package, and Kilo-owned plugin text.
   for (const file of [
     "core/src/tool/plugin/webfetch.ts",

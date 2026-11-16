@@ -52,8 +52,8 @@ export function createProjectWiring(opts: {
   selected: (target: SidebarTarget) => void
   /** Post an outbound message to the webview. */
   post: (message: AgentManagerOutMessage) => void
-  /** Route one session to a directory inside a project (override + project route). */
-  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => void
+  /** Route one session to a directory inside a project; false when the server could not move it. */
+  routeSession?: (projectId: string, sessionId: string, directory: string, generation: number) => Promise<boolean>
 }): ProjectWiring {
   const registry = new ProjectRegistry(
     { read: () => opts.host.readProjects(), write: (value) => opts.host.writeProjects(value) },

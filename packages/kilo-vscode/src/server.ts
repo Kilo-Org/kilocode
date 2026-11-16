@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto"
 import { existsSync, mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
+import { local } from "./local"
 import { launch } from "./process"
 import { dataPlans } from "./documents/document-reader"
 
@@ -15,6 +16,13 @@ const ARGS = ["serve", "--port", "0", "--stdio"]
 const TIMEOUT = 60_000
 const OUTPUT_LIMIT = 4096
 const RETRY = 10_000
+const IDENTITY = 5_000
+/** Attempts per printed URL: a transient failure must not discard the line the server just printed. */
+const VERIFY_ATTEMPTS = 2
+const VERIFY_RETRY = 500
+/** The stdio server binds a numeric loopback address; the credential goes only to these. */
+const LOOPBACK: ReadonlySet<string> = new Set(["127.0.0.1", "[::1]"])
+const JSON_TYPE = /^application\/(?:[\w.-]+\+)?json\b/i
 
 /** Variables that only the v1 CLI reads. */
 const V1_ONLY = [
@@ -130,15 +138,68 @@ export function indexingEnvironment(folders: number | undefined): Record<string,
   return folders && folders > 0 ? {} : { KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" }
 }
 
-/** The URL from the first complete JSON line `{"url":"http://127.0.0.1:<port>"}`. */
-export function parse(output: string) {
+/** Every complete URL line, in the order it was printed. */
+function candidates(output: string) {
   return output
     .split(/\r?\n/)
     .slice(0, -1)
     .map((line) => line.trim())
     .filter((line) => line.startsWith("{"))
     .map((line) => url(line))
-    .find((value) => value !== undefined)
+    .filter((value) => value !== undefined)
+}
+
+type Answer =
+  | { ok: true }
+  | { ok: false; failure: string; status?: number; json?: boolean }
+
+/**
+ * One GET of `/api/info` from the printed server with the given credential. The body is discarded: the credential this
+ * child alone was given is the identity, and an unverified server must not make the extension host buffer a document.
+ */
+async function call(target: URL, authorization: string): Promise<Answer> {
+  const response = await local(target, {
+    headers: { authorization },
+    signal: AbortSignal.timeout(IDENTITY),
+  }).catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))))
+  if (response instanceof Error) return { ok: false, failure: response.message }
+  const type = response.headers.get("content-type") ?? ""
+  const json = JSON_TYPE.test(type)
+  await response.body?.cancel().catch(() => undefined)
+  if (response.status !== 200 || !json)
+    return {
+      ok: false,
+      failure: `${target.pathname} returned ${response.status} (${type || "no content type"})`,
+      status: response.status,
+      json,
+    }
+  return { ok: true }
+}
+
+/**
+ * Confirms a printed URL is the server this extension started: it must refuse a wrong credential the way the Kilo
+ * server does, and accept the one only that child was given, as JSON. Returns why it does not, or undefined when it
+ * does.
+ */
+async function verify(url: string, authorization: string) {
+  const base = URL.canParse(url) ? new URL(url) : undefined
+  // The stdio server binds a plain numeric loopback address; a line naming anything else must not receive the
+  // credential.
+  if (!base || base.protocol !== "http:" || !LOOPBACK.has(base.hostname))
+    return `${url} did not answer as the Kilo server: not a loopback http address.`
+  const target = new URL("/api/info", base)
+  const wrong = `Basic ${Buffer.from("opencode:not-the-password").toString("base64")}`
+  // A local server that answers without the generated password is not the one this child started, even when it
+  // serves the same JSON document.
+  const probe = await call(target, wrong)
+  if (probe.ok) return `${url} did not answer as the Kilo server: /api/info accepted a wrong credential.`
+  // Only a server that refuses the credential the way the Kilo server does (a JSON 401) may receive the generated
+  // one. Any other answer is an unrelated service, and its request log would keep the header.
+  if (probe.status !== 401 || probe.json !== true)
+    return `${url} did not answer as the Kilo server: ${probe.failure}.`
+  const answer = await call(target, authorization)
+  if (!answer.ok) return `${url} did not answer as the Kilo server: ${answer.failure}.`
+  return undefined
 }
 
 export function start(input: {
@@ -150,6 +211,7 @@ export function start(input: {
   onExit?: (child: ChildProcess) => void
 }): Promise<Server> {
   const password = randomBytes(32).toString("hex")
+  const authorization = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
   mkdirSync(input.cwd, { recursive: true })
   const child = launch(input.command.cmd, input.command.args, {
     cwd: input.cwd,
@@ -165,12 +227,64 @@ export function start(input: {
     detached: process.platform !== "win32",
   })
   const ready = Promise.withResolvers<Server>()
-  const state = { output: "", errors: [] as string[], done: false, started: false }
+  const state = {
+    output: "",
+    errors: [] as string[],
+    done: false,
+    started: false,
+    verifying: false,
+    tried: new Set<string>(),
+    attempts: new Map<string, number>(),
+    seen: new Set<string>(),
+    retry: undefined as ReturnType<typeof setTimeout> | undefined,
+  }
   const fail = (message: string) => {
     if (state.done) return
     state.done = true
     clearTimeout(timer)
+    clearTimeout(state.retry)
     ready.reject(new Error([message, ...state.errors.slice(-20)].join("\n").trim()))
+  }
+  // A printed URL is used only once `/api/info` answers with the password this child alone was given. A line printed
+  // by anything else on stdout (a plugin or MCP server that logs one) names a server the webviews must not read: the
+  // client only reports an unreadable response, and both views keep it until the window reloads.
+  const identify = async () => {
+    if (state.done || state.verifying) return
+    const all = candidates(state.output)
+    const found = all.find((value) => !state.tried.has(value) && !state.seen.has(value))
+    if (found === undefined) {
+      // Every candidate of this pass failed. A transient failure must not discard the line the server printed, so
+      // retry the candidates that still have an attempt left; a later line starts the next pass at once.
+      if (!all.some((value) => !state.tried.has(value))) return
+      state.seen.clear()
+      clearTimeout(state.retry)
+      state.retry = setTimeout(() => {
+        if (state.done || state.verifying) return
+        void identify()
+      }, VERIFY_RETRY)
+      return
+    }
+    state.seen.add(found)
+    state.verifying = true
+    // A candidate that throws is a candidate that failed: releasing the guard lets a later line be read.
+    const failure = await verify(found, authorization).catch((error: unknown) => {
+      return `${found} did not answer as the Kilo server: ${error instanceof Error ? error.message : String(error)}`
+    })
+    state.verifying = false
+    if (state.done) return
+    if (failure !== undefined) {
+      // Another line may still name the server this child started; the start fails on exit or the timeout above.
+      const attempts = (state.attempts.get(found) ?? 0) + 1
+      state.attempts.set(found, attempts)
+      if (attempts >= VERIFY_ATTEMPTS) state.tried.add(found)
+      state.errors = [...state.errors.slice(-19), failure]
+      return void identify()
+    }
+    state.done = true
+    state.started = true
+    clearTimeout(timer)
+    clearTimeout(state.retry)
+    ready.resolve({ url: found, authorization, process: child })
   }
   const timer = setTimeout(() => {
     fail(`The Kilo server did not start within ${TIMEOUT / 1000} seconds.`)
@@ -179,16 +293,7 @@ export function start(input: {
 
   child.stdout?.on("data", (chunk: Buffer) => {
     state.output = (state.output + chunk.toString()).slice(-OUTPUT_LIMIT)
-    const found = parse(state.output)
-    if (!found || state.done) return
-    state.done = true
-    state.started = true
-    clearTimeout(timer)
-    ready.resolve({
-      url: found,
-      authorization: `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`,
-      process: child,
-    })
+    void identify()
   })
   child.stderr?.on("data", (chunk: Buffer) => {
     const text = chunk.toString()

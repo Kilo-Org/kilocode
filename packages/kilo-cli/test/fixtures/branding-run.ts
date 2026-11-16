@@ -129,6 +129,9 @@ export async function host(env: Record<string, string>, use: (url: string) => Pr
     stdout: "pipe",
     // A child that dies before it prints its URL shows why.
     stderr: "inherit",
+    // Below the 60 s test timeout: a child that hangs, or ignores the end of stdin, is killed, so the cleanup runs.
+    timeout: 50_000,
+    killSignal: "SIGKILL",
   })
   try {
     const reader = child.stdout.getReader()
