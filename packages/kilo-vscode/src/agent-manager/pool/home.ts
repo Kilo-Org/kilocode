@@ -19,10 +19,14 @@ import { sanitizeBranchName } from "../branch-name"
 import { pathKey } from "../project/paths"
 import { markNoIndex } from "../../util/spotlight"
 
-/** Per-user pool home next to the Kilo CLI data. Honors `XDG_DATA_HOME` and is never roaming on Windows. */
+/**
+ * Per-user pool home next to the kilo2 CLI data. Honors `XDG_DATA_HOME` and is never roaming on Windows. Kilo v1 keeps
+ * its own pool in `kilo/worktree-pool` and marks its slots with the extension host pid, which v2 shares when both
+ * extensions run in one window, so a shared home would let each extension adopt and remove the other's slots.
+ */
 export function poolHome(): string {
   const data = process.env.XDG_DATA_HOME?.trim() || path.join(os.homedir(), ".local", "share")
-  return path.join(data, "kilo", "worktree-pool")
+  return path.join(data, "kilo2", "worktree-pool")
 }
 
 /** Stable slot directory for one repository root. The readable prefix helps users who inspect disk usage. */

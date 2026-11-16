@@ -297,6 +297,27 @@ describe("createPanelData", () => {
     })
   })
 
+  // A worktree folder deleted on disk fails every load of its store. Once the folder is restored, the store clears the
+  // failure and loads its location again instead of keeping both until the panel reopens.
+  test("reloads a directory after its folder was restored", async () => {
+    requests.length = 0
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const store = panel.store(WORKTREE)
+      panel.show([WORKTREE])
+      const located = () => requests.filter((item) => item.path === "/api/location" && item.location === WORKTREE)
+      await until(() => located().length > 0 && store.failure() !== undefined)
+      const before = located().length
+
+      panel.reload(WORKTREE)
+      expect(store.failure()).toBeUndefined()
+      await until(() => located().length > before)
+      panel.reload(OTHER)
+      dispose()
+    })
+  })
+
   // The host sends a cycle shortcut as an action, which a dialog can consume. Without a dialog it must reach the
   // mounted views as the same command the sidebar receives, so a composer without a session still cycles its agent.
   test("dispatches a host command to the mounted views", async () => {

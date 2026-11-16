@@ -65,6 +65,14 @@ export function createAppSession(opts: {
 
   createEffect(() => panel.retain(opts.directories.retained()))
 
+  // A restored worktree folder loads again; its store failed while the folder was gone.
+  createEffect(
+    on(opts.directories.missingDirectories, (missing, previous) => {
+      const known = new Set(opts.directories.sessionDirectories())
+      previous?.filter((dir) => known.has(dir) && !missing.includes(dir)).forEach(panel.reload)
+    }),
+  )
+
   const models = (): ModelInfo[] => rootStore()?.data.location.model.list() ?? []
   const providers = (): ProviderInfo[] => rootStore()?.data.location.provider.list() ?? []
   const agents = (): AgentInfo[] =>
