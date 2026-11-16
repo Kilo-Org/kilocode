@@ -122,15 +122,18 @@ export const make = (input: { readonly sessions: Sessions; readonly jobs: Jobs }
       yield* Effect.sleep(REPORT)
       const info = yield* report
       if (info.count > 0) yield* Effect.logInfo("session drain pending", info)
-    }).pipe(Effect.forever)
-    // Reporting observes the same snapshot without restarting waits or changing delivery deadlines.
+    }).pipe(
+      Effect.catchCause(() => Effect.void),
+      Effect.forever,
+    )
+    // Recover inside each cycle so a diagnostic defect cannot win the race or stop later reports.
     yield* loop(root, new Map()).pipe(
       Effect.raceFirst(reporting),
       Effect.onInterrupt(() =>
         Effect.gen(function* () {
           const info = yield* report
           if (info.count > 0) yield* Effect.logWarning("session drain cancelled", info)
-        }),
+        }).pipe(Effect.catchCause(() => Effect.void)),
       ),
     )
   })

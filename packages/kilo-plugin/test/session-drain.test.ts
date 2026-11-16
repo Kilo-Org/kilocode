@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Deferred, Effect, Exit, Fiber, Layer, Logger, Option, Stream } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer, Logger, Option, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
@@ -29,6 +29,7 @@ import { offlineModels } from "../../core/test/fixture/models"
 import { tmpdirScoped } from "../../core/test/fixture/tmpdir"
 import { testEffect } from "../../core/test/lib/effect"
 import { KiloSessionDrain } from "../src/session-drain"
+import { make } from "../src/session-drain/drain"
 
 const llmLayer = TestLLM.testLayer()
 const plugins = makeGlobalNode({
@@ -484,6 +485,68 @@ describe("kilocode.session-drain", () => {
       expect(yield* env.rpc.drain({ sessionID: env.root.id }).pipe(Effect.provide(logs))).toBe(true)
       yield* TestClock.adjust("2 minutes")
       expect(messages).toHaveLength(1)
+    }),
+  )
+
+  it.effect("keeps waiting and reporting when the pending logger throws", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const gate = yield* Deferred.make<void>()
+      const llm = yield* replies(held(gate, "finished"))
+      yield* env.sessions.prompt({ sessionID: env.root.id, text: "Work" })
+      yield* llm.wait(1)
+      const attempts: unknown[] = []
+      const logs = Logger.layer([
+        Logger.make((entry) => {
+          if (entry.logLevel !== "Info") return
+          attempts.push(entry.message)
+          throw new Error("fixture logger failed")
+        }),
+      ])
+      const waiting = yield* env.rpc
+        .drain({ sessionID: env.root.id })
+        .pipe(Effect.provide(logs), Effect.forkChild({ startImmediately: true }))
+      yield* TestClock.adjust("1 minute")
+      expect(attempts).toHaveLength(1)
+      expect(waiting.pollUnsafe()).toBeUndefined()
+      yield* TestClock.adjust("1 minute")
+      expect(attempts).toHaveLength(2)
+      expect(waiting.pollUnsafe()).toBeUndefined()
+      yield* Deferred.succeed(gate, undefined)
+      expect(yield* Fiber.join(waiting)).toBe(true)
+      yield* TestClock.adjust("2 minutes")
+      expect(attempts).toHaveLength(2)
+    }),
+  )
+
+  it.effect("preserves cancellation when the cancellation logger throws", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const jobs = yield* Job.Service
+      const gate = yield* Deferred.make<void>()
+      const llm = yield* replies(held(gate, "kept"))
+      yield* env.sessions.prompt({ sessionID: env.root.id, text: "Keep working" })
+      yield* llm.wait(1)
+      const attempts: unknown[] = []
+      const logs = Logger.layer([
+        Logger.make((entry) => {
+          attempts.push(entry.message)
+          throw new Error("fixture logger failed")
+        }),
+      ])
+      const waiting = yield* make({ sessions: env.sessions, jobs })
+        .wait(env.root.id)
+        .pipe(Effect.provide(logs), Effect.forkChild({ startImmediately: true }))
+      yield* TestClock.adjust("1 second")
+      yield* Fiber.interrupt(waiting)
+      const result = yield* Fiber.await(waiting)
+      expect(attempts).toHaveLength(1)
+      expect(Exit.isFailure(result) && Cause.hasInterruptsOnly(result.cause)).toBe(true)
+      expect([...(yield* env.sessions.active)]).toContain(env.root.id)
+      yield* Deferred.succeed(gate, undefined)
+      expect(yield* env.rpc.drain({ sessionID: env.root.id })).toBe(true)
+      yield* TestClock.adjust("2 minutes")
+      expect(attempts).toHaveLength(1)
     }),
   )
 
