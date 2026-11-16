@@ -10,6 +10,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import type { Plugin } from "@/plugin"
 import type { Provider } from "@/provider/provider"
+import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { LLMRequestPrep } from "@/session/llm/request"
 import { MessageID, SessionID } from "@/session/schema"
 import { SystemPrompt } from "@/session/system"
@@ -333,4 +334,65 @@ describe("LLM request headers", () => {
       }),
     )
   }
+
+  // Provider headers go out as the SDK's default headers, but not every
+  // transport sees them (the Cloudflare AI Gateway loader builds its own
+  // clients), so configured attribution is carried per request in place of
+  // Kilo's defaults.
+  const openrouter = (headers?: Record<string, string>, modelHeaders: Record<string, string> = {}) =>
+    Effect.gen(function* () {
+      const id = ProviderV2.ID.make("openrouter")
+      const result = yield* LLMRequestPrep.prepare({
+        user: { ...user("code"), model: { providerID: id, modelID: model.id } },
+        sessionID: "ses_test",
+        model: { ...model, providerID: id, headers: modelHeaders },
+        agent: agent("code"),
+        system: [],
+        messages: [],
+        tools: {},
+        provider: {
+          id,
+          name: "OpenRouter",
+          source: "config",
+          env: [],
+          options: headers ? { headers } : {},
+          models: {},
+        },
+        auth: undefined,
+        plugin,
+        flags: yield* RuntimeFlags.Service,
+        isWorkflow: false,
+      })
+      const sent: Record<string, string | undefined> = result.headers
+      return sent
+    })
+
+  it.instance("adds Kilo's default headers when the provider has none", () =>
+    Effect.gen(function* () {
+      expect(yield* openrouter()).toMatchObject(DEFAULT_HEADERS)
+    }),
+  )
+
+  it.instance("sends the provider's configured attribution instead of Kilo's defaults", () =>
+    Effect.gen(function* () {
+      const headers = yield* openrouter({ "http-referer": "https://example.com/", "X-Title": "Example App" })
+
+      expect(headers["HTTP-Referer"]).toBe("https://example.com/")
+      expect(headers["X-Title"]).toBe("Example App")
+      expect(headers["User-Agent"]).toBe(DEFAULT_HEADERS["User-Agent"])
+    }),
+  )
+
+  it.instance("keeps Kilo's User-Agent and model header precedence over configured attribution", () =>
+    Effect.gen(function* () {
+      const headers = yield* openrouter(
+        { "HTTP-Referer": "https://example.com/", "X-Title": "Example App", "User-Agent": "Example/1.0" },
+        { "X-Title": "Model Title" },
+      )
+
+      expect(headers["HTTP-Referer"]).toBe("https://example.com/")
+      expect(headers["X-Title"]).toBe("Model Title")
+      expect(headers["User-Agent"]).toBe(DEFAULT_HEADERS["User-Agent"])
+    }),
+  )
 })
