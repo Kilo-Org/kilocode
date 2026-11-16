@@ -52,6 +52,30 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
+    fun `local command posts its durable message correlation and selected choices`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        val prompt = PromptDto(
+            parts = emptyList(),
+            messageID = "msg_initial",
+            agent = "plan",
+            providerID = "kilo",
+            modelID = "gpt-5",
+            variant = "high",
+        )
+
+        chat.command("ses_cloud", "/test/project", "review", "src/", prompt)
+
+        assertEquals(1, mock.requestCount("/session/ses_cloud/command"))
+        assertTrue(mock.lastHostedCommandPath!!.startsWith("/session/ses_cloud/command?directory="))
+        assertEquals(
+            """{"command":"review","arguments":"src/","messageID":"msg_initial","agent":"plan","variant":"high","model":"kilo/gpt-5"}""",
+            mock.lastHostedCommandBody,
+        )
+    }
+
+    @Test
     fun `revert posts message and part to revert endpoint`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())

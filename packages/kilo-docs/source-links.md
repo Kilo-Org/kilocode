@@ -62,6 +62,7 @@
   <!-- packages/kilo-vscode/src/agent-manager/git-errors.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
+  <!-- packages/opencode/src/kilocode/session-hosting/kilo-cloud.ts -->
 - <https://github.com/anthropics/claude-code/issues/31375>
   <!-- packages/kilo-vscode/src/utils.ts -->
 - <https://github.com/apps/kiloconnect>
