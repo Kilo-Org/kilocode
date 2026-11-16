@@ -180,5 +180,7 @@ flowchart LR
 2. MCP Apps: stays in U-E11-05 (2026-11-11).
 3. Env sanitization: not in #15307; follow-up C (2026-11-11).
 4. Plugin marketplace install: resolve the package at install time, then write the spec (2026-11-10).
-5. Branding: the MCP client identity belongs here and is done; the rest is #15298 (2026-11-11).
+5. Branding: the MCP client identity belongs here and is done; the rest is #15298 (2026-11-11). The
+   one MCP value that epic left on upstream's identity, the OAuth `logo_uri`, is tracked in #16219
+   (2026-11-16).
 6. Callback takeover and Docker `--rm`: not carried (2026-11-11).

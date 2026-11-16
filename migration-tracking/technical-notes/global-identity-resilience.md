@@ -74,4 +74,4 @@ Recommendation: **port all five** behaviors. v1 history shows none are v1-specif
 
 - DB-preflight actionable "not writable" error / self-heal — separate `db-preflight` feature.
 - Any v1-Kilo → v2 user-data migration — deferred release-migration slices (U-E3-03/U-E8-02).
-- The `installation` cells: v1's Kilo distribution identity and its use by upgrade and uninstall. v2 runs a disabled updater on purpose (`packages/kilo-cli/src/updater.ts`), so the cells stay open and belong to #15311. The isolated `kilo2 uninstall` check (dry run and cleanup with the disabled updater; see the `removal` comment there) belongs to #15324, not to these cells.
+- The `installation` cells: v1's Kilo distribution identity and its use by upgrade and uninstall. v2 runs a disabled updater on purpose (`packages/kilo-cli/src/updater.ts`), so the cells stay open and belong to #15311. The isolated `kilo2 uninstall` check (dry run and cleanup with the disabled updater; see the `removal` comment there) is `packages/kilo-cli/test/uninstall.test.ts`, added under #15324; it closes none of these cells.
