@@ -36,6 +36,53 @@ export function provider(
     getWorkspace: () => Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
     getWorkspaceStatus: () =>
       Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
+    getWorkspaceChanges: (input) =>
+      Effect.succeed({
+        id: input.id,
+        status: "not_captured",
+        revision: null,
+        capturedAt: null,
+        truncated: false,
+        comparisons: null,
+      }),
+    refreshWorkspaceChanges: (input) =>
+      Effect.succeed({
+        status: "failed",
+        changes: {
+          id: input.id,
+          status: "not_captured",
+          revision: null,
+          capturedAt: null,
+          truncated: false,
+          comparisons: null,
+        },
+      }),
+    getWorkspaceChangeFile: () =>
+      Effect.succeed({
+        status: "not_captured",
+        file: null,
+        capturedAt: null,
+        comparison: null,
+        currentRevision: null,
+      }),
+    getWorkspacePullRequestDiff: (input) =>
+      Effect.succeed({
+        id: input.id,
+        status: "not_linked",
+        reason: "no_pull_request",
+        pullRequest: null,
+        truncated: false,
+        files: [],
+      }),
+    getWorkspacePullRequestDiffFile: (input) =>
+      Effect.succeed({
+        status: "not_linked",
+        path: input.path,
+        reason: "no_pull_request",
+        omissionReason: null,
+        headSha: null,
+        patch: null,
+      }),
     deleteWorkspace: (input) => Effect.succeed({ workspace: input.id, success: true }),
     createWorkspace: () =>
       Effect.fail(
