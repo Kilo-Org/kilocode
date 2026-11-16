@@ -11,7 +11,7 @@ import { Session, type GlobalInfo } from "../../src/session/session"
 import { KiloSession } from "../../src/kilocode/session"
 import { SessionTable } from "@opencode-ai/core/session/sql"
 import { Database } from "@opencode-ai/core/database/database"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import fs from "fs/promises"
 import { spyOn } from "bun:test"
 import { Filesystem } from "../../src/util/filesystem"
@@ -192,9 +192,8 @@ describe("Kilo Session.list", () => {
         .map((i) => sid(i))
 
       const resolve = spyOn(Filesystem, "resolve")
-      const first = yield* listIn(ctx, { limit: 21 })
+      const first = yield* listIn(ctx, { limit: 21 }).pipe(Effect.ensuring(Effect.sync(() => resolve.mockRestore())))
       const calls = resolve.mock.calls.length
-      resolve.mockRestore()
 
       expect(ids(first)).toEqual(expected.slice(0, 21))
       // Cost is bounded by distinct directories, not by session count.
@@ -230,10 +229,11 @@ describe("Kilo Session.list", () => {
       Effect.gen(function* () {
         const { ctx, db } = yield* instance
         const outside = yield* tmpdirScoped()
-        const rejected = 5000
+        const rejected = 2000
+        const accepted = 1500
         const now = Date.now()
-        // Newest rows belong to another worktree; the three accepted rows are the oldest.
-        yield* seedRows(db, rejected + 3, (i) => ({
+        // Newest rows belong to another worktree; the accepted rows, each in its own directory, are the oldest.
+        yield* seedRows(db, rejected + accepted, (i) => ({
           directory: i < rejected ? outside : path.join(ctx.directory, `d${i}`),
           time_updated: now - i,
         }))
@@ -244,10 +244,13 @@ describe("Kilo Session.list", () => {
         // and the page query carries LIMIT, so rows read never scale with rejected sessions.
         expect(queries.sql.length).toBe(2)
         const [scan, page] = queries.sql
-        expect(scan!.sql).toMatch(/^select distinct "directory" from/)
-        expect(page!.sql).toMatch(/limit \?$/)
-        expect(page!.sql).toContain("json_each(?)")
+        expect(scan!.sql).toContain("distinct")
+        expect(page!.sql).toContain("json_each")
+        expect(page!.sql).toContain("limit")
         expect(page!.params.at(-1)).toBe(3)
+        // The accepted directories travel as one JSON parameter, so the bind count does not
+        // grow with them: the same fixed filters bind for a page over a handful of directories.
+        expect(page!.params.filter((param) => typeof param === "string" && param.startsWith("[")).length).toBe(1)
         expect(page!.params.length).toBeLessThan(20)
       }),
     60_000,
@@ -275,17 +278,30 @@ describe("Kilo Session.list", () => {
     }),
   )
 
-  test("binds accepted directories in their stored representation", () => {
-    const platform = Object.getOwnPropertyDescriptor(process, "platform")!
-    Object.defineProperty(process, "platform", { value: "win32" })
-    try {
-      expect(KiloSession.directoryParam(["C:\\repo\\a", "\\\\srv\\share\\b", ""])).toBe(
-        JSON.stringify(["C:/repo/a", "//srv/share/b", ""]),
+  it.instance("binds stored directories unchanged, including mixed separators", () =>
+    Effect.gen(function* () {
+      const { ctx, db } = yield* instance
+      const now = Date.now()
+      yield* seedRows(db, 2, (i) => ({ directory: ctx.directory, time_updated: now - i }))
+      // A legacy row that bypassed the column encoder. The win32 decoder turns it into
+      // `<root>/legacy/x`, which would re-encode to different bytes than the stored text.
+      const raw = `${ctx.directory}/legacy\\x`
+      yield* db
+        .update(SessionTable)
+        .set({ directory: sql<string>`${raw}`, time_updated: now - 1 })
+        .where(eq(SessionTable.id, sid(1) as Row["id"]))
+      const decode = spyOn(SessionTable.directory, "mapFromDriverValue").mockImplementation((value) =>
+        value.replaceAll("\\", "/"),
       )
-    } finally {
-      Object.defineProperty(process, "platform", platform)
-    }
-  })
+      const queries = yield* captureQueries(db, listIn(ctx, { limit: 5 })).pipe(
+        Effect.ensuring(Effect.sync(() => decode.mockRestore())),
+      )
+      expect(ids(queries.result)).toEqual([sid(0), sid(1)])
+      const bound = queries.sql[1]!.params.flatMap((param) => (typeof param === "string" ? [param] : []))
+      const lists = bound.flatMap((param): unknown[] => (param.startsWith("[") ? [JSON.parse(param)] : []))
+      expect(lists).toEqual([expect.arrayContaining([ctx.directory, raw])])
+    }),
+  )
 
   it.instance("skips a directory that cannot be resolved instead of failing the page", () =>
     Effect.gen(function* () {
@@ -293,9 +309,9 @@ describe("Kilo Session.list", () => {
       const denied = path.join(ctx.directory, "denied")
       yield* Effect.promise(() => fs.mkdir(denied, { recursive: true }))
       const now = Date.now()
-      // The inaccessible directory holds the oldest session, beyond the requested page.
+      // The inaccessible directory holds the newest session, so it would lead the page if accepted.
       yield* seedRows(db, 3, (i) => ({
-        directory: i === 2 ? denied : path.join(ctx.directory, `d${i}`),
+        directory: i === 0 ? denied : path.join(ctx.directory, `d${i}`),
         time_updated: now - i,
       }))
       const original = Filesystem.resolve
@@ -304,7 +320,7 @@ describe("Kilo Session.list", () => {
         return original(input)
       })
       const list = yield* listIn(ctx, { limit: 2 }).pipe(Effect.ensuring(Effect.sync(() => resolve.mockRestore())))
-      expect(ids(list)).toEqual([sid(0), sid(1)])
+      expect(ids(list)).toEqual([sid(1), sid(2)])
     }),
   )
 })

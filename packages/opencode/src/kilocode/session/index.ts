@@ -134,11 +134,6 @@ export namespace KiloSession {
   // Project family resolution (worktree-aware)
   // ---------------------------------------------------------------------------
 
-  // Decoded directories (platform separators) back to their stored form, so SQLite compares equal bytes.
-  export function directoryParam(directories: string[]) {
-    return JSON.stringify(directories.map((dir) => SessionTable.directory.mapToDriverValue(dir)))
-  }
-
   function family(
     id: string,
     rows: Array<Pick<typeof ProjectTable.$inferSelect, "id" | "worktree" | "sandboxes">>,
@@ -487,56 +482,45 @@ export namespace KiloSession {
       }
       const order = [desc(SessionTable.time_updated), desc(SessionTable.id)] as const
 
-      const list: SessionRow[] = []
-      if (dirs.length === 0) {
-        list.push(
-          ...(yield* db
+      // Membership depends only on `directory`. Inside one read transaction (one SQLite
+      // snapshot), list the distinct stored directories of the matching sessions, decide each
+      // once, then run a single ordered, limited query over full rows restricted to the
+      // accepted directories. The stored text is bound back unchanged, so SQLite compares
+      // exact bytes whatever form the row was written in. The values travel as one JSON bind
+      // parameter, so the number of directories can never hit SQLite's bind-variable limit.
+      // Memory is bounded by the distinct directories and `limit`, and the order is sorted once.
+      const scoped = db.transaction((tx) =>
+        Effect.gen(function* () {
+          const stored = sql<string>`${SessionTable.directory}`.as("directory")
+          const seen = yield* tx.selectDistinct({ directory: stored }).from(SessionTable).where(where()).all()
+          const decided = new Map<string, boolean>()
+          const accepted: string[] = []
+          for (const { directory: raw } of seen) {
+            const dir = SessionTable.directory.mapFromDriverValue(raw)
+            const ok = decided.get(dir) ?? accepts(dir)
+            decided.set(dir, ok)
+            if (ok) accepted.push(raw)
+          }
+          if (accepted.length === 0) return []
+          const members = sql`${SessionTable.directory} IN (SELECT value FROM json_each(${JSON.stringify(accepted)}))`
+          return yield* tx
             .select()
             .from(SessionTable)
-            .where(where())
+            .where(where(members))
             .orderBy(...order)
             .limit(limit)
             .all()
-            .pipe(Effect.orDie)),
-        )
-      } else {
-        // Membership depends only on `directory`. Inside one read transaction (one SQLite
-        // snapshot), list the distinct directories of the matching sessions, decide each
-        // once, then run a single ordered, limited query over full rows restricted to the
-        // accepted directories. They travel as one JSON bind parameter, so the number of
-        // directories can never hit SQLite's bind-variable limit. Memory is bounded by the
-        // distinct directories and `limit`, and the order is sorted once.
-        const decided = new Map<string, boolean>()
-        const allowed = (dir: string) => {
-          const hit = decided.get(dir)
-          if (hit !== undefined) return hit
-          const ok = accepts(dir)
-          decided.set(dir, ok)
-          return ok
-        }
-        const rows = yield* db
-          .transaction((tx) =>
-            Effect.gen(function* () {
-              const seen = yield* tx
-                .selectDistinct({ directory: SessionTable.directory })
-                .from(SessionTable)
-                .where(where())
-                .all()
-              const accepted = seen.map((row) => row.directory).filter(allowed)
-              if (accepted.length === 0) return []
-              const members = sql`${SessionTable.directory} IN (SELECT value FROM json_each(${directoryParam(accepted)}))`
-              return yield* tx
-                .select()
-                .from(SessionTable)
-                .where(where(members))
-                .orderBy(...order)
-                .limit(limit)
-                .all()
-            }),
-          )
-          .pipe(Effect.orDie)
-        list.push(...rows)
-      }
+        }),
+      )
+      const all = db
+        .select()
+        .from(SessionTable)
+        .where(where())
+        .orderBy(...order)
+        .limit(limit)
+        .all()
+      // The query result is used as is: spreading a large page into `push` exceeds the argument limit.
+      const list: SessionRow[] = yield* (dirs.length === 0 ? all : scoped).pipe(Effect.orDie)
 
       const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
       const projects = new Map<string, ProjectInfo>()
