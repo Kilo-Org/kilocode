@@ -3,11 +3,12 @@ import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import path from "path"
-import { seedProject } from "../fixture/fixture"
+import { seedProject, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { ProjectV2 } from "@opencode-ai/core/project"
-import { Session } from "../../src/session/session"
+import { Session, type GlobalInfo } from "../../src/session/session"
+import { KiloSession } from "../../src/kilocode/session"
 import { SessionTable } from "@opencode-ai/core/session/sql"
 import { Database } from "@opencode-ai/core/database/database"
 import { eq } from "drizzle-orm"
@@ -15,11 +16,14 @@ import fs from "fs/promises"
 import { spyOn } from "bun:test"
 import { Filesystem } from "../../src/util/filesystem"
 import { InstanceRef } from "../../src/effect/instance-ref"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
-const layer = LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node]))
+const layer = LayerNode.compile(
+  LayerNode.group([Session.node, SessionProjector.node, Database.node, CrossSpawnSpawner.node]),
+)
 const it = testEffect(layer)
 
 describe("Kilo Session.list", () => {
@@ -82,7 +86,7 @@ describe("Kilo Session.list", () => {
       const { db } = yield* Database.Service
       const base = yield* sessions.create({ title: "base" })
       const [row] = yield* db.select().from(SessionTable).where(eq(SessionTable.id, base.id)).all()
-      const outside = path.join(path.dirname(ctx.directory), `${path.basename(ctx.directory)}-outside`)
+      const outside = yield* tmpdirScoped()
       const dirs = [ctx.directory, path.join(ctx.directory, "a"), path.join(ctx.directory, "b"), outside]
       yield* Effect.promise(() => Promise.all(dirs.slice(1).map((dir) => fs.mkdir(dir, { recursive: true }))))
       const total = 80
@@ -122,7 +126,7 @@ describe("Kilo Session.list", () => {
       // Cost is bounded by distinct directories, not by session count.
       expect(calls).toBeLessThanOrEqual(dirs.length * 3 + 4)
 
-      const cursor = first[first.length - 1]!.time.updated
+      const cursor = first.at(-1)!.time.updated
       const next = yield* run({ limit: 21, cursor })
       const rest = expected.filter((id) => !first.some((item) => item.id === id))
       const after = expected.filter((id) => {
@@ -131,6 +135,88 @@ describe("Kilo Session.list", () => {
       })
       expect(next.map((item) => String(item.id))).toEqual(after.slice(0, 21))
       expect(rest.length).toBeGreaterThan(0)
+
+      // Tiny batches cross many keyset boundaries, including tied time_updated values.
+      const batched = yield* KiloSession.listGlobal<GlobalInfo>({
+        fromRow: Session.fromRow,
+        projectID: ctx.project.id,
+        directories: [ctx.directory],
+        roots: true,
+        limit: 21,
+        batch: 3,
+      })
+      expect(batched.map((item) => String(item.id))).toEqual(expected.slice(0, 21))
+    }),
+  )
+
+  it.instance(
+    "pages past thousands of distinct directories without a bind list",
+    () =>
+      Effect.gen(function* () {
+        yield* seedProject
+        const ctx = yield* InstanceRef
+        if (!ctx) return yield* Effect.die(new Error("missing test instance"))
+        const sessions = yield* Session.Service
+        const { db } = yield* Database.Service
+        const base = yield* sessions.create({ title: "base" })
+        const [row] = yield* db.select().from(SessionTable).where(eq(SessionTable.id, base.id)).all()
+        yield* db.delete(SessionTable).where(eq(SessionTable.id, base.id))
+        const total = 33000
+        const now = Date.now()
+        // Every session has its own directory inside the project, so the allowed set is
+        // larger than SQLite can bind in one IN list.
+        for (let start = 0; start < total; start += 3000) {
+          yield* db.insert(SessionTable).values(
+            Array.from({ length: 3000 }, (_, k) => {
+              const i = start + k
+              return {
+                ...row,
+                id: `ses_${String(i).padStart(6, "0")}` as typeof row.id,
+                directory: path.join(ctx.directory, `d${i}`) as typeof row.directory,
+                path: null,
+                time_created: now,
+                time_updated: now - i,
+                time_archived: null,
+                parent_id: null,
+              }
+            }),
+          )
+        }
+        const expected = Array.from({ length: total }, (_, i) => `ses_${String(i).padStart(6, "0")}`)
+        const run = (input: { limit: number; batch?: number }) =>
+          KiloSession.listGlobal<GlobalInfo>({
+            fromRow: Session.fromRow,
+            projectID: ctx.project.id,
+            directories: [ctx.directory],
+            roots: true,
+            ...input,
+          })
+
+        expect((yield* run({ limit: 5 })).map((item) => String(item.id))).toEqual(expected.slice(0, 5))
+        expect((yield* run({ limit: 3, batch: 1000 })).map((item) => String(item.id))).toEqual(expected.slice(0, 3))
+      }),
+    60_000,
+  )
+
+  it.instance("includes a session created in a previously unseen directory on the next read", () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const ctx = yield* InstanceRef
+      if (!ctx) return yield* Effect.die(new Error("missing test instance"))
+      const sessions = yield* Session.Service
+      const { db } = yield* Database.Service
+      const base = yield* sessions.create({ title: "base" })
+      const [row] = yield* db.select().from(SessionTable).where(eq(SessionTable.id, base.id)).all()
+      const run = () =>
+        Session.listGlobal({ projectID: ctx.project.id, directories: [ctx.directory], roots: true, limit: 1 })
+      expect((yield* run()).map((item) => item.id)).toEqual([base.id])
+      yield* db.insert(SessionTable).values({
+        ...row,
+        id: "ses_newer" as typeof row.id,
+        directory: path.join(ctx.directory, "fresh") as typeof row.directory,
+        time_updated: row.time_updated + 1,
+      })
+      expect((yield* run()).map((item) => String(item.id))).toEqual(["ses_newer"])
     }),
   )
 })

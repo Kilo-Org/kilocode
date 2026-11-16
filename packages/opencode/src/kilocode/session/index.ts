@@ -397,6 +397,8 @@ export namespace KiloSession {
     search?: string
     limit?: number
     archived?: boolean
+    /** Rows fetched per batch when filtering by `directories`; defaults to twice the limit. */
+    batch?: number
   }) {
     return Effect.gen(function* () {
       const { db } = yield* Database.Service
@@ -464,29 +466,53 @@ export namespace KiloSession {
         if (input.currentDirectory) return root === current
         return true
       }
-      if (dirs.length > 0) {
-        // Membership depends only on `directory`, so decide it once per distinct
-        // directory and push the result into SQL to keep LIMIT effective.
-        const found = yield* db
-          .selectDistinct({ directory: SessionTable.directory })
+      const where = (extra?: SQL) => {
+        const all = extra ? [...conditions, extra] : conditions
+        return all.length > 0 ? and(...all) : undefined
+      }
+      const page = (extra?: SQL, size = limit) =>
+        db
+          .select()
           .from(SessionTable)
-          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .where(where(extra))
+          .orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
+          .limit(size)
           .all()
           .pipe(Effect.orDie)
-        const allowed = found.map((item) => item.directory).filter(accepts)
-        if (allowed.length === 0) return []
-        conditions.push(inArray(SessionTable.directory, allowed))
-      }
 
-      const query =
-        conditions.length > 0
-          ? db
-              .select()
-              .from(SessionTable)
-              .where(and(...conditions))
-          : db.select().from(SessionTable)
-      const ordered = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
-      const list = yield* ordered.limit(limit).all().pipe(Effect.orDie)
+      const list: SessionRow[] = []
+      if (dirs.length === 0) {
+        list.push(...(yield* page()))
+      } else {
+        // Membership depends only on `directory`, so decide it once per distinct
+        // directory. Walk the ordered rows in keyset batches and stop once the page
+        // is full. Every batch reads the table directly, so there is no bind list
+        // that can exceed SQLite's variable limit and no separate directory
+        // snapshot that can go stale.
+        const size = Math.max(input.batch ?? limit * 2, 1)
+        const decided = new Map<string, boolean>()
+        const allowed = (dir: string) => {
+          const hit = decided.get(dir)
+          if (hit !== undefined) return hit
+          const ok = accepts(dir)
+          decided.set(dir, ok)
+          return ok
+        }
+        let after: SQL | undefined
+        while (list.length < limit) {
+          const rows = yield* page(after, size)
+          for (const row of rows) {
+            if (list.length >= limit) break
+            if (allowed(row.directory)) list.push(row)
+          }
+          const last = rows.at(-1)
+          if (rows.length < size || !last) break
+          after = or(
+            lt(SessionTable.time_updated, last.time_updated),
+            and(eq(SessionTable.time_updated, last.time_updated), lt(SessionTable.id, last.id)),
+          )
+        }
+      }
 
       const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
       const projects = new Map<string, ProjectInfo>()
