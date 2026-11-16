@@ -67,9 +67,15 @@ class KiloToolWindowFactoryTest : BasePlatformTestCase() {
     }
 
     fun `test the fake application matches the platform application type`() {
+        val app = ApplicationManager.getApplication()
         application {
             // Cancellation/JFR hooks read the application as ApplicationEx from other threads.
-            assertTrue(ApplicationManager.getApplication() is ApplicationEx)
+            val proxy = ApplicationManager.getApplication()
+            assertTrue(proxy is ApplicationEx)
+            assertTrue(proxy == proxy)
+            assertFalse(proxy == app)
+            assertEquals(System.identityHashCode(proxy), proxy.hashCode())
+            assertTrue(proxy.toString().startsWith("ApplicationEx test delegate@"))
         }
     }
 
@@ -136,9 +142,17 @@ class KiloToolWindowFactoryTest : BasePlatformTestCase() {
         val delegate = Proxy.newProxyInstance(
             ApplicationEx::class.java.classLoader,
             arrayOf(Application::class.java, ApplicationEx::class.java),
-        ) { _, method, args ->
+        ) { proxy, method, args ->
             val arguments = args ?: emptyArray()
             when {
+                method.declaringClass == Any::class.java ->
+                    when (method.name) {
+                        "equals" -> proxy === arguments.singleOrNull()
+                        "hashCode" -> System.identityHashCode(proxy)
+                        "toString" -> "ApplicationEx test delegate@${Integer.toHexString(System.identityHashCode(proxy))}"
+                        else -> forward(app, method, arguments)
+                    }
+
                 method.name == "getService" && arguments.size == 1 -> {
                     val type = arguments[0] as Class<*>
                     if (failure != null && type == failure.first) throw failure.second

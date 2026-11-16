@@ -64,12 +64,6 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
     if (profilePage && value) profilePage[field] = nullable(value)
   }
 
-  // Preserve the published input when a scoped omit wins its shared identifier.
-  const defaults = spec.components?.schemas?.SessionHostWorkspaceProfileDefaultInput?.properties
-  if (defaults?.id && !defaults.organizationID) {
-    defaults.organizationID = { $ref: "#/components/schemas/SessionHostOrganizationID" }
-  }
-
   const workspaceStatus = spec.components?.schemas?.SessionHostWorkspaceStatus?.properties
   const compute = workspaceStatus?.compute?.properties
   if (compute?.estimatedSleepAt) compute.estimatedSleepAt = nullable(compute.estimatedSleepAt)

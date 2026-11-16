@@ -735,12 +735,13 @@ const itOffline = testEffect(layer(offline.url))
 const legacy = fixture("legacy")
 const registry = createRegistry([legacy.value])
 const itLegacy = testEffect(layer(app.url, Layer.succeed(SessionHost.Service, { registry, default: registry.default })))
+const projectionBase = Schema.decodeUnknownSync(WorkspacePullRequestResult)({
+  id: { providerID: "projector", workspaceID: WORKSPACE },
+  state: "available",
+  pullRequest: summary(),
+})
 const projection: { value: WorkspacePullRequestResult; failure?: HostedFailure; calls: WorkspacePullRequestInput[] } = {
-  value: Schema.decodeUnknownSync(WorkspacePullRequestResult)({
-    id: { providerID: "projector", workspaceID: WORKSPACE },
-    state: "available",
-    pullRequest: summary(),
-  }),
+  value: projectionBase,
   calls: [],
 }
 const project = (input: WorkspacePullRequestInput) => {
@@ -766,6 +767,7 @@ afterEach(() => {
   app.state.continuation = "ok"
   app.state.pr = undefined
   projection.failure = undefined
+  projection.value = projectionBase
   projection.calls.length = 0
 })
 afterAll(() => {
@@ -1411,8 +1413,16 @@ describe("session host HttpApi", () => {
             const worker = calls.find((item) => item.path.startsWith("/trpc/"))
             expect(worker?.auth).toBe(`Bearer ${CONTROL}`)
             expect(worker?.org).toBe(organization)
-            expect(worker?.body).not.toContain("Organization")
-            expect(worker?.search).not.toContain("Organization")
+            if (request.method === "GET") {
+              expect(parse(new URLSearchParams(worker?.search ?? "").get("input") ?? "{}")).toEqual({
+                workspaceId: WORKSPACE,
+                sessionLimit: 1,
+              })
+              expect(worker?.body).toBe("")
+            } else {
+              expect(worker?.search).toBe("")
+              expect(parse(worker?.body ?? "{}")).toEqual({ workspaceId: WORKSPACE })
+            }
           }
         }
       }),
@@ -1626,25 +1636,28 @@ describe("session host HttpApi", () => {
 
   it.live("sets and clears the personal default workspace profile", () =>
     Effect.gen(function* () {
+      const before = app.calls.length
       const set = yield* HttpClientRequest.post(SessionHostPaths.workspaceProfilePersonalDefault).pipe(
-        HttpClientRequest.bodyJson({ id: PROFILE }),
+        HttpClientRequest.bodyJson({ id: PROFILE, organizationID: PROFILE }),
         Effect.flatMap(HttpClient.execute),
       )
       expect(set.status).toBe(200)
       expect(yield* set.json).toEqual({ success: true })
 
       const cleared = yield* HttpClient.execute(
-        HttpClientRequest.delete(
-          SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE),
-        ),
+        HttpClientRequest.delete(SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE)),
       )
       expect(cleared.status).toBe(200)
       expect(yield* cleared.json).toEqual({ success: true })
 
-      expect(app.calls.at(-2)?.path).toBe("/trpc/setHostedWorkspacePersonalDefaultProfile")
-      expect(app.calls.at(-2)?.body).toBe(JSON.stringify({ profileId: PROFILE }))
-      expect(app.calls.at(-1)?.path).toBe("/trpc/clearHostedWorkspacePersonalDefaultProfile")
-      expect(app.calls.at(-1)?.body).toBe(JSON.stringify({ profileId: PROFILE }))
+      const calls = app.calls.slice(before)
+      const issued = calls.find((call) => call.path === "/api/cloud-agent-next/token")
+      expect(parse(issued?.body ?? "{}")).toEqual({ organizationId: PROFILE })
+      const assigned = calls.find((call) => call.path === "/trpc/setHostedWorkspacePersonalDefaultProfile")
+      expect(assigned?.org).toBe(PROFILE)
+      expect(assigned?.body).toBe(JSON.stringify({ profileId: PROFILE }))
+      const removed = calls.find((call) => call.path === "/trpc/clearHostedWorkspacePersonalDefaultProfile")
+      expect(removed?.body).toBe(JSON.stringify({ profileId: PROFILE }))
     }),
   )
 
@@ -1866,7 +1879,10 @@ describe("session host HttpApi", () => {
           const typed = createKiloClient({
             baseUrl: "http://handler.invalid",
             fetch: (async () =>
-              new Response(text, { status, headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
+              new Response(text, {
+                status,
+                headers: { "content-type": "application/json" },
+              })) as unknown as typeof fetch,
           })
           const { error } = yield* Effect.promise(() =>
             typed.sessionHost.continueWorkspace(body, { throwOnError: false }),

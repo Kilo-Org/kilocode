@@ -399,6 +399,13 @@ export const WorkspacePullRequestRefresh = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspacePullRequestRefresh" })
 export type WorkspacePullRequestRefresh = Schema.Schema.Type<typeof WorkspacePullRequestRefresh>
 
+export function refreshState(status: WorkspacePullRequestRefresh["status"]): WorkspacePullRequestState {
+  if (status === "refreshed") return "available"
+  if (status === "no_pr") return "no_pr"
+  if (status === "rate_limited" || status === "throttled") return "rate_limited"
+  return "unavailable"
+}
+
 /**
  * Only `no_pr` clears a previously known linked PR. Other states retain any
  * returned cache evidence, and a null summary must not erase client evidence.
@@ -415,14 +422,7 @@ export const WorkspacePullRequestResult = Schema.Struct({
       if (result.state === "available" && result.pullRequest === null) return "Available PR requires a summary"
       if (result.state === "no_pr" && result.pullRequest !== null) return "No PR requires a null summary"
       if (!result.refresh) return undefined
-      const state =
-        result.refresh.status === "refreshed"
-          ? "available"
-          : result.refresh.status === "no_pr"
-            ? "no_pr"
-            : result.refresh.status === "rate_limited" || result.refresh.status === "throttled"
-              ? "rate_limited"
-              : "unavailable"
+      const state = refreshState(result.refresh.status)
       return result.state === state ? undefined : "PR refresh status does not match availability"
     }),
   )
@@ -849,6 +849,7 @@ export type WorkspaceProfilePage = Schema.Schema.Type<typeof WorkspaceProfilePag
 
 export const WorkspaceProfileDefaultInput = Schema.Struct({
   id: Schema.String.check(Schema.isUUID()),
+  organizationID: Schema.optional(OrganizationID),
 }).annotate({ identifier: "SessionHostWorkspaceProfileDefaultInput" })
 export type WorkspaceProfileDefaultInput = Schema.Schema.Type<typeof WorkspaceProfileDefaultInput>
 

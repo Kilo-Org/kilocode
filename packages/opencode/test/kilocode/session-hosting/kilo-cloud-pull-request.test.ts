@@ -79,6 +79,7 @@ function harness() {
     issue: 200,
     status: 200,
     wire: "ok" as "ok" | "json" | "envelope",
+    tokens: "shared" as "shared" | "scoped",
   }
 
   function serve(kind: "issuer" | "worker") {
@@ -99,7 +100,9 @@ function harness() {
         })
         if (kind === "issuer" && url.pathname === "/api/cloud-agent-next/token") {
           if (state.issue !== 200) return Response.json({ error: "private-issuer-error" }, { status: state.issue })
-          return Response.json({ token: CONTROL, expiresAt: "2026-10-21T12:10:00.000Z" })
+          const organization = Object(JSON.parse(calls.at(-1)?.body ?? "{}")).organizationId ?? "personal"
+          const token = state.tokens === "scoped" ? `${CONTROL}-${organization}` : CONTROL
+          return Response.json({ token, expiresAt: "2026-10-21T12:10:00.000Z" })
         }
         if (kind === "worker") {
           if (state.status !== 200) return Response.json({ error: "private-worker-error" }, { status: state.status })
@@ -227,6 +230,7 @@ it.live("scopes issuer and Worker auth to an organization without adding keys to
 it.live("keeps personal refresh payloads strict and exchanges a distinct token for each organization scope", () =>
   Effect.gen(function* () {
     const app = yield* fixture
+    app.state.tokens = "scoped"
     const cloud = client(app)
 
     yield* cloud.refreshWorkspacePullRequest!(INPUT)
@@ -242,7 +246,11 @@ it.live("keeps personal refresh payloads strict and exchanges a distinct token f
       { path: "/trpc/refreshHostedWorkspacePullRequest", org: ORG, body: JSON.stringify({ workspaceId: WORKSPACE }) },
       { path: "/trpc/getHostedWorkspace", org: null, body: "" },
     ])
-    expect(app.worker.calls.every((call) => call.auth === `Bearer ${CONTROL}`)).toBe(true)
+    expect(app.worker.calls.map((call) => call.auth)).toEqual([
+      `Bearer ${CONTROL}-personal`,
+      `Bearer ${CONTROL}-${ORG}`,
+      `Bearer ${CONTROL}-personal`,
+    ])
     expect(app.issuer.calls.every((call) => call.auth === `Bearer ${SOURCE}`)).toBe(true)
   }),
 )

@@ -182,13 +182,6 @@ test("reports transport failures as unavailable", async () => {
   expect(error instanceof ControlTokenError && error.status).toBeUndefined()
 })
 
-test("keeps HTTP status optional for existing control-token errors", () => {
-  const error = new ControlTokenError("unavailable", "Kilo control token could not be issued")
-  expect(error.reason).toBe("unavailable")
-  expect(error.status).toBeUndefined()
-  expect(error.message).toBe("Kilo control token could not be issued")
-})
-
 test("bounds the issued cache", async () => {
   const cache = createControlTokenCache(1)
   const app = issuer()

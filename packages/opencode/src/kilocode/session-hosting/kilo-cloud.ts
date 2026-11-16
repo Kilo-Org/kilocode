@@ -45,6 +45,7 @@ import {
   WorkspaceStatusInput,
   markDeletionDispatched,
   pullRequestFailure,
+  refreshState,
   type Attachment,
   type Availability,
   type ContinueWorkspaceSession,
@@ -630,7 +631,11 @@ export function provider(options: Options): Provider {
       })
     }
     if (code === "operation_key_reuse_mismatch") {
-      return new HostedFailure({ code, message: "This operation key was used for a different request", retryable: false })
+      return new HostedFailure({
+        code,
+        message: "This operation key was used for a different request",
+        retryable: false,
+      })
     }
     if (code === "creation_in_progress") {
       return new HostedFailure({ code, message: "Kilo Cloud is still completing this workspace", retryable: true })
@@ -1136,14 +1141,7 @@ export function provider(options: Options): Provider {
           parsed.data.refresh,
           "Kilo Cloud returned an unsupported PR refresh result",
         )
-        const state =
-          metadata.status === "refreshed"
-            ? "available"
-            : metadata.status === "no_pr"
-              ? "no_pr"
-              : metadata.status === "rate_limited" || metadata.status === "throttled"
-                ? "rate_limited"
-                : "unavailable"
+        const state = refreshState(metadata.status)
         return yield* decode(
           WorkspacePullRequestResult,
           { id: input.id, state, pullRequest: summary, refresh: metadata },
@@ -1515,10 +1513,11 @@ export function provider(options: Options): Provider {
   ): Effect.Effect<WorkspaceProfileDefaultResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(WorkspaceProfileDefaultInput, raw)
-      const auth = yield* resolve()
+      const auth = yield* resolve(input.organizationID)
       const body = yield* mutation(auth, procedure, { profileId: input.id })
       const parsed = z.object({ success: z.literal(true) }).safeParse(body)
-      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported profile default result"))
+      if (!parsed.success)
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported profile default result"))
       return { success: true }
     })
 
