@@ -53,7 +53,8 @@ function emit(event: unknown) {
   }
 }
 
-const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } })
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
 
 /** How many handshake calls the fake server answers with a page instead of JSON. */
 let unreadableHandshakes = 0
@@ -107,9 +108,10 @@ const server = Bun.serve({
       })
     if (url.pathname === "/api/session/active") return json({ data: {} })
     if (url.pathname === "/api/location" && url.searchParams.get("location[directory]") === MISSING)
-      return new Response(JSON.stringify({ _tag: "LocationNotFound", message: `Location not found: ${MISSING}` }), {
-        status: 404,
-      })
+      return json(
+        { _tag: "LocationNotFoundError", location: { directory: MISSING }, message: `Location not found: ${MISSING}` },
+        404,
+      )
     if (url.pathname === "/api/location")
       return json({ directory: ROOT, project: { id: "prj_1", directory: ROOT, canonical: ROOT } })
     if (url.pathname === "/api/vcs")
@@ -372,7 +374,7 @@ describe("createPanelData", () => {
       const store = panel.store(MISSING)
       panel.show([MISSING])
       const located = () => requests.filter((item) => item.path === "/api/location" && item.location === MISSING)
-      await until(() => located().length > 0 && store.failure() !== undefined)
+      await until(() => located().length > 0 && store.failure()?.message === `Location not found: ${MISSING}`)
       const before = located().length
 
       panel.reload(MISSING)
