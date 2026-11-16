@@ -333,6 +333,11 @@ export namespace KiloSessionProcessor {
    * Returns the Kilo-specific retry policy options (limit + offline handler).
    * Designed to be spread into SessionRetry.policy() opts.
    *
+   * The retry limit comes from `experimental.chatMaxRetries` in the config,
+   * falling back to the `KILO_SESSION_RETRY_LIMIT` environment variable. When
+   * neither is set the limit is left `undefined` and `SessionRetry.policy`
+   * applies its default (`SessionRetry.RETRY_MAX_RETRIES`).
+   *
    * The `abort` signal is used by the offline handler to cancel the network
    * reconnection wait when the session is interrupted.
    */
@@ -341,8 +346,9 @@ export namespace KiloSessionProcessor {
     abort: AbortSignal
     set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
     used?: number
+    chatMaxRetries?: number
   }) {
-    const limit = Flag.KILO_SESSION_RETRY_LIMIT
+    const limit = input.chatMaxRetries ?? Flag.KILO_SESSION_RETRY_LIMIT
     return {
       limit: limit === undefined ? undefined : Math.max(0, limit - (input.used ?? 0)),
       offline: (info: { error: unknown; message: string }) =>
