@@ -9,6 +9,7 @@ import {
   rememberSelectionTab,
   selectLocalAction,
   selectWorktreeAction,
+  vacantWorktreeTab,
   type SelectionActionDeps,
 } from "../webview-ui/agent-manager/selection-actions"
 
@@ -359,5 +360,41 @@ describe("rememberSelectionTab", () => {
     rememberSelectionTab((selection, tab) => calls.push([selection, tab]), "local", "ses-a2")
 
     expect(calls).toEqual([["local", "ses-a2"]])
+  })
+})
+
+describe("vacantWorktreeTab", () => {
+  const vacant = {
+    selection: "wt-1",
+    current: undefined,
+    pending: undefined,
+    terminal: undefined,
+    review: false,
+    history: false,
+    tabs: ["ses-a", "ses-b"],
+    remembered: undefined,
+  }
+
+  it("fills a worktree that shows nothing with its first tab", () => {
+    expect(vacantWorktreeTab(vacant)).toBe("ses-a")
+  })
+
+  it("prefers the remembered tab while the worktree still has it", () => {
+    expect(vacantWorktreeTab({ ...vacant, remembered: "ses-b" })).toBe("ses-b")
+    expect(vacantWorktreeTab({ ...vacant, remembered: "ses-gone" })).toBe("ses-a")
+  })
+
+  it("keeps whatever the worktree already shows", () => {
+    expect(vacantWorktreeTab({ ...vacant, current: "ses-b" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, pending: "pending:1" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, terminal: "terminal:1" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, review: true })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, history: true })).toBeUndefined()
+  })
+
+  it("leaves Local, no selection and a worktree without tabs alone", () => {
+    expect(vacantWorktreeTab({ ...vacant, selection: "local" })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, selection: null })).toBeUndefined()
+    expect(vacantWorktreeTab({ ...vacant, tabs: [] })).toBeUndefined()
   })
 })

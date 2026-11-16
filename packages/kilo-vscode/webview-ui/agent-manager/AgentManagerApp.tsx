@@ -88,6 +88,7 @@ import {
   rememberSelectionTab,
   selectLocalAction,
   selectWorktreeAction,
+  vacantWorktreeTab,
 } from "./selection-actions"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { createProjectLive } from "./project/live"
@@ -1066,6 +1067,20 @@ const AgentManagerContent: Component = () => {
     const id = sessions.currentSessionID()
     if (!id || isPending(id)) return undefined
     return showsSession(selection(), ownerOf(id)) ? id : undefined
+  })
+  createEffect(() => {
+    const sel = selection()
+    const id = vacantWorktreeTab({
+      selection: sel,
+      current: sessions.currentSessionID(),
+      pending: activePendingId(),
+      terminal: terms.activeId(),
+      review: reviewActive(),
+      history: history(),
+      tabs: activeWorktreeSessions().map((session) => session.id),
+      remembered: sel ? untrack(tabMemory)[sel] : undefined,
+    })
+    if (id) sessions.selectSession(id)
   })
   const draftTab = () => {
     const id = sessions.currentSessionID()

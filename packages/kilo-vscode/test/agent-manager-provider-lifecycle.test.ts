@@ -163,6 +163,34 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(saved.getSessions()).toEqual([])
   })
 
+  it("moves kept sessions of a removed stale worktree to the project root on the server", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    state.addSession("first", id)
+    state.addSession("second", id)
+    ctx.stale.add(id)
+    fs.rmdirSync(worktree)
+
+    await removeStaleLifecycleWorktree(ctx, host, id, true)
+
+    expect(client.session.move).toHaveBeenCalledWith({ sessionID: "first", directory: ctx.root })
+    expect(client.session.move).toHaveBeenCalledWith({ sessionID: "second", directory: ctx.root })
+    expect(state.getSessions().map((session) => [session.id, session.worktreeId])).toEqual([
+      ["first", null],
+      ["second", null],
+    ])
+    expect(calls.indexOf("move:first")).toBeLessThan(calls.indexOf("push"))
+  })
+
+  it("does not move sessions when a stale worktree is removed without keeping them", async () => {
+    const id = state.getWorktrees().at(0)!.id
+    state.addSession("first", id)
+    ctx.stale.add(id)
+
+    await removeStaleLifecycleWorktree(ctx, host, id)
+
+    expect(client.session.move).not.toHaveBeenCalled()
+  })
+
   it("ignores stale removal for a worktree that is not marked stale", async () => {
     const id = state.getWorktrees().at(0)!.id
 
