@@ -1,3 +1,4 @@
+import { createEffect, on } from "solid-js"
 import { focusQuestionOption, hasPopup, hasQuestionOption, isTextControl, ownsFocusRegion } from "../src/utils/focus"
 
 export type AgentManagerFocusTarget = "prompt" | "mainTerminal" | "sideTerminal" | "other"
@@ -83,6 +84,40 @@ export function keepsFocus(active: Element | null): boolean {
 export const terminalHasFocus = (active: Element | null): boolean => {
   const target = agentManagerFocusTarget(active)
   return target === "mainTerminal" || target === "sideTerminal"
+}
+
+/**
+ * The main tab surface of the visible context. The terminal counts only while it belongs to the selected context and
+ * no History or review covers it; a selection change drops a terminal of the context it left.
+ */
+export function createMainSurface(deps: {
+  terms: {
+    activeId: () => string | undefined
+    setActiveId: (id: undefined) => void
+    contextFor: (id: string) => string | undefined
+    currentKey: () => string | undefined
+    requestFocus: (id: string) => void
+  }
+  covered: () => boolean
+  prompt: (force: boolean) => void
+}) {
+  const terms = deps.terms
+  const terminal = () => {
+    const id = terms.activeId()
+    if (!id || deps.covered() || terms.contextFor(id) !== terms.currentKey()) return undefined
+    return id
+  }
+  createEffect(on(terms.currentKey, () => dropForeignTerminal(terms), { defer: true }))
+  return {
+    terminal,
+    focus: createMainFocus({
+      terminal,
+      focusTerminal: terms.requestFocus,
+      prompt: deps.prompt,
+      keeps: () => keepsFocus(document.activeElement),
+    }),
+    typing: () => terminalHasFocus(document.activeElement),
+  }
 }
 
 export function createFocusBridge(deps: {
