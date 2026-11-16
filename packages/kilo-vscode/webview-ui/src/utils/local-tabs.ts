@@ -88,6 +88,19 @@ export function restoreTabs(
   return normalize(tabs, tab, pending)
 }
 
+/**
+ * The initial tabs of a chat webview. An editor tab is bound to the session its host opened it on and restores no
+ * sidebar tabs; the sidebar restores its own saved tabs.
+ */
+export function initialTabs(
+  session: string | undefined,
+  saved: { sidebarSessionTabIDs?: string[]; sidebarActiveSessionTabID?: string } | undefined,
+  pending: PendingTabFactory,
+): LocalTabState {
+  if (session) return { ids: [session], active: session }
+  return restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending)
+}
+
 // New composers become active immediately even before the backend creates a session.
 export function addPendingTab(state: LocalTabState, id: string): LocalTabState {
   return { ids: unique([...state.ids, id]), active: id }

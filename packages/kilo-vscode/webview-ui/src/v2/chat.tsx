@@ -39,7 +39,14 @@ export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
   const work = useWorkStyle()
-  const tabs = createLocalTabs()
+  // The sidebar restores its local tabs. An editor tab is bound to the session the host opened it on, and writes the
+  // session it shows into its own state so the host serializer can restore it.
+  const surface = (window as unknown as { KILO_SURFACE?: string }).KILO_SURFACE === "editor" ? "editor" : "sidebar"
+  const initial =
+    surface === "editor"
+      ? ((window as unknown as { KILO_SESSION_ID?: string | null }).KILO_SESSION_ID ?? undefined)
+      : undefined
+  const tabs = createLocalTabs({ session: initial })
   const [view, setView] = createSignal<"chat" | "history">("chat")
   // Comments can arrive while the chat composer is unmounted (History), so hold them until it returns.
   const reviewQueue = createReviewAppendQueue()
@@ -142,6 +149,16 @@ export function Chat() {
   createEffect(() => {
     const id = session()
     vscode.postMessage({ type: "sidebar.session", sessionId: id })
+  })
+  // An editor tab restores from its own webview state, not from the sidebar's local tabs.
+  createEffect(() => {
+    if (surface !== "editor") return
+    const id = session()
+    vscode.setState({
+      ...(vscode.getState<Record<string, unknown>>() ?? {}),
+      sessionID: id ?? null,
+      directory: v2.directory,
+    })
   })
   let reference: ReferenceHandler | undefined
   onCleanup(

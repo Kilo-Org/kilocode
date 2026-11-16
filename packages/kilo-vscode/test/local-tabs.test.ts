@@ -7,6 +7,7 @@ import {
   closeAllTabs,
   closeOtherTabs,
   closeTab,
+  initialTabs,
   nextTabAfterClose,
   openSessionTab,
   insertSessionTabAfter,
@@ -66,6 +67,13 @@ const tracked = () =>
   )
 
 describe("local session tabs", () => {
+  it("opens an editor tab on its bound session and ignores the sidebar's saved tabs", () => {
+    const saved = { sidebarSessionTabIDs: ["s9"], sidebarActiveSessionTabID: "s9" }
+    expect(initialTabs("s1", saved, makePending())).toEqual({ ids: ["s1"], active: "s1" })
+    expect(initialTabs(undefined, saved, makePending())).toEqual({ ids: ["s9"], active: "s9" })
+    expect(initialTabs(undefined, undefined, makePending("sidebar-pending:new")).ids).toEqual(["sidebar-pending:new"])
+  })
+
   it("opens explicitly activated sessions in the foreground", () => {
     expect(tabsForCreatedSession(state(["s1"], "s1"), "s2", undefined, true)).toEqual({
       ids: ["s1", "s2"],

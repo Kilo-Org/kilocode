@@ -8,11 +8,11 @@ import {
   addPendingTab,
   closeOtherTabs,
   closeTab,
+  initialTabs,
   insertSessionTabAfter,
   isPendingTab,
   openSessionTab,
   replacePendingTab,
-  restoreTabs,
   type LocalTabState,
 } from "../utils/local-tabs"
 import { applyPinnedTabs, reorderPinnedTabs, togglePinnedTab } from "../utils/tab-order"
@@ -52,12 +52,13 @@ export interface LocalTabsValue {
 
 const same = (left: string[], right: string[]) => left.length === right.length && left.every((id, i) => right[i] === id)
 
-export function createLocalTabs(): LocalTabsValue {
+export function createLocalTabs(options?: { session?: string }): LocalTabsValue {
   const v2 = useV2()
   const vscode = useVSCode()
   const saved = vscode.getState<StoredTabs>()
   const pending = () => `${PENDING_TAB_PREFIX}${crypto.randomUUID()}`
-  const init = restoreTabs(saved?.sidebarSessionTabIDs, saved?.sidebarActiveSessionTabID, pending)
+  // An editor tab opens on the session its host bound it to and restores no sidebar tabs of its own.
+  const init = initialTabs(options?.session, saved, pending)
   // restoreTabs normalizes to at least one tab, so these fallbacks keep the accessor type non-optional.
   const [ids, setIds] = createSignal(init.ids)
   const [active, setActive] = createSignal(init.active ?? init.ids[0])

@@ -86,3 +86,56 @@ export function gitChanges(input: {
     },
   }
 }
+
+/**
+ * One working-tree poller per directory, shared by every chat surface that shows its counts. Each surface keeps the
+ * visibility rule of one view: the poller runs while at least one of them is visible, and stops when the last
+ * subscriber disposes.
+ */
+export function createSharedGitStats(input: {
+  directory: string
+  /** Test seam: the per-source poller. */
+  create?: (input: { directory: string; onStats: (stats: GitChangesStats | undefined) => void }) => GitChanges
+}) {
+  const listeners = new Map<symbol, (stats: GitChangesStats | undefined) => void>()
+  const visible = new Map<symbol, boolean>()
+  let source: GitChanges | undefined
+  let running = false
+  const anyVisible = () => [...visible.values()].some(Boolean)
+  const poller = () => {
+    source ??= (input.create ?? gitChanges)({
+      directory: input.directory,
+      onStats: (value) => listeners.forEach((listener) => listener(value)),
+    })
+    return source
+  }
+  /** Starts or stops the poller only when the combined visibility of the subscribers changes. */
+  const sync = () => {
+    const next = anyVisible()
+    if (next === running) return
+    running = next
+    if (next) poller().setVisible(true)
+    else source?.setVisible(false)
+  }
+  return (onStats: (stats: GitChangesStats | undefined) => void): GitChanges => {
+    const id = Symbol("gitStats")
+    listeners.set(id, onStats)
+    visible.set(id, false)
+    return {
+      read: () => poller().read(),
+      setVisible(next) {
+        visible.set(id, next)
+        sync()
+      },
+      dispose() {
+        listeners.delete(id)
+        visible.delete(id)
+        sync()
+        if (listeners.size > 0) return
+        source?.dispose()
+        source = undefined
+        running = false
+      },
+    }
+  }
+}
