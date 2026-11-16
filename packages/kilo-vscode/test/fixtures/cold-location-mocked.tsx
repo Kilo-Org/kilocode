@@ -54,7 +54,8 @@ async function until(check: () => boolean, label: string, timeout = 2_000) {
 const unavailable = { type: "rpc.unavailable", message: "RPC is unavailable" }
 const server = {
   kilo: scenario !== "unsupported",
-  warm: scenario === "cold" ? 3 : scenario === "unsupported" ? 1 : Number.POSITIVE_INFINITY,
+  warm:
+    scenario === "cold" ? 3 : scenario === "unsupported" || scenario === "send-disposed" ? 1 : Number.POSITIVE_INFINITY,
   lists: 0,
   listed: false,
   online: true,
@@ -121,7 +122,10 @@ const language = {
 }
 
 // The sandbox of a draft is the unsupported case: the first prompt reads its metadata and must not wait.
-const session = store === "sandbox" && scenario === "unsupported" ? undefined : "ses_parent"
+const session =
+  store === "sandbox" && (scenario === "unsupported" || scenario === "send-disposed") ? undefined : "ses_parent"
+// The composer of a first send owns its sandbox; a context switch disposes only that owner, not the webview.
+let composer: (() => void) | undefined
 const mounted = createRoot((dispose) => {
   const stores: { jobs?: ReturnType<typeof createBackgroundJobs>; sandbox?: ReturnType<typeof createSandbox> } = {}
   createComponent(VSCodeProvider, {
@@ -133,7 +137,12 @@ const mounted = createRoot((dispose) => {
             value: v2 as never,
             get children() {
               if (store === "background-jobs") stores.jobs = createBackgroundJobs({ session: () => session })
-              if (store === "sandbox") stores.sandbox = createSandbox({ session: () => session })
+              if (store === "sandbox" && scenario === "send-disposed")
+                stores.sandbox = createRoot((owner) => {
+                  composer = owner
+                  return createSandbox({ session: () => session })
+                })
+              else if (store === "sandbox") stores.sandbox = createSandbox({ session: () => session })
               return null
             },
           })
@@ -199,6 +208,18 @@ if (scenario === "disposed") {
   mounted.dispose()
   await quiet()
   for (const read of reads) assert.equal(count(read), 1, `${read}: ${calls.join(", ")}`)
+}
+
+if (scenario === "send-disposed") {
+  // A first send waits for the default of its draft. A switch to another worktree or project disposes the composer
+  // meanwhile, before or while the send reads it; the send still gets the default and creates its session.
+  const sandbox = mounted.sandbox!
+  const expected = { "kilocode.sandbox": { enabled: true, version: 0 } }
+  const waiting = (value: Promise<unknown>) => Promise.race([value, sleep(2_000).then(() => "waiting" as const)])
+  const during = sandbox.metadata()
+  composer?.()
+  assert.deepEqual(await waiting(during), expected)
+  assert.deepEqual(await waiting(sandbox.metadata()), expected)
 }
 
 assert.deepEqual(reports, [])

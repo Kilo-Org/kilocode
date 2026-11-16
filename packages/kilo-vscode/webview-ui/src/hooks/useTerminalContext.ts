@@ -31,10 +31,7 @@ export function useTerminalContext(embedded?: EmbeddedResolver): TerminalContext
     }
   })
 
-  onCleanup(() => {
-    unsubscribe()
-    requests.dispose("Terminal context request cancelled")
-  })
+  onCleanup(() => requests.drain(unsubscribe))
 
   const resolveAttachment = async (text: string, sessionID?: string, context?: string) => {
     if (!hasTerminalMention(text)) return undefined
