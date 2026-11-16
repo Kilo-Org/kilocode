@@ -15,6 +15,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 - **Auto-Approve** — set per-tool permission levels (Allow / Ask / Deny) and manage granular command and path exceptions without editing config by hand. Permission prompts offer one-time approvals alongside saved allow/reject rules. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for the shared permission model.
 - **Context** — toggle auto-compaction, set the auto-compaction limit (the percentage of the model window that triggers compaction), enable pruning of old tool outputs, and manage file watcher ignore patterns. See [Context Condensing](/docs/customize/context/context-condensing) and [.kilocodeignore](/docs/customize/context/kilocodeignore) for what these settings control.
+- **Transcript** — choose how blocks render in the session transcript: the reasoning block mode, and whether terminal command, code edit, MCP and generic tool, and question blocks start expanded. Answered question cards start expanded by default. A sample transcript previews each change as you make it.
 - **Agent Behavior → Skills** — inspect loaded skills, add extra skill sources (local paths or remote URLs), edit or remove custom skills, and open skill files in the editor. See [Skills](/docs/customize/skills) for the skill format and discovery rules.
 - **Integrations** - enable or disable the GitHub integration for pull request badges and imports. It requires the GitHub CLI (`gh`) to be installed and authenticated.
 - **Advanced → Index agent worktrees** - include `.kilo/worktrees` in the containing project's index. Worktrees are excluded by default to avoid duplicate search results. Files opened from an excluded worktree in the main IDE window lack code resolution and inspections; open the worktree as its own project for full indexing.
@@ -23,11 +24,23 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 Use **Chat** for the current workspace and **Agents** to manage parallel tasks in isolated git worktrees. **+ Session** starts a conversation; **+ Worktree** opens the worktree creation dialog.
 
-- **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**.
+- **New Worktree** creates a new branch, imports a GitHub pull request with **From PR**, or uses an available local branch with **From Branch**. Leave **Fetch latest base branch before creating** enabled (the default) to fetch the selected base branch from its configured remote before the worktree is created, so the new worktree branches from the latest commit instead of a stale local ref. Kilo remembers the choice across projects and IDEs.
 - **Move to Worktree** moves the conversation and uncommitted changes into a new worktree while the session is idle. This action is also available from the main checkout's session list.
-- Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it and drag worktree rows to reorder them.
+- In the **Agents** list, local worktrees, Cloud workspaces, and the primary checkout for the current branch share one list. Drag rows to reorder them, or to move a workspace into, out of, or between sections. The primary checkout stays pinned at the top and cannot be moved or grouped. See [Sections](#sections).
+- Open a worktree to see its sessions in an editor tab. Its session list is scoped to that worktree; use the list toggle to hide or show it.
 - Worktree rows show session activity, pull request checks and reviews, unresolved review conversations, merge conflicts, and active build/run processes. Use the row menu to copy the branch name, directory, or pull request reference.
 - Choose **Update from Base** in a worktree's row menu to have its agent fetch the saved base branch's remote and merge the latest commit. For worktrees created before the saved base metadata existed, the agent first asks you to confirm the main branch as the base. The agent preserves staged, unstaged, and untracked work without using Git stash, resolves conflicts, and runs checks; it does not push or merge the base.
+
+### Sections
+
+Group local worktrees and Cloud workspaces into collapsible, color-coded sections to organize the **Agents** list.
+
+- Create a section with **New Section** in the tool window's **Add** menu. A new section gets an automatic color and starts in rename mode.
+- Right-click a section header to **Rename Section**, pick one of the eight section colors, or **Delete Section**. Deleting a section only ungroups its contents; it does not delete the workspaces.
+- Drag sections to reorder them, and drag workspaces into, out of, and between sections. Sections are single-level, so a section cannot be placed inside another.
+- The primary checkout for the current branch stays pinned at the top and cannot be moved or grouped.
+
+Organization is saved for each IDE project.
 
 ### Worktree setup scripts
 
@@ -49,6 +62,33 @@ Use **Show Output** to view a running process's console, **Stop** to stop it, or
 ### Forking a session
 
 Use **Fork Session** in a worktree session's row menu, right-click menu, or prompt bar's more menu to try another approach without losing the original conversation. To branch from an earlier message, use that user message's hover toolbar. The copied conversation opens as a new session next to its source; forking does not create a separate worktree.
+
+## Prompt navigator
+
+A prompt navigator runs along the right edge of the transcript. Hover it to list the session's entries and select one to jump to that prompt. The rail stays visible even when the session has only a single prompt.
+
+Answered `question` cards appear as their own entries, titled with the question header and previewing your answers. Selecting one expands the card and scrolls to it.
+
+## Finding text in the transcript
+
+Press the IDE's **Find** shortcut (`Ctrl+F` / `Cmd+F`, or whatever your keymap assigns to Find) anywhere in a chat to search the conversation. The plugin opens the native Find bar over the transcript, so the field, **Match case**, whole-word, and regex toggles, the match count, the arrows, and the close behavior match the ones you use in a file editor. **Find Next** and **Find Previous** act on the transcript while a chat is active, and ordinary file editors keep their own Find behavior.
+
+Search covers the conversation's user and assistant prose, including inline code and tables. It skips fenced code blocks, tool output, reasoning, diffs, and notices. Every match is highlighted and the current match is distinguished; selecting a hidden match inside a collapsed injected prompt expands it. Results refresh while a response streams without moving the selected match.
+
+## Cloud sessions
+
+When you are signed in to Kilo, the **Agents** tool window lists your repository-scoped Cloud workspaces in the same list as local worktrees, where you can group them with [sections](#sections). Kilo discovers them automatically and shows passive compute and activity status; opening a workspace does not start or wake it.
+
+Use the tool window's **Add** menu to create work. **Local Worktree Task** opens the local worktree dialog, and **Cloud Task** opens the New Cloud Workspace dialog, which uses this repository and lets you set an optional branch or ref, an optional Cloud profile, and an initial prompt. **New Section** creates a [section](#sections) to organize the list. An empty prompt creates an empty workspace that you add sessions to later. Creating a Cloud workspace requires signing in to Kilo.
+
+Open a Cloud workspace to see its sessions in an editor tab, then open a session to continue it with a live transcript, preparation progress, and the same permission and question prompts as a local session. Cloud sessions use Kilo models only. Use the workspace's **New Cloud Session** row to start another root session without repeating the repository or profile setup.
+
+- **Refresh Cloud** in the **Core** menu reloads Cloud workspaces and sessions without restarting Core. Refresh a single workspace from its row menu.
+- **Open in Browser** opens a workspace in your browser, in the workspace's organization.
+- Use **Close** on a session to hide it from the workspace and **Reopen** to bring it back. When every session is closed, the workspace shows an empty state instead of a new-session editor.
+- **Delete Cloud Workspace** permanently removes the workspace, its sessions, and its Cloud files after you confirm. The row keeps its place and shows deletion progress, and offers **Retry** if deletion fails. To remove only your local reference to a workspace that was already deleted elsewhere, use **Dismiss Unavailable Workspace**, which does not change anything in Cloud.
+- Cloud prompts are text-only: file attachments and file mentions are not supported yet, and Kilo does not send your editor context or selections with a hosted prompt.
+- Local-only actions, such as worktree, pull request, sharing, and Git actions, are disabled for Cloud sessions.
 
 ## Diagrams in chat
 
@@ -80,6 +120,15 @@ These shortcuts work while a Kilo session is active. They use `Ctrl` on macOS to
 | `Ctrl+2` | Cycle favorite models, or recommended models if you have no favorites |
 | `Ctrl+3` | Cycle reasoning effort for the current model |
 | `Ctrl+0` | Reset the model override |
+| `Ctrl+K` | Start or stop voice input while the prompt is focused |
+
+## Voice input
+
+Dictate a prompt instead of typing it. A microphone button sits in the prompt bar; select it to start recording, speak, then select it again to stop. Kilo transcribes your speech and inserts it at the caret, or replaces the prompt's selected text when there is a selection. To send in one step, press Send while recording: Kilo stops, transcribes, and sends the prompt.
+
+`Ctrl+K` starts and stops recording while the prompt is focused. The action is registered as **Toggle Voice Input**, so you can reassign it in **Settings → Keymap**. While the prompt is focused, the action takes precedence over the IDE's own `Ctrl+K` binding; outside the prompt, the IDE shortcut is unchanged.
+
+Recording stops automatically after two minutes. Audio is captured on your machine with the local microphone and uploaded to Kilo through your signed-in account for transcription, so remote development still uses your local microphone. Kilo selects a transcription model available to your account automatically. See [Voice Transcription](/docs/code-with-ai/features/speech-to-text) for how transcription through Kilo Gateway works.
 
 ## Permission requests
 
