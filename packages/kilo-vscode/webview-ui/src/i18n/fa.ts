@@ -615,8 +615,6 @@ export const dict = {
 
   "common.retry": "تلاش مجدد",
   "common.refresh": "بازخوانی",
-  "common.reload": "بارگذاری مجدد",
-  "common.reloadDescription": "بارگذاری مجدد تنظیمات، مهارت‌ها، عوامل و دستورات از دیسک",
 
   "profile.title": "پروفایل",
   "profile.notLoggedIn": "وارد نشده‌اید",
