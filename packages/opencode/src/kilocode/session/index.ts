@@ -431,9 +431,17 @@ export namespace KiloSession {
 
       const limit = input.limit ?? 100
       const sorted = [...dirs].sort((a, b) => b.length - a.length)
+      const git = new Map<string, boolean>()
+      const hasGit = (dir: string) => {
+        const hit = git.get(dir)
+        if (hit !== undefined) return hit
+        const found = existsSync(path.join(dir, ".git"))
+        git.set(dir, found)
+        return found
+      }
       const nested = (root: string, dir: string): boolean => {
         if (dir === root || !Filesystem.contains(root, dir)) return false
-        if (existsSync(path.join(dir, ".git"))) return true
+        if (hasGit(dir)) return true
         const parent = path.dirname(dir)
         return parent !== dir && nested(root, parent)
       }
@@ -450,6 +458,26 @@ export namespace KiloSession {
       }
       const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
+      const accepts = (raw: string) => {
+        const root = worktree(Filesystem.resolve(raw))
+        if (!root) return false
+        if (input.currentDirectory) return root === current
+        return true
+      }
+      if (dirs.length > 0) {
+        // Membership depends only on `directory`, so decide it once per distinct
+        // directory and push the result into SQL to keep LIMIT effective.
+        const found = yield* db
+          .selectDistinct({ directory: SessionTable.directory })
+          .from(SessionTable)
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .all()
+          .pipe(Effect.orDie)
+        const allowed = found.map((item) => item.directory).filter(accepts)
+        if (allowed.length === 0) return []
+        conditions.push(inArray(SessionTable.directory, allowed))
+      }
+
       const query =
         conditions.length > 0
           ? db
@@ -458,18 +486,7 @@ export namespace KiloSession {
               .where(and(...conditions))
           : db.select().from(SessionTable)
       const ordered = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
-      const rows = yield* (dirs.length ? ordered.all() : ordered.limit(limit).all()).pipe(Effect.orDie)
-
-      const list =
-        dirs.length > 0
-          ? rows.filter((row) => {
-              const dir = Filesystem.resolve(row.directory)
-              const root = worktree(dir)
-              if (!root) return false
-              if (input.currentDirectory) return root === current
-              return true
-            })
-          : rows
+      const list = yield* ordered.limit(limit).all().pipe(Effect.orDie)
 
       const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
       const projects = new Map<string, ProjectInfo>()
