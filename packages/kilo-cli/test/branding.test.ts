@@ -157,21 +157,36 @@ test("leaves every file with a reviewed identity untouched", async () => {
   }
 })
 
-test("does not rename a trace span, and only an Effect span", () => {
-  // The name of an Effect span is an identity telemetry groups by. Only the text a person reads changes, and a
-  // method that merely shares the name (`ui.fn`, `tracer.withSpan`) takes text like any other call.
+test("does not rename a trace span, in any of its call shapes", () => {
+  // The name of a span is an identity telemetry groups by: the first argument of `Effect.fn`, and the name of a
+  // `withSpan` on any receiver, data-first and as a template too. Everything else in those calls is text, and so is
+  // the argument of a method that merely shares the name `fn`.
   const source = [
     'const load = Effect.fn("OpenCode.load")(function* () {})',
+    "const made = Effect.fn(`OpenCode.${id}`)(function* () {})",
     'const traced = work.pipe(Effect.withSpan("opencode work"))',
+    'const streamed = stream.pipe(Stream.withSpan("OpenCode stream", { attributes: { label: "OpenCode label" } }))',
+    'const first = Effect.withSpan(work, "OpenCode first", { attributes: { hint: "Restart opencode" } })',
+    'const note = tracer.withSpan("Restart opencode")',
+    "const named = Effect.withSpan(`OpenCode ${id} step`)",
+    'const nested = Effect.withSpan(`OpenCode ${failed ? "OpenCode failed" : "ok"}`)',
+    'const two = Effect.withSpan("OpenCode name", "OpenCode text")',
     'const label = "OpenCode work"',
     'const hint = ui.fn("OpenCode hint")',
-    'const note = tracer.withSpan("Restart opencode")',
+    "const other = ui.fn(`OpenCode ${id}`)",
   ].join("\n")
   expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", source)).toBe(
     source
+      // A string in the options of a span call.
+      .replace('label: "OpenCode label"', 'label: "Kilo label"')
+      .replace('hint: "Restart opencode"', 'hint: "Restart kilo2"')
+      // A string inside an expression of a template name, and a second string after the name.
+      .replace('"OpenCode failed"', '"Kilo failed"')
+      .replace('"OpenCode text"', '"Kilo text"')
+      // Ordinary text, and `fn` on a receiver that is not Effect.
       .replace('"OpenCode work"', '"Kilo work"')
       .replace('"OpenCode hint"', '"Kilo hint"')
-      .replace('"Restart opencode"', '"Restart kilo2"'),
+      .replace("ui.fn(`OpenCode ${id}`)", "ui.fn(`Kilo ${id}`)"),
   )
 })
 

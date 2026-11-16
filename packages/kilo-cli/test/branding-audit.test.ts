@@ -314,14 +314,35 @@ test("does not count a trace span name as user-visible text", async () => {
   expect(KiloBrandingAudit.auditFile(key, source)).toEqual([])
   const findings = KiloBrandingAudit.auditFile(key, 'export const label = "OpenCodeTools.Plugin"')
   expect(findings.map((f) => f.kind)).toEqual(["rule-gap"])
-  // Only an Effect span is a span name: the same token as the argument of another `fn` is text.
+  // `fn` names a span only on Effect: the same token as the argument of another `fn` is text.
   expect(
     KiloBrandingAudit.auditFile(key, 'export const label = ui.fn("OpenCodeTools.Plugin")').map((f) => f.kind),
   ).toEqual(["rule-gap"])
   expect(
     KiloBrandingAudit.auditFile("cli/src/not-intercepted.ts", 'ui.fn("OpenCode hint")').map((f) => f.kind),
   ).toEqual(["missing-interception"])
-  expect(KiloBrandingAudit.auditFile("cli/src/not-intercepted.ts", 'Effect.fn("OpenCode.load")')).toEqual([])
+  // A span name is not a finding in any of its call shapes: `withSpan` on any receiver, data-first, or a template.
+  const file = "cli/src/not-intercepted.ts"
+  for (const call of [
+    'Effect.fn("OpenCode.load")',
+    "Effect.fn(`OpenCode.${id}`)",
+    'Stream.withSpan("OpenCode stream")',
+    'tracer.withSpan("OpenCode trace")',
+    'Effect.withSpan(work, "OpenCode first")',
+    "Effect.withSpan(`OpenCode ${id} step`)",
+  ])
+    expect(KiloBrandingAudit.auditFile(file, call), call).toEqual([])
+  expect(KiloBrandingAudit.auditFile(key, 'export const stream = Stream.withSpan("OpenCodeTools.stream")')).toEqual([])
+  // Only the name: another string of the same call is still a finding.
+  for (const call of [
+    'Stream.withSpan("OpenCode stream", { attributes: { label: "Restart OpenCode" } })',
+    'Effect.withSpan(work, "OpenCode first", { attributes: { label: "Restart OpenCode" } })',
+    'Effect.withSpan("OpenCode name", "Restart OpenCode")',
+  ])
+    expect(
+      KiloBrandingAudit.auditFile(file, call).map((f) => [f.kind, f.snippet]),
+      call,
+    ).toEqual([["missing-interception", "Restart OpenCode"]])
 })
 
 test("does not flag the server's wire identities", async () => {

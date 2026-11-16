@@ -23,7 +23,7 @@ The engine never rewrites code that merely looks like branding:
 - the command token inside `@opencode`, a dotted ID (`opencode.app`, `opencode.ai`), a path, or a hyphenated name;
 - a string literal whose entire value is the bare executable name `"opencode"` (the `OPENCODE_CLI_NAME` fallback, the ACP `command: "opencode"`, the server's basic-auth `username: "opencode"`);
 - a string literal that is an equality operand (`=== "# opencode"`) or the search pattern of a `replace`/`replaceAll`/`split`/`includes`/... call (the OAuth seam's `.replaceAll("OpenCode", ...)`);
-- a trace span name (`Effect.fn("OpenCodeTools.Plugin")`, `Effect.withSpan("...")`): telemetry groups by it and nobody reads it as product text. Only a string that is the first argument of `Effect.fn` or `Effect.withSpan` is protected; other span shapes (`Stream.withSpan`, the data-first `Effect.withSpan(self, "...")`, a template literal name) are not, and none exists in an intercepted file today.
+- a trace span name: telemetry groups by it and nobody reads it as product text. The name is the first argument of `Effect.fn("OpenCodeTools.Plugin")` (on `Effect` only: `ui.fn("...")` takes text), and the name of `<receiver>.withSpan(...)` on any receiver (`Effect`, `Stream`, a tracer): the first argument when it is a string, otherwise the second, which is the data-first `Effect.withSpan(self, "...")`. A template literal in that position is protected in its static text. Only the name is protected: another string of the same call, such as a span attribute, is still text. Not covered: `withSpan(...)` called without a receiver, a name built by concatenation, and a string inside a `${...}` of a template name; none exists in the audited packages today.
 
 ### Adding coverage
 

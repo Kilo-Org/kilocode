@@ -110,7 +110,12 @@ even though they are string literals:
 - the env-name anchor `OPENCODE_CLI_NAME` and other `OPENCODE_*` env names;
 - provider/model IDs, theme schema URLs, and wire identifiers enumerated in an
   explicit `PROTECTED` set (seeded from the anchors `branding.test.ts` already
-  guards at lines 33–98).
+  guards at lines 33–98);
+- trace span names, decided from the call and not from the text: the first
+  argument of `Effect.fn(...)`, and the name of `<receiver>.withSpan(...)` on
+  any receiver (the first argument when it is a string, otherwise the second,
+  the data-first form), including the static text of a template literal there.
+  Other strings of the same call stay text.
 
 **Rules (applied in order, within each surviving span):**
 

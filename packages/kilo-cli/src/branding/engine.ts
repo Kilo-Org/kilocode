@@ -39,7 +39,7 @@ export function userVisibleSpans(filePath: string, source: string): { normalized
   if (!program) throw new Error(`Kilo branding could not parse ${filePath}`)
 
   const spans: Span[] = []
-  const visit = (node: Node, parent: Node | null) => {
+  const visit = (node: Node, parent: Node | null, grand: Node | null) => {
     if (node.type === "StringLiteral" && typeof node.start === "number" && typeof node.end === "number") {
       if (!isProtected(node, parent))
         spans.push({
@@ -53,21 +53,23 @@ export function userVisibleSpans(filePath: string, source: string): { normalized
       typeof node.start === "number" &&
       typeof node.end === "number"
     ) {
-      spans.push({
-        start: node.start,
-        end: node.end,
-        raw: normalized.slice(node.start, node.end),
-        bareStringLiteral: false,
-      })
+      // The static text of a template that names a trace span is part of the name.
+      if (!grand || spanName(grand) !== parent)
+        spans.push({
+          start: node.start,
+          end: node.end,
+          raw: normalized.slice(node.start, node.end),
+          bareStringLiteral: false,
+        })
     }
     for (const key of types.VISITOR_KEYS[node.type] ?? []) {
       const child = node[key]
       if (Array.isArray(child)) {
-        for (const item of child) if (isNode(item)) visit(item, node)
-      } else if (isNode(child)) visit(child, node)
+        for (const item of child) if (isNode(item)) visit(item, node, parent)
+      } else if (isNode(child)) visit(child, node, parent)
     }
   }
-  visit(program, null)
+  visit(program, null, null)
   return { normalized, spans }
 }
 
@@ -99,9 +101,6 @@ function isNode(value: unknown): value is Node {
 // example the OAuth seam's `.replaceAll("OpenCode", ...)` pattern, or a shell-rc
 // marker compared with `===`).
 const EQUALITY = new Set(["===", "!==", "==", "!="])
-// `Effect.fn("OpenCodeTools.Plugin")` and `Effect.withSpan("...")` name a trace span: telemetry groups by it and no
-// person or model reads it as product text, so the name stays what upstream emits.
-const SPAN_METHODS = new Set(["fn", "withSpan"])
 const SEARCH_METHODS = new Set([
   "replace",
   "replaceAll",
@@ -129,12 +128,36 @@ function isProtected(node: Node, parent: Node | null): boolean {
   if (parent.type === "TSImportType" && parent.argument === node) return true
   if (parent.type === "BinaryExpression" && EQUALITY.has(parent.operator as string)) return true
   if (parent.type === "CallExpression") {
+    if (spanName(parent) === node) return true
     const callee = parent.callee as Node | undefined
     const args = parent.arguments as Node[] | undefined
     if (callee?.type !== "MemberExpression" || args?.[0] !== node) return false
-    const method = ((callee.property as Node | undefined)?.name as string) ?? ""
-    if (SEARCH_METHODS.has(method)) return true
-    return SPAN_METHODS.has(method) && (callee.object as Node | undefined)?.name === "Effect"
+    return SEARCH_METHODS.has(((callee.property as Node | undefined)?.name as string) ?? "")
   }
   return false
+}
+
+// The argument that names a trace span, when `node` is a call that takes one. Telemetry groups by the name and no
+// person or model reads it as product text, so it stays what upstream emits:
+//
+//   - `Effect.fn("OpenCodeTools.Plugin")`: the first argument. Only on `Effect`, because `fn` is a common method name
+//     and `ui.fn("OpenCode hint")` takes text.
+//   - `<receiver>.withSpan("name", options)` on any receiver (`Effect`, `Stream`, `Layer`, a tracer): the first
+//     argument when it is a string, otherwise the second when that is one, the data-first
+//     `Effect.withSpan(self, "name")`.
+//
+// Only that argument is the name. A string in the options of the same call is still text.
+function spanName(node: Node) {
+  if (node.type !== "CallExpression") return undefined
+  const callee = node.callee as Node | undefined
+  if (callee?.type !== "MemberExpression") return undefined
+  const method = (callee.property as Node | undefined)?.name
+  const args = (node.arguments as Node[] | undefined) ?? []
+  const candidates =
+    method === "withSpan"
+      ? args.slice(0, 2)
+      : method === "fn" && (callee.object as Node | undefined)?.name === "Effect"
+        ? args.slice(0, 1)
+        : []
+  return candidates.find((arg) => arg.type === "StringLiteral" || arg.type === "TemplateLiteral")
 }
