@@ -17,6 +17,7 @@ import {
   PtySmokeCommand,
   RemoteCommand,
   RollCallCommand,
+  SoulCommand,
   WorktreeCommand,
 } from "@/kilocode/cli/lazy-kilo-commands"
 
@@ -52,6 +53,7 @@ export namespace KiloCli {
       .command(RemoteCommand)
       .command(DaemonCommand)
       .command(ConfigCLICommand)
+      .command(SoulCommand)
       .command(WorktreeCommand)
     if (process.env.KILO_PTY_SMOKE === "1") cli.command(PtySmokeCommand)
     if (InstallationBuildKind !== "release") cli.command(DevSetupCommand).command(DevAliasCommand)

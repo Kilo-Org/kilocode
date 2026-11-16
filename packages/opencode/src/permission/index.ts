@@ -19,6 +19,7 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { SoulGuard } from "@/kilocode/soul/guard" // kilocode_change - soul formation guard
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -191,6 +192,29 @@ const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
+
+      // kilocode_change start - soul formation guard: agents may never edit SOUL.md or its
+      // paired eval artifacts (SOUL.suite.yaml, SOUL.baseline.json). This runs before the
+      // configurable permission rules so no rule or "always" grant can override it. Human
+      // edits in their own editor never pass through this path and are unaffected.
+      if (request.permission === "edit") {
+        const metadata = request.metadata as { filepath?: unknown } | undefined
+        const target = request.patterns.find((pattern) => SoulGuard.isProtectedEditTarget(pattern, metadata?.filepath))
+        if (target) {
+          return yield* new DeniedError({
+            ruleset: [
+              {
+                permission: "edit",
+                pattern: target,
+                action: "deny",
+                reason: SoulGuard.denialMessage(target),
+              },
+            ],
+          })
+        }
+      }
+      // kilocode_change end
+
       let needsAsk = false
       let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
