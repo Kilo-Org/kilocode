@@ -20,6 +20,7 @@ import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
 import type { Config } from "@/config/config"
 import { organization, token } from "./catalog"
+import { loadTogetherAI } from "./together-usage"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -32,6 +33,8 @@ type BundledSDK = { languageModel(modelId: string): LanguageModelV3 }
 
 export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any) => BundledSDK>> = {
   "@kilocode/kilo-gateway": async () => createKilo as unknown as (options: any) => BundledSDK,
+  // Together's SDK never requests streaming usage; see together-usage.ts
+  "@ai-sdk/togetherai": () => loadTogetherAI() as Promise<(options: any) => BundledSDK>,
 }
 
 // ---------------------------------------------------------------------------
