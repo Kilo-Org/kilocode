@@ -1249,4 +1249,21 @@ describe("config overlay routes", () => {
     const overlay2 = await json<Overlay>(await req(project.path, "/config/overlay"))
     expect(overlay2.effective?.privacy_mode).toBe(false)
   })
+
+  test.each([
+    ["string", "/tmp"],
+    ["local object", { path: "/tmp" }],
+    ["local object with description", { path: "/tmp", description: "scratch", hidden: true }],
+    ["git repository", { repository: "https://github.com/x/y", branch: "main", description: "upstream" }],
+  ])("serves the overlay for a project config with a %s reference", async (_name, entry) => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await config(project.path, { reference: { a: entry } })
+
+    const response = await req(project.path, "/config/overlay")
+    expect(response.status).toBe(200)
+    const overlay = (await response.json()) as { project: { reference?: Record<string, unknown> } }
+    expect(overlay.project.reference).toEqual({ a: entry })
+  })
 })
