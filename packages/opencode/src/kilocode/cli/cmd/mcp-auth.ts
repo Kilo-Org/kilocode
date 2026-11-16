@@ -35,44 +35,19 @@ export namespace KilocodeMcpAuth {
   }
 
   /**
-   * Report the result of `MCP.authenticate`. For "connected" it verifies that credentials were
-   * actually stored; every other status keeps the messages and exit codes of the upstream handler.
+   * Report a "connected" result from `MCP.authenticate` after verifying that credentials were
+   * actually stored. Other statuses are handled by the upstream command.
    */
-  export const report = Effect.fn("KilocodeMcpAuth.report")(function* (input: {
-    status: MCP.Status
+  export const connected = Effect.fn("KilocodeMcpAuth.connected")(function* (input: {
     mcp: Pick<MCP.Interface, "getAuthStatus">
     serverName: string
-    serverUrl: string
     spinner: Spinner
     prompts: Log
   }) {
-    const { status, spinner, prompts, serverName } = input
-    if (status.status === "connected") {
-      const result = outcome(serverName, yield* input.mcp.getAuthStatus(serverName))
-      if (result.ok) return spinner.stop("Authentication successful!")
-      spinner.stop("Authentication not confirmed", 1)
-      return prompts.log[result.level](result.message)
-    }
-    if (status.status === "needs_client_registration") {
-      spinner.stop("Authentication failed", 1)
-      prompts.log.error(status.error)
-      prompts.log.info("Add clientId to your MCP server config:")
-      return prompts.log.info(`
-  "mcp": {
-    "${serverName}": {
-      "type": "remote",
-      "url": "${input.serverUrl}",
-      "oauth": {
-        "clientId": "your-client-id",
-        "clientSecret": "your-client-secret"
-      }
-    }
-  }`)
-    }
-    if (status.status === "failed") {
-      spinner.stop("Authentication failed", 1)
-      return prompts.log.error(status.error)
-    }
-    spinner.stop("Unexpected status: " + status.status, 1)
+    const { spinner, prompts } = input
+    const result = outcome(input.serverName, yield* input.mcp.getAuthStatus(input.serverName))
+    if (result.ok) return spinner.stop("Authentication successful!")
+    spinner.stop("Authentication not confirmed", 1)
+    prompts.log[result.level](result.message)
   })
 }

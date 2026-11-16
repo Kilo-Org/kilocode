@@ -268,11 +268,38 @@ export const McpAuthCommand = effectCmd({
     ).pipe(
       // kilocode_change start - verify stored credentials before reporting success
       Effect.tap((status) =>
-        MCP.Service.use((mcp) =>
-          KilocodeMcpAuth.report({ status, mcp, serverName, serverUrl: serverConfig.url, spinner, prompts }),
-        ),
+        status.status === "connected"
+          ? MCP.Service.use((mcp) => KilocodeMcpAuth.connected({ mcp, serverName, spinner, prompts }))
+          : Effect.void,
       ),
       // kilocode_change end
+      Effect.tap((status) =>
+        Effect.sync(() => {
+          if (status.status === "connected") {
+            // kilocode_change - reported by KilocodeMcpAuth.connected
+          } else if (status.status === "needs_client_registration") {
+            spinner.stop("Authentication failed", 1)
+            prompts.log.error(status.error)
+            prompts.log.info("Add clientId to your MCP server config:")
+            prompts.log.info(`
+  "mcp": {
+    "${serverName}": {
+      "type": "remote",
+      "url": "${serverConfig.url}",
+      "oauth": {
+        "clientId": "your-client-id",
+        "clientSecret": "your-client-secret"
+      }
+    }
+  }`)
+          } else if (status.status === "failed") {
+            spinner.stop("Authentication failed", 1)
+            prompts.log.error(status.error)
+          } else {
+            spinner.stop("Unexpected status: " + status.status, 1)
+          }
+        }),
+      ),
       Effect.catchCause((cause) =>
         Effect.sync(() => {
           spinner.stop("Authentication failed", 1)
