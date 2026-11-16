@@ -1,35 +1,43 @@
 import { describe, expect, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import path from "path"
 import { KilocodeMcpAuth } from "@/kilocode/cli/cmd/mcp"
 import type { MCP } from "@/mcp"
+import { testEffect } from "../../../lib/effect"
 
-function run(stored: MCP.AuthStatus) {
+const it = testEffect(Layer.empty)
+
+const run = Effect.fn("test.run")(function* (stored: MCP.AuthStatus) {
   const calls: string[] = []
-  return Effect.runPromise(
-    KilocodeMcpAuth.connected({
-      mcp: { getAuthStatus: () => Effect.succeed(stored) },
-      serverName: "google_drive",
-      spinner: { stop: (message, code) => calls.push(`stop:${message}:${code ?? 0}`) },
-      prompts: { log: { error: (message) => calls.push(`error:${message}`) } },
-    }),
-  ).then(() => calls)
-}
+  yield* KilocodeMcpAuth.connected({
+    mcp: { getAuthStatus: () => Effect.succeed(stored) },
+    serverName: "google_drive",
+    spinner: { stop: (message, code) => calls.push(`stop:${message}:${code ?? 0}`) },
+    prompts: { log: { error: (message) => calls.push(`error:${message}`) } },
+  })
+  return calls
+})
 
 describe("KilocodeMcpAuth.connected", () => {
-  test("reports success when credentials are stored", async () => {
-    expect(await run("authenticated")).toStrictEqual(["stop:Authentication successful!:0"])
-  })
+  it.effect("reports success when credentials are stored", () =>
+    Effect.gen(function* () {
+      expect(yield* run("authenticated")).toStrictEqual(["stop:Authentication successful!:0"])
+    }),
+  )
 
   const cases: MCP.AuthStatus[] = ["not_authenticated", "expired"]
-  test.each(cases)("reports no authentication when stored status is %s", async (stored) => {
-    const calls = await run(stored)
-    expect(calls).toHaveLength(2)
-    expect(calls[0]).toBe("stop:Authentication not performed:1")
-    expect(calls[1]).toStartWith("error:MCP server google_drive connected without requesting OAuth")
-    expect(calls[1]).toContain("no credentials were stored")
-    expect(calls.join("\n")).not.toContain("Authentication successful!")
-  })
+  for (const stored of cases) {
+    it.effect(`reports no authentication when stored status is ${stored}`, () =>
+      Effect.gen(function* () {
+        const calls = yield* run(stored)
+        expect(calls).toHaveLength(2)
+        expect(calls[0]).toBe("stop:Authentication not performed:1")
+        expect(calls[1]).toStartWith("error:MCP server google_drive connected without requesting OAuth")
+        expect(calls[1]).toContain("no credentials were stored")
+        expect(calls.join("\n")).not.toContain("Authentication successful!")
+      }),
+    )
+  }
 })
 
 describe("McpAuthCommand", () => {
