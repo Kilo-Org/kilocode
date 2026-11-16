@@ -6,7 +6,9 @@ import { Continuation } from "@/kilocode/session-hosting/continuation"
 import {
   HostedFailure,
   StartInput,
+  WorkspacePullRequestResult,
   deletionDispatched,
+  pullRequestFailure,
   type ContinueWorkspaceInput,
   type CreateWorkspaceInput,
   type HostedWorkspaceID,
@@ -277,14 +279,17 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       },
     )
 
-    const clearWorkspacePersonalDefaultProfile = Effect.fn(
-      "SessionHostHttpApi.clearWorkspacePersonalDefaultProfile",
-    )(function* (ctx: { params: { profileID: string } }) {
-      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
-      return yield* provider
-        .clearWorkspacePersonalDefaultProfile({ id: ctx.params.profileID })
-        .pipe(Effect.mapError(mapFailure))
-    })
+    const clearWorkspacePersonalDefaultProfile = Effect.fn("SessionHostHttpApi.clearWorkspacePersonalDefaultProfile")(
+      function* (ctx: { params: { profileID: string }; query: { organizationID?: OrganizationID } }) {
+        const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+        return yield* provider
+          .clearWorkspacePersonalDefaultProfile({
+            id: ctx.params.profileID,
+            ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+          })
+          .pipe(Effect.mapError(mapFailure))
+      },
+    )
 
     const createWorkspace = Effect.fn("SessionHostHttpApi.createWorkspace")(function* (ctx: {
       payload: CreateWorkspaceInput
@@ -375,6 +380,42 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
           ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
         }),
       ).pipe(Effect.mapError(mapFailure))
+    })
+
+    const pullRequest = Effect.fn("SessionHostHttpApi.pullRequest")(function* (
+      ctx: {
+        params: { providerID: ProviderID; workspaceID: WorkspaceID }
+        query: { organizationID?: OrganizationID }
+      },
+      refresh: boolean,
+    ) {
+      const provider = yield* require(ctx.params.providerID)
+      const id = workspaceID(ctx.params)
+      const action = refresh ? provider.refreshWorkspacePullRequest : provider.getWorkspacePullRequest
+      if (!action) return { id, state: "unsupported", pullRequest: null } as const
+      return yield* action({
+        id,
+        ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+      }).pipe(
+        Effect.flatMap((result) =>
+          Effect.try({
+            try: () => {
+              const parsed = Schema.decodeUnknownSync(WorkspacePullRequestResult)(result)
+              if (parsed.id.providerID !== id.providerID || parsed.id.workspaceID !== id.workspaceID) {
+                throw new Error("Workspace PR identity does not match")
+              }
+              return parsed
+            },
+            catch: () =>
+              new HostedFailure({
+                code: "invalid_response",
+                message: "Session host returned an unsupported workspace PR observation",
+                retryable: false,
+              }),
+          }),
+        ),
+        Effect.catch((err) => Effect.succeed(pullRequestFailure(id, err))),
+      )
     })
 
     const listWorkspaceSessions = Effect.fn("SessionHostHttpApi.listWorkspaceSessions")(function* (ctx: {
@@ -599,6 +640,8 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("continueWorkspace", continueWorkspace)
       .handle("getWorkspace", getWorkspace)
       .handle("getWorkspaceStatus", getWorkspaceStatus)
+      .handle("getWorkspacePullRequest", (ctx) => pullRequest(ctx, false))
+      .handle("refreshWorkspacePullRequest", (ctx) => pullRequest(ctx, true))
       .handle("getWorkspaceChanges", getWorkspaceChanges)
       .handle("refreshWorkspaceChanges", refreshWorkspaceChanges)
       .handle("getWorkspaceChangeFile", getWorkspaceChangeFile)

@@ -788,8 +788,12 @@ it.effect("sets and clears the personal default profile with the caller identity
   return Effect.gen(function* () {
     const cloud = client(app.url)
 
-    expect(yield* cloud.setWorkspacePersonalDefaultProfile({ id: PROFILE })).toEqual({ success: true })
-    expect(yield* cloud.clearWorkspacePersonalDefaultProfile({ id: PROFILE })).toEqual({ success: true })
+    expect(yield* cloud.setWorkspacePersonalDefaultProfile({ id: PROFILE, organizationID: ORG })).toEqual({
+      success: true,
+    })
+    expect(yield* cloud.clearWorkspacePersonalDefaultProfile({ id: PROFILE, organizationID: ORG })).toEqual({
+      success: true,
+    })
 
     expect(app.calls).toMatchObject([
       { method: "POST", path: "/trpc/setHostedWorkspacePersonalDefaultProfile" },
@@ -798,6 +802,8 @@ it.effect("sets and clears the personal default profile with the caller identity
     expect(JSON.parse(app.calls[0].body)).toEqual({ profileId: PROFILE })
     expect(JSON.parse(app.calls[1].body)).toEqual({ profileId: PROFILE })
     expect(app.calls[0].auth).toBe(`Bearer ${CONTROL}`)
+    expect(app.calls[0].org).toBe(ORG)
+    expect(app.calls[1].org).toBe(ORG)
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
