@@ -194,10 +194,13 @@ export async function collectProjectSessions(
       if (seen.has(session.id)) continue
       seen.add(session.id)
       if (refile(ctx, session, home)) moved.push(session.id)
+      // A Local filing (`null`) of a session that runs in a worktree is the user's choice, so only an unfiled session
+      // takes the worktree of the directory that listed it.
+      const filed = state?.getSession(session.id)
       views.push({
         ...session,
         parentID: undefined,
-        worktreeId: state?.getSession(session.id)?.worktreeId ?? entry.worktreeId,
+        worktreeId: filed ? filed.worktreeId : entry.worktreeId,
       })
     }
   }

@@ -27,6 +27,7 @@ import type { ScriptTerminalManager } from "./ScriptTerminalManager"
 import type { RunController } from "./run/controller"
 import type { RecoveryMessage } from "./worktree-recovery"
 import type { ProjectContexts } from "./project/contexts"
+import { routeSession } from "./route-session"
 
 export interface MessageHost {
   connection: AgentManagerConnection
@@ -163,6 +164,8 @@ async function handleSession(m: AgentManagerInMessage, ctx: ProjectContext, host
     return true
   }
   if (m.type === "agentManager.openLocally") {
+    const client = await host.lifecycle.client().catch(() => undefined)
+    if (client) await routeSession(client, m.sessionId, ctx.root, host.log)
     const state = ctx.peekState()
     if (state?.getSession(m.sessionId)) {
       state.moveSession(m.sessionId, null)

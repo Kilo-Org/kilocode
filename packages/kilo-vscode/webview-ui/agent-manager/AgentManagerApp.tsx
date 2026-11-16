@@ -1070,9 +1070,11 @@ const AgentManagerContent: Component = () => {
   })
   createEffect(() => {
     const sel = selection()
+    const current = sessions.currentSessionID()
     const id = vacantWorktreeTab({
       selection: sel,
-      current: sessions.currentSessionID(),
+      // What the chat renders: a session that runs in another directory leaves the worktree as empty as no session.
+      current: shownSession() ?? (current && isPending(current) ? current : undefined),
       pending: activePendingId(),
       terminal: terms.activeId(),
       review: reviewActive(),
