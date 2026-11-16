@@ -130,6 +130,8 @@ export interface SessionCatalogHost {
   list(directory: string): Promise<SessionInfo[]>
   /** One backend session, for create events that carry no full record. */
   get(sessionID: string): Promise<SessionInfo | undefined>
+  /** File a session under the context that now runs it, after a move the server applied late. */
+  moved(sessionID: string, directory: string): void
   /** Post one message to the webview. */
   post(message: AgentManagerOutMessage): void
   /** Report one catalog failure to the output channel. */

@@ -245,7 +245,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
           .then((client) => routeSession(client, sessionId, directory, (...args) => this.log(...args)))
           .catch((err: unknown) => {
             this.log(`Failed to move session ${sessionId}:`, err)
-            return false
+            return "failed" as const
           }),
     })
     this.contexts = wiring.contexts

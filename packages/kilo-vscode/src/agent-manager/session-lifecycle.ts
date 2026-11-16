@@ -15,6 +15,15 @@ function sessionID(data: unknown): string | undefined {
   return typeof value.sessionID === "string" ? value.sessionID : undefined
 }
 
+/** The destination directory of a `session.moved` event. */
+function movedDirectory(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null) return undefined
+  const location = (data as Record<string, unknown>).location
+  if (typeof location !== "object" || location === null) return undefined
+  const directory = (location as Record<string, unknown>).directory
+  return typeof directory === "string" && directory.length > 0 ? directory : undefined
+}
+
 /** A subagent session is not a sidebar root and never enters the catalog. */
 function child(data: unknown): boolean {
   if (typeof data !== "object" || data === null) return false
@@ -24,6 +33,15 @@ function child(data: unknown): boolean {
 
 /** Tracks which sessions the Agent Manager knows are gone, so a late event cannot revive them. */
 export function handleSessionLifecycle(event: Event, deps: Deps): void {
+  if (event.type === "session.moved") {
+    const id = sessionID(event.data)
+    const directory = movedDirectory(event.data)
+    if (!id || !directory) return
+    // A move applies at a step boundary, often long after the request returned. The filing follows the server
+    // directory here so the session stays reachable in the tab strip of the directory that actually runs it.
+    sessionCatalogHost(deps.busy)?.moved(id, directory)
+    return
+  }
   if (event.type === "session.deleted") {
     const id = sessionID(event.data)
     if (!id) return

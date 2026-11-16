@@ -22,6 +22,14 @@ export interface RestoreDeps {
   focusManaged: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string | null) => void
   setActivePendingId: (id: string | undefined) => void
+  /** The directory the server runs a session in, when the catalog already listed it. */
+  directoryOf?: (sessionId: string) => string | undefined
+}
+
+/** Compare directory paths the way the host stores them, ignoring a trailing separator. */
+function sameDirectory(a: string, b: string): boolean {
+  const trim = (value: string) => (value.length > 1 ? value.replace(/[\\/]+$/, "") : value)
+  return trim(a) === trim(b)
 }
 
 /** Restore `state.activeTarget` for the incoming project's state payload. */
@@ -36,6 +44,19 @@ export function restoreProjectTarget(state: AgentManagerStateMessage, deps: Rest
   if (target.kind === "session") {
     const managed = state.sessions.find((s) => s.id === target.sessionId)
     deps.setActivePendingId(undefined)
+    // A filing from an older build can name a worktree the server does not run the session in. That worktree's
+    // view reads the store of its own directory, so restoring into it shows an empty panel. Follow the server
+    // directory when the catalog already knows it.
+    const directory = deps.directoryOf?.(target.sessionId)
+    const owner = directory ? state.worktrees.find((wt) => sameDirectory(wt.path, directory)) : undefined
+    if (owner) {
+      deps.focusManaged(owner.id, target.sessionId)
+      return
+    }
+    if (directory) {
+      deps.focusLocal(target.sessionId)
+      return
+    }
     if (managed?.worktreeId && state.worktrees.some((wt) => wt.id === managed.worktreeId)) {
       deps.focusManaged(managed.worktreeId, managed.id)
       return

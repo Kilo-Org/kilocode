@@ -25,6 +25,7 @@ import { hydrateExpanded } from "./project/hydrate"
 import { getReviewMarkdownRender } from "./provider-messages"
 import { readTerminalFont } from "./terminal-font"
 import { isRestrictedRoot } from "./home-workspace"
+import { fileMovedSession } from "./session-move"
 
 export interface ProviderStateHost {
   readonly contexts: ProjectContexts
@@ -159,8 +160,25 @@ function sessionCatalog(p: ProviderStateHost): SessionCatalogHost {
   return {
     contextForDirectory: (directory) => p.contexts.byDirectory(directory),
     contextForSession: (sessionID) => p.contexts.byLiveSession(sessionID),
-    list: async (directory) => (await (await p.client()).session.list({ directory, parentID: null })).data,
+    list: async (directory) =>
+      (
+        await (await p.client()).session.list({
+          directory,
+          parentID: null,
+          // The catalog also repairs filings from the server directory. The default list window would hide older
+          // sessions, so a moved one outside it would never be refiled.
+          limit: Number.MAX_SAFE_INTEGER,
+        })
+      ).data,
     get: async (sessionID) => (await p.client()).session.get({ sessionID }),
+    moved: (sessionID, directory) => {
+      const ctx = p.contexts.byDirectory(directory) ?? p.contexts.byLiveSession(sessionID)
+      const state = ctx?.peekState()
+      if (!ctx || !state) return
+      // A tracked session follows the directory that now runs it. A session outside every tracked directory has no
+      // tab strip to land in.
+      if (fileMovedSession(state, sessionID, directory, ctx.root)) pushState(p, ctx)
+    },
     post: (message) => p.postToWebview(message),
     log: (...args) => p.log(...args),
   }

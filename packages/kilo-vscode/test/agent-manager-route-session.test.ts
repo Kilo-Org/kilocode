@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock, setSystemTime } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
@@ -14,7 +14,7 @@ describe("routeSession", () => {
   }
 
   beforeEach(() => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), "am-route-"))
+    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-route-")))
     worktree = path.join(root, ".kilo", "worktrees", "one")
     fs.mkdirSync(worktree, { recursive: true })
     directory = worktree
@@ -30,11 +30,12 @@ describe("routeSession", () => {
   })
 
   afterEach(() => {
+    setSystemTime()
     fs.rmSync(root, { recursive: true, force: true })
   })
 
   it("moves a worktree session opened locally to the project root", async () => {
-    expect(await routeSession(client as never, "ses_1", root, () => undefined)).toBe(true)
+    expect(await routeSession(client as never, "ses_1", root, () => undefined)).toBe("moved")
 
     expect(client.session.move).toHaveBeenCalledWith({ sessionID: "ses_1", directory: root })
     expect(directory).toBe(root)
@@ -43,7 +44,7 @@ describe("routeSession", () => {
   it("leaves a session that already runs in the project root alone", async () => {
     directory = root
 
-    expect(await routeSession(client as never, "ses_1", `${root}/`, () => undefined)).toBe(true)
+    expect(await routeSession(client as never, "ses_1", `${root}/`, () => undefined)).toBe("moved")
 
     expect(client.session.move).not.toHaveBeenCalled()
   })
@@ -51,18 +52,32 @@ describe("routeSession", () => {
   it("reports a failed read or move so the caller keeps the filing", async () => {
     const logs: unknown[][] = []
     client.session.get.mockRejectedValueOnce(new Error("offline"))
-    expect(await routeSession(client as never, "ses_1", root, (...args) => logs.push(args))).toBe(false)
+    expect(await routeSession(client as never, "ses_1", root, (...args) => logs.push(args))).toBe("failed")
     client.session.get.mockResolvedValueOnce({ id: "ses_1", location: { directory: worktree } })
     client.session.move.mockRejectedValueOnce(new Error("move failed"))
-    expect(await routeSession(client as never, "ses_1", root, (...args) => logs.push(args))).toBe(false)
+    expect(await routeSession(client as never, "ses_1", root, (...args) => logs.push(args))).toBe("failed")
 
     expect(logs).toHaveLength(2)
+    expect(directory).toBe(worktree)
+  })
+
+  it("reports a move that waits for the current step as queued, not failed", async () => {
+    // The server accepted the move, but the session still runs in the worktree when the request wait ends.
+    client.session.move.mockResolvedValueOnce(undefined)
+    client.session.active.mockImplementation(async () => {
+      setSystemTime(new Date(Date.now() + 60_000))
+      return { ses_1: { type: "running" } }
+    })
+
+    expect(await routeSession(client as never, "ses_1", root, () => undefined)).toBe("queued")
+    expect(client.session.move).toHaveBeenCalledWith({ sessionID: "ses_1", directory: root })
     expect(directory).toBe(worktree)
   })
 })
 
 describe("fileSessionLocally", () => {
   let root: string
+  let worktree: string
   let state: WorktreeStateManager
   let client: {
     session: { get: ReturnType<typeof mock>; move: ReturnType<typeof mock>; active: ReturnType<typeof mock> }
@@ -71,11 +86,12 @@ describe("fileSessionLocally", () => {
   beforeEach(() => {
     root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "am-file-local-")))
     state = new WorktreeStateManager(root, () => undefined)
-    const worktree = state.addWorktree({ branch: "one", path: path.join(root, "one"), parentBranch: "main" })
-    state.addSession("ses_1", worktree.id)
+    worktree = path.join(root, "one")
+    const wt = state.addWorktree({ branch: "one", path: worktree, parentBranch: "main" })
+    state.addSession("ses_1", wt.id)
     client = {
       session: {
-        get: mock(async () => ({ id: "ses_1", location: { directory: worktree.path } })),
+        get: mock(async () => ({ id: "ses_1", location: { directory: worktree } })),
         move: mock(async () => {
           throw new Error("move failed")
         }),
@@ -85,6 +101,7 @@ describe("fileSessionLocally", () => {
   })
 
   afterEach(async () => {
+    setSystemTime()
     await state.flush()
     fs.rmSync(root, { recursive: true, force: true })
   })
@@ -98,7 +115,7 @@ describe("fileSessionLocally", () => {
       log: () => undefined,
     })
 
-    expect(filed).toBe(false)
+    expect(filed).toBe("failed")
     expect(state.getSession("ses_1")?.worktreeId).not.toBeNull()
   })
 
@@ -106,12 +123,34 @@ describe("fileSessionLocally", () => {
     const moved = { id: "ses_1", location: { directory: root } }
     client.session.move.mockResolvedValueOnce(undefined)
     client.session.get
-      .mockResolvedValueOnce({ id: "ses_1", location: { directory: path.join(root, "one") } })
+      .mockResolvedValueOnce({ id: "ses_1", location: { directory: worktree } })
       .mockResolvedValueOnce(moved)
 
     expect(
       await fileSessionLocally({ client: client as never, state, sessionId: "ses_1", root, log: () => undefined }),
-    ).toBe(true)
+    ).toBe("moved")
     expect(state.getSession("ses_1")?.worktreeId).toBeNull()
+  })
+
+  it("keeps the worktree filing for a queued move and leaves the follow-up to the moved event", async () => {
+    const changed = mock(() => undefined)
+    client.session.move.mockResolvedValueOnce(undefined)
+    client.session.active.mockImplementation(async () => {
+      setSystemTime(new Date(Date.now() + 60_000))
+      return { ses_1: { type: "running" } }
+    })
+
+    expect(
+      await fileSessionLocally({
+        client: client as never,
+        state,
+        sessionId: "ses_1",
+        root,
+        log: () => undefined,
+        changed,
+      }),
+    ).toBe("queued")
+    expect(state.getSession("ses_1")?.worktreeId).not.toBeNull()
+    expect(changed).not.toHaveBeenCalled()
   })
 })

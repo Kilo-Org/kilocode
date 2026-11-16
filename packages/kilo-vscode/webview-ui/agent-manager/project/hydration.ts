@@ -15,7 +15,11 @@ export function createProjectHydration(opts: {
   markdown: (value: boolean) => void
   current: () => string | undefined
   settingUp: () => boolean
-  sessions: () => Parameters<typeof trackedSessionInventory>[1]
+  /**
+   * Root sessions the panel knows, with their server directory when loaded. The directory lets the restore follow
+   * where a session runs instead of a filing an older build left behind.
+   */
+  sessions: () => (Parameters<typeof trackedSessionInventory>[1][number] & { location?: { directory?: string } })[]
   tabs: () => string[]
   closed: () => Set<string>
   pending: (id: string) => boolean
@@ -54,7 +58,10 @@ export function createProjectHydration(opts: {
       if (restored) opts.setTabs(restored)
       if (switched === "switched" && needsLocalDraft(opts.tabs(), opts.terminals())) opts.draft()
       if (switched !== "same") {
-        restoreProjectTarget(state, opts.restore)
+        restoreProjectTarget(state, {
+          ...opts.restore,
+          directoryOf: (sessionId) => opts.sessions().find((item) => item.id === sessionId)?.location?.directory,
+        })
         opts.focus()
       }
       opts.sidebar(state.sidebarCollapsed)

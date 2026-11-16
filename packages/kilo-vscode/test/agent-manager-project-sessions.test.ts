@@ -65,6 +65,7 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
   cleanups.push(() => ctx.dispose())
 
   const listed: string[] = []
+  const listInputs: Array<{ directory?: string; parentID?: string | null; limit?: number }> = []
   const created = new Map<string, SessionInfo>()
   let release: () => void = () => {}
   const held = new Promise<void>((resolve) => {
@@ -72,9 +73,10 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
   })
   const client = {
     session: {
-      list: async (input: { directory?: string }) => {
+      list: async (input: { directory?: string; parentID?: string | null; limit?: number }) => {
         const directory = input.directory ?? ""
         listed.push(directory)
+        listInputs.push(input)
         if (options.hold === directory) await held
         if (options.fail === directory) throw new Error(`cannot list ${directory}`)
         const base =
@@ -136,7 +138,7 @@ async function setup(options: { fail?: string; hold?: string } = {}) {
   })()
   const host = Object.assign(logger, fields) as unknown as ProviderStateHost
 
-  return { ctx, host, posts, listed, created, logs: logger.logs, release, busy: host.busySessions, client }
+  return { ctx, host, posts, listed, listInputs, created, logs: logger.logs, release, busy: host.busySessions, client }
 }
 
 const catalog = (posts: AgentManagerOutMessage[]) =>
@@ -151,7 +153,7 @@ async function settle(check: () => boolean) {
 
 describe("Agent Manager project session catalog", () => {
   it("posts root sessions for the project root and every worktree from pushState", async () => {
-    const { ctx, host, posts, listed } = await setup()
+    const { ctx, host, posts, listed, listInputs } = await setup()
     pushState(host)
     await settle(() => catalog(posts).length > 0)
     expect(catalog(posts)).toEqual([
@@ -165,6 +167,10 @@ describe("Agent Manager project session catalog", () => {
       },
     ])
     expect(listed).toEqual([ROOT, WORKTREE])
+    expect(listInputs).toEqual([
+      { directory: ROOT, parentID: null, limit: Number.MAX_SAFE_INTEGER },
+      { directory: WORKTREE, parentID: null, limit: Number.MAX_SAFE_INTEGER },
+    ])
     expect(ctx.hasLiveSession("root-session")).toBe(true)
     expect(ctx.hasLiveSession("wt-session")).toBe(true)
   })
@@ -207,6 +213,21 @@ describe("Agent Manager project session catalog", () => {
     )
     await settle(() => catalog(posts).length === 2)
     expect(catalog(posts)[1]?.sessions.map((session) => session.id)).toEqual(["root-session"])
+  })
+
+  it("reports a session move to the catalog host so the filing follows the server", () => {
+    const moved: Array<[string, string]> = []
+    const busy = new Set<string>()
+    registerSessionCatalogHost(busy, {
+      moved: (sessionID: string, directory: string) => moved.push([sessionID, directory]),
+    } as never)
+
+    handleSessionLifecycle(
+      { type: "session.moved", data: { sessionID: "s1", location: { directory: WORKTREE } } },
+      { busy, removed: new Set<string>() },
+    )
+
+    expect(moved).toEqual([["s1", WORKTREE]])
   })
 
   it("re-lists after a create event so a later push is not served from a stale cache", async () => {
