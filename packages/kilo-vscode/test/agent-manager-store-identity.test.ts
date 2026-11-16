@@ -82,6 +82,22 @@ describe("closed session suppression", () => {
     })
   })
 
+  it("keeps the suppression when a state payload has no tab order", () => {
+    createRoot((dispose) => {
+      const store = createProjectStore("project")
+      store.dismissSession("ses_a")
+
+      store.applyState({
+        type: "agentManager.state",
+        worktrees: [tree("a")],
+        sessions: [],
+      } as AgentManagerStateMessage)
+
+      expect(store.closed().has("ses_a")).toBe(true)
+      dispose()
+    })
+  })
+
   it("resumes a session the user opens again", () => {
     createRoot((dispose) => {
       const store = createProjectStore("project")

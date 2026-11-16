@@ -156,12 +156,15 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
       const next = new Map([...prev].filter(([key]) => ids.has(key)))
       return next.size === prev.size ? prev : next
     })
-    // The host dropped a closed session from its filing and tab order: the optimistic close is confirmed.
-    const tracked = [
-      ...state.sessions,
-      ...Object.values(state.tabOrder ?? {}).flatMap((ids) => ids.map((id) => ({ id }))),
-    ]
-    closed.prune(tracked)
+    // A payload without a tab order is not a complete host state, so the retained order cannot confirm a close.
+    if (state.tabOrder !== undefined) {
+      // The host dropped a closed session from its filing and tab order: the optimistic close is confirmed.
+      const tracked = [
+        ...state.sessions,
+        ...Object.values(state.tabOrder).flatMap((ids) => ids.map((id) => ({ id }))),
+      ]
+      closed.prune(tracked)
+    }
   }
 
   return {

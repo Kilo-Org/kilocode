@@ -81,6 +81,14 @@ describe("worktreeSessionTabs", () => {
     ).toEqual([])
   })
 
+  it("does not keep a filed session whose live directory belongs to another worktree", () => {
+    expect(tabs({ owner: () => OTHER })).toEqual([])
+  })
+
+  it("does not keep a filed session that runs in the project root", () => {
+    expect(tabs({ owner: () => null })).toEqual([])
+  })
+
   it("keeps the remaining tabs in order after one closes", () => {
     expect(tabs({ closed: new Set([first.id]) })).toEqual([second.id])
     expect(tabs({ closed: new Set([second.id]) })).toEqual([first.id])

@@ -43,7 +43,9 @@ export function worktreeSessionTabs(input: {
   closed?: ReadonlySet<string>
 }): SessionInfo[] {
   const order = input.order?.filter((id) => !input.closed?.has(id))
-  const list = worktreeSessions(input.id, input.managed, input.sessions, order, input.closed)
+  const list = worktreeSessions(input.id, input.managed, input.sessions, order, input.closed).filter((session) =>
+    showsSession(input.id, input.owner(session.id)),
+  )
   const known = new Set(list.map((session) => session.id))
   const extra = (order ?? []).flatMap((sessionID) => {
     const session = input.lookup(sessionID)
