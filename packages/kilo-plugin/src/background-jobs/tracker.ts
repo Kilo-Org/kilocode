@@ -157,7 +157,7 @@ export const make = Effect.fn("KiloBackgroundJobs.make")(function* (input: {
         ...(agent !== undefined ? { agent } : {}),
         ...(title !== undefined ? { title } : {}),
         status: "running",
-        background: job.background || (running && previous.background),
+        background: true,
         time: { started: running ? previous.time.started : now },
       },
     })

@@ -69,7 +69,8 @@ export const Plugin = define({
                       parentSessionID: context.sessionID,
                       title: input.description,
                       agent: input.agent,
-                      background: input.background === true,
+                      // Upstream always runs a subagent in the background; a call only ever returns running.
+                      background: true,
                     })
                   }
                   yield* context.progress(update)

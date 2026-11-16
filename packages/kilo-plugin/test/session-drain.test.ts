@@ -339,13 +339,14 @@ describe("kilocode.session-drain", () => {
       yield* llm.serve((request) => {
         const text = JSON.stringify(request)
         if (text.includes("REVIEWER")) return held(child, "child done")
-        if (text.includes("<subagent")) return held(follow, "parent saw the result")
+        // The subagent tool description names `<subagent>` too, and JSON escapes the notice's quotes, so match the
+        // completion's own escaped state attribute before the earlier tool result that also names the call.
+        if (text.includes('state=\\"completed\\"')) return held(follow, "parent saw the result")
         if (text.includes("call_review")) return TestLLM.text("parent waits", "parent")
         return TestLLM.toolCall("call_review", "subagent", {
           agent: "reviewer",
           description: "Review",
           prompt: "Review it",
-          background: true,
         })
       })
       yield* env.sessions.prompt({ sessionID: env.root.id, text: "Start a review" })

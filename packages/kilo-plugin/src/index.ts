@@ -41,7 +41,6 @@ import { KiloWakeupPlugin } from "./wakeup"
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
 import { KiloSessionDrain } from "./session-drain"
-import { KiloSubagentBackgroundPlugin } from "./subagent-background"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
 import { KiloPagesPlugin } from "./pages"
@@ -104,7 +103,6 @@ export const KiloPlugins = [
   // Waits until a session and the work it started have gone quiet. kilo_port(goals:b983b6af7e4b)
   KiloSessionDrain.Plugin,
   // Runs subagents in the background unless the call passes `background: false`.
-  KiloSubagentBackgroundPlugin,
   KiloRecallPlugin,
   // v1 enabled codebase indexing through a built-in plugin entry. kilo_port(indexing:2e5dfe2574c6)
   KiloIndexingPlugin,

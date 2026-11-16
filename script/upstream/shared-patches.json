@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 136,
-    "markedLines": 2410,
+    "files": 137,
+    "markedLines": 2426,
     "unmarkedLines": 332,
     "deletedFiles": 0
   },
@@ -565,6 +565,10 @@
     "packages/tui/test/session-panel.test.tsx": {
       "rung": 4,
       "seam": "Kilo registers an additional builtin TUI plugin, so the Plugins dialog can scroll past `opencode.diffs`. The test waits for the reveal instead of requiring that row in the first frame after ctrl+a; the same row, filter and toggle assertions stay. The test must stay next to the upstream session-panel harness because it drives the real dialog and keymap."
+    },
+    "packages/tui/test/fixture/tui-environment.tsx": {
+      "rung": 4,
+      "seam": "Kilo TUI tests mount the provider tree piecemeal. Upstream's DataProvider now requires ConfigProvider, so the shared fixture supplies a resolved default. A test fixture has no product seam to expose, and the Kilo tests cannot mount the full app shell."
     }
   }
 }
