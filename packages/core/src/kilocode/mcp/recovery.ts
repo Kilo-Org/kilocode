@@ -7,6 +7,7 @@ import { Clock, Effect, FiberMap, Layer, Stream } from "effect"
 import { Bus } from "../../bus.js"
 import { Credential } from "../../credential.js"
 import { Environment } from "../../environment/index.js"
+import { Flag } from "../../flag.js"
 import { Form } from "../../form.js"
 import { Integration } from "../../integration.js"
 import { Location } from "../../location.js"
@@ -30,6 +31,7 @@ export const configured = (options?: Mcp.Options) =>
     deps: [
       Location.node,
       Environment.node,
+      Flag.node,
       Bus.node,
       Form.node,
       Integration.node,

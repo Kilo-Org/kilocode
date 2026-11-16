@@ -57,6 +57,7 @@ export const files: readonly string[] = [
   "core/src/tool/plugin/artifact.ts",
   "core/src/tool/plugin/schedule.ts",
   "core/src/tool/plugin/mcp-resource.ts",
+  "core/src/tool/plugin/mcp-events.ts",
   "core/src/schedule/check.ts",
   "core/src/oauth/page.ts",
 ]

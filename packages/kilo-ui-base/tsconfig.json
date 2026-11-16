@@ -18,5 +18,11 @@
     "strict": true,
     "types": ["vite/client", "bun"]
   },
+<<<<<<<< HEAD:packages/kilo-ui-base/tsconfig.json
   "exclude": ["**/*.stories.*", "**/*.mdx"]
+|||||||| 5f76acb125:packages/stats/app/tsconfig.json
+  "include": ["*.ts", "src", "../core/src/resource.d.ts"]
+========
+  "include": ["*.ts", "src"]
+>>>>>>>> 73abe63ac23224d88e739e7028882e547ef65a79:packages/data/app/tsconfig.json
 }

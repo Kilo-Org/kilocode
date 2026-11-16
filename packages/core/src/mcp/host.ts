@@ -31,8 +31,6 @@ export interface OAuth {
   readonly document?: (config: OAuthConfig | undefined) => string | undefined
   /** Loopback callback for an attempt that configures neither `redirect_uri` nor `callback_port`. */
   readonly callback?: (config: OAuthConfig | undefined) => { readonly port: number; readonly path: string } | undefined
-  /** Redirect a non-interactive registration must record so a later login reuses it, or undefined for the default. */
-  readonly redirectUrl?: (config: OAuthConfig | undefined) => string | undefined
   /** Credential binding for a configured `client_id`. Absent keeps the upstream static client. */
   readonly binding?: OAuthBinding
 }

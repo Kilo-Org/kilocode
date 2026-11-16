@@ -1,5 +1,8 @@
 name: check-test
 
+# Pull requests run the fast tier: the affected unit tests on Linux. The full tier — unit tests on Windows, the
+# compiled builds, and the Playwright suites on both OSes — runs on pushes to dev and beta and on nightly and manual
+# runs. A stable release also runs it through release.yml's gate, with the browser suites on Linux only.
 on:
   push:
     branches:
@@ -12,6 +15,16 @@ on:
     inputs:
       quarantine:
         description: Run only the quarantined browser tests (packages/app/e2e/QUARANTINE.md)
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      quarantine:
+        description: Run only the quarantined browser tests (packages/app/e2e/QUARANTINE.md)
+        type: boolean
+        default: false
+      release_gate:
+        description: Run the browser suites on Linux only
         type: boolean
         default: false
 
@@ -27,8 +40,15 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Push and pull request runs test only what changed. Manual runs and the release gate test everything: they
+  # have no base commit to diff against.
+  AFFECTED: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+  # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
+  TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
+  TURBO_SCM_HEAD: ${{ github.sha }}
 
 jobs:
+  # Only the browser suites need this, and pull requests run no browser suites.
   affected:
     name: affected packages
     if: false # kilocode_change - Kilo removed packages/app and packages/session-ui, so the e2e jobs (needs: affected) have nothing to test
@@ -40,8 +60,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
-          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -50,11 +69,8 @@ jobs:
 
       - name: Find affected packages
         id: packages
-        env:
-          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$AFFECTED" != "true" ]; then
             echo "app=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -68,17 +84,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # kilocode_change start - Kilo's shard and concurrency matrix replaces upstream's pull-request-only settings.
+        # The `packages` leg runs the packages without `test:ci` and the Linux-only checks, in parallel with the
+        # shards. Windows stays in the matrix on pull requests too: Kilo's host suite is sharded on both systems.
         settings:
           - name: linux
             host: blacksmith-4vcpu-ubuntu-2404
-            shards: 2 # kilocode_change
-            concurrency: 2 # kilocode_change - test processes per package and shard (KILO_TEST_CONCURRENCY)
+            shards: 2
+            concurrency: 2 # test processes per package and shard (KILO_TEST_CONCURRENCY)
           - name: windows
             host: blacksmith-4vcpu-windows-2025
-            shards: 4 # kilocode_change
-            concurrency: 1 # kilocode_change
-        # kilocode_change start - the KILO_TEST_SHARD index; Linux runs two shards. The `packages` leg runs the
-        # packages without `test:ci` and the Linux-only checks, in parallel with the shards.
+            shards: 4
+            concurrency: 1
         shard: [packages, 1, 2, 3, 4]
         exclude:
           - settings: { name: linux, host: blacksmith-4vcpu-ubuntu-2404, shards: 2, concurrency: 2 }
@@ -169,8 +186,6 @@ jobs:
           # kilocode_change end
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
-          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
           # kilocode_change - the `packages` leg runs no shard: the Kilo host suite runs there in parallel, not split.
           KILO_TEST_SHARD: ${{ matrix.shard != 'packages' && format('{0}/{1}', matrix.shard, matrix.settings.shards) || '' }} # kilocode_change
           KILO_TEST_CONCURRENCY: ${{ matrix.settings.concurrency }} # kilocode_change
@@ -202,6 +217,16 @@ jobs:
         if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         working-directory: packages/codemode
         run: bun run pack
+    
+      - name: Verify packed workerd SDK
+        if: runner.os == 'Linux'
+        timeout-minutes: 15
+        run: |
+          if [ "$AFFECTED" = "true" ]; then
+            bun turbo verify:package --affected --filter=@opencode/sdk
+            exit 0
+          fi
+          bun turbo verify:package --filter=@opencode/sdk
 
       - name: Check generated client
         if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
@@ -217,7 +242,8 @@ jobs:
 
   build:
     name: build (${{ matrix.settings.name }})
-    if: ${{ !inputs.quarantine && !github.event.pull_request.draft }}
+    # Compiling the CLI and smoke-testing its service lifecycle is part of the full tier.
+    if: ${{ !inputs.quarantine && github.event_name != 'pull_request' && !github.event.pull_request.draft }}
     strategy:
       fail-fast: false
       matrix:
@@ -235,8 +261,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
-          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -257,14 +282,11 @@ jobs:
         if: ${{ !cancelled() && runner.os == 'Linux' }}
         timeout-minutes: 10
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then # kilocode_change - manual runs build everything
             bun turbo build --concurrency=3 --filter='@opencode/cli^...' # kilocode_change - Kilo removed @opencode/app, and turbo fails on a filter with no package
             exit 0
           fi
           bun turbo build --affected --concurrency=3 --filter='@opencode/cli^...' # kilocode_change
-        env:
-          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
 
       - name: Setup Node build runtime
         if: ${{ !cancelled() }}
@@ -291,8 +313,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Beta PRs gate on Linux; Windows runs on pushes and manual runs (nightly-beta.yml dispatches beta).
-        settings: ${{ fromJSON(github.base_ref == 'beta' && '[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404"}]' || '[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404"},{"name":"windows","host":"blacksmith-4vcpu-windows-2025"}]') }}
+        # The release gate runs the Linux browser suites only: the Windows legs still fail on dev pushes often
+        # enough that a stable release must not wait for them. Pushes and nightly runs cover Windows.
+        settings: ${{ fromJSON(inputs.release_gate && '[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404"}]' || '[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404"},{"name":"windows","host":"blacksmith-4vcpu-windows-2025"}]') }}
         quarantine: ${{ fromJSON(inputs.quarantine && '[true]' || '[false]') }}
         # Playwright splits whole spec files across shards by test count, not duration. Every app-N
         # entry must use the same total, and the entries must cover 1..total. The service worker suite
@@ -310,7 +333,7 @@ jobs:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
       # Beta only (packages/app/e2e/QUARANTINE.md): gate legs skip quarantined tests, retry once and stop after 8
       # failures; quarantine legs run only those tests, to the end. Other branches keep the config defaults.
-      PLAYWRIGHT_ARGS: ${{ matrix.quarantine && '--grep @quarantine --pass-with-no-tests --retries=1' || (github.base_ref == 'beta' || github.ref == 'refs/heads/beta') && '--grep-invert @quarantine --max-failures=8 --retries=1' || '' }}
+      PLAYWRIGHT_ARGS: ${{ matrix.quarantine && '--grep @quarantine --pass-with-no-tests --retries=1' || github.ref == 'refs/heads/beta' && '--grep-invert @quarantine --max-failures=8 --retries=1' || '' }}
     defaults:
       run:
         shell: bash
@@ -357,7 +380,7 @@ jobs:
         run: bun --cwd packages/app test:e2e:built --shard=${{ matrix.suite.shard }} ${{ env.PLAYWRIGHT_ARGS }}
         env:
           CI: true
-        timeout-minutes: ${{ (matrix.quarantine || github.base_ref == 'beta' || github.ref == 'refs/heads/beta') && 10 || 15 }}
+        timeout-minutes: ${{ (matrix.quarantine || github.ref == 'refs/heads/beta') && 10 || 15 }}
 
       - name: Verify service worker precaching and upgrades
         if: matrix.suite.shard == '2/2' && !matrix.quarantine
@@ -370,14 +393,14 @@ jobs:
         run: bun --cwd packages/session-ui test:components ${{ env.PLAYWRIGHT_ARGS }}
         env:
           CI: true
-        timeout-minutes: ${{ (matrix.quarantine || github.base_ref == 'beta' || github.ref == 'refs/heads/beta') && 10 || 15 }}
+        timeout-minutes: ${{ (matrix.quarantine || github.ref == 'refs/heads/beta') && 10 || 15 }}
 
       - name: Run app component tests
         if: matrix.suite.id == 'app-components'
         run: bun --cwd packages/app test:components ${{ env.PLAYWRIGHT_ARGS }}
         env:
           CI: true
-        timeout-minutes: ${{ (matrix.quarantine || github.base_ref == 'beta' || github.ref == 'refs/heads/beta') && 10 || 15 }}
+        timeout-minutes: ${{ (matrix.quarantine || github.ref == 'refs/heads/beta') && 10 || 15 }}
 
       - name: Upload Playwright artifacts
         if: always()
@@ -394,8 +417,8 @@ jobs:
             packages/app/component-tests/test-results
             packages/app/component-tests/playwright-report
 
-  # Branch rules require one e2e check per OS. These keep those names and pass only when every
-  # leg above passed, or when no leg was needed; a failing leg on either OS fails both checks.
+  # One check per OS for the browser suites: it passes only when every leg above passed, or when no leg was
+  # needed because the changed packages have no browser tests.
   e2e:
     name: e2e (${{ matrix.os }})
     needs: [affected, e2e-suite]
@@ -404,7 +427,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [linux, windows]
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Aggregates results only; these do not need a paid runner.
+    runs-on: ubuntu-24.04
     steps:
       - name: Check browser test results
         env:
@@ -412,10 +436,6 @@ jobs:
           SUITES: ${{ needs.e2e-suite.result }}
           EXPECTED: ${{ needs.affected.outputs.e2e == 'true' && 'success' || 'skipped' }}
         run: |
-          if [ "${{ matrix.os }}" = windows ] && [ "${{ github.base_ref }}" = beta ]; then
-            echo "Windows browser tests run on beta pushes and nightly, not on beta pull requests"
-            exit 0
-          fi
           echo "affected packages: $AFFECTED, browser test legs: $SUITES (expected $EXPECTED)"
           test "$AFFECTED" = success && test "$SUITES" = "$EXPECTED"
 

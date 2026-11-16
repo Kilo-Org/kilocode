@@ -424,6 +424,19 @@ async function guards(sync: report.SyncReport) {
       sync.notes.push(`\`${name}\` fails after the merge. Fix it in the sync PR`)
     }
   }
+  // New upstream user-visible text and new builtin tool namespaces are not covered by the anchor tests,
+  // so a clean merge can silently revert Kilo branding. Run the audit the CLI CI runs.
+  if (await Bun.file("packages/kilo-cli/script/branding-audit.ts").exists()) {
+    const result = await $`bun run --cwd packages/kilo-cli branding:audit`.quiet().nothrow()
+    console.log(result.stdout.toString() + result.stderr.toString())
+    if (result.exitCode === 0) logger.success("branding audit: ok")
+    if (result.exitCode !== 0) {
+      logger.warn("branding audit failed")
+      sync.notes.push(
+        "`bun run branding:audit` fails after the merge: map new upstream product text or tool namespaces in packages/kilo-cli/src/branding/",
+      )
+    }
+  }
 }
 
 /**

@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
 import { Credential } from "@opencode/core/credential"
+import { McpClientMetadata } from "@opencode/core/kilocode/mcp/client-metadata"
 import { KiloSseProbe } from "@opencode/core/kilocode/mcp/sse-probe"
 import { McpClient } from "@opencode/core/mcp/client"
-import type { McpHost } from "@opencode/core/mcp/host"
 import { McpOAuth } from "@opencode/core/mcp/oauth"
 import { Effect, Exit } from "effect"
 import { hostEnvironmentLayer } from "../../fixture/environment"
@@ -76,7 +76,7 @@ test("normalizes a non-SSE stream probe for a real server", async () => {
   }
 })
 
-test("uses the host OAuth client identity and keeps the upstream default", async () => {
+test("keeps the host OAuth client identity for the login and leaves the connect provider anonymous", async () => {
   const unused = () => Effect.die("unused credential method")
   const credentials = Credential.Service.of({
     refresh: unused,
@@ -89,19 +89,14 @@ test("uses the host OAuth client identity and keeps the upstream default", async
     remove: unused,
   })
   const config = new ConfigMCP.Remote({ type: "remote", url: "https://example.com/mcp" })
-  // An anonymous connect-time provider reads no credential, so it only needs the service to exist.
-  const identity = (clientMetadata?: McpHost.OAuth) =>
-    Effect.runPromise(
-      McpOAuth.connectProvider({ config, credential: undefined, clientMetadata }).pipe(
-        Effect.provideService(Credential.Service, credentials),
-      ),
-    ).then((provider) => provider.clientMetadata)
-
-  const branded = await identity({ name: "Kilo", uri: "https://kilo.ai" })
-  expect(branded?.client_name).toBe("Kilo")
-  expect(branded?.client_uri).toBe("https://kilo.ai")
-
-  const upstream = await identity()
-  expect(upstream?.client_name).toBe("opencode")
-  expect(upstream?.client_uri).toBe("https://opencode.ai")
+  // Upstream moved client registration into the login, so an anonymous connect only reports no token. The host
+  // identity reaches the provider that registers during `authorize`, covered by the CIMD tests.
+  const provider = await Effect.runPromise(
+    McpOAuth.connectProvider({ server: "example", config, credential: undefined }).pipe(
+      Effect.provideService(Credential.Service, credentials),
+    ),
+  )
+  expect(await provider.token()).toBeUndefined()
+  expect(McpClientMetadata.oauth.name).toBe("Kilo")
+  expect(McpClientMetadata.oauth.uri).toBe("https://kilo.ai")
 })
