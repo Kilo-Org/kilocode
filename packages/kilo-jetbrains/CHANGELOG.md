@@ -683,17 +683,24 @@
 ## [7.2.1-rc.7] - 2026-11-15
 
 ### Added
-- feat(jetbrains): organize Agent Manager sections and add dictation by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16182
-- feat(jetbrains): add section selection and voice input to dialogs by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16174
+
+- Agent Manager worktrees can now be moved into an existing section from the row context menu with a new **Move To** submenu.
+- New Worktree, branch/PR import, and Create Cloud Workspace dialogs offer a section picker, defaulting to the selected section or the selected workspace's parent so new tasks land where you are working.
+- Both creation dialogs support prompt dictation, so you can speak the initial prompt instead of typing it.
 
 ### Fixed
-- fix(jetbrains): reconcile worktree creation and preserve prompts by @kirillk in https://github.com/Kilo-Org/kilocode/pull/16181
+
+- Successful worktree creations no longer stay stuck spinning or showing a temporary lock when a background reload discovers the checkout first.
+- Initial prompts now keep their selected mode, model, and reasoning level through failures, reopening the session, and IDE restarts, without overwriting newer composer drafts.
+- Failed or uncertain prompts are recovered as editable drafts instead of being silently lost.
+- New Agent Manager rows are inserted at the top of their section, keeping the newest work in view.
+- **Move To** is hidden when no other section exists, and worktree startup resumes after an IDE reconnect.
+- Voice input no longer takes over the global action shortcut, and Create cannot discard an active recording or pending transcription.
+- Section headers keep the selected background instead of flickering under hover and selection, and toggle on mouse release.
 
 ### Changed
-- release(jetbrains): v7.2.1-rc.6 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/16170
-- docs(kilo-docs): update Kilo Desktop docs for 0.1.16 by @MihaelaStoica in https://github.com/Kilo-Org/kilocode/pull/16172
-- docs: reference organization analytics API by @alexkgold in https://github.com/Kilo-Org/kilocode/pull/16162
 
+- Agent Manager section headers now render as persistent structure: they ignore hover and stay on the selection background, making groups easier to scan.
 
 ## [7.2.1-rc.6] - 2026-11-13
 
