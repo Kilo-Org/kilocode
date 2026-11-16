@@ -6,7 +6,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { KiloBrandingStructural } from "../src/branding/structural"
 import { compileDefine } from "./fixtures/compile-define"
-import { repo, run, temporary } from "./fixtures/branding-run"
+import { repo, run, serverText, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
@@ -80,6 +80,17 @@ test("brands the lowercase prompt names to Kilo and the tool namespace, not the 
     const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
     expect(branded, file).toContain(expected)
     expect(branded, file).not.toContain("kilo2")
+  }
+})
+
+test("brands the text the server answers with, and nothing else in those modules", async () => {
+  for (const [file, from, to] of serverText) {
+    const filename = path.join(repo, "packages", file)
+    const original = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
+    expect(original.split(from), file).toHaveLength(2)
+    // The one replacement is the whole difference: the basic-auth username, wire IDs and every other string stay as
+    // upstream wrote them.
+    expect(KiloBranding.transform(filename, original), file).toBe(original.replace(from, to))
   }
 })
 

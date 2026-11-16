@@ -59,6 +59,9 @@ export const files: readonly string[] = [
   "core/src/tool/plugin/mcp-resource.ts",
   "core/src/schedule/check.ts",
   "core/src/oauth/page.ts",
+  "server/src/handlers/server.ts",
+  "server/src/handlers/persistent-pty.ts",
+  "server/src/process.ts",
 ]
 
 const intercepted: ReadonlySet<string> = new Set(files)
