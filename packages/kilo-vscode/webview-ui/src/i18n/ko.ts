@@ -215,6 +215,7 @@ export const dict = {
   "prompt.action.continue": "계속",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.send.recording": "텍스트 변환 및 전송",
+  "prompt.action.click": "클릭",
   "prompt.action.stop": "중지",
   "prompt.action.stop.background": "메인 에이전트를 중지합니다. 백그라운드 에이전트는 계속 실행됩니다.",
   "prompt.agents.show": "백그라운드 에이전트 표시",

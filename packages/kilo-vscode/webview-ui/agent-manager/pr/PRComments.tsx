@@ -4,6 +4,10 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useLanguage } from "../../src/context/language"
 import { useBridge } from "../v2/vscode"
 import type { PRStatus } from "../../src/types/messages/agent-manager"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { PRCommentCard } from "./PRCommentCard"
 import { resolvedFor, sendThreads, unsentThreads } from "./pr-actions"
 import { SEND_LIMIT, githubUrl } from "./pr-comment-payload"
@@ -60,6 +64,10 @@ export function PRComments(props: Props) {
   })
 
   const unsent = createMemo(() => unsentThreads(props.comments.comments, state()))
+  const sendAllLabel = () =>
+    t(props.activeTerminalId ? "agentManager.pr.comment.sendAllToTerminal" : "agentManager.pr.fixWithKiloCount", {
+      count: Math.min(unsent().length, SEND_LIMIT),
+    })
 
   // Drop the optimistic state once a poll reports the state the user asked for.
   createEffect(() => {
@@ -121,8 +129,8 @@ export function PRComments(props: Props) {
     } as never)
   }
 
-  function send(ids: string[]) {
-    sendThreads(props.worktreeId, props.comments.comments, ids, state(), props.activeTerminalId)
+  function send(ids: string[], intent: SendIntent) {
+    sendThreads(props.worktreeId, props.comments.comments, ids, state(), props.activeTerminalId, intent)
   }
 
   // `For` over stable thread ids: the DOM survives a poll, so Pierre and
@@ -135,6 +143,7 @@ export function PRComments(props: Props) {
           worktreeId={props.worktreeId}
           prNumber={props.prNumber}
           prUrl={props.prUrl}
+          activeTerminalId={props.activeTerminalId}
           comment={comment()}
           preview={comment().outdated ? undefined : comment().preview}
           resolved={resolved(comment())}
@@ -155,7 +164,7 @@ export function PRComments(props: Props) {
             patch((prev) => ({ expanded: { ...prev.expanded, [id]: next } }))
           }}
           onToggleResolved={() => toggleResolved(comment())}
-          onSend={() => send([id])}
+          onSend={(intent) => send([id], intent)}
           onOpenFile={
             comment().file && props.onOpenFile
               ? () =>
@@ -177,7 +186,10 @@ export function PRComments(props: Props) {
   return (
     <>
       <div class="am-pr-panel-divider" />
-      <div class="am-pr-panel-section">
+      <div
+        class="am-pr-panel-section"
+        onKeyDown={(event) => altEnterSend(event, () => send(unsent(), "alternate"))}
+      >
         <SectionHeading
           title={t("agentManager.pr.comment.title")}
           open={state().open}
@@ -191,14 +203,20 @@ export function PRComments(props: Props) {
         />
         <Show when={state().open}>
           <Show when={unsent().length > 0}>
-            <Button variant="primary" size="small" class="am-pr-comment-send-all" onClick={() => send(unsent())}>
-              {t(
-                props.activeTerminalId
-                  ? "agentManager.pr.comment.sendAllToTerminal"
-                  : "agentManager.pr.fixWithKiloCount",
-                { count: Math.min(unsent().length, SEND_LIMIT) },
-              )}
-            </Button>
+            <SendHint
+              title={sendAllLabel()}
+              alternateKeybind={alternateEnterKeybind()}
+              alternate={!props.activeTerminalId}
+            >
+              <Button
+                variant="primary"
+                size="small"
+                class="am-pr-comment-send-all"
+                onClick={(event: MouseEvent) => send(unsent(), clickSend(event))}
+              >
+                {sendAllLabel()}
+              </Button>
+            </SendHint>
           </Show>
           <div class="am-pr-panel-comment-list am-pr-col">
             <For each={groups().todo}>{card}</For>

@@ -20,6 +20,7 @@ import { fileName } from "./prompt-input-utils"
 import { PromptRowActions } from "./PromptRowActions"
 import { PromptShowMore } from "./PromptShowMore"
 import { REVEAL_CHAT_REFERENCE, useReviewCommentActions } from "./review-actions"
+import { SendHint } from "../../v2/send-hint"
 
 interface ReviewCommentsProps {
   comments: ReviewCommentEntry[]
@@ -28,7 +29,7 @@ interface ReviewCommentsProps {
   onRemove?: (id: string) => void
   onClear?: (ids: string[]) => void
   /** Sends the draft with its chat references at once. Only the chat group offers it. */
-  onSend?: () => void
+  onSend?: (event: MouseEvent) => void
 }
 
 /** Rows rendered before the "show more" toggle takes over. */
@@ -166,9 +167,11 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" | "c
           </Button>
         </Show>
         <Show when={props.source === "chat" && props.onSend}>
-          <Button variant="primary" size="small" onClick={() => props.onSend?.()}>
-            {language.t("chat.reply.sendAll")}
-          </Button>
+          <SendHint title={language.t("chat.reply.sendAll")}>
+            <Button variant="primary" size="small" onClick={(event: MouseEvent) => props.onSend?.(event)}>
+              {language.t("chat.reply.sendAll")}
+            </Button>
+          </SendHint>
         </Show>
       </div>
 

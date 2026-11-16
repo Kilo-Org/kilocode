@@ -8,6 +8,7 @@ import {
   type ReviewComment,
 } from "../webview-ui/diff-viewer/review-comments"
 import { markdownCommentBlocks } from "../webview-ui/diff-viewer/markdown-comment-ranges"
+import { clickModifier } from "../webview-ui/src/v2/send-hint-text"
 import {
   buildFileAnnotations,
   clearReviewComposer,
@@ -472,17 +473,20 @@ describe("getFilename", () => {
 })
 
 it("shares review action labels and translates line numbers", () => {
-  const value = labels((key, params) => (params ? `${key}:${params.line}` : key))
+  const value = labels((key, params) => (params ? `${key}:${params.line}` : key), "queue")
   expect(value).toMatchObject({
     placeholder: "agentManager.review.commentPlaceholder",
     cancel: "common.cancel",
     comment: "agentManager.review.commentAction",
     send: "prompt.action.send",
     save: "common.save",
-    sendToChat: "agentManager.review.sendToChat",
     edit: "common.edit",
     delete: "common.delete",
   })
+  // The send hint names the delivery an Option-click uses, next to the click itself.
+  expect(value.sendToChat).toBe(
+    `agentManager.review.sendToChat (${clickModifier()}+prompt.action.click: prompt.action.queue)`,
+  )
   expect(value.commentOnLine(3)).toBe("agentManager.review.commentOnLine:3")
   expect(value.editCommentOnLine(7)).toBe("agentManager.review.editCommentOnLine:7")
 })

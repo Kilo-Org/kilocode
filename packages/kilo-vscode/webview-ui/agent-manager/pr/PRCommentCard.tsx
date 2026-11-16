@@ -13,6 +13,10 @@ import { PRAvatar } from "./PRAvatar"
 import { prMarkdown, preview, githubUrl } from "./pr-comment-payload"
 import { PRCommentTime } from "./PRCommentTime"
 import type { PRComment, PRReaction, PRReactionContent } from "./pr-types"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { PRReactions } from "./PRReactions"
 import { PRCommentForm } from "./PRCommentForm"
 
@@ -28,6 +32,7 @@ interface Props {
   sent: boolean
   open: boolean
   inline?: boolean
+  activeTerminalId?: string
   preview?: PRComment["preview"]
   error?: string
   reactionError?: string
@@ -41,7 +46,7 @@ interface Props {
   onReplyReaction?: (id: string, content: PRReactionContent, add: boolean) => void
   onToggleOpen: () => void
   onToggleResolved?: () => void
-  onSend: () => void
+  onSend: (send: SendIntent) => void
   onOpenFile?: () => void
   onOpenDiff?: () => void
   onOpenUrl?: () => void
@@ -49,6 +54,8 @@ interface Props {
 
 export function PRCommentCard(props: Props) {
   const { t } = useLanguage()
+  const sendLabel = () =>
+    t(props.activeTerminalId ? "agentManager.pr.comment.sendToTerminal" : "agentManager.pr.fixWithKilo")
   const replies = createMemo(() => new Map(props.comment.replies?.map((reply, index) => [reply.id ?? index, reply])))
   const target = () => {
     if (!props.worktreeId || !props.prNumber || !props.prUrl) return
@@ -191,9 +198,24 @@ export function PRCommentCard(props: Props) {
           </Show>
           <Show when={props.error}>{(err) => <div class="am-pr-comment-error">{err()}</div>}</Show>
           <div class="am-pr-comment-actions am-pr-row">
-            <Button variant="primary" size="small" disabled={props.sent} onClick={props.onSend}>
-              {t("agentManager.pr.fixWithKilo")}
-            </Button>
+            <SendHint
+              title={sendLabel()}
+              alternateKeybind={alternateEnterKeybind()}
+              alternate={!props.activeTerminalId}
+            >
+              <Button
+                variant="primary"
+                size="small"
+                disabled={props.sent}
+                onClick={(event: MouseEvent) => props.onSend(clickSend(event))}
+                onKeyDown={(event: KeyboardEvent) => {
+                  if (props.sent) return
+                  altEnterSend(event, () => props.onSend("alternate"))
+                }}
+              >
+                {sendLabel()}
+              </Button>
+            </SendHint>
             <Show when={target() && props.onToggleResolved}>
               <Button
                 variant="secondary"

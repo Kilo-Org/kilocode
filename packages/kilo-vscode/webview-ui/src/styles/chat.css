@@ -84,3 +84,14 @@
   color: var(--text-base);
   text-decoration: underline;
 }
+
+/* A send button's tooltip: its own hint, then the delivery an Option-click sends with. */
+.send-hint {
+  display: grid;
+  gap: 2px;
+}
+
+.send-hint [data-slot="tooltip-keybind"] {
+  justify-content: space-between;
+  min-width: 200px;
+}

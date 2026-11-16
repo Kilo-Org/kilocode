@@ -7,6 +7,7 @@ import {
   ViewColumn,
   env,
   window,
+  workspace,
   type Disposable,
   type ExtensionContext,
   type Webview,
@@ -14,9 +15,10 @@ import {
 } from "vscode"
 import { html } from "./chat"
 import { readDocument, resolveDocumentPath } from "./documents/document-reader"
-import { effectiveFontSize, readKiloSettings } from "./settings-host"
+import { effectiveFontSize, KILO_SETTING_KEYS, readKiloSettings } from "./settings-host"
 import { filePosition } from "./tool-diff-patch"
 import type { ReviewCommentData } from "./shared/review-comments"
+import type { SendIntent } from "./shared/prompt-send"
 
 interface Context {
   sessionId?: string
@@ -34,7 +36,7 @@ interface Pending {
 export interface DocumentViewerOptions {
   extension: ExtensionContext
   directory: string
-  onComments: (comments: ReviewCommentData[], autoSend: boolean) => void
+  onComments: (comments: ReviewCommentData[], send: SendIntent) => void
 }
 
 export class DocumentViewerProvider implements Disposable {
@@ -89,9 +91,14 @@ export class DocumentViewerProvider implements Disposable {
     }
     panel.webview.html = this.html(panel.webview)
     this.panel = panel
+    const settings = workspace.onDidChangeConfiguration((event) => {
+      if (KILO_SETTING_KEYS.some((key) => event.affectsConfiguration(`kilo-code.v2.${key}`)))
+        void panel.webview.postMessage({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
+    })
     this.disposables.push(
       panel.webview.onDidReceiveMessage((message) => this.message(message as Record<string, unknown>)),
       panel.onDidDispose(() => {
+        settings.dispose()
         this.panel = undefined
         this.ready = false
         this.pending = undefined
@@ -108,7 +115,7 @@ export class DocumentViewerProvider implements Disposable {
     }
     if (message.type === "document.request") return this.request(message)
     if (message.type === "document.sendComments" && Array.isArray(message.comments)) {
-      this.options.onComments(message.comments as ReviewCommentData[], message.autoSend === true)
+      this.options.onComments(message.comments as ReviewCommentData[], message.send === "alternate" ? "alternate" : "enter")
       return
     }
     if (message.type === "document.openFile" && typeof message.file === "string") {

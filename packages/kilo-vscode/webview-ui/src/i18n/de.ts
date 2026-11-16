@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.continue": "Fortsetzen",
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
   "prompt.action.send.recording": "Transkribieren und senden",
+  "prompt.action.click": "Klick",
   "prompt.action.stop": "Stopp",
   "prompt.action.stop.background": "Hauptagent stoppen. Hintergrund-Agenten laufen weiter.",
   "prompt.agents.show": "Hintergrund-Agenten anzeigen",

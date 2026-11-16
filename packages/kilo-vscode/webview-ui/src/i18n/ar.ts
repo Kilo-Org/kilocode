@@ -208,6 +208,7 @@ export const dict = {
   "prompt.action.continue": "متابعة",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
   "prompt.action.send.recording": "تفريغ وإرسال",
+  "prompt.action.click": "النقر",
   "prompt.action.stop": "توقف",
   "prompt.action.stop.background": "إيقاف الوكيل الرئيسي. يستمر الوكلاء الخلفيون في العمل.",
   "prompt.agents.show": "إظهار الوكلاء الخلفيين",

@@ -214,6 +214,7 @@ export const dict = {
   "prompt.action.continue": "ادامه",
   "prompt.action.send.blocked": "ابتدا به سؤال در انتظار پاسخ دهید یا آن را رد کنید",
   "prompt.action.send.recording": "رونویسی و ارسال",
+  "prompt.action.click": "کلیک",
   "prompt.action.stop": "توقف",
   "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
   "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",

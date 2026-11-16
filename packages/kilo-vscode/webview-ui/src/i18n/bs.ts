@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.continue": "Nastavi",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.send.recording": "Transkribuj i pošalji",
+  "prompt.action.click": "klik",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
   "prompt.agents.show": "Prikaži agente u pozadini",

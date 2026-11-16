@@ -211,6 +211,7 @@ export const dict = {
   "prompt.action.continue": "继续",
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
   "prompt.action.send.recording": "转录并发送",
+  "prompt.action.click": "点击",
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "停止主智能体。后台智能体将继续运行。",
   "prompt.agents.show": "显示后台智能体",

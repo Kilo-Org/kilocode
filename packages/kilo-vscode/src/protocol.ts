@@ -2,6 +2,7 @@
 // requests through the host (`fetch`), and the host streams each response back in order.
 import type { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import type { ReviewCommentData, ReviewCommentEntry } from "./shared/review-comments"
+import type { SendIntent } from "./shared/prompt-send"
 import type { WorkStyle, WorkStyleState } from "./shared/work-style-presets"
 
 import type { BrowserReference } from "./shared/browser-feedback"
@@ -486,8 +487,8 @@ export type ToWebview =
   | { type: "dismissedNotificationsLoaded"; ids: string[] }
   | { type: "webviewActiveChanged"; active: boolean }
   | { type: "validateFilesResult"; id: string; existing: string[] }
-  /** Review comments for the composer from the Changes or a document tab. `autoSend` sends an otherwise empty draft. */
-  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; autoSend: boolean }
+  /** Review comments for the composer from the Changes or a document tab. `send` says whether a click sends them now. */
+  | { type: "appendReviewComments"; comments: ReviewCommentEntry[]; send: SendIntent }
   | {
       type: "configLoaded"
       global: ConfigFileContent

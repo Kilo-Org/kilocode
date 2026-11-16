@@ -8,6 +8,10 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { PRStatus } from "../../src/types/messages/agent-manager"
 import { useLanguage } from "../../src/context/language"
 import { sendReviewComments } from "../../diff-viewer/review-annotations"
+import { clickSend, type SendIntent } from "../../../src/shared/prompt-send"
+import { SendHint } from "../../src/v2/send-hint"
+import { alternateEnterKeybind } from "../../src/v2/send-hint-text"
+import { altEnterSend } from "./pr-send-keys"
 import { PRAvatar } from "./PRAvatar"
 import { PRMerge } from "./PRMerge"
 import { checkFeedback } from "./pr-check-feedback"
@@ -39,7 +43,7 @@ interface Row {
   status: string
   target?: JumpTarget
   /** Secondary marks lower-confidence feedback, like general discussion. */
-  action?: { label: string; run: () => void; variant?: "primary" | "secondary" }
+  action?: { label: string; run: (send: SendIntent) => void; variant?: "primary" | "secondary" }
   avatars?: Array<{ login: string; avatar?: string }>
 }
 
@@ -76,7 +80,7 @@ export function PRSummary(props: PRSummaryProps) {
       action: feedback
         ? {
             label: t(terminal ? "agentManager.pr.checks.terminal" : "agentManager.pr.checks.fix"),
-            run: () => sendReviewComments([feedback], terminal),
+            run: (send) => sendReviewComments([feedback], terminal, send),
           }
         : undefined,
     }
@@ -134,7 +138,7 @@ export function PRSummary(props: PRSummaryProps) {
               label: t(terminal ? "agentManager.pr.comment.sendAllToTerminal" : "agentManager.pr.fixWithKiloCount", {
                 count: Math.min(unsent.length, SEND_LIMIT),
               }),
-              run: () => sendThreads(props.worktreeId, value.comments, unsent, state(), terminal),
+              run: (send) => sendThreads(props.worktreeId, value.comments, unsent, state(), terminal, send),
             }
           : undefined,
     }
@@ -161,7 +165,7 @@ export function PRSummary(props: PRSummaryProps) {
                 terminal ? "agentManager.pr.conversation.sendAllToTerminal" : "agentManager.pr.conversation.sendAll",
                 { count: Math.min(ids.length, SEND_LIMIT) },
               ),
-              run: () => sendConversation(props.worktreeId, value, ids, state(), terminal),
+              run: (send) => sendConversation(props.worktreeId, value, ids, state(), terminal, send),
               variant: "secondary",
             }
           : undefined,
@@ -197,7 +201,12 @@ export function PRSummary(props: PRSummaryProps) {
           />
           <For each={rows()}>
             {(row) => (
-              <div class="am-pr-summary-row am-pr-row" data-status={row.status} data-target={row.target}>
+              <div
+                class="am-pr-summary-row am-pr-row"
+                data-status={row.status}
+                data-target={row.target}
+                onKeyDown={(event) => altEnterSend(event, () => row.action?.run("alternate"))}
+              >
                 <Show when={row.icon} fallback={<Spinner class="am-pr-summary-icon" />}>
                   {(icon) => <Icon name={icon()} size="small" class="am-pr-summary-icon" />}
                 </Show>
@@ -217,14 +226,20 @@ export function PRSummary(props: PRSummaryProps) {
                   <span class="am-pr-summary-actions am-pr-row">
                     <Show when={row.action}>
                       {(action) => (
-                        <Button
-                          variant={action().variant ?? "primary"}
-                          size="small"
-                          class="am-pr-summary-fix"
-                          onClick={action().run}
+                        <SendHint
+                          title={action().label}
+                          alternateKeybind={alternateEnterKeybind()}
+                          alternate={!props.activeTerminalId}
                         >
-                          {action().label}
-                        </Button>
+                          <Button
+                            variant={action().variant ?? "primary"}
+                            size="small"
+                            class="am-pr-summary-fix"
+                            onClick={(event: MouseEvent) => action().run(clickSend(event))}
+                          >
+                            {action().label}
+                          </Button>
+                        </SendHint>
                       )}
                     </Show>
                     <Show when={row.target && props.onJump ? row.target : undefined}>

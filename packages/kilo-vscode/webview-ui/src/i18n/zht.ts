@@ -205,6 +205,7 @@ export const dict = {
   "prompt.action.continue": "繼續",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.send.recording": "轉錄並傳送",
+  "prompt.action.click": "點擊",
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "停止主 Agent。背景 Agent 會繼續執行。",
   "prompt.agents.show": "顯示背景 Agent",

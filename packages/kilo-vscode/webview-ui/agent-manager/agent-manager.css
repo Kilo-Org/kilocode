@@ -3317,7 +3317,14 @@ body.am-wt-dragging-active * {
   color: var(--text-on-brand-base, var(--vscode-button-foreground, #ffffff));
 }
 
-.am-split-button[data-variant="primary"] > [data-component="button"] {
+.am-split-button[data-variant="primary"] > [data-component="tooltip-trigger"] {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.am-split-button[data-variant="primary"] > [data-component="button"],
+.am-split-button[data-variant="primary"] > [data-component="tooltip-trigger"] > [data-component="button"] {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 24px;
@@ -3363,7 +3370,10 @@ body.am-wt-dragging-active * {
   transform: rotate(180deg);
 }
 
-.am-split-button[data-variant="primary"] > [data-component="button"]:hover:not(:disabled) {
+.am-split-button[data-variant="primary"] > [data-component="button"]:hover:not(:disabled),
+.am-split-button[data-variant="primary"]
+  > [data-component="tooltip-trigger"]
+  > [data-component="button"]:hover:not(:disabled) {
   background: color-mix(in srgb, var(--surface-brand-hover) 88%, var(--vscode-editor-background));
 }
 
@@ -3384,6 +3394,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-split-button[data-variant="primary"] > [data-component="button"]:disabled,
+.am-split-button[data-variant="primary"] > [data-component="tooltip-trigger"] > [data-component="button"]:disabled,
 .am-split-button[data-variant="primary"] > .am-split-arrow:disabled {
   background: transparent;
   color: inherit;

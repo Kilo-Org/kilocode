@@ -273,7 +273,7 @@ export const DiffViewerApp: Component = () => {
     const detail = (event as CustomEvent<AppendReviewCommentsDetail>).detail
     if (!detail || detail.handled || detail.comments.length === 0) return
     detail.handled = true
-    post({ type: "diffViewer.sendComments", comments: detail.comments, autoSend: detail.autoSend })
+    post({ type: "diffViewer.sendComments", comments: detail.comments, send: detail.send })
   }
 
   window.addEventListener(APPEND_REVIEW_COMMENTS, onReviewComments)

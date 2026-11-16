@@ -236,7 +236,7 @@ export function activate(context: ExtensionContext) {
     server,
     directory,
     catalog: diffCatalog,
-    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+    onComments: (comments, send) => void view.post({ type: "appendReviewComments", comments, send }),
   })
   let browserTab: BrowserTabProvider | undefined
   // The Documents panel is an editor tab created after this view, so the view receives it through a lazy getter.
@@ -262,7 +262,7 @@ export function activate(context: ExtensionContext) {
   const documents = new DocumentViewerProvider({
     extension: context,
     directory,
-    onComments: (comments, autoSend) => void view.post({ type: "appendReviewComments", comments, autoSend }),
+    onComments: (comments, send) => void view.post({ type: "appendReviewComments", comments, send }),
   })
   documentsRef.current = documents
   // The Agent Manager binds first and skips the session the sidebar is showing and sessions with an open editor tab,

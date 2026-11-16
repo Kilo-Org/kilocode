@@ -247,6 +247,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               onSendChat={sendAllClick}
               onSendGithub={sendAllToGithub}
               keybind={sendAllKeybind()}
+              terminal={!!props.activeTerminalId}
               placement="bottom"
             />
           </Show>

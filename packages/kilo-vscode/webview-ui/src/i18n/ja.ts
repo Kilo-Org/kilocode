@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.continue": "続行",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.send.recording": "文字起こしして送信",
+  "prompt.action.click": "クリック",
   "prompt.action.stop": "停止",
   "prompt.action.stop.background": "メインエージェントを停止します。バックグラウンドエージェントは実行を続けます。",
   "prompt.agents.show": "バックグラウンドエージェントを表示",

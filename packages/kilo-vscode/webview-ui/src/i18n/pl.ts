@@ -213,6 +213,7 @@ export const dict = {
   "prompt.action.continue": "Kontynuuj",
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
   "prompt.action.send.recording": "Transkrybuj i wyślij",
+  "prompt.action.click": "kliknij",
   "prompt.action.stop": "Zatrzymaj",
   "prompt.action.stop.background": "Zatrzymaj głównego agenta. Agenci w tle nadal działają.",
   "prompt.agents.show": "Pokaż agentów w tle",

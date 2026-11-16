@@ -19,6 +19,7 @@ export function createReviewSurface(props: SurfaceProps, root: () => HTMLDivElem
     snapshot: () => props.prSnapshot,
     diffs: () => props.diffs,
     worktree: () => props.worktreeId ?? props.sessionId ?? "diff",
+    terminal: () => props.activeTerminalId,
   })
   const view = createReviewView(props, root, {
     commentForm: props.commentForm ?? forms.mount,

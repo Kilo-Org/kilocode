@@ -1,8 +1,10 @@
 import { Show, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../src/context/language"
+import { SendHint } from "../src/v2/send-hint"
+import { alternateEnterKeybind } from "../src/v2/send-hint-text"
 
 interface Props {
   /** Number of local comments. */
@@ -12,9 +14,10 @@ interface Props {
   /** PR number when a publishable PR is available. */
   githubNumber?: number
   pending: boolean
-  onSendChat: () => void
+  onSendChat: (event: MouseEvent) => void
   onSendGithub: () => void
   keybind: string
+  terminal?: boolean
   placement?: "top" | "bottom"
 }
 
@@ -33,7 +36,13 @@ export const SendAllButton: Component<Props> = (props) => {
   const githubLabel = () =>
     t("agentManager.review.sendAllToGithubWithCount", { count: props.githubCount, number: github() ?? 0 })
   const Chat = () => (
-    <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={props.keybind} placement={placement()}>
+    <SendHint
+      title={t("agentManager.review.sendAllToChat")}
+      keybind={props.keybind}
+      alternateKeybind={alternateEnterKeybind()}
+      alternate={!props.terminal}
+      placement={placement()}
+    >
       <Button
         data-action="send-all-chat"
         variant="primary"
@@ -43,7 +52,7 @@ export const SendAllButton: Component<Props> = (props) => {
       >
         {chatLabel()}
       </Button>
-    </TooltipKeybind>
+    </SendHint>
   )
   return (
     <Show when={github() !== undefined} fallback={<Chat />}>
