@@ -320,7 +320,10 @@ test("reads the URL line after other JSON and a split line", async () => {
     env: process.env,
   })
   expect(server.url).toStartWith("http://127.0.0.1:")
+  const exited = new Promise<void>((resolve) => server.process.once("exit", () => resolve()))
   stop(server.process)
+  // Windows locks the temp directory while the child still runs there, so wait for it before removing.
+  await exited
   await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 }, 15_000)
 
@@ -359,7 +362,10 @@ test("keeps looking for the server when another process prints a URL line", asyn
   const info = await fetch(new URL("/api/info", server.url), { headers: { authorization: server.authorization } })
   expect(info.status).toBe(200)
   expect(info.headers.get("content-type")).toBe("application/json")
+  const exited = new Promise<void>((resolve) => server.process.once("exit", () => resolve()))
   stop(server.process)
+  // Windows locks the temp directory while the child still runs there, so wait for it before removing.
+  await exited
   await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
 }, 15_000)
 
