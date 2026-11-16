@@ -168,10 +168,13 @@ The structural fix for hidden regressions. The audit:
    `kilocode/`, over two scopes:
    - the user-visible surface (`PATHSPECS`/`INCLUDE`): TS/TSX under
      `packages/{cli,tui}/src`, TS under `packages/server/src` (that package's
-     own literals) and `packages/core/src` (every module: tool descriptions,
-     form and error text, the OAuth pages, provider plugins), and the `.txt`
-     prompt templates under `packages/core/src` (bundled as strings; the engine
-     treats each as one span);
+     own literals), `packages/core/src` (every module: tool descriptions,
+     form and error text, the OAuth pages, provider plugins) and
+     `packages/plugin/src` (the loader for user plugins), the `.txt` prompt
+     templates under `packages/core/src` (bundled as strings; the engine
+     treats each as one span), and Kilo's own `packages/kilo-plugin/src`
+     (TS and `.txt`; no loader rewrites it, so a finding there is fixed in
+     the source);
    - the tool-namespace scope (`NAMESPACE_PATHSPECS`/`NAMESPACE_INCLUDE`): TS/TSX
      and bundled `.txt`/`.md` assets under `packages/core/src` and
      `packages/kilo-plugin/src`.
@@ -197,7 +200,8 @@ The structural fix for hidden regressions. The audit:
    list of exact source snippets (a provider or SaaS name, a wire identity
    pinned with the code around it) that accounts for those identities only, so
    the rest of the file stays audited. A stale entry (a file without findings,
-   a snippet that accounts for none) fails the run;
+   a snippet that accounts for none) fails the run, and so does a snippet that
+   is only the product name;
 5. exits non-zero on any unexpected finding, with `file:line:col` and the span.
 
 Wiring: the `branding:audit` package script, the `branding-audit.test.ts`
@@ -260,8 +264,9 @@ engine`. A byte-for-byte parity test proved the new pipeline reproduces the
    the `branding:audit` package script, the `kilo-packages` CI step, and the
    sync-checklist updates in the `v2-migration` / `v2-feature-placement` skills.
    The broader glob (decision 1) is the audit's scan scope (see §5: the
-   CLI/TUI surface, `packages/server/src` and `packages/core/src` (modules and
-   prompt templates), plus the tool-namespace
+   CLI/TUI surface, `packages/server/src`, `packages/core/src` (modules and
+   prompt templates), `packages/plugin/src` and `packages/kilo-plugin/src`,
+   plus the tool-namespace
    scope over `packages/core/src` and `packages/kilo-plugin/src`, added later
    with the namespace-leak mode); the loader still intercepts
    the curated `files` set, and the audit's hard-fail forces that set to stay

@@ -64,6 +64,20 @@ export const coreText = [
   ],
 ] as const
 
+// The intercepted module of the plugin package: the loader the host installs for user plugins.
+export const pluginText = [
+  [
+    "plugin/src/runtime.ts",
+    "is not provided by OpenCode; plugins must use the host's",
+    "is not provided by Kilo; plugins must use the host's",
+  ],
+] as const
+
+/** The server, core and plugin modules above, one entry per module with its texts in source order. */
+export const branded = Object.entries(
+  Object.groupBy([...serverText, ...coreText, ...pluginText], ([file]) => file),
+).map(([file, texts = []]) => ({ file, texts }))
+
 /**
  * The modules of `text` bundled as the compiled build bundles them (script/build.ts), with the branding plugin or
  * without it, so the loader's path filter is checked against a bundle as well as a source run.
@@ -105,6 +119,8 @@ export async function host(env: Record<string, string>, use: (url: string) => Pr
       TEMP: path.join(root, "tmp"),
       TMP: path.join(root, "tmp"),
       OPENCODE_DISABLE_AUTOUPDATE: "1",
+      // The server would fetch the models.dev catalog from its real host; the bundled snapshot is enough here.
+      OPENCODE_DISABLE_MODELS_FETCH: "1",
       OPENCODE_SERVER_PASSWORD: "secret",
       KILO_API_URL: backend.url,
       ...env,

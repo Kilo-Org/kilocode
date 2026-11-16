@@ -7,7 +7,7 @@ import { KiloBranding } from "../src/branding/text"
 import { KiloBrandingStructural } from "../src/branding/structural"
 import { compileDefine } from "./fixtures/compile-define"
 import { allow } from "../script/branding-audit-allow"
-import { coreText, repo, run, serverText, temporary } from "./fixtures/branding-run"
+import { branded, coreText, repo, run, temporary } from "./fixtures/branding-run"
 
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
 
@@ -84,17 +84,15 @@ test("brands the lowercase prompt names to Kilo and the tool namespace, not the 
   }
 })
 
-test("brands the listed server and core text, and nothing else in those modules", async () => {
-  const text = [...serverText, ...coreText]
-  for (const file of new Set(text.map(([file]) => file))) {
+test("brands the listed server, core and plugin text, and nothing else in those modules", async () => {
+  for (const { file, texts } of branded) {
     const filename = path.join(repo, "packages", file)
     const original = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
-    const listed = text.filter(([name]) => name === file)
-    for (const [, from] of listed) expect(original.split(from), `${file}: ${from}`).toHaveLength(2)
-    // The listed replacements are the whole difference: the basic-auth username, wire IDs, provider and SaaS names
-    // and every other string stay as upstream wrote them.
+    for (const [, from] of texts) expect(original.split(from), `${file}: ${from}`).toHaveLength(2)
+    // The listed replacements are the whole difference: the basic-auth username, wire IDs, provider and SaaS names,
+    // the `@opencode/plugin` specifier and every other string stay as upstream wrote them.
     expect(KiloBranding.transform(filename, original), file).toBe(
-      listed.reduce((out, [, from, to]) => out.replace(from, to), original),
+      texts.reduce((out, [, from, to]) => out.replace(from, to), original),
     )
   }
 })
@@ -159,15 +157,21 @@ test("leaves every file with a reviewed identity untouched", async () => {
   }
 })
 
-test("does not rename a trace span", () => {
-  // The name of an Effect span is an identity telemetry groups by. Only the text a person reads changes.
+test("does not rename a trace span, and only an Effect span", () => {
+  // The name of an Effect span is an identity telemetry groups by. Only the text a person reads changes, and a
+  // method that merely shares the name (`ui.fn`, `tracer.withSpan`) takes text like any other call.
   const source = [
     'const load = Effect.fn("OpenCode.load")(function* () {})',
     'const traced = work.pipe(Effect.withSpan("opencode work"))',
     'const label = "OpenCode work"',
+    'const hint = ui.fn("OpenCode hint")',
+    'const note = tracer.withSpan("Restart opencode")',
   ].join("\n")
   expect(KiloBranding.transform("/repo/packages/tui/src/util/error.ts", source)).toBe(
-    source.replace('"OpenCode work"', '"Kilo work"'),
+    source
+      .replace('"OpenCode work"', '"Kilo work"')
+      .replace('"OpenCode hint"', '"Kilo hint"')
+      .replace('"Restart opencode"', '"Restart kilo2"'),
   )
 })
 

@@ -73,6 +73,8 @@ export const files: readonly string[] = [
   "server/src/handlers/server.ts",
   "server/src/handlers/persistent-pty.ts",
   "server/src/process.ts",
+  // The loader the host installs for user plugins: the error names the host a plugin has to take `effect` from.
+  "plugin/src/runtime.ts",
 ]
 
 const intercepted: ReadonlySet<string> = new Set(files)

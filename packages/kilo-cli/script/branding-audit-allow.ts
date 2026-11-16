@@ -16,17 +16,21 @@
 //     still audited, so new product text there fails.
 //
 // The audit fails on a stale entry: a file with no findings, or a snippet that
-// no longer accounts for a finding because upstream moved or reworded it.
+// no longer accounts for a finding because upstream moved or reworded it. It
+// also fails on a snippet that is only the product name (`OpenCode`), which
+// would account for every later use of the name in that file.
 
 /** A reviewed identity in an otherwise audited file: the exact source text, and why it is not Kilo branding. */
 export type Identity = readonly [snippet: string, reason: string]
 
 const CONSOLE = "OpenCode Console is an upstream SaaS product name, not host branding."
 const GO = "OpenCode Go is an upstream SaaS product name, not host branding."
-// packages/kilo-plugin/src/request-identity.ts recognises these upstream defaults by value to put Kilo's in their place.
+// Under the Kilo host a provider is sent Kilo's referer: KiloRequestIdentity (packages/kilo-plugin/src/request-identity.ts,
+// #16088) recognises this upstream default by value and puts its own in its place, so the literal stays as upstream
+// wrote it. packages/kilo-cli/test/request-identity.test.ts pins the hosted and the unhosted value for OpenRouter.
 const REFERER: Identity = [
   '"HTTP-Referer": "https://opencode.ai/"',
-  "Referer sent to the provider. A third-party identity: KiloRequestIdentity replaces this exact upstream default, and what each provider is sent is tracked in #16219.",
+  "Upstream's default referer for the provider, a third-party identity. KiloRequestIdentity matches this exact value to replace it with Kilo's, so it is not rebranded here.",
 ]
 
 export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<string, string | readonly Identity[]>([
@@ -104,15 +108,15 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
     [
       [
         'export const CLIENT_METADATA_URL = "https://opencode.ai/oauth/opencode/client.json"',
-        "Upstream's OAuth client document, sent to MCP servers as the client ID. A third-party identity: the Kilo host supplies its own document through McpClientMetadata (#15307), so this one is not sent.",
+        "Upstream's OAuth client document, offered to MCP servers as the client ID only when no host identity is set. Unreachable in Kilo: the host supplies its own document through McpClientMetadata (packages/kilo-cli/src/host.ts; done in #15307).",
       ],
       [
         'client_uri: options.clientMetadata?.uri ?? "https://opencode.ai"',
-        "Upstream's default OAuth client URI. A third-party identity: the Kilo host supplies its own through McpClientMetadata (#15307).",
+        "Upstream's default OAuth client URI. Unreachable in Kilo: the host supplies `https://kilo.ai` through McpClientMetadata (done in #15307).",
       ],
       [
         'logo_uri: "https://opencode.ai/web-app-manifest-512x512.png"',
-        "OAuth client logo sent to MCP servers at registration. A third-party identity with no host knob yet, tracked in #16219.",
+        "OAuth client logo sent to MCP servers at registration, next to the Kilo client name and URI. A third-party identity with no host knob; tracked in #16219 (MCP OAuth client registration).",
       ],
     ],
   ],
@@ -121,7 +125,7 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
     [
       [
         "OpenCode-User/1.0; +https://opencode.ai",
-        "User agent the webfetch tool sends to the fetched site. A third-party identity, tracked in #16219.",
+        "User agent the webfetch tool sends to the fetched site. A third-party identity, tracked in #16219 (webfetch tool).",
       ],
     ],
   ],
@@ -130,7 +134,7 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
     [
       [
         'const agentName = "OpenCode"',
-        "Agent name sent to OpenAI when the ChatGPT token-sharing client registers. A third-party identity, tracked in #16219.",
+        "Sent to OpenAI as `agent_name_hint`, only in the authorize URL of the `chatgpt-token-sharing` sign-in. Unreachable in Kilo: KiloOpenAIPlugin (packages/kilo-plugin/src/openai.ts) removes that method and its implementation, which packages/kilo-cli/test/openai.test.ts pins. #16219 notes it needs a Kilo value first if Kilo ever offers that sign-in.",
       ],
     ],
   ],
@@ -144,7 +148,7 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
       REFERER,
       [
         '"X-BILLING-INVOKE-ORIGIN": provider.headers?.["X-BILLING-INVOKE-ORIGIN"] ?? "OpenCode"',
-        "Billing origin sent to NVIDIA. A third-party identity, tracked in #16219.",
+        "Billing origin sent to NVIDIA. A third-party identity, tracked in #16219 (NVIDIA).",
       ],
     ],
   ],
@@ -172,6 +176,44 @@ export const allow: ReadonlyMap<string, string | readonly Identity[]> = new Map<
     [
       ["OpenCode Console", CONSOLE],
       ["OpenCode Go", GO],
+    ],
+  ],
+  [
+    "plugin/src/gui/vite.ts",
+    [
+      [
+        "is not a module the OpenCode app provides to plugin GUIs",
+        "Build error of the Vite plugin a plugin author runs to bundle a GUI for the upstream desktop app. The Kilo host never loads this module, and the loader cannot reach an author's build.",
+      ],
+    ],
+  ],
+  [
+    "plugin/src/gui/registries.typecheck.ts",
+    [
+      [
+        '$schema: "https://opencode.ai/desktop-theme.json"',
+        "Theme $schema URL, a schema identifier, in a type-level check that nothing imports.",
+      ],
+    ],
+  ],
+  [
+    "kilo-plugin/src/request-identity.ts",
+    [
+      [
+        'upstream: "https://opencode.ai/"',
+        "The upstream default referer this module recognises in order to replace it with Kilo's.",
+      ],
+    ],
+  ],
+  [
+    "kilo-plugin/src/skill/kilo-config.txt",
+    [
+      ["Kilo runs on the OpenCode V2 runtime.", "Kilo's own guide naming the upstream runtime it is built on."],
+      [
+        "the OpenCode V2 docs at <https://opencode.ai/docs/> apply, with `opencode` read as `kilo2`, `opencode.json` as `kilo2.json`",
+        "Kilo's own guide pointing at the upstream docs for the shared runtime and saying how to read their names.",
+      ],
+      ["or OpenCode config as a fallback", "Kilo's own guide saying that OpenCode config files are not read."],
     ],
   ],
   [

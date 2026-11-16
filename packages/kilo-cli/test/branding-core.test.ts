@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test"
-import { bundle, coreText, host } from "./fixtures/branding-run"
+import path from "node:path"
+import { bundle, coreText, host, pluginText, run, temporary } from "./fixtures/branding-run"
 
 // The compiled build bundles core through the same plugin (script/build.ts), so the loader's path filter has to
 // match the core modules in a bundle as well as in a source run.
 for (const hosted of [false, true]) {
-  test(`a bundle of the core modules ${hosted ? "names Kilo" : "keeps upstream wording"}`, async () => {
-    const output = await bundle(coreText, hosted)
-    for (const [file, upstream, kilo] of coreText) {
+  test(`a bundle of the core and plugin modules ${hosted ? "names Kilo" : "keeps upstream wording"}`, async () => {
+    const output = await bundle([...coreText, ...pluginText], hosted)
+    for (const [file, upstream, kilo] of [...coreText, ...pluginText]) {
       expect(output, file).toContain(hosted ? kilo : upstream)
       expect(output, file).not.toContain(hosted ? upstream : kilo)
     }
@@ -14,6 +15,18 @@ for (const hosted of [false, true]) {
     expect(output).toContain('new Server({ name: "opencode", version: "1.0.0" }')
     expect(output).toContain('server.name === "opencode"')
     expect(output).toContain('"mcp__opencode__"')
+    // The package a plugin imports keeps its name.
+    expect(output).toContain('"@opencode/plugin" modules.')
+  }, 60_000)
+
+  // The loader the host installs for user plugins, reached through `@opencode/plugin/runtime` as the host entry
+  // imports it: a plugin that ships its own copy of `effect` reads the host's name in the error.
+  test(`the plugin loader error ${hosted ? "names Kilo" : "keeps upstream wording"}`, async () => {
+    await using root = await temporary()
+    const fixture = path.join(import.meta.dir, "fixtures/branding-plugin-runtime.ts")
+    expect(JSON.parse(await run([process.execPath, fixture], root.path, hosted))).toBe(
+      `Cannot load "effect/RemovedLegacySubpath.js" from plugin node_modules: "effect/RemovedLegacySubpath.js" is not provided by ${hosted ? "Kilo" : "OpenCode"}; plugins must use the host's "effect" and "@opencode/plugin" modules.`,
+    )
   }, 60_000)
 }
 
