@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Deferred, Effect, Exit, Fiber, Layer, Option, Stream } from "effect"
+import { Deferred, Effect, Exit, Fiber, Layer, Logger, Option, Stream } from "effect"
 import { TestClock } from "effect/testing"
 import { LanguageModel } from "@opencode/ai/effect"
 import { OpenAIChat } from "@opencode/ai/protocols"
@@ -361,6 +361,129 @@ describe("kilocode.session-drain", () => {
       expect(yield* finish(waiting)).toBe(true)
       const messages = yield* env.sessions.messages({ sessionID: env.root.id, order: "asc" })
       expect(JSON.stringify(messages)).toContain("parent saw the result")
+    }),
+  )
+
+  it.effect("reports own and descendant work, shared owner counts, and cancellation with virtual time", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const jobs = yield* Job.Service
+      const child = yield* env.create(env.root.id)
+      const gate = yield* Deferred.make<void>()
+      const first = yield* Deferred.make<void>()
+      const second = yield* Deferred.make<void>()
+      const llm = yield* replies(held(gate, "parent"), held(gate, "child"))
+      yield* env.sessions.prompt({ sessionID: env.root.id, text: "Parent work" })
+      yield* llm.wait(1)
+      yield* env.sessions.prompt({ sessionID: child.id, text: "Child work" })
+      yield* llm.wait(2)
+      for (const [id, done] of [
+        ["job_report_first", first],
+        ["job_report_second", second],
+      ] as const) {
+        yield* jobs.start({
+          id,
+          type: "shell",
+          recovery: { kind: "shell", sessionID: env.root.id, shellID: `sh_${id}`, command: "held" },
+          run: Deferred.await(done).pipe(Effect.as("finished")),
+        })
+        yield* jobs.background(id)
+      }
+      const messages: { level: string; message: unknown }[] = []
+      const logs = Logger.layer([
+        Logger.make((entry) => messages.push({ level: entry.logLevel, message: entry.message })),
+      ])
+      const waiting = yield* env.rpc
+        .drain({ sessionID: env.root.id })
+        .pipe(Effect.provide(logs), Effect.forkChild({ startImmediately: true }))
+      yield* TestClock.adjust("59 seconds")
+      expect(messages).toEqual([])
+      yield* TestClock.adjust("1 second")
+      const pending = [
+        { session: env.root.id, owner: "foreground session execution", count: 1 },
+        { session: child.id, owner: "foreground session execution", count: 1 },
+        { session: env.root.id, owner: "background job run", count: 2 },
+      ]
+      expect(messages).toEqual([
+        {
+          level: "Info",
+          message: ["session drain pending", { "session.id": env.root.id, elapsed: 60_000, count: 4, pending }],
+        },
+      ])
+      expect(waiting.pollUnsafe()).toBeUndefined()
+      yield* Deferred.succeed(first, undefined)
+      const settled = yield* jobs.wait({ id: "job_report_first" })
+      const notification = settled.info?.notificationID
+      if (notification === undefined) throw new Error("background job has no notification")
+      yield* jobs.completeBackground(notification)
+      yield* TestClock.adjust("1 minute")
+      const remaining = {
+        "session.id": env.root.id,
+        elapsed: 120_000,
+        count: 3,
+        pending: pending.map((item) => (item.owner === "background job run" ? { ...item, count: 1 } : item)),
+      }
+      expect(messages).toHaveLength(2)
+      expect(messages.at(-1)).toEqual({ level: "Info", message: ["session drain pending", remaining] })
+      expect(waiting.pollUnsafe()).toBeUndefined()
+      yield* Fiber.interrupt(waiting)
+      expect(messages.at(-1)).toEqual({ level: "Warn", message: ["session drain cancelled", remaining] })
+      expect([...(yield* env.sessions.active)]).toEqual(expect.arrayContaining([env.root.id, child.id]))
+      yield* Deferred.succeed(second, undefined)
+      const last = yield* jobs.wait({ id: "job_report_second" })
+      if (last.info?.notificationID === undefined) throw new Error("background job has no notification")
+      yield* jobs.completeBackground(last.info.notificationID)
+      yield* Deferred.succeed(gate, undefined)
+      expect(yield* env.rpc.drain({ sessionID: env.root.id }).pipe(Effect.provide(logs))).toBe(true)
+      yield* TestClock.adjust("2 minutes")
+      expect(messages).toHaveLength(3)
+    }),
+  )
+
+  it.effect("names result delivery when cancelled before the first pending report", () =>
+    Effect.gen(function* () {
+      const env = yield* setup
+      const jobs = yield* Job.Service
+      const done = yield* Deferred.make<void>()
+      yield* jobs.start({
+        id: "job_report_delivery",
+        type: "shell",
+        recovery: { kind: "shell", sessionID: env.root.id, shellID: "sh_delivery", command: "held" },
+        run: Deferred.await(done).pipe(Effect.as("finished")),
+      })
+      yield* jobs.background("job_report_delivery")
+      yield* Deferred.succeed(done, undefined)
+      const settled = yield* jobs.wait({ id: "job_report_delivery" })
+      const messages: { level: string; message: unknown }[] = []
+      const logs = Logger.layer([
+        Logger.make((entry) => messages.push({ level: entry.logLevel, message: entry.message })),
+      ])
+      const waiting = yield* env.rpc
+        .drain({ sessionID: env.root.id })
+        .pipe(Effect.provide(logs), Effect.forkChild({ startImmediately: true }))
+      yield* TestClock.adjust("1 second")
+      expect(messages).toEqual([])
+      yield* Fiber.interrupt(waiting)
+      expect(messages).toEqual([
+        {
+          level: "Warn",
+          message: [
+            "session drain cancelled",
+            {
+              "session.id": env.root.id,
+              elapsed: 1_000,
+              count: 1,
+              pending: [{ session: env.root.id, owner: "background result delivery", count: 1 }],
+            },
+          ],
+        },
+      ])
+      const notification = settled.info?.notificationID
+      if (notification === undefined) throw new Error("background job has no notification")
+      yield* jobs.completeBackground(notification)
+      expect(yield* env.rpc.drain({ sessionID: env.root.id }).pipe(Effect.provide(logs))).toBe(true)
+      yield* TestClock.adjust("2 minutes")
+      expect(messages).toHaveLength(1)
     }),
   )
 
