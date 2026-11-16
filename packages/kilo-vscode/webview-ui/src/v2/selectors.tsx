@@ -190,9 +190,13 @@ export function createSelection(
       if (!session()) remember(current, variant)
       setModel({ id: current.id, providerID: current.providerID, ...(variant ? { variant } : {}) })
     },
-    /** Creates a session with the current selection, then writes the metadata the caller passes. */
-    create(metadata?: Record<string, JsonValue>) {
-      const created = v2.data.session.create({ agent: agent()?.id, model: model() })
+    /** The agent and model a new session would start with. */
+    choice() {
+      return { agent: agent()?.id, model: model() }
+    },
+    /** Creates a session with the given or the current selection, then writes the metadata the caller passes. */
+    create(metadata?: Record<string, JsonValue>, choice = { agent: agent()?.id, model: model() }) {
+      const created = v2.data.session.create(choice)
       // The server reads the sandbox metadata when it first resolves the session state, so write it before the first
       // prompt or status call, which both wait for this request.
       const request = metadata

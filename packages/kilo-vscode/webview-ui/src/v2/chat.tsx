@@ -32,6 +32,7 @@ import { createReviewAppendQueue } from "./review-queue"
 import { createComposerQueue } from "./composer"
 import { createPlanOpener } from "./open-plan"
 import { openSubagent } from "./open-subagent"
+import { takesHandoff } from "./plan-handoff"
 import { showTabStrip } from "../utils/local-tabs"
 import { focusPrompt } from "../utils/tab-navigation"
 
@@ -79,10 +80,12 @@ export function Chat() {
     requestAnimationFrame(focusPrompt)
   }
   // The plan handoff creates a new session on the server and asks the client to show it. The TUI and the
-  // VS Code sidebar both consume this event, so the new Code session opens in the active view.
+  // VS Code sidebar both consume this event; the new Code session opens in the webview that answered the plan question,
+  // so a plan in the Agent Manager does not open its session here.
   onCleanup(
     v2.data.on("tui.session.select", (event) => {
       if (event.location && event.location.directory !== v2.directory) return
+      if (!takesHandoff(v2.directory)) return
       open(event.data.sessionID)
     }),
   )

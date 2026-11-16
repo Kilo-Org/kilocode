@@ -33,7 +33,7 @@ import { sessionMissing } from "./scope"
 import { childTools, createChildSessions } from "./child-session"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
-import { PromptInput, setPromptDraft } from "./prompt"
+import { PromptInput, setPromptDraft, type SendTarget } from "./prompt"
 import { createRevertQueue, EMPTY_DRAFT, redoTarget, restoredDraft, type ComposerDraft } from "./revert"
 import { sendBinding } from "./send-binding"
 import { createSelection, Selectors } from "./selectors"
@@ -251,6 +251,13 @@ export function SessionView(props: {
   // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
   const questioning = () => !blocked() && forms().length > 0
   const selection = createSelection(session, draftKey)
+  // The agent and model each draft tab shows. A tab switch resets the composer's draft choice, and a first send that
+  // is still resolving its mentions or sandbox default must create its session with the choice of its own tab.
+  const choices = new Map<string, ReturnType<typeof selection.choice>>()
+  createEffect(() => {
+    const key = draftKey()
+    if (key && !session()) choices.set(key, selection.choice())
+  })
   const preferences = useModelPreferences()
   const autoApprove = createAutoApprove()
   const sandbox = createSandbox({ session, gate: selection.created })
@@ -381,19 +388,23 @@ export function SessionView(props: {
 
   // A prompt and a slash command start the same way: a draft creates its session, the tab settles on it, a pending
   // question is dismissed, and a send that should stop the running model call stops it.
-  const begin = async (mode: SendMode) => {
+  const begin = async (mode: SendMode, target?: SendTarget) => {
     // A workspace restore can take a while and the composer stays enabled, so the send is bound to the session and
     // draft it was pressed in. Reading them after the wait would send this text into the tab the user switched to.
-    const key = draftKey()
-    const existing = session()
+    // The composer passes the tab it captured on submit, before it resolved its mentions.
+    const existing = target ? target.session : session()
+    const key = target ? (target.key ?? existing ?? "new") : draftKey()
+    const choice = existing ? undefined : (choices.get(key) ?? selection.choice())
+    choices.delete(key)
     reverts.sent(existing)
     await reverts.settled(existing)
     // The first prompt is a task start too; skip an unset work style so the picker does not return later.
     work?.skip()
     // A created session is seeded with the resolved sandbox default before the first prompt.
     const seed = existing ? undefined : await sandbox.metadata()
-    const id = existing ?? selection.create(seed)
-    if (existing) selection.ensure(id)
+    const id = existing ?? selection.create(seed, choice)
+    // The composer's model describes this session only while its tab is still the one shown.
+    if (existing && existing === session()) selection.ensure(id)
     const gate = selection.gate(id)
     // The prompt runs on what the composer shows: its draft, which the send commits, or the session's own model.
     // Read both before onSession changes the session identity. The active selection belongs to the active tab, so it
@@ -407,7 +418,7 @@ export function SessionView(props: {
       steerInterrupts: steerInterrupts(v2.data.session.message.list(id), waiting),
       mode,
     })
-    const model = binding.same ? selection.model() : selection.selected(id)
+    const model = choice ? choice.model : binding.same ? selection.model() : selection.selected(id)
     const draft = selection.draft(id)
     // A pending question of this session is dismissed when the user sends instead.
     const questions = formsOf(id)
@@ -441,9 +452,14 @@ export function SessionView(props: {
   const send = async (
     text: string,
     mode: SendMode = "steer",
-    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
+    input?: {
+      items?: PromptAttachment[]
+      files?: MentionFile[]
+      metadata?: { [key: string]: JsonValue }
+      target?: SendTarget
+    },
   ) => {
-    const { id, gate, model, draft } = await begin(mode)
+    const { id, gate, model, draft } = await begin(mode, input?.target)
     const files = promptFiles(input?.items ?? [], input?.files ?? [])
     return v2.data.session
       .prompt({
@@ -525,8 +541,9 @@ export function SessionView(props: {
     mode: SendMode,
     items: PromptAttachment[],
     mentions: MentionFile[] = [],
+    target?: SendTarget,
   ) => {
-    const { id, gate, model } = await begin(mode)
+    const { id, gate, model } = await begin(mode, target)
     const text = args ? `/${entry.name} ${args}` : `/${entry.name}`
     // A command with its own model runs on that model, which the server switches the session to.
     const own = entry.kind === "command" ? parseCommandModel(entry.command.model) : undefined

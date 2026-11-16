@@ -150,6 +150,9 @@ const SEND_ICONS = ["send", "arrow-up", "clock", "arrow-right"] as const
 
 const NO_KEYS = { altKey: false, ctrlKey: false, metaKey: false }
 
+/** The tab a send was pressed in: its session, or the draft key before a session exists. */
+export type SendTarget = { session: string | undefined; key: string | undefined }
+
 export function PromptInput(props: {
   session?: string
   /** Draft identity: the session id, or the pending tab id before a session exists. */
@@ -170,7 +173,12 @@ export function PromptInput(props: {
   onSend: (
     text: string,
     mode: SendMode,
-    input?: { items?: PromptAttachment[]; files?: MentionFile[]; metadata?: { [key: string]: JsonValue } },
+    input?: {
+      items?: PromptAttachment[]
+      files?: MentionFile[]
+      metadata?: { [key: string]: JsonValue }
+      target?: SendTarget
+    },
   ) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
@@ -207,6 +215,7 @@ export function PromptInput(props: {
       mode: SendMode,
       items: PromptAttachment[],
       files?: MentionFile[],
+      target?: SendTarget,
     ) => Promise<boolean>
   }
   /** Agent Manager worktrees the `@` menu can reference. The Worktrees entry is offered only when this is set. */
@@ -834,6 +843,8 @@ export function PromptInput(props: {
     const target = runner ? parseSlash(runner.entries(), sent) : undefined
     // The draft key identifies the conversation this send belongs to, even when the session is created first.
     const key = props.draftKey
+    // Resolving mentions can wait for the host, and the user can switch tabs meanwhile: the send stays bound to this tab.
+    const bound = { session: props.session, key }
     // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
     // if the send fails and the user has not typed, attached or picked something new.
     const restore = () => {
@@ -859,12 +870,13 @@ export function PromptInput(props: {
     const request = pendingFiles.then((files) => {
       // A mention whose context could not be read keeps the draft for another try.
       if (!files) return false
-      if (runner && target) return runner.run(target.entry, target.args, mode, items, files)
+      if (runner && target) return runner.run(target.entry, target.args, mode, items, files, bound)
       // The references and review data hold only strings, numbers and arrays, so they are prompt metadata.
       return props.onSend(review.text, mode, {
         items,
         files,
         metadata: mergePromptMetadata(prompt.metadata as { [key: string]: JsonValue } | undefined, review.metadata),
+        target: bound,
       })
     })
     void request
@@ -905,6 +917,7 @@ export function PromptInput(props: {
     const items = attachments()
     const sent = expandPastes(draft, pastes).trim()
     const key = props.draftKey
+    const bound = { session: props.session, key }
     const restore = () => {
       setGoalMode(true)
       if (text().trim() || attachments().length > 0) return
@@ -923,7 +936,7 @@ export function PromptInput(props: {
     setSending(true)
     void files
       // `--` keeps an objective that is itself a control word, such as "pause", an objective, as in v1.
-      .then((list) => (list ? run(entry, `-- ${sent}`, mode, items, list) : false))
+      .then((list) => (list ? run(entry, `-- ${sent}`, mode, items, list, bound) : false))
       .then((ok) => {
         if (!ok) return restore()
         preEnhance = null

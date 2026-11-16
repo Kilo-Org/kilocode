@@ -47,6 +47,7 @@ import {
   LOCAL,
   directoryWorktree,
   canOpenRootSession,
+  knownSessions,
   isKnownRootSession,
   adjacentHint,
   focusChatSearch,
@@ -82,6 +83,8 @@ import {
 import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
+import { createdTab } from "./session-created"
+import { takesHandoff } from "../src/v2/plan-handoff"
 import {
   createSessionRestore,
   createTabMemory,
@@ -889,6 +892,7 @@ const AgentManagerContent: Component = () => {
       if (!result.has(session.id)) result.set(session.id, session.location.directory)
     return result
   })
+  const openable = () => knownSessions(sessions.sessions(), projectSessionsLive()[currentProjectId() ?? ""])
   const ownerOf = (sid: string) => {
     const directory = locations().get(sid)
     if (directory === undefined) return undefined
@@ -1077,7 +1081,7 @@ const AgentManagerContent: Component = () => {
   // locally.
   const openInWorktree = (sid: string) => {
     const sel = selection()
-    if (!canOpenRootSession(sid, sessions.sessions())) return false
+    if (!canOpenRootSession(sid, openable())) return false
     const current = managedSessions().find((entry) => entry.id === sid)?.worktreeId
     const owner = ownerOf(sid)
     if (current && (owner === undefined || owner === current)) return focusManagedSession(current, sid)
@@ -1259,7 +1263,11 @@ const AgentManagerContent: Component = () => {
     project: currentProjectId(),
     worktree: directoryWorktree(directory, worktrees()),
   })
-  const handleSessionCreated = (id: string | undefined, origin: ReturnType<typeof sessionOrigin>) => {
+  const handleSessionCreated = (
+    id: string | undefined,
+    origin: ReturnType<typeof sessionOrigin>,
+    sent?: { key: string | undefined },
+  ) => {
     if (!id) {
       sessions.clearCurrentSession()
       return
@@ -1285,20 +1293,44 @@ const AgentManagerContent: Component = () => {
       local: localSessionIDs().includes(id),
       owner: known === undefined ? origin.worktree : known,
     })
-    if (worktree) {
-      appendToTabOrder(worktree, id)
+    const tab = createdTab({
+      id,
+      sent,
+      worktree,
+      worktreeTabs: worktree ? sessionsForWorktree(worktree).map((session) => session.id) : [],
+      selection: sel,
+      local: localSessionIDs(),
+      activePending: activePendingId(),
+      shown: shownSession(),
+      pending: isPending,
+    })
+    if (tab.kind === "keep") return
+    if (tab.kind === "worktree") {
+      if (tab.append) appendToTabOrder(tab.worktree, id)
       // Adopting a session the worktree already owns would end its branch auto-naming.
-      if (filed !== worktree)
-        to({ type: "agentManager.addSessionToWorktree", projectId: origin.project, worktreeId: worktree, sessionId: id })
-      if (worktree === sel) sessions.selectSession(id)
-      else focusManagedSession(worktree, id)
+      if (filed !== tab.worktree) {
+        if (!tab.show) quietSessions.add(id)
+        to({
+          type: "agentManager.addSessionToWorktree",
+          projectId: origin.project,
+          worktreeId: tab.worktree,
+          sessionId: id,
+        })
+      }
+      if (!tab.show) return
+      if (tab.worktree === sel) sessions.selectSession(id)
+      else focusManagedSession(tab.worktree, id)
       return
     }
-    placeLocal(id, activePendingId(), activePendingId() ?? sessions.currentSessionID())
-    setSelection(LOCAL)
+    placeLocal(id, tab.replace, tab.replace ? activePendingId() : (activePendingId() ?? sessions.currentSessionID()))
     to({ type: "agentManager.persistSession", projectId: origin.project, sessionId: id })
+    if (!tab.show) return
+    if (!tab.replace) setActivePendingId(undefined)
+    setSelection(LOCAL)
     sessions.selectSession(id)
   }
+  // Sessions filed in a worktree without taking the view; the host's sessionAdded reply must not focus them either.
+  const quietSessions = new Set<string>()
 
   // Tool cards and edit permissions open their file changes in the edit preview, next to the session.
   const previewEdit = (files: EditPreviewDiff[], sessionID = sessions.currentSessionID()) => {
@@ -1458,7 +1490,14 @@ const AgentManagerContent: Component = () => {
       onCleanup(
         store.data.on("tui.session.select", (event) => {
           if (event.location && event.location.directory !== directory) return
-          handleSessionCreated(event.data.sessionID, sessionOrigin(store.directory))
+          if (!takesHandoff(store.directory)) return
+          const id = event.data.sessionID
+          const origin = sessionOrigin(store.directory)
+          // The server created the session; load it first, or the tab reconciliation drops a tab it does not know.
+          void store.data.session
+            .sync(id)
+            .then(() => handleSessionCreated(id, origin))
+            .catch((err: unknown) => store.report(err))
         }),
       )
     }
@@ -1668,7 +1707,7 @@ const AgentManagerContent: Component = () => {
     requestChatFocus()
   }
   const openLocally = (sid: string) => {
-    if (!canOpenRootSession(sid, sessions.sessions())) return
+    if (!canOpenRootSession(sid, openable())) return
     saveTabMemory()
     expandSidebar()
     const pending = activePendingId()
@@ -2079,6 +2118,8 @@ const AgentManagerContent: Component = () => {
       if (message.type === "agentManager.sessionAdded") {
         applySessionAdded(message, {
           currentProjectId,
+          quiet: (id) => quietSessions.delete(id),
+          placeLocal: (id) => placeLocal(id, undefined, activePendingId() ?? sessions.currentSessionID()),
           saveTabMemory,
           appendOrder: appendToTabOrder,
           setSelection: (id) => setSelection(id),
@@ -2397,7 +2438,7 @@ const AgentManagerContent: Component = () => {
                       session={shownSession()}
                       draftKey={shownSession() ?? draftTab()}
                       readOnly={readOnly()}
-                      onSession={(id) => handleSessionCreated(id, origin)}
+                      onSession={(id, key) => handleSessionCreated(id, origin, { key })}
                       actions={toolActions}
                       onShowHistory={() => openHistory()}
                       row={sessionActions}
