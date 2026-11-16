@@ -4,7 +4,7 @@
 import type { OpenCodeClient } from "@opencode/client"
 import type { createClientConnection } from "@opencode/client/solid"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
-import { createEffect, createSignal, on } from "solid-js"
+import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { toFailure, type Failure } from "./error"
 import { catalogEvent, createKiloCatalog } from "./kilo-catalog"
 import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
@@ -12,6 +12,12 @@ import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
 type Connection = ReturnType<typeof createClientConnection>
 
 export type ConnectionMetadata = ReturnType<typeof createConnectionMetadata>
+
+/**
+ * Retry delays for a failed handshake. A server that just started can answer one request before it is ready, and the
+ * banner would otherwise stay until the window reloads.
+ */
+const HANDSHAKE_RETRY = [500, 1_000, 2_000, 5_000, 10_000] as const
 
 /**
  * Call inside a reactive owner. `subscribe` reaches the catalog event: the panel routes it from its shared stream, and
@@ -40,9 +46,11 @@ export function createConnectionMetadata(input: {
           status: input.connection.status,
           on: input.subscribe,
         })
-  const state = { handshake: 0 }
+  const state = { handshake: 0, retry: undefined as ReturnType<typeof setTimeout> | undefined }
+  onCleanup(() => clearTimeout(state.retry))
 
-  const readHandshake = (dir: string) => {
+  const readHandshake = (dir: string, attempt = 0) => {
+    clearTimeout(state.retry)
     const read = ++state.handshake
     void input.api
       .rpc(KiloHandshakeRpc.Definition)
@@ -60,6 +68,12 @@ export function createConnectionMetadata(input: {
           message: "Not a Kilo v2 server.",
           details: failure.details ?? failure.message,
         })
+        const delay = HANDSHAKE_RETRY[attempt]
+        if (delay === undefined) return
+        state.retry = setTimeout(() => {
+          if (read !== state.handshake || input.connection.status() !== "connected") return
+          readHandshake(dir, attempt + 1)
+        }, delay)
       })
   }
   createEffect(
