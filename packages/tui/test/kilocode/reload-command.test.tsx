@@ -9,8 +9,11 @@ test("the reload slash command and its palette entry are removed", async () => {
   await app.ready
   await app.waitForFrame((frame) => frame.includes("ctrl+p commands"))
 
-  // The typed text is `/relo`; a live slash entry would add `/reload` to the frame.
-  app.mockInput.typeText("/relo")
+  // Prove the completion list renders first: a dead list would also lack `/reload`.
+  app.mockInput.typeText("/")
+  await app.waitForFrame((frame) => frame.includes("/caffeinate"))
+  // The typed text is now `/relo`; a live slash entry would add `/reload` to the frame.
+  app.mockInput.typeText("relo")
   await Bun.sleep(100)
   await app.renderOnce()
   expect(app.captureCharFrame()).not.toContain("/reload")
