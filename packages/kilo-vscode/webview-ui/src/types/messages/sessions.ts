@@ -45,6 +45,8 @@ export interface SessionInfo {
   id: string
   parentID?: string | null
   title?: string
+  /** Two-word identifier assigned at creation; shown while the title is still the placeholder. */
+  slug?: string
   createdAt: string
   updatedAt: string
   /** Agent the server last ran this session with. */

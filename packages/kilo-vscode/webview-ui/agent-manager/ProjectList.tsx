@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, type Component } from "solid-js"
+import { displayTitle } from "../../src/shared/session-title"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type {
@@ -159,7 +160,7 @@ export const ProjectList: Component<Props> = (props) => {
           projectId: project.id,
           kind: "session",
           group: "sessions",
-          title: session.title || props.t("agentManager.session.untitled"),
+          title: displayTitle(session, props.t("agentManager.session.untitled")),
           meta: [project.label, where],
           search: [project.label, where, wt?.branch, session.title, session.id].filter(Boolean).join(" "),
           updatedAt: session.updatedAt,

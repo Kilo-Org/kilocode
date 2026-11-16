@@ -10,6 +10,7 @@ import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecyc
 import { Timing } from "./creation-timing"
 import { plan } from "./creation-plan"
 import { sessionCreateBody } from "./session-create"
+import { creationTitle } from "../shared/session-title"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -72,6 +73,7 @@ export interface ToolDeps {
     boot?: CreationBoot,
     timing?: Timing,
     agent?: string,
+    title?: string,
   ) => Promise<Session | null>
   sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   registerWorktreeSession: (sid: string, dir: string) => void
@@ -181,6 +183,7 @@ async function local(
       directory: target,
       metadata,
       agent: task.agent,
+      title: creationTitle(task.name),
       sandboxInheritanceToken: source?.sandboxInheritanceToken,
     }),
     { throwOnError: true },
@@ -245,6 +248,7 @@ async function worktree(
         boot,
         timing,
         task.agent,
+        creationTitle(task.name),
       )
     },
   )

@@ -1,4 +1,5 @@
 import { For, Show, type Component, type JSX } from "solid-js"
+import { displayTitle } from "../../src/shared/session-title"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
@@ -37,7 +38,7 @@ export interface TabBarProps {
   onDragEnd: (event: DragEvent) => void
   onDragOver: (event: DragEvent) => void
   onRelease: () => void
-  overlay: () => { title?: string } | undefined
+  overlay: () => { title?: string; slug?: string } | undefined
   localStats: () => LocalGitStats | undefined
   worktreeStats: () => Record<string, WorktreeGitStats>
   applyState: () => { status: string } | undefined
@@ -351,7 +352,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
         <Show when={props.overlay()}>
           {(tab) => (
             <div class="am-tab am-tab-overlay">
-              <span class="am-tab-label">{tab().title || props.t("agentManager.session.untitled")}</span>
+              <span class="am-tab-label">{displayTitle(tab(), props.t("agentManager.session.untitled"))}</span>
             </div>
           )}
         </Show>

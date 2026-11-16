@@ -203,13 +203,17 @@ export async function runWithMessageConfirmation<T>(
 }
 
 export function sessionToWebview(
-  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata" | "agent" | "model">,
+  session: Pick<
+    Session,
+    "id" | "parentID" | "title" | "slug" | "time" | "summary" | "revert" | "metadata" | "agent" | "model"
+  >,
 ) {
   const goal = session.metadata?.["kilo.goal"]
   return {
     id: session.id,
     parentID: session.parentID ?? null,
     title: session.title,
+    slug: session.slug,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
     // The agent and model the server last ran, so a reopened session shows
