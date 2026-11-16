@@ -24,6 +24,8 @@ import { TerminalSocket } from "./socket"
 import { registerTerminalOutput, unregisterTerminalOutput } from "./output"
 import { registerActivity } from "./activity"
 import type { Activity } from "../v2/activity"
+import { isFocusChord, leavesTerminal } from "../chords"
+import { terminalActivation } from "../focus"
 import {
   APPEND_REVIEW_COMMENTS,
   takeReviewCommentsForTerminal,
@@ -82,6 +84,7 @@ interface Props {
  *  every observation, so the visible terminal is never stale; only
  *  the backend dimension sync is debounced. */
 const RESIZE_DEBOUNCE_MS = 100
+const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 /** Resolve a VS Code CSS custom property to a concrete color string.
  *
@@ -136,18 +139,6 @@ function readTheme() {
   }
 }
 
-/** Allow agent-manager Cmd/Ctrl shortcuts to fall through xterm's key handler. */
-function isAgentManagerShortcut(e: KeyboardEvent): boolean {
-  if (!e.metaKey && !e.ctrlKey) return false
-  const key = e.key.toLowerCase()
-  if (e.altKey && ["arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) return true
-  if (["t", "w", "n", "d", "e", "f"].includes(key)) return true
-  if (e.shiftKey && ["t", "w", "n", "o", "r", "m", "[", "]", "/", "?"].includes(key)) return true
-  if (/^[1-9]$/.test(key)) return true
-  if (key === "/") return true
-  return false
-}
-
 export const TerminalTab: Component<Props> = (props) => {
   const vscode = useBridge()
   const { t } = useLanguage()
@@ -197,13 +188,11 @@ export const TerminalTab: Component<Props> = (props) => {
     // Pass Agent Manager hotkeys through to the parent key handler so
     // ⌘T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
     term.attachCustomKeyEventHandler((event) => {
-      const prompt =
-        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m"
-      if (prompt) {
+      if (isFocusChord(event, mac)) {
         if (event.type === "keydown") props.onFocusPrompt?.()
         return false
       }
-      return !isAgentManagerShortcut(event)
+      return !leavesTerminal(event, mac)
     })
 
     // Track DOM focus so the state layer knows which terminal holds the
@@ -585,13 +574,19 @@ export const TerminalTab: Component<Props> = (props) => {
     createEffect(() => {
       const now = props.active
       const serial = props.focusSerial ?? 0
-      if (now && (!wasActive || serial !== focusSerial)) {
-        const focus = (serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false
+      const step = terminalActivation({
+        active: now,
+        wasActive,
+        serial,
+        previous: focusSerial,
+        focusOnActivate: props.focusOnActivate !== false,
+      })
+      if (step) {
         // xterm creates its textarea synchronously in term.open(). Focus it
         // now so a freshly revealed terminal accepts input in this event
         // turn; the queued repaint below still refits and retries next frame.
-        if (focus && document.hasFocus()) term.focus()
-        scheduleRepaint(focus)
+        if (step.focus && document.hasFocus()) term.focus()
+        scheduleRepaint(step.focus)
       }
       if (!now && wasActive) term.blur()
       wasActive = now

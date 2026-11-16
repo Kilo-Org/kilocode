@@ -181,7 +181,15 @@ import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
 import { defaultBindings } from "./keybind-defaults"
-import { createChatFocus, createFocusBridge, createPromptFocus, forgetTerminalFocus } from "./focus"
+import {
+  createChatFocus,
+  createFocusBridge,
+  createMainFocus,
+  createPromptFocus,
+  dropForeignTerminal,
+  forgetTerminalFocus,
+  terminalHasFocus,
+} from "./focus"
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
@@ -524,12 +532,18 @@ const AgentManagerContent: Component = () => {
   const forgetContextFocus = (context: string) => {
     for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
   }
-  let restoreSession: () => "none" | "ready" | "pending" = () => "none"
+  const mainTerminal = () => {
+    const id = terms.activeId()
+    if (!id || history() || reviewActive() || terms.contextFor(id) !== terms.currentKey()) return undefined
+    return id
+  }
+  const focusMain = createMainFocus({ terminal: mainTerminal, focusTerminal: terms.requestFocus, prompt: requestChatFocus })
   const focusCtl = createFocusBridge({
     prompt,
     post: (target) => to({ type: "agentManagerFocusChanged", target }),
     remember: () => focusMemory.set(focusKey(), "prompt"),
-    restore: () => restoreSession(),
+    terminal: mainTerminal,
+    focusTerminal: terms.requestFocus,
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
@@ -557,7 +571,7 @@ const AgentManagerContent: Component = () => {
       }
       if (!terminal) focusMemory.delete(key)
     }
-    requestChatFocus()
+    focusMain()
   }
   const diffPanels = createAppDiffPanelFocus({
     isOpen: () => diffOpen() && !reviewActive(),
@@ -592,6 +606,7 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
+  createEffect(on(terms.currentKey, () => dropForeignTerminal(terms), { defer: true }))
   const ambientSetup = createAmbientSetup({
     terms,
     selection: () => {
@@ -1481,7 +1496,6 @@ const AgentManagerContent: Component = () => {
     create: handleNewTabForCurrentSelection,
     remember: (sel, id) => registry.active().sessionRestore.set(sel, id),
   })
-  restoreSession = tabs.restore
   const termHandlers = createTerminalHandlers({
     state: terms,
     tabIds: () => tabIds(),
@@ -1514,7 +1528,7 @@ const AgentManagerContent: Component = () => {
       cancelAmbientSetup()
       panels.close(SidePanel.Terminal)
     },
-    refocus: requestChatFocus,
+    refocus: () => focusMain(),
   })
   createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
   const handleReviewTabMouseDown = (event: MouseEvent) => {
@@ -1991,6 +2005,7 @@ const AgentManagerContent: Component = () => {
       setHeld,
       focusReport: focusCtl.report,
       restoreFocus,
+      terminalFocused: () => terminalHasFocus(document.activeElement),
       createDraft: (sel) => drafts.create(sel),
       setActiveTerminal: (id) => terms.setActiveId(id),
       postToWorktree: (worktreeId) => to({ type: "agentManager.addSessionToWorktree", worktreeId }),
@@ -2065,6 +2080,8 @@ const AgentManagerContent: Component = () => {
           managedSessions,
           evictLocal,
           requestChatFocus,
+          saveTabMemory,
+          clearTerminal: () => terms.setActiveId(undefined),
         })
         applyMultiVersionReady(message as AgentManagerWorktreeSetupMessage, {
           ensure: (pid) => registry.ensure(pid),
@@ -2087,6 +2104,7 @@ const AgentManagerContent: Component = () => {
           applyDraft: (worktreeId, sessionId) => drafts.apply(worktreeId, sessionId),
           selectSession: (id) => sessions.selectSession(id),
           requestChatFocus,
+          clearTerminal: () => terms.setActiveId(undefined),
         })
         return
       }
@@ -2198,6 +2216,10 @@ const AgentManagerContent: Component = () => {
     // These host messages are shared with the sidebar protocol, not the Agent Manager message union.
     const context = vscode.onMessage((raw) => {
       const message = raw as unknown as ToWebview
+      // Context for the composer needs a session tab: a terminal main tab hands over to the remembered session.
+      if ((message.type === "appendContext" || message.type === "startPrompt") && mainTerminal()) {
+        if (tabs.restore() !== "pending") prompt.focus()
+      }
       if (message.type === "appendContext") {
         composerQueue.push({ type: "attach", items: message.items })
         requestChatFocus(true)

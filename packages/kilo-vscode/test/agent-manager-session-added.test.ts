@@ -15,6 +15,7 @@ const record = () => {
       applyDraft: (worktreeId: string, sessionId: string) => calls.push(`draft:${worktreeId}:${sessionId}`),
       selectSession: (id: string) => calls.push(`session:${id}`),
       requestChatFocus: () => calls.push("focus"),
+      clearTerminal: () => calls.push("terminal:off"),
     },
   }
 }
@@ -29,6 +30,17 @@ describe("applySessionAdded", () => {
     expect(test.calls).toContain("select:wt-1")
     expect(test.calls).toContain("evict:s")
     expect(test.calls).not.toContain("local:s")
+  })
+
+  it("shows the new session over a main terminal tab of the same worktree", () => {
+    const test = record()
+
+    applySessionAdded({ type: "agentManager.sessionAdded", sessionId: "s", worktreeId: "wt-1" }, test.deps)
+
+    // Cmd+T from a focused terminal tab: the terminal leaves the main pane before the session is selected.
+    expect(test.calls.indexOf("terminal:off")).toBeGreaterThan(-1)
+    expect(test.calls.indexOf("terminal:off")).toBeLessThan(test.calls.indexOf("session:s"))
+    expect(test.calls.indexOf("save")).toBeLessThan(test.calls.indexOf("terminal:off"))
   })
 
   it("places a session the host files under Local in the local tabs", () => {

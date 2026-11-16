@@ -46,6 +46,8 @@ export function applySetupMessage(
     managedSessions: () => ManagedSessionState[]
     evictLocal: (id: string) => void
     requestChatFocus: (force?: boolean) => void
+    saveTabMemory: () => void
+    clearTerminal: () => void
   },
 ) {
   deps.creation.setup(msg)
@@ -61,15 +63,23 @@ export function applySetupMessage(
       )
   }
   if (!deps.isActivePayload(msg.projectId)) return
+  // The new worktree takes the selection: the context it leaves remembers its tab first, and the new session replaces
+  // a main terminal tab as the visible surface.
+  const leave = (worktree: string | null | undefined) => {
+    if (worktree && deps.selection() !== worktree) deps.saveTabMemory()
+  }
   if (msg.status === "ready" && msg.sessionId) {
-    deps.selectSession(msg.sessionId)
     const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    leave(worktree)
+    deps.clearTerminal()
+    deps.selectSession(msg.sessionId)
     if (worktree) deps.setSelection(worktree)
     deps.evictLocal(msg.sessionId)
     deps.requestChatFocus(true)
     return
   }
   if (msg.status !== "ready" && msg.status !== "error") {
+    leave(msg.worktreeId)
     if (msg.worktreeId) deps.setSelection(msg.worktreeId)
     deps.setReviewActive(false)
   }
@@ -85,6 +95,7 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   applyDraft: (worktreeId: string, sessionId: string) => void
   selectSession: (id: string) => void
   requestChatFocus: (force?: boolean) => void
+  clearTerminal: () => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
   deps.saveTabMemory()
@@ -97,6 +108,8 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   deps.setSelection(msg.worktreeId)
   deps.evictLocal(msg.sessionId)
   deps.applyDraft(msg.worktreeId, msg.sessionId)
+  // The new session is the visible tab, also when a main terminal tab of the same worktree was active (Cmd+T).
+  deps.clearTerminal()
   deps.selectSession(msg.sessionId)
   deps.requestChatFocus(true)
 }
