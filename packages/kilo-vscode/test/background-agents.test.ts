@@ -84,6 +84,19 @@ describe("subagent children", () => {
     expect(transcriptChildren(messages)).toEqual([])
   })
 
+  it("skips a streaming subagent part and keeps a running one", () => {
+    const streaming = {
+      type: "tool",
+      id: "streaming",
+      name: "subagent",
+      state: { status: "streaming", input: "", metadata: { sessionID: "ses_streaming" } },
+      time: { created: 1 },
+    } as unknown as SessionMessageAssistantTool
+    const messages = [assistant("m1", [streaming, part({ id: "running", child: "ses_running" })])]
+
+    expect(transcriptChildren(messages)).toEqual(["ses_running"])
+  })
+
   it("names the children that only reverted turns started", () => {
     const messages = [
       user("u1"),

@@ -169,6 +169,8 @@ export function createPanelData(input: {
     release,
     retain,
     directories: () => [...stores.keys()],
+    /** Runs a host command against the mounted views, as a `command` message from the host does. */
+    command: (name: string) => commands.forEach((handler) => handler(name)),
     /** Relay replies and host commands; returns true when the message was one of them. */
     receive(message: ToWebview) {
       if (message.type === "command") {

@@ -14,9 +14,9 @@ export const layer = Layer.succeed(
     method: () => Effect.succeed(undefined),
     latest: () => Effect.fail(new Error(message)),
     upgrade: () => Effect.fail(new Error(message)),
-    // TODO(rebrand, #15324): Before installer/service identity work, test isolated uninstall dry-run
-    // and cleanup paths. Undefined skips package removal, not upstream cache cleanup or service
-    // shutdown. Verify kilo2-only paths and confirmation text; preserve v1/OpenCode data and shell config.
+    // `kilo2 uninstall` runs the upstream handler with this service. `method` reports no install method, so the
+    // handler never asks for a removal: it runs no package manager and prints no binary or shell PATH step. It
+    // still stops the kilo2 background services and removes the kilo2 cache directory (test/uninstall.test.ts).
     removal: () => undefined,
   }),
 )
