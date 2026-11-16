@@ -39,10 +39,7 @@ export function useGitChangesContext(
     }
   })
 
-  onCleanup(() => {
-    unsubscribe()
-    requests.dispose("Git changes context request cancelled", true)
-  })
+  onCleanup(() => requests.drain(unsubscribe))
 
   const resolveAttachment = async (text: string, scope?: GitChangesTarget) => {
     if (!hasGitChangesMention(text)) return undefined

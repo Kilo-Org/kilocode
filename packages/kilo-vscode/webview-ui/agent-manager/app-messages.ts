@@ -96,8 +96,18 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   selectSession: (id: string) => void
   requestChatFocus: (force?: boolean) => void
   clearTerminal: () => void
+  /** Whether the panel filed this session without taking the view; consumes the mark. */
+  quiet: (id: string) => boolean
+  placeLocal: (id: string) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
+  // A send that resolved after the user moved on files its session without pulling the user back.
+  if (deps.quiet(msg.sessionId)) {
+    if (msg.worktreeId === LOCAL) return deps.placeLocal(msg.sessionId)
+    deps.appendOrder(msg.worktreeId, msg.sessionId)
+    deps.evictLocal(msg.sessionId)
+    return
+  }
   deps.saveTabMemory()
   // The host files a session that runs outside every worktree under Local, where it reads from the root store.
   if (msg.worktreeId === LOCAL) {

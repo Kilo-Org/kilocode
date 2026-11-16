@@ -33,3 +33,29 @@ test("a synchronous send failure settles the request immediately", async () => {
   // Not pending until the timeout: the composer gates Send on this flag.
   expect(ctx.pending()).toBe(false)
 })
+
+test("a drained composer keeps an open request until it settles, then stops listening", async () => {
+  const ctx = createContextRequests("drain", 10_000, "Timed out")
+  let id = ""
+  const result = ctx.request((value) => (id = value))
+  const done: string[] = []
+  ctx.drain(() => done.push("done"))
+  expect(done).toEqual([])
+  ctx.settle(id, (req) => req.resolve("diff"))
+  await expect(result).resolves.toBe("diff")
+  expect(done).toEqual(["done"])
+
+  ctx.drain(() => done.push("idle"))
+  expect(done).toEqual(["done", "idle"])
+})
+
+test("request IDs stay unique across composers, so a drained composer never settles another one's request", () => {
+  const ids: string[] = []
+  const first = createContextRequests("unique", 10_000, "Timed out")
+  const second = createContextRequests("unique", 10_000, "Timed out")
+  void first.request((id) => ids.push(id)).catch(() => undefined)
+  void second.request((id) => ids.push(id)).catch(() => undefined)
+  expect(new Set(ids).size).toBe(2)
+  first.dispose("done")
+  second.dispose("done")
+})
