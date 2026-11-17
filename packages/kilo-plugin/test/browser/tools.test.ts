@@ -22,10 +22,20 @@ type Hook = (event: Record<string, unknown>) => Effect.Effect<void, unknown>
 async function boot(browser?: Browser) {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const hooks: Hook[] = []
+  const registrations: string[] = []
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
+    // The status RPC the settings dialog reads; the tests here never call it.
+    rpc: {
+      register: (definition: { id: string }) =>
+        Effect.sync(() => {
+          registrations.push(definition.id)
+          return { events: { emit: () => Effect.void }, dispose: Effect.void }
+        }),
+    },
     tool: {
-      transform: (fn: (typeof transforms)[number]) => Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      transform: (fn: (typeof transforms)[number]) =>
+        Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
     permission: {
       hook: (_: string, callback: Hook) =>
@@ -38,9 +48,7 @@ async function boot(browser?: Browser) {
   const config = {
     entries: () =>
       Effect.succeed(
-        browser === undefined
-          ? []
-          : [new Document({ type: "document", info: new KiloConfigPolicy.Info({ browser }) })],
+        browser === undefined ? [] : [new Document({ type: "document", info: new KiloConfigPolicy.Info({ browser }) })],
       ),
   } as unknown as Config.Interface
   const scope = await Effect.runPromise(Scope.make())
@@ -72,7 +80,7 @@ async function boot(browser?: Browser) {
     )
   const evaluate = (event: Record<string, unknown>) =>
     Effect.runPromise(Effect.forEach(hooks, (callback) => callback(event), { discard: true })).then(() => event)
-  return { tools, call, evaluate }
+  return { tools, call, evaluate, registrations }
 }
 
 describe("browser tools", () => {
@@ -100,6 +108,11 @@ describe("browser tools", () => {
     expect(host.tools().length).toBe(26)
   })
 
+  test("registers the browser status RPC even when the backend is off", async () => {
+    const host = await boot({ backend: "off" })
+    expect(host.registrations).toEqual(["kilocode.browser"])
+  })
+
   test("the extension backend answers every call with the model-facing unavailable error and a hint", async () => {
     const host = await boot({ backend: "extension" })
     const result = await host.call("browser_click", { target: "e1" })
@@ -113,10 +126,19 @@ describe("browser tools", () => {
 describe("browser permission flow", () => {
   /** A stand-in permission service that records what it was asked. */
   function recorder() {
-    const asserts: { action: string; resources: readonly string[]; save: readonly string[]; metadata?: Record<string, unknown> }[] = []
+    const asserts: {
+      action: string
+      resources: readonly string[]
+      save: readonly string[]
+      metadata?: Record<string, unknown>
+    }[] = []
     const service = {
-      assert: (input: { action: string; resources: readonly string[]; save: readonly string[]; metadata?: Record<string, unknown> }) =>
-        Effect.sync(() => void asserts.push(input)),
+      assert: (input: {
+        action: string
+        resources: readonly string[]
+        save: readonly string[]
+        metadata?: Record<string, unknown>
+      }) => Effect.sync(() => void asserts.push(input)),
     } as unknown as Permission.Interface
     return { asserts, service: Option.some(service) }
   }
@@ -175,7 +197,13 @@ describe("browser permission flow", () => {
   test("a frame item is marked as one", async () => {
     const { asserts, service } = recorder()
     await Effect.runPromise(
-      authorize([{ class: "read" as const, origin: "https://frame.example.com", frame: true }], context, false, () => false, service),
+      authorize(
+        [{ class: "read" as const, origin: "https://frame.example.com", frame: true }],
+        context,
+        false,
+        () => false,
+        service,
+      ),
     )
     expect(asserts[0].metadata).toMatchObject({ frame: true })
   })
@@ -201,11 +229,21 @@ describe("browser permission hook", () => {
   test("a sensitive step asks unless browser.allow_sensitive is on", async () => {
     const strict = await boot()
     expect(
-      await strict.evaluate({ action: "browser_sensitive", effect: "allow", resources: ["https://example.com"], rules: [] }),
+      await strict.evaluate({
+        action: "browser_sensitive",
+        effect: "allow",
+        resources: ["https://example.com"],
+        rules: [],
+      }),
     ).toMatchObject({ effect: "ask" })
     const relaxed = await boot({ allow_sensitive: true })
     expect(
-      await relaxed.evaluate({ action: "browser_sensitive", effect: "allow", resources: ["https://example.com"], rules: [] }),
+      await relaxed.evaluate({
+        action: "browser_sensitive",
+        effect: "allow",
+        resources: ["https://example.com"],
+        rules: [],
+      }),
     ).toMatchObject({ effect: "allow" })
   })
 

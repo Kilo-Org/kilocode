@@ -9,6 +9,9 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {},
+  "devDependencies": {
+    "@tsconfig/node22": "catalog:"
+  },
   "peerDependencies": {},
   "private": true
 }

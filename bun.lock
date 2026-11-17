@@ -321,6 +321,9 @@
     "packages/kilo-i18n": {
       "name": "@kilocode/kilo-i18n",
       "version": "0.0.1",
+      "devDependencies": {
+        "@tsconfig/node22": "catalog:",
+      },
     },
     "packages/kilo-indexing": {
       "name": "@kilocode/kilo-indexing",
@@ -788,6 +791,7 @@
       "version": "2.2.6",
       "dependencies": {
         "@kilocode/caffeination": "workspace:*",
+        "@kilocode/kilo-i18n": "workspace:*",
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
         "@opencode/latex": "workspace:*",

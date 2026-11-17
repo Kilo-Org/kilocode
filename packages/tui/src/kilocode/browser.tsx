@@ -2,10 +2,13 @@
 // and the switch between the bundled Playwright browser, the Kilo browser extension and off. The choices are the same
 // `browser` keys the VS Code settings panel writes, through the same `kilocode.settings` RPC.
 import { dict } from "@kilocode/kilo-i18n/en"
+import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import type { Plugin } from "@opencode/plugin/tui"
+import { useTerminalDimensions } from "@opentui/solid"
 import { For } from "solid-js"
 import { useTheme } from "../context/theme"
+import { errorMessage } from "../util/error"
 import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 
 type Backend = "playwright" | "extension" | "off"
@@ -31,6 +34,20 @@ async function document(context: Plugin.Context) {
   const location = { location: { directory: context.location?.directory ?? process.cwd() } }
   const read = await settings.read({ scope: "global" }, location)
   return { settings, location, target: read.target, document: read.document }
+}
+
+/**
+ * Whether the Playwright backend has a browser to start, asked of the process that would launch it. A failed check is
+ * not a ready backend, so it reads as unavailable instead of claiming the tools work.
+ */
+async function playwrightReady(context: Plugin.Context) {
+  const location = { location: { directory: context.location?.directory ?? process.cwd() } }
+  try {
+    const status = context.client.rpc(KiloBrowserRpc.Definition)
+    return (await status.status({}, location)).playwright.ready
+  } catch {
+    return false
+  }
 }
 
 function rules(documentValue: unknown): Rule[] {
@@ -75,16 +92,16 @@ export function grantLine(rule: Rule) {
 }
 
 /** The backend line: the bundled browser starts on the first call, the extension is not wired yet (part C). */
-export function describeState(state: State) {
+export function describeState(state: State, ready: boolean) {
   const backend =
     state.backend === "playwright"
-      ? `${copy("browser.backend.playwright")} — ${copy("browser.state.ready")}`
+      ? `${copy("browser.backend.playwright")} — ${ready ? copy("browser.state.ready") : copy("browser.state.unavailable")}`
       : state.backend === "extension"
         ? `${copy("browser.backend.extension")} — ${copy("browser.state.unavailable")}`
         : copy("browser.backend.off")
   return [
     `${copy("browser.command.backend")}: ${backend}`,
-    `${copy("browser.command.observation")}: ${state.observation}`,
+    `${copy("browser.command.observation")}: ${copy(`browser.observation.${state.observation}` as keyof typeof dict)}`,
     `${copy("browser.command.sensitive")}: ${state.allowSensitive ? copy("browser.sensitive.allowed") : copy("browser.sensitive.asks")}`,
     `${copy("browser.command.grants")}: ${
       state.allowAll
@@ -96,17 +113,17 @@ export function describeState(state: State) {
   ].join("\n")
 }
 
+/**
+ * Write the keys of one setting. Only the changed key is sent: the write sets leaf paths, so the other keys of the
+ * `browser` block keep their values, and an unrelated invalid value cannot refuse this edit.
+ */
 async function write(context: Plugin.Context, browser: Record<string, unknown>) {
-  const { settings, location, target, document: current } = await document(context)
-  const existing =
-    typeof current === "object" && current !== null && typeof (current as { browser?: unknown }).browser === "object"
-      ? ((current as { browser?: Record<string, unknown> }).browser ?? {})
-      : {}
+  const { settings, location, target } = await document(context)
   await settings.write(
     {
       scope: "global",
-      // The RPC's values are JSON; this block carries strings, booleans and rule objects only.
-      set: { browser: { ...existing, ...browser } } as never,
+      // The RPC's values are JSON; this block carries strings and booleans only.
+      set: { browser } as never,
       ...(target.revision ? { expected: { path: target.path, revision: target.revision } } : {}),
     },
     location,
@@ -115,21 +132,26 @@ async function write(context: Plugin.Context, browser: Record<string, unknown>) 
 
 /**
  * The rows of the `/browser` dialog, grouped by setting. Each backend's hint is a detail line of its own, so it stays
- * readable at any dialog width instead of being clipped after the title.
+ * readable at any dialog width instead of being clipped after the title. `hints` is off on a short terminal, where the
+ * three extra rows push the last groups out of the dialog's scroll window.
  */
-export function browserOptions(state: State): DialogSelectOption<string>[] {
+export function browserOptions(state: State, hints = true): DialogSelectOption<string>[] {
   return [
     ...BACKENDS.map((backend) => ({
       category: copy("browser.command.backend"),
       title: copy(`browser.backend.${backend}` as keyof typeof dict),
       value: `backend:${backend}`,
-      details: [
-        backend === "extension"
-          ? copy("browser.state.extensionHint")
-          : backend === "off"
-            ? copy("browser.backend.offHint")
-            : copy("browser.state.readyHint"),
-      ],
+      ...(hints
+        ? {
+            details: [
+              backend === "extension"
+                ? copy("browser.state.extensionHint")
+                : backend === "off"
+                  ? copy("browser.backend.offHint")
+                  : copy("browser.state.readyHint"),
+            ],
+          }
+        : {}),
     })),
     ...OBSERVATIONS.map((observation) => ({
       category: copy("browser.command.observation"),
@@ -155,27 +177,53 @@ export function browserOptions(state: State): DialogSelectOption<string>[] {
 }
 
 /** The current backend, observation and sensitive-step choice, one line each under the list. */
-function StateLines(props: { state: State }) {
+function StateLines(props: { state: State; ready: boolean }) {
   const theme = useTheme().surface("dialog")
   return (
     <box flexDirection="column">
-      <For each={describeState(props.state).split("\n").slice(0, 3)}>
+      <For each={describeState(props.state, props.ready).split("\n").slice(0, 3)}>
         {(line) => <text fg={theme.text.muted}>{line}</text>}
       </For>
     </box>
   )
 }
 
+/**
+ * The dialog itself. It reads the terminal height here, inside the renderer, and drops the backend hints under 40
+ * rows: the list is capped to half the screen, so at 30 rows the three hint lines would leave the last groups below
+ * the fold. Without them every setting stays one screen; the backend in use is still named by the state lines.
+ */
+function BrowserDialog(props: {
+  state: State
+  ready: boolean
+  onSelect: (value: string) => void
+  onCancel: () => void
+}) {
+  const dimensions = useTerminalDimensions()
+  return (
+    <DialogSelect<string>
+      title={copy("browser.command.title")}
+      options={browserOptions(props.state, dimensions().height >= 40)}
+      current={`backend:${props.state.backend}`}
+      footer={<StateLines state={props.state} ready={props.ready} />}
+      onSelect={(option) => props.onSelect(option.value)}
+    />
+  )
+}
+
 export function browserLayer(context: Plugin.Context) {
   const open = async () => {
     let state: State
+    let ready: boolean
     try {
-      state = readState((await document(context)).document)
+      const [loaded, playwright] = await Promise.all([document(context), playwrightReady(context)])
+      state = readState(loaded.document)
+      ready = playwright
     } catch (error) {
       context.ui.toast.show({
         variant: "error",
         title: copy("browser.command.title"),
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
       })
       return
     }
@@ -183,15 +231,14 @@ export function browserLayer(context: Plugin.Context) {
     const picked = Promise.withResolvers<string | undefined>()
     context.ui.dialog.show(
       () => (
-        <DialogSelect<string>
-          title={copy("browser.command.title")}
-          options={browserOptions(state)}
-          current={`backend:${state.backend}`}
-          footer={<StateLines state={state} />}
-          onSelect={(option) => {
-            picked.resolve(option.value)
+        <BrowserDialog
+          state={state}
+          ready={ready}
+          onSelect={(value) => {
+            picked.resolve(value)
             context.ui.dialog.clear()
           }}
+          onCancel={() => picked.resolve(undefined)}
         />
       ),
       () => picked.resolve(undefined),
@@ -213,7 +260,10 @@ export function browserLayer(context: Plugin.Context) {
       if (action.startsWith("observation:")) {
         const observation = action.slice("observation:".length) as Observation
         await write(context, { observation })
-        context.ui.toast.show({ variant: "info", message: `${copy("browser.command.observation")}: ${observation}` })
+        context.ui.toast.show({
+          variant: "info",
+          message: `${copy("browser.command.observation")}: ${copy(`browser.observation.${observation}` as keyof typeof dict)}`,
+        })
         return
       }
       if (action.startsWith("sensitive:")) {
@@ -238,7 +288,7 @@ export function browserLayer(context: Plugin.Context) {
       context.ui.toast.show({
         variant: "error",
         title: copy("browser.command.title"),
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
       })
     }
   }

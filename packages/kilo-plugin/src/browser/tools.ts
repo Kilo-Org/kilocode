@@ -5,6 +5,7 @@ import { Wildcard } from "@opencode/core/util/wildcard"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
+import { KiloBrowserRpc } from "@opencode/schema/kilocode/browser"
 import { Effect, Option, Result } from "effect"
 import type { JsonSchema } from "effect"
 import {
@@ -20,7 +21,7 @@ import { BrowserContract } from "./contract"
 import type { Entry } from "./contract-shape"
 import { modeFor, observe, snapshot, split, Tracker } from "./observation"
 import { BrowserPermission } from "./permission"
-import { key, playwright } from "./playwright"
+import { key, playwright, readiness } from "./playwright"
 import { resolve, type Settings } from "./settings"
 import { KiloGatewayAccounts } from "../gateway/accounts"
 
@@ -30,7 +31,7 @@ const tracker = new Tracker()
 
 /** The hint the UI shows for the extension backend until the browser hub is wired (part C). */
 const EXTENSION_HINT =
-  "Install the Kilo browser extension, turn on \"Allow local agents\", then set browser.backend to \"extension\"."
+  'Install the Kilo browser extension, turn on "Allow local agents", then set browser.backend to "extension".'
 
 /**
  * The extension backend. The hub, the pairing and the transport are part C; until then the tools exist so the tool
@@ -114,9 +115,7 @@ function failure(error: unknown) {
 /** Read the config per call, so an observation or headless change applies without a restart. */
 function settings(config: Option.Option<Config.Interface>) {
   if (Option.isNone(config)) return Effect.succeed(resolve(undefined))
-  return config.value
-    .entries()
-    .pipe(Effect.map((entries) => resolve(KiloConfigPolicy.browserConfig(entries))))
+  return config.value.entries().pipe(Effect.map((entries) => resolve(KiloConfigPolicy.browserConfig(entries))))
 }
 
 /** A rule that names the browser permission itself decides the class, so the built-in defaults stay out of its way. */
@@ -176,8 +175,7 @@ export function authorize(
         continue
       }
       const request = BrowserPermission.request(item, allowSensitive)
-      if (Option.isSome(permission))
-        yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
+      if (Option.isSome(permission)) yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
       // A sensitive step is approved per step through its token, never remembered here.
       if (item.class !== "sensitive") grants.add(pattern)
     }
@@ -247,7 +245,13 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
           try: () => active.plan!(entry.name, input, { authorized: [...grants], sensitive: [...sensitive] }),
           catch: (error) => error,
         }).pipe(Effect.catch(() => Effect.succeed<readonly Item[]>([])))
-        yield* authorize(planned, context, allowSensitive, (origin) => KiloBrowserPolicy.allows(organization, origin), deps.permission)
+        yield* authorize(
+          planned,
+          context,
+          allowSensitive,
+          (origin) => KiloBrowserPolicy.allows(organization, origin),
+          deps.permission,
+        )
       }
       const outcome = yield* Effect.result(
         Effect.tryPromise({
@@ -263,9 +267,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       const error = outcome.failure
       if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
       if (attempt === 1 || !error.items.length) {
-        return yield* failure(new Error("The browser page changed while permission was requested. Call the tool again."))
+        return yield* failure(
+          new Error("The browser page changed while permission was requested. Call the tool again."),
+        )
       }
-      yield* authorize(error.items, context, allowSensitive, (origin) => KiloBrowserPolicy.allows(organization, origin), deps.permission)
+      yield* authorize(
+        error.items,
+        context,
+        allowSensitive,
+        (origin) => KiloBrowserPolicy.allows(organization, origin),
+        deps.permission,
+      )
       sensitive = error.stepToken ? [error.stepToken] : []
     }
     if (!result) return yield* failure(new Error("the browser call did not settle"))
@@ -303,9 +315,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         },
       },
     } as Tool.Result
-  }).pipe(
-    Effect.mapError((error) => failure(error)),
-  )
+  }).pipe(Effect.mapError((error) => failure(error)))
 }
 
 /**
@@ -339,6 +349,21 @@ export const KiloBrowserToolsPlugin = define({
 
     const browser = yield* settings(config)
     const organization = yield* policy(ctx.location.directory)
+
+    // What a settings editor shows before it offers a backend: whether the Playwright one has a browser to start. Read
+    // through the same `locate` check the backend runs, so the dialog never calls it ready when a call would fail.
+    yield* ctx.rpc
+      .register(KiloBrowserRpc.Definition, {
+        status: () =>
+          Effect.promise(() =>
+            readiness().then(
+              (playwright) => ({ playwright }),
+              () => ({ playwright: { ready: false } }),
+            ),
+          ),
+      })
+      .pipe(Effect.orDie)
+
     // `off` hides the tools: an agent never sees a browser tool it cannot use.
     if (browser.backend === "off" || organization?.control === "off") return
 
