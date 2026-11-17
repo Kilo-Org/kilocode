@@ -168,6 +168,54 @@ export async function importV1(input: {
 }
 
 /**
+ * Imports the Kilo v1 store at `store` into the existing kilo2 store at `file`, and returns the number of sessions it
+ * added. The window is converted into a private store beside `file` first, so a failed conversion leaves `file` as it
+ * is. Sessions `file` already holds are kept as they are, so running it again only adds new sessions.
+ */
+export async function mergeV1(input: {
+  readonly store: string
+  readonly file: string
+  readonly data: string
+  readonly since?: number
+  readonly progress?: (done: number, total: number) => void
+}) {
+  const { hasRecent } = await import("./import/extract")
+  // An empty window adds nothing, so a repeated run in the same window reports 0 instead of failing.
+  if (input.since !== undefined && !hasRecent(input.store, input.since)) return 0
+  sweepScratch(input.file)
+  const scratch = `${input.file}.${process.pid}.import`
+  try {
+    const { KiloV1Store } = await import("./v1-store")
+    await copy(input.store, scratch, {
+      since: input.since,
+      check: (copy) => KiloV1Store.convert(copy, { data: input.data, progress: input.progress }),
+    })
+    const { merge } = await import("./import/merge")
+    return merge(scratch, input.file)
+  } finally {
+    for (const suffix of ["", "-wal", "-shm", "-journal"])
+      if (!remove(`${scratch}${suffix}`))
+        console.error(`kilo2: could not remove ${scratch}${suffix}. Delete it by hand.`)
+  }
+}
+
+/**
+ * Removes the private stores of earlier merges that did not finish: those of a process that no longer runs, and one
+ * named after this process, which is left over from an earlier process with the same PID. Otherwise `copy` would find
+ * the old store in place and the merge would read its stale sessions.
+ */
+function sweepScratch(file: string) {
+  const prefix = `${path.basename(file)}.`
+  for (const name of readdirSync(path.dirname(file))) {
+    const pid = name.startsWith(prefix) ? /^(\d+)\.import/.exec(name.slice(prefix.length))?.[1] : undefined
+    if (pid === undefined || (Number(pid) !== process.pid && alive(Number(pid)))) continue
+    const leftover = path.join(path.dirname(file), name)
+    if (!remove(leftover))
+      throw new Error(`kilo2: could not remove ${leftover} of an earlier import. Delete it by hand.`)
+  }
+}
+
+/**
  * A lock whose owner has not reported progress for this long is stale: its process is stuck, or it died and its PID now
  * belongs to another process. The owner touches the lock with every progress line, about every two seconds.
  */
