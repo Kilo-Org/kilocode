@@ -291,8 +291,10 @@ describe("tracked tab restore", () => {
 
   it("prunes suppressed ids the host no longer tracks", () => {
     const closed = new Set(["s1", "s2"])
-    pruneClosed(closed, [{ id: "s1" }])
-    expect([...closed]).toEqual(["s1"])
+    const pruned = pruneClosed(closed, [{ id: "s1" }])
+    expect([...pruned!]).toEqual(["s1"])
+    expect([...closed]).toEqual(["s1", "s2"])
+    expect(pruneClosed(closed, [{ id: "s1" }, { id: "s2" }])).toBeUndefined()
   })
 })
 

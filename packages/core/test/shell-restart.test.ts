@@ -127,7 +127,7 @@ describe("shell commands across a graceful restart", () => {
           let turns = 0
           yield* llm.serve((request) =>
             request.tools.some((tool) => tool.name === "shell") && turns++ === 0
-              ? TestLLM.toolCall("call-restart", "shell", { command: idleCommand })
+              ? TestLLM.toolCall("call-restart", "shell", { description: "Waits idle", command: idleCommand }) // kilocode_change - required summary
               : TestLLM.text("Done", "done"),
           )
 
@@ -210,7 +210,7 @@ describe("shell commands across a graceful restart", () => {
           let turns = 0
           yield* llm.serve((request) =>
             request.tools.some((tool) => tool.name === "shell") && turns++ === 0
-              ? TestLLM.toolCall("call-shutdown", "shell", { command: idleCommand })
+              ? TestLLM.toolCall("call-shutdown", "shell", { description: "Waits idle", command: idleCommand }) // kilocode_change - required summary
               : TestLLM.text("Done", "done"),
           )
           let release = () => {}

@@ -18,6 +18,7 @@ import type {
 } from "../src/types/messages/agent-manager"
 import type { SetupState } from "./project/progress"
 import { clearMultiVersionBusy, markMultiVersionBusy, updateSetup } from "./project/progress"
+import type { QuickCreate } from "./quick-create"
 import { LOCAL } from "./navigate"
 import { isCurrent } from "./project/message-ownership"
 import type { ProjectStore } from "./project/store"
@@ -35,6 +36,10 @@ export function applySetupMessage(
     setup: () => SetupState
     setSetup: (state: SetupState | ((prev: SetupState) => SetupState)) => void
     creation: { setup: (msg: AgentManagerWorktreeSetupMessage) => void }
+    /** A quick create in flight, which has no dialog to explain a setup blocker. */
+    quick?: QuickCreate
+    /** Open the dialog for a blocker reported by a quick create from another webview. */
+    openBlocked?: (projectId: string) => void
     ensure: (projectId: string) => ProjectStore
     active: () => ProjectStore
     currentProjectId: Accessor<string | undefined>
@@ -46,8 +51,10 @@ export function applySetupMessage(
     managedSessions: () => ManagedSessionState[]
     evictLocal: (id: string) => void
     requestChatFocus: (force?: boolean) => void
+    saveTabMemory: () => void
   },
 ) {
+  if (quickCreateBlocked(msg, deps.quick, deps.openBlocked, deps.currentProjectId())) return
   deps.creation.setup(msg)
   const store = msg.projectId ? deps.ensure(msg.projectId) : deps.active()
   const previous = deps.setup()
@@ -61,22 +68,60 @@ export function applySetupMessage(
       )
   }
   if (!deps.isActivePayload(msg.projectId)) return
+  // The new worktree takes the selection: the context it leaves remembers its tab before the new session replaces a
+  // main terminal tab (the main surface drops the terminal once a session becomes the current one).
+  const leave = (worktree: string | null | undefined) => {
+    if (worktree && deps.selection() !== worktree) deps.saveTabMemory()
+  }
   if (msg.status === "ready" && msg.sessionId) {
-    deps.selectSession(msg.sessionId)
     const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    leave(worktree)
+    deps.selectSession(msg.sessionId)
     if (worktree) deps.setSelection(worktree)
     deps.evictLocal(msg.sessionId)
     deps.requestChatFocus(true)
     return
   }
   if (msg.status !== "ready" && msg.status !== "error") {
+    leave(msg.worktreeId)
     if (msg.worktreeId) deps.setSelection(msg.worktreeId)
     deps.setReviewActive(false)
   }
 }
 
+/** True when a quick create hit a setup blocker; the dialog then replaces the transient overlay. */
+function quickCreateBlocked(
+  msg: AgentManagerWorktreeSetupMessage,
+  quick: QuickCreate | undefined,
+  openBlocked: ((projectId: string) => void) | undefined,
+  currentProjectId: string | undefined,
+): boolean {
+  const blocker = msg.status === "error" && (msg.errorCode === "not_git_repo" || msg.errorCode === "no_commits")
+  if (blocker) {
+    if (quick && msg.requestId === quick.requestId) {
+      quick.blocked(quick.project)
+      return true
+    }
+    // A quick create from another webview names a request but has no marker in this one.
+    const project = msg.projectId ?? currentProjectId
+    if (msg.requestId && openBlocked && project) {
+      openBlocked(project)
+      return true
+    }
+    return false
+  }
+  if (!quick) return false
+  const mine = msg.requestId === quick.requestId
+  // A terminal message for this request ends the marker. A ready message may come from the session
+  // stage without the request ID, so its project is enough; an error never clears another request.
+  if (mine && msg.status !== "creating") quick.done()
+  else if (msg.status === "ready" && (msg.projectId === quick.project || msg.projectId === undefined)) quick.done()
+  return false
+}
+
 export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   currentProjectId: Accessor<string | undefined>
+  resume: (sessionId: string) => void
   saveTabMemory: () => void
   appendOrder: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string) => void
@@ -90,6 +135,8 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   placeLocal: (id: string) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
+  // The host filing the session opens it again, even when the user closed its tab before this message arrived.
+  deps.resume(msg.sessionId)
   // A send that resolved after the user moved on files its session without pulling the user back.
   if (deps.quiet(msg.sessionId)) {
     if (msg.worktreeId === LOCAL) return deps.placeLocal(msg.sessionId)

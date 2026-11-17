@@ -34,6 +34,7 @@
     "test/fixtures/prompt-rail-render.tsx",
     "test/fixtures/prompt-toolbar-flicker.tsx",
     "test/fixtures/revert-banner-render.tsx",
-    "test/fixtures/settings-search-focus.tsx"
+    "test/fixtures/settings-search-focus.tsx",
+    "test/fixtures/terminal-tab-selection.tsx"
   ]
 }

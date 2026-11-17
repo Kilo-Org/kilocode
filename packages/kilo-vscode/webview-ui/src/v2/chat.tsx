@@ -294,9 +294,14 @@ export function Chat() {
   )
   createEffect(() => planOpener.flush(session()))
 
-  const startWorktree = () => vscode.postMessage({ type: "agentManager.createWorktree" } satisfies ToHost as never)
+  const startWorktree = () =>
+    vscode.postMessage({ type: "agentManager.createWorktree", requestId: crypto.randomUUID() } satisfies ToHost as never)
   const startWorktreeFromBranch = (branch: string) =>
-    vscode.postMessage({ type: "agentManager.createWorktree", baseBranch: branch } satisfies ToHost as never)
+    vscode.postMessage({
+      type: "agentManager.createWorktree",
+      baseBranch: branch,
+      requestId: crypto.randomUUID(),
+    } satisfies ToHost as never)
   const showAdvancedWorktree = () => vscode.postMessage({ type: "openAdvancedWorktree" } satisfies ToHost as never)
   const moveToWorktree = () => {
     const id = session()

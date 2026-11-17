@@ -238,11 +238,14 @@ export function restoreTrackedTabs(
 }
 
 /** Drop suppressed ids the host no longer tracks, so a later restore can re-add them. */
-export function pruneClosed(closed: Set<string>, sessions: readonly { id: string }[]): void {
+export function pruneClosed(
+  closed: ReadonlySet<string>,
+  sessions: readonly { id: string }[],
+): Set<string> | undefined {
   const live = new Set(sessions.map((entry) => entry.id))
-  for (const id of closed) {
-    if (!live.has(id)) closed.delete(id)
-  }
+  const kept = [...closed].filter((id) => live.has(id))
+  if (kept.length === closed.size) return undefined
+  return new Set(kept)
 }
 
 export function reconcileTrackedTabs(

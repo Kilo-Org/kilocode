@@ -85,7 +85,7 @@ export async function forkInto(
       })
     })
   if (!directory || samePath(canonicalizePath(forked.location.directory), canonicalizePath(directory))) return forked
-  return moveSession(client, forked, directory)
+  return (await moveSession(client, forked, directory)).session
 }
 
 /** True when the server rejects the fork because the source has no messages. */
