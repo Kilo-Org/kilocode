@@ -27,6 +27,7 @@ import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { ShutdownDeadline } from "@opencode/cli/shutdown-deadline"
 import { KiloApp } from "./app"
 import { AutoCommand } from "./auto/auto"
+import { BrowserSmokeCommand } from "./browser/command"
 import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
@@ -67,6 +68,8 @@ const KiloCommands = {
       commands: { ...Commands.commands.service.commands, ...KiloServiceCommands },
     },
     auto: AutoCommand,
+    // Kilo: the bundled browser backend's spike harness (see ./browser/smoke).
+    "browser-smoke": BrowserSmokeCommand,
     import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
@@ -160,6 +163,8 @@ const Handlers = Runtime.handlers(KiloCommands, {
     },
     eval: () => import("./auto/eval"),
   },
+  // Kilo: the bundled browser backend's spike harness.
+  "browser-smoke": () => import("./browser/smoke"),
 })
 
 Effect.gen(function* () {

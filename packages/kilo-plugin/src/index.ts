@@ -30,6 +30,8 @@ import { KiloSkillPlugin } from "./skill"
 import { KiloSkillConfigPlugin } from "./skill/config"
 import { KiloTodoPlugin } from "./todo"
 import { KiloBrowserToolPlugin } from "./browser"
+// The bundled Playwright backend's tools; the extension backend's are in ./browser.
+import { KiloBundledBrowserPlugin } from "./browser/bundled"
 import { KiloChartPlugin } from "./chart"
 import { KiloWriteToolPlugin } from "./tool-write"
 // kilo_port(notebook:91a426486dc8) v1 registered the notebook tools and service from the shared server.
@@ -91,6 +93,8 @@ export const KiloPlugins = [
   KiloTodoPlugin,
   KiloWriteToolPlugin,
   KiloBrowserToolPlugin,
+  // The bundled Playwright backend: playwright-core and @playwright/mcp run in this process.
+  KiloBundledBrowserPlugin,
   KiloNotebookPlugin,
   // The chart tool and its skill, for the VS Code chat that draws the chart. It registers nothing elsewhere.
   KiloChartPlugin,
