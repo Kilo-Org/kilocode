@@ -44,11 +44,12 @@ const description = (shell?: string) =>
   ].join(" ")
 
 export const Input = Schema.Struct({
-  // kilocode_change start - optional model-written summary shown instead of the raw command in the tool card.
+  // kilocode_change start - model-written summary shown instead of the raw command in the tool card.
+  // Required: models such as Claude skip an optional summary, so their cards showed bare `cd <worktree> && ...` rows.
   // It comes first: models write arguments in schema order, so the card can show it before the command streams.
-  description: Schema.optionalKey(Schema.String).annotate({
+  description: Schema.String.annotate({
     description:
-      "Recommended: a clear, concise description of what this command does in 5-10 words, for the tool card. Omit it only when the command already says what it does.",
+      "A clear, concise description of what this command does in 5-10 words, shown as the title of the tool card. Examples: 'Shows working tree status', 'Runs the core package tests', 'Installs package dependencies'.",
   }),
   // kilocode_change end
   command: Schema.String.annotate({ description: "Shell command string to execute" }),
@@ -91,7 +92,7 @@ const resultMessages = (output: Output, timeout?: number) => {
   return [...(output.output ? [output.output] : []), ...(notice ? [notice] : [])]
 }
 
-const toolResult = (output: Output, timeout?: number, description?: string) => { // kilocode_change - carries the optional description
+const toolResult = (output: Output, timeout?: number, description?: string) => { // kilocode_change - carries the description
   return {
     output,
     content: resultMessages(output, timeout).map((text) => ({ type: "text" as const, text })),
@@ -174,7 +175,7 @@ export const Plugin = {
         yield* sessions.synthetic({
           ...(info.notificationID ? { id: info.notificationID } : {}),
           sessionID,
-          description: description ?? command, // kilocode_change - prefer the model's description over the raw command
+          description: description || command, // kilocode_change - prefer the model's description over the raw command
           ...ShellResult.notification({
             jobID: id,
             shellID,
