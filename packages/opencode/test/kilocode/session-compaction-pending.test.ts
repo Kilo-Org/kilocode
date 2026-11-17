@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Database } from "@opencode-ai/core/database/database"
@@ -126,6 +127,81 @@ describe("pending compaction marker", () => {
       )
       expect(again?.auto).toBe(true)
       expect(again?.overflow).toBe(true)
+    }),
+  )
+
+  const part = (found: MessageV2.WithParts[]) =>
+    found[0].parts.find((item): item is MessageV2.CompactionPart => item.type === "compaction")
+
+  for (const [name, first, second, overflow] of [
+    ["overflow marker", true, false, false],
+    ["overflow marker, undefined", true, undefined, undefined],
+    ["preflight marker", false, true, true],
+  ] as const) {
+    it.instance(
+      `an auto request replaces overflow instead of merging: ${name}`,
+      Effect.gen(function* () {
+        yield* seedProject
+        const sessions = yield* Session.Service
+        const compaction = yield* SessionCompaction.Service
+        const session = yield* sessions.create({})
+        const input = { sessionID: session.id, agent: "code", model: ref, auto: true }
+
+        yield* compaction.create({ ...input, overflow: first })
+        yield* compaction.create({ ...input, overflow: second })
+
+        const found = yield* markers(sessions, session.id)
+        expect(found).toHaveLength(1)
+        expect(part(found)?.auto).toBe(true)
+        expect(part(found)?.overflow).toBe(overflow)
+      }),
+    )
+  }
+
+  for (const [name, next] of [
+    ["agent", { agent: "plan", model: ref }],
+    ["model", { agent: "code", model: { providerID: ref.providerID, modelID: ModelV2.ID.make("other-model") } }],
+  ] as const) {
+    it.instance(
+      `an auto request moves a manual marker to its own ${name}`,
+      Effect.gen(function* () {
+        yield* seedProject
+        const sessions = yield* Session.Service
+        const compaction = yield* SessionCompaction.Service
+        const session = yield* sessions.create({})
+
+        yield* compaction.create({ sessionID: session.id, agent: "code", model: ref, auto: false })
+        yield* compaction.create({ sessionID: session.id, ...next, auto: true, overflow: false })
+
+        const found = yield* markers(sessions, session.id)
+        expect(found).toHaveLength(1)
+        const info = found[0].info
+        if (info.role !== "user") throw new Error("marker must be a user message")
+        expect(info.agent).toBe(next.agent)
+        expect(info.model).toEqual(next.model)
+        expect(part(found)?.auto).toBe(true)
+      }),
+    )
+  }
+
+  it.instance(
+    "a manual request leaves an auto marker unchanged",
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const compaction = yield* SessionCompaction.Service
+      const session = yield* sessions.create({})
+
+      yield* compaction.create({ sessionID: session.id, agent: "code", model: ref, auto: true, overflow: true })
+      const before = yield* markers(sessions, session.id)
+      yield* compaction.create({
+        sessionID: session.id,
+        agent: "plan",
+        model: { providerID: ref.providerID, modelID: ModelV2.ID.make("other-model") },
+        auto: false,
+      })
+
+      expect(yield* markers(sessions, session.id)).toEqual(before)
     }),
   )
 

@@ -7,6 +7,11 @@ import { KiloSessionPromptQueue } from "./prompt-queue"
 
 const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
 
+const sameModel = (
+  a: { providerID: string; modelID: string; variant?: string },
+  b: { providerID: string; modelID: string; variant?: string },
+) => a.providerID === b.providerID && a.modelID === b.modelID && a.variant === b.variant
+
 export namespace KiloSessionCompaction {
   /**
    * The compaction marker that is written but not yet started. Only messages after the last
@@ -27,15 +32,22 @@ export namespace KiloSessionCompaction {
   /**
    * Runs `create` unless a marker is already pending. Serialized per session so concurrent requests cannot both write one.
    * A reused marker is re-targeted so the prompt queue keeps it visible, and an automatic request upgrades a pending
-   * manual marker so the compaction still replays or continues the interrupted turn.
+   * manual marker so the compaction still replays or continues the interrupted turn. The latest automatic request owns the
+   * marker: its auto, overflow, model and agent replace the old values so no earlier turn's recovery mode leaks into it.
    */
   export function once<E, R>(
     session: {
       messages: (input: { sessionID: SessionID }) => Effect.Effect<MessageV2.WithParts[], unknown>
+      updateMessage: <T extends MessageV2.Info>(msg: T) => Effect.Effect<T>
       updatePart: <T extends MessageV2.Part>(part: T) => Effect.Effect<T>
     },
     sessionID: SessionID,
-    request: { auto: boolean; overflow?: boolean },
+    request: {
+      auto: boolean
+      overflow?: boolean
+      agent: string
+      model: { providerID: ProviderV2.ID; modelID: ModelV2.ID; variant?: string }
+    },
     create: Effect.Effect<void, E, R>,
   ) {
     return Effect.acquireUseRelease(
@@ -53,10 +65,12 @@ export namespace KiloSessionCompaction {
             KiloSessionPromptQueue.retarget(sessionID, marker.info.id)
             const part = marker.parts.find((item): item is MessageV2.CompactionPart => item.type === "compaction")
             if (!part || !request.auto) return
-            // overflow=true (strip media) wins over false (preflight replay) and over undefined (no replay)
-            const overflow = part.overflow === true ? true : (request.overflow ?? part.overflow)
-            if (part.auto && overflow === part.overflow) return
-            yield* session.updatePart({ ...part, auto: true, overflow })
+            const info = marker.info
+            if (info.role === "user" && (info.agent !== request.agent || !sameModel(info.model, request.model))) {
+              yield* session.updateMessage({ ...info, agent: request.agent, model: request.model })
+            }
+            if (part.auto && part.overflow === request.overflow) return
+            yield* session.updatePart({ ...part, auto: true, overflow: request.overflow })
           }),
         ),
       (entry) =>
