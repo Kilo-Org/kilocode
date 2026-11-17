@@ -244,7 +244,9 @@ async function target(settings: Settings, chromium: string): Promise<Target> {
     chromium,
   })
   if (located) return located
-  throw new Error(`No browser found. Install Chromium with \`${INSTALL_HINT}\`, or install Google Chrome or Microsoft Edge.`)
+  throw new Error(
+    `No browser found. Install Chromium with \`${INSTALL_HINT}\`, or install Google Chrome or Microsoft Edge.`,
+  )
 }
 
 /**
@@ -306,18 +308,66 @@ export function withheldFrames(page: Page, authorized: readonly string[]): Frame
   const result: Frame[] = []
   const visit = (frame: Frame, granted: boolean) => {
     for (const child of frame.childFrames()) {
-      const origin = BrowserPermission.origin(child.url())
-      // about:blank and srcdoc frames inherit the parent: they hold no other origin's data.
-      const ok = granted && (origin === undefined || authorized.includes(`read:${origin}`))
-      if (!ok) {
-        result.push(child)
-        continue
-      }
-      visit(child, true)
+      const origin = frameOrigin(child)
+      // A frame whose origin cannot be determined is never granted.
+      const ok = granted && origin !== undefined && authorized.includes(`read:${origin}`)
+      if (!ok) result.push(child)
+      // A withheld frame withholds every descendant, whatever the descendant's own origin.
+      visit(child, ok)
     }
   }
   visit(page.mainFrame(), true)
   return result
+}
+
+/**
+ * The origin a frame's document belongs to. `about:blank` and `srcdoc` frames inherit their parent's origin, so a
+ * frame without one of its own is attributed to the nearest ancestor that has one.
+ */
+export function frameOrigin(frame: Pick<Frame, "url" | "parentFrame">): string | undefined {
+  let current: Pick<Frame, "url" | "parentFrame"> | null = frame
+  while (current) {
+    const origin = BrowserPermission.origin(current.url())
+    if (origin) return origin
+    current = current.parentFrame()
+  }
+  return undefined
+}
+
+/** The empty document a tab starts in; it carries no origin and no page data. */
+const ABOUT_BLANK = "about:blank"
+
+/**
+ * Why a navigation target is refused, or undefined when it may proceed. Only http(s) pages carry an origin the
+ * permission system can grant, and `about:blank` is the browser's empty document. Every other scheme — `file:`,
+ * `data:`, `javascript:`, `chrome:`, `view-source:` — would read the local machine or run in the browser's own
+ * context, so it never reaches the page, whether it is the requested URL or a redirect's landing page.
+ */
+export function navigationRefusal(url: string): string | undefined {
+  const target = url.trim()
+  if (target === ABOUT_BLANK) return undefined
+  let parsed: URL
+  try {
+    parsed = new URL(target)
+  } catch {
+    return `Navigation refused: "${target}" is not a URL the browser can open.`
+  }
+  if (parsed.protocol === "http:" || parsed.protocol === "https:") return undefined
+  return `Navigation refused: ${parsed.protocol} URLs are not allowed. The browser opens http(s) pages and about:blank only.`
+}
+
+/**
+ * Whether a call's output directory must be baselined before it runs. The withheld frame set is only final after the
+ * call, and every result that can reach the output directory as a file must still be removable afterwards, so the
+ * baseline never depends on a frame being withheld before the call.
+ */
+export function outputBaseline(name: string): boolean {
+  return (
+    name === "browser_take_screenshot" ||
+    name === "browser_network_request" ||
+    name === "browser_network_requests" ||
+    name === "browser_console_messages"
+  )
 }
 
 /** The file link of a screenshot the backend deleted; the masked image replaces it. */
@@ -371,7 +421,10 @@ class PlaywrightBackend implements BrowserBackend {
 
   /** The frame a `[ref=…]` snapshot ref lives in, resolved through Playwright's aria-ref engine. */
   private async frameOf(page: Page, ref: string): Promise<Frame | undefined> {
-    const handle = await page.locator(`aria-ref=${ref}`).elementHandle({ timeout: 2_000 }).catch(() => null)
+    const handle = await page
+      .locator(`aria-ref=${ref}`)
+      .elementHandle({ timeout: 2_000 })
+      .catch(() => null)
     if (!handle) return undefined
     // An iframe ref points at the frame element in its parent; the grant belongs to the document it contains, so
     // prefer the child frame when there is one.
@@ -382,7 +435,10 @@ class PlaywrightBackend implements BrowserBackend {
   }
 
   private async inspect(page: Page, ref: string, kind: "fill" | "click"): Promise<string> {
-    const handle = await page.locator(`aria-ref=${ref}`).elementHandle({ timeout: 2_000 }).catch(() => null)
+    const handle = await page
+      .locator(`aria-ref=${ref}`)
+      .elementHandle({ timeout: 2_000 })
+      .catch(() => null)
     if (!handle) return ""
     const reason = await handle.evaluate(inspectElement, kind).catch(() => "")
     handle.dispose()
@@ -412,15 +468,21 @@ class PlaywrightBackend implements BrowserBackend {
     return [...new Set(reasons)]
   }
 
-  /** Refs of every iframe node in a snapshot text, with the origin of the frame they contain. */
+  /**
+   * Refs of every iframe node in a snapshot text, with the origin of the frame they contain. A ref that does not
+   * resolve is absent: the caller withholds it.
+   */
   private async frameOrigins(page: Page, text: string) {
     const origins = new Map<string, string>()
     for (const node of Frames.iframes(text)) {
-      const handle = await page.locator(`aria-ref=${node.ref}`).elementHandle({ timeout: 2_000 }).catch(() => null)
+      const handle = await page
+        .locator(`aria-ref=${node.ref}`)
+        .elementHandle({ timeout: 2_000 })
+        .catch(() => null)
       if (!handle) continue
       const frame = await handle.contentFrame().catch(() => null)
       handle.dispose()
-      const origin = frame && BrowserPermission.origin(frame.url())
+      const origin = frame ? frameOrigin(frame) : undefined
       if (origin) origins.set(node.ref, origin)
     }
     return origins
@@ -428,19 +490,17 @@ class PlaywrightBackend implements BrowserBackend {
 
   private async filter(page: Page, name: string, text: string, authorized: readonly string[]) {
     const withheld = withheldFrames(page, authorized)
-    if (!withheld.length) return text
-    const origins = new Set(
-      withheld.map((frame) => BrowserPermission.origin(frame.url())).filter((origin): origin is string => !!origin),
-    )
-    let next = text
-    if (next.includes("### Snapshot")) {
-      // Best effort: a ref that does not resolve to a frame keeps its subtree.
-      const resolved = await this.frameOrigins(page, next)
-      next = Frames.snapshot(next, resolved, (origin) => authorized.includes(`read:${origin}`))
-    }
-    if (name === "browser_console_messages") next = Frames.consoleMessages(next, origins)
-    if (name === "browser_network_requests" || name === "browser_network_request") next = Frames.networkRequests(next, origins)
-    return next
+    if (!withheld.length) return { text, refused: false }
+    const origins = new Set(withheld.map((frame) => frameOrigin(frame)).filter((origin): origin is string => !!origin))
+    const resolved = text.includes("### Snapshot") ? await this.frameOrigins(page, text) : undefined
+    return Frames.scope({
+      tool: name,
+      text,
+      withholding: true,
+      withheld: origins,
+      origins: resolved,
+      granted: (origin) => authorized.includes(`read:${origin}`),
+    })
   }
 
   /** Mask boxes for withheld frames, in CSS pixels of the screenshot. */
@@ -511,35 +571,52 @@ class PlaywrightBackend implements BrowserBackend {
     const authorized = ctx.authorized ?? []
     let page = this.current()
 
-    // Sensitive steps are classified on the live element, then approved one step at a time.
+    // A navigation target is checked before the browser sees it: a scheme without an http(s) origin has no grant to
+    // ask for, so it must not reach the page at all.
+    if (name === "browser_navigate") {
+      const refusal = navigationRefusal(String(args.url ?? ""))
+      if (refusal) throw new Error(refusal)
+    }
+
+    // Sensitive steps are classified on the live element, then approved one step at a time. A document without an
+    // origin (`about:blank`, a `data:` page) still needs its step approved, keyed by the site it lives in.
     if (page) {
       const reasons = await this.sensitive(name, args, page)
-      const origin = BrowserPermission.origin(page.url())
-      if (reasons.length && origin && !stepApproved(ctx.sensitive ?? [], name, args, origin)) {
+      const site = BrowserPermission.site(page.url())
+      if (reasons.length && !site) {
+        throw new Error("A sensitive step was refused: the page has no URL to bind the approval to.")
+      }
+      if (reasons.length && site && !stepApproved(ctx.sensitive ?? [], name, args, site)) {
         throw new NeedsPermissionError(
-          [{ class: "sensitive", origin, reason: reasons.join("; ") }],
-          approveStep(name, args, origin),
+          [{ class: "sensitive", origin: site, reason: reasons.join("; ") }],
+          approveStep(name, args, site),
         )
       }
     }
 
-    // A screenshot may not leave the backend with a withheld frame visible in pixels or file.
+    // A screenshot may not leave the backend with a withheld frame visible in pixels or file. Every screenshot is
+    // taken inline as PNG in CSS pixels: the backend masks it and returns the image, so the MCP never writes pixels
+    // to a file the backend cannot inspect, and a frame that starts loading during the call cannot leave one behind.
     const withheldBefore = page ? withheldFrames(page, authorized) : []
     const shot = name === "browser_take_screenshot"
     let callArgs = args
-    if (shot && withheldBefore.length) {
-      if (args.target !== undefined) {
-        return { content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }], isError: true }
+    if (shot) {
+      if (args.target !== undefined && withheldBefore.length) {
+        return {
+          content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }],
+          isError: true,
+        }
       }
       callArgs = { ...args, type: "png", scale: "css" }
       delete callArgs.filename
     }
-    const before = shot && withheldBefore.length ? await this.outputFiles() : undefined
+    // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
+    const before = outputBaseline(name) ? await this.outputFiles() : undefined
 
     const downloads: string[] = []
     const onDownload = (download: Download) => {
-      const origin = page && BrowserPermission.origin(page.url())
-      if (origin && stepApproved(ctx.sensitive ?? [], name, args, origin)) return
+      const site = page && BrowserPermission.site(page.url())
+      if (site && stepApproved(ctx.sensitive ?? [], name, args, site)) return
       downloads.push(download.suggestedFilename())
       void download.cancel().catch(() => undefined)
     }
@@ -569,17 +646,21 @@ class PlaywrightBackend implements BrowserBackend {
     page = this.current()
 
     if (downloads.length) {
-      const origin = page && BrowserPermission.origin(page.url())
-      if (origin) {
+      const site = page && BrowserPermission.site(page.url())
+      if (site) {
         throw new NeedsPermissionError(
-          [{ class: "sensitive", origin, reason: `download: ${downloads.join(", ")}` }],
-          approveStep(name, args, origin),
+          [{ class: "sensitive", origin: site, reason: `download: ${downloads.join(", ")}` }],
+          approveStep(name, args, site),
         )
       }
+      throw new Error("A download was refused: the page has no URL to bind the approval to.")
     }
 
-    // A navigation can land on another origin through a redirect; the real origin decides.
+    // A navigation can land on another origin through a redirect; the real origin decides. A landing page without an
+    // http(s) origin is refused the same way as such a target.
     if (page && (name === "browser_navigate" || name === "browser_navigate_back")) {
+      const refusal = navigationRefusal(page.url())
+      if (refusal) throw new Error(refusal)
       const origin = BrowserPermission.origin(page.url())
       if (origin && !authorized.includes(`read:${origin}`) && !authorized.includes(`navigate:${origin}`)) {
         throw new NeedsPermissionError([{ class: "navigate", origin }])
@@ -587,33 +668,53 @@ class PlaywrightBackend implements BrowserBackend {
     }
 
     const withheld = page ? withheldFrames(page, authorized) : []
-    const viewed = page ? await this.filter(page, name, text, authorized) : text
+    const scoped = page ? await this.filter(page, name, text, authorized) : { text, refused: false }
+    const viewed = scoped.text
     const images = content.filter((block): block is Extract<ContentBlock, { type: "image" }> => block.type === "image")
     const origin = page && BrowserPermission.origin(page.url())
     const withheldOrigins = withheld
-      .map((frame) => BrowserPermission.origin(frame.url()))
+      .map((frame) => frameOrigin(frame))
       .filter((value): value is string => value !== undefined)
+
+    if (scoped.refused) {
+      // A file the refused call wrote must not outlive the call either.
+      if (before) await this.removeNewFiles(before)
+      return {
+        content: [{ type: "text", text: viewed }],
+        isError: true,
+        meta: {
+          ...(origin ? { origin } : {}),
+          ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
+        },
+      }
+    }
 
     if (withheld.length && shot) {
       // Whatever the MCP saved was written before masking: it must not outlive the call, and its path is not an
       // acceptable answer either, because the model would open the unmasked pixels.
       if (before) await this.removeNewFiles(before)
       const masked =
-        images.length > 0 && page
+        images.length > 0 && page && args.target === undefined
           ? await this.maskFrames(page, images, withheld, args.fullPage === true).catch(() => false)
           : false
       if (!masked) {
         return {
           content: [{ type: "text", text: "The screenshot is unavailable: part of the page is withheld." }],
           isError: true,
-          meta: { ...(origin ? { origin } : {}), ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}) },
+          meta: {
+            ...(origin ? { origin } : {}),
+            ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
+          },
         }
       }
       // The file link points at the deleted file; the masked image is the answer.
       return {
         content: [{ type: "text", text: withoutScreenshotLink(viewed) }, ...images],
         isError: result.isError === true,
-        meta: { ...(origin ? { origin } : {}), ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}) },
+        meta: {
+          ...(origin ? { origin } : {}),
+          ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
+        },
       }
     }
 
@@ -684,6 +785,4 @@ export function key(settings: Settings) {
 }
 
 /** The process-wide browser pool of the bundled Playwright backend. */
-export const playwright = new Backends((value, evict) =>
-  PlaywrightBackend.create(JSON.parse(value) as Settings, evict),
-)
+export const playwright = new Backends((value, evict) => PlaywrightBackend.create(JSON.parse(value) as Settings, evict))
