@@ -9,7 +9,7 @@ Product telemetry helps us understand which features people use, identify proble
 
 Product telemetry is enabled by default in the standalone CLI and Kilo Desktop. In VS Code, Kilo follows the editor's telemetry preference. Use the instructions for your client below; these clients do not share one telemetry preference.
 
-These controls are separate from [optional OpenTelemetry export](#optional-opentelemetry-export), which sends diagnostics to an endpoint you configure.
+This page covers product telemetry shared with Kilo. [OpenTelemetry export](#optional-opentelemetry-export) is a separate feature for monitoring Kilo in your own observability tools.
 
 | Client | Where to disable analytics | Precedence |
 |---|---|---|
@@ -101,6 +101,6 @@ The mobile app has its own optional-telemetry consent during onboarding and in S
 
 ## Optional OpenTelemetry export
 
-OpenTelemetry/OTLP export is separate from product telemetry. If you set `OTEL_EXPORTER_OTLP_ENDPOINT`, the CLI can send logs and traces to that endpoint independently of the preferences above. To stop that export, remove the endpoint from the service's environment and restart it.
+OpenTelemetry/OTLP export lets you send logs and traces to your own configured observability endpoint. It is not the mechanism for Kilo's product telemetry collection. If you set `OTEL_EXPORTER_OTLP_ENDPOINT`, that export operates independently of the product telemetry preferences above. To stop your configured export, remove the endpoint from the service's environment and restart it.
 
 See [CLI OpenTelemetry export](/docs/code-with-ai/platforms/cli#opentelemetry-export) for exporter configuration. You do not need to configure an OTLP endpoint to disable product telemetry.

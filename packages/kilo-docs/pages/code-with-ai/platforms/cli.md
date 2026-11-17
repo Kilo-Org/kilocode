@@ -496,7 +496,7 @@ See [Usage analytics and crash reports](/docs/getting-started/settings/usage-ana
 
 ### OpenTelemetry Export
 
-Optional OTLP export is independent of product telemetry and its opt-out settings.
+Use OpenTelemetry to monitor Kilo in your own observability tools. This optional export sends diagnostics to an endpoint you configure; it is separate from the product telemetry Kilo collects and is not controlled by the product telemetry opt-out.
 
 If `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the CLI exports OpenTelemetry traces and logs to that OTLP HTTP endpoint. You can also pass `OTEL_EXPORTER_OTLP_HEADERS` as comma-separated `key=value` pairs and `OTEL_RESOURCE_ATTRIBUTES` as comma-separated resource attributes. Request spans include `http.method`, `http.path`, route params such as `session.id` and `message.id`, and internal params under the `opencode.*` namespace.
 
