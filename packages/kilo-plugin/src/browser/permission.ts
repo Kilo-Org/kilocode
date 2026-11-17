@@ -51,6 +51,28 @@ export namespace BrowserPermission {
     }
   }
 
+  /**
+   * The key a decision binds to for a document: its origin, or — for a document the browser gives no origin
+   * (`about:blank`, a `data:` document) — a scheme-qualified key. A blob URL belongs to the origin it embeds.
+   * Returns undefined only for a URL that cannot be parsed at all.
+   */
+  export function site(url: string): string | undefined {
+    if (!url) return undefined
+    const known = origin(url)
+    if (known) return known
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === "blob:") {
+        const inner = origin(url.slice("blob:".length))
+        if (inner) return inner
+      }
+      // An opaque document has no origin to name; the scheme is the narrowest key left.
+      return parsed.protocol === "about:" && parsed.pathname === "blank" ? "about:blank" : parsed.protocol
+    } catch {
+      return undefined
+    }
+  }
+
   export function pattern(item: Item): string {
     return `${item.class}:${item.origin}`
   }

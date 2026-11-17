@@ -1,8 +1,106 @@
 import { describe, expect, test } from "bun:test"
+import type { Frame, Page } from "playwright-core"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
-import { Backends, key, launchFailure } from "../../src/browser/playwright"
+import {
+  Backends,
+  frameOrigin,
+  key,
+  launchFailure,
+  navigationRefusal,
+  outputBaseline,
+  withheldFrames,
+} from "../../src/browser/playwright"
 import { resolve } from "../../src/browser/settings"
 import type { BrowserBackend } from "../../src/browser/backend"
+
+type Fake = { node: Frame; kids: Fake[] }
+
+function tree(url: string, parent: Fake | null = null): Fake {
+  const kids: Fake[] = []
+  const node = {
+    url: () => url,
+    parentFrame: () => parent?.node ?? null,
+    childFrames: () => kids.map((kid) => kid.node),
+  } as unknown as Frame
+  return { node, kids }
+}
+
+function page(main: Fake): Page {
+  return { mainFrame: () => main.node } as unknown as Page
+}
+
+describe("withheld frames", () => {
+  test("a frame nested in a withheld frame is withheld too", () => {
+    const top = tree("https://shop.example.com/checkout")
+    const pay = tree("https://pay.example.net/", top)
+    const widget = tree("https://widget.example/", pay)
+    top.kids.push(pay)
+    pay.kids.push(widget)
+    // The widget has its own read grant; the withheld ancestor still hides it.
+    const withheld = withheldFrames(page(top), ["read:https://shop.example.com", "read:https://widget.example"])
+    expect(withheld).toEqual([pay.node, widget.node])
+  })
+
+  test("about:blank and srcdoc frames belong to their parent's origin", () => {
+    const top = tree("https://shop.example.com/")
+    const blank = tree("about:blank", top)
+    top.kids.push(blank)
+    expect(frameOrigin(blank.node)).toBe("https://shop.example.com")
+    expect(withheldFrames(page(top), ["read:https://shop.example.com"])).toEqual([])
+  })
+
+  test("a frame whose origin cannot be determined is withheld", () => {
+    const blank = tree("about:blank")
+    const child = tree("about:srcdoc", blank)
+    blank.kids.push(child)
+    expect(withheldFrames(page(blank), [])).toEqual([child.node])
+  })
+})
+
+describe("navigation targets", () => {
+  test("http(s) pages and about:blank may be opened", () => {
+    expect(navigationRefusal("https://shop.example.com/checkout")).toBeUndefined()
+    expect(navigationRefusal("http://localhost:3000/")).toBeUndefined()
+    expect(navigationRefusal("about:blank")).toBeUndefined()
+    expect(navigationRefusal("  about:blank  ")).toBeUndefined()
+  })
+
+  test("a scheme that reaches the machine or the browser itself is refused", () => {
+    for (const url of [
+      "file:///etc/passwd",
+      "data:text/html,<p>hi</p>",
+      "javascript:alert(1)",
+      "chrome://settings",
+      "view-source:file:///etc/passwd",
+    ]) {
+      const refusal = navigationRefusal(url)
+      expect(refusal).toContain("Navigation refused")
+      expect(refusal).toContain(new URL(url).protocol)
+    }
+  })
+
+  test("a target that is not a URL is refused", () => {
+    expect(navigationRefusal("not a url")).toContain("not a URL")
+    expect(navigationRefusal("")).toContain("not a URL")
+  })
+})
+
+describe("output baselines", () => {
+  test("a screenshot is always baselined, even with nothing withheld yet", () => {
+    expect(outputBaseline("browser_take_screenshot")).toBe(true)
+  })
+
+  test("results that can be saved as a file are baselined", () => {
+    expect(outputBaseline("browser_network_request")).toBe(true)
+    expect(outputBaseline("browser_network_requests")).toBe(true)
+    expect(outputBaseline("browser_console_messages")).toBe(true)
+  })
+
+  test("a tool that writes nothing is not read", () => {
+    expect(outputBaseline("browser_click")).toBe(false)
+    expect(outputBaseline("browser_snapshot")).toBe(false)
+  })
+})
 
 describe("playwright launch failures", () => {
   test("names the sandbox fix instead of a raw stack", () => {

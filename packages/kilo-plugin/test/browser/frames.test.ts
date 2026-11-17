@@ -75,10 +75,23 @@ describe("snapshot frame scoping", () => {
     expect(Frames.snapshot(snapshot, origins, () => true)).toBe(snapshot)
   })
 
-  test("an iframe with an unresolved ref is left alone", () => {
+  test("an iframe whose ref does not resolve is withheld, not shown", () => {
     const result = Frames.snapshot(snapshot, new Map([["e9", "http://localhost:4001"]]), granted)
-    expect(result).toContain("- iframe [ref=e5]:")
-    expect(result).toContain("CARD-MARKER-9f3a")
+    expect(result).toContain("- iframe [ref=e5] [origin withheld]")
+    expect(result).not.toContain("CARD-MARKER-9f3a")
+    expect(result).toContain("- iframe [ref=e9]:")
+  })
+
+  test("an iframe node without a ref is withheld with its subtree", () => {
+    const text = `### Snapshot
+\`\`\`yaml
+- generic [ref=e1]:
+  - iframe:
+    - text: NO-REF-MARKER
+\`\`\``
+    const result = Frames.snapshot(text, new Map(), granted)
+    expect(result).toContain("- iframe [origin withheld]")
+    expect(result).not.toContain("NO-REF-MARKER")
   })
 
   test("iframe refs are listed in document order", () => {
@@ -112,5 +125,62 @@ describe("console and network filtering", () => {
     const result = Frames.networkRequests(text, new Set(["https://pay.example.net"]))
     expect(result).toContain("1. [GET] https://shop.example.com/checkout => [200] OK")
     expect(result).not.toContain("api/charge")
+  })
+})
+
+describe("scoping a tool result", () => {
+  const withheld = new Set(["https://pay.example.net"])
+
+  test("request details are refused while any frame is withheld", () => {
+    // A part (headers, a body) carries no URL, so the backend cannot attribute it to a granted frame.
+    const result = Frames.scope({
+      tool: "browser_network_request",
+      text: "authorization: Bearer CARD-MARKER",
+      withholding: true,
+      withheld,
+      granted: () => true,
+    })
+    expect(result.refused).toBe(true)
+    expect(result.text).not.toContain("CARD-MARKER")
+    expect(result.text).toContain("unavailable")
+  })
+
+  test("request details pass through when nothing is withheld", () => {
+    const text = "#1 [GET] https://shop.example.com/checkout"
+    const result = Frames.scope({
+      tool: "browser_network_request",
+      text,
+      withholding: false,
+      withheld: new Set(),
+      granted: () => true,
+    })
+    expect(result.refused).toBe(false)
+    expect(result.text).toBe(text)
+  })
+
+  test("the request list is filtered, the console is filtered, the snapshot is masked", () => {
+    const result = Frames.scope({
+      tool: "browser_network_requests",
+      text: [
+        "1. [GET] https://shop.example.com/checkout => [200] OK",
+        "2. [POST] https://pay.example.net/api/charge => [402] Payment Required",
+      ].join("\n"),
+      withholding: true,
+      withheld,
+      granted: () => true,
+    })
+    expect(result.refused).toBe(false)
+    expect(result.text).not.toContain("api/charge")
+
+    const snapshotResult = Frames.scope({
+      tool: "browser_snapshot",
+      text: snapshot,
+      withholding: true,
+      withheld,
+      origins,
+      granted,
+    })
+    expect(snapshotResult.text).toContain("[origin withheld: https://pay.example.net]")
+    expect(snapshotResult.text).not.toContain("CARD-MARKER-9f3a")
   })
 })

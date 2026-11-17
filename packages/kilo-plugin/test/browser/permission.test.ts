@@ -51,8 +51,13 @@ describe("browser permission defaults", () => {
     expect(browser("act:http://localhost:3000", allowed)).toBe("allow")
     // Core evaluation turns the same rule into `ask`; the hook must not relax it back to the localhost default.
     expect(
-      evaluate({ action: "browser", effect: "ask", resources: ["act:http://localhost:3000"], rules: allowed, allowSensitive: false })
-        .effect,
+      evaluate({
+        action: "browser",
+        effect: "ask",
+        resources: ["act:http://localhost:3000"],
+        rules: allowed,
+        allowSensitive: false,
+      }).effect,
     ).toBe("ask")
   })
 
@@ -64,18 +69,32 @@ describe("browser permission defaults", () => {
 
   test("a deny is never relaxed", () => {
     expect(
-      evaluate({ action: "browser", effect: "deny", resources: ["read:http://localhost:3000"], rules: defaults, allowSensitive: false })
-        .effect,
+      evaluate({
+        action: "browser",
+        effect: "deny",
+        resources: ["read:http://localhost:3000"],
+        rules: defaults,
+        allowSensitive: false,
+      }).effect,
     ).toBe("deny")
   })
 })
 
 describe("sensitive browser steps", () => {
   const sensitive = (allowSensitive: boolean, rules: Permission.Ruleset = defaults) =>
-    evaluate({ action: "browser_sensitive", effect: "allow", resources: ["https://example.com"], rules, allowSensitive })
+    evaluate({
+      action: "browser_sensitive",
+      effect: "allow",
+      resources: ["https://example.com"],
+      rules,
+      allowSensitive,
+    })
 
   test("need a person unless browser.allow_sensitive is on", () => {
-    expect(sensitive(false)).toMatchObject({ effect: "ask", message: expect.stringContaining("sensitive browser step") })
+    expect(sensitive(false)).toMatchObject({
+      effect: "ask",
+      message: expect.stringContaining("sensitive browser step"),
+    })
     expect(sensitive(true).effect).toBe("allow")
   })
 
@@ -87,8 +106,13 @@ describe("sensitive browser steps", () => {
 
   test("a deny stays a deny", () => {
     expect(
-      evaluate({ action: "browser_sensitive", effect: "deny", resources: ["https://example.com"], rules: defaults, allowSensitive: true })
-        .effect,
+      evaluate({
+        action: "browser_sensitive",
+        effect: "deny",
+        resources: ["https://example.com"],
+        rules: defaults,
+        allowSensitive: true,
+      }).effect,
     ).toBe("deny")
   })
 })
@@ -115,6 +139,14 @@ describe("browser permission patterns", () => {
     expect(BrowserPermission.origin("https://example.com/a/b?c=d#e")).toBe("https://example.com")
     expect(BrowserPermission.origin("http://localhost:3000/x")).toBe("http://localhost:3000")
     expect(BrowserPermission.origin("about:blank")).toBeUndefined()
+  })
+
+  test("an origin-less document still has a site a decision can bind to", () => {
+    expect(BrowserPermission.site("https://shop.example.com/a")).toBe("https://shop.example.com")
+    expect(BrowserPermission.site("about:blank")).toBe("about:blank")
+    expect(BrowserPermission.site("data:text/html,<p>hi</p>")).toBe("data:")
+    expect(BrowserPermission.site("blob:https://shop.example.com/1b2c")).toBe("https://shop.example.com")
+    expect(BrowserPermission.site("")).toBeUndefined()
   })
 
   test("classes follow the tool: evaluate and unsafe code need act (D11)", () => {
@@ -184,7 +216,11 @@ describe("browser tool-level permissions", () => {
 
   test("a deny for one tool leaves the rest alone", () => {
     const rules = [...defaults, rule("browser_click", "*", "deny")]
-    expect(evaluate({ action: "browser_click", effect: "deny", resources: ["*"], rules, allowSensitive: false }).effect).toBe("deny")
-    expect(evaluate({ action: "browser_navigate", effect: "allow", resources: ["*"], rules, allowSensitive: false }).effect).toBe("allow")
+    expect(
+      evaluate({ action: "browser_click", effect: "deny", resources: ["*"], rules, allowSensitive: false }).effect,
+    ).toBe("deny")
+    expect(
+      evaluate({ action: "browser_navigate", effect: "allow", resources: ["*"], rules, allowSensitive: false }).effect,
+    ).toBe("allow")
   })
 })
