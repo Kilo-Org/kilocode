@@ -273,7 +273,7 @@ export function activate(context: ExtensionContext) {
     server,
     directory,
     trackCostSession: alerts.track,
-    saveImageDirectory: () => agentManagerRef?.imageDirectory(),
+    saveImageDirectory: (sessionID) => agentManagerRef?.imageDirectory(sessionID),
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager

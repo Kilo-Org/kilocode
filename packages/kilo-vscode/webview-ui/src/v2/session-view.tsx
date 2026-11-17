@@ -590,7 +590,7 @@ export function SessionView(props: {
 
   return (
     <TranscriptSearchProvider>
-      <div class="chat-view">
+      <div class="chat-view" data-session-id={session()}>
         {props.tabStrip}
         <Show when={session()} keyed>
           {(id) => (
