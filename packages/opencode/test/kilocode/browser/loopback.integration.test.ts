@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { spawn, type ChildProcess } from "child_process"
 import fs from "fs/promises"
 import net from "node:net"
+import os from "os"
 import path from "path"
 import z from "zod"
 import { create as createClient, type Client } from "../../../src/kilocode/browser/client"
@@ -36,7 +37,7 @@ afterEach(async () => {
       if (runtime.child.exitCode !== null) return resolve()
       runtime.child.once("exit", () => resolve())
     })
-    await fs.rm(runtime.root, { recursive: true, force: true })
+    await fs.rm(runtime.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 })
 
@@ -56,7 +57,7 @@ async function port() {
 }
 
 async function start(): Promise<Runtime> {
-  const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-loopback-"))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-loopback-"))
   const run = path.join(root, "run")
   const data = path.join(root, "browser")
   const free = await port()
@@ -94,8 +95,14 @@ async function start(): Promise<Runtime> {
   const entry = await until(async () => (await Registry.list({ dir: path.join(run, "hubs") })).at(0), 10_000)
   const file = path.join(data, "pairing.json")
   const stat = await fs.stat(file)
-  expect(stat.mode & 0o777).toBe(0o600)
+  expect(stat.isFile()).toBe(true)
+  // Windows reports 0666 for every file; 0600 is a POSIX guarantee.
+  if (process.platform !== "win32") expect(stat.mode & 0o777).toBe(0o600)
   const key = await pair.load(file)
+  // The hub advertises the platform's socket: a named pipe on Windows, a unix socket
+  // elsewhere, so the CLI client dials the same transport the hub listens on.
+  expect(entry.socket.startsWith("\\\\.\\pipe\\kilo-browser-")).toBe(process.platform === "win32")
+  expect(entry.socket.endsWith(".sock")).toBe(process.platform !== "win32")
   const runtime: Runtime = { root, run, data, port: free, child, hubId: entry.hubId, key }
   running.push(runtime)
   return runtime

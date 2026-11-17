@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
+import os from "os"
 import path from "path"
 import { caller, ids, install, manifest, script, targets } from "../../../src/kilocode/browser/install"
 import { FirefoxExtensionId, HostName, StoreExtensionId } from "../../../src/kilocode/browser/protocol"
@@ -8,7 +9,7 @@ const data = "/kilo/data"
 const file = `${HostName}.json`
 
 async function tmp() {
-  return fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-install-"))
+  return fs.mkdtemp(path.join(os.tmpdir(), "kilo-install-"))
 }
 
 describe("native host manifests", () => {
@@ -116,7 +117,10 @@ describe("native host install", () => {
 
     const shim = await fs.readFile(first.shim, "utf8")
     expect(shim).toContain('exec "/bin/kilo" browser-hub --native "$@"')
-    expect((await fs.stat(first.shim)).mode & 0o777).toBe(0o755)
+    const stat = await fs.stat(first.shim)
+    expect(stat.isFile()).toBe(true)
+    // Windows has no execute bits; the shim is a .cmd file there.
+    if (process.platform !== "win32") expect(stat.mode & 0o777).toBe(0o755)
 
     const entry = JSON.parse(before[0] ?? "{}")
     expect(entry.name).toBe(HostName)

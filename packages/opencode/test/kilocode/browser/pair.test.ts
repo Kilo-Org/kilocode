@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
+import os from "os"
 import path from "path"
 import * as pair from "../../../src/kilocode/browser/pair"
 
@@ -9,7 +10,7 @@ const nonceH = "AgICAgICAgICAgICAgICAg"
 const nonceE = "AwMDAwMDAwMDAwMDAwMDAw"
 
 async function dir() {
-  const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-pair-"))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-pair-"))
   return { root, file: path.join(root, "browser", "pairing.json") }
 }
 
@@ -30,12 +31,14 @@ describe("pairing", () => {
     expect(pair.equal("", "")).toBe(false)
   })
 
-  test("creates the key file once with 0600 and reuses it", async () => {
+  test("creates one private key file and reuses it", async () => {
     const at = await dir()
     const first = await pair.load(at.file)
     expect(pair.decode(first, pair.KeyBytes)).toBeDefined()
     const stat = await fs.stat(at.file)
-    expect(stat.mode & 0o777).toBe(0o600)
+    expect(stat.isFile()).toBe(true)
+    // Windows reports 0666 for every file; 0600 is a POSIX guarantee.
+    if (process.platform !== "win32") expect(stat.mode & 0o777).toBe(0o600)
     expect(await pair.load(at.file)).toBe(first)
     await fs.rm(at.root, { recursive: true, force: true })
   })

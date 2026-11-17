@@ -1,20 +1,24 @@
 import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
+import os from "os"
 import path from "path"
 import { Registry } from "../../../src/kilocode/browser/registry"
 
 async function dir() {
-  return fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-registry-"))
+  return fs.mkdtemp(path.join(os.tmpdir(), "kilo-registry-"))
 }
 
 const hubId = "6f1c2f7e-0d3f-4b1f-8a54-9d0e7a1c2b3d"
 
 describe("hub registry", () => {
-  test("writes and reads an entry with 0600", async () => {
+  test("writes and reads a private entry", async () => {
     const at = await dir()
     await Registry.write(Registry.empty({ hubId, mode: "native", socket: "/tmp/x.sock", pid: 42 }), at)
     const file = path.join(at, `${hubId}.json`)
-    expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
+    const stat = await fs.stat(file)
+    expect(stat.isFile()).toBe(true)
+    // Windows reports 0666 for every file; 0600 is a POSIX guarantee.
+    if (process.platform !== "win32") expect(stat.mode & 0o777).toBe(0o600)
     const entries = await Registry.list({ dir: at, alive: () => true })
     expect(entries).toHaveLength(1)
     expect(entries[0]?.mode).toBe("native")
@@ -73,6 +77,7 @@ describe("hub registry", () => {
 
   test("treats the current process as alive and a missing pid as dead", () => {
     expect(Registry.alive(process.pid)).toBe(true)
-    expect(Registry.alive(2 ** 22 + 12345)).toBe(false)
+    // Above the maximum PID on both platforms, so no process can own it.
+    expect(Registry.alive(2_147_483_647)).toBe(false)
   })
 })

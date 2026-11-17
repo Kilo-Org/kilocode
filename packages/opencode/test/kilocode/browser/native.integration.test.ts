@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { spawn, type ChildProcess } from "child_process"
 import fs from "fs/promises"
+import os from "os"
 import path from "path"
 import { HubError, create as createClient, type Client } from "../../../src/kilocode/browser/client"
 import { encode } from "../../../src/kilocode/browser/frame"
@@ -29,12 +30,12 @@ afterEach(async () => {
       if (runtime.child.exitCode !== null) return resolve()
       runtime.child.once("exit", () => resolve())
     })
-    await fs.rm(runtime.root, { recursive: true, force: true })
+    await fs.rm(runtime.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 })
 
 async function start(): Promise<Runtime> {
-  const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-native-"))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-native-"))
   const run = path.join(root, "run")
   const child = spawn(
     process.execPath,
@@ -100,6 +101,10 @@ describe("native hub process", () => {
 
     const entry = await until(async () => (await Registry.list({ dir: path.join(hub.run, "hubs") })).at(0))
     expect(entry.mode).toBe("native")
+    // The advertised transport is the platform's: a named pipe on Windows, a unix
+    // socket elsewhere.
+    expect(entry.socket.startsWith("\\\\.\\pipe\\kilo-browser-")).toBe(process.platform === "win32")
+    expect(entry.socket.endsWith(".sock")).toBe(process.platform !== "win32")
 
     hub.send(extensionHello({ profileLabel: "Work" }))
 
