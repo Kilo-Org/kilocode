@@ -1,5 +1,6 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.telemetry.Telemetry
@@ -25,11 +26,12 @@ class RefreshHostedWorkspaceAction : AnAction(), DumbAware {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        if (e.getData(HostedWorkspaceDataKeys.WORKSPACE) == null) return
+        val workspace = e.getData(HostedWorkspaceDataKeys.WORKSPACE) ?: return
         val hosted = project.service<KiloHostedService>()
         if (hosted.enabled() && !hosted.state.value.loading) {
             Telemetry.send("Cloud Refresh Clicked", mapOf("surface" to "workspace_row"))
             hosted.refresh(project.basePath.orEmpty())
+            project.service<HostedPullRequestService>().refresh(workspace.ref, revalidate = true)
         }
     }
 }

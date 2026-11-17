@@ -13,6 +13,7 @@ import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedAgentDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceProfileListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
@@ -477,6 +478,29 @@ class KiloHostedService internal constructor(
             current.copy(statuses = current.statuses + (ref.key to next))
         }
         return _state.value.statuses[ref.key] ?: fresh
+    }
+
+    /**
+     * Passive workspace PR evidence. A transport failure is not evidence of "no PR": callers keep
+     * whatever badge they already had. Cloud only clears on the explicit `no_pr` state.
+     */
+    suspend fun pullRequest(ref: HostedWorkspaceRefDto): HostedWorkspacePullRequestDto = try {
+        call { workspacePullRequest(ref, null) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("hosted workspace pull request read failed workspace=${ref.key}", e)
+        HostedWorkspacePullRequestDto(ref, "unreachable", null)
+    }
+
+    /** Explicit observation refresh, using the core's throttle, retry, and cached-evidence rules. */
+    suspend fun refreshPullRequest(ref: HostedWorkspaceRefDto): HostedWorkspacePullRequestDto = try {
+        call { refreshWorkspacePullRequest(ref, null) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("hosted workspace pull request refresh failed workspace=${ref.key}", e)
+        HostedWorkspacePullRequestDto(ref, "unreachable", null)
     }
 
     /** Shares a session feed with passive discovery and releases it with the consumer. */

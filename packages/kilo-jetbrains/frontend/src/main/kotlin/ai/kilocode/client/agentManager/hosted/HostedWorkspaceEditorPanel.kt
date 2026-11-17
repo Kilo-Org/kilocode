@@ -22,6 +22,7 @@ import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -60,6 +61,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     branch: String? = null,
 ) : WorkspaceSessionEditorPanel(parent), UiDataProvider {
     private val hosted = project.service<KiloHostedService>()
+    private val prs = project.service<HostedPullRequestService>()
     private val management = project.service<HostedManagementService>()
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val header = WorkspaceSessionHeader()
@@ -86,13 +88,14 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private var signedOut = false
     private var lastStatus: HostedWorkspaceStatus? = null
     private var running: Set<String> = emptySet()
+    private var pull: WorktreePrDto? = null
 
     init {
         project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
         compute.update(HostedWorkspaceStatus.LOADING.badge())
         header.addAction(compute)
         header.addAction(price)
-        header.update(null, null, title())
+        syncHeader()
         initialize(
             content = manager.component,
             header = header,
@@ -133,6 +136,8 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                         sessions = emptyList()
                         manager.clearPresentation()
                         list.update(emptyList())
+                        pull = null
+                        syncHeader()
                         return@withContext
                     }
                     signedOut = false
@@ -163,6 +168,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     sessions = emptyList()
                     manager.clearPresentation()
                     list.update(emptyList())
+                    pull = null
                     header.update(null, null, ref.workspaceID)
                     reload()
                 }
@@ -175,6 +181,17 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                 }
             }
         }
+        cs.launch {
+            prs.pulls.collect { value ->
+                withContext(Dispatchers.Main) {
+                    if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
+                    val next = value[ref.key]
+                    if (next == pull) return@withContext
+                    pull = next
+                    syncHeader()
+                }
+            }
+        }
         ensureStarted()
     }
 
@@ -183,6 +200,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     override fun onStart() {
         active = true
         reload()
+        prs.refresh(ref)
     }
 
     override fun onHostChanged() {
@@ -202,7 +220,11 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         val finished = running.any { it !in now }
         running = now
         sync(select = false)
-        if (finished) scheduleTitleRefresh()
+        if (finished) {
+            scheduleTitleRefresh()
+            // A finished turn is the first point a push can have created or updated a PR.
+            prs.refresh(ref, revalidate = true)
+        }
     }
 
     override fun rows(): List<ActiveItem> {
@@ -245,6 +267,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     @RequiresEdt
     private fun reload() {
         applyStatus()
+        prs.refresh(ref)
         val generation = ++loadGeneration
         cs.launch { load(generation) }
     }
@@ -427,11 +450,18 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     @RequiresEdt
     private fun syncTitle() {
         val value = title()
-        header.update(null, null, value)
+        syncHeader()
         service<HostedWorkspaceCache>().put(dto, value)
         project.service<KiloVfsManager>().updatePresentation(
             HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto),
         )
+    }
+
+    /** Keeps the PR pill/title on the same shared header a worktree editor uses, with no changes stats. */
+    @RequiresEdt
+    private fun syncHeader() {
+        val name = title()
+        header.update(null, pull?.titled(name), name)
     }
 
     /** One label for the tab, header, and status bar, matching the tree row. */
