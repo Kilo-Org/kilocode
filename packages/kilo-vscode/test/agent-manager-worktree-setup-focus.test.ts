@@ -102,6 +102,34 @@ describe("worktree setup selection", () => {
     expect(mine.deps.setup().active).toBe(false)
   })
 
+  it("opens the dialog for a foreign blocker while its own quick create is in flight", () => {
+    const test = scene("local")
+    const opened: string[] = []
+    const done: string[] = []
+    const quick = { requestId: "q-1", project: "p", blocked: () => {}, done: () => done.push("done") }
+
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "not a repository",
+        errorCode: "not_git_repo",
+        requestId: "q-2",
+      },
+      { ...test.deps, quick, openBlocked: (id) => opened.push(id) },
+    )
+
+    expect(opened).toEqual(["p"])
+    expect(done).toEqual([])
+
+    applySetupMessage(
+      { type: "agentManager.worktreeSetup", status: "ready", message: "", worktreeId: "wt-1" },
+      { ...test.deps, quick, openBlocked: (id) => opened.push(id) },
+    )
+
+    expect(done).toEqual(["done"])
+  })
+
   it("opens the dialog for a blocked quick create from another webview", () => {
     const test = scene("local")
     const opened: string[] = []
