@@ -17,7 +17,14 @@ import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./ope
 import { configTargets, type ConfigEntry } from "./config-targets"
 import { resolveKiloProfile, canonicalPath, resolveDataDir } from "./settings-paths"
 import { command, type Manager } from "./server"
-import type { AgentManagerSettings, BrowserSettingsMessage, ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
+import type {
+  AgentManagerSettings,
+  BrowserSettingsMessage,
+  ConfigEdit,
+  ConfigScope,
+  ToHost,
+  ToWebview,
+} from "./protocol"
 import { MODEL_RESET_KEYS } from "./model-preferences"
 
 const NAMESPACE = "kilo-code.v2"
@@ -57,7 +64,8 @@ export const KILO_SETTING_KEYS = [
 /** `kilo-code.v2.fontSize` when set, otherwise `editor.fontSize`, clamped to the v1 slider range. */
 export function effectiveFontSize(): number {
   const configured = workspace.getConfiguration(NAMESPACE).get<number>("fontSize")
-  const raw = typeof configured === "number" ? configured : workspace.getConfiguration("editor").get<number>("fontSize", 13)
+  const raw =
+    typeof configured === "number" ? configured : workspace.getConfiguration("editor").get<number>("fontSize", 13)
   return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
 }
 
@@ -111,7 +119,11 @@ export function settingsHost(input: {
       directory: () => input.directory,
       data: resolveDataDir(process.env, profile),
       command: () =>
-        command({ extension: input.context.extensionPath, storage: input.context.globalStorageUri.fsPath, env: process.env }),
+        command({
+          extension: input.context.extensionPath,
+          storage: input.context.globalStorageUri.fsPath,
+          env: process.env,
+        }),
       state: input.context.globalState,
       env: process.env,
     })
@@ -302,7 +314,12 @@ export function settingsHost(input: {
       input.post(
         result
           ? { type: "agentManagerSettingsBranchesLoaded", requestId: message.requestId, ...result }
-          : { type: "agentManagerSettingsBranchesLoaded", requestId: message.requestId, projectId: message.projectId, error: "Could not read the branches of this project." },
+          : {
+              type: "agentManagerSettingsBranchesLoaded",
+              requestId: message.requestId,
+              projectId: message.projectId,
+              error: "Could not read the branches of this project.",
+            },
       )
       return
     }
@@ -329,14 +346,18 @@ export function settingsHost(input: {
         input.post({ type: "browserSettingsInstalled", requestId: message.requestId, ...result })
         return
       }
-      const state =
-        message.type === "browserSettingsWrite"
-          ? await browser.write(message.patch)
-          : await browser.read()
+      const state = message.type === "browserSettingsWrite" ? await browser.write(message.patch) : await browser.read()
       input.post({
         type: "browserSettingsLoaded",
         requestId: message.requestId,
-        state,
+        // The panel's state uses the protocol's names: the config key is `allow_sensitive`, the message field is not.
+        state: {
+          backend: state.backend,
+          observation: state.observation,
+          allowSensitive: state.allow_sensitive,
+          rules: state.rules,
+          allowAll: state.allowAll,
+        },
         status: await browser.status(),
       })
     } catch (error) {

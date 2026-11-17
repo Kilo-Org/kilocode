@@ -156,7 +156,7 @@ export const dict = {
   "browser.grants.title": "สิทธิ์ต้นทางของเบราว์เซอร์",
   "browser.grants.none": "ยังไม่มีกฎของต้นทาง",
   "browser.grants.all": "อนุญาตทุกต้นทาง",
-  "browser.grants.editHint": "แก้ไขกฎในคำสั่งเบราว์เซอร์ของ VS Code หรือการตั้งค่า Kilo",
+  "browser.grants.editHint": "แก้ไขกฎในการตั้งค่า Kilo Code แท็บเครื่องมือเว็บ ภายใต้สิทธิ์ของเว็บไซต์",
   "browser.state.ready": "พร้อม",
   "browser.state.unavailable": "ไม่พร้อมใช้งาน",
   "browser.state.readyHint": "โปรไฟล์ Chromium ของ Kilo จะเริ่มเมื่อเรียกใช้เบราว์เซอร์ครั้งแรก",

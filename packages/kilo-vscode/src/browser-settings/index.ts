@@ -94,7 +94,11 @@ export namespace BrowserSettings {
    * The `set` payload that applies `patch`. Rules the editor does not own (provider, tool and the per-tool keys) are
    * kept, and so is a `browser` deny for a tool the user wrote by hand.
    */
-  export function apply(state: State, document: unknown, patch: { browser?: Input; rules?: Rule[]; allowAll?: boolean }) {
+  export function apply(
+    state: State,
+    document: unknown,
+    patch: { browser?: Input; rules?: Rule[]; allowAll?: boolean },
+  ) {
     const headless = patch.browser?.headless ?? state.headless
     const next = {
       backend: patch.browser?.backend ?? state.backend,
@@ -156,7 +160,11 @@ export namespace BrowserSettings {
 
 type Store = {
   read: () => Promise<BrowserSettings.State>
-  write: (patch: { browser?: BrowserSettings.Input; rules?: BrowserSettings.Rule[]; allowAll?: boolean }) => Promise<unknown>
+  write: (patch: {
+    browser?: BrowserSettings.Input
+    rules?: BrowserSettings.Rule[]
+    allowAll?: boolean
+  }) => Promise<unknown>
 }
 
 /**
@@ -291,4 +299,3 @@ export function browserSettingsService(input: {
       }),
   }
 }
-

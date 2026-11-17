@@ -157,7 +157,8 @@ export const dict = {
   "browser.grants.title": "Tilladelser for browseroprindelser",
   "browser.grants.none": "Ingen oprindelsesregler endnu",
   "browser.grants.all": "alle oprindelser tilladt",
-  "browser.grants.editHint": "Rediger reglerne i VS Code-browserkommandoerne eller Kilo-konfigurationen.",
+  "browser.grants.editHint":
+    "Rediger reglerne i Kilo Code-indstillingerne på fanen Webværktøjer under Tilladelser pr. websted.",
   "browser.state.ready": "klar",
   "browser.state.unavailable": "utilgængelig",
   "browser.state.readyHint": "En Chromium-profil ejet af Kilo, startet ved det første browserkald",

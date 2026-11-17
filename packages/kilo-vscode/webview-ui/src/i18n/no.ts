@@ -878,7 +878,8 @@ export const dict = {
   "settings.browser.origins.act": "Handle",
   "settings.browser.origins.navigate": "Naviger",
   "settings.browser.origins.allowAll.title": "Tillat alle nettsteder",
-  "settings.browser.origins.allowAll.description": "Alle nettsteder er tillatt uten å spørre. En nettstedregel gjelder fortsatt.",
+  "settings.browser.origins.allowAll.description":
+    "Alle nettsteder er tillatt uten å spørre. En nettstedregel gjelder fortsatt.",
   "settings.browser.origins.empty":
     "Ingen nettstedregler ennå. Hvert nettsted utenfor maskinen din spør før agenten leser, bruker eller navigerer det.",
   "settings.browser.origins.add": "Legg til et nettsted",
@@ -1446,7 +1447,8 @@ export const dict = {
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
   "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
-  "task.backgroundAgents.promoteFailed": "Denne agenten kunne ikke fortsette i bakgrunnen. Den kan allerede være ferdig.",
+  "task.backgroundAgents.promoteFailed":
+    "Denne agenten kunne ikke fortsette i bakgrunnen. Den kan allerede være ferdig.",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",

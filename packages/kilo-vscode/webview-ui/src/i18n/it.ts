@@ -760,7 +760,7 @@ export const dict = {
   "settings.browser.status.extension.connected": "Connessa",
   "settings.browser.status.extension.disconnected": "Non connessa",
   "settings.browser.status.extension.hint":
-    'Installa l\'estensione browser di Kilo e attiva "Consenti agenti locali", poi apri una pagina che l\'agente può usare.',
+    "Installa l'estensione browser di Kilo e attiva \"Consenti agenti locali\", poi apri una pagina che l'agente può usare.",
   "settings.browser.origins.title": "Permessi dei siti",
   "settings.browser.origins.site": "Sito",
   "settings.browser.origins.read": "Lettura",
@@ -1298,7 +1298,8 @@ export const dict = {
   "task.backgroundAgents.openAll": "Apri tutti gli agenti in background",
   "task.backgroundAgents.cancel": "Arresta",
   "task.backgroundAgents.continueInBackground": "Continua in background",
-  "task.backgroundAgents.promoteFailed": "Questo agente non ha potuto continuare in background. Potrebbe aver già finito.",
+  "task.backgroundAgents.promoteFailed":
+    "Questo agente non ha potuto continuare in background. Potrebbe aver già finito.",
   "task.backgroundAgents.waiting": "Un agente in background richiede il tuo input",
   "task.backgroundAgents.needsInput": "Input richiesto",
   "task.backgroundAgents.clearFinished": "Cancella completati",

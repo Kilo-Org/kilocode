@@ -80,7 +80,7 @@ const BrowserTab: Component = () => {
           background: "var(--vscode-textBlockQuote-background)",
           border: "1px solid var(--vscode-panel-border)",
           "border-radius": "4px",
-          "padding": "12px 16px",
+          padding: "12px 16px",
         }}
       >
         <p
@@ -287,7 +287,7 @@ const BrowserTools: Component = () => {
             last
           >
             <Switch
-              checked={state()?.allow_sensitive === true}
+              checked={state()?.allowSensitive === true}
               onChange={(checked) => browser.write({ browser: { allow_sensitive: checked } })}
               hideLabel
             >
@@ -302,9 +302,7 @@ const BrowserTools: Component = () => {
         <Card>
           <SettingsRow
             title={language.t("settings.browser.status.playwright")}
-            description={
-              disconnected() ? language.t("settings.browser.status.extension.hint") : undefined
-            }
+            description={disconnected() ? language.t("settings.browser.status.extension.hint") : undefined}
           >
             <Show
               when={!browser.status()?.playwright.ready}
@@ -326,10 +324,7 @@ const BrowserTools: Component = () => {
                   disabled={browser.installing()}
                   onClick={() => browser.install()}
                 >
-                  <Show
-                    when={browser.installing()}
-                    fallback={language.t("settings.browser.status.playwright.install")}
-                  >
+                  <Show when={browser.installing()} fallback={language.t("settings.browser.status.playwright.install")}>
                     <Spinner /> {language.t("settings.browser.status.playwright.installing")}
                   </Show>
                 </Button>
@@ -379,14 +374,10 @@ const BrowserTools: Component = () => {
                 "border-bottom": "1px solid var(--border-weak-base)",
               }}
             >
-              <span data-slot="settings-row-label-subtitle">
-                {language.t("settings.browser.origins.site")}
-              </span>
+              <span data-slot="settings-row-label-subtitle">{language.t("settings.browser.origins.site")}</span>
               <For each={GRANTS}>
                 {(grant) => (
-                  <span data-slot="settings-row-label-subtitle">
-                    {language.t(`settings.browser.origins.${grant}`)}
-                  </span>
+                  <span data-slot="settings-row-label-subtitle">{language.t(`settings.browser.origins.${grant}`)}</span>
                 )}
               </For>
               <span />
@@ -408,9 +399,7 @@ const BrowserTools: Component = () => {
                       {(grant) => (
                         <ActionSelect
                           level={row[grant]}
-                          onChange={(effect) =>
-                            browser.write({ cell: { origin: row.origin, type: grant, effect } })
-                          }
+                          onChange={(effect) => browser.write({ cell: { origin: row.origin, type: grant, effect } })}
                         />
                       )}
                     </For>

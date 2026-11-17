@@ -865,8 +865,7 @@ export const dict = {
   "settings.browser.backend.title": "الواجهة الخلفية",
   "settings.browser.backend.description": "المتصفح الذي تقوده أدوات المتصفح لدى الوكيل.",
   "settings.browser.backend.playwright": "متصفح مضمّن (Playwright)",
-  "settings.browser.backend.playwright.description":
-    "ملف تعريف Chromium مملوك لـ Kilo، يبدأ عند أول استدعاء للمتصفح.",
+  "settings.browser.backend.playwright.description": "ملف تعريف Chromium مملوك لـ Kilo، يبدأ عند أول استدعاء للمتصفح.",
   "settings.browser.backend.extension": "إضافة المتصفح",
   "settings.browser.backend.extension.description": "متصفحك الخاص، عبر إضافة متصفح Kilo.",
   "settings.browser.backend.off": "إيقاف",
@@ -877,8 +876,7 @@ export const dict = {
   "settings.browser.observation.diff": "ما تغيّر فقط",
   "settings.browser.observation.none": "الحالة فقط",
   "settings.browser.sensitive.title": "السماح بالخطوات الحساسة دون سؤال",
-  "settings.browser.sensitive.description":
-    "كلمات المرور ونماذج الدفع وصفحات موافقة OAuth والرفع تعمل دون تأكيد.",
+  "settings.browser.sensitive.description": "كلمات المرور ونماذج الدفع وصفحات موافقة OAuth والرفع تعمل دون تأكيد.",
   "settings.browser.status.title": "الحالة",
   "settings.browser.status.playwright": "Playwright",
   "settings.browser.status.playwright.ready": "جاهز، باستخدام {{browser}}",
@@ -1155,7 +1153,8 @@ export const dict = {
     "لم يتم تهيئة خوادم MCP. أضف خوادم MCP في kilo2.json، أو اطلب من الوكيل إضافتها لك.",
   "settings.agentBehaviour.workflows.description":
     "سير العمل هي أوامر مخصصة محددة في التهيئة الخاصة بك أو في ملفات Markdown للأوامر. يمكنك تعيين نموذج ومتغير استدلال لكل سير عمل.",
-  "settings.agentBehaviour.workflows.empty": "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",
+  "settings.agentBehaviour.workflows.empty":
+    "لم يتم العثور على أوامر مخصصة. أضف أوامر إلى kilo2.json أو إلى ملف Markdown في .kilo2/command.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
   "settings.agentBehaviour.workflows.model": "النموذج",

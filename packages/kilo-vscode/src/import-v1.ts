@@ -5,7 +5,7 @@ import { existsSync } from "node:fs"
 import { homedir } from "node:os"
 import path from "node:path"
 import { environment, type Command } from "./server"
-import { launch } from "./process"
+import { collected, launch } from "./process"
 
 export function importV1(input: {
   command: Command
@@ -35,19 +35,7 @@ export function importV1(input: {
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error
     }
   })
-  const result = Promise.withResolvers<{ ok: boolean; output: string }>()
-  const lines: string[] = []
-  const collect = (chunk: Buffer) => {
-    const text = chunk.toString()
-    input.log(text)
-    lines.push(text)
-  }
-  child.stdout?.on("data", collect)
-  child.stderr?.on("data", collect)
-  child.on("error", (error) => result.resolve({ ok: false, output: error.message }))
-  // `close` comes after both output streams ended, so the summary line is never cut off.
-  child.on("close", (code) => result.resolve({ ok: code === 0, output: lines.join("").trim() }))
-  return result.promise
+  return collected(child, input.log)
 }
 
 /**

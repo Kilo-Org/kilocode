@@ -1,6 +1,6 @@
 // `/browser`: the browser tools' state — the backend, whether it can run, and the origin grants the CLI enforces —
 // and the switch between the bundled Playwright browser, the Kilo browser extension and off. The choices are the same
-// `browser` keys the VS Code commands and the settings panels write, through the same `kilocode.settings` RPC.
+// `browser` keys the VS Code settings panel writes, through the same `kilocode.settings` RPC.
 import { dict } from "@kilocode/kilo-i18n/en"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import type { Plugin } from "@opencode/plugin/tui"
@@ -46,7 +46,9 @@ function rules(documentValue: unknown): Rule[] {
 /** The state as the command shows it. Defaults follow the config schema: playwright, full, not sensitive. */
 export function readState(documentValue: unknown): State {
   const input =
-    typeof documentValue === "object" && documentValue !== null && typeof (documentValue as { browser?: unknown }).browser === "object"
+    typeof documentValue === "object" &&
+    documentValue !== null &&
+    typeof (documentValue as { browser?: unknown }).browser === "object"
       ? ((documentValue as { browser?: Record<string, unknown> }).browser ?? {})
       : {}
   const all = rules(documentValue)
@@ -82,7 +84,11 @@ export function describeState(state: State) {
     `${copy("browser.command.observation")}: ${state.observation}`,
     `${copy("browser.command.sensitive")}: ${state.allowSensitive ? copy("browser.sensitive.allowed") : copy("browser.sensitive.asks")}`,
     `${copy("browser.command.grants")}: ${
-      state.allowAll ? copy("browser.grants.all") : state.grants.length === 0 ? copy("browser.grants.none") : state.grants.length
+      state.allowAll
+        ? copy("browser.grants.all")
+        : state.grants.length === 0
+          ? copy("browser.grants.none")
+          : state.grants.length
     }`,
   ].join("\n")
 }
@@ -128,7 +134,11 @@ export function browserLayer(context: Plugin.Context) {
             value: `backend:${backend}`,
             current: state.backend === backend,
             description:
-              backend === "extension" ? copy("browser.state.extensionHint") : backend === "off" ? copy("browser.backend.offHint") : copy("browser.state.readyHint"),
+              backend === "extension"
+                ? copy("browser.state.extensionHint")
+                : backend === "off"
+                  ? copy("browser.backend.offHint")
+                  : copy("browser.state.readyHint"),
           })),
           ...OBSERVATIONS.map((observation) => ({
             title: `${copy("browser.command.observation")}: ${copy(`browser.observation.${observation}` as keyof typeof dict)}`,
@@ -153,7 +163,10 @@ export function browserLayer(context: Plugin.Context) {
       if (action.startsWith("backend:")) {
         const backend = action.slice("backend:".length) as Backend
         await write(context, { backend })
-        context.ui.toast.show({ variant: "info", message: `${copy("browser.command.backend")}: ${copy(`browser.backend.${backend}` as keyof typeof dict)}` })
+        context.ui.toast.show({
+          variant: "info",
+          message: `${copy("browser.command.backend")}: ${copy(`browser.backend.${backend}` as keyof typeof dict)}`,
+        })
         return
       }
       if (action.startsWith("observation:")) {

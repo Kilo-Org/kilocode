@@ -61,7 +61,8 @@ export const dict = {
   "marketplace.install.failed": "Yükleme başarısız oldu",
   "marketplace.install.done": "Bitti",
   "marketplace.install.close": "Kapat",
-  "marketplace.install.mcp.signIn.message": "{{name}} yüklendi, ancak araçlarının kullanılabilmesi için önce oturum açılması gerekiyor.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} yüklendi, ancak araçlarının kullanılabilmesi için önce oturum açılması gerekiyor.",
   "marketplace.install.mcp.signIn.button": "Giriş Yap",
   "marketplace.install.mcp.signIn.waiting": "Tarayıcıda oturum açma bekleniyor…",
   "marketplace.install.mcp.signIn.cancel": "İptal",
@@ -158,7 +159,8 @@ export const dict = {
   "browser.grants.title": "Tarayıcı kaynak izinleri",
   "browser.grants.none": "Henüz kaynak kuralı yok",
   "browser.grants.all": "tüm kaynaklara izin verildi",
-  "browser.grants.editHint": "Kuralları VS Code tarayıcı komutlarında veya Kilo yapılandırmasında düzenleyin.",
+  "browser.grants.editHint":
+    "Kuralları Kilo Code ayarlarında, Web Araçları sekmesinde, Site izinleri altında düzenleyin.",
   "browser.state.ready": "hazır",
   "browser.state.unavailable": "kullanılamıyor",
   "browser.state.readyHint": "Kilo'ya ait bir Chromium profili; ilk tarayıcı çağrısında başlar",

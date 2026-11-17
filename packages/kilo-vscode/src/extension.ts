@@ -120,7 +120,10 @@ export function activate(context: ExtensionContext) {
       ...(agentManagerRef
         ? [...agentManagerRef.contexts.values()].flatMap((project) => [
             project.root,
-            ...(project.peekState()?.getWorktrees().map((worktree) => worktree.path) ?? []),
+            ...(project
+              .peekState()
+              ?.getWorktrees()
+              .map((worktree) => worktree.path) ?? []),
           ])
         : []),
     ],
@@ -224,10 +227,11 @@ export function activate(context: ExtensionContext) {
     .then((result) => {
       if (result.error) void window.showErrorMessage(`Browser settings migration failed: ${result.error}`)
     })
-    .catch((error: unknown) =>
-      void window.showErrorMessage(
-        `Browser settings migration failed: ${error instanceof Error ? error.message : String(error)}`,
-      ),
+    .catch(
+      (error: unknown) =>
+        void window.showErrorMessage(
+          `Browser settings migration failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
     )
   const indexingService = indexingHost({
     context,
@@ -295,7 +299,8 @@ export function activate(context: ExtensionContext) {
   })
   const agentManager = new AgentManagerProvider(agentHost, connection, agentPanel, undefined, broker)
   agentManagerRef = agentManager
-  agentManager.onBrowserDebug = (...args) => output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
+  agentManager.onBrowserDebug = (...args) =>
+    output.appendLine(`Browser AM: ${args.map((item) => String(item)).join(" ")}`)
   // Temporary import of Kilo v1 data for internal users. A machine with a v1 store is offered it at startup until the
   // user imports or chooses "Don't Ask Again"; closing the notification only postpones it to the next start.
   const importFromV1 = async (days: number) => {
@@ -377,8 +382,7 @@ export function activate(context: ExtensionContext) {
       trusted: () => workspace.isTrusted,
       // The tab serves the session the sidebar shows, and keeps serving a session whose tab is still open.
       resolve: (route) =>
-        editorTabOwns(route.sessionId) &&
-        samePath(canonicalizePath(route.directory), canonicalizePath(directory))
+        editorTabOwns(route.sessionId) && samePath(canonicalizePath(route.directory), canonicalizePath(directory))
           ? { sessionId: route.sessionId, directory: route.directory }
           : undefined,
       directory: () => directory,
@@ -475,9 +479,8 @@ export function activate(context: ExtensionContext) {
     { dispose: () => diffs.dispose() },
     diffCatalog,
     changes,
-    commands.registerCommand(
-      "kilo-code.v2.showChanges",
-      (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) => changes.openFromCommand(arg),
+    commands.registerCommand("kilo-code.v2.showChanges", (arg?: Parameters<DiffViewerProvider["openFromCommand"]>[0]) =>
+      changes.openFromCommand(arg),
     ),
     window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
       deserializeWebviewPanel: async (panel, state) => changes.deserializePanel(panel, state),

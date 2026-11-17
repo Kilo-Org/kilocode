@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { extensionConnected, hubsDirectory, installedChromium, status, systemBrowser } from "../src/browser-settings/status"
+import {
+  extensionConnected,
+  hubsDirectory,
+  installedChromium,
+  status,
+  systemBrowser,
+} from "../src/browser-settings/status"
 
 const noFiles = { exists: () => false, entries: () => [], text: () => "", alive: () => false }
 
@@ -46,9 +52,9 @@ describe("playwright target", () => {
   })
 
   test("status reports not ready without any browser", () => {
-    expect(status({ data: "/data", platform: "linux", home: "/home/igor", env: {}, reader: noFiles }).playwright).toEqual(
-      { ready: false },
-    )
+    expect(
+      status({ data: "/data", platform: "linux", home: "/home/igor", env: {}, reader: noFiles }).playwright,
+    ).toEqual({ ready: false })
   })
 })
 

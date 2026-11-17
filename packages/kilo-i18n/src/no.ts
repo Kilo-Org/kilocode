@@ -158,7 +158,8 @@ export const dict = {
   "browser.grants.title": "Tillatelser for nettleseropphav",
   "browser.grants.none": "Ingen opphavsregler ennå",
   "browser.grants.all": "alle opphav tillatt",
-  "browser.grants.editHint": "Rediger reglene i VS Code-nettleserkommandoene eller Kilo-konfigurasjonen.",
+  "browser.grants.editHint":
+    "Rediger reglene i Kilo Code-innstillingene på fanen Nettverktøy under Nettstedstillatelser.",
   "browser.state.ready": "klar",
   "browser.state.unavailable": "utilgjengelig",
   "browser.state.readyHint": "En Chromium-profil eid av Kilo, startet ved det første nettleserkallet",

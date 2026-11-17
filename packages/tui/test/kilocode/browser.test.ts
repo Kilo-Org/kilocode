@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { describeState, grantLine, readState } from "../src/kilocode/browser"
+import { describeState, grantLine, readState } from "../../src/kilocode/browser"
 
 const document = {
   browser: { backend: "extension", observation: "diff", allow_sensitive: true },
@@ -49,7 +49,12 @@ describe("/browser state", () => {
 
   test("the state line names the backend and whether it can run", () => {
     expect(describeState(readState({}))).toBe(
-      ["Backend: Bundled browser (Playwright) — ready", "Observation: full", "Sensitive steps: ask a person", "Origin grants: No origin rules yet"].join("\n"),
+      [
+        "Backend: Bundled browser (Playwright) — ready",
+        "Observation: full",
+        "Sensitive steps: ask a person",
+        "Origin grants: No origin rules yet",
+      ].join("\n"),
     )
     expect(describeState(readState(document))).toContain("Kilo browser extension — unavailable")
   })

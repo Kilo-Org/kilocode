@@ -61,7 +61,8 @@ export const dict = {
   "marketplace.install.failed": "Falha na instalação",
   "marketplace.install.done": "Concluído",
   "marketplace.install.close": "Fechar",
-  "marketplace.install.mcp.signIn.message": "{{name}} está instalado, mas precisa de login antes que suas ferramentas possam ser usadas.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} está instalado, mas precisa de login antes que suas ferramentas possam ser usadas.",
   "marketplace.install.mcp.signIn.button": "Entrar",
   "marketplace.install.mcp.signIn.waiting": "Aguardando login pelo navegador…",
   "marketplace.install.mcp.signIn.cancel": "Cancelar",
@@ -158,7 +159,8 @@ export const dict = {
   "browser.grants.title": "Permissões de origem do navegador",
   "browser.grants.none": "Ainda não há regras de origem",
   "browser.grants.all": "todas as origens permitidas",
-  "browser.grants.editHint": "Edite as regras nos comandos de navegador do VS Code ou na configuração do Kilo.",
+  "browser.grants.editHint":
+    "Edite as regras nas configurações do Kilo Code, na aba Ferramentas da Web, em Permissões de sites.",
   "browser.state.ready": "pronto",
   "browser.state.unavailable": "indisponível",
   "browser.state.readyHint": "Um perfil Chromium do Kilo, iniciado na primeira chamada do navegador",

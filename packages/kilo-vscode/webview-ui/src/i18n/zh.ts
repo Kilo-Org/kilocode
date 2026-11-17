@@ -880,8 +880,7 @@ export const dict = {
   "settings.browser.origins.navigate": "导航",
   "settings.browser.origins.allowAll.title": "允许所有站点",
   "settings.browser.origins.allowAll.description": "所有站点无需询问即可访问。站点规则仍然生效。",
-  "settings.browser.origins.empty":
-    "还没有站点规则。你机器以外的每个站点都会在智能体读取、使用或导航之前询问。",
+  "settings.browser.origins.empty": "还没有站点规则。你机器以外的每个站点都会在智能体读取、使用或导航之前询问。",
   "settings.browser.origins.add": "添加站点",
   "settings.browser.origins.placeholder": "https://example.com",
   "settings.browser.origins.error.empty": "请输入站点来源",
@@ -1125,7 +1124,8 @@ export const dict = {
   "settings.agentBehaviour.mcpEmpty": "未配置 MCP 服务器。在 kilo2.json 中添加 MCP 服务器，或让代理为您添加。",
   "settings.agentBehaviour.workflows.description":
     "工作流是在配置或命令 Markdown 文件中定义的自定义命令。您可以为每个工作流设置模型和推理变体。",
-  "settings.agentBehaviour.workflows.empty": "未找到自定义命令。请将命令添加到 kilo2.json 或 .kilo2/command 中的 Markdown 文件。",
+  "settings.agentBehaviour.workflows.empty":
+    "未找到自定义命令。请将命令添加到 kilo2.json 或 .kilo2/command 中的 Markdown 文件。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
   "settings.agentBehaviour.workflows.model": "模型",
@@ -1138,8 +1138,7 @@ export const dict = {
   "settings.sandboxing.enabled.description":
     "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
-  "settings.autoApprove.description":
-    "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
+  "settings.autoApprove.description": "定义工具的运行权限。大多数工具默认为「允许」。Bash 默认为「询问」。",
   "settings.autoApprove.maxCost.title": "会话费用提醒",
   "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
   "settings.autoApprove.maxCost.v2Description": "当会话费用达到此美元金额时显示非阻塞提醒。留空则禁用。",
@@ -1202,8 +1201,7 @@ export const dict = {
   "settings.context.compactionLimit.title": "自动压缩限制",
   "settings.context.compactionLimit.description": "当上下文达到模型窗口的此百分比时进行压缩。留空则仅使用安全缓冲区。",
   "settings.context.compactionKeep.title": "保留最近 Token",
-  "settings.context.compactionKeep.description":
-    "压缩上下文时按原样保留的最近 Token 数量。留空则保留 15,000 个。",
+  "settings.context.compactionKeep.description": "压缩上下文时按原样保留的最近 Token 数量。留空则保留 15,000 个。",
   "settings.context.compactionBuffer.title": "压缩缓冲区",
   "settings.context.compactionBuffer.description":
     "压缩前在模型上下文上限以下保留的 Token 数量。留空则保留 15%（至少 16,000 个）。",

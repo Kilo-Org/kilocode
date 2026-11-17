@@ -1,7 +1,7 @@
 // Runs `kilo browser install-chromium` with the command and environment of the spawned server, so the Chromium lands in
 // the data directory that server reads, also from a repository checkout with its isolated profile.
 import { environment, type Command } from "../server"
-import { launch } from "../process"
+import { collected, launch } from "../process"
 
 export function installChromium(input: {
   command: Command
@@ -17,17 +17,5 @@ export function installChromium(input: {
     stdio: ["ignore", "pipe", "pipe"],
     detached: process.platform !== "win32",
   })
-  const result = Promise.withResolvers<{ ok: boolean; output: string }>()
-  const lines: string[] = []
-  const collect = (chunk: Buffer) => {
-    const text = chunk.toString()
-    input.log(text)
-    lines.push(text)
-  }
-  child.stdout?.on("data", collect)
-  child.stderr?.on("data", collect)
-  child.on("error", (error) => result.resolve({ ok: false, output: error.message }))
-  // `close` comes after both output streams ended, so the summary line is never cut off.
-  child.on("close", (code) => result.resolve({ ok: code === 0, output: lines.join("").trim() }))
-  return result.promise
+  return collected(child, input.log)
 }

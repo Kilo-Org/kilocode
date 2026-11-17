@@ -62,7 +62,8 @@ export const dict = {
   "marketplace.install.failed": "L'installation a échoué",
   "marketplace.install.done": "Terminé",
   "marketplace.install.close": "Fermer",
-  "marketplace.install.mcp.signIn.message": "{{name}} est installé, mais nécessite une connexion avant que ses outils puissent être utilisés.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} est installé, mais nécessite une connexion avant que ses outils puissent être utilisés.",
   "marketplace.install.mcp.signIn.button": "Se connecter",
   "marketplace.install.mcp.signIn.waiting": "En attente de connexion via le navigateur…",
   "marketplace.install.mcp.signIn.cancel": "Annuler",
@@ -159,7 +160,8 @@ export const dict = {
   "browser.grants.title": "Autorisations d'origine du navigateur",
   "browser.grants.none": "Aucune règle d'origine",
   "browser.grants.all": "toutes les origines autorisées",
-  "browser.grants.editHint": "Modifiez les règles dans les commandes de navigateur VS Code ou la configuration Kilo.",
+  "browser.grants.editHint":
+    "Modifiez les règles dans les paramètres de Kilo Code, onglet Outils web, sous Autorisations des sites.",
   "browser.state.ready": "prêt",
   "browser.state.unavailable": "indisponible",
   "browser.state.readyHint": "Un profil Chromium géré par Kilo, lancé au premier appel du navigateur",

@@ -62,7 +62,8 @@ export const dict = {
   "marketplace.install.failed": "Installation fehlgeschlagen",
   "marketplace.install.done": "Fertig",
   "marketplace.install.close": "Schließen",
-  "marketplace.install.mcp.signIn.message": "{{name}} ist installiert, benötigt aber eine Anmeldung, bevor die Tools verwendet werden können.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} ist installiert, benötigt aber eine Anmeldung, bevor die Tools verwendet werden können.",
   "marketplace.install.mcp.signIn.button": "Anmelden",
   "marketplace.install.mcp.signIn.waiting": "Warten auf Anmeldung im Browser…",
   "marketplace.install.mcp.signIn.cancel": "Abbrechen",
@@ -159,7 +160,8 @@ export const dict = {
   "browser.grants.title": "Freigaben für Browser-Origins",
   "browser.grants.none": "Noch keine Origin-Regeln",
   "browser.grants.all": "alle Origins erlaubt",
-  "browser.grants.editHint": "Regeln in den VS-Code-Browser-Befehlen oder der Kilo-Konfiguration bearbeiten.",
+  "browser.grants.editHint":
+    "Regeln in den Kilo-Code-Einstellungen im Tab „Web-Tools“ unter „Website-Berechtigungen“ bearbeiten.",
   "browser.state.ready": "bereit",
   "browser.state.unavailable": "nicht verfügbar",
   "browser.state.readyHint": "Ein Chromium-Profil von Kilo, gestartet beim ersten Browser-Aufruf",

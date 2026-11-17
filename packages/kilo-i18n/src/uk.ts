@@ -61,7 +61,8 @@ export const dict = {
   "marketplace.install.failed": "Встановлення не вдалося",
   "marketplace.install.done": "Готово",
   "marketplace.install.close": "Закрити",
-  "marketplace.install.mcp.signIn.message": "{{name}} встановлено, але потрібно увійти, перш ніж можна буде використовувати його інструменти.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} встановлено, але потрібно увійти, перш ніж можна буде використовувати його інструменти.",
   "marketplace.install.mcp.signIn.button": "Увійти",
   "marketplace.install.mcp.signIn.waiting": "Очікування входу через браузер…",
   "marketplace.install.mcp.signIn.cancel": "Скасувати",
@@ -158,7 +159,8 @@ export const dict = {
   "browser.grants.title": "Дозволи браузера для джерел",
   "browser.grants.none": "Правил для джерел ще немає",
   "browser.grants.all": "усі джерела дозволені",
-  "browser.grants.editHint": "Змініть правила в командах браузера VS Code або в конфігурації Kilo.",
+  "browser.grants.editHint":
+    "Змініть правила в налаштуваннях Kilo Code, на вкладці «Вебінструменти», у розділі «Дозволи сайтів».",
   "browser.state.ready": "готовий",
   "browser.state.unavailable": "недоступний",
   "browser.state.readyHint": "Профіль Chromium, що належить Kilo, запускається під час першого виклику браузера",

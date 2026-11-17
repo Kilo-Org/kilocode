@@ -186,7 +186,7 @@ export const dict = {
   "browser.grants.title": "Browser origin grants",
   "browser.grants.none": "No origin rules yet",
   "browser.grants.all": "every origin allowed",
-  "browser.grants.editHint": "Edit the rules in the VS Code browser commands or the Kilo config.",
+  "browser.grants.editHint": "Edit the rules in the Kilo Code settings, Web Tools tab, under Site permissions.",
   "browser.state.ready": "ready",
   "browser.state.unavailable": "unavailable",
   "browser.state.readyHint": "A Kilo-owned Chromium profile, started by the first browser call",

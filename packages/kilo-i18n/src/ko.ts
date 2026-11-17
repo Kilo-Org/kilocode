@@ -154,7 +154,7 @@ export const dict = {
   "browser.grants.title": "브라우저 출처 권한",
   "browser.grants.none": "아직 출처 규칙이 없습니다",
   "browser.grants.all": "모든 출처 허용",
-  "browser.grants.editHint": "VS Code 브라우저 명령이나 Kilo 설정에서 규칙을 편집하세요.",
+  "browser.grants.editHint": "Kilo Code 설정의 '웹 도구' 탭, '사이트 권한'에서 규칙을 편집하세요.",
   "browser.state.ready": "준비됨",
   "browser.state.unavailable": "사용할 수 없음",
   "browser.state.readyHint": "Kilo가 소유한 Chromium 프로필이며 첫 브라우저 호출에서 시작됩니다",

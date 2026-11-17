@@ -916,7 +916,8 @@ export const dict = {
   "settings.browser.origins.act": "Handl",
   "settings.browser.origins.navigate": "Naviger",
   "settings.browser.origins.allowAll.title": "Tillad alle websteder",
-  "settings.browser.origins.allowAll.description": "Alle websteder er tilladt uden at spørge. En webstedsregel gælder stadig.",
+  "settings.browser.origins.allowAll.description":
+    "Alle websteder er tilladt uden at spørge. En webstedsregel gælder stadig.",
   "settings.browser.origins.empty":
     "Ingen webstedsregler endnu. Ethvert websted uden for din maskine spørger, før agenten læser, bruger eller navigerer det.",
   "settings.browser.origins.add": "Tilføj et websted",

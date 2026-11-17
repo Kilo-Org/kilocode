@@ -877,8 +877,7 @@ export const dict = {
   "settings.browser.backend.title": "백엔드",
   "settings.browser.backend.description": "에이전트의 브라우저 도구가 제어할 브라우저입니다.",
   "settings.browser.backend.playwright": "내장 브라우저(Playwright)",
-  "settings.browser.backend.playwright.description":
-    "첫 브라우저 호출에서 시작되는 Kilo 소유의 Chromium 프로필입니다.",
+  "settings.browser.backend.playwright.description": "첫 브라우저 호출에서 시작되는 Kilo 소유의 Chromium 프로필입니다.",
   "settings.browser.backend.extension": "브라우저 확장 프로그램",
   "settings.browser.backend.extension.description": "Kilo 브라우저 확장 프로그램을 통해 내 브라우저를 사용합니다.",
   "settings.browser.backend.off": "끔",
@@ -889,8 +888,7 @@ export const dict = {
   "settings.browser.observation.diff": "변경된 부분만",
   "settings.browser.observation.none": "상태만",
   "settings.browser.sensitive.title": "묻지 않고 민감한 단계 허용",
-  "settings.browser.sensitive.description":
-    "비밀번호, 결제 양식, OAuth 동의 페이지, 업로드가 확인 없이 실행됩니다.",
+  "settings.browser.sensitive.description": "비밀번호, 결제 양식, OAuth 동의 페이지, 업로드가 확인 없이 실행됩니다.",
   "settings.browser.status.title": "상태",
   "settings.browser.status.playwright": "Playwright",
   "settings.browser.status.playwright.ready": "준비됨, {{browser}} 사용",
@@ -908,7 +906,8 @@ export const dict = {
   "settings.browser.origins.act": "동작",
   "settings.browser.origins.navigate": "이동",
   "settings.browser.origins.allowAll.title": "모든 사이트 허용",
-  "settings.browser.origins.allowAll.description": "모든 사이트가 묻지 않고 허용됩니다. 사이트 규칙은 여전히 적용됩니다.",
+  "settings.browser.origins.allowAll.description":
+    "모든 사이트가 묻지 않고 허용됩니다. 사이트 규칙은 여전히 적용됩니다.",
   "settings.browser.origins.empty":
     "아직 사이트 규칙이 없습니다. 내 컴퓨터 밖의 모든 사이트는 에이전트가 읽거나 사용하거나 이동하기 전에 묻습니다.",
   "settings.browser.origins.add": "사이트 추가",
@@ -1426,7 +1425,8 @@ export const dict = {
   "task.backgroundAgents.openAll": "모든 백그라운드 에이전트 열기",
   "task.backgroundAgents.cancel": "중지",
   "task.backgroundAgents.continueInBackground": "백그라운드에서 계속",
-  "task.backgroundAgents.promoteFailed": "이 에이전트를 백그라운드에서 계속할 수 없습니다. 이미 완료되었을 수 있습니다.",
+  "task.backgroundAgents.promoteFailed":
+    "이 에이전트를 백그라운드에서 계속할 수 없습니다. 이미 완료되었을 수 있습니다.",
   "task.backgroundAgents.waiting": "백그라운드 에이전트에 입력이 필요합니다",
   "task.backgroundAgents.needsInput": "입력 필요",
   "task.backgroundAgents.clearFinished": "완료된 항목 지우기",

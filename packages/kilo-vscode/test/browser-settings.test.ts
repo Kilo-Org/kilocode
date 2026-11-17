@@ -139,7 +139,7 @@ describe("browser settings migration", () => {
       const written: unknown[] = []
       const result = await BrowserSettingsMigration.run({
         write: async (browser) => void written.push(browser),
-        state: { get: <T,>() => undefined as T | undefined, update: async (_key, value) => void marked.push(value) },
+        state: { get: <T>() => undefined as T | undefined, update: async (_key, value) => void marked.push(value) },
       })
       expect(result).toEqual({ migrated: true, wrote: ["backend", "headless"] })
       expect(written).toEqual([{ backend: "playwright", headless: false }])
@@ -154,7 +154,7 @@ describe("browser settings migration", () => {
     let writes = 0
     const result = await BrowserSettingsMigration.run({
       write: async () => void (writes += 1),
-      state: { get: <T,>() => true as T, update: async () => {} },
+      state: { get: <T>() => true as T, update: async () => {} },
     })
     expect(result.migrated).toBe(false)
     expect(writes).toBe(0)
@@ -171,7 +171,7 @@ describe("browser settings migration", () => {
         write: async () => {
           throw new Error("rpc unavailable")
         },
-        state: { get: <T,>() => undefined as T | undefined, update: async (_key, value) => void marked.push(value) },
+        state: { get: <T>() => undefined as T | undefined, update: async (_key, value) => void marked.push(value) },
       })
       expect(result).toMatchObject({ migrated: false, error: "rpc unavailable" })
       expect(cleared).toEqual([])
@@ -192,7 +192,9 @@ describe("site rules", () => {
   })
 
   test("adding a site writes every class it does not have, asking", () => {
-    const state = BrowserSettings.read({ permissions: [{ action: "browser", resource: "read:https://kilo.ai" }] })
+    const state = BrowserSettings.read({
+      permissions: [{ action: "browser", resource: "read:https://kilo.ai", effect: "allow" }],
+    })
     expect(
       BrowserSettings.addOrigin(state, "https://kilo.ai").map((rule) => `${rule.resource}=${rule.effect}`),
     ).toEqual(["read:https://kilo.ai=allow", "act:https://kilo.ai=ask", "navigate:https://kilo.ai=ask"])
@@ -201,9 +203,9 @@ describe("site rules", () => {
   test("removing a site drops every class of it and nothing else", () => {
     const state = BrowserSettings.read({
       permissions: [
-        { action: "browser", resource: "read:https://kilo.ai" },
-        { action: "browser", resource: "act:https://kilo.ai" },
-        { action: "browser", resource: "read:https://example.com" },
+        { action: "browser", resource: "read:https://kilo.ai", effect: "allow" },
+        { action: "browser", resource: "act:https://kilo.ai", effect: "ask" },
+        { action: "browser", resource: "read:https://example.com", effect: "allow" },
         { action: "shell", resource: "*" },
       ],
     })

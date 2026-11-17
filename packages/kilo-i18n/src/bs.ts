@@ -65,7 +65,8 @@ export const dict = {
   "marketplace.install.failed": "Instalacija nije uspjela",
   "marketplace.install.done": "Završeno",
   "marketplace.install.close": "Zatvori",
-  "marketplace.install.mcp.signIn.message": "{{name}} je instaliran, ali zahtijeva prijavu prije nego što se njegovi alati mogu koristiti.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} je instaliran, ali zahtijeva prijavu prije nego što se njegovi alati mogu koristiti.",
   "marketplace.install.mcp.signIn.button": "Prijava",
   "marketplace.install.mcp.signIn.waiting": "Čekanje na prijavu putem preglednika…",
   "marketplace.install.mcp.signIn.cancel": "Otkaži",
@@ -162,7 +163,8 @@ export const dict = {
   "browser.grants.title": "Dozvole preglednika za izvore",
   "browser.grants.none": "Još nema pravila za izvore",
   "browser.grants.all": "svi izvori dozvoljeni",
-  "browser.grants.editHint": "Uredite pravila u VS Code komandama preglednika ili Kilo konfiguraciji.",
+  "browser.grants.editHint":
+    "Uredite pravila u Kilo Code postavkama, na kartici Web alati, u odjeljku Dozvole za sajtove.",
   "browser.state.ready": "spremno",
   "browser.state.unavailable": "nedostupno",
   "browser.state.readyHint": "Kilo-ov Chromium profil, pokreće se pri prvom pozivu preglednika",

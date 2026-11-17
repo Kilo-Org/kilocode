@@ -912,7 +912,8 @@ export const dict = {
   "settings.browser.origins.act": "操作",
   "settings.browser.origins.navigate": "移動",
   "settings.browser.origins.allowAll.title": "すべてのサイトを許可",
-  "settings.browser.origins.allowAll.description": "すべてのサイトが確認なしで許可されます。サイトのルールは引き続き適用されます。",
+  "settings.browser.origins.allowAll.description":
+    "すべてのサイトが確認なしで許可されます。サイトのルールは引き続き適用されます。",
   "settings.browser.origins.empty":
     "サイトのルールはまだありません。このマシン以外のサイトは、エージェントが読み取り・操作・移動する前に確認します。",
   "settings.browser.origins.add": "サイトを追加",
@@ -1442,7 +1443,8 @@ export const dict = {
   "task.backgroundAgents.openAll": "すべてのバックグラウンドエージェントを開く",
   "task.backgroundAgents.cancel": "停止",
   "task.backgroundAgents.continueInBackground": "バックグラウンドで続行",
-  "task.backgroundAgents.promoteFailed": "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
+  "task.backgroundAgents.promoteFailed":
+    "このエージェントをバックグラウンドで続行できませんでした。すでに完了している可能性があります。",
   "task.backgroundAgents.waiting": "バックグラウンドエージェントが入力を待っています",
   "task.backgroundAgents.needsInput": "入力が必要",
   "task.backgroundAgents.clearFinished": "完了済みを消去",

@@ -63,7 +63,8 @@ export const dict = {
   "marketplace.install.failed": "Installatie mislukt",
   "marketplace.install.done": "Klaar",
   "marketplace.install.close": "Sluiten",
-  "marketplace.install.mcp.signIn.message": "{{name}} is geïnstalleerd, maar vereist een login voordat de tools gebruikt kunnen worden.",
+  "marketplace.install.mcp.signIn.message":
+    "{{name}} is geïnstalleerd, maar vereist een login voordat de tools gebruikt kunnen worden.",
   "marketplace.install.mcp.signIn.button": "Inloggen",
   "marketplace.install.mcp.signIn.waiting": "Wachten op inloggen via de browser…",
   "marketplace.install.mcp.signIn.cancel": "Annuleren",
@@ -160,7 +161,8 @@ export const dict = {
   "browser.grants.title": "Machtigingen voor browseroorsprongen",
   "browser.grants.none": "Nog geen oorsprongsregels",
   "browser.grants.all": "alle oorsprongen toegestaan",
-  "browser.grants.editHint": "Bewerk de regels in de VS Code-browseropdrachten of de Kilo-configuratie.",
+  "browser.grants.editHint":
+    "Bewerk de regels in de Kilo Code-instellingen, op het tabblad Webtools, onder Sitetoestemmingen.",
   "browser.state.ready": "gereed",
   "browser.state.unavailable": "niet beschikbaar",
   "browser.state.readyHint": "Een Chromium-profiel van Kilo, gestart bij de eerste browseroproep",

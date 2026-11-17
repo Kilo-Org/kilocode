@@ -78,7 +78,7 @@ function edgePaths(platform: NodeJS.Platform, home: string, env: Record<string, 
 }
 
 /** The system browser the Playwright backend prefers, when one is installed. */
-export function systemBrowser(input: Input): Target | undefined {
+export function systemBrowser(input: Omit<Input, "data">): Target | undefined {
   const platform = input.platform ?? process.platform
   const home = input.home ?? os.homedir()
   const env = input.env ?? process.env
