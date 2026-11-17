@@ -455,8 +455,9 @@ export namespace KiloSessionProcessor {
     // The AI SDK reports "other" when an OpenAI-compatible stream ends without a
     // finish_reason (truncated stream). With only reasoning emitted it is as
     // incomplete as "unknown", so it shares the bounded recovery budget (#13062).
-    const open =
-      input.finish === undefined || input.finish === "unknown" || (input.finish === "other" && input.reasoning)
+    const missing = input.finish === undefined || input.finish === "unknown"
+    const cut = input.finish === "other" && input.reasoning
+    const open = missing || cut
     if (!open) return false
     if (input.text || input.tool) return false
     // Reasoning without text or tools has no actionable output. Retry it through

@@ -320,55 +320,32 @@ describe("session processor incomplete response retry", () => {
     ),
   )
 
-  it.effect("retries reasoning-only unknown responses", () =>
-    provideTmpdirProject(
-      (dir) =>
-        Effect.gen(function* () {
-          const ctx = yield* setup(dir)
-          yield* ctx.test.reply(...reasoning())
-          yield* ctx.test.reply(...success())
-          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+  for (const reason of ["unknown", "other"] as const) {
+    it.effect(`retries reasoning-only responses finished as ${reason}`, () =>
+      provideTmpdirProject(
+        (dir) =>
+          Effect.gen(function* () {
+            const ctx = yield* setup(dir)
+            yield* ctx.test.reply(...reasoning(reason))
+            yield* ctx.test.reply(...success())
+            const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-          try {
-            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
-          } finally {
-            delay.mockRestore()
-          }
+            try {
+              expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+            } finally {
+              delay.mockRestore()
+            }
 
-          expect(yield* ctx.test.calls).toBe(2)
-          expect(ctx.handle.message.finish).toBe("stop")
-          const parts = yield* MessageV2.parts(ctx.msg.id)
-          expect(parts.some((part) => part.type === "reasoning")).toBe(false)
-          expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
-        }),
-      { git: true },
-    ),
-  )
-
-  it.effect("retries reasoning-only responses truncated without a finish reason", () =>
-    provideTmpdirProject(
-      (dir) =>
-        Effect.gen(function* () {
-          const ctx = yield* setup(dir)
-          yield* ctx.test.reply(...reasoning("other"))
-          yield* ctx.test.reply(...success())
-          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
-
-          try {
-            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
-          } finally {
-            delay.mockRestore()
-          }
-
-          expect(yield* ctx.test.calls).toBe(2)
-          expect(ctx.handle.message.finish).toBe("stop")
-          const parts = yield* MessageV2.parts(ctx.msg.id)
-          expect(parts.some((part) => part.type === "reasoning")).toBe(false)
-          expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
-        }),
-      { git: true },
-    ),
-  )
+            expect(yield* ctx.test.calls).toBe(2)
+            expect(ctx.handle.message.finish).toBe("stop")
+            const parts = yield* MessageV2.parts(ctx.msg.id)
+            expect(parts.some((part) => part.type === "reasoning")).toBe(false)
+            expect(parts.find((part) => part.type === "text")?.text).toBe("Recovered")
+          }),
+        { git: true },
+      ),
+    )
+  }
 
   it.effect("bounds reasoning-only unknown retries", () =>
     provideTmpdirProject(
