@@ -39,6 +39,7 @@ describe("createWorktreeOnDisk", () => {
     const value = await createWorktreeOnDisk(ctx, {
       baseBranch: "main",
       branchName: "feature",
+      requestId: "q-1",
       onError: (failure) => failures.push(failure),
     })
 
@@ -53,6 +54,10 @@ describe("createWorktreeOnDisk", () => {
       type: "agentManager.worktreeSetup",
       status: "error",
       errorCode: "no_commits",
+      requestId: "q-1",
+    })
+    expect(messages.find((message) => message.type === "agentManager.worktreeSetup" && message.status === "creating")).toMatchObject({
+      requestId: "q-1",
     })
     expect(logs.some((line) => line.includes("This repository has no commits yet."))).toBe(true)
   })

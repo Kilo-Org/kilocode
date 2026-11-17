@@ -69,7 +69,7 @@ export type ChatWorktree = {
   /** Moves a conversation into a new worktree, reporting each step. */
   continue: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>
   /** Creates a worktree, then opens the Agent Manager. */
-  create: (baseBranch?: string, branchName?: string) => Promise<void>
+  create: (baseBranch?: string, branchName?: string, requestId?: string) => Promise<void>
   /** Opens the Agent Manager worktree dialog. */
   advanced: () => Promise<void>
   /** The current branch of the workspace, for the New Worktree menu. */
@@ -712,7 +712,7 @@ export function routeWorktreeMessage(
     return true
   }
   if (message.type === "agentManager.createWorktree") {
-    void worktree?.create(message.baseBranch, message.branchName).catch((error: unknown) => {
+    void worktree?.create(message.baseBranch, message.branchName, message.requestId).catch((error: unknown) => {
       post({ type: "continueInWorktreeProgress", status: "error", error: getErrorMessage(error) })
     })
     return true

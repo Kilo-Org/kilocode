@@ -102,6 +102,25 @@ describe("worktree setup selection", () => {
     expect(mine.deps.setup().active).toBe(false)
   })
 
+  it("opens the dialog for a blocked quick create from another webview", () => {
+    const test = scene("local")
+    const opened: string[] = []
+
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "not a repository",
+        errorCode: "not_git_repo",
+        requestId: "q-2",
+      },
+      { ...test.deps, openBlocked: (id) => opened.push(id) },
+    )
+
+    expect(opened).toEqual(["p"])
+    expect(test.deps.setup().active).toBe(false)
+  })
+
   it("clears the quick create marker when the setup finishes normally", () => {
     const test = scene("local")
     const done: string[] = []

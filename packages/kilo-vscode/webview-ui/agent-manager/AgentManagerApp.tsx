@@ -1866,19 +1866,15 @@ const AgentManagerContent: Component = () => {
     dialog.show(() => <ShortcutsDialog title={t("agentManager.shortcuts.title")} categories={categories} />)
   }
   const loaded = () => worktreesLoaded() && sessionsLoaded()
+  const openBlocked = (projectId: string) => {
+    setSetup({ active: false, message: "" })
+    showNewWorktreeDialog(projectId)
+  }
   // A quick create reports a blocker on the setup message; its request ID keeps that answer tied to this create.
-  const quickCreate = createQuickCreate({
-    post: (message) => {
-      expandSidebar()
-      to(message)
-    },
-    blocked: (projectId) => {
-      setSetup({ active: false, message: "" })
-      showNewWorktreeDialog(projectId)
-    },
-  })
+  const quickCreate = createQuickCreate({ post: to, blocked: openBlocked })
   const createWorktreeNow = (baseBranch?: string, projectId = activeProjectId()) => {
     if (!loaded() || !projectId) return
+    expandSidebar()
     quickCreate.start(projectId, baseBranch)
   }
   const handleCreateWorktree = () => createWorktreeNow()
@@ -2087,6 +2083,7 @@ const AgentManagerContent: Component = () => {
           setSetup,
           creation,
           quick: quickCreate.quick(),
+          openBlocked,
           ensure: (pid) => registry.ensure(pid),
           active: () => registry.active(),
           currentProjectId,

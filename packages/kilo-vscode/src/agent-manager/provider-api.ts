@@ -188,11 +188,16 @@ function worktreeContext(p: ProviderApiHost, root: string): ContinueContext {
   }
 }
 
-export async function createFromSidebar(p: ProviderApiHost, baseBranch?: string, branchName?: string): Promise<void> {
+export async function createFromSidebar(
+  p: ProviderApiHost,
+  baseBranch?: string,
+  branchName?: string,
+  requestId?: string,
+): Promise<void> {
   p.openPanel()
   if (!p.panel || !(await p.waitForPanelReady(p.panel))) return
   await p.waitForStateReady("createFromSidebar")
-  await p.onCreateWorktree(baseBranch, branchName)
+  await p.onCreateWorktree(baseBranch, branchName, requestId)
 }
 
 export async function openAdvancedWorktree(p: ProviderApiHost): Promise<void> {

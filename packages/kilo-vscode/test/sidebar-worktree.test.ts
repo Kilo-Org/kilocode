@@ -67,13 +67,13 @@ describe("sidebar worktree host messages", () => {
 
     expect(
       routeWorktreeMessage(
-        { type: "agentManager.createWorktree", baseBranch: "main", branchName: "feature" },
+        { type: "agentManager.createWorktree", baseBranch: "main", branchName: "feature", requestId: "q-1" },
         worktree,
         post,
       ),
     ).toBe(true)
     await flush()
-    expect(createAction).toHaveBeenCalledWith("main", "feature")
+    expect(createAction).toHaveBeenCalledWith("main", "feature", "q-1")
 
     const failing = setup({
       create: async () => {

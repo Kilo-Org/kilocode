@@ -38,6 +38,8 @@ export function applySetupMessage(
     creation: { setup: (msg: AgentManagerWorktreeSetupMessage) => void }
     /** A quick create in flight, which has no dialog to explain a setup blocker. */
     quick?: QuickCreate
+    /** Open the dialog for a blocker reported by a quick create from another webview. */
+    openBlocked?: (projectId: string) => void
     ensure: (projectId: string) => ProjectStore
     active: () => ProjectStore
     currentProjectId: Accessor<string | undefined>
@@ -52,7 +54,7 @@ export function applySetupMessage(
     saveTabMemory: () => void
   },
 ) {
-  if (quickCreateBlocked(msg, deps.quick)) return
+  if (quickCreateBlocked(msg, deps.quick, deps.openBlocked, deps.currentProjectId())) return
   deps.creation.setup(msg)
   const store = msg.projectId ? deps.ensure(msg.projectId) : deps.active()
   const previous = deps.setup()
@@ -88,13 +90,28 @@ export function applySetupMessage(
 }
 
 /** True when a quick create hit a setup blocker; the dialog then replaces the transient overlay. */
-function quickCreateBlocked(msg: AgentManagerWorktreeSetupMessage, quick: QuickCreate | undefined): boolean {
+function quickCreateBlocked(
+  msg: AgentManagerWorktreeSetupMessage,
+  quick: QuickCreate | undefined,
+  openBlocked: ((projectId: string) => void) | undefined,
+  currentProjectId: string | undefined,
+): boolean {
+  const blocker = msg.status === "error" && (msg.errorCode === "not_git_repo" || msg.errorCode === "no_commits")
+  if (blocker) {
+    if (quick && msg.requestId === quick.requestId) {
+      quick.blocked(quick.project)
+      return true
+    }
+    // A quick create from another webview names a request but has no marker in this one.
+    const project = msg.projectId ?? currentProjectId
+    if (msg.requestId && openBlocked && project) {
+      openBlocked(project)
+      return true
+    }
+    return false
+  }
   if (!quick) return false
   const mine = msg.requestId === quick.requestId
-  if (mine && msg.status === "error" && (msg.errorCode === "not_git_repo" || msg.errorCode === "no_commits")) {
-    quick.blocked(quick.project)
-    return true
-  }
   // A terminal message for this request ends the marker. A ready message may come from the session
   // stage without the request ID, so its project is enough; an error never clears another request.
   if (mine && msg.status !== "creating") quick.done()

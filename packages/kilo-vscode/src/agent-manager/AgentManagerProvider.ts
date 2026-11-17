@@ -1176,8 +1176,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return continueInActiveProject(this.api(), sessionId, progress)
   }
 
-  public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
-    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName))
+  public createFromSidebar(baseBranch?: string, branchName?: string, requestId?: string): Promise<void> {
+    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName, requestId))
   }
 
   public openAdvancedWorktree(): Promise<void> {
