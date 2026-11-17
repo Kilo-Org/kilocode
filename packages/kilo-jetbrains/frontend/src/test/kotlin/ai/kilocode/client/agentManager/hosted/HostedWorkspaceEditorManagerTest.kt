@@ -33,6 +33,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 /**
  * The blank New Session panel hands its first prompt to [HostedWorkspaceEditorManager.createSession],
@@ -124,6 +125,11 @@ class HostedWorkspaceEditorManagerTest : BasePlatformTestCase() {
 
         assertTrue(error is IllegalStateException)
         assertTrue(rpc.starts.isEmpty())
+    }
+
+    fun `test disposing manager completes its workspace session scope`() {
+        edt { Disposer.dispose(manager) }
+        runBlocking { withTimeout(5_000) { manager.closed() } }
     }
 
     private fun <T> edt(block: () -> T): T {

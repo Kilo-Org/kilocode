@@ -9,14 +9,19 @@ import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.client.vfs.KiloVfsManager
+import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
+import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
+import ai.kilocode.client.session.subagent.SubagentSessionEditorPanel
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -118,6 +123,42 @@ internal fun openHostedWorkspace(project: Project, dto: HostedWorkspaceDto, focu
     service<HostedWorkspaceCache>().put(dto, HostedWorkspaceTitle.text(dto))
     project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
     project.service<KiloVfsManager>().open(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto), focus)
+}
+
+/** Disposes every workspace-owned UI/controller before reconnecting its hosted streams. */
+@RequiresEdt
+internal fun reloadHostedWorkspace(project: Project, dto: HostedWorkspaceDto) {
+    var children = emptyList<Map<String, String>>()
+    project.service<KiloHostedService>().reload(dto.ref, close = {
+        val vfs = project.service<KiloVfsManager>()
+        val params = hostedWorkspaceParams(dto)
+        val files = FileEditorManager.getInstance(project)
+        val file = KiloVirtualFileSystem.getInstance().cached(KiloPath(HostedWorkspaceEditorKind.ID, params))
+        val panels = file?.let { files.getEditors(it) }
+            ?.mapNotNull { it.component as? HostedWorkspaceEditorPanel }
+            .orEmpty()
+        val subagents = files.openFiles.mapNotNull { child ->
+            val kilo = child as? KiloVirtualFile ?: return@mapNotNull null
+            if (kilo.path.kind != SubagentSessionEditorKind.ID) return@mapNotNull null
+            val directory = kilo.path.params["directory"]
+            if (directory != dto.ref.key) return@mapNotNull null
+            val childPanels = files.getEditors(child).mapNotNull { it.component as? SubagentSessionEditorPanel }
+            kilo.path.params to childPanels
+        }
+        children = subagents.map { it.first }
+        vfs.close(HostedWorkspaceEditorKind.ID, params)
+        subagents.forEach { (child, _) -> vfs.close(SubagentSessionEditorKind.ID, child) }
+        suspend {
+            panels.forEach { it.closed() }
+            subagents.flatMap { it.second }.forEach { it.closed() }
+        }
+    }) {
+        if (project.isDisposed) return@reload
+        openHostedWorkspace(project, dto)
+        val vfs = project.service<KiloVfsManager>()
+        // Child tabs are restored only after their old controller scopes have fully terminated.
+        children.forEach { vfs.open(SubagentSessionEditorKind.ID, it, focus = false) }
+    }
 }
 
 internal fun hostedWorkspaceRoot(project: Project): ai.kilocode.client.app.Workspace =
