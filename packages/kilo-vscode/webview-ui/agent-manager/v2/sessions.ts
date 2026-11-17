@@ -2,7 +2,7 @@
 // directory: a worktree session in the store of the worktree path, a local session in the store of the project root.
 // The sidebar, the tabs and the history read the root sessions of the directories whose stores are shown.
 import type { SessionInfo } from "@opencode/client"
-import { createMemo, createSignal } from "solid-js"
+import { createEffect, createMemo, createSignal, untrack } from "solid-js"
 import type { V2 } from "../../src/v2/scope"
 import { activityOf, sessionActivity, type Activity, type Outcome } from "./activity"
 import { key, type PanelData } from "./panel-data"
@@ -16,7 +16,26 @@ export function createSessions(input: {
 }) {
   const [current, setCurrent] = createSignal<string>()
   const connected = () => input.panel.connection.status() === "connected"
-  const stores = createMemo(() => input.directories().map((directory) => input.panel.store(directory)))
+  const project = createMemo(() => input.directories().map((directory) => input.panel.store(directory)))
+
+  // Sessions loaded outside the tab strip, such as a subagent in the inspector. One can move itself to a directory the
+  // project does not track (the session_move tool); its later events reach only that directory's store, so the store
+  // joins the lookup. Every store that loaded the session applies the move, so a project store knows the destination.
+  const [watched, setWatched] = createSignal<ReadonlySet<string>>(new Set())
+  const followed = createMemo<readonly string[]>((previous) => {
+    const known = new Set(project().map((item) => item.directory))
+    const next = new Set<string>()
+    for (const id of watched())
+      for (const item of project()) {
+        const directory = item.data.session.get(id)?.location.directory
+        if (directory && !known.has(key(directory))) next.add(key(directory))
+      }
+    const result = [...next].toSorted()
+    return result.length === previous.length && result.every((item, index) => item === previous[index])
+      ? previous
+      : result
+  }, [])
+  const stores = createMemo(() => [...project(), ...followed().map((directory) => input.panel.store(directory))])
 
   // A store can also load a session of another directory, when an event about it reaches that store. The session
   // belongs to the store of its own directory.
@@ -57,10 +76,31 @@ export function createSessions(input: {
     return existing ?? stores()[0]
   }
 
+  // A followed directory is shown and loaded, then the watched sessions that moved there read from its store. It
+  // stays out of the session list below: its other sessions do not belong to this project.
+  const loaded = new Set<string>()
+  createEffect(() => {
+    const extra = followed()
+    if (extra.length === 0) return
+    untrack(() => input.panel.show(extra))
+    for (const id of watched()) {
+      const item = owners().get(id)
+      if (!item || !extra.includes(item.directory) || item.data.session.get(id)) continue
+      const mark = `${item.directory}\n${id}`
+      if (loaded.has(mark)) continue
+      loaded.add(mark)
+      untrack(() => {
+        void Promise.all([item.data.session.sync(id), item.data.session.message.sync(id)]).catch(() =>
+          loaded.delete(mark),
+        )
+      })
+    }
+  })
+
   // One entry per session: the copy of its own store, else the first store that has it.
   const sessions = createMemo(() => {
     const result = new Map<string, SessionInfo>()
-    for (const item of stores())
+    for (const item of project())
       for (const info of item.data.session.list()) {
         if (info.parentID) continue
         if (!result.has(info.id) || owns(item, info)) result.set(info.id, info)
@@ -99,6 +139,7 @@ export function createSessions(input: {
     },
     /** Loads a session the user did not open in a tab, for example a subagent in the inspector. */
     sync(sessionID: string) {
+      setWatched((previous) => new Set([...previous, sessionID]))
       const item = scope(sessionID)
       if (!item) return Promise.resolve()
       return Promise.all([item.data.session.sync(sessionID), item.data.session.message.sync(sessionID)]).then(
@@ -108,7 +149,11 @@ export function createSessions(input: {
     /** Drops the loaded session and its messages when the inspector no longer shows it. */
     release(sessionID: string) {
       scope(sessionID)?.data.session.message.evict(sessionID)
+      setWatched((previous) => new Set([...previous].filter((id) => id !== sessionID)))
+      for (const mark of [...loaded]) if (mark.endsWith(`\n${sessionID}`)) loaded.delete(mark)
     },
+    /** Directories outside the project that a watched session moved to; their stores must stay alive. */
+    followed,
     interrupt(sessionID: string) {
       const item = scope(sessionID)
       if (!item) return Promise.resolve()

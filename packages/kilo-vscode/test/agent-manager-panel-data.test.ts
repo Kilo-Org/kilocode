@@ -349,6 +349,44 @@ describe("createPanelData", () => {
     })
   })
 
+  // A subagent can move itself (the session_move tool) to a directory the project does not track. Its later events go
+  // only to that directory's store, so the inspector must read it from there instead of the store whose events stopped.
+  test("follows a watched subagent that moves to a directory outside the project", async () => {
+    const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
+    await createRoot(async (dispose) => {
+      const panel = createPanelData({ post: () => {}, api })
+      const layer = createSessions({ panel, directories: () => [ROOT, WORKTREE], directoryOf: () => ROOT })
+      await until(() => panel.connection.status() === "connected" && streams.size > 0)
+      emit(created("ses_sub", ROOT))
+      await until(() => !!panel.store(ROOT).data.session.get("ses_sub"))
+      void layer.sync("ses_sub")
+      expect(layer.scope("ses_sub")).toBe(panel.store(ROOT))
+
+      sessions.set("ses_sub", OTHER)
+      emit({
+        id: "evt_ses_sub_moved",
+        created: Date.now(),
+        type: "session.moved",
+        durable: { aggregateID: "ses_sub", seq: 2, version: 1 },
+        location: { directory: OTHER },
+        data: { sessionID: "ses_sub", projectID: "prj_1", subpath: "", location: { directory: OTHER } },
+      })
+
+      await until(() => !!panel.find(OTHER)?.data.session.get("ses_sub"))
+      expect(layer.followed()).toEqual([OTHER])
+      expect(layer.scope("ses_sub")).toBe(panel.find(OTHER))
+      // The followed directory's own sessions stay out of the project's session list.
+      emit(created("ses_foreign", OTHER))
+      await until(() => !!panel.find(OTHER)?.data.session.get("ses_foreign"))
+      expect(layer.sessions().map((item) => item.id)).not.toContain("ses_foreign")
+
+      // Closing the inspector tab stops following the directory.
+      layer.release("ses_sub")
+      expect(layer.followed()).toEqual([])
+      dispose()
+    })
+  })
+
   test("forwards shift-click so the host opens the system browser", async () => {
     const api = OpenCode.make({ baseUrl: `http://127.0.0.1:${server.port}` })
     await createRoot(async (dispose) => {

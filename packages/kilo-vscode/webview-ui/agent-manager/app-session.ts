@@ -64,7 +64,7 @@ export function createAppSession(opts: {
     ),
   )
 
-  createEffect(() => panel.retain(opts.directories.retained()))
+  createEffect(() => panel.retain([...opts.directories.retained(), ...sessions.followed()]))
 
   // A restored worktree folder loads again; its store failed while the folder was gone.
   reloadRestoredDirectories(panel, opts.directories)
