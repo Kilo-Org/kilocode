@@ -16,7 +16,7 @@ This page covers product telemetry shared with Kilo. [OpenTelemetry export](#opt
 | Standalone CLI | `KILO_TELEMETRY_LEVEL=off`, or `experimental.openTelemetry: false` in global Kilo config | The environment variable overrides global config. |
 | VS Code | VS Code's **Telemetry: Telemetry Level** setting: any level other than **all** | VS Code's preference overrides the CLI controls for its managed Kilo backend. |
 | Kilo Desktop | **Settings > General > Privacy > Share usage analytics and crash reports** | Desktop's preference overrides the CLI controls for its embedded Kilo service. |
-| JetBrains | Not available yet; see [JetBrains](#jetbrains) | Product telemetry is currently always on in the plugin. |
+| JetBrains | Not available; see [JetBrains](#jetbrains) | Product telemetry is currently always on in the plugin. |
 
 ## VS Code
 
@@ -88,7 +88,7 @@ See [Desktop privacy settings](/docs/desktop/settings/general#privacy) for the s
 ## JetBrains
 
 {% callout type="note" %}
-Product telemetry is currently always on in the JetBrains plugin. The CLI settings above and the IDE's data-sharing preferences do not turn it off. We are fixing this, and an opt-out is expected in a plugin update within the next few days.
+Product telemetry is currently always on in the JetBrains plugin. The CLI settings above and the IDE's data-sharing preferences do not turn it off.
 {% /callout %}
 
 ## Mobile
