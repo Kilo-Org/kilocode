@@ -33,6 +33,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { homedir, tmpdir } from "node:os"
 import { delimiter, join, resolve } from "node:path"
 import { spawn } from "node:child_process"
+import { editorSpawn } from "./editor-spawn"
 
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
@@ -422,18 +423,9 @@ async function launch() {
     return
   }
 
-  // Do not use a shell here: on Windows `shell: true` joins the arguments into
-  // one unquoted command line, which breaks whenever the VS Code path or the
-  // workspace path contains spaces (e.g. "Microsoft VS Code", "My Projects").
-  // `windowsHide` is intentionally omitted: it maps to SW_HIDE in STARTUPINFO and
-  // would hide VS Code's own window. `app` is a GUI executable, so no console
-  // window is created anyway.
-  const child = spawn(app, args, {
-    cwd: workspace,
-    detached: true,
-    env,
-    stdio: "ignore",
-  })
+  // Argument arrays keep paths with spaces intact; see editorSpawn for the rationale.
+  const editor = editorSpawn(app, args, workspace, env)
+  const child = spawn(editor.command, editor.args, editor.options)
   child.unref()
 
   console.log(`[launch] VS Code launched (pid ${child.pid})`)
