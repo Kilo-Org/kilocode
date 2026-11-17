@@ -10,7 +10,7 @@ import { Paths } from "./paths"
 import { Registry } from "./registry"
 import { create, type Extension, type Hub } from "./hub"
 import { serve } from "./socket"
-import { ids } from "./install"
+import { allowlist, ids } from "./install"
 import * as pair from "./pair"
 
 const log = Log.create({ service: "browser.loopback" })
@@ -102,6 +102,8 @@ export type Run = {
   host?: string
   version?: string
   idleMs?: number
+  // How long a minted pairing token stays redeemable; tests shorten it.
+  pairingTtlMs?: number
 }
 
 export type Running = {
@@ -117,8 +119,11 @@ export async function run(input: Run = {}): Promise<Running> {
   const host = input.host ?? "127.0.0.1"
   const version = input.version ?? OPENCODE_VERSION
   const idleMs = input.idleMs ?? IdleExit
+  const ttl = input.pairingTtlMs ?? pair.PairingTtl
   const key = await pair.load()
-  const allowed = ids()
+  // Same source as native mode: the persisted allowlist, which `install-host` writes
+  // and a browser started from its GUI session needs, then the environment.
+  const allowed = (await allowlist()) ?? ids()
   // When nothing is attached or connected, the window is measured from the last
   // activity, not from process start.
   const activity = { at: Date.now() }
@@ -126,9 +131,32 @@ export async function run(input: Run = {}): Promise<Running> {
     activity.at = Date.now()
   }
 
+  // Pairing tokens minted for this hub. A CLI asks for one over the per-user socket
+  // (0700, same user only) and the extension redeems it once for the key here, so the
+  // durable key never appears in the opener's argv.
+  const tokens = new Map<string, number>()
+  function mint() {
+    const now = Date.now()
+    for (const [value, expires] of tokens) if (expires <= now) tokens.delete(value)
+    const token = pair.nonce(pair.TokenBytes)
+    tokens.set(token, now + ttl)
+    return token
+  }
+  function redeem(token: string) {
+    const expires = tokens.get(token)
+    if (expires === undefined) return false
+    tokens.delete(token)
+    return expires > Date.now()
+  }
+
   const hub: Hub = create({
     mode: "loopback",
     version,
+    local(method) {
+      if (method !== "pairing.url") return undefined
+      touch()
+      return { url: pair.url({ port: entry.port ?? port, hubId: hub.id, token: mint() }) }
+    },
     onChange(info) {
       touch()
       void Registry.write({
@@ -146,6 +174,10 @@ export async function run(input: Run = {}): Promise<Running> {
     // upgrade socket and the handshake timeout covers the pre-auth window.
     const url = requestUrl(request, host)
     if (!url || url.pathname !== pair.PairingPath) {
+      if (url?.pathname === pair.PairingKeyPath) {
+        exchange(request, response, url)
+        return
+      }
       response.writeHead(404, { "content-type": "text/plain; charset=utf-8" })
       response.end("not found")
       return
@@ -153,6 +185,33 @@ export async function run(input: Run = {}): Promise<Running> {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" })
     response.end(page)
   })
+
+  // The extension's only new step: hand back the fragment token and receive the key.
+  // The origin gate is the same one the WebSocket upgrade uses, so a web page that
+  // reaches 127.0.0.1 cannot redeem a token it guessed or minted for itself.
+  function exchange(request: http.IncomingMessage, response: http.ServerResponse, url: URL) {
+    if (!trusted({ origin: request.headers.origin, host: request.headers.host, allowed })) {
+      log.warn("refusing a pairing key exchange", { origin: request.headers.origin, host: request.headers.host })
+      response.writeHead(403, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" })
+      response.end("forbidden")
+      return
+    }
+    const token = url.searchParams.get("t")
+    if (token === null || !redeem(token)) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" })
+      response.end("not found")
+      return
+    }
+    const body: pair.KeyExchange = { v: 1, key, ws: pair.ws(entry.port ?? port) }
+    response.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      // The extension reads this cross-origin; Chrome sends its own origin and only
+      // exposes the body when the response allows it.
+      "access-control-allow-origin": request.headers.origin ?? "null",
+    })
+    response.end(JSON.stringify(body))
+  }
   // Without this, an accept-level error (EMFILE, for example) on a long-lived hub
   // reaches no listener and becomes an uncaught exception.
   server.on("error", (error) => log.error("loopback server error", { error }))

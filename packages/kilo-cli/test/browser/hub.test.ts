@@ -214,6 +214,66 @@ describe("hub multiplexing", () => {
     expect(answer.message.error?.code).toBe(proto.ErrorCodes.browser_unavailable)
   })
 
+  test("refuses an extension whose protocol does not overlap ours", () => {
+    const hub = create({ mode: "native", version: "test" })
+    const ext = link()
+    const sink = hub.attach(ext.link.send, ext.link.close)!
+    const caller = controller()
+    hub.join(caller.send, caller.close)
+
+    sink.hello({ ...info, protocol: [2] })
+
+    // D14: a version we cannot speak is refused instead of being routed as v1.
+    expect(ext.closed).toStrictEqual(["the extension speaks an unsupported protocol"])
+    expect(hub.extension()).toBeUndefined()
+    expect(hub.attached()).toBe(false)
+    // The CLI is told the browser is unavailable rather than being served a foreign
+    // contract, and the slot is free for a compatible build.
+    expect(caller.frames.at(-1)).toStrictEqual({ type: "hub.waiting" })
+    const next = link()
+    const compatible = hub.attach(next.link.send, next.link.close)!
+    compatible.hello(info)
+    expect(hub.extension()?.protocol).toStrictEqual([1])
+  })
+
+  test("answers a hub-local request without an extension attached", () => {
+    const hub = create({
+      mode: "loopback",
+      version: "test",
+      local: (method) => (method === "pairing.url" ? { url: "http://127.0.0.1:1/pair" } : undefined),
+    })
+    const caller = controller()
+    const controller$ = hub.join(caller.send, caller.close)
+    expect(caller.frames).toStrictEqual([{ type: "hub.waiting" }])
+
+    controller$.frame({ type: "rpc", message: { jsonrpc: "2.0", id: 21, method: "pairing.url", params: {} } })
+
+    expect(caller.frames.at(-1)).toStrictEqual({
+      type: "rpc",
+      message: { jsonrpc: "2.0", id: 21, result: { url: "http://127.0.0.1:1/pair" } },
+    })
+  })
+
+  test("forwards a request the hub does not answer itself", () => {
+    const hub = create({
+      mode: "loopback",
+      version: "test",
+      local: (method) => (method === "pairing.url" ? { url: "http://127.0.0.1:1/pair" } : undefined),
+    })
+    const ext = link()
+    const sink = hub.attach(ext.link.send, ext.link.close)!
+    sink.hello(info)
+    const caller = controller()
+    const controller$ = hub.join(caller.send, caller.close)
+
+    controller$.frame(call(22))
+
+    const routed = ext.frames.filter((frame): frame is proto.Routed => frame.type === "rpc")
+    expect(routed.map((frame) => (proto.isRequest(frame.message) ? frame.message.method : undefined))).toStrictEqual([
+      "tools.list",
+    ])
+  })
+
   test("close() closes every controller and the extension, then refuses new work", () => {
     const hub = create({ mode: "native", version: "test" })
     const ext = link()

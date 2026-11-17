@@ -27,6 +27,9 @@ export type Options = {
   mode: "native" | "loopback"
   version: string
   onChange?(info: proto.ExtensionInfo | null): void
+  // Answers a request on the hub itself instead of forwarding it to the extension.
+  // Returning undefined forwards it; a value is sent back to that controller only.
+  local?(method: string, params: unknown): unknown | undefined
 }
 
 export type Hub = {
@@ -83,6 +86,15 @@ export function create(input: Options): Hub {
       id: controllerId,
       frame(frame) {
         if (!controllers.has(controllerId)) return
+        // A hub-local request (the pairing URL) never reaches the extension: the hub
+        // answers it even while no browser is attached.
+        if (proto.isRequest(frame.message)) {
+          const answer = input.local?.(frame.message.method, frame.message.params)
+          if (answer !== undefined) {
+            send({ type: "rpc", message: { jsonrpc: "2.0", id: frame.message.id, result: answer } })
+            return
+          }
+        }
         if (slot.kind !== "ready") {
           // Fail requests fast instead of letting the caller wait for a timeout.
           if (proto.isRequest(frame.message)) {
@@ -139,6 +151,13 @@ export function create(input: Options): Hub {
     return {
       hello(info) {
         if (slot.kind !== "pending") return
+        // D14: the CLI speaks this protocol or the one before it. A version with no
+        // overlap cannot be routed, so the transport is refused and the CLIs are told
+        // the browser is unavailable rather than being served a foreign contract.
+        if (!info.protocol.includes(proto.Protocol)) {
+          vacate("the extension speaks an unsupported protocol")
+          return
+        }
         slot = { kind: "ready", info, link }
         // Controllers that joined while the transport was still handshaking never
         // saw controller.connected, so announce them before the ready broadcast.

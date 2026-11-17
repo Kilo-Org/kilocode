@@ -93,9 +93,19 @@ describe("native host manifests", () => {
   test("writes a shim that forwards the browser arguments", () => {
     const posix = script({ platform: "darwin", command: ["/opt/my kilo/kilo"] })
     expect(posix.startsWith("#!/bin/sh")).toBe(true)
-    expect(posix).toContain('exec "/opt/my kilo/kilo" browser hub --native "$@"')
+    expect(posix).toContain(`exec '/opt/my kilo/kilo' browser hub --native "$@"`)
     const win = script({ platform: "win32", command: ["C:\\kilo\\kilo.exe"] })
     expect(win).toContain('"C:\\kilo\\kilo.exe" browser hub --native %*')
+  })
+
+  test("quotes a path the shell cannot expand", () => {
+    // A chosen install path may contain shell syntax; every part must stay literal.
+    const directory = "/opt/don't $expand `echo no`/bin"
+    const posix = script({ platform: "darwin", command: [directory, "hub"] })
+    expect(posix).toContain(`exec '/opt/don'\\''t $expand \`echo no\`/bin' 'hub' browser hub --native "$@"`)
+    // A batch file expands `%NAME%` even inside quotes, so percent signs are doubled.
+    const win = script({ platform: "win32", command: ["C:\\100%\\kilo.exe"] })
+    expect(win).toContain('"C:\\100%%\\kilo.exe" browser hub --native %*')
   })
 })
 
@@ -125,7 +135,7 @@ describe("native host install", () => {
     expect(second.shim).toBe(first.shim)
 
     const shim = await fs.readFile(first.shim, "utf8")
-    expect(shim).toContain('exec "/bin/kilo" browser hub --native "$@"')
+    expect(shim).toContain(`exec '/bin/kilo' browser hub --native "$@"`)
     const stat = await fs.stat(first.shim)
     expect(stat.isFile()).toBe(true)
     // Windows has no execute bits; the shim is a .cmd file there.
@@ -157,6 +167,38 @@ describe("native host install", () => {
       `chrome-extension://${StoreExtensionId}/`,
       `chrome-extension://${extra}/`,
     ])
+    await fs.rm(root, { recursive: true, force: true })
+  })
+
+  test("keeps the pairing-key directory private on a fresh install", async () => {
+    const root = await tmp()
+    const data = path.join(root, "data")
+    await install({
+      platform: "darwin",
+      home: path.join(root, "home"),
+      config: path.join(root, "home", ".config"),
+      data,
+      command: ["/bin/kilo"],
+    })
+    // The same directory holds pairing.json, so installing before the first hub
+    // start must not create it world-traversable.
+    if (process.platform !== "win32") expect((await fs.stat(data)).mode & 0o777).toBe(0o700)
+    await fs.rm(root, { recursive: true, force: true })
+  })
+
+  test("tightens, never widens, an existing data directory", async () => {
+    const root = await tmp()
+    const data = path.join(root, "data")
+    await fs.mkdir(data, { recursive: true, mode: 0o700 })
+    if (process.platform !== "win32") await fs.chmod(data, 0o755)
+    await install({
+      platform: "darwin",
+      home: path.join(root, "home"),
+      config: path.join(root, "home", ".config"),
+      data,
+      command: ["/bin/kilo"],
+    })
+    if (process.platform !== "win32") expect((await fs.stat(data)).mode & 0o777).toBe(0o700)
     await fs.rm(root, { recursive: true, force: true })
   })
 

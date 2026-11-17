@@ -10,9 +10,15 @@ import { Paths } from "./paths"
 const log = Log.create({ service: "browser.pair" })
 
 export const PairingPath = "/__kilo_browser_pair"
+// The extension redeems the fragment's token here, once, for the durable key.
+export const PairingKeyPath = "/__kilo_browser_pair/key"
 export const SocketPath = "/__kilo_browser"
 export const KeyBytes = 32
 export const NonceBytes = 16
+// Pairing tokens are single use and short lived: they ride the opener's argv, which
+// every local process can read, so one is worth nothing once redeemed or expired.
+export const TokenBytes = 16
+export const PairingTtl = 60_000
 
 const File = z.object({ v: z.literal(1), key: z.string() })
 
@@ -111,10 +117,18 @@ export function ws(port: number) {
   return `ws://127.0.0.1:${port}${SocketPath}`
 }
 
-export function url(input: { port: number; hubId: string; key: string }) {
-  const params = new URLSearchParams({ v: "1", hub: input.hubId, k: input.key, ws: ws(input.port) })
+// The pairing page URL the CLI hands to the system opener. It carries a single-use
+// token, never the durable key: argv is world-readable on Linux, and a leaked key
+// would let another local user forge the extension handshake for good.
+export function url(input: { port: number; hubId: string; token: string }) {
+  const params = new URLSearchParams({ v: "1", hub: input.hubId, t: input.token, ws: ws(input.port) })
   return `http://127.0.0.1:${input.port}${PairingPath}#${params.toString()}`
 }
+
+// What the extension receives in exchange for the token. `ws` saves it from guessing
+// the port again, and the key is the durable secret it will HMAC with.
+export const KeyExchange = z.object({ v: z.literal(1), key: z.string(), ws: z.string() })
+export type KeyExchange = z.infer<typeof KeyExchange>
 
 export type Exec = (cmd: string[]) => Promise<number>
 

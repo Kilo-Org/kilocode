@@ -204,8 +204,13 @@ export function create(input: Input = {}): Client {
       // start attempt again.
       lifecycle.tried = false
       backoff.level = 0
+      // The extension transport is gone, so a request already routed to it can only be
+      // answered by the instance that received it. Fail those now with effectsUncertain
+      // rather than leave every caller waiting out RequestTimeout; on the first attach
+      // the map is empty, so this is a no-op.
+      abort(active, "the extension went away")
       set({ kind: "waiting", hub: active.hub })
-      void maybePair(active.hub)
+      void maybePair(active.hub, active)
       return
     }
     if (envelope.data.type === "hub.ready") {
@@ -301,16 +306,17 @@ export function create(input: Input = {}): Client {
   }
 
   // A loopback hub that has never completed a handshake cannot be paired on its own:
-  // the key only travels in the URL fragment of the pairing page. Open that page
-  // through the injectable opener, at most once per hub process.
-  async function maybePair(entry: Registry.Entry) {
+  // the CLI asks the hub for a pairing URL over this socket, and the URL carries a
+  // single-use token instead of the durable key, because the opener's argv is visible
+  // to every local process. Open that page at most once per hub process.
+  async function maybePair(entry: Registry.Entry, active: Link) {
     if (entry.mode !== "loopback" || entry.paired) return
     if (pairing.has(entry.hubId)) return
     pairing.add(entry.hubId)
     try {
-      const key = await pair.load()
+      const answer = proto.HubRequests["pairing.url"].result.parse(await rpc(active, "pairing.url", {}))
       const port = entry.port ?? input.port ?? proto.DefaultPort
-      await pair.open(pair.url({ port, hubId: entry.hubId, key }), { opener: input.opener })
+      await pair.open(answer.url, { opener: input.opener })
       log.info("opened the browser pairing page", { hubId: entry.hubId, port })
     } catch (error) {
       log.warn("cannot open the browser pairing page", { error, hubId: entry.hubId })
@@ -323,7 +329,16 @@ export function create(input: Input = {}): Client {
     if (lifecycle.tried) return
     lifecycle.tried = true
     if (input.start) {
-      input.start()
+      // A host-provided starter can throw synchronously (a missing executable, a
+      // host that refuses to spawn). Keep it retryable: the flag goes back, and the
+      // connect() that called this schedules the next attempt, which runs the hook
+      // again instead of polling an empty registry forever.
+      try {
+        input.start()
+      } catch (error) {
+        lifecycle.tried = false
+        throw error
+      }
       return
     }
     // Same shape as the daemon: a detached process with no inherited stdio, and
@@ -424,8 +439,9 @@ export function create(input: Input = {}): Client {
     }
   }
 
-  function rpc(method: string, params: unknown, options?: { timeout?: number }) {
-    const active = link
+  // `active` is passed rather than read from `link`: the pairing ask runs from the
+  // frame reader, and a socket that was replaced meanwhile must not receive it.
+  function rpc(active: Link | undefined, method: string, params: unknown, options?: { timeout?: number }) {
     if (!active) {
       return Promise.reject(
         new HubError({
@@ -486,7 +502,7 @@ export function create(input: Input = {}): Client {
       return deferred.promise
     },
     async call(method, params, options) {
-      const value = await rpc(method, params, options)
+      const value = await rpc(link, method, params, options)
       // The schema above validated this exact value, so the boundary cast is sound.
       return proto.Requests[method].result.parse(value) as proto.Result<typeof method>
     },

@@ -82,14 +82,17 @@ describe("pairing", () => {
     await fs.rm(at.root, { recursive: true, force: true })
   })
 
-  test("builds the pairing URL the extension watches for", () => {
-    const target = new URL(pair.url({ port: 47917, hubId: "6f1c2f7e-0d3f-4b1f-8a54-9d0e7a1c2b3d", key }))
+  test("builds the pairing URL the extension watches for, without the key", () => {
+    const token = pair.nonce(pair.TokenBytes)
+    const target = new URL(pair.url({ port: 47917, hubId: "6f1c2f7e-0d3f-4b1f-8a54-9d0e7a1c2b3d", token }))
     expect(target.host).toBe("127.0.0.1:47917")
     expect(target.pathname).toBe(pair.PairingPath)
     const fragment = new URLSearchParams(target.hash.slice(1))
     expect(fragment.get("v")).toBe("1")
     expect(fragment.get("hub")).toBe("6f1c2f7e-0d3f-4b1f-8a54-9d0e7a1c2b3d")
-    expect(fragment.get("k")).toBe(key)
+    // The durable key must never ride the opener's argv; only a single-use token.
+    expect(fragment.get("t")).toBe(token)
+    expect(fragment.get("k")).toBeNull()
     expect(fragment.get("ws")).toBe("ws://127.0.0.1:47917" + pair.SocketPath)
   })
 

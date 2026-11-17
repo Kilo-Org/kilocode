@@ -5,19 +5,18 @@ import fs from "fs/promises"
 import os from "os"
 import path from "path"
 import { randomUUID } from "node:crypto"
-import { create as createClient, type Client, type State } from "../../src/browser/client"
-import { create as createHub } from "../../src/browser/hub"
+import { HubError, create as createClient, type Client, type State } from "../../src/browser/client"
+import { create as createHub, type Hub } from "../../src/browser/hub"
+import * as pair from "../../src/browser/pair"
 import * as proto from "../../src/browser/protocol"
 import { Registry } from "../../src/browser/registry"
 import { serve } from "../../src/browser/socket"
 import { until as eventually } from "./fixture"
 
 const cleanups: (() => Promise<void> | void)[] = []
-const restore: (() => void)[] = []
 
 afterEach(async () => {
   for (const item of cleanups.splice(0).reverse()) await item()
-  for (const undo of restore.splice(0)) undo()
 })
 
 const info: proto.ExtensionInfo = {
@@ -42,14 +41,6 @@ async function tmp() {
   const base = process.platform === "win32" ? os.tmpdir() : "/tmp"
   const root = await fs.mkdtemp(path.join(base, "kilo-client-"))
   cleanups.push(() => fs.rm(root, { recursive: true, force: true }))
-  // The client reads the pairing key to build the page URL, so keep it out of the
-  // real data directory.
-  const before = process.env.KILO_BROWSER_DATA_DIR
-  process.env.KILO_BROWSER_DATA_DIR = path.join(root, "data")
-  restore.push(() => {
-    if (before === undefined) delete process.env.KILO_BROWSER_DATA_DIR
-    else process.env.KILO_BROWSER_DATA_DIR = before
-  })
   const dir = path.join(root, "run")
   await fs.mkdir(dir, { recursive: true })
   return { root, dir, hubs: path.join(dir, "hubs") }
@@ -60,7 +51,14 @@ function socketPath(root: string) {
 }
 
 async function host(input: { root: string; hubs: string; paired?: boolean }) {
-  const hub = createHub({ mode: "loopback", version: "test" })
+  // The pairing ask is answered by the hub over this socket, exactly as loopback.ts
+  // wires it; the URL carries a single-use token, never the key.
+  const hub: Hub = createHub({
+    mode: "loopback",
+    version: "test",
+    local: (method) =>
+      method === "pairing.url" ? { url: pair.url({ port: 47917, hubId: hub.id, token: "test-token" }) } : undefined,
+  })
   // The controller ids the hub assigns, in connection order, so a test can route an
   // extension frame to a specific CLI.
   const controllers: string[] = []
@@ -131,7 +129,11 @@ describe("browser client", () => {
     const page = new URL(await opened.promise)
     expect(page.host).toBe("127.0.0.1:47917")
     expect(page.pathname).toBe("/__kilo_browser_pair")
-    expect(new URLSearchParams(page.hash.slice(1)).get("k")).toBeDefined()
+    // The opener's argv is world-readable on Linux, so the URL the CLI hands it
+    // carries a single-use token and never the durable pairing key.
+    const fragment = new URLSearchParams(page.hash.slice(1))
+    expect(fragment.get("t")).toBe("test-token")
+    expect(fragment.get("k")).toBeNull()
 
     // An extension that attaches and drops makes the hub report waiting again; the
     // page must not be reopened for the same hub start. The short wait is the only
@@ -181,6 +183,40 @@ describe("browser client", () => {
     expect(target.state().kind).toBe("ready")
   })
 
+  test("fails an in-flight request when the extension goes away", async () => {
+    const at = await tmp()
+    const { hub } = await host({ ...at, paired: true })
+    const target = client({ dir: at.dir, start: () => {} })
+    await until(target, "waiting")
+    const routed: proto.HubToExtension[] = []
+    const extension = hub.attach(
+      (frame) => {
+        routed.push(frame)
+        return true
+      },
+      () => undefined,
+    )!
+    extension.hello(info)
+    await until(target, "ready")
+
+    // The hub routes the call and nothing ever answers it.
+    const pending = target.tools.list().then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    await eventually(() => (routed.some((frame) => frame.type === "rpc") ? true : undefined))
+    extension.drop()
+
+    const failure = await pending
+    expect(failure).toBeInstanceOf(HubError)
+    if (!(failure instanceof HubError)) throw new Error("expected a HubError")
+    expect(failure.kind).toBe("browser_unavailable")
+    // The call may have reached the browser before the transport went away, so the
+    // caller must look at the page rather than retry blind.
+    expect(failure.uncertain).toBe(true)
+    expect(target.state().kind).toBe("waiting")
+  })
+
   test("does not open the pairing page for a hub that already paired", async () => {
     const at = await tmp()
     await host({ ...at, paired: true })
@@ -201,14 +237,20 @@ describe("browser client", () => {
 
   test("a failed start leaves the client retrying instead of stalling", async () => {
     const at = await tmp()
+    let starts = 0
     const target = client({
       dir: at.dir,
       start: () => {
+        starts += 1
         throw new Error("cannot spawn")
       },
     })
 
     await until(target, "reconnecting")
+    // A transient host failure must not disable self-start for good: the next
+    // attempt runs the hook again instead of only polling an empty registry.
+    await eventually(() => (starts >= 2 ? true : undefined))
+    expect(starts).toBeGreaterThanOrEqual(2)
   })
 
   test("a hub process that exits before registering is treated as a failed start", async () => {

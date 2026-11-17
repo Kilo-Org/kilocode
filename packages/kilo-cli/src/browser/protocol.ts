@@ -212,6 +212,17 @@ export type Method = keyof typeof Requests
 export type Params<M extends Method> = z.infer<(typeof Requests)[M]["params"]>
 export type Result<M extends Method> = z.infer<(typeof Requests)[M]["result"]>
 
+// Requests the hub answers itself, over the per-user CLI socket, and never forwards
+// to the extension. The pairing URL carries a single-use token rather than the
+// durable pairing key, because the opener's argv is visible to every local process;
+// only a caller that reached this socket (a 0700 directory) may mint one.
+export const HubRequests = {
+  "pairing.url": { params: z.object({}).loose(), result: z.object({ url: z.string() }) },
+} as const
+
+export type HubMethod = keyof typeof HubRequests
+export type HubResult<M extends HubMethod> = z.infer<(typeof HubRequests)[M]["result"]>
+
 export const Notifications = {
   "tab.closed": z.object({ sessionHandle: z.string(), tabId: z.number().int() }),
   "session.revoked": z.object({
