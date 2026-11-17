@@ -2,7 +2,7 @@
 // Integrated Browser is a `kilo-code.v2.*` editor setting, so its rows write that. The browser tools' backend,
 // observation, sensitive steps and site permissions are the `browser` config keys the CLI reads; the host owns those
 // writes, and the status line reports what this machine can start.
-import { Component, For, Show, createSignal, onMount } from "solid-js"
+import { Component, For, Show, createEffect, createSignal, onMount } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -206,9 +206,16 @@ const BrowserTools: Component = () => {
   const browser = createBrowserSettings()
   const [draft, setDraft] = createSignal("")
   const [originError, setOriginError] = createSignal<"empty" | "invalid" | "duplicate">()
+  // The radio the user just clicked shows at once; a reply (success or failure) clears it, so a refused write falls
+  // back to the value the file still holds instead of leaving the unsaved one checked.
+  const [chosen, setChosen] = createSignal<(typeof BACKENDS)[number]>()
   onMount(() => browser.load())
+  createEffect(() => {
+    if (!browser.busy()) setChosen(undefined)
+  })
 
   const state = () => browser.state()
+  const backend = () => chosen() ?? state()?.backend
   const rows = () => sites(state()?.rules ?? [])
   const disconnected = () => state()?.backend === "extension" && browser.status()?.extension.connected === false
 
@@ -250,9 +257,12 @@ const BrowserTools: Component = () => {
                   <input
                     type="radio"
                     name="kilo-browser-backend"
-                    checked={state()?.backend === value}
+                    checked={backend() === value}
                     disabled={!state() || browser.busy()}
-                    onChange={() => browser.write({ browser: { backend: value } })}
+                    onChange={() => {
+                      setChosen(value)
+                      browser.write({ browser: { backend: value } })
+                    }}
                     style={{ "margin-top": "3px" }}
                   />
                   <span>
@@ -295,6 +305,19 @@ const BrowserTools: Component = () => {
             </Switch>
           </SettingsRow>
         </Card>
+        <Show when={browser.error()}>
+          {(message) => (
+            <div
+              style={{
+                color: "var(--vscode-errorForeground)",
+                "font-size": "var(--kilo-font-size-12)",
+                "padding-top": "6px",
+              }}
+            >
+              {message() || language.t("settings.saveBar.saveFailed")}
+            </div>
+          )}
+        </Show>
       </div>
 
       <div>
@@ -302,30 +325,42 @@ const BrowserTools: Component = () => {
         <Card>
           <SettingsRow title={language.t("settings.browser.status.playwright")}>
             <Show
-              when={!browser.status()?.playwright.ready}
+              when={browser.status()}
               fallback={
-                <span style={{ color: "var(--vscode-descriptionForeground)" }}>
-                  {language.t("settings.browser.status.playwright.ready", {
-                    browser: TARGETS[browser.status()?.playwright.target ?? "chromium"],
-                  })}
-                </span>
+                <span style={{ color: "var(--vscode-descriptionForeground)" }}>{language.t("common.loading")}</span>
               }
             >
-              <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
-                <span style={{ color: "var(--vscode-errorForeground)" }}>
-                  {language.t("settings.browser.status.playwright.missing")}
-                </span>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  disabled={browser.installing()}
-                  onClick={() => browser.install()}
+              {(status) => (
+                <Show
+                  when={status().playwright.ready}
+                  fallback={
+                    <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+                      <span style={{ color: "var(--vscode-errorForeground)" }}>
+                        {language.t("settings.browser.status.playwright.missing")}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        disabled={browser.installing()}
+                        onClick={() => browser.install()}
+                      >
+                        <Show
+                          when={browser.installing()}
+                          fallback={language.t("settings.browser.status.playwright.install")}
+                        >
+                          <Spinner /> {language.t("settings.browser.status.playwright.installing")}
+                        </Show>
+                      </Button>
+                    </div>
+                  }
                 >
-                  <Show when={browser.installing()} fallback={language.t("settings.browser.status.playwright.install")}>
-                    <Spinner /> {language.t("settings.browser.status.playwright.installing")}
-                  </Show>
-                </Button>
-              </div>
+                  <span style={{ color: "var(--vscode-descriptionForeground)" }}>
+                    {language.t("settings.browser.status.playwright.ready", {
+                      browser: TARGETS[status().playwright.target ?? "chromium"],
+                    })}
+                  </span>
+                </Show>
+              )}
             </Show>
           </SettingsRow>
           <SettingsRow
@@ -333,18 +368,30 @@ const BrowserTools: Component = () => {
             description={disconnected() ? language.t("settings.browser.status.extension.hint") : undefined}
             last
           >
-            <span
-              style={{
-                color: browser.status()?.extension.connected
-                  ? "var(--vscode-descriptionForeground)"
-                  : "var(--vscode-errorForeground)",
-              }}
+            <Show
+              when={browser.status()}
+              fallback={
+                <span style={{ color: "var(--vscode-descriptionForeground)" }}>{language.t("common.loading")}</span>
+              }
             >
-              {browser.status()?.extension.connected
-                ? language.t("settings.browser.status.extension.connected")
-                : language.t("settings.browser.status.extension.disconnected")}
-            </span>
+              {(status) => (
+                <span
+                  style={{
+                    color: status().extension.connected
+                      ? "var(--vscode-descriptionForeground)"
+                      : "var(--vscode-errorForeground)",
+                  }}
+                >
+                  {status().extension.connected
+                    ? language.t("settings.browser.status.extension.connected")
+                    : language.t("settings.browser.status.extension.disconnected")}
+                </span>
+              )}
+            </Show>
           </SettingsRow>
+          <Show when={browser.installing() && browser.progress()}>
+            {(line) => <Subtitle text={line().split("\n").filter(Boolean).slice(-1)[0] ?? ""} />}
+          </Show>
         </Card>
       </div>
 
@@ -448,13 +495,6 @@ const BrowserTools: Component = () => {
               {(reason) => (
                 <span style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-12)" }}>
                   {language.t(`settings.browser.origins.error.${reason()}`)}
-                </span>
-              )}
-            </Show>
-            <Show when={browser.error()}>
-              {(message) => (
-                <span style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-12)" }}>
-                  {message() || language.t("settings.saveBar.saveFailed")}
                 </span>
               )}
             </Show>

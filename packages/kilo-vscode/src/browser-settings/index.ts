@@ -2,6 +2,7 @@ import { OpenCode, type OpenCodeClient } from "@opencode/client"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import { local } from "../local"
 import type { Command, Manager } from "../server"
+import { defaultAllow } from "../shared/browser-permissions"
 import { installChromium } from "./install-chromium"
 import { BrowserSettingsMigration } from "./migrate"
 import { status as readStatus, type Status } from "./status"
@@ -35,9 +36,9 @@ export namespace BrowserSettings {
     observation: Observation
     allow_sensitive: boolean
     headless?: boolean
-    /** Rules that name the browser permission, one `<class>:<origin>` resource each, plus the per-tool rules. */
+    /** Every `browser` rule in document order: one `<class>:<origin>` each, plus any `*` catch-all the user wrote. */
     rules: Rule[]
-    /** `{ action: "browser", resource: "*", effect: "allow" }`: every origin allowed without asking. */
+    /** `{ action: "browser", resource: "*", effect: "allow" }` is present: every origin allowed without asking. */
     allowAll: boolean
   }
 
@@ -85,14 +86,15 @@ export namespace BrowserSettings {
         : DEFAULTS.observation,
       allow_sensitive: input.allow_sensitive === true,
       ...(typeof input.headless === "boolean" ? { headless: input.headless } : {}),
-      rules: browser.filter((rule) => rule.resource !== "*"),
+      rules: browser,
       allowAll: browser.some((rule) => rule.resource === "*" && rule.effect === "allow"),
     }
   }
 
   /**
-   * The `set` payload that applies `patch`. Rules the editor does not own (provider, tool and the per-tool keys) are
-   * kept, and so is a `browser` deny for a tool the user wrote by hand.
+   * The `set` payload that applies `patch`. Every rule keeps its document position: an edited rule is replaced where
+   * it stands, a removed rule is dropped, and a new rule is appended. Resolution is last-match-wins, so a new
+   * catch-all goes before the first origin rule (the origin rules still win) and a new origin rule goes last.
    */
   export function apply(
     state: State,
@@ -106,23 +108,67 @@ export namespace BrowserSettings {
       allow_sensitive: patch.browser?.allow_sensitive ?? state.allow_sensitive,
       ...(headless === undefined ? {} : { headless }),
     }
-    // The editor owns `browser` rules only; provider and tool rules are carried over untouched. Collected rules come
-    // after them, so a specific origin rule wins over a catch-all allow.
-    const keep = permissionRules(document).filter((rule) => rule.action !== "browser")
-    const rules = (patch.rules ?? state.rules).filter((rule) => rule.action === "browser" && rule.resource !== "*")
-    const own: Rule[] = [
-      ...((patch.allowAll ?? state.allowAll) ? [{ action: "browser", resource: "*", effect: "allow" as const }] : []),
-      ...rules,
-    ]
-    return { browser: next, permissions: [...keep, ...own] }
+    // The editor owns `browser` rules only; provider and tool rules are carried over untouched, at their position.
+    const rules = (patch.rules ?? state.rules).filter((rule) => rule.action === "browser")
+    const desired =
+      patch.allowAll === undefined
+        ? rules
+        : patch.allowAll
+          ? withAllowAll(rules)
+          : rules.filter((rule) => !(rule.resource === "*" && rule.effect === "allow"))
+    return { browser: next, permissions: merge(permissionRules(document), desired) }
   }
 
-  /** Add or replace the rule for one resource. */
+  /**
+   * The catch-all allow is a baseline, never an override: it goes after the catch-alls the user wrote and before the
+   * first origin rule, so a specific origin rule still wins and a hand-written `*` rule keeps its effect.
+   */
+  function withAllowAll(rules: Rule[]): Rule[] {
+    if (rules.some((rule) => rule.resource === "*" && rule.effect === "allow")) return rules
+    const index = rules.findIndex((rule) => rule.resource !== "*")
+    const at = index < 0 ? rules.length : index
+    return [...rules.slice(0, at), { action: "browser", resource: "*", effect: "allow" }, ...rules.slice(at)]
+  }
+
+  /**
+   * Write the desired browser rules into the document's rule list at the positions the file already uses. A rule the
+   * document names keeps its place with the new effect; one it does not name is appended (catch-alls first, so the
+   * origin rules that follow still win), and every rule the panel does not own stays untouched.
+   */
+  function merge(rules: Rule[], desired: Rule[]): Rule[] {
+    // A resource can appear more than once (`*` deny then `*` allow); each document rule takes the next desired
+    // rule of its own resource, in order, so a duplicate keeps its multiplicity and its place.
+    const pending = new Map<string, Rule[]>()
+    for (const rule of desired) {
+      const list = pending.get(rule.resource)
+      if (list) list.push(rule)
+      else pending.set(rule.resource, [rule])
+    }
+    const merged: Rule[] = []
+    for (const rule of rules) {
+      if (rule.action !== "browser") {
+        merged.push(rule)
+        continue
+      }
+      const list = pending.get(rule.resource)
+      const hit = list?.shift()
+      if (!list || !hit) continue
+      if (list.length === 0) pending.delete(rule.resource)
+      merged.push(hit)
+    }
+    const added = [...pending.values()].flat()
+    const catchAlls = added.filter((rule) => rule.resource === "*")
+    const specific = added.filter((rule) => rule.resource !== "*")
+    const first = merged.findIndex((rule) => rule.action === "browser" && rule.resource !== "*")
+    const at = first < 0 ? merged.length : first
+    return [...merged.slice(0, at), ...catchAlls, ...merged.slice(at), ...specific]
+  }
+
+  /** Add or replace the rule for one resource, keeping the position of an existing one. */
   export function withRule(state: State, resource: string, effect: Effect): Rule[] {
-    return [
-      ...state.rules.filter((rule) => rule.action !== "browser" || rule.resource !== resource),
-      { action: "browser", resource, effect },
-    ]
+    const index = state.rules.findIndex((rule) => rule.action === "browser" && rule.resource === resource)
+    if (index < 0) return [...state.rules, { action: "browser", resource, effect }]
+    return state.rules.map((rule, at) => (at === index ? { action: "browser", resource, effect } : rule))
   }
 
   /** Drop the rule for one resource. */
@@ -139,7 +185,10 @@ export namespace BrowserSettings {
     return { type: resource.slice(0, index), origin: resource.slice(index + 1) }
   }
 
-  /** Add one origin with every class asking, so the table lists it and each cell can be set. */
+  /**
+   * Add one origin so the table lists it and each cell can be set. A new class gets the effect the CLI already applies
+   * — allow on the localhost family, ask elsewhere — so adding an origin does not change what the CLI does.
+   */
   export function addOrigin(state: State, origin: string): Rule[] {
     const present = new Set(
       state.rules.flatMap((rule) => {
@@ -147,9 +196,10 @@ export namespace BrowserSettings {
         return parts?.origin === origin ? [parts.type] : []
       }),
     )
+    const effect = defaultAllow(origin) ? "allow" : "ask"
     return (["read", "act", "navigate"] as const)
       .filter((type) => !present.has(type))
-      .reduce((rules, type) => withRule({ ...state, rules }, `${type}:${origin}`, "ask"), state.rules)
+      .reduce((rules, type) => withRule({ ...state, rules }, `${type}:${origin}`, effect), state.rules)
   }
 
   /** Drop every class rule of one origin. */
@@ -158,45 +208,91 @@ export namespace BrowserSettings {
   }
 }
 
-type Store = {
+/** One write to the config document: the parsed file, and the revision the RPC refuses to overwrite. */
+export type Snapshot = { path: string; revision?: string; document: unknown }
+
+/** The two calls a write needs, so a test can describe a revision-guarded file instead of running a server. */
+export type Access = {
+  read: () => Promise<Snapshot>
+  write: (set: unknown, expected?: { path: string; revision: string }) => Promise<unknown>
+}
+
+/** The keys a write may change. A `rules` list replaces the panel's browser rules; the others merge with the file. */
+export type WritePatch = {
+  browser?: BrowserSettings.Input
+  rules?: BrowserSettings.Rule[]
+  allowAll?: boolean
+}
+
+/** What the store may build from the file it just read: a patch, or nothing when the file is already correct. */
+export type Builder = (input: { state: BrowserSettings.State; document: unknown }) => WritePatch | undefined
+
+export type Store = {
   read: () => Promise<BrowserSettings.State>
-  write: (patch: {
-    browser?: BrowserSettings.Input
-    rules?: BrowserSettings.Rule[]
-    allowAll?: boolean
-  }) => Promise<unknown>
+  /** Apply one patch and answer with the state the file holds afterwards. */
+  write: (patch: WritePatch) => Promise<BrowserSettings.State>
+  /** Read, build and write as one serialized step, so the patch sees the newest file. */
+  update: (build: Builder) => Promise<BrowserSettings.State>
 }
 
 /**
- * The global Kilo config document, read and written through the `kilocode.settings` RPC: a write keeps comments and
- * formatting, and a stale revision is refused instead of overwriting a newer file.
+ * The global Kilo config document: a write keeps comments and formatting, and a stale revision is refused instead of
+ * overwriting a newer file. Every write is one step of a per-store queue and re-reads the revision when it starts, so
+ * two edits that began together apply one after the other instead of the second failing on the first one's revision.
  */
-export function documentStore(input: { client: () => Promise<OpenCodeClient>; directory: () => string }): Store {
-  const call = async () => {
-    const client = await input.client()
-    const location = { location: { directory: input.directory() } }
-    const settings = client.rpc(KiloSettingsRpc.Definition)
-    const read = await settings.read({ scope: "global" }, location)
-    return { settings, location, target: read.target, document: read.document }
+export function documentStore(access: () => Promise<Access>): Store {
+  let queue: Promise<unknown> = Promise.resolve()
+  const serial = <T>(run: () => Promise<T>): Promise<T> => {
+    const next = queue.then(run, run)
+    queue = next.then(
+      () => undefined,
+      () => undefined,
+    )
+    return next
+  }
+  const apply = (build: Builder) => async () => {
+    const file = await access()
+    const snapshot = await file.read()
+    const state = BrowserSettings.read(snapshot.document)
+    const patch = build({ state, document: snapshot.document })
+    if (!patch) return state
+    const set = BrowserSettings.apply(state, snapshot.document, patch)
+    await file.write(
+      // The RPC's values are JSON; these keys carry booleans, strings and rule objects only.
+      set as never,
+      snapshot.revision ? { path: snapshot.path, revision: snapshot.revision } : undefined,
+    )
+    return BrowserSettings.read(set)
   }
   return {
     async read() {
-      const { document } = await call()
-      return BrowserSettings.read(document)
+      const file = await access()
+      return BrowserSettings.read((await file.read()).document)
     },
-    async write(patch) {
-      const { settings, location, target, document } = await call()
-      const set = BrowserSettings.apply(BrowserSettings.read(document), document, patch)
-      await settings.write(
-        {
-          scope: "global",
-          // The RPC's values are JSON; these keys carry booleans, strings and rule objects only.
-          set: set as never,
-          ...(target.revision ? { expected: { path: target.path, revision: target.revision } } : {}),
-        },
-        location,
-      )
-    },
+    write: (patch) => serial(apply(() => patch)),
+    update: (build) => serial(apply(build)),
+  }
+}
+
+/** The `kilocode.settings` RPC of the spawned server, as the two calls the store needs. */
+function rpcAccess(input: { client: () => Promise<OpenCodeClient>; directory: () => string }): () => Promise<Access> {
+  return async () => {
+    const client = await input.client()
+    const location = { location: { directory: input.directory() } }
+    const settings = client.rpc(KiloSettingsRpc.Definition)
+    return {
+      read: async () => {
+        const read = await settings.read({ scope: "global" }, location)
+        return {
+          path: read.target.path,
+          ...(read.target.revision ? { revision: read.target.revision } : {}),
+          document: read.document,
+        }
+      },
+      // The RPC's values are JSON; the store builds rule objects and booleans only.
+      write: (set, expected) =>
+        settings.write({ scope: "global", set: set as never, ...(expected ? { expected } : {}) }, location),
+    }
   }
 }
 
@@ -204,7 +300,7 @@ export function documentStore(input: { client: () => Promise<OpenCodeClient>; di
 export type Patch = {
   browser?: BrowserSettings.Input
   allowAll?: boolean
-  /** Add an origin with every class asking. */
+  /** Add an origin, with the effect the CLI already applies to it. */
   site?: string
   /** Drop one origin and every class rule it has. */
   remove?: string
@@ -217,7 +313,8 @@ export type Service = {
   read: () => Promise<BrowserSettings.State>
   write: (patch: Patch) => Promise<BrowserSettings.State>
   status: () => Promise<Status>
-  install: () => Promise<{ ok: boolean; error?: string; status: Status }>
+  /** One install at a time; `onProgress` receives the installer's output as it arrives. */
+  install: (onProgress?: (line: string) => void) => Promise<{ ok: boolean; error?: string; status: Status }>
   migrate: () => Promise<BrowserSettingsMigration.Result>
 }
 
@@ -227,11 +324,14 @@ export type Service = {
 export function browserSettingsService(input: {
   server: Manager
   directory: () => string
-  /** `Global.Path.data` of the spawned server, where the installed Chromium and the hub registry live. */
+  /** `Global.Path.data` of the spawned server, where the installed Chromium lives. */
   data: string
+  /** `Global.Path.state` of the spawned server, where the hub registry lives. */
+  state: string
   /** The CLI the extension starts, so `install-chromium` writes where that CLI reads. */
   command: () => Command | undefined
-  state: {
+  /** The extension's global state, which remembers that the one-time migration ran. */
+  store: {
     get<T>(key: string): T | undefined
     update(key: string, value: unknown): PromiseLike<void>
   }
@@ -250,25 +350,24 @@ export function browserSettingsService(input: {
     cached = { url: server.url, client: created }
     return created
   }
-  const store = documentStore({ client, directory: input.directory })
-  const current = () => readStatus({ data: input.data, env: input.env })
+  const store = documentStore(rpcAccess({ client, directory: input.directory }))
+  const current = () => readStatus({ data: input.data, state: input.state, env: input.env })
 
-  const write = async (patch: Patch) => {
+  const write = (patch: Patch) =>
     // A site edit is expressed against the rules already in the file, so the panel never has to send the whole list.
-    const state = await store.read()
-    const rules =
-      patch.site !== undefined
-        ? BrowserSettings.addOrigin(state, patch.site)
-        : patch.remove !== undefined
-          ? BrowserSettings.withoutOrigin(state, patch.remove)
-          : patch.cell
-            ? BrowserSettings.withRule(state, `${patch.cell.type}:${patch.cell.origin}`, patch.cell.effect)
-            : undefined
-    await store.write({ browser: patch.browser, allowAll: patch.allowAll, ...(rules ? { rules } : {}) })
-    return store.read()
-  }
+    store.update(({ state }) => {
+      const rules =
+        patch.site !== undefined
+          ? BrowserSettings.addOrigin(state, patch.site)
+          : patch.remove !== undefined
+            ? BrowserSettings.withoutOrigin(state, patch.remove)
+            : patch.cell
+              ? BrowserSettings.withRule(state, `${patch.cell.type}:${patch.cell.origin}`, patch.cell.effect)
+              : undefined
+      return { browser: patch.browser, allowAll: patch.allowAll, ...(rules ? { rules } : {}) }
+    })
 
-  const install = async () => {
+  const install = async (onProgress?: (line: string) => void) => {
     const found = input.command()
     if (!found) return { ok: false, error: "The Kilo CLI was not found.", status: current() }
     const result = await installChromium({
@@ -276,6 +375,7 @@ export function browserSettingsService(input: {
       cwd: input.directory(),
       env: input.env ?? process.env,
       log: (text) => input.log?.(text),
+      onProgress,
     })
     return {
       ok: result.ok,
@@ -291,10 +391,19 @@ export function browserSettingsService(input: {
     install,
     migrate: () =>
       BrowserSettingsMigration.run({
-        state: input.state,
+        state: input.store,
         log: input.log,
-        write: async (browser) => {
-          await store.write({ browser })
+        // The legacy values only fill `browser` keys the user has not set, and the fill runs on the document read at
+        // write time, inside the store's queue.
+        write: (browser) => {
+          let wrote: string[] = []
+          return store
+            .update(({ document }) => {
+              const next = BrowserSettingsMigration.fill(document, browser)
+              wrote = Object.keys(next)
+              return wrote.length ? { browser: next } : undefined
+            })
+            .then(() => wrote)
         },
       }),
   }

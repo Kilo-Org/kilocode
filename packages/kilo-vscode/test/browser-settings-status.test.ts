@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import path from "node:path"
 import {
   extensionConnected,
   hubsDirectory,
@@ -8,6 +9,30 @@ import {
 } from "../src/browser-settings/status"
 
 const noFiles = { exists: () => false, entries: () => [], text: () => "", alive: () => false }
+
+const data = "/data/kilo2"
+const state = "/state/kilo2"
+
+/** A reader for a data directory whose Chromium builds have exactly these paths. */
+function machine(files: string[], entries: string[] = ["chromium-1200"]) {
+  return {
+    ...noFiles,
+    exists: (file: string) => files.includes(file),
+    entries: (directory: string) => (directory === path.join(data, "browser", "browsers") ? entries : []),
+  }
+}
+
+const build = path.join(data, "browser", "browsers", "chromium-1200")
+const marker = path.join(build, "INSTALLATION_COMPLETE")
+const executableFor = (platform: "linux" | "darwin" | "win32") =>
+  path.join(
+    build,
+    platform === "darwin"
+      ? "chrome-mac/Chromium.app/Contents/MacOS/Chromium"
+      : platform === "win32"
+        ? "chrome-win/chrome.exe"
+        : "chrome-linux/chrome",
+  )
 
 describe("playwright target", () => {
   test("chrome wins over edge", () => {
@@ -30,56 +55,65 @@ describe("playwright target", () => {
     expect(found).toBe("msedge")
   })
 
-  test("the installed chromium counts when no system browser exists", () => {
-    expect(installedChromium("/data", { ...noFiles, entries: () => ["chromium-1200"] })).toBe(true)
-    expect(installedChromium("/data", { ...noFiles, entries: () => ["firefox-1500"] })).toBe(false)
+  test("a complete chromium build counts when no system browser exists", () => {
+    for (const platform of ["linux", "darwin", "win32"] as const) {
+      expect(installedChromium(data, platform, machine([marker, executableFor(platform)]))).toBe(true)
+    }
+  })
+
+  test("a directory without the executable is not an install", () => {
+    // The archive can be extracted and the executable missing; the plugin's locate.ts would find nothing to start.
+    expect(installedChromium(data, "linux", machine([marker]))).toBe(false)
+    // And the completion marker is what playwright's own installer checks before it downloads again.
+    expect(installedChromium(data, "linux", machine([executableFor("linux")]))).toBe(false)
+  })
+
+  test("another browser's revision and a plain chromium directory do not count", () => {
+    expect(installedChromium(data, "linux", machine([marker, executableFor("linux")], ["firefox-1500"]))).toBe(false)
+    expect(installedChromium(data, "linux", machine([marker, executableFor("linux")], ["chromium"]))).toBe(false)
   })
 
   test("a missing browsers directory is no chromium", () => {
-    expect(installedChromium("/data", noFiles)).toBe(false)
+    expect(installedChromium(data, "linux", noFiles)).toBe(false)
   })
 
   test("status reports ready with the target it found", () => {
     expect(
       status({
-        data: "/data",
+        data,
+        state,
         platform: "linux",
         home: "/home/igor",
         env: {},
-        reader: { ...noFiles, entries: () => ["chromium-1200"] },
+        reader: machine([marker, executableFor("linux")]),
       }).playwright,
     ).toEqual({ ready: true, target: "chromium" })
   })
 
   test("status reports not ready without any browser", () => {
-    expect(
-      status({ data: "/data", platform: "linux", home: "/home/igor", env: {}, reader: noFiles }).playwright,
-    ).toEqual({ ready: false })
+    expect(status({ data, state, platform: "linux", home: "/home/igor", env: {}, reader: noFiles }).playwright).toEqual(
+      { ready: false },
+    )
   })
 })
 
 describe("extension connection", () => {
-  const hubs = {
-    platform: "linux" as const,
-    home: "/home/igor",
-    env: { XDG_RUNTIME_DIR: "/run/user/1000" },
-  }
+  // The CLI's `Paths.run()` is `<state dir>/browser/run`, and its registry lists `<run dir>/hubs/*.json`.
+  const hubs = path.join(state, "browser", "run", "hubs")
 
-  test("the hub registry lives in the runtime directory on linux", () => {
-    expect(hubsDirectory(hubs.platform, hubs.home, hubs.env)).toBe("/run/user/1000/kilo-browser/hubs")
+  test("the hub registry lives in the state directory, as the CLI writes it", () => {
+    expect(hubsDirectory(state, {})).toBe(hubs)
   })
 
-  test("the hub registry lives in application support on macOS", () => {
-    expect(hubsDirectory("darwin", "/Users/igor", {})).toBe(
-      "/Users/igor/Library/Application Support/kilo/browser/run/hubs",
-    )
+  test("KILO_BROWSER_RUN_DIR moves the registry, as it moves the CLI's", () => {
+    expect(hubsDirectory(state, { KILO_BROWSER_RUN_DIR: "/tmp/run" })).toBe("/tmp/run/hubs")
   })
 
   test("a registered hub with a live process is a connected extension", () => {
     expect(
       extensionConnected({
-        ...hubs,
-        data: "/data",
+        data,
+        state,
         reader: {
           ...noFiles,
           entries: () => ["hub.json"],
@@ -93,15 +127,14 @@ describe("extension connection", () => {
   test("a hub whose process exited is not connected", () => {
     expect(
       extensionConnected({
-        ...hubs,
-        data: "/data",
+        data,
+        state,
         reader: { ...noFiles, entries: () => ["hub.json"], text: () => JSON.stringify({ pid: 4242 }) },
       }),
     ).toBe(false)
   })
 
   test("without a hub registry directory nothing is connected", () => {
-    expect(extensionConnected({ ...hubs, data: "/data", reader: noFiles })).toBe(false)
-    expect(extensionConnected({ ...hubs, env: {}, data: "/data", reader: noFiles })).toBe(false)
+    expect(extensionConnected({ data, state, reader: noFiles })).toBe(false)
   })
 })

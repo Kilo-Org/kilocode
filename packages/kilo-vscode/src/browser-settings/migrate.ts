@@ -37,13 +37,33 @@ export namespace BrowserSettingsMigration {
   }
 
   export type Input = {
-    /** Write the Kilo config keys at the global scope. */
-    write: (browser: { backend?: "playwright"; headless?: boolean }) => Promise<unknown>
+    /** Fill the Kilo config keys at the global scope, and answer with the keys it actually wrote. */
+    write: (browser: { backend?: "playwright"; headless?: boolean }) => Promise<string[]>
     state: { get<T>(key: string): T | undefined; update(key: string, value: unknown): PromiseLike<void> }
     log?: (...args: unknown[]) => void
   }
 
   export type Result = { migrated: boolean; wrote: string[]; error?: string }
+
+  /**
+   * The `browser` keys of `wanted` the document does not already set. A key the user set — to any value — is theirs,
+   * and a `null` counts as unset because the settings RPC removes a key by writing null.
+   */
+  export function fill(
+    document: unknown,
+    wanted: { backend?: "playwright"; headless?: boolean },
+  ): { backend?: "playwright"; headless?: boolean } {
+    let browser: Record<string, unknown> = {}
+    if (typeof document === "object" && document !== null && "browser" in document) {
+      const block = document.browser
+      // The parsed document is JSON: an object here is the `browser` block, any other value is not a setting.
+      if (typeof block === "object" && block !== null) browser = block as Record<string, unknown>
+    }
+    const filled: { backend?: "playwright"; headless?: boolean } = {}
+    if (wanted.backend !== undefined && browser.backend == null) filled.backend = wanted.backend
+    if (wanted.headless !== undefined && browser.headless == null) filled.headless = wanted.headless
+    return filled
+  }
 
   /**
    * Migrate once, then clear the legacy keys so nothing reads them again. A failure leaves both the marker and the
@@ -58,8 +78,9 @@ export namespace BrowserSettingsMigration {
       await input.state.update(marker, true)
       return { migrated: false, wrote: [] }
     }
+    let wrote: string[]
     try {
-      await input.write(set)
+      wrote = await input.write(set)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       input.log?.("browser settings migration failed", message)
@@ -72,6 +93,6 @@ export namespace BrowserSettingsMigration {
         () => undefined,
       )
     await input.state.update(marker, true)
-    return { migrated: true, wrote: Object.keys(set) }
+    return { migrated: true, wrote }
   }
 }

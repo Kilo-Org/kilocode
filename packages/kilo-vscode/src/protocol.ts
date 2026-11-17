@@ -423,6 +423,13 @@ export type BrowserSettingsInstallResult = {
   status: BrowserSettingsStatus
 }
 
+/** One chunk of the installer's output while it runs, for the panel's progress line. */
+export type BrowserSettingsInstallProgress = {
+  type: "browserSettingsInstallProgress"
+  requestId: string
+  text: string
+}
+
 /**
  * The Agent Manager rows of the Settings panel. The project is explicit, because the panel edits a project the
  * Agent Manager provider owns, not the panel's own directory. `requestId` guards out-of-order replies.
@@ -504,6 +511,7 @@ export type ToWebview =
   | BrowserOut
   | BrowserSettingsLoaded
   | BrowserSettingsInstallResult
+  | BrowserSettingsInstallProgress
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }

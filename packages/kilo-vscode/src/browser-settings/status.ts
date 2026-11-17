@@ -25,6 +25,8 @@ export type Reader = {
 export type Input = {
   /** `Global.Path.data` of the spawned server: `resolveDataDir` of the extension host. */
   data: string
+  /** `Global.Path.state` of the spawned server, where `Paths.run()` of the CLI puts the hub registry. */
+  state: string
   platform?: NodeJS.Platform
   home?: string
   env?: Record<string, string | undefined>
@@ -78,7 +80,7 @@ function edgePaths(platform: NodeJS.Platform, home: string, env: Record<string, 
 }
 
 /** The system browser the Playwright backend prefers, when one is installed. */
-export function systemBrowser(input: Omit<Input, "data">): Target | undefined {
+export function systemBrowser(input: Omit<Input, "data" | "state">): Target | undefined {
   const platform = input.platform ?? process.platform
   const home = input.home ?? os.homedir()
   const env = input.env ?? process.env
@@ -89,14 +91,34 @@ export function systemBrowser(input: Omit<Input, "data">): Target | undefined {
   return undefined
 }
 
+/** The Chromium executable inside a `chromium-<revision>` directory, for each platform playwright-core ships. */
+const EXECUTABLE: Partial<Record<NodeJS.Platform, string>> = {
+  darwin: "chrome-mac/Chromium.app/Contents/MacOS/Chromium",
+  win32: "chrome-win/chrome.exe",
+  linux: "chrome-linux/chrome",
+}
+
 /**
- * Whether `kilo browser install-chromium` wrote a Chromium into the server's data directory. The revision directory
- * name belongs to the pinned playwright-core, so any `chromium-*` build counts.
+ * Whether `kilo browser install-chromium` wrote a complete Chromium into the server's data directory. The CLI
+ * (`packages/kilo-plugin/src/browser/install.ts`) extracts the build into `<data>/browser/browsers/chromium-<revision>`
+ * and writes `INSTALLATION_COMPLETE` after chmodding the executable, which is what its own installer checks before it
+ * downloads again; the plugin's `locate.ts` then starts that executable. A stray or half-extracted directory with no
+ * executable is not installed.
  */
-export function installedChromium(data: string, read: Reader = reader): boolean {
+export function installedChromium(
+  data: string,
+  platform: NodeJS.Platform = process.platform,
+  read: Reader = reader,
+): boolean {
+  const executable = EXECUTABLE[platform]
+  if (!executable) return false
   const directory = path.join(data, "browser", "browsers")
   try {
-    return read.entries(directory).some((entry) => entry.startsWith("chromium"))
+    return read.entries(directory).some((entry) => {
+      if (!/^chromium-\d+$/.test(entry)) return false
+      const build = path.join(directory, entry)
+      return read.exists(path.join(build, "INSTALLATION_COMPLETE")) && read.exists(path.join(build, executable))
+    })
   } catch {
     return false
   }
@@ -104,28 +126,19 @@ export function installedChromium(data: string, read: Reader = reader): boolean 
 
 /**
  * The hub registry of the browser extension (`SPEC` § Transport): each hub writes `<run dir>/hubs/<hubId>.json` and
- * removes it on exit. It is written by the browser hub, which ships after these settings; until one runs, no
- * extension is connected.
+ * removes it on exit. The CLI's `Paths.hubs()` puts the run dir under the state dir, not the data dir, and lets
+ * `KILO_BROWSER_RUN_DIR` move it; this mirrors both (`packages/kilo-cli/src/browser/paths.ts`).
  */
-export function hubsDirectory(
-  platform: NodeJS.Platform,
-  home: string,
-  env: Record<string, string | undefined>,
-): string | undefined {
-  if (platform === "darwin") return path.join(home, "Library", "Application Support", "kilo", "browser", "run", "hubs")
-  if (platform === "win32") return undefined
-  const runtime = env.XDG_RUNTIME_DIR
-  return runtime ? path.join(runtime, "kilo-browser", "hubs") : undefined
+export function hubsDirectory(state: string, env: Record<string, string | undefined> = process.env): string {
+  const run = env.KILO_BROWSER_RUN_DIR || path.join(state, "browser", "run")
+  return path.join(run, "hubs")
 }
 
 /** True while a hub that an extension can connect to is registered and its process is alive. */
 export function extensionConnected(input: Input): boolean {
-  const platform = input.platform ?? process.platform
-  const home = input.home ?? os.homedir()
   const env = input.env ?? process.env
   const read: Reader = { ...reader, ...input.reader }
-  const directory = hubsDirectory(platform, home, env)
-  if (!directory) return false
+  const directory = hubsDirectory(input.state, env)
   let entries: string[]
   try {
     entries = read.entries(directory)
@@ -145,7 +158,9 @@ export function extensionConnected(input: Input): boolean {
 
 export function status(input: Input): Status {
   const target = systemBrowser(input)
-  const found = target ?? (installedChromium(input.data, { ...reader, ...input.reader }) ? "chromium" : undefined)
+  const read: Reader = { ...reader, ...input.reader }
+  const found =
+    target ?? (installedChromium(input.data, input.platform ?? process.platform, read) ? "chromium" : undefined)
   return {
     playwright: found ? { ready: true, target: found } : { ready: false },
     extension: { connected: extensionConnected(input) },

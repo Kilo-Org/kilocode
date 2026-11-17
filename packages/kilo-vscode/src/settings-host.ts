@@ -15,7 +15,7 @@ import { local } from "./local"
 import { validAutocompleteSetting } from "./services/autocomplete/settings"
 import { candidateConfigFiles, chooseConfigFile, configDirectories } from "./open-config"
 import { configTargets, type ConfigEntry } from "./config-targets"
-import { resolveKiloProfile, canonicalPath, resolveDataDir } from "./settings-paths"
+import { resolveKiloProfile, canonicalPath, resolveDataDir, resolveStateDir } from "./settings-paths"
 import { command, type Manager } from "./server"
 import type {
   AgentManagerSettings,
@@ -118,13 +118,14 @@ export function settingsHost(input: {
       server: input.server,
       directory: () => input.directory,
       data: resolveDataDir(process.env, profile),
+      state: resolveStateDir(process.env, profile),
       command: () =>
         command({
           extension: input.context.extensionPath,
           storage: input.context.globalStorageUri.fsPath,
           env: process.env,
         }),
-      state: input.context.globalState,
+      store: input.context.globalState,
       env: process.env,
     })
 
@@ -342,7 +343,9 @@ export function settingsHost(input: {
   const handleBrowserSettings = async (message: BrowserSettingsMessage) => {
     try {
       if (message.type === "browserSettingsInstall") {
-        const result = await browser.install()
+        const result = await browser.install((text) =>
+          input.post({ type: "browserSettingsInstallProgress", requestId: message.requestId, text }),
+        )
         input.post({ type: "browserSettingsInstalled", requestId: message.requestId, ...result })
         return
       }

@@ -8,67 +8,72 @@ import type {
   ToWebview,
 } from "../../../src/protocol"
 import { getVSCodeAPI, useVSCode } from "../context/vscode"
-
-type Request =
-  | { type: "browserSettingsRead"; requestId: string }
-  | { type: "browserSettingsWrite"; requestId: string; patch: BrowserSettingsPatch }
-  | { type: "browserSettingsInstall"; requestId: string }
+import { requestTracker } from "./browser-settings-requests"
 
 export function createBrowserSettings() {
   const vscode = useVSCode()
   const [state, setState] = createSignal<BrowserSettingsState>()
   const [status, setStatus] = createSignal<BrowserSettingsStatus>()
   const [error, setError] = createSignal<string>()
-  const [busy, setBusy] = createSignal(false)
+  const [progress, setProgress] = createSignal<string>()
+  const [reading, setReading] = createSignal(false)
+  const [writing, setWriting] = createSignal(false)
   const [installing, setInstalling] = createSignal(false)
-  // A later request supersedes an earlier one, so a slow reply to the previous edit cannot overwrite the new state.
-  let latest = 0
+  const tracker = requestTracker()
 
-  const send = (build: (requestId: string) => Request) => {
-    const requestId = String(++latest)
-    getVSCodeAPI().postMessage(build(requestId) as never)
+  const send = (request: { type: string; requestId: string; patch?: BrowserSettingsPatch }) => {
+    getVSCodeAPI().postMessage(request as never)
   }
 
   const unsubscribe = vscode.onMessage((raw) => {
     const message = raw as unknown as ToWebview
     if (message.type === "browserSettingsLoaded") {
-      if (message.requestId !== String(latest)) return
-      setBusy(false)
+      if (!tracker.accepts(message.requestId)) return
+      if (tracker.kindOf(message.requestId) === "write") setWriting(false)
+      else setReading(false)
       setError(message.error)
       if (message.state) setState(message.state)
       if (message.status) setStatus(message.status)
       return
     }
+    if (message.type === "browserSettingsInstallProgress") {
+      if (!tracker.accepts(message.requestId)) return
+      setProgress(message.text.trim())
+      return
+    }
     if (message.type === "browserSettingsInstalled") {
-      if (message.requestId !== String(latest)) return
+      if (!tracker.accepts(message.requestId)) return
       setInstalling(false)
+      setProgress(undefined)
       setStatus(message.status)
       setError(message.ok ? undefined : (message.error ?? ""))
     }
   })
   onCleanup(unsubscribe)
 
-  const write = (patch: BrowserSettingsPatch) => {
-    setBusy(true)
-    setError(undefined)
-    send((requestId) => ({ type: "browserSettingsWrite", requestId, patch }))
-  }
-
   return {
     state,
     status,
     error,
-    busy,
+    progress,
+    /** A read or a write is in flight; the panel disables the controls meanwhile. */
+    busy: () => reading() || writing(),
     installing,
     load: () => {
-      setBusy(true)
-      send((requestId) => ({ type: "browserSettingsRead", requestId }))
+      setReading(true)
+      setError(undefined)
+      send({ type: "browserSettingsRead", requestId: tracker.start("read") })
     },
-    write,
+    write: (patch: BrowserSettingsPatch) => {
+      setWriting(true)
+      setError(undefined)
+      send({ type: "browserSettingsWrite", requestId: tracker.start("write"), patch })
+    },
     install: () => {
       setInstalling(true)
+      setProgress(undefined)
       setError(undefined)
-      send((requestId) => ({ type: "browserSettingsInstall", requestId }))
+      send({ type: "browserSettingsInstall", requestId: tracker.start("install") })
     },
   }
 }

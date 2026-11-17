@@ -1,7 +1,8 @@
 // The Browser section's view model: the permission table and the origin field, kept apart from the JSX so the mapping
 // from the rules the host stores is testable. A rule names one class of one origin (`<class>:<origin>`); a class
-// without a rule asks, which is also what the CLI does for an origin the defaults do not cover.
+// without a rule shows the effect the CLI applies by default — allow on the localhost family, ask elsewhere.
 import type { BrowserSettingsState } from "../../../../src/protocol"
+import { defaultAllow } from "../../../../src/shared/browser-permissions"
 
 export type Effect = "allow" | "ask" | "deny"
 export type Grant = "read" | "act" | "navigate"
@@ -24,7 +25,7 @@ export function parse(resource: string): { grant: Grant; origin: string } | unde
 
 /**
  * The permission table: one row per origin in the order the rules first name it, with every class the origin has no
- * rule for asking. The allow-all catch-all is the separate toggle, not a row.
+ * rule for showing the CLI's default. The allow-all catch-all is the separate toggle, not a row.
  */
 export function sites(rules: Rule[]): Site[] {
   const rows = new Map<string, Site>()
@@ -32,7 +33,8 @@ export function sites(rules: Rule[]): Site[] {
     if (rule.action !== "browser" || rule.resource === "*") continue
     const parts = parse(rule.resource)
     if (!parts) continue
-    const row = rows.get(parts.origin) ?? { origin: parts.origin, read: "ask", act: "ask", navigate: "ask" }
+    const fallback = defaultAllow(parts.origin) ? "allow" : "ask"
+    const row = rows.get(parts.origin) ?? { origin: parts.origin, read: fallback, act: fallback, navigate: fallback }
     row[parts.grant] = rule.effect
     rows.set(parts.origin, row)
   }
@@ -41,7 +43,9 @@ export function sites(rules: Rule[]): Site[] {
 
 /**
  * The origin the Add field turns into rules, or why it cannot be one. An origin is a scheme, a host and an optional
- * port: a path, a query and a fragment would never match the protocol's origin, so they are refused here.
+ * port: a path, a query and a fragment would never match the protocol's origin, so they are refused here. A default
+ * port is dropped, because `https://example.com:443` and `https://example.com` are the same origin and the protocol
+ * spells it without the port.
  */
 export function origin(
   input: string,
@@ -51,8 +55,14 @@ export function origin(
   if (value.length === 0) return { error: "empty" }
   const match = /^(https?):\/\/(\[[0-9a-f:.]+\]|[a-z0-9*](?:[a-z0-9.*-]*[a-z0-9*])?)(?::(\d{1,5}|\*))?$/.exec(value)
   if (!match) return { error: "invalid" }
-  // Rebuild from the parts so a host that only differs by case or a dropped slash is one row.
-  const origin = `${match[1]}://${match[2]}${match[3] ? `:${match[3]}` : ""}`
+  const port =
+    match[3] === "443" && match[1] === "https"
+      ? undefined
+      : match[3] === "80" && match[1] === "http"
+        ? undefined
+        : match[3]
+  // Rebuild from the parts so a host that only differs by case, a dropped slash or a default port is one row.
+  const origin = `${match[1]}://${match[2]}${port ? `:${port}` : ""}`
   if (existing.includes(origin)) return { error: "duplicate" }
   return { value: origin }
 }

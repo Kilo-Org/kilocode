@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { createHash } from "node:crypto"
 import * as vscode from "vscode"
-import { BrowserSettings, BrowserSettingsMigration } from "../src/browser-settings"
+import { BrowserSettings, BrowserSettingsMigration, documentStore } from "../src/browser-settings"
 
 const document: Record<string, unknown> = {
   browser: { backend: "extension", observation: "diff", allow_sensitive: true, headless: true },
@@ -38,25 +39,41 @@ describe("browser settings document", () => {
     expect(BrowserSettings.read({ browser: { backend: "chrome" } }).backend).toBe("playwright")
   })
 
-  test("a catch-all allow rule is the allow-all toggle, not a list entry", () => {
+  test("a catch-all rule is the allow-all toggle and stays in the rule list", () => {
     const state = BrowserSettings.read({
       permissions: [{ action: "browser", resource: "*", effect: "allow" }],
     })
     expect(state.allowAll).toBe(true)
-    expect(state.rules).toEqual([])
+    // The panel's table does not list it, but the file's other rules must not be rewritten from a state that lost it.
+    expect(state.rules).toEqual([{ action: "browser", resource: "*", effect: "allow" }])
   })
 
-  test("keeps rules the editor does not own and removes the one it does", () => {
+  test("keeps rules the editor does not own and removes the one it does, in document order", () => {
     const state = BrowserSettings.read(document)
     const set = BrowserSettings.apply(state, document, {
       rules: BrowserSettings.withoutRule(state, "act:http://localhost:5173"),
     })
-    // Rules the editor does not own keep their document order; the collected origin rules follow them.
+    // Every surviving rule keeps the position the user put it in; only the removed one is gone.
     expect(set.permissions).toEqual([
+      { action: "browser", resource: "read:https://example.com", effect: "allow" },
       { action: "browser_click", resource: "*", effect: "deny" },
       { action: "provider.use", resource: "kilo", effect: "allow" },
-      { action: "browser", resource: "read:https://example.com", effect: "allow" },
     ])
+  })
+
+  test("an edited cell keeps its rule at the same position", () => {
+    const state = BrowserSettings.read(document)
+    const rules = BrowserSettings.withRule(state, "read:https://example.com", "deny")
+    expect(rules).toEqual([
+      { action: "browser", resource: "read:https://example.com", effect: "deny" },
+      { action: "browser", resource: "act:http://localhost:5173", effect: "ask" },
+    ])
+    // A new rule is appended, so it wins over the earlier rules the way a fresh edit should.
+    expect(BrowserSettings.withRule(state, "navigate:https://kilo.ai", "allow").at(-1)).toEqual({
+      action: "browser",
+      resource: "navigate:https://kilo.ai",
+      effect: "allow",
+    })
   })
 
   test("adds and replaces one origin rule", () => {
@@ -72,16 +89,62 @@ describe("browser settings document", () => {
     })
   })
 
-  test("allow-all is one catch-all rule beside the listed origins", () => {
+  test("allow-all is one catch-all rule beside the listed origins, ahead of them", () => {
     const state = BrowserSettings.read(document)
     const set = BrowserSettings.apply(state, document, { allowAll: true })
     expect(set.permissions).toContainEqual({ action: "browser", resource: "*", effect: "allow" })
     expect(set.permissions).toContainEqual({ action: "browser", resource: "read:https://example.com", effect: "allow" })
+    // Last-match-wins: the catch-all is a baseline, so the specific origin rules after it still decide.
+    expect(set.permissions.findIndex((rule) => rule.action === "browser" && rule.resource === "*")).toBeLessThan(
+      set.permissions.findIndex((rule) => rule.action === "browser" && rule.resource === "read:https://example.com"),
+    )
     expect(BrowserSettings.apply(state, document, { allowAll: false }).permissions).not.toContainEqual({
       action: "browser",
       resource: "*",
       effect: "allow",
     })
+  })
+
+  test("a catch-all rule the user wrote keeps its effect and position", () => {
+    const custom = {
+      permissions: [
+        { action: "browser", resource: "*", effect: "deny" },
+        { action: "browser", resource: "read:https://kilo.ai", effect: "allow" },
+      ],
+    }
+    const state = BrowserSettings.read(custom)
+    expect(state.allowAll).toBe(false)
+    expect(state.rules[0]).toEqual({ action: "browser", resource: "*", effect: "deny" })
+    // A cell edit goes through the state, which carries the catch-all, so the deny survives the write.
+    const set = BrowserSettings.apply(state, custom, {
+      rules: BrowserSettings.withRule(state, "read:https://kilo.ai", "ask"),
+    })
+    expect(set.permissions).toEqual([
+      { action: "browser", resource: "*", effect: "deny" },
+      { action: "browser", resource: "read:https://kilo.ai", effect: "ask" },
+    ])
+    // Turning allow-all on adds its own rule; the hand-written deny is not deleted or moved.
+    expect(BrowserSettings.apply(state, custom, { allowAll: true }).permissions).toEqual([
+      { action: "browser", resource: "*", effect: "deny" },
+      { action: "browser", resource: "*", effect: "allow" },
+      { action: "browser", resource: "read:https://kilo.ai", effect: "allow" },
+    ])
+  })
+
+  test("turning allow-all off removes only its own rule", () => {
+    const custom = {
+      permissions: [
+        { action: "browser", resource: "*", effect: "deny" },
+        { action: "browser", resource: "*", effect: "allow" },
+        { action: "browser", resource: "act:https://kilo.ai", effect: "deny" },
+      ],
+    }
+    const state = BrowserSettings.read(custom)
+    expect(state.allowAll).toBe(true)
+    expect(BrowserSettings.apply(state, custom, { allowAll: false }).permissions).toEqual([
+      { action: "browser", resource: "*", effect: "deny" },
+      { action: "browser", resource: "act:https://kilo.ai", effect: "deny" },
+    ])
   })
 
   test("a patch leaves every untouched key in place", () => {
@@ -138,7 +201,10 @@ describe("browser settings migration", () => {
       const marked: unknown[] = []
       const written: unknown[] = []
       const result = await BrowserSettingsMigration.run({
-        write: async (browser) => void written.push(browser),
+        write: async (browser) => {
+          written.push(browser)
+          return Object.keys(browser)
+        },
         state: { get: <T>() => undefined as T | undefined, update: async (_key, value) => void marked.push(value) },
       })
       expect(result).toEqual({ migrated: true, wrote: ["backend", "headless"] })
@@ -153,11 +219,34 @@ describe("browser settings migration", () => {
   test("a migrated user is never migrated twice", async () => {
     let writes = 0
     const result = await BrowserSettingsMigration.run({
-      write: async () => void (writes += 1),
+      write: async () => {
+        writes += 1
+        return []
+      },
       state: { get: <T>() => true as T, update: async () => {} },
     })
     expect(result.migrated).toBe(false)
     expect(writes).toBe(0)
+  })
+
+  test("only fills browser keys the user left unset", () => {
+    expect(
+      BrowserSettingsMigration.fill({ browser: { backend: "extension" } }, { backend: "playwright", headless: true }),
+    ).toEqual({ headless: true })
+    expect(
+      BrowserSettingsMigration.fill({ browser: { headless: false } }, { backend: "playwright", headless: true }),
+    ).toEqual({ backend: "playwright" })
+    // Every key already set: the migration writes nothing, but still clears the legacy settings.
+    expect(
+      BrowserSettingsMigration.fill(
+        { browser: { backend: "off", headless: false } },
+        { backend: "playwright", headless: true },
+      ),
+    ).toEqual({})
+    // A `null` is the settings RPC's removal marker, so the key counts as unset.
+    expect(BrowserSettingsMigration.fill({ browser: { backend: null } }, { backend: "playwright" })).toEqual({
+      backend: "playwright",
+    })
   })
 
   test("a failed write keeps the legacy settings so the next start retries", async () => {
@@ -200,6 +289,17 @@ describe("site rules", () => {
     ).toEqual(["read:https://kilo.ai=allow", "act:https://kilo.ai=ask", "navigate:https://kilo.ai=ask"])
   })
 
+  test("adding a localhost origin keeps the allow the CLI applies by default", () => {
+    const state = BrowserSettings.read({})
+    expect(
+      BrowserSettings.addOrigin(state, "http://localhost:5173").map((rule) => `${rule.resource}=${rule.effect}`),
+    ).toEqual([
+      "read:http://localhost:5173=allow",
+      "act:http://localhost:5173=allow",
+      "navigate:http://localhost:5173=allow",
+    ])
+  })
+
   test("removing a site drops every class of it and nothing else", () => {
     const state = BrowserSettings.read({
       permissions: [
@@ -212,5 +312,80 @@ describe("site rules", () => {
     expect(BrowserSettings.withoutOrigin(state, "https://kilo.ai")).toEqual([
       { action: "browser", resource: "read:https://example.com", effect: "allow" },
     ])
+  })
+})
+
+describe("config document writes", () => {
+  /** A config file with the RPC's revision guard: a write whose expected revision is stale is refused. */
+  function guarded(initial: Record<string, unknown> = {}) {
+    let text = JSON.stringify(initial)
+    const revision = () => createHash("sha256").update(text).digest("hex")
+    return {
+      read: async () => ({ path: "/kilo2.json", revision: revision(), document: JSON.parse(text) as unknown }),
+      write: async (set: unknown, expected?: { path: string; revision: string }) => {
+        if (expected && expected.revision !== revision()) throw new Error("revision-conflict")
+        const current = JSON.parse(text) as Record<string, unknown>
+        text = JSON.stringify({ ...current, ...(set as Record<string, unknown>) })
+      },
+      document: () => JSON.parse(text) as Record<string, unknown>,
+      writes: 0,
+    }
+  }
+
+  test("two concurrent writes both land instead of one failing on the other's revision", async () => {
+    const file = guarded({ browser: { backend: "off", observation: "diff" }, permissions: [] })
+    // Count the writes so the test also proves the second one re-read the revision the first one left.
+    const write = file.write
+    file.write = async (set, expected) => {
+      file.writes += 1
+      return write(set, expected)
+    }
+    const store = documentStore(async () => file)
+    const [first, second] = await Promise.all([
+      store.write({ browser: { backend: "playwright" } }),
+      store.write({ browser: { observation: "full" } }),
+    ])
+    expect(file.writes).toBe(2)
+    expect(file.document().browser).toEqual({
+      backend: "playwright",
+      observation: "full",
+      allow_sensitive: false,
+    })
+    expect(first.backend).toBe("playwright")
+    expect(second.observation).toBe("full")
+  })
+
+  test("two concurrent site edits keep both origins", async () => {
+    const file = guarded({ permissions: [] })
+    const store = documentStore(async () => file)
+    await Promise.all([
+      store.update(({ state }) => ({ rules: BrowserSettings.addOrigin(state, "https://one.test") })),
+      store.update(({ state }) => ({ rules: BrowserSettings.addOrigin(state, "https://two.test") })),
+    ])
+    const resources = (file.document().permissions as { resource: string }[]).map((rule) => rule.resource)
+    expect(resources).toContain("read:https://one.test")
+    expect(resources).toContain("read:https://two.test")
+  })
+
+  test("a rejected write does not block the next one in the queue", async () => {
+    const file = guarded({ browser: { backend: "off" }, permissions: [] })
+    const write = file.write
+    file.write = async (set, expected) => {
+      // The first write of the batch fails; the queue must still run the second.
+      file.writes += 1
+      if (file.writes === 1) throw new Error("rpc unavailable")
+      return write(set, expected)
+    }
+    const store = documentStore(async () => file)
+    const [failed, written] = await Promise.all([
+      store.write({ browser: { backend: "playwright" } }).then(
+        () => false,
+        () => true,
+      ),
+      store.write({ browser: { observation: "none" } }),
+    ])
+    expect(failed).toBe(true)
+    expect(written.observation).toBe("none")
+    expect(file.document().browser).toEqual({ backend: "off", observation: "none", allow_sensitive: false })
   })
 })

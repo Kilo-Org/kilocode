@@ -30,10 +30,11 @@ import { createCostAlerts } from "./cost-alert"
 import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment } from "./server"
 import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
-import { resolveDataDir, resolveKiloProfile } from "./settings-paths"
+import { resolveDataDir, resolveKiloProfile, resolveStateDir } from "./settings-paths"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { BrowserBroker } from "./services/browser-automation"
 import { browserSettingsService } from "./browser-settings"
+import { cancelChromiumInstall } from "./browser-settings/install-chromium"
 import {
   integratedBrowserEnabled,
   integratedBrowserFallback,
@@ -217,8 +218,9 @@ export function activate(context: ExtensionContext) {
     server,
     directory: () => workspace.workspaceFolders?.[0]?.uri.fsPath ?? directory,
     data: resolveDataDir(process.env, resolveKiloProfile(context)),
+    state: resolveStateDir(process.env, resolveKiloProfile(context)),
     command: serverCommand,
-    state: context.globalState,
+    store: context.globalState,
     env: process.env,
     log: (...args) => output.appendLine(`Browser settings: ${args.map((item) => String(item)).join(" ")}`),
   })
@@ -608,5 +610,6 @@ function browserTheme(): "dark" | "light" {
 }
 
 export function deactivate() {
+  cancelChromiumInstall()
   return shutdownExtension?.()
 }
