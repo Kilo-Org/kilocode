@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto"
 import * as proto from "./protocol"
 
 export type Link = {
-  send(frame: proto.HubToExtension): void
+  // False when the frame could not be handed to the transport at all.
+  send(frame: proto.HubToExtension): boolean
   close(reason: string): void
 }
 
@@ -33,8 +34,10 @@ export type Hub = {
   readonly mode: Options["mode"]
   readonly version: string
   extension(): proto.ExtensionInfo | undefined
+  // True while a transport is attached, including while it is still handshaking.
+  attached(): boolean
   join(send: (frame: proto.HubToCli) => void, close: (reason: string) => void): Controller
-  attach(send: (frame: proto.HubToExtension) => void, close: (reason: string) => void): Extension | undefined
+  attach(send: (frame: proto.HubToExtension) => boolean, close: (reason: string) => void): Extension | undefined
   count(): number
   close(reason: string): void
 }
@@ -66,12 +69,16 @@ export function create(input: Options): Hub {
   }
 
   function join(send: (frame: proto.HubToCli) => void, close: (reason: string) => void): Controller {
+    // Never add a controller to a closed hub: nothing would remove it again.
+    if (shut) {
+      close("hub is shutting down")
+      return { id: randomUUID(), frame() {}, drop() {} }
+    }
     const controllerId = randomUUID()
     controllers.set(controllerId, { send, close })
     // A CLI that joins mid-session learns the current state immediately.
     send(slot.kind === "ready" ? { type: "hub.ready", extension: slot.info } : { type: "hub.waiting" })
     if (slot.kind === "ready") slot.link.send({ type: "controller.connected", controllerId })
-    if (shut) close("hub is shutting down")
     return {
       id: controllerId,
       frame(frame) {
@@ -81,12 +88,29 @@ export function create(input: Options): Hub {
           if (proto.isRequest(frame.message)) {
             send({
               type: "rpc",
-              message: proto.failure(frame.message.id, "browser_unavailable", "The browser is not available right now."),
+              message: proto.failure(
+                frame.message.id,
+                "browser_unavailable",
+                "The browser is not available right now.",
+              ),
             })
           }
           return
         }
-        slot.link.send({ type: "rpc", controllerId, message: frame.message })
+        if (!slot.link.send({ type: "rpc", controllerId, message: frame.message })) {
+          // The transport refused the frame (oversized or dead). Answer the caller
+          // instead of leaving it to time out with no explanation.
+          if (proto.isRequest(frame.message)) {
+            send({
+              type: "rpc",
+              message: proto.failure(
+                frame.message.id,
+                "browser_unavailable",
+                "The browser connection could not carry this request.",
+              ),
+            })
+          }
+        }
       },
       drop() {
         // The admission guard: only the first drop for a controller notifies the extension.
@@ -96,7 +120,10 @@ export function create(input: Options): Hub {
     }
   }
 
-  function attach(send: (frame: proto.HubToExtension) => void, close: (reason: string) => void): Extension | undefined {
+  function attach(
+    send: (frame: proto.HubToExtension) => boolean,
+    close: (reason: string) => void,
+  ): Extension | undefined {
     if (shut) {
       close("hub is shutting down")
       return undefined
@@ -142,6 +169,9 @@ export function create(input: Options): Hub {
     version: input.version,
     extension() {
       return slot.kind === "ready" ? slot.info : undefined
+    },
+    attached() {
+      return slot.kind !== "empty"
     },
     join,
     attach,

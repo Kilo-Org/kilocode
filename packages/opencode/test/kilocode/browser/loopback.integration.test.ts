@@ -28,15 +28,25 @@ const running: Runtime[] = []
 const clients: Client[] = []
 const sockets: raw.Socket[] = []
 
+// A child can already be gone by the time cleanup runs (or die from the signal
+// before it installs a handler), and `exitCode` stays null for a signal death, so
+// both are checked and the wait is bounded.
+async function exited(child: ChildProcess) {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  const done = Promise.withResolvers<void>()
+  child.once("exit", () => done.resolve())
+  const timer = setTimeout(() => child.kill("SIGKILL"), 5_000)
+  timer.unref()
+  await done.promise
+  clearTimeout(timer)
+}
+
 afterEach(async () => {
   for (const socket of sockets.splice(0)) socket.close()
   for (const client of clients.splice(0)) client.close()
   for (const runtime of running.splice(0)) {
     runtime.child.kill()
-    await new Promise<void>((resolve) => {
-      if (runtime.child.exitCode !== null) return resolve()
-      runtime.child.once("exit", () => resolve())
-    })
+    await exited(runtime.child)
     await fs.rm(runtime.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 })
@@ -92,6 +102,10 @@ async function start(): Promise<Runtime> {
       windowsHide: true,
     },
   )
+  // Register the child for cleanup immediately: every await below can throw, and an
+  // unregistered child keeps the test process alive and hides the real error.
+  const runtime: Runtime = { root, run, data, port: free, child, hubId: "", key: "" }
+  running.push(runtime)
   const entry = await until(async () => (await Registry.list({ dir: path.join(run, "hubs") })).at(0), 10_000)
   const file = path.join(data, "pairing.json")
   const stat = await fs.stat(file)
@@ -103,8 +117,8 @@ async function start(): Promise<Runtime> {
   // elsewhere, so the CLI client dials the same transport the hub listens on.
   expect(entry.socket.startsWith("\\\\.\\pipe\\kilo-browser-")).toBe(process.platform === "win32")
   expect(entry.socket.endsWith(".sock")).toBe(process.platform !== "win32")
-  const runtime: Runtime = { root, run, data, port: free, child, hubId: entry.hubId, key }
-  running.push(runtime)
+  runtime.hubId = entry.hubId
+  runtime.key = key
   return runtime
 }
 

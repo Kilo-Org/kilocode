@@ -8,7 +8,7 @@ import { Paths } from "./paths"
 import { Registry } from "./registry"
 import { create } from "./hub"
 import { serve } from "./socket"
-import { caller, ids } from "./install"
+import { allowlist, caller, ids } from "./install"
 
 const log = Log.create({ service: "browser.native" })
 
@@ -26,7 +26,7 @@ export async function run(input: Run = {}) {
   const stdout = input.stdout ?? process.stdout
   const leave = input.exit ?? ((code: number) => process.exit(code))
 
-  if (!caller(input.argv ?? process.argv.slice(2), ids())) {
+  if (!caller(input.argv ?? process.argv.slice(2), (await allowlist()) ?? ids())) {
     // The browser passes the calling origin; refusing it here keeps a host that was
     // installed for one extension from serving another.
     log.error("refusing to start for an extension that is not allowed")

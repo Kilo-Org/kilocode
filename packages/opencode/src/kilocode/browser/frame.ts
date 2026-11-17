@@ -10,6 +10,10 @@ export const HostLimit = 1_000_000
 // Chrome allows 64 MiB towards the host; Firefox allows 4 GB. Tool results such as
 // screenshots need far more than 1 MB in the inbound direction.
 export const PeerLimit = 64 * 1024 * 1024
+// Chunks kept per frame before the decoder folds them into one buffer. Any
+// same-user process can write to the CLI socket, so a peer that writes one byte at
+// a time must not be able to grow the part list into millions of entries.
+const PartLimit = 1024
 
 export class FrameError extends Error {
   constructor(
@@ -102,6 +106,7 @@ export function decoder(input: DecodeInput): Decoder {
           continue
         }
         const take = Math.min(state.need - state.got, view.length)
+        if (state.parts.length >= PartLimit) state.parts = [Buffer.concat(state.parts, state.got)]
         state.parts.push(view.subarray(0, take))
         state.got += take
         view = view.subarray(take)
@@ -117,11 +122,22 @@ export function decoder(input: DecodeInput): Decoder {
   }
 }
 
+// Returns false when the frame could not be handed to the stream at all. A `false`
+// from `stream.write` only means backpressure, so it still counts as sent.
 export function write(stream: NodeJS.WritableStream, value: unknown, limit = HostLimit): boolean {
+  let frame: Buffer
   try {
-    return stream.write(encode(value, limit))
+    frame = encode(value, limit)
   } catch (error) {
-    log.error("dropping oversized frame", { error })
+    if (error instanceof FrameError) log.error("dropping an oversized frame", { kind: error.kind, error })
+    else log.error("cannot serialize a frame", { error })
+    return false
+  }
+  try {
+    stream.write(frame)
+    return true
+  } catch (error) {
+    log.error("cannot write a frame to the stream", { error })
     return false
   }
 }

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import os from "os"
 import path from "path"
-import { caller, ids, install, manifest, script, targets } from "../../../src/kilocode/browser/install"
+import { allowlist, caller, ids, install, manifest, script, targets } from "../../../src/kilocode/browser/install"
 import { FirefoxExtensionId, HostName, StoreExtensionId } from "../../../src/kilocode/browser/protocol"
 
 const data = "/kilo/data"
@@ -77,10 +77,7 @@ describe("native host manifests", () => {
 
   test("reads extra test extension ids from the environment", () => {
     const extra = "b".repeat(32)
-    expect(ids({ KILO_BROWSER_EXTRA_EXTENSION_IDS: `${extra}, not-an-id ,` })).toStrictEqual([
-      StoreExtensionId,
-      extra,
-    ])
+    expect(ids({ KILO_BROWSER_EXTRA_EXTENSION_IDS: `${extra}, not-an-id ,` })).toStrictEqual([StoreExtensionId, extra])
     expect(ids({})).toStrictEqual([StoreExtensionId])
   })
 
@@ -107,10 +104,22 @@ describe("native host install", () => {
     const root = await tmp()
     const home = path.join(root, "home")
     const at = path.join(root, "data")
-    const first = await install({ platform: "darwin", home, config: path.join(home, ".config"), data: at, command: ["/bin/kilo"] })
+    const first = await install({
+      platform: "darwin",
+      home,
+      config: path.join(home, ".config"),
+      data: at,
+      command: ["/bin/kilo"],
+    })
     const before = await Promise.all(first.files.map((item) => fs.readFile(item, "utf8")))
 
-    const second = await install({ platform: "darwin", home, config: path.join(home, ".config"), data: at, command: ["/bin/kilo"] })
+    const second = await install({
+      platform: "darwin",
+      home,
+      config: path.join(home, ".config"),
+      data: at,
+      command: ["/bin/kilo"],
+    })
     const after = await Promise.all(second.files.map((item) => fs.readFile(item, "utf8")))
     expect(after).toStrictEqual(before)
     expect(second.shim).toBe(first.shim)
@@ -127,6 +136,27 @@ describe("native host install", () => {
     expect(entry.path).toBe(first.shim)
     expect(entry.allowed_origins).toStrictEqual([`chrome-extension://${StoreExtensionId}/`])
     expect(first.keys).toStrictEqual([])
+    await fs.rm(root, { recursive: true, force: true })
+  })
+
+  test("persists the allowlist it wrote into the manifests", async () => {
+    const root = await tmp()
+    const data = path.join(root, "data")
+    const extra = "b".repeat(32)
+    const result = await install({
+      platform: "darwin",
+      home: path.join(root, "home"),
+      config: path.join(root, "home", ".config"),
+      data,
+      command: ["/bin/kilo"],
+      env: { KILO_BROWSER_EXTRA_EXTENSION_IDS: extra },
+    })
+    expect(await allowlist(data)).toStrictEqual([StoreExtensionId, extra])
+    const manifest = JSON.parse(await fs.readFile(result.files[0] ?? "", "utf8"))
+    expect(manifest.allowed_origins).toStrictEqual([
+      `chrome-extension://${StoreExtensionId}/`,
+      `chrome-extension://${extra}/`,
+    ])
     await fs.rm(root, { recursive: true, force: true })
   })
 

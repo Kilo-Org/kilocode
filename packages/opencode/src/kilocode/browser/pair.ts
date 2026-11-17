@@ -39,11 +39,32 @@ export async function load(file = Paths.pairing()) {
     log.warn("cannot read the pairing file", { file, error })
     return undefined
   })
-  if (text === undefined) return save(file)
+  // Two hubs starting at once both see ENOENT, so the first run uses an exclusive
+  // create and whoever loses re-reads the winner's key instead of overwriting it.
+  if (text === undefined) return create(file)
   const parsed = File.safeParse(parse(text))
   if (parsed.success && decode(parsed.data.key, KeyBytes)) return parsed.data.key
   log.warn("replacing an unusable pairing file", { file })
   return save(file)
+}
+
+// Writes a fresh key only when the file does not exist yet. Returns the key that is
+// on disk afterwards, which may be another process's.
+async function create(file: string) {
+  const key = encode(randomBytes(KeyBytes))
+  await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 })
+  try {
+    await fs.writeFile(file, JSON.stringify({ v: 1, key }), { mode: 0o600, flag: "wx" })
+  } catch (error) {
+    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST")) throw error
+    const existing = await fs.readFile(file, "utf8").catch(() => undefined)
+    const parsed = existing === undefined ? undefined : File.safeParse(parse(existing))
+    if (parsed?.success && decode(parsed.data.key, KeyBytes)) return parsed.data.key
+    // The winner left an unusable file; replacing it is the only way forward.
+    log.warn("replacing a pairing file that another process left unusable", { file })
+    return save(file)
+  }
+  return key
 }
 
 function parse(text: string): unknown {
@@ -98,9 +119,7 @@ export function url(input: { port: number; hubId: string; key: string }) {
 
 export type Exec = (cmd: string[]) => Promise<number>
 
-export function opener(
-  input: { platform?: NodeJS.Platform; env?: NodeJS.ProcessEnv; exec?: Exec } = {},
-): Opener {
+export function opener(input: { platform?: NodeJS.Platform; env?: NodeJS.ProcessEnv; exec?: Exec } = {}): Opener {
   const platform = input.platform ?? process.platform
   const env = input.env ?? process.env
   const exec = input.exec ?? (async (cmd: string[]) => (await Process.run(cmd, { nothrow: true })).code)

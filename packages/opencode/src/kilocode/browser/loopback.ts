@@ -17,6 +17,8 @@ const log = Log.create({ service: "browser.loopback" })
 
 const HandshakeTimeout = 10_000
 const IdleExit = 10 * 60_000
+// Longest a shutdown waits for connections to drain before giving up on them.
+const ShutdownGrace = 2_000
 const Hosts = ["127.0.0.1", "localhost", "::1"]
 
 export type Trust = {
@@ -27,6 +29,15 @@ export type Trust = {
 
 // Only a loopback Host and an extension Origin may open the socket. A web page can
 // reach 127.0.0.1 too, so the Origin is the check that matters.
+//
+// Firefox reports `moz-extension://<random per-profile uuid>`, not the add-on's
+// Gecko ID, so the origin cannot be pinned to the one Kilo extension the way the
+// Chromium branch pins it to the store ID. A Gecko ID sent later in the handshake
+// would be self-reported and no stronger than the URL the peer already controls, so
+// Firefox relies on the HMAC over the 32-byte pairing key; the origin check only
+// keeps web pages and non-extension schemes out.
+const MozUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
 export function trusted(input: Trust) {
   const host = input.host?.trim()
   if (!host) return false
@@ -34,9 +45,22 @@ export function trusted(input: Trust) {
   if (!Hosts.includes(name)) return false
   const origin = input.origin?.trim().replace(/\/$/, "")
   if (!origin) return false
-  if (origin.startsWith("moz-extension://")) return origin.length > "moz-extension://".length
+  if (origin.startsWith("moz-extension://")) return MozUuid.test(origin.slice("moz-extension://".length))
   const chrome = /^chrome-extension:\/\/([a-p]{32})$/.exec(origin)
   return chrome !== null && chrome[1] !== undefined && input.allowed.includes(chrome[1])
+}
+
+// `new URL` throws on an empty or malformed Host header, so every request path goes
+// through here and a bad request never reaches an uncaught exception.
+function requestUrl(request: { url?: string; headers: { host?: string | string[] } }, fallback: string) {
+  const raw = request.headers.host
+  const host = typeof raw === "string" && raw.trim() !== "" ? raw.trim() : fallback
+  try {
+    return new URL(request.url ?? "/", `http://${host}`)
+  } catch (error) {
+    log.warn("dropping a loopback request with an unusable URL", { url: request.url, host: raw, error })
+    return undefined
+  }
 }
 
 function text(data: RawData) {
@@ -89,11 +113,18 @@ export async function run(input: Run = {}) {
   const leave = input.exit ?? ((code: number) => process.exit(code))
   const key = await pair.load()
   const allowed = ids()
+  // When nothing is attached or connected, the window is measured from the last
+  // activity, not from process start.
+  const activity = { at: Date.now() }
+  const touch = () => {
+    activity.at = Date.now()
+  }
 
   const hub: Hub = create({
     mode: "loopback",
     version,
     onChange(info) {
+      touch()
       void Registry.write({
         ...entry,
         browser: info?.browser ?? null,
@@ -104,8 +135,9 @@ export async function run(input: Run = {}) {
   const entry = Registry.empty({ hubId: hub.id, mode: "loopback", socket: Paths.socket(hub.id) })
 
   const server = http.createServer((request, response) => {
-    const url = new URL(request.url ?? "/", `http://${request.headers.host ?? host}`)
-    if (url.pathname !== pair.PairingPath) {
+    touch()
+    const url = requestUrl(request, host)
+    if (!url || url.pathname !== pair.PairingPath) {
       response.writeHead(404, { "content-type": "text/plain; charset=utf-8" })
       response.end("not found")
       return
@@ -113,11 +145,15 @@ export async function run(input: Run = {}) {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" })
     response.end(page)
   })
+  // Without this, an accept-level error (EMFILE, for example) on a long-lived hub
+  // reaches no listener and becomes an uncaught exception.
+  server.on("error", (error) => log.error("loopback server error", { error }))
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: PeerLimit })
   server.on("upgrade", (request, socket, head) => {
-    const url = new URL(request.url ?? "/", `http://${request.headers.host ?? host}`)
-    if (url.pathname !== pair.SocketPath) {
+    touch()
+    const url = requestUrl(request, host)
+    if (!url || url.pathname !== pair.SocketPath) {
       socket.destroy()
       return
     }
@@ -131,12 +167,20 @@ export async function run(input: Run = {}) {
   })
 
   wss.on("connection", (ws) => {
+    touch()
     const nonceH = pair.nonce()
     const state: { sink?: Extension; timer?: NodeJS.Timeout } = {}
     const send = (frame: proto.HubToExtension) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(frame))
+      if (ws.readyState !== WebSocket.OPEN) return false
+      ws.send(JSON.stringify(frame))
+      return true
     }
-    const hello: proto.HubHello = { type: "hub.hello", protocol: [proto.Protocol], hubVersion: version, mode: "loopback" }
+    const hello: proto.HubHello = {
+      type: "hub.hello",
+      protocol: [proto.Protocol],
+      hubVersion: version,
+      mode: "loopback",
+    }
 
     state.timer = setTimeout(() => {
       log.warn("loopback handshake timed out")
@@ -145,6 +189,7 @@ export async function run(input: Run = {}) {
     ws.send(JSON.stringify({ type: "challenge", nonceH } satisfies proto.Challenge))
 
     ws.on("message", (data) => {
+      touch()
       // A frame that does not parse or does not match the phase ends the connection.
       const value = parse(text(data))
       if (state.sink === undefined) {
@@ -160,7 +205,15 @@ export async function run(input: Run = {}) {
           return
         }
         clearTimeout(state.timer)
-        ws.send(JSON.stringify({ type: "auth_ok", mac: pair.hubMac(key, nonceH, auth.data.nonceE) } satisfies proto.AuthOk))
+        ws.send(
+          JSON.stringify({ type: "auth_ok", mac: pair.hubMac(key, nonceH, auth.data.nonceE) } satisfies proto.AuthOk),
+        )
+        // The CLI opens the pairing page only while the hub reports that it was
+        // never paired, so record the first successful handshake in the registry.
+        if (!entry.paired) {
+          entry.paired = true
+          void Registry.write(entry).catch((error) => log.warn("cannot record the pairing in the registry", { error }))
+        }
         // hub.hello is the first frame after auth_ok, even when this transport is
         // about to be refused because another extension already owns the hub.
         send(hello)
@@ -181,6 +234,7 @@ export async function run(input: Run = {}) {
     })
 
     ws.on("close", () => {
+      touch()
       clearTimeout(state.timer)
       state.sink?.drop()
     })
@@ -195,34 +249,49 @@ export async function run(input: Run = {}) {
     listening.resolve(typeof address === "object" && address !== null ? address.port : port)
   })
   const bound = await listening.promise
+  // The registry is what lets a CLI build the pairing URL, so record the port the
+  // browser must reach.
+  entry.port = bound
 
   const socket = await serve({
     path: entry.socket,
     open(connection) {
+      touch()
       const controller = hub.join(
         (frame) => connection.send(frame),
         () => connection.close(),
       )
-      connection.onClose(() => controller.drop())
+      connection.onClose(() => {
+        touch()
+        controller.drop()
+      })
       return (frame) => controller.frame(frame)
     },
   })
   await Registry.write(entry)
 
-  const started = Date.now()
   const stopping = { done: false }
+  const signals = { term: () => void stop(0), int: () => void stop(0) }
   // Resolved when the hub is stopped, so a caller that awaits run() stays alive.
   const finished = Promise.withResolvers<void>()
   async function stop(code: number) {
     if (stopping.done) return
     stopping.done = true
     clearInterval(idle)
+    process.removeListener("SIGTERM", signals.term)
+    process.removeListener("SIGINT", signals.int)
     hub.close("the hub is shutting down")
+    // `server.close()` alone waits for keep-alive HTTP connections and peers that
+    // ignore the WebSocket close frame, so terminate them and bound the wait.
+    for (const client of wss.clients) client.terminate()
     wss.close()
     const closed = Promise.withResolvers<void>()
     server.close(() => closed.resolve())
-    await closed.promise
-    await socket.close().catch((error) => log.warn("cannot close the CLI socket", { error }))
+    if (typeof server.closeAllConnections === "function") server.closeAllConnections()
+    const drained = await Promise.race([closed.promise.then(() => true), Bun.sleep(ShutdownGrace).then(() => false)])
+    if (!drained) log.warn("the loopback server did not close within the shutdown grace period")
+    const graceful = socket.close().catch((error) => log.warn("cannot close the CLI socket", { error }))
+    await Promise.race([graceful, Bun.sleep(ShutdownGrace)])
     await Registry.remove(entry.hubId).catch((error) => log.warn("cannot remove the hub registry entry", { error }))
     finished.resolve()
     leave(code)
@@ -232,8 +301,14 @@ export async function run(input: Run = {}) {
   // and nothing has been for the whole idle window.
   const idle = setInterval(
     () => {
-      if (hub.count() > 0 || hub.extension()) return
-      if (Date.now() - started < idleMs) return
+      // A controller or a transport that is still handshaking counts as activity,
+      // even before `ext.hello` makes the extension visible. `wss.clients` also
+      // covers a socket that has not completed authentication yet.
+      if (hub.count() > 0 || hub.attached() || wss.clients.size > 0) {
+        touch()
+        return
+      }
+      if (Date.now() - activity.at < idleMs) return
       log.info("exiting an idle loopback hub")
       void stop(0)
     },
@@ -241,7 +316,7 @@ export async function run(input: Run = {}) {
   )
 
   log.info("loopback hub listening", { port: bound, hubId: hub.id })
-  process.once("SIGTERM", () => void stop(0))
-  process.once("SIGINT", () => void stop(0))
+  process.once("SIGTERM", signals.term)
+  process.once("SIGINT", signals.int)
   return finished.promise
 }

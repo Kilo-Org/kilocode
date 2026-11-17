@@ -15,6 +15,11 @@ export namespace Registry {
     browser: z.object({ name: z.string(), version: z.string() }).nullable(),
     profileLabel: z.string().nullable(),
     socket: z.string(),
+    // Loopback port behind the pairing URL; null for native hubs.
+    port: z.number().int().nullable().default(null),
+    // True once the extension has completed a loopback handshake. The CLI opens the
+    // pairing page only for a hub that was never paired.
+    paired: z.boolean().default(false),
     pid: z.number().int().positive(),
     protocol: z.array(z.number().int()).min(1),
   })
@@ -26,6 +31,8 @@ export namespace Registry {
     browser: null,
     profileLabel: null,
     socket: input.socket,
+    port: null,
+    paired: false,
     pid: input.pid ?? process.pid,
     protocol: [1],
   })

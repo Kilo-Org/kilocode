@@ -8,6 +8,7 @@ import * as proto from "./protocol"
 import { PeerLimit, decoder, encode, type Decoder } from "./frame"
 import { Registry } from "./registry"
 import { bin } from "./bin"
+import * as pair from "./pair"
 
 const log = Log.create({ service: "browser.client" })
 
@@ -55,7 +56,11 @@ export type Client = {
   state(): State
   subscribe(listener: (state: State) => void): () => void
   ready(timeout?: number): Promise<proto.ExtensionInfo>
-  call<M extends proto.Method>(method: M, params: proto.Params<M>, options?: { timeout?: number }): Promise<proto.Result<M>>
+  call<M extends proto.Method>(
+    method: M,
+    params: proto.Params<M>,
+    options?: { timeout?: number },
+  ): Promise<proto.Result<M>>
   notify(method: proto.Method, params?: unknown): void
   on<M extends proto.NotificationMethod>(method: M, listener: (params: proto.NotificationParams<M>) => void): () => void
   session: {
@@ -85,6 +90,8 @@ export type Input = {
   dir?: string
   // Replaces the detached-hub spawn in tests or in hosts that manage processes.
   start?: () => void
+  // Replaces the system opener for the pairing page (VS Code passes openExternal).
+  opener?: pair.Opener
 }
 
 type Waiter = {
@@ -109,7 +116,17 @@ export function create(input: Input = {}): Client {
   const handlers = new Map<string, Set<(params: unknown) => void>>()
   const waiters = new Set<Waiter>()
   const backoff = { level: 0 }
-  const lifecycle = { closed: false, retry: undefined as NodeJS.Timeout | undefined, tried: false }
+  const lifecycle = {
+    closed: false,
+    retry: undefined as NodeJS.Timeout | undefined,
+    tried: false,
+    // Bumped by close() so a connect() that resumes after an await cannot install a
+    // socket into a closed client.
+    generation: 0,
+  }
+  // Hubs whose pairing page this client has already opened, so a hub that keeps
+  // reporting hub.waiting is surfaced once per start.
+  const pairing = new Set<string>()
 
   let state: State = { kind: "idle" }
   let link: Link | undefined
@@ -143,10 +160,15 @@ export function create(input: Input = {}): Client {
 
   function schedule(reason: string) {
     if (lifecycle.closed) return
+    clearTimeout(lifecycle.retry)
     backoff.level = Math.min(backoff.level + 1, 10)
     const delay = Math.min(Backoff.max, Backoff.base * 2 ** (backoff.level - 1))
     set({ kind: "reconnecting", attempt: backoff.level, reason })
-    lifecycle.retry = setTimeout(() => void connect(), delay)
+    const generation = lifecycle.generation
+    lifecycle.retry = setTimeout(() => {
+      if (generation !== lifecycle.generation) return
+      void connect()
+    }, delay)
     lifecycle.retry.unref()
   }
 
@@ -166,7 +188,12 @@ export function create(input: Input = {}): Client {
       return
     }
     if (envelope.data.type === "hub.waiting") {
+      // A live hub that is waiting is reachable, so a later outage may need its own
+      // start attempt again.
+      lifecycle.tried = false
+      backoff.level = 0
       set({ kind: "waiting", hub: active.hub })
+      void maybePair(active.hub)
       return
     }
     if (envelope.data.type === "hub.ready") {
@@ -195,7 +222,9 @@ export function create(input: Input = {}): Client {
     if (!pending) return
     active.pending.delete(String(message.id))
     if (message.error) {
-      pending.settle(new HubError({ code: message.error.code, message: message.error.message, data: message.error.data }))
+      pending.settle(
+        new HubError({ code: message.error.code, message: message.error.message, data: message.error.data }),
+      )
       return
     }
     pending.settle(undefined, message.result)
@@ -254,6 +283,23 @@ export function create(input: Input = {}): Client {
     return undefined
   }
 
+  // A loopback hub that has never completed a handshake cannot be paired on its own:
+  // the key only travels in the URL fragment of the pairing page. Open that page
+  // through the injectable opener, at most once per hub process.
+  async function maybePair(entry: Registry.Entry) {
+    if (entry.mode !== "loopback" || entry.paired) return
+    if (pairing.has(entry.hubId)) return
+    pairing.add(entry.hubId)
+    try {
+      const key = await pair.load()
+      const port = entry.port ?? input.port ?? proto.DefaultPort
+      await pair.open(pair.url({ port, hubId: entry.hubId, key }), { opener: input.opener })
+      log.info("opened the browser pairing page", { hubId: entry.hubId, port })
+    } catch (error) {
+      log.warn("cannot open the browser pairing page", { error, hubId: entry.hubId })
+    }
+  }
+
   function start() {
     // One detached start per outage: retries poll the registry instead of spawning
     // a process every backoff step.
@@ -266,11 +312,22 @@ export function create(input: Input = {}): Client {
     // Same shape as the daemon: a detached process with no inherited stdio, and
     // windowsHide so no console window flashes.
     const cmd = bin()
-    const child = spawn(cmd[0], [...cmd.slice(1), "browser-hub", "--loopback", "--port", String(input.port ?? proto.DefaultPort)], {
-      detached: true,
-      stdio: "ignore",
-      windowsHide: true,
-      env: { ...process.env, ...(input.dir === undefined ? {} : { KILO_BROWSER_RUN_DIR: input.dir }) },
+    const child = spawn(
+      cmd[0],
+      [...cmd.slice(1), "browser-hub", "--loopback", "--port", String(input.port ?? proto.DefaultPort)],
+      {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+        env: { ...process.env, ...(input.dir === undefined ? {} : { KILO_BROWSER_RUN_DIR: input.dir }) },
+      },
+    )
+    // spawn reports a missing or non-executable command asynchronously; without a
+    // listener that error kills the host CLI.
+    child.on("error", (error) => {
+      log.warn("cannot start a detached loopback hub", { error })
+      lifecycle.tried = false
+      schedule("cannot start the browser hub")
     })
     child.unref()
   }
@@ -287,27 +344,48 @@ export function create(input: Input = {}): Client {
 
   async function connect() {
     if (lifecycle.closed) return
-    set({ kind: "connecting", attempt: backoff.level + 1 })
-    const found = await discover()
-    if (found) {
-      link = found
-      return
+    const generation = lifecycle.generation
+    const current = () => !lifecycle.closed && generation === lifecycle.generation
+    try {
+      set({ kind: "connecting", attempt: backoff.level + 1 })
+      const found = await discover()
+      if (!current()) {
+        found?.socket.destroy()
+        return
+      }
+      if (found) {
+        lifecycle.tried = false
+        link = found
+        return
+      }
+      start()
+      const entry = await waitForHub(Date.now() + StartTimeout)
+      if (!current()) return
+      const started = entry === undefined ? undefined : await dial(entry)
+      if (!current()) {
+        started?.socket.destroy()
+        return
+      }
+      if (started) {
+        lifecycle.tried = false
+        link = started
+        return
+      }
+      schedule("no hub is reachable")
+    } catch (error) {
+      log.warn("cannot connect to a browser hub", { error })
+      if (current()) schedule("cannot connect to the browser hub")
     }
-    start()
-    const entry = await waitForHub(Date.now() + StartTimeout)
-    const started = entry === undefined ? undefined : await dial(entry)
-    if (started) {
-      link = started
-      return
-    }
-    schedule("no hub is reachable")
   }
 
   function rpc(method: string, params: unknown, options?: { timeout?: number }) {
     const active = link
     if (!active) {
       return Promise.reject(
-        new HubError({ code: proto.ErrorCodes.browser_unavailable, message: "The browser is not available right now." }),
+        new HubError({
+          code: proto.ErrorCodes.browser_unavailable,
+          message: "The browser is not available right now.",
+        }),
       )
     }
     const id = active.next++
@@ -358,9 +436,7 @@ export function create(input: Input = {}): Client {
           new HubError({ code: proto.ErrorCodes.browser_unavailable, message: "The browser is not connected." }),
         )
       }, timeout)
-      deferred.promise
-        .finally(() => clearTimeout(timer))
-        .catch(() => undefined)
+      deferred.promise.finally(() => clearTimeout(timer)).catch(() => undefined)
       return deferred.promise
     },
     async call(method, params, options) {
@@ -399,6 +475,9 @@ export function create(input: Input = {}): Client {
     close(reason = "The caller closed the connection.") {
       if (lifecycle.closed) return
       lifecycle.closed = true
+      // Any connect() still awaiting sees a different generation and stops without
+      // installing its socket.
+      lifecycle.generation += 1
       clearTimeout(lifecycle.retry)
       const active = link
       link = undefined

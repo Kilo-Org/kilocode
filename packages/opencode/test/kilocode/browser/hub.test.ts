@@ -9,7 +9,10 @@ function link() {
     frames,
     closed,
     link: {
-      send: (frame: proto.HubToExtension) => frames.push(frame),
+      send: (frame: proto.HubToExtension) => {
+        frames.push(frame)
+        return true
+      },
       close: (reason: string) => closed.push(reason),
     },
   }
@@ -18,7 +21,12 @@ function link() {
 function controller() {
   const frames: proto.HubToCli[] = []
   const closed: string[] = []
-  return { frames, closed, send: (frame: proto.HubToCli) => frames.push(frame), close: (reason: string) => closed.push(reason) }
+  return {
+    frames,
+    closed,
+    send: (frame: proto.HubToCli) => frames.push(frame),
+    close: (reason: string) => closed.push(reason),
+  }
 }
 
 const info: proto.ExtensionInfo = {
@@ -172,5 +180,68 @@ describe("hub multiplexing", () => {
 
     expect(ext.closed).toStrictEqual(["received a frame before ext.hello"])
     expect(hub.count()).toBe(1)
+  })
+
+  test("treats a transport that is still handshaking as attached", () => {
+    const hub = create({ mode: "loopback", version: "test" })
+    expect(hub.attached()).toBe(false)
+    const ext = link()
+    const sink = hub.attach(ext.link.send, ext.link.close)!
+    expect(hub.attached()).toBe(true)
+    expect(hub.extension()).toBeUndefined()
+    sink.hello(info)
+    expect(hub.attached()).toBe(true)
+    sink.drop()
+    expect(hub.attached()).toBe(false)
+  })
+
+  test("answers the controller when the extension transport refuses a frame", () => {
+    const hub = create({ mode: "native", version: "test" })
+    const refused = {
+      send: () => false,
+      close: () => undefined,
+    }
+    const sink = hub.attach(refused.send, refused.close)!
+    sink.hello(info)
+    const caller = controller()
+    const controller$ = hub.join(caller.send, caller.close)
+    controller$.frame(call(11))
+
+    const answer = proto.HubToCli.parse(caller.frames.at(-1))
+    if (answer.type !== "rpc") throw new Error("expected an rpc frame")
+    if (!proto.isResponse(answer.message)) throw new Error("expected a response")
+    expect(answer.message.id).toBe(11)
+    expect(answer.message.error?.code).toBe(proto.ErrorCodes.browser_unavailable)
+  })
+
+  test("close() closes every controller and the extension, then refuses new work", () => {
+    const hub = create({ mode: "native", version: "test" })
+    const ext = link()
+    const sink = hub.attach(ext.link.send, ext.link.close)!
+    sink.hello(info)
+    const a = controller()
+    const b = controller()
+    hub.join(a.send, a.close)
+    hub.join(b.send, b.close)
+
+    hub.close("the hub is shutting down")
+
+    expect(ext.closed).toStrictEqual(["the hub is shutting down"])
+    expect(a.closed).toStrictEqual(["the hub is shutting down"])
+    expect(b.closed).toStrictEqual(["the hub is shutting down"])
+    expect(hub.count()).toBe(0)
+    expect(hub.extension()).toBeUndefined()
+    expect(hub.attached()).toBe(false)
+
+    const late = controller()
+    const after = hub.join(late.send, late.close)
+    expect(late.closed).toStrictEqual(["hub is shutting down"])
+    expect(hub.count()).toBe(0)
+    after.drop()
+    expect(late.closed).toHaveLength(1)
+
+    const second = link()
+    expect(hub.attach(second.link.send, second.link.close)).toBeUndefined()
+    expect(second.closed).toStrictEqual(["hub is shutting down"])
   })
 })

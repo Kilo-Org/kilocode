@@ -43,6 +43,14 @@ describe("pairing", () => {
     await fs.rm(at.root, { recursive: true, force: true })
   })
 
+  test("gives two racing first runs the same key instead of overwriting it", async () => {
+    const at = await dir()
+    const [first, second] = await Promise.all([pair.load(at.file), pair.load(at.file)])
+    expect(first).toBe(second)
+    expect(JSON.parse(await fs.readFile(at.file, "utf8"))).toStrictEqual({ v: 1, key: first })
+    await fs.rm(at.root, { recursive: true, force: true })
+  })
+
   test("replaces a corrupt key file", async () => {
     const at = await dir()
     await fs.mkdir(path.dirname(at.file), { recursive: true })

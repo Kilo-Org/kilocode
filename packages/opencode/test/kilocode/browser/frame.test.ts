@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { FrameError, HostLimit, PeerLimit, decoder, encode } from "../../../src/kilocode/browser/frame"
+import { FrameError, HostLimit, PeerLimit, decoder, encode, write } from "../../../src/kilocode/browser/frame"
 
 function collect(limit = PeerLimit) {
   const frames: unknown[] = []
@@ -81,5 +81,46 @@ describe("native messaging framing", () => {
   test("keeps host frames under one megabyte", () => {
     expect(HostLimit).toBeLessThan(1024 * 1024)
     expect(PeerLimit).toBeGreaterThan(HostLimit)
+  })
+
+  test("decodes a frame that arrives one byte at a time without unbounded parts", () => {
+    const view = collect()
+    const frame = encode({ text: "z".repeat(5_000) })
+    for (const byte of frame) view.feed(Buffer.from([byte]))
+    expect(view.errors).toHaveLength(0)
+    expect(view.frames).toStrictEqual([{ text: "z".repeat(5_000) }])
+  })
+
+  test("reports a frame it cannot serialize instead of throwing", () => {
+    const written: Buffer[] = []
+    const stream = {
+      write(chunk: Buffer) {
+        written.push(chunk)
+        return true
+      },
+    } as unknown as NodeJS.WritableStream
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+    expect(write(stream, circular)).toBe(false)
+    expect(write(stream, { text: "x".repeat(64) }, 16)).toBe(false)
+    expect(written).toHaveLength(0)
+  })
+
+  test("treats a backpressured write as delivered", () => {
+    const stream = {
+      write() {
+        return false
+      },
+    } as unknown as NodeJS.WritableStream
+    expect(write(stream, { ok: true })).toBe(true)
+  })
+
+  test("reports a dead stream", () => {
+    const stream = {
+      write() {
+        throw new Error("EPIPE")
+      },
+    } as unknown as NodeJS.WritableStream
+    expect(write(stream, { ok: true })).toBe(false)
   })
 })

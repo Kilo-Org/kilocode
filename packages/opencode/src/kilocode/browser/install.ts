@@ -18,6 +18,27 @@ export function ids(env: NodeJS.ProcessEnv = process.env) {
   return [...new Set([StoreExtensionId, ...extra])].filter((item) => ExtensionId.safeParse(item).success)
 }
 
+export function allowlistPath(data = Paths.data()) {
+  return path.join(data, "allowed.json")
+}
+
+// The manifests are written from the installing shell, but the browser starts the
+// host from its GUI session, which does not inherit KILO_BROWSER_EXTRA_EXTENSION_IDS.
+// Persisting the list next to the manifests keeps the runtime check in step with them.
+export async function allowlist(data = Paths.data()) {
+  const text = await fs.readFile(allowlistPath(data), "utf8").catch(() => undefined)
+  if (text === undefined) return undefined
+  let value: unknown
+  try {
+    value = JSON.parse(text)
+  } catch (error) {
+    log.warn("the installed allowlist is not valid JSON", { error })
+    return undefined
+  }
+  if (!Array.isArray(value)) return undefined
+  return value.filter((item): item is string => typeof item === "string" && ExtensionId.safeParse(item).success)
+}
+
 // The browser passes the calling origin (Chrome) or the manifest path and add-on ID
 // (Firefox). A host started by hand passes neither and is allowed.
 export function caller(args: string[], allowed: string[]) {
@@ -80,7 +101,11 @@ const fileName = `${HostName}.json`
 export function targets(input: Layout): Target[] {
   const list: Target[] = []
   const base =
-    input.platform === "darwin" ? path.join(input.home, "Library/Application Support") : input.platform === "linux" ? input.config : undefined
+    input.platform === "darwin"
+      ? path.join(input.home, "Library/Application Support")
+      : input.platform === "linux"
+        ? input.config
+        : undefined
 
   if (input.platform === "win32") {
     for (const browser of chromium) {
@@ -125,7 +150,11 @@ export function targets(input: Layout): Target[] {
   }
 
   for (const browser of chromium) {
-    list.push({ browser: browser.name, kind: "chromium", file: path.join(base, browser.dir, "NativeMessagingHosts", fileName) })
+    list.push({
+      browser: browser.name,
+      kind: "chromium",
+      file: path.join(base, browser.dir, "NativeMessagingHosts", fileName),
+    })
   }
   list.push({ browser: "Firefox", kind: "firefox", file: path.join(base, "Mozilla/NativeMessagingHosts", fileName) })
   return list
@@ -193,6 +222,9 @@ export async function install(input: Install = {}): Promise<Installed> {
   await write(shim, script({ platform, command }), 0o755)
 
   const allowed = ids(input.env)
+  // A stale allowlist from an older install must not keep admitting an ID that the
+  // freshly written manifests no longer list, so rewrite it with the same list.
+  await write(allowlistPath(data), `${JSON.stringify(allowed, null, 2)}\n`, 0o600)
   const files: string[] = []
   const keys: string[] = []
   for (const target of targets({ platform, home, config, data })) {

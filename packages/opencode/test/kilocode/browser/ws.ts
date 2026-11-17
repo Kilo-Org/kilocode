@@ -19,7 +19,9 @@ type Head = { status: number; rest: Buffer }
 function head(socket: net.Socket, key: string) {
   const deferred = Promise.withResolvers<Head>()
   let buffer = Buffer.alloc(0)
-  const expected = createHash("sha1").update(key + Guid).digest("base64")
+  const expected = createHash("sha1")
+    .update(key + Guid)
+    .digest("base64")
   socket.on("data", function read(chunk: Buffer) {
     buffer = Buffer.concat([buffer, chunk])
     const end = buffer.indexOf("\r\n\r\n")
@@ -27,7 +29,10 @@ function head(socket: net.Socket, key: string) {
     socket.off("data", read)
     const lines = buffer.subarray(0, end).toString("latin1").split("\r\n")
     const status = Number(lines[0]?.split(" ")[1] ?? 0)
-    const accept = lines.find((line) => line.toLowerCase().startsWith("sec-websocket-accept:"))?.split(":")[1]?.trim()
+    const accept = lines
+      .find((line) => line.toLowerCase().startsWith("sec-websocket-accept:"))
+      ?.split(":")[1]
+      ?.trim()
     if (status === 101 && accept !== expected) {
       deferred.reject(new Error("the server returned an unexpected Sec-WebSocket-Accept"))
       return
