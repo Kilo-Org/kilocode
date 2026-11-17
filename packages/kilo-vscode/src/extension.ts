@@ -495,8 +495,11 @@ export function activate(context: ExtensionContext) {
   )
   shutdownExtension = () => shutdown.run(() => server.stop())
 
-  // `bun run extension` opens a development host: show the chat right away.
-  if (context.extensionMode === ExtensionMode.Development) void commands.executeCommand("kilo-code.v2.chat.focus")
+  // `bun run extension` opens a development host: open the Agent Manager panel and show the chat right away.
+  if (context.extensionMode === ExtensionMode.Development) {
+    agentManager.openPanel(true)
+    void commands.executeCommand("kilo-code.v2.chat.focus")
+  }
 }
 
 /** Current IDE color scheme, so the Integrated Browser matches the editor theme. */

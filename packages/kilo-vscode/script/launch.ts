@@ -19,12 +19,13 @@ const state = fresh
   : path.join(tmpdir(), `kilo-vscode-v2-${createHash("sha256").update(root).digest("hex").slice(0, 12)}`)
 await mkdir(state, { recursive: true })
 
-// Disable VS Code's built-in AI features so Copilot does not activate in the development host.
+// Disable VS Code's built-in AI features so Copilot does not activate in the development host, and workspace trust so
+// the scratch workspace opens without a prompt and the Agent Manager, git and terminals work right away.
 const userDir = path.join(state, "user")
 await mkdir(path.join(userDir, "User"), { recursive: true })
 await writeFile(
   path.join(userDir, "User", "settings.json"),
-  JSON.stringify({ "chat.disableAIFeatures": true }, null, 2) + "\n",
+  JSON.stringify({ "chat.disableAIFeatures": true, "security.workspace.trust.enabled": false }, null, 2) + "\n",
 )
 
 const build = Bun.spawn([process.execPath, path.join(root, "script/build.ts")], { stdout: "inherit", stderr: "inherit" })
