@@ -15,6 +15,11 @@ export function createLocalTabPlacement(opts: {
   setIds: (next: string[] | ((prev: string[]) => string[])) => void
   appendOrder: (key: string, id: string) => void
   replaceOrder: (key: string, oldId: string, id: string) => void
+  /**
+   * A draft promoted to a real session keeps the context's remembered tab: the draft was the visible tab when the
+   * user left, and it no longer exists under its old id. Without this, returning falls back to the leftmost tab.
+   */
+  replaceRemembered: (from: string, to: string) => void
   activePending: () => string | undefined
   setActivePending: (id: string | undefined) => void
   setActiveTerminal: (id: undefined) => void
@@ -43,7 +48,10 @@ export function createLocalTabPlacement(opts: {
       ? replacePendingTab({ ids: opts.ids(), active }, pending, id)
       : openSessionTab({ ids: opts.ids(), active }, id)
     opts.setIds(next.ids)
-    if (pending) opts.replaceOrder(LOCAL, pending, id)
+    if (pending) {
+      opts.replaceOrder(LOCAL, pending, id)
+      opts.replaceRemembered(pending, id)
+    }
     if (!pending && !existing) opts.appendOrder(LOCAL, id)
     if (pending && pending === active) opts.setActivePending(undefined)
   }
