@@ -71,9 +71,12 @@ const UPSTREAM_REQUEST_HEADERS = [
 ]
 
 // Written by the device method. Decoded again because stored credentials are read back from the database.
+// `accountID` is the team of a Kilo v1 `auth.json` login that the upstream `import_legacy_credentials` migration
+// copied into a new database.
 const Metadata = Schema.Struct({
   server: Schema.optional(Schema.String),
   organizationID: Schema.optional(Schema.NullOr(Schema.String)),
+  accountID: Schema.optional(Schema.String),
 })
 const decodeMetadata = Schema.decodeUnknownOption(Metadata)
 const decodeSettings = Schema.decodeUnknownOption(
@@ -648,7 +651,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       )
     })
 
-    yield* ctx.integration.transform((editor) => editor.method.update(device(() => server)))
+    yield* ctx.integration.transform((editor) => editor.method.update(device(() => server, global.data)))
 
     // The first start (no stored catalog) and team scope, which fails closed, wait for the catalog, but only for
     // FIRST_CATALOG_WAIT: the server answers 503 when the plugins of a Location take longer than 5 seconds to
@@ -1462,7 +1465,7 @@ function toImageModelInfo(source: KiloModels.Model, baseURL: string, headers: Re
   }
 }
 
-function device(server: () => string) {
+function device(server: () => string, data: string) {
   return {
     integrationID: id,
     method: { id: methodID, type: "oauth", label: "Kilo Gateway (Device Authorization)" },
@@ -1476,7 +1479,10 @@ function device(server: () => string) {
           instructions: `Enter code: ${code.code}`,
           expiresAt: (yield* Clock.currentTimeMillis) + code.expiresIn * 1000,
           callback: Effect.gen(function* () {
-            const login = yield* KiloDevice.login(base, code)
+            // A new login starts on the team of the Kilo v1 login on this machine when its profile allows it: the team
+            // selected on the backend can be an older one.
+            const preferred = yield* KiloAccount.v1Organization(data)
+            const login = yield* KiloDevice.login(base, code, { preferred })
             // v1 reuses the token as the refresh token and has no refresh endpoint.
             return Credential.OAuth.make({
               type: "oauth",
@@ -1506,7 +1512,8 @@ function credentialInput(credential: Credential.Value): KiloAccount.Input | unde
   return {
     token,
     server: metadata?.server,
-    organizationID: metadata?.organizationID,
+    // `null` is an explicit Personal choice, so only a missing team falls back to the imported one.
+    organizationID: metadata?.organizationID === undefined ? metadata?.accountID : metadata.organizationID,
   }
 }
 

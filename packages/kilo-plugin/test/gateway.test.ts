@@ -2491,6 +2491,43 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
+  // `import_legacy_credentials` stores the team of an imported `auth.json` login as `accountID`.
+  for (const scenario of [
+    { name: "uses the imported team when no team was chosen", metadata: { accountID: "first" }, team: "first" },
+    {
+      name: "keeps an explicit Personal choice over the imported team",
+      metadata: { organizationID: null, accountID: "first" },
+      team: undefined,
+    },
+    {
+      name: "keeps a chosen team over the imported team",
+      metadata: { organizationID: "selected", accountID: "first" },
+      team: "selected",
+    },
+  ])
+    it.live(`${scenario.name} of a stored credential`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+            Effect.gen(function* () {
+              yield* (yield* Credential.Service).create({
+                integrationID,
+                label: "OAuth",
+                value: oauth(scenario.metadata),
+              })
+              yield* addPlugin()
+              expect(yield* (yield* Rpc.Service).call("kilocode.gateway", "authStatus", {})).toMatchObject({
+                authenticated: true,
+                organizationID: scenario.team ?? null,
+              })
+              expect((yield* (yield* Provider.Service).get(kilo))?.headers).toEqual(headers(scenario.team))
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+
   it.live("rejects account calls when signed out", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),

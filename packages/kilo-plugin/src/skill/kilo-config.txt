@@ -181,7 +181,7 @@ v1 `KILO_CONFIG`, `KILO_CONFIG_DIR` and `KILO_DB` have no effect on `kilo2`.
 
 ## Coming from v1
 
-`kilo2 import v1 [--from <kilo.db or data dir>] [--since 14d]` copies v1 sessions into a new `kilo2` store. It only reads v1, and refuses when a `kilo2` database already exists, so run it before the first launch or point `KILO2_DB` at a new file. v1 config, TUI preferences and workflows are not imported; recreate them with the `kilo2` names above. `kilo2 upgrade` does not self-update; update through the install method.
+`kilo2 import v1 [--from <kilo.db or data dir>] [--since 14d] [--config]` copies v1 sessions into the `kilo2` store. It only reads v1. A new store gets the v1 store; an existing one gets only the v1 sessions it does not have yet, so it is safe to run again, also while Kilo runs. `--config` also copies the v1 global config (`kilo.json(c)` as `kilo2.json(c)`, skills, agents, commands, modes, rules, `AGENTS.md`) into the `kilo2` config directory without overwriting `kilo2` files. In VS Code, "Import Sessions and Config from Kilo v1" in the sidebar `...` menu runs it for a chosen timespan and adds the v1 Agent Manager sessions of that timespan. Project `.kilo/` config, plugins, credentials, TUI preferences and workflows are not imported; recreate them with the `kilo2` names above. `kilo2 upgrade` does not self-update; update through the install method.
 
 ## Agent Manager
 

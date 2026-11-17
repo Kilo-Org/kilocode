@@ -7,6 +7,7 @@ import { SidePanel } from "../webview-ui/agent-manager/side-panel-layout"
 import {
   createTabMemory,
   rememberSelectionTab,
+  replaceRememberedTab,
   selectLocalAction,
   selectWorktreeAction,
   vacantWorktreeTab,
@@ -396,5 +397,42 @@ describe("vacantWorktreeTab", () => {
     expect(vacantWorktreeTab({ ...vacant, selection: "local" })).toBeUndefined()
     expect(vacantWorktreeTab({ ...vacant, selection: null })).toBeUndefined()
     expect(vacantWorktreeTab({ ...vacant, tabs: [] })).toBeUndefined()
+  })
+})
+
+describe("replaceRememberedTab", () => {
+  const store = (memory: Record<string, string>, restore: Record<string, string>) => ({
+    tabMemory: {
+      get: (key: string) => memory[key],
+      set: (key: string, tab: string) => {
+        memory[key] = tab
+      },
+    },
+    sessionRestore: {
+      get: (key: string) => restore[key],
+      set: (key: string, tab: string) => {
+        restore[key] = tab
+      },
+    },
+  })
+
+  it("moves both memories from the draft to the session", () => {
+    const memory = { local: "pending:a" }
+    const restore = { local: "pending:a" }
+
+    replaceRememberedTab(store(memory, restore), "local", "pending:a", "ses_new")
+
+    expect(memory.local).toBe("ses_new")
+    expect(restore.local).toBe("ses_new")
+  })
+
+  it("leaves memories that point elsewhere or belong to another context alone", () => {
+    const memory = { local: "ses_old", "wt-1": "pending:a" }
+    const restore = { local: "ses_old" }
+
+    replaceRememberedTab(store(memory, restore), "local", "pending:a", "ses_new")
+
+    expect(memory).toEqual({ local: "ses_old", "wt-1": "pending:a" })
+    expect(restore).toEqual({ local: "ses_old" })
   })
 })

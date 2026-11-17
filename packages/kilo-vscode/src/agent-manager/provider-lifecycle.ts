@@ -196,15 +196,15 @@ export async function createLifecycleWorktree(
   return { session, ready }
 }
 
-/** Remove a worktree's snapshot repository. Teardown must still complete if removal fails. */
+/**
+ * Remove a worktree's snapshot repository. Teardown must still complete if removal fails. Resolves true when no
+ * checkpoint data is left: the repository is created lazily, so `removed: false` from the RPC means there was none.
+ */
 export async function removeWorktreeSnapshot(host: LifecycleHost, root: string, dir: string): Promise<boolean> {
   try {
     const client = await host.client()
-    const result = await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot(
-      { worktree: dir },
-      { location: { directory: root } },
-    )
-    return result.removed
+    await client.rpc(KiloAgentManagerRpc.Definition).removeSnapshot({ worktree: dir }, { location: { directory: root } })
+    return true
   } catch (error) {
     host.log(`Failed to remove worktree snapshots: ${error}`)
     return false
