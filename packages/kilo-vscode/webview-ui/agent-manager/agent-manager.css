@@ -3496,6 +3496,20 @@ body.am-wt-dragging-active * {
   padding: 0 20px;
 }
 
+/* A project that cannot hold worktrees yet: stays visible above Create until the folder changes. */
+.am-nv-branch-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-warning, #f59e0b);
+  line-height: 1.4;
+}
+
+.am-nv-branch-warning [data-component="icon"] {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 /* Starting point group: origin and worktree name read as one unit. */
 .am-nv-start {
   display: flex;

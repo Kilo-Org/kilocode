@@ -190,6 +190,8 @@ export const NewWorktreeDialog: Component<{
 
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
   const [branchesLoading, setBranchesLoading] = createSignal(false)
+  // A folder that is not a repository, or a repository with no commits, cannot hold worktrees.
+  const [branchError, setBranchError] = createSignal<"not_git_repo" | "no_commits">()
   const [detected, setDetected] = createSignal("main")
   const defaultBranch = () => base() ?? detected()
   const [branchSearch, setBranchSearch] = createSignal("")
@@ -442,6 +444,7 @@ export const NewWorktreeDialog: Component<{
     on(project, (id) => {
       const hit = id ? branchCache.get(id) : undefined
       setBranches(hit?.branches ?? [])
+      setBranchError(undefined)
       setDetected(hit?.detected ?? "main")
       setBranchesLoading(!hit)
       setBranchSearch("")
@@ -468,6 +471,7 @@ export const NewWorktreeDialog: Component<{
 
   const canSubmit = () => {
     if (starting()) return false
+    if (branchError()) return false
     if (speech.active()) return false
     return selection.canSubmit(compareMode() ? modelAllocations() : undefined)
   }
@@ -692,10 +696,11 @@ export const NewWorktreeDialog: Component<{
     if (msg.type === "agentManager.branches") {
       const ev = msg as AgentManagerBranchesMessage
       if (ev.projectId !== project()) return
-      if (ev.projectId) cacheBranches(ev.projectId, ev.branches, ev.defaultBranch)
       setBranches(ev.branches)
+      setBranchError(ev.errorCode)
       setDetected(ev.defaultBranch)
       setBranchesLoading(false)
+      if (ev.projectId && !ev.errorCode) cacheBranches(ev.projectId, ev.branches, ev.defaultBranch)
       const pick = baseBranch()
       if (pick && ev.branches.length > 0 && !ev.branches.some((b) => b.name === pick)) pickBase(null)
     }
@@ -1069,6 +1074,14 @@ export const NewWorktreeDialog: Component<{
                 </div>
               </div>
             </div>
+            <Show when={branchError()}>
+              {(code) => (
+                <div class="am-nv-branch-warning" role="status">
+                  <Icon name="warning" size="small" />
+                  <span>{t(`agentManager.setup.error.${code()}`)}</span>
+                </div>
+              )}
+            </Show>
           </div>
           <div class="am-nv-dialog-footer">
             <Show

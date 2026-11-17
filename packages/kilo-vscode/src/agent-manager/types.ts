@@ -373,6 +373,8 @@ interface BranchesMessage {
   projectId?: string
   branches: (BranchListItem & { isCheckedOut?: boolean })[]
   defaultBranch: string
+  /** Why there are no branches: the folder is not a repository or its repository has no commits. */
+  errorCode?: WorktreeSetupErrorCode
 }
 
 interface ImportResultMessage {

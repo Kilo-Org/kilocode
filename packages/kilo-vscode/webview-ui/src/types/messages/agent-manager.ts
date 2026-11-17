@@ -514,6 +514,8 @@ export interface AgentManagerBranchesMessage {
   projectId?: string
   branches: BranchInfo[]
   defaultBranch: string
+  /** Why there are no branches: the folder is not a repository or its repository has no commits. */
+  errorCode?: "not_git_repo" | "no_commits"
 }
 
 /** Import tab result feedback. */

@@ -1512,6 +1512,13 @@ export class WorktreeManager {
   // ---------------------------------------------------------------------------
 
   async listBranches(): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    await this.ensureGitAvailable()
+    // Ask about the repository before the default branch: an unborn HEAD in a folder
+    // that is not a repository at all must not read as "no commits".
+    if (!(await this.git.checkIsRepo()))
+      throw new Error(
+        "This folder is not a git repository. Initialize a repository or open a git project to use worktrees.",
+      )
     const defBranch = await this.defaultBranch()
     const raw = await this.git.raw([
       "for-each-ref",
