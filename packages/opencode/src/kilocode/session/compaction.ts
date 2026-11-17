@@ -60,17 +60,18 @@ export namespace KiloSessionCompaction {
       (entry) =>
         entry.semaphore.withPermits(1)(
           Effect.gen(function* () {
+            const sync = Effect.fn("KiloSessionCompaction.sync")(function* (info: MessageV2.Info) {
+              if (info.role !== "user") return
+              const agent = info.agent !== request.agent
+              const model = !sameModel(info.model, request.model)
+              if (agent || model) yield* session.updateMessage({ ...info, agent: request.agent, model: request.model })
+            })
             const marker = pending(yield* session.messages({ sessionID }).pipe(Effect.orDie))
             if (!marker) return yield* create
             KiloSessionPromptQueue.retarget(sessionID, marker.info.id)
             const part = marker.parts.find((item): item is MessageV2.CompactionPart => item.type === "compaction")
             if (!part || !request.auto) return
-            const info = marker.info
-            if (info.role === "user") {
-              const agent = info.agent !== request.agent
-              const model = !sameModel(info.model, request.model)
-              if (agent || model) yield* session.updateMessage({ ...info, agent: request.agent, model: request.model })
-            }
+            yield* sync(marker.info)
             if (part.auto && part.overflow === request.overflow) return
             yield* session.updatePart({ ...part, auto: true, overflow: request.overflow })
           }),
