@@ -1,7 +1,7 @@
 // The codebase indexing host: machine-local consent per project in globalState, re-sent to the server for the
 // workspace project whenever the server starts, and the settings and status messages the webviews consume. The
 // status itself comes from the `kilocode.indexing` RPC and its status events; this host only answers consent.
-import { OpenCode } from "@opencode/client"
+import { OpenCode, type OpenCodeClient } from "@opencode/client"
 import { KiloIndexingRpc } from "@opencode/schema/kilocode/indexing"
 import type { ExtensionContext } from "vscode"
 import { local } from "../local"
@@ -36,6 +36,8 @@ export function createIndexingHost(input: {
   directory: () => string | undefined
   /** Test seam: the RPC of the running server. */
   connect?: () => Promise<IndexingRpc>
+  /** Test seam: the server client every RPC read goes through. */
+  api?: (server: { url: string; authorization: string }) => OpenCodeClient
   /** Test seam: the consent store, normally the extension globalState one. */
   store?: IndexingConsentStore
   /** Test seam: the additional Agent Manager projects. */
@@ -51,11 +53,13 @@ export function createIndexingHost(input: {
 
   const rpc = async (): Promise<IndexingRpc> => {
     const server = await input.server.get()
-    const api = OpenCode.make({
-      baseUrl: server.url,
-      headers: { authorization: server.authorization },
-      fetch: local,
-    })
+    const api =
+      input.api?.(server) ??
+      OpenCode.make({
+        baseUrl: server.url,
+        headers: { authorization: server.authorization },
+        fetch: local,
+      })
     const client = api.rpc(KiloIndexingRpc.Definition)
     // The server is ready before its plugins are, and `sync` runs as soon as it starts. Without the wait, the
     // indexing RPC is not yet registered and the stored consent never reaches the new server.
