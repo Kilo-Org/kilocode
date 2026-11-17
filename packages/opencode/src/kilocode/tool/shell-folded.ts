@@ -38,9 +38,10 @@ export function fold(root: Node): Fold {
       .sort((a, b) => a.startIndex - b.startIndex)[0]
     if (!error) continue
 
-    const pipe = pipeline(command)
-    const start = pipe && error.startIndex >= pipe.startIndex ? pipe.startIndex : error.startIndex
-    const end = pipe ? pipe.endIndex : command.endIndex
+    // Stop at this argument. A later pipeline stage (`| Set-Content ...`) is a
+    // separate command and keeps its own permission pattern and path scan.
+    const start = error.startIndex
+    const end = command.endIndex
     const span = `${start}:${end}`
     if (seen.has(span)) continue
     seen.add(span)
@@ -48,26 +49,10 @@ export function fold(root: Node): Fold {
     if (!pattern) continue
     patterns.push(pattern)
     covers.push({ start, end })
-    for (const inner of commands) {
-      if (inner.startIndex >= start && inner.endIndex <= end) skip.add(key(inner))
-    }
+    skip.add(key(command))
   }
 
   return { skip, patterns, covers }
-}
-
-// Drop ERROR fragments whose text is already inside a reconstructed statement.
-// Keeping both would make the head match an allow rule while the argument is
-// checked on its own.
-export function withoutCovered(root: Node, texts: string[], covers: Cover[]): string[] {
-  if (covers.length === 0 || texts.length === 0) return texts
-  const hidden = new Set(
-    named(root, "ERROR")
-      .filter((node) => covers.some((cover) => node.startIndex >= cover.start && node.endIndex <= cover.end))
-      .map((node) => node.text.trim())
-      .filter((text) => text.length > 0),
-  )
-  return texts.filter((text) => !hidden.has(text))
 }
 
 export function commandKey(node: Node) {
@@ -94,10 +79,4 @@ function dotArgument(command: Node) {
   return false
 }
 
-function pipeline(node: Node) {
-  let current = node.parent
-  while (current) {
-    if (current.type === "pipeline") return current
-    current = current.parent
-  }
-}
+

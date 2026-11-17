@@ -143,11 +143,46 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
       "Write-Output x, .venv/Scripts/python.exe --version",
       "git push origin -- .foo -f",
       "Remove-Item -- .foo/../x",
-      "Write-Output -- .agents/README.md | Out-String",
     ]
     for (const command of commands) {
-      expect(patterns(await scan(tmp.path, command, "pwsh"))).toEqual([command])
+      const found = patterns(await scan(tmp.path, command, "pwsh"))
+      expect(found).toContain(command)
+      expect(found.some((pattern) => pattern.startsWith("."))).toBe(false)
     }
+  })
+
+  test("pwsh: a later pipeline command keeps its own check (#15938)", async () => {
+    await using tmp = await tmpdir()
+    const found = patterns(await scan(tmp.path, "Write-Output -- .agents/README.md | Out-String", "pwsh"))
+    expect(found).toContain("Write-Output -- .agents/README.md")
+    expect(found).toContain("Out-String")
+    expect(found).not.toContain("Write-Output -- .agents/README.md | Out-String")
+
+    const written = await scan(tmp.path, "git status -- .x | Set-Content -Path ../outside.txt", "pwsh")
+    const writtenPatterns = patterns(written)
+    expect(writtenPatterns.some((pattern) => pattern.includes("git status -- .x"))).toBe(true)
+    expect(writtenPatterns.some((pattern) => pattern.includes("Set-Content"))).toBe(true)
+    expect(written.some((request) => request.permission === "external_directory")).toBe(true)
+  })
+
+  test("pwsh: an identical later parse error is still checked (#15938)", async () => {
+    await using tmp = await tmpdir()
+    const found = patterns(await scan(tmp.path, "git checkout -- README .foo; git checkout -- README", "pwsh"))
+    expect(found.some((pattern) => pattern.includes("git checkout -- README .foo"))).toBe(true)
+    expect(found.some((pattern) => pattern.includes("git checkout -- README") && !pattern.includes(".foo"))).toBe(true)
+  })
+
+  test("pwsh: a reconstructed git push still escalates the sandbox (#15938)", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const requests = await scan(tmp.path, "git push origin -- .foo -f", "pwsh", true)
+    expect(requests.map((request) => request.permission)).toContain("sandbox_escalation")
+  })
+
+  test("pwsh: allow-always can persist the reconstructed command (#15938)", async () => {
+    await using tmp = await tmpdir()
+    const requests = await scan(tmp.path, "Write-Output -- .agents/README.md", "pwsh")
+    const bash = requests.find((request) => request.permission === "bash")
+    expect(bash?.always).toContain("Write-Output *")
   })
 
   test("pwsh: a dot-prefixed argument does not swallow the next statement (#15938)", async () => {
