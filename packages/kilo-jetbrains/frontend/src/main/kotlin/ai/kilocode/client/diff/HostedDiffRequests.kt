@@ -61,7 +61,7 @@ internal class HostedDiffSnapshot(
         @RequiresBackgroundThread
         override fun process(context: UserDataHolder, indicator: ProgressIndicator): DiffRequest = runBlockingCancellable {
             indicator.checkCanceled()
-            if (!source.current(project)) return@runBlockingCancellable message(entry, "identity.changed")
+            if (!source.current(project)) return@runBlockingCancellable message(entry, source.reason(project) ?: "unavailable")
             if (!valid.get()) return@runBlockingCancellable message(entry, stale())
             val request = try {
                 request(project, entry)
@@ -73,7 +73,7 @@ internal class HostedDiffSnapshot(
                 message(entry, "unavailable")
             }
             indicator.checkCanceled()
-            if (!source.current(project)) return@runBlockingCancellable message(entry, "identity.changed")
+            if (!source.current(project)) return@runBlockingCancellable message(entry, source.reason(project) ?: "unavailable")
             if (!valid.get()) return@runBlockingCancellable message(entry, stale())
             request.also { it.putUserData(DIFF_FILE_KEY, entry.key) }
         }
@@ -186,14 +186,19 @@ internal class HostedDiffSnapshot(
 }
 
 internal suspend fun loadHostedDiff(project: Project, source: HostedDiffSource, refresh: Boolean): DiffEditorData.Files {
-    if (!source.current(project)) return HostedDiffSnapshot(source, message = text("identity.changed")).data()
+    fun unavailable(): DiffEditorData.Files {
+        val reason = source.reason(project)
+        return HostedDiffSnapshot(source, message = text(reason ?: "unavailable"),
+            refresh = "failed".takeIf { refresh && reason == null }).data()
+    }
+    if (!source.current(project)) return unavailable()
     val service = project.service<KiloHostedService>()
     val snapshot = when {
         source.comparison == HostedDiffComparison.PULL_REQUEST -> HostedDiffSnapshot.pullRequest(source, service.workspacePullRequestDiff(source.ref), refresh)
         refresh -> service.refreshWorkspaceChanges(source.ref).let { HostedDiffSnapshot.workspace(source, it.changes, it.status) }
         else -> HostedDiffSnapshot.workspace(source, service.workspaceChanges(source.ref))
     }
-    if (!source.current(project)) return HostedDiffSnapshot(source, message = text("identity.changed")).data()
+    if (!source.current(project)) return unavailable()
     return snapshot.data()
 }
 

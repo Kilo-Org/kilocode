@@ -49,7 +49,9 @@ internal object KiloDiffEditorKind : KiloEditorKind {
     override val id: String = ID
 
     override fun title(params: Map<String, String>): String {
-        HostedDiffSource.parse(params)?.let { return it.comparison.title() }
+        HostedDiffSource.parse(params)?.let {
+            return KiloBundle.message("diff.editor.hosted.title", it.ref.key, it.comparison.title())
+        }
         params["title"].takeIfPresent()?.let { return it }
         val comparison = KiloDiffComparison.entries.firstOrNull { it.source == params["source"] }
         return comparison?.title(params["branch"].takeIfPresent())
@@ -169,18 +171,22 @@ internal class KiloDiffEditorService(
                     } ?: DiffEditorData.Error(it.message ?: it::class.java.simpleName)
                 }
             writeIntentReadAction {
-                if (alive(disposed)) done(if (source != null && !source.current(project)) HostedDiffSnapshot(
-                    source, message = KiloBundle.message("diff.editor.hosted.identity.changed"),
-                ).data() else data)
+                if (alive(disposed)) {
+                    val reason = source?.reason(project) ?: "unavailable"
+                    done(if (source != null && !source.current(project)) HostedDiffSnapshot(
+                        source, message = KiloBundle.message("diff.editor.hosted.$reason"),
+                    ).data() else data)
+                }
             }
             if (source != null) {
                 val hosted = project.service<KiloHostedService>()
-                combine(app.state, hosted.state) { state, workspace ->
-                    !source.current(state) || workspace.signedOut || !hosted.enabled()
-                }.distinctUntilChanged().collect { invalid ->
-                    if (invalid) writeIntentReadAction {
-                        if (alive(disposed) && !source.current(project)) done(HostedDiffSnapshot(
-                            source, message = KiloBundle.message("diff.editor.hosted.identity.changed"),
+                combine(app.state, hosted.state) { state, _ ->
+                    source.reason(project, state)
+                }.distinctUntilChanged().collect { reason ->
+                    if (reason != null) writeIntentReadAction {
+                        val current = source.reason(project)
+                        if (alive(disposed) && current != null) done(HostedDiffSnapshot(
+                            source, message = KiloBundle.message("diff.editor.hosted.$current"),
                         ).data())
                     }
                 }

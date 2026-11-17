@@ -509,10 +509,10 @@ class KiloHostedService internal constructor(
     }
 
     suspend fun workspaceChanges(ref: HostedWorkspaceRefDto): HostedWorkspaceChangesDto =
-        call { workspaceChanges(ref, app?.state?.value?.profile?.currentOrgId) }
+        diff { workspaceChanges(ref, it) }
 
     suspend fun refreshWorkspaceChanges(ref: HostedWorkspaceRefDto): HostedWorkspaceChangesRefreshDto =
-        call { refreshWorkspaceChanges(ref, app?.state?.value?.profile?.currentOrgId) }
+        diff { refreshWorkspaceChanges(ref, it) }
 
     suspend fun workspaceChangeFile(
         ref: HostedWorkspaceRefDto,
@@ -520,17 +520,17 @@ class KiloHostedService internal constructor(
         scope: String?,
         expectedRevision: Long,
     ): HostedWorkspaceChangeFileResultDto =
-        call { workspaceChangeFile(ref, path, scope, expectedRevision, app?.state?.value?.profile?.currentOrgId) }
+        diff { workspaceChangeFile(ref, path, scope, expectedRevision, it) }
 
     suspend fun workspacePullRequestDiff(ref: HostedWorkspaceRefDto): HostedWorkspacePullRequestDiffDto =
-        call { workspacePullRequestDiff(ref, app?.state?.value?.profile?.currentOrgId) }
+        diff { workspacePullRequestDiff(ref, it) }
 
     suspend fun workspacePullRequestDiffFile(
         ref: HostedWorkspaceRefDto,
         path: String,
         expectedHeadSha: String,
     ): HostedWorkspacePullRequestDiffFileResultDto =
-        call { workspacePullRequestDiffFile(ref, path, expectedHeadSha, app?.state?.value?.profile?.currentOrgId) }
+        diff { workspacePullRequestDiffFile(ref, path, expectedHeadSha, it) }
 
     /** Shares a session feed with passive discovery and releases it with the consumer. */
     fun observe(ref: HostedWorkspaceRefDto, session: String, parent: Disposable): Disposable {
@@ -796,6 +796,23 @@ class KiloHostedService internal constructor(
             log.warn("hosted preparation failed code=$code step=${preparation.step}")
         }
         retired[event.sessionID] = item.retired.toSet()
+    }
+
+    private suspend fun <T> diff(block: suspend KiloHostedRpcApi.(String?) -> T): T {
+        val message = "Cloud comparison is unavailable"
+        val state = app?.state?.value
+        check(state == null || state.status == KiloAppStatusDto.READY && state.profile != null &&
+            state.progress?.profile != ProfileStatusDto.NOT_LOGGED_IN) { message }
+        val profile = state?.profile
+        // Keep the captured scope and revalidate it whenever durable retries the callback.
+        return call {
+            check(gate() && !_state.value.signedOut) { message }
+            val state = app?.state?.value
+            check(state == null || state.status == KiloAppStatusDto.READY && state.profile != null &&
+                state.progress?.profile != ProfileStatusDto.NOT_LOGGED_IN &&
+                state.profile?.email == profile?.email && state.profile?.currentOrgId == profile?.currentOrgId) { message }
+            block(profile?.currentOrgId)
+        }
     }
 
     private suspend fun <T> call(block: suspend KiloHostedRpcApi.() -> T): T {

@@ -10,7 +10,9 @@ import com.intellij.diff.chains.DiffRequestProducer
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.impl.CacheDiffRequestChainProcessor
 import com.intellij.diff.impl.DiffRequestProcessorListener
+import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.MessageDiffRequest
+import com.intellij.diff.util.DiffUserDataKeysEx.ScrollToPolicy
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
@@ -244,10 +246,14 @@ internal class DiffEditorView(
             if (!disposed.get() && !project.isDisposed) {
                 val source = hosted?.source
                 val retained = hosted?.revision != null || hosted?.head != null
-                if (source != null && !source.current(project)) {
+                val reason = source?.reason(project)
+                if (source != null && reason != null) {
                     warning = null
-                    val snapshot = HostedDiffSnapshot(source, message = KiloBundle.message("diff.editor.hosted.identity.changed"))
+                    val snapshot = HostedDiffSnapshot(source, message = KiloBundle.message("diff.editor.hosted.$reason"))
                     applyFiles(snapshot.files, nextHosted = snapshot)
+                } else if (source != null && !source.current(project)) {
+                    warning = KiloBundle.message("diff.editor.hosted.unavailable")
+                    updateBanner()
                 } else if (source != null && (data is DiffEditorData.Error || data is DiffEditorData.Files &&
                         (data.hosted?.source != source || retained && data.hosted?.refresh in setOf("offline", "failed")))) {
                     warning = refreshWarning((data as? DiffEditorData.Files)?.hosted?.refresh ?: "failed")
@@ -346,7 +352,15 @@ internal class DiffEditorView(
             })
         }
         val chain = SimpleDiffRequestChain.fromProducers(producers, index.coerceIn(0, (next.size - 1).coerceAtLeast(0)))
-        return CacheDiffRequestChainProcessor(project, chain)
+        if (snapshot == null) return CacheDiffRequestChainProcessor(project, chain)
+        return object : CacheDiffRequestChainProcessor(project, chain) {
+            @RequiresEdt
+            override fun applyRequest(request: DiffRequest, force: Boolean, policy: ScrollToPolicy?) {
+                // Recheck the EDT handoff after the background producer has completed.
+                if (snapshot.entries.isNotEmpty() && !snapshot.source.current(this@DiffEditorView.project)) return
+                super.applyRequest(request, force, policy)
+            }
+        }
     }
 
     private fun producer(file: DiffFileDto): DiffRequestProducer {
