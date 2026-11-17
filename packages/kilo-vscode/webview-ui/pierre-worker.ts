@@ -40,7 +40,11 @@ function uri(): string | undefined {
 
 const script: { url?: string; load?: Promise<string | undefined> } = {}
 
-/** The blob URL of the worker script, fetched on first use. Resolves undefined when it cannot be loaded. */
+/**
+ * The blob URL of the worker script, fetched on first use. Resolves undefined when it cannot be loaded. It is kept
+ * for the life of the webview: every worker the pools create reads the script from it, and the document teardown
+ * releases it, so revoking it after the first pool starts would break the next one.
+ */
 function load(url: string) {
   script.load ??= fetch(url)
     .then((response) => {
