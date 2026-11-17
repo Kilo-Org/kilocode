@@ -2,7 +2,7 @@ import { batch } from "solid-js"
 import type { AgentManagerStateMessage } from "../../src/types/messages/agent-manager"
 import { LOCAL } from "../navigate"
 import { applyTabOrder } from "../tab-order"
-import { pruneClosed, restoreTrackedTabs, trackedSessionInventory } from "../../src/utils/local-tabs"
+import { restoreTrackedTabs, trackedSessionInventory } from "../../src/utils/local-tabs"
 import { restoreProjectTarget, type RestoreDeps } from "./restore"
 
 export function createProjectHydration(opts: {
@@ -25,7 +25,7 @@ export function createProjectHydration(opts: {
   /** The project root, for placing a server directory on Local. */
   root: () => string | undefined
   tabs: () => string[]
-  closed: () => Set<string>
+  closed: () => ReadonlySet<string>
   pending: (id: string) => boolean
   setTabs: (ids: string[]) => void
   terminals: () => { id: string }[]
@@ -49,15 +49,13 @@ export function createProjectHydration(opts: {
         if (session?.worktreeId) opts.restore.setSelection(session.worktreeId)
       }
       const tracked = trackedSessionInventory(state.sessions, opts.sessions())
-      const closed = opts.closed()
-      pruneClosed(closed, state.sessions)
       const restored = restoreTrackedTabs(
         tracked,
         opts.tabs(),
         state.tabOrder?.[LOCAL],
         opts.pending,
         applyTabOrder,
-        closed,
+        opts.closed(),
       )
       if (restored) opts.setTabs(restored)
       if (switched === "switched" && needsLocalDraft(opts.tabs(), opts.terminals())) opts.draft()

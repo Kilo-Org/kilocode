@@ -923,6 +923,13 @@ export interface OpenSessionLocallyRequest {
   sessionId: string
 }
 
+/** Open a session in the context of the directory the server runs it in. */
+export interface OpenSessionRequest {
+  type: "agentManager.openSession"
+  projectId?: string
+  sessionId: string
+}
+
 /** Add a new session to an existing worktree. */
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
@@ -1485,6 +1492,7 @@ export type AgentManagerWebviewMessage =
   | PromoteSessionRequest
   | OpenLocallyRequest
   | OpenSessionLocallyRequest
+  | OpenSessionRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
   | CloseSessionRequest

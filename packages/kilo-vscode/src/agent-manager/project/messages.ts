@@ -12,7 +12,7 @@ import type { AgentManagerInMessage, AgentManagerOutMessage } from "../types"
 import type { ProjectRegistry } from "./registry"
 import type { ProjectContext, ProjectInitResult } from "./context"
 import type { ProjectContexts } from "./contexts"
-import { canonicalizePath, projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import { canonicalizePath, pathKey, projectIdFor, resolveProjectRoot, samePath } from "./paths"
 import type { SidebarTarget, SessionRef } from "./route"
 import { cloneProject, createProject, defaultParent, onboard, type Onboarding } from "./onboarding"
 import { runner } from "./prepare"
@@ -77,6 +77,8 @@ export interface ProjectMessageDeps {
     directory: string,
     generation: number,
   ) => Promise<RouteOutcome>
+  /** The directory the server runs a session in, for a session another surface names without a project. */
+  sessionDirectory?: (sessionId: string) => Promise<string | undefined>
   git?: GitOps
   log: (...args: unknown[]) => void
 }
@@ -132,6 +134,10 @@ export async function handleProjectMessage(m: AgentManagerInMessage, deps: Proje
     await openSessionLocally(m.projectId, m.sessionId, deps)
     return true
   }
+  if (m.type === "agentManager.openSession") {
+    await openSession(m.projectId, m.sessionId, deps)
+    return true
+  }
   if (m.type === "agentManager.rememberTarget") {
     rememberTarget(m.projectId, m.target, deps)
     return true
@@ -181,11 +187,85 @@ async function activateSelection(requested: SidebarTarget, deps: ProjectMessageD
     deps.log(`selection target worktree ${target.worktreeId} is gone, falling back to local`)
     return finish({ projectId: target.projectId, kind: "local" }, deps)
   }
-  if (target.kind === "session" && !state?.getSession(target.sessionId) && !ctx.hasLiveSession(target.sessionId)) {
-    deps.log(`selection target session ${target.sessionId} is gone, falling back to local`)
-    return finish({ projectId: target.projectId, kind: "local" }, deps)
+  if (target.kind === "session" && !state?.getSession(target.sessionId)) {
+    if (!ctx.hasLiveSession(target.sessionId) || !fileLiveSession(ctx, target.sessionId)) {
+      deps.log(`selection target session ${target.sessionId} is gone, falling back to local`)
+      return finish({ projectId: target.projectId, kind: "local" }, deps)
+    }
+    deps.pushState?.(ctx)
   }
   finish(target, deps)
+}
+
+/**
+ * File a live session under the directory it runs in before it is selected. Closing a tab removes its filing, and
+ * only the store of the server directory receives its events, so the session must not open through another view.
+ * Returns false when the directory is outside the project.
+ */
+function fileLiveSession(ctx: ProjectContext, sessionId: string): boolean {
+  const directory = ctx.sessions().find((item) => item.id === sessionId)?.location.directory
+  return directory !== undefined && fileSessionByDirectory(ctx, sessionId, directory) !== undefined
+}
+
+/**
+ * File a session under the worktree that owns its server directory, or under Local when it runs in the project
+ * root. A view reads the store of that directory, so a session filed anywhere else never receives its events.
+ * Returns the worktree id, `null` for Local, or undefined when the directory is outside the project.
+ */
+function fileSessionByDirectory(
+  ctx: ProjectContext,
+  sessionId: string,
+  directory: string,
+): string | null | undefined {
+  const state = ctx.peekState()
+  if (!state) return undefined
+  const owner = pathKey(directory) === pathKey(ctx.root) ? null : (state.findWorktreeByPath(directory)?.id ?? undefined)
+  if (owner === undefined) return undefined
+  const filed = state.getSession(sessionId)
+  if (!filed) state.addSession(sessionId, owner)
+  else if (filed.worktreeId !== owner) state.moveSession(sessionId, owner)
+  return owner
+}
+
+/**
+ * Open a session a chat link or another surface names, in the context of the directory the server runs it in. The
+ * link carries no project, so resolve it from the server directory first and fall back to the live catalog.
+ */
+async function openSession(projectId: string | undefined, sessionId: string, deps: ProjectMessageDeps): Promise<void> {
+  // A link can resolve after the user clicked a sidebar row or another link. The newer selection owns the view.
+  const token = Symbol()
+  selections.set(deps, token)
+  const directory = await deps.sessionDirectory?.(sessionId)
+  if (selections.get(deps) !== token) return
+  const ctx =
+    (projectId ? deps.contexts.resolve(projectId) : undefined) ??
+    (directory ? deps.contexts.byDirectory(directory) : undefined) ??
+    deps.contexts.byLiveSession(sessionId) ??
+    deps.contexts.active()
+  if (!ctx) {
+    deps.error("The project is unavailable. Check that the repository still exists.")
+    return
+  }
+  const result = await deps.ready(ctx, { warm: true })
+  if (selections.get(deps) !== token) return
+  if (!result.current || !result.ok) {
+    deps.error("The project is not ready yet. Expand it before selecting a worktree or session.")
+    deps.push()
+    return
+  }
+  const resolved = directory ?? ctx.sessions().find((item) => item.id === sessionId)?.location.directory
+  const state = ctx.peekState()
+  if (resolved) {
+    if (fileSessionByDirectory(ctx, sessionId, resolved) === undefined) {
+      deps.log(`openSession: session ${sessionId} runs in ${resolved}, outside the project`)
+      return
+    }
+    deps.pushState?.(ctx)
+  } else if (!state?.getSession(sessionId)) {
+    deps.log(`openSession: could not locate session ${sessionId}`)
+    return
+  }
+  finish({ projectId: ctx.id, kind: "session", sessionId }, deps)
 }
 
 /**

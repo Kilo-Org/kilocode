@@ -46,6 +46,7 @@ export function applySetupMessage(
     managedSessions: () => ManagedSessionState[]
     evictLocal: (id: string) => void
     requestChatFocus: (force?: boolean) => void
+    saveTabMemory: () => void
   },
 ) {
   deps.creation.setup(msg)
@@ -61,15 +62,22 @@ export function applySetupMessage(
       )
   }
   if (!deps.isActivePayload(msg.projectId)) return
+  // The new worktree takes the selection: the context it leaves remembers its tab before the new session replaces a
+  // main terminal tab (the main surface drops the terminal once a session becomes the current one).
+  const leave = (worktree: string | null | undefined) => {
+    if (worktree && deps.selection() !== worktree) deps.saveTabMemory()
+  }
   if (msg.status === "ready" && msg.sessionId) {
-    deps.selectSession(msg.sessionId)
     const worktree = msg.worktreeId ?? deps.managedSessions().find((session) => session.id === msg.sessionId)?.worktreeId
+    leave(worktree)
+    deps.selectSession(msg.sessionId)
     if (worktree) deps.setSelection(worktree)
     deps.evictLocal(msg.sessionId)
     deps.requestChatFocus(true)
     return
   }
   if (msg.status !== "ready" && msg.status !== "error") {
+    leave(msg.worktreeId)
     if (msg.worktreeId) deps.setSelection(msg.worktreeId)
     deps.setReviewActive(false)
   }
@@ -77,6 +85,7 @@ export function applySetupMessage(
 
 export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   currentProjectId: Accessor<string | undefined>
+  resume: (sessionId: string) => void
   saveTabMemory: () => void
   appendOrder: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string) => void
@@ -90,6 +99,8 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   placeLocal: (id: string) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
+  // The host filing the session opens it again, even when the user closed its tab before this message arrived.
+  deps.resume(msg.sessionId)
   // A send that resolved after the user moved on files its session without pulling the user back.
   if (deps.quiet(msg.sessionId)) {
     if (msg.worktreeId === LOCAL) return deps.placeLocal(msg.sessionId)

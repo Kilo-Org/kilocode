@@ -313,12 +313,21 @@ describe("Agent Manager worktree lifecycle", () => {
   })
 
   it("closes a session by interrupting it before dropping its state", async () => {
-    state.addSession("closed", state.getWorktrees()[0]!.id)
+    const worktree = state.getWorktrees()[0]!
+    state.addSession("closed", worktree.id)
+    state.setTabOrder(worktree.id, ["closed", "other"])
 
     await closeLifecycleSession(ctx, host, "closed")
 
     expect(calls).toEqual(["abort:closed", "push"])
     expect(state.getSession("closed")).toBeUndefined()
+    // The webview derives worktree tabs from the filed session and its tab order, so both must drop the closed session.
+    expect(state.getTabOrder()[worktree.id]).toEqual(["other"])
+
+    await state.flush()
+    const saved = JSON.parse(fs.readFileSync(path.join(root, ".kilo2", "agent-manager.json"), "utf8"))
+    expect(saved.sessions.closed).toBeUndefined()
+    expect(saved.tabOrder[worktree.id]).toEqual(["other"])
   })
 
   it("still interrupts a closed session when the project has no state", async () => {

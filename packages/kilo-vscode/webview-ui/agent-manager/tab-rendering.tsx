@@ -16,6 +16,7 @@ import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { SortableTab, SortableReviewTab } from "./sortable-tab"
 import type { TerminalStateControls } from "./terminal"
 import { isTerminalTabId, renderTerminalTab } from "./terminal"
+import { terminalTabDeps } from "./terminal-tab-deps"
 import { closeOthers } from "./close-others"
 import { closableRightOf, closeToRight } from "./close-to-right"
 import type { SessionInfo } from "../src/types/messages/agent-manager"
@@ -100,39 +101,7 @@ export interface TabRenderDeps {
 
 /** Render a single tab by id — routes to terminal / review / session render paths. */
 export function renderTab(id: string, deps: TabRenderDeps): JSX.Element {
-  if (isTerminalTabId(id)) {
-    // Pass `keybind` as a getter — Solid's JSX compiler wraps getter
-    // calls in reactive effects, so the tooltip stays in sync with
-    // `activeId` / `tabIds()` changes. A precomputed string would
-    // capture the value at render time and never update.
-    return renderTerminalTab({
-      id,
-      terms: deps.terms,
-      keybind: () =>
-        deps.adjacentHint(
-          id,
-          deps.visibleTabId() ?? "",
-          deps.tabIds(),
-          deps.kb().previousTab ?? "",
-          deps.kb().nextTab ?? "",
-        ),
-      closeKeybind: () => deps.kb().closeTab ?? "",
-      onSelect: deps.activateTerminal,
-      onMiddleClick: deps.terminalMiddleClick,
-      onClose: deps.closeTerminal,
-      onCloseOthers: (target) => closeOthers(target, deps),
-      // Getter so the menu item reacts to tabs opening, closing, or reordering.
-      get onCloseToRight() {
-        return closableRightOf(id, deps.tabIds(), deps.REVIEW_TAB_ID, deps.isPinned).length
-          ? (target: string) => closeToRight(target, deps)
-          : undefined
-      },
-      role: "tab",
-      selected: deps.visibleTabId() === id,
-      tabIndex: deps.visibleTabId() === id ? 0 : -1,
-      onKeyDown: (event) => deps.onTabKey(id, event),
-    })
-  }
+  if (isTerminalTabId(id)) return renderTerminalTab(terminalTabDeps(id, deps))
   if (id === deps.REVIEW_TAB_ID) return renderReviewTab(deps)
   const s = deps.tabLookup().get(id)
   if (!s) return null
