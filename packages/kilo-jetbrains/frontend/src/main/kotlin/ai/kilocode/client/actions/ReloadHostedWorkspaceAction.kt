@@ -2,6 +2,7 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
+import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.agentManager.hosted.reloadHostedWorkspace
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.telemetry.Telemetry
@@ -25,5 +26,6 @@ class ReloadHostedWorkspaceAction : HostedWorkspaceAction() {
         if (item.deletionState == "deleted" || !project.getService(KiloHostedService::class.java).enabled()) return
         Telemetry.send("Cloud Workspace Reloaded", mapOf("surface" to "workspace_row"))
         reloadHostedWorkspace(project, item)
+        project.getService(HostedPullRequestService::class.java).refresh(item.ref, revalidate = true)
     }
 }

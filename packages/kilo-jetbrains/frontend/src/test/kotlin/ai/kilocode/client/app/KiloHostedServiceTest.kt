@@ -1131,6 +1131,9 @@ class KiloHostedServiceTest {
         private val pages: Map<String?, HostedWorkspaceListDto> = emptyMap(),
         private val sessionPages: Map<String?, HostedWorkspaceDto> = emptyMap(),
     ) : KiloHostedRpcApi {
+        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?): Nothing = error("unused")
+
         var workspaceCalls = 0
             private set
         val requests = mutableListOf<Pair<String?, String?>>()

@@ -2,6 +2,7 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
+import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.agentManager.hosted.openHostedWorkspace
 import ai.kilocode.client.agentManager.hosted.hostedWorkspaceParams
 import ai.kilocode.client.app.KiloHostedService
@@ -22,6 +23,7 @@ import ai.kilocode.rpc.dto.HostedProviderDto
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
 import ai.kilocode.rpc.dto.HostedWorkspaceListDto
+import ai.kilocode.rpc.dto.HostedWorkspacePullRequestDto
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -57,6 +59,7 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
     private lateinit var hosted: KiloHostedService
     private lateinit var rpc: FakeRpc
     private lateinit var coroutines: TestCoroutines
+    private val revalidated = java.util.concurrent.CopyOnWriteArrayList<HostedWorkspaceRefDto>()
     private var enabled = true
 
     override fun setUp() {
@@ -66,6 +69,22 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
         rpc = FakeRpc(dto)
         hosted = KiloHostedService(scope, rpc, gate = { enabled }, log = TestLog())
         project.replaceService(KiloHostedService::class.java, hosted, testRootDisposable)
+        project.replaceService(
+            HostedPullRequestService::class.java,
+            HostedPullRequestService(
+                scope,
+                read = { HostedWorkspacePullRequestDto(it, "unavailable", null) },
+                revalidate = {
+                    revalidated += it
+                    HostedWorkspacePullRequestDto(it, "unavailable", null)
+                },
+                pause = {},
+                clock = { 0L },
+                identity = null,
+                signedOut = null,
+            ),
+            testRootDisposable,
+        )
         ApplicationManager.getApplication().replaceService(
             KiloTelemetryService::class.java,
             KiloTelemetryService(scope, FakeAppRpcApi()),
@@ -125,6 +144,7 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
         assertNotNull(KiloVirtualFileSystem.getInstance().cached(
             ai.kilocode.client.vfs.KiloPath(HostedWorkspaceEditorKind.ID, hostedWorkspaceParams(dto)),
         ))
+        assertTrue(coroutines.pumpUntil { revalidated.contains(dto.ref) })
     }
 
     fun `test reload replaces refresh in the existing row menu with localized strings`() {
@@ -156,6 +176,10 @@ class ReloadHostedWorkspaceActionTest : BasePlatformTestCase() {
     private fun edt(block: () -> Unit) = ApplicationManager.getApplication().invokeAndWait(block)
 
     private class FakeRpc(private val dto: HostedWorkspaceDto) : KiloHostedRpcApi {
+        override suspend fun workspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            HostedWorkspacePullRequestDto(ref, "unavailable", null)
+        override suspend fun refreshWorkspacePullRequest(ref: HostedWorkspaceRefDto, organizationID: String?) =
+            HostedWorkspacePullRequestDto(ref, "unavailable", null)
         override suspend fun providers(): List<HostedProviderDto> = emptyList()
         override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) =
             HostedWorkspaceListDto(items = listOf(dto))
