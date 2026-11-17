@@ -3403,8 +3403,10 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             (tree.parent as? javax.swing.JViewport)?.setSize(tree.width, tree.height)
             // The native layout cache sizes rows lazily and in order. Reading a later row first
             // stacks it on the estimated heights of rows that were never measured, so measure every
-            // row before answering with one.
-            leaves(tree).forEach { tree.regions.cell(it) }
+            // visible row, group rows included, before answering with one.
+            (0 until tree.rowCount)
+                .mapNotNull { tree.getPathForRow(it)?.lastPathComponent as? ActiveEntry }
+                .forEach { tree.regions.cell(it) }
             tree.regions.cell(leafEntry(tree, index))
         }
 
