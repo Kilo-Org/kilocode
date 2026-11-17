@@ -44,7 +44,7 @@ If a push fails, the error opens in a dialog where you can read the full git out
 
 ## Switch and create branches
 
-On the [New Session page](/docs/desktop/quickstart#start-a-session), the **Branch** field lets you switch branches for the folder the session will work in. The list is grouped into **Default Branch**, **Recent Branches**, and **Other Branches**, and you can search it. Selecting a branch checks it out; choosing a remote branch creates a local tracking branch for it. The checkout changes immediately, before the session starts. In an open chat, the current branch is shown under the message box.
+On the [New Session page](/docs/desktop/quickstart#start-a-session), the **Branch** field lets you switch branches for the folder the session will work in. The list is grouped into **Default**, **Recent**, **Local**, and **Remote**, and you can search it. Remote branches that you don't have locally are marked with a cloud icon. Selecting a branch checks it out; choosing a remote branch creates a local tracking branch for it. The checkout changes immediately, before the session starts. In an open chat, the current branch is shown under the message box.
 
 If the branch you pick is already checked out in another worktree, Kilo Desktop sets **Use** to that worktree instead of checking the branch out again; if it's checked out in your main repository, **Use** switches to **Local repository**.
 
