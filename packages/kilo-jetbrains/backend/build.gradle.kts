@@ -1,3 +1,4 @@
+import java.net.URI
 import normalization.NormalizeOpenApiSpecTask
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.Exec
@@ -147,14 +148,17 @@ val specDir = File(
 // from earlier runs. Keeping the name stable preserves openApiGenerate's up-to-date checks.
 val stageSpec = tasks.register<Sync>("stageOpenApiSpec") {
     val path = specDir.absolutePath
+    // swagger-parser builds the URI from the spec path with platform separators.
+    val uriPath = path.replace(File.separatorChar, '/')
     dependsOn(normalizeOpenApiSpec)
     from(generatedSpec)
     into(specDir)
     doFirst {
-        if (path.any { it.isWhitespace() || it.code > 127 }) {
+        runCatching { URI(uriPath) }.exceptionOrNull()?.let { error ->
             throw GradleException(
-                "OpenAPI spec staging directory must be ASCII-only and space-free, but is: $path. " +
-                    "Set java.io.tmpdir to a path such as C:\\Temp and retry.",
+                "OpenAPI spec staging directory is not a valid URI path: $path. " +
+                    "Set org.gradle.jvmargs=-Djava.io.tmpdir=C:/Temp in gradle.properties and retry.",
+                error,
             )
         }
     }
