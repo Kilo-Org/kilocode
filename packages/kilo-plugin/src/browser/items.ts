@@ -26,6 +26,13 @@ export namespace BrowserItems {
     return result
   }
 
+  /** The URLs a call would open: a navigation, or a new tab. */
+  export function targets(tool: string, args: Record<string, unknown>): string[] {
+    if (tool === "browser_navigate" && typeof args.url === "string") return [args.url]
+    if (tool === "browser_tabs" && args.action === "new" && typeof args.url === "string") return [args.url]
+    return []
+  }
+
   export function plan(input: {
     tool: string
     args: Record<string, unknown>
@@ -35,10 +42,11 @@ export namespace BrowserItems {
     elements: readonly Element[]
     authorized: readonly string[]
   }): Item[] {
-    if (input.tool === "browser_navigate") {
-      const origin = BrowserPermission.origin(String(input.args.url ?? ""))
-      return origin ? [{ class: "navigate", origin }] : []
-    }
+    const opened = targets(input.tool, input.args).flatMap((url) => {
+      const origin = BrowserPermission.origin(url)
+      return origin ? [{ class: "navigate" as const, origin }] : []
+    })
+    if (opened.length) return BrowserPermission.unique(opened)
     if (!input.page) return []
     const cls = BrowserPermission.classOf(input.tool)
     const items: Item[] = []
@@ -50,7 +58,11 @@ export namespace BrowserItems {
       }
       if (cls !== "read") items.push({ class: cls, origin: element.origin, frame: true })
     }
-    if (items.length) return BrowserPermission.unique(items)
+    // A mixed call (a fill_form with main-page and frame fields) needs the page's own grant as well.
+    const mixed = input.elements.some((element) => !element.frame)
+    if (items.length) {
+      return BrowserPermission.unique(mixed ? [...items, { class: cls, origin: input.page }] : items)
+    }
     return [{ class: cls, origin: input.page }]
   }
 }

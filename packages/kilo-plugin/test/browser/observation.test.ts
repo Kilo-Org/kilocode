@@ -131,6 +131,18 @@ ${Array.from({ length: 4000 }, (_, index) => `- ${index}`).join("\n")}
     expect(observed.text).not.toContain("Page changes")
   })
 
+  test("the tracker keeps a bounded number of tabs per session, least recently seen first out", () => {
+    const tracker = new Tracker()
+    for (let index = 0; index < 40; index += 1)
+      tracker.record("s1", { url: `http://localhost/${index}`, lines: [`- ${index}`] })
+    // The newest survives; the first recorded tab was evicted.
+    expect(tracker.previous("s1", "browser_click", "http://localhost/39")).toEqual({
+      url: "http://localhost/39",
+      lines: ["- 39"],
+    })
+    expect(tracker.previous("s1", "browser_click", "http://localhost/0")).toBeUndefined()
+  })
+
   test("the tracker releases a session and keeps a bounded number of them", () => {
     const tracker = new Tracker()
     tracker.record("gone", { url: "http://localhost/a", lines: ["- a"] })

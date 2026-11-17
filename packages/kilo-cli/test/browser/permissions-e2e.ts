@@ -3,7 +3,7 @@
 // scripted OpenAI-compatible model, and the compiled CLI driven through `run`. Not a `bun test` file: it needs a
 // display (run it under xvfb), a built binary and an installed browser.
 //
-//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|nested
+//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|tabs-new-file|nested
 //
 // Each scenario prints one JSON report and exits non-zero when an expectation fails.
 import * as Png from "@kilocode/kilo-plugin/browser/png"
@@ -221,6 +221,13 @@ const plans: Record<string, Plan> = {
   "navigate-file": (index) => {
     if (index === 0) return { name: "browser_navigate", args: { url: "file:///etc/passwd" } }
     if (index === 1) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 2) return { name: "browser_evaluate", args: { function: "() => location.href" } }
+    return undefined
+  },
+  // A new tab is a navigation too: the same refusal applies before the tab opens.
+  "tabs-new-file": (index) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_tabs", args: { action: "new", url: "file:///etc/passwd" } }
     if (index === 2) return { name: "browser_evaluate", args: { function: "() => location.href" } }
     return undefined
   },
@@ -469,6 +476,19 @@ async function main() {
     expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
     expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     // The tab is still on the fixture: the refused call never navigated.
+    expect(back.includes(fixture.url.origin), `the tab did not stay on the fixture:\n${back.slice(0, 300)}`)
+    return output
+  }
+
+  if (scenario === "tabs-new-file") {
+    const result = await run({})
+    const refused = result.last.results[1] ?? ""
+    const back = result.last.results[2] ?? ""
+    output.refused = refused.slice(0, 300)
+    output.back = back.slice(0, 200)
+    expect(refused.includes("Navigation refused"), `the file: tab was not refused:\n${refused.slice(0, 300)}`)
+    expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
+    expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     expect(back.includes(fixture.url.origin), `the tab did not stay on the fixture:\n${back.slice(0, 300)}`)
     return output
   }

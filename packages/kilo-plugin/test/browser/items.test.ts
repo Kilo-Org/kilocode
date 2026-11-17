@@ -15,6 +15,41 @@ describe("browser call items", () => {
     ).toEqual([{ class: "navigate", origin: "https://example.com" }])
   })
 
+  test("a new tab asks for the origin it would open", () => {
+    expect(
+      BrowserItems.plan({
+        tool: "browser_tabs",
+        args: { action: "new", url: "https://example.com/" },
+        elements: [],
+        authorized: [],
+      }),
+    ).toEqual([{ class: "navigate", origin: "https://example.com" }])
+    expect(BrowserItems.targets("browser_tabs", { action: "new", url: "file:///etc/passwd" })).toEqual([
+      "file:///etc/passwd",
+    ])
+  })
+
+  test("a mixed fill_form asks for the page origin as well as the frame's", () => {
+    expect(
+      BrowserItems.plan({
+        tool: "browser_fill_form",
+        args: { fields: [{ target: "f2e7" }, { target: "e2" }] },
+        page,
+        elements: [
+          { ref: "f2e7", origin: "https://pay.example.net", frame: true },
+          { ref: "e2", origin: page, frame: false },
+        ],
+        authorized: [],
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        { class: "read", origin: "https://pay.example.net", frame: true },
+        { class: "act", origin: "https://pay.example.net", frame: true },
+        { class: "act", origin: page },
+      ]),
+    )
+  })
+
   test("a read tool needs read on the current page", () => {
     expect(BrowserItems.plan({ tool: "browser_snapshot", args: {}, page, elements: [], authorized: [] })).toEqual([
       { class: "read", origin: page },
@@ -92,6 +127,8 @@ describe("browser call items", () => {
     ).toEqual([
       { class: "read", origin: "https://pay.example.net", frame: true },
       { class: "act", origin: "https://pay.example.net", frame: true },
+      // The main-page field needs the page's own act grant.
+      { class: "act", origin: page },
     ])
   })
 

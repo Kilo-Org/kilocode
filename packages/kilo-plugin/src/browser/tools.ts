@@ -30,7 +30,7 @@ const tracker = new Tracker()
 
 /** The hint the UI shows for the extension backend until the browser hub is wired (part C). */
 const EXTENSION_HINT =
-  "Install the Kilo browser extension, turn on \"Allow local agents\", then set browser.backend to \"extension\"."
+  'Install the Kilo browser extension, turn on "Allow local agents", then set browser.backend to "extension".'
 
 /**
  * The extension backend. The hub, the pairing and the transport are part C; until then the tools exist so the tool
@@ -114,9 +114,7 @@ function failure(error: unknown) {
 /** Read the config per call, so an observation or headless change applies without a restart. */
 function settings(config: Option.Option<Config.Interface>) {
   if (Option.isNone(config)) return Effect.succeed(resolve(undefined))
-  return config.value
-    .entries()
-    .pipe(Effect.map((entries) => resolve(KiloConfigPolicy.browserConfig(entries))))
+  return config.value.entries().pipe(Effect.map((entries) => resolve(KiloConfigPolicy.browserConfig(entries))))
 }
 
 /** A rule that names the browser permission itself decides the class, so the built-in defaults stay out of its way. */
@@ -176,22 +174,42 @@ export function authorize(
         continue
       }
       const request = BrowserPermission.request(item, allowSensitive)
-      if (Option.isSome(permission))
-        yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
+      if (Option.isSome(permission)) yield* permission.value.assert({ ...request, ...Permission.invocation(context) })
       // A sensitive step is approved per step through its token, never remembered here.
       if (item.class !== "sensitive") grants.add(pattern)
     }
   })
 }
 
-function consoleErrors(active: BrowserBackend, session: string) {
-  return Effect.tryPromise({
-    try: (signal) => active.callTool("browser_console_messages", { level: "error" }, { signal }),
-    catch: (error) => error,
-  }).pipe(
-    Effect.map((console) => tracker.consoleErrors(session, textOf(console))),
-    Effect.catch(() => Effect.succeed<string[]>([])),
-  )
+/**
+ * Console data for diff mode. The internal call is a real read: it plans like a user call, and it returns nothing
+ * unless every item the plan asks for is already granted for this session. It then runs with the same authorized
+ * list, so the frame filter sees the same grants a user call does.
+ */
+function consoleErrors(active: BrowserBackend, session: string, context: Tool.Context) {
+  return Effect.gen(function* () {
+    if (!active.plan) return []
+    const grants = grantsFor(session)
+    const planned = yield* Effect.tryPromise({
+      try: () =>
+        active.plan!(
+          "browser_console_messages",
+          { level: "error" },
+          {
+            session,
+            authorized: [...grants],
+          },
+        ),
+      catch: () => [],
+    })
+    if (planned.some((item) => !grants.has(BrowserPermission.pattern(item)))) return []
+    const result = yield* Effect.tryPromise({
+      try: (signal) =>
+        active.callTool("browser_console_messages", { level: "error" }, { signal, session, authorized: [...grants] }),
+      catch: (error) => error,
+    })
+    return tracker.consoleErrors(session, textOf(result))
+  }).pipe(Effect.catch(() => Effect.succeed<string[]>([])))
 }
 
 type Deps = {
@@ -244,15 +262,26 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     for (let attempt = 0; attempt < 2; attempt++) {
       if (active.plan) {
         const planned = yield* Effect.tryPromise({
-          try: () => active.plan!(entry.name, input, { authorized: [...grants], sensitive: [...sensitive] }),
+          try: () => active.plan!(entry.name, input, { session, authorized: [...grants], sensitive: [...sensitive] }),
           catch: (error) => error,
         }).pipe(Effect.catch(() => Effect.succeed<readonly Item[]>([])))
-        yield* authorize(planned, context, allowSensitive, (origin) => KiloBrowserPolicy.allows(organization, origin), deps.permission)
+        yield* authorize(
+          planned,
+          context,
+          allowSensitive,
+          (origin) => KiloBrowserPolicy.allows(organization, origin),
+          deps.permission,
+        )
       }
       const outcome = yield* Effect.result(
         Effect.tryPromise({
           try: (signal) =>
-            active.callTool(entry.name, input, { signal, authorized: [...grants], sensitive: [...sensitive] }),
+            active.callTool(entry.name, input, {
+              signal,
+              session,
+              authorized: [...grants],
+              sensitive: [...sensitive],
+            }),
           catch: (error) => error,
         }),
       )
@@ -263,9 +292,17 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
       const error = outcome.failure
       if (!(error instanceof NeedsPermissionError)) return yield* failure(error)
       if (attempt === 1 || !error.items.length) {
-        return yield* failure(new Error("The browser page changed while permission was requested. Call the tool again."))
+        return yield* failure(
+          new Error("The browser page changed while permission was requested. Call the tool again."),
+        )
       }
-      yield* authorize(error.items, context, allowSensitive, (origin) => KiloBrowserPolicy.allows(organization, origin), deps.permission)
+      yield* authorize(
+        error.items,
+        context,
+        allowSensitive,
+        (origin) => KiloBrowserPolicy.allows(organization, origin),
+        deps.permission,
+      )
       sensitive = error.stepToken ? [error.stepToken] : []
     }
     if (!result) return yield* failure(new Error("the browser call did not settle"))
@@ -274,7 +311,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     const text = textOf(result)
     const next = snapshot(split(text))
     const mode = modeFor(entry.name, browser.observation)
-    const errors = mode === "diff" ? yield* consoleErrors(active, session) : []
+    const errors = mode === "diff" ? yield* consoleErrors(active, session, context) : []
     const previous = mode === "diff" ? tracker.previous(session, entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors: errors })
     if (viewed.snapshot) tracker.record(session, viewed.snapshot)
@@ -303,9 +340,7 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
         },
       },
     } as Tool.Result
-  }).pipe(
-    Effect.mapError((error) => failure(error)),
-  )
+  }).pipe(Effect.mapError((error) => failure(error)))
 }
 
 /**
@@ -316,7 +351,12 @@ export const KiloBrowserToolsPlugin = define({
   id: "kilocode.browser-tools",
   effect: Effect.fn("KiloBrowserToolsPlugin")(function* (ctx) {
     // The bundled browser lives as long as this location: the finalizer runs when the server shuts down.
-    yield* Effect.addFinalizer(() => Effect.promise(() => playwright.dispose()))
+    yield* Effect.addFinalizer(() =>
+      Effect.promise(async () => {
+        tracker.clear()
+        await playwright.dispose()
+      }),
+    )
 
     const config = yield* Effect.serviceOption(Config.Service)
     const permission = yield* Effect.serviceOption(Permission.Service)
