@@ -299,6 +299,10 @@ export const dict = {
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
+  "notification.permission.titleBrowserSensitive": "مرحله حساس مرورگر",
+  "notification.permission.descriptionBrowserSensitive":
+    "این مرحله ممکن است رمز عبور، جزئیات پرداخت، کد یک‌بارمصرف یا یک فایل را افشا کند. فقط اگر انتظارش را دارید تأیید کنید.",
+
   "notification.permission.titleSandboxEscalation": "اجرا خارج از sandbox؟",
   "notification.permission.descriptionSandboxEscalation":
     "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
@@ -330,6 +334,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "نوشتن Todo",
   "ui.permission.toolLabel.codeSearch": "جستجوی کد",
   "ui.permission.toolLabel.browserOpen": "مرورگر یکپارچه",
+  "ui.permission.toolLabel.browser": "مرورگر",
+  "ui.permission.toolLabel.browserSensitive": "مرحله حساس مرورگر",
   "ui.permission.copyCommand": "کپی",
   "ui.approval.auto": "تأیید خودکار",
   "ui.approval.manual": "تأیید شده توسط شما",
@@ -869,6 +875,25 @@ export const dict = {
   "settings.browser.backend.extension": "افزونه مرورگر Kilo",
   "settings.browser.backend.extension.description":
     "مرورگر خودتان را از طریق افزونه مرورگر Kilo کنترل کنید. هنوز در دسترس نیست؛ فراخوانی ابزارهای مرورگر گزارش می‌دهد که مرورگری وجود ندارد.",
+
+  "settings.browser.permissions.title": "مجوزهای سایت",
+  "settings.browser.permissions.description":
+    "ابزارهای مرورگر پیش از خواندن، اقدام یا رفتن به یک سایت می‌پرسند. سایت‌های localhost مجاز هستند. هر قاعده ذخیره‌شده یک نوع دسترسی به یک مبدأ می‌دهد؛ iframeها به قواعد خودشان نیاز دارند.",
+  "settings.browser.allowAll.title": "اجازه به همه سایت‌ها",
+  "settings.browser.allowAll.description":
+    "درخواست‌های سایت را برای همه مبدأها نادیده بگیر. این فهرست سایت‌های زیر را جایگزین می‌کند؛ خاموش کردن آن پیش‌فرض‌های داخلی را بازمی‌گرداند.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "افزودن سایت",
+  "settings.browser.allowlist.remove": "حذف سایت",
+  "settings.browser.allowlist.empty": "هنوز سایتی نیست. سایت‌های localhost همیشه مجاز هستند.",
+  "settings.browser.class.read": "خواندن",
+  "settings.browser.class.act": "اقدام",
+  "settings.browser.class.navigate": "پیمایش",
+  "settings.browser.allowSensitive.title": "اجازه به مراحل حساس مرورگر",
+  "settings.browser.allowSensitive.description":
+    "به ابزارهای مرورگر اجازه بده رمز عبور تایپ کنند، فیلدهای کارت را پر کنند، فایل بارگذاری کنند و ورود را بدون پرسیدن هر بار ادامه دهند.",
+  "settings.browser.allowSensitive.warning":
+    "هر کسی یا هر چیزی که این عامل را هدایت می‌کند می‌تواند سپس بدون تأیید شما اعتبارنامه وارد کند و فایل بارگذاری کند. مگر اینکه مراقب باشید، این را خاموش بگذارید.",
 
   "settings.language.description":
     "زبان رابط کاربری Kilo Code را انتخاب کنید. «Auto» از زبان نمایشی VS Code شما استفاده می‌کند.",

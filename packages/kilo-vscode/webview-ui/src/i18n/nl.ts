@@ -303,6 +303,10 @@ export const dict = {
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
+  "notification.permission.titleBrowserSensitive": "Gevoelige browserstap",
+  "notification.permission.descriptionBrowserSensitive":
+    "Deze stap kan een wachtwoord, betaalgegevens, een eenmalige code of een bestand onthullen. Keur het alleen goed als je het verwacht.",
+
   "notification.permission.titleSandboxEscalation": "Buiten de sandbox uitvoeren?",
   "notification.permission.descriptionSandboxEscalation":
     "Dit voert het hele commando uit zonder beperkingen voor het bestandssysteem en netwerk, alleen voor dit commando. Git moet naar .git schrijven, dat alleen-lezen is in de sandbox en bij een gekoppelde worktree buiten de worktree ligt. Bash-toestemmingsregels en automatisch goedkeuren keuren deze aanvraag nooit automatisch goed.",
@@ -334,6 +338,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Todo Schrijven",
   "ui.permission.toolLabel.codeSearch": "Code Zoeken",
   "ui.permission.toolLabel.browserOpen": "Geïntegreerde browser",
+  "ui.permission.toolLabel.browser": "Browser",
+  "ui.permission.toolLabel.browserSensitive": "Gevoelige browserstap",
   "ui.permission.copyCommand": "Kopiëren",
   "ui.approval.auto": "Automatisch goedgekeurd",
   "ui.approval.manual": "Door jou goedgekeurd",
@@ -880,6 +886,25 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo-browserextensie",
   "settings.browser.backend.extension.description":
     "Je eigen browser aansturen via de Kilo-browserextensie. Nog niet beschikbaar; aanroepen van browsertools melden dat er geen browser is.",
+
+  "settings.browser.permissions.title": "Sitetoestemmingen",
+  "settings.browser.permissions.description":
+    "Browsertools vragen voordat ze een site lezen, erop handelen of ernaar navigeren. Localhost-sites zijn toegestaan. Elke opgeslagen regel verleent één soort toegang tot één origin; iframes hebben eigen regels nodig.",
+  "settings.browser.allowAll.title": "Alle sites toestaan",
+  "settings.browser.allowAll.description":
+    "Sla de sitevragen voor elk origin over. Dit vervangt de lijst hieronder; uitschakelen herstelt de ingebouwde standaardwaarden.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Site toevoegen",
+  "settings.browser.allowlist.remove": "Site verwijderen",
+  "settings.browser.allowlist.empty": "Nog geen sites. Localhost-sites zijn altijd toegestaan.",
+  "settings.browser.class.read": "Lezen",
+  "settings.browser.class.act": "Handelen",
+  "settings.browser.class.navigate": "Navigeren",
+  "settings.browser.allowSensitive.title": "Gevoelige browserstappen toestaan",
+  "settings.browser.allowSensitive.description":
+    "Laat browsertools wachtwoorden typen, kaartvelden invullen, bestanden uploaden en doorgaan met inloggen zonder het elke keer te vragen.",
+  "settings.browser.allowSensitive.warning":
+    "Iedereen of alles wat deze agent aanstuurt, kan dan zonder jouw goedkeuring inloggegevens invoeren en bestanden uploaden. Laat dit uit tenzij je meekijkt.",
 
   "settings.language.description": 'Kies de taal voor de Kilo Code UI. "Auto" gebruikt je VS Code schermtaal.',
   "settings.language.auto": "Auto (VS Code taal)",

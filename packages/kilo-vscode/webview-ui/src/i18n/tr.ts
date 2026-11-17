@@ -299,6 +299,10 @@ export const dict = {
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
+  "notification.permission.titleBrowserSensitive": "Hassas tarayıcı adımı",
+  "notification.permission.descriptionBrowserSensitive":
+    "Bu adım bir parolayı, ödeme bilgilerini, tek kullanımlık bir kodu veya bir dosyayı açığa çıkarabilir. Yalnızca bunu bekliyorsanız onaylayın.",
+
   "notification.permission.titleSandboxEscalation": "Korumalı alan dışında çalıştırılsın mı?",
   "notification.permission.descriptionSandboxEscalation":
     "Bu, tüm komutu dosya sistemi ve ağ kısıtlamaları kaldırılmış olarak yalnızca bu komut için çalıştırır. Git, korumalı alanda salt okunur olan ve bağlı bir worktree'de worktree dışında kalan .git dosyasına yazmalıdır. Bash izin kuralları ve otomatik onay bu istemi hiçbir zaman otomatik olarak onaylamaz.",
@@ -330,6 +334,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Görev Yaz",
   "ui.permission.toolLabel.codeSearch": "Kod Araması",
   "ui.permission.toolLabel.browserOpen": "Entegre Tarayıcı",
+  "ui.permission.toolLabel.browser": "Tarayıcı",
+  "ui.permission.toolLabel.browserSensitive": "Hassas tarayıcı adımı",
   "ui.permission.copyCommand": "Kopyala",
   "ui.approval.auto": "Otomatik onaylandı",
   "ui.approval.manual": "Sizin tarafınızdan onaylandı",
@@ -877,6 +883,25 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo tarayıcı uzantısı",
   "settings.browser.backend.extension.description":
     "Kendi tarayıcınızı Kilo tarayıcı uzantısı aracılığıyla yönetin. Henüz kullanılamıyor; tarayıcı aracı çağrıları tarayıcı olmadığını bildirir.",
+
+  "settings.browser.permissions.title": "Site izinleri",
+  "settings.browser.permissions.description":
+    "Tarayıcı araçları bir siteyi okumadan, üzerinde işlem yapmadan veya siteye gitmeden önce sorar. localhost sitelerine izin verilir. Kaydedilen her kural bir kaynağa tek tür erişim verir; iframe'lerin kendi kuralları olmalıdır.",
+  "settings.browser.allowAll.title": "Tüm sitelere izin ver",
+  "settings.browser.allowAll.description":
+    "Her kaynak için site sorularını atla. Aşağıdaki site listesinin yerine geçer; kapatıldığında yerleşik varsayılanlar geri yüklenir.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Site ekle",
+  "settings.browser.allowlist.remove": "Siteyi kaldır",
+  "settings.browser.allowlist.empty": "Henüz site yok. localhost sitelerine her zaman izin verilir.",
+  "settings.browser.class.read": "Oku",
+  "settings.browser.class.act": "İşlem yap",
+  "settings.browser.class.navigate": "Gezin",
+  "settings.browser.allowSensitive.title": "Hassas tarayıcı adımlarına izin ver",
+  "settings.browser.allowSensitive.description":
+    "Tarayıcı araçlarının her seferinde sormadan parola yazmasına, kart alanlarını doldurmasına, dosya yüklemesine ve oturum açmaya devam etmesine izin verin.",
+  "settings.browser.allowSensitive.warning":
+    "Bu ajanı yöneten herkes veya her şey, onayınız olmadan kimlik bilgilerini girebilir ve dosya yükleyebilir. İzlemiyorsanız bunu kapalı bırakın.",
 
   "settings.language.description":
     '"Otomatik" VS Code görüntüleme dilinizi kullanır. Kilo Code arayüzü için dil seçin.',

@@ -301,6 +301,10 @@ export const dict = {
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
+  "notification.permission.titleBrowserSensitive": "Osjetljiv korak preglednika",
+  "notification.permission.descriptionBrowserSensitive":
+    "Ovaj korak može otkriti lozinku, podatke o plaćanju, jednokratni kod ili datoteku. Odobrite ga samo ako ga očekujete.",
+
   "notification.permission.titleSandboxEscalation": "Pokrenuti izvan sandboxa?",
   "notification.permission.descriptionSandboxEscalation":
     "Ovo izvršava cijelu komandu bez ograničenja datotečnog sistema i mreže, samo za ovu komandu. Git mora pisati u .git, koji je samo za čitanje u sandboxu i nalazi se izvan radnog stabla u povezanom worktreeu. Bash pravila dozvola i automatsko odobravanje nikada ne odobravaju ovaj upit automatski.",
@@ -332,6 +336,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Ažuriranje liste zadataka",
   "ui.permission.toolLabel.codeSearch": "Pretraga koda",
   "ui.permission.toolLabel.browserOpen": "Integrirani preglednik",
+  "ui.permission.toolLabel.browser": "Preglednik",
+  "ui.permission.toolLabel.browserSensitive": "Osjetljiv korak preglednika",
   "ui.permission.copyCommand": "Kopiraj",
   "ui.approval.auto": "Automatski odobreno",
   "ui.approval.manual": "Odobrili ste vi",
@@ -888,6 +894,25 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo proširenje za preglednik",
   "settings.browser.backend.extension.description":
     "Upravljajte vlastitim preglednikom kroz Kilo proširenje. Još nije dostupno; pozivi alata preglednika javljaju da nema preglednika.",
+
+  "settings.browser.permissions.title": "Dozvole za web-mjesta",
+  "settings.browser.permissions.description":
+    "Alati preglednika pitaju prije čitanja, djelovanja ili navigacije na web-mjesto. Web-mjesta na localhostu su dopuštena. Svako spremljeno pravilo daje jednu vrstu pristupa jednom izvoru; iframeovi trebaju vlastita pravila.",
+  "settings.browser.allowAll.title": "Dopusti sva web-mjesta",
+  "settings.browser.allowAll.description":
+    "Preskoči upite za web-mjesta za svaki izvor. Ovo zamjenjuje popis web-mjesta u nastavku; isključivanje vraća ugrađene zadane vrijednosti.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Dodaj web-mjesto",
+  "settings.browser.allowlist.remove": "Ukloni web-mjesto",
+  "settings.browser.allowlist.empty": "Još nema web-mjesta. Web-mjesta na localhostu su uvijek dopuštena.",
+  "settings.browser.class.read": "Čitaj",
+  "settings.browser.class.act": "Djeluj",
+  "settings.browser.class.navigate": "Navigiraj",
+  "settings.browser.allowSensitive.title": "Dopusti osjetljive korake preglednika",
+  "settings.browser.allowSensitive.description":
+    "Dopustite alatima preglednika da upisuju lozinke, ispunjavaju polja kartice, prenose datoteke i nastave prijavu bez pitanja svaki put.",
+  "settings.browser.allowSensitive.warning":
+    "Svako ko ili što god upravlja ovim agentom može tada unijeti vjerodajnice i prenijeti datoteke bez vašeg odobrenja. Ostavite isključeno osim ako gledate.",
 
   "settings.language.description": 'Odaberite jezik za Kilo Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
   "settings.language.auto": "Auto (VS Code jezik)",

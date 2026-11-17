@@ -298,6 +298,10 @@ export const dict = {
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
+  "notification.permission.titleBrowserSensitive": "Конфиденциальный шаг браузера",
+  "notification.permission.descriptionBrowserSensitive":
+    "Этот шаг может раскрыть пароль, платёжные данные, одноразовый код или файл. Одобряйте его, только если вы этого ожидаете.",
+
   "notification.permission.titleSandboxEscalation": "Выполнить вне песочницы?",
   "notification.permission.descriptionSandboxEscalation":
     "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
@@ -330,6 +334,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Запись списка задач",
   "ui.permission.toolLabel.codeSearch": "Поиск кода",
   "ui.permission.toolLabel.browserOpen": "Встроенный браузер",
+  "ui.permission.toolLabel.browser": "Браузер",
+  "ui.permission.toolLabel.browserSensitive": "Конфиденциальный шаг браузера",
   "ui.permission.copyCommand": "Копировать",
   "ui.approval.auto": "Одобрено автоматически",
   "ui.approval.manual": "Одобрено вами",
@@ -886,6 +892,25 @@ export const dict = {
   "settings.browser.backend.extension": "Расширение Kilo для браузера",
   "settings.browser.backend.extension.description":
     "Управлять вашим браузером через расширение Kilo. Пока недоступно; вызовы инструментов браузера сообщают об отсутствии браузера.",
+
+  "settings.browser.permissions.title": "Разрешения для сайтов",
+  "settings.browser.permissions.description":
+    "Инструменты браузера спрашивают перед чтением, действием или переходом на сайт. Сайты localhost разрешены. Каждое сохранённое правило даёт один тип доступа к одному источнику; iframe требуют собственных правил.",
+  "settings.browser.allowAll.title": "Разрешить все сайты",
+  "settings.browser.allowAll.description":
+    "Пропускать запросы о сайте для всех источников. Это заменяет список ниже; при выключении восстанавливаются встроенные значения по умолчанию.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Добавить сайт",
+  "settings.browser.allowlist.remove": "Удалить сайт",
+  "settings.browser.allowlist.empty": "Сайтов пока нет. Сайты localhost разрешены всегда.",
+  "settings.browser.class.read": "Чтение",
+  "settings.browser.class.act": "Действие",
+  "settings.browser.class.navigate": "Навигация",
+  "settings.browser.allowSensitive.title": "Разрешить конфиденциальные шаги браузера",
+  "settings.browser.allowSensitive.description":
+    "Позволяет инструментам браузера вводить пароли, заполнять поля карты, загружать файлы и продолжать вход, не спрашивая каждый раз.",
+  "settings.browser.allowSensitive.warning":
+    "Любой, кто или что управляет этим агентом, сможет вводить учётные данные и загружать файлы без вашего одобрения. Оставляйте выключенным, если вы не наблюдаете.",
 
   "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",

@@ -301,6 +301,10 @@ export const dict = {
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
+  "notification.permission.titleBrowserSensitive": "機密性の高いブラウザ操作",
+  "notification.permission.descriptionBrowserSensitive":
+    "この操作はパスワード、支払い情報、ワンタイムコード、またはファイルを露出する可能性があります。想定している場合にのみ承認してください。",
+
   "notification.permission.titleSandboxEscalation": "サンドボックス外で実行しますか？",
   "notification.permission.descriptionSandboxEscalation":
     "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
@@ -332,6 +336,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Todo書き込み",
   "ui.permission.toolLabel.codeSearch": "コード検索",
   "ui.permission.toolLabel.browserOpen": "統合ブラウザー",
+  "ui.permission.toolLabel.browser": "ブラウザ",
+  "ui.permission.toolLabel.browserSensitive": "機密性の高いブラウザ操作",
   "ui.permission.copyCommand": "コピー",
   "ui.approval.auto": "自動承認されました",
   "ui.approval.manual": "あなたが承認しました",
@@ -884,6 +890,25 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo ブラウザ拡張機能",
   "settings.browser.backend.extension.description":
     "Kilo ブラウザ拡張機能経由でご自身のブラウザを操作します。まだ利用できません。ブラウザツールの呼び出しはブラウザがないことを報告します。",
+
+  "settings.browser.permissions.title": "サイトの権限",
+  "settings.browser.permissions.description":
+    "ブラウザツールは、サイトを読み取る、操作する、または移動する前に確認します。localhost のサイトは許可されています。保存された各ルールは1つのオリジンに対して1種類のアクセスを許可します。iframe には独自のルールが必要です。",
+  "settings.browser.allowAll.title": "すべてのサイトを許可",
+  "settings.browser.allowAll.description":
+    "すべてのオリジンでサイトの確認をスキップします。下のサイト一覧を置き換えます。オフにすると組み込みの既定値に戻ります。",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "サイトを追加",
+  "settings.browser.allowlist.remove": "サイトを削除",
+  "settings.browser.allowlist.empty": "サイトはまだありません。localhost のサイトは常に許可されています。",
+  "settings.browser.class.read": "読み取り",
+  "settings.browser.class.act": "操作",
+  "settings.browser.class.navigate": "移動",
+  "settings.browser.allowSensitive.title": "機密性の高いブラウザ操作を許可",
+  "settings.browser.allowSensitive.description":
+    "ブラウザツールがパスワードの入力、カード項目の入力、ファイルのアップロード、サインインの続行を毎回確認せずに行えるようにします。",
+  "settings.browser.allowSensitive.warning":
+    "このエージェントを操作する誰かまたは何かが、承認なしに認証情報を入力しファイルをアップロードできるようになります。監視していない限りオフのままにしてください。",
 
   "settings.language.description": "Kilo Code UIの言語を選択します。「自動」はVS Codeの表示言語を使用します。",
   "settings.language.auto": "自動（VS Code言語）",

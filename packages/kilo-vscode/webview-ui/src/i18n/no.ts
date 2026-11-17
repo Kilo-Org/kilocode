@@ -307,6 +307,10 @@ export const dict = {
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
+  "notification.permission.titleBrowserSensitive": "Sensitivt nettlesertrinn",
+  "notification.permission.descriptionBrowserSensitive":
+    "Dette trinnet kan avsløre et passord, betalingsdetaljer, en engangskode eller en fil. Godkjenn det bare hvis du forventer det.",
+
   "notification.permission.titleSandboxEscalation": "Kjør utenfor sandkassen?",
   "notification.permission.descriptionSandboxEscalation":
     "Dette kjører hele kommandoen uten begrensninger for filsystem og nettverk, kun for denne kommandoen. Git må skrive til .git, som er skrivebeskyttet i sandkassen og ligger utenfor arbeidstreet i et koblet worktree. Bash-tillatelsesregler og automatisk godkjenning godkjenner aldri denne forespørselen automatisk.",
@@ -338,6 +342,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Skriv gjøremål",
   "ui.permission.toolLabel.codeSearch": "Kodesøk",
   "ui.permission.toolLabel.browserOpen": "Integrert nettleser",
+  "ui.permission.toolLabel.browser": "Nettleser",
+  "ui.permission.toolLabel.browserSensitive": "Sensitivt nettlesertrinn",
   "ui.permission.copyCommand": "Kopier",
   "ui.approval.auto": "Automatisk godkjent",
   "ui.approval.manual": "Godkjent av deg",
@@ -849,6 +855,25 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo-nettleserutvidelse",
   "settings.browser.backend.extension.description":
     "Styr din egen nettleser via Kilo-nettleserutvidelsen. Ikke tilgjengelig ennå; kall til nettleserverktøy rapporterer at det ikke finnes noen nettleser.",
+
+  "settings.browser.permissions.title": "Tillatelser for nettsteder",
+  "settings.browser.permissions.description":
+    "Nettleserverktøy spør før de leser, handler på eller navigerer til et nettsted. Nettsteder på localhost er tillatt. Hver lagrede regel gir én type tilgang til én opprinnelse; iframes trenger egne regler.",
+  "settings.browser.allowAll.title": "Tillat alle nettsteder",
+  "settings.browser.allowAll.description":
+    "Hopp over nettstedsforespørslene for alle opprinnelser. Dette erstatter listen nedenfor; slås det av, gjenopprettes standardverdiene.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Legg til nettsted",
+  "settings.browser.allowlist.remove": "Fjern nettsted",
+  "settings.browser.allowlist.empty": "Ingen nettsteder ennå. Nettsteder på localhost er alltid tillatt.",
+  "settings.browser.class.read": "Les",
+  "settings.browser.class.act": "Handle",
+  "settings.browser.class.navigate": "Naviger",
+  "settings.browser.allowSensitive.title": "Tillat sensitive nettlesertrinn",
+  "settings.browser.allowSensitive.description":
+    "La nettleserverktøy skrive passord, fylle ut kortfelt, laste opp filer og fortsette pålogging uten å spørre hver gang.",
+  "settings.browser.allowSensitive.warning":
+    "Enhver eller hva som helst som styrer denne agenten kan da legge inn påloggingsinformasjon og laste opp filer uten din godkjenning. La dette være av med mindre du følger med.",
 
   "settings.language.description": 'Velg språket for Kilo Code-grensesnittet. "Auto" bruker VS Codes visningsspråk.',
   "settings.language.auto": "Auto (VS Code-språk)",

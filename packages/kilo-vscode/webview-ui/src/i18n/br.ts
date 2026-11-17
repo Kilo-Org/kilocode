@@ -304,6 +304,10 @@ export const dict = {
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
+  "notification.permission.titleBrowserSensitive": "Etapa sensível do navegador",
+  "notification.permission.descriptionBrowserSensitive":
+    "Esta etapa pode expor uma senha, dados de pagamento, um código de uso único ou um arquivo. Aprove apenas se você espera por isso.",
+
   "notification.permission.titleSandboxEscalation": "Executar fora da sandbox?",
   "notification.permission.descriptionSandboxEscalation":
     "Isto executa todo o comando sem as restrições de sistema de arquivos e rede, apenas para este comando. O Git precisa gravar em .git, que é somente leitura na sandbox e fica fora da árvore de trabalho em um worktree vinculado. Regras de permissão do Bash e a aprovação automática nunca aprovam esta solicitação automaticamente.",
@@ -335,6 +339,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
   "ui.permission.toolLabel.browserOpen": "Navegador Integrado",
+  "ui.permission.toolLabel.browser": "Navegador",
+  "ui.permission.toolLabel.browserSensitive": "Etapa sensível do navegador",
   "ui.permission.copyCommand": "Copiar",
   "ui.approval.auto": "Aprovado automaticamente",
   "ui.approval.manual": "Aprovado por você",
@@ -894,6 +900,25 @@ export const dict = {
   "settings.browser.backend.extension": "Extensão Kilo para navegador",
   "settings.browser.backend.extension.description":
     "Controlar o seu próprio navegador pela extensão Kilo. Ainda não disponível; chamadas de ferramentas de navegador informam que não há navegador.",
+
+  "settings.browser.permissions.title": "Permissões de sites",
+  "settings.browser.permissions.description":
+    "As ferramentas de navegador perguntam antes de ler, agir ou navegar até um site. Sites localhost são permitidos. Cada regra salva concede um tipo de acesso a uma origem; iframes precisam de suas próprias regras.",
+  "settings.browser.allowAll.title": "Permitir todos os sites",
+  "settings.browser.allowAll.description":
+    "Ignorar os avisos de site para todas as origens. Isso substitui a lista de sites abaixo; desativar restaura os padrões integrados.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Adicionar site",
+  "settings.browser.allowlist.remove": "Remover site",
+  "settings.browser.allowlist.empty": "Nenhum site ainda. Sites localhost são sempre permitidos.",
+  "settings.browser.class.read": "Ler",
+  "settings.browser.class.act": "Agir",
+  "settings.browser.class.navigate": "Navegar",
+  "settings.browser.allowSensitive.title": "Permitir etapas sensíveis do navegador",
+  "settings.browser.allowSensitive.description":
+    "Deixe as ferramentas de navegador digitar senhas, preencher campos de cartão, enviar arquivos e continuar o login sem perguntar a cada vez.",
+  "settings.browser.allowSensitive.warning":
+    "Qualquer pessoa ou coisa que controle este agente poderá então inserir credenciais e enviar arquivos sem a sua aprovação. Deixe desativado a menos que esteja acompanhando.",
 
   "settings.language.description":
     'Escolha o idioma da interface do Kilo Code. "Auto" usa o idioma de exibição do VS Code.',

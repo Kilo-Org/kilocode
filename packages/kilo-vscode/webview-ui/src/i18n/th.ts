@@ -298,6 +298,10 @@ export const dict = {
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
+  "notification.permission.titleBrowserSensitive": "ขั้นตอนเบราว์เซอร์ที่ละเอียดอ่อน",
+  "notification.permission.descriptionBrowserSensitive":
+    "ขั้นตอนนี้อาจเปิดเผยรหัสผ่าน ข้อมูลการชำระเงิน รหัสใช้ครั้งเดียว หรือไฟล์ อนุมัติเฉพาะเมื่อคุณคาดว่าจะเกิดเหตุนี้",
+
   "notification.permission.titleSandboxEscalation": "เรียกใช้ภายนอกแซนด์บ็อกซ์หรือไม่?",
   "notification.permission.descriptionSandboxEscalation":
     "การดำเนินการนี้จะรันคำสั่งทั้งหมดโดยไม่มีการจำกัดระบบไฟล์และเครือข่าย สำหรับคำสั่งนี้เท่านั้น Git ต้องเขียนลงใน .git ซึ่งเป็นแบบอ่านอย่างเดียวในแซนด์บ็อกซ์ และอยู่นอก worktree สำหรับ worktree ที่เชื่อมโยง กฎอนุญาตของ Bash และการอนุมัติอัตโนมัติจะไม่อนุมัติพร้อมท์นี้โดยอัตโนมัติ",
@@ -329,6 +333,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "เขียนรายการงาน",
   "ui.permission.toolLabel.codeSearch": "ค้นหาโค้ด",
   "ui.permission.toolLabel.browserOpen": "เบราว์เซอร์ในตัว",
+  "ui.permission.toolLabel.browser": "เบราว์เซอร์",
+  "ui.permission.toolLabel.browserSensitive": "ขั้นตอนเบราว์เซอร์ที่ละเอียดอ่อน",
   "ui.permission.copyCommand": "คัดลอก",
   "ui.approval.auto": "อนุมัติอัตโนมัติ",
   "ui.approval.manual": "คุณเป็นผู้อนุมัติ",
@@ -874,6 +880,25 @@ export const dict = {
   "settings.browser.backend.extension": "ส่วนขยายเบราว์เซอร์ Kilo",
   "settings.browser.backend.extension.description":
     "ควบคุมเบราว์เซอร์ของคุณเองผ่านส่วนขยายเบราว์เซอร์ Kilo ยังไม่พร้อมใช้งาน การเรียกเครื่องมือเบราว์เซอร์จะรายงานว่าไม่มีเบราว์เซอร์",
+
+  "settings.browser.permissions.title": "สิทธิ์ของเว็บไซต์",
+  "settings.browser.permissions.description":
+    "เครื่องมือเบราว์เซอร์จะถามก่อนอ่าน กระทำ หรือไปยังเว็บไซต์ เว็บไซต์ localhost ได้รับอนุญาต ทุกกฎที่บันทึกไว้ให้สิทธิ์การเข้าถึงประเภทหนึ่งกับต้นทางหนึ่ง iframe ต้องมีกฎของตัวเอง",
+  "settings.browser.allowAll.title": "อนุญาตทุกเว็บไซต์",
+  "settings.browser.allowAll.description":
+    "ข้ามการถามเว็บไซต์สำหรับทุกต้นทาง การตั้งนี้แทนที่รายการเว็บไซต์ด้านล่าง เมื่อปิดจะคืนค่าเริ่มต้นในตัว",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "เพิ่มเว็บไซต์",
+  "settings.browser.allowlist.remove": "ลบเว็บไซต์",
+  "settings.browser.allowlist.empty": "ยังไม่มีเว็บไซต์ เว็บไซต์ localhost ได้รับอนุญาตเสมอ",
+  "settings.browser.class.read": "อ่าน",
+  "settings.browser.class.act": "กระทำ",
+  "settings.browser.class.navigate": "นำทาง",
+  "settings.browser.allowSensitive.title": "อนุญาตขั้นตอนเบราว์เซอร์ที่ละเอียดอ่อน",
+  "settings.browser.allowSensitive.description":
+    "ให้เครื่องมือเบราว์เซอร์พิมพ์รหัสผ่าน กรอกช่องบัตร อัปโหลดไฟล์ และดำเนินการลงชื่อเข้าใช้ต่อโดยไม่ถามทุกครั้ง",
+  "settings.browser.allowSensitive.warning":
+    "ใครก็ตามหรือสิ่งใดก็ตามที่ควบคุมเอเจนต์นี้จะสามารถป้อนข้อมูลรับรองและอัปโหลดไฟล์ได้โดยไม่ต้องได้รับการอนุมัติจากคุณ ปล่อยให้ปิดไว้เว้นแต่คุณกำลังเฝ้าดู",
 
   "settings.language.description": 'เลือกภาษาสำหรับ UI ของ Kilo Code "อัตโนมัติ" จะใช้ภาษาการแสดงผลของ VS Code',
   "settings.language.auto": "อัตโนมัติ (ภาษา VS Code)",

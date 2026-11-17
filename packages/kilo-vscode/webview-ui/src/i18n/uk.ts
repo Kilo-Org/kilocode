@@ -302,6 +302,10 @@ export const dict = {
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
+  "notification.permission.titleBrowserSensitive": "Чутливий крок браузера",
+  "notification.permission.descriptionBrowserSensitive":
+    "Цей крок може розкрити пароль, платіжні дані, одноразовий код або файл. Схвалюйте його лише тоді, коли ви цього очікуєте.",
+
   "notification.permission.titleSandboxEscalation": "Виконати поза пісочницею?",
   "notification.permission.descriptionSandboxEscalation":
     "Команда повністю виконується без обмежень файлової системи та мережі, лише для цієї команди. Git має записувати в .git, який доступний лише для читання в пісочниці та розташований поза робочим деревом у пов'язаному worktree. Правила дозволів Bash і автоматичне схвалення ніколи не схвалюють цей запит автоматично.",
@@ -334,6 +338,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Записати завдання",
   "ui.permission.toolLabel.codeSearch": "Пошук коду",
   "ui.permission.toolLabel.browserOpen": "Вбудований браузер",
+  "ui.permission.toolLabel.browser": "Браузер",
+  "ui.permission.toolLabel.browserSensitive": "Чутливий крок браузера",
   "ui.permission.copyCommand": "Копіювати",
   "ui.approval.auto": "Схвалено автоматично",
   "ui.approval.manual": "Схвалено вами",
@@ -877,6 +883,25 @@ export const dict = {
   "settings.browser.backend.extension": "Розширення Kilo для браузера",
   "settings.browser.backend.extension.description":
     "Керувати вашим браузером через розширення Kilo. Поки недоступно; виклики інструментів браузера повідомляють про відсутність браузера.",
+
+  "settings.browser.permissions.title": "Дозволи для сайтів",
+  "settings.browser.permissions.description":
+    "Інструменти браузера запитують перед читанням, дією або переходом на сайт. Сайти localhost дозволені. Кожне збережене правило надає один тип доступу до одного джерела; iframe потребують власних правил.",
+  "settings.browser.allowAll.title": "Дозволити всі сайти",
+  "settings.browser.allowAll.description":
+    "Пропускати запити про сайт для всіх джерел. Це замінює список нижче; вимкнення відновлює вбудовані значення за замовчуванням.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Додати сайт",
+  "settings.browser.allowlist.remove": "Вилучити сайт",
+  "settings.browser.allowlist.empty": "Сайтів ще немає. Сайти localhost дозволені завжди.",
+  "settings.browser.class.read": "Читання",
+  "settings.browser.class.act": "Дія",
+  "settings.browser.class.navigate": "Навігація",
+  "settings.browser.allowSensitive.title": "Дозволити чутливі кроки браузера",
+  "settings.browser.allowSensitive.description":
+    "Дозволяє інструментам браузера вводити паролі, заповнювати поля картки, завантажувати файли та продовжувати вхід, не запитуючи щоразу.",
+  "settings.browser.allowSensitive.warning":
+    "Будь-хто або будь-що, що керує цим агентом, зможе вводити облікові дані та завантажувати файли без вашого схвалення. Залишайте вимкненим, якщо ви не спостерігаєте.",
 
   "settings.language.description":
     '"Автоматично" використовує мову відображення VS Code. Виберіть мову для інтерфейсу Kilo Code.',

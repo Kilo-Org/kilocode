@@ -301,6 +301,10 @@ export const dict = {
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
+  "notification.permission.titleBrowserSensitive": "민감한 브라우저 단계",
+  "notification.permission.descriptionBrowserSensitive":
+    "이 단계는 비밀번호, 결제 정보, 일회용 코드 또는 파일을 노출할 수 있습니다. 예상하는 경우에만 승인하세요.",
+
   "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 실행할까요?",
   "notification.permission.descriptionSandboxEscalation":
     "이 명령에만 적용되며, 파일 시스템 및 네트워크 제한을 해제하고 명령 전체를 실행합니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 해당 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
@@ -332,6 +336,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
   "ui.permission.toolLabel.browserOpen": "통합 브라우저",
+  "ui.permission.toolLabel.browser": "브라우저",
+  "ui.permission.toolLabel.browserSensitive": "민감한 브라우저 단계",
   "ui.permission.copyCommand": "복사",
   "ui.approval.auto": "자동 승인됨",
   "ui.approval.manual": "사용자가 승인함",
@@ -879,6 +885,25 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo 브라우저 확장 프로그램",
   "settings.browser.backend.extension.description":
     "Kilo 브라우저 확장 프로그램을 통해 사용자 브라우저를 제어합니다. 아직 사용할 수 없으며, 브라우저 도구 호출은 브라우저가 없다고 보고합니다.",
+
+  "settings.browser.permissions.title": "사이트 권한",
+  "settings.browser.permissions.description":
+    "브라우저 도구는 사이트를 읽거나 조작하거나 이동하기 전에 묻습니다. localhost 사이트는 허용됩니다. 저장된 각 규칙은 하나의 출처에 한 가지 접근 권한을 부여합니다. iframe에는 자체 규칙이 필요합니다.",
+  "settings.browser.allowAll.title": "모든 사이트 허용",
+  "settings.browser.allowAll.description":
+    "모든 출처에 대해 사이트 확인을 건너뜁니다. 아래 사이트 목록을 대체하며, 끄면 기본값으로 복원됩니다.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "사이트 추가",
+  "settings.browser.allowlist.remove": "사이트 제거",
+  "settings.browser.allowlist.empty": "아직 사이트가 없습니다. localhost 사이트는 항상 허용됩니다.",
+  "settings.browser.class.read": "읽기",
+  "settings.browser.class.act": "조작",
+  "settings.browser.class.navigate": "이동",
+  "settings.browser.allowSensitive.title": "민감한 브라우저 단계 허용",
+  "settings.browser.allowSensitive.description":
+    "브라우저 도구가 매번 묻지 않고 비밀번호를 입력하고, 카드 필드를 채우고, 파일을 업로드하고, 로그인을 계속할 수 있게 합니다.",
+  "settings.browser.allowSensitive.warning":
+    "이 에이전트를 제어하는 누구든 무엇이든 승인 없이 자격 증명을 입력하고 파일을 업로드할 수 있습니다. 지켜보지 않는 한 꺼 두세요.",
 
   "settings.language.description": 'Kilo Code UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
   "settings.language.auto": "자동 (VS Code 언어)",

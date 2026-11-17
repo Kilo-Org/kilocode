@@ -293,6 +293,10 @@ export const dict = {
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
+  "notification.permission.titleBrowserSensitive": "خطوة متصفح حساسة",
+  "notification.permission.descriptionBrowserSensitive":
+    "قد تكشف هذه الخطوة عن كلمة مرور أو بيانات دفع أو رمز لمرة واحدة أو ملف. وافق عليها فقط إذا كنت تتوقعها.",
+
   "notification.permission.titleSandboxEscalation": "التشغيل خارج البيئة المعزولة؟",
   "notification.permission.descriptionSandboxEscalation":
     "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
@@ -324,6 +328,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "كتابة المهام",
   "ui.permission.toolLabel.codeSearch": "بحث الكود",
   "ui.permission.toolLabel.browserOpen": "المتصفح المدمج",
+  "ui.permission.toolLabel.browser": "المتصفح",
+  "ui.permission.toolLabel.browserSensitive": "خطوة متصفح حساسة",
   "ui.permission.copyCommand": "نسخ",
   "ui.approval.auto": "تمت الموافقة تلقائيًا",
   "ui.approval.manual": "تمت الموافقة من قبلك",
@@ -867,6 +873,25 @@ export const dict = {
   "settings.browser.backend.extension": "إضافة Kilo للمتصفح",
   "settings.browser.backend.extension.description":
     "تحكّم في متصفحك الخاص عبر إضافة Kilo للمتصفح. غير متاح بعد؛ تُبلغ استدعاءات أدوات المتصفح بعدم وجود متصفح.",
+
+  "settings.browser.permissions.title": "أذونات المواقع",
+  "settings.browser.permissions.description":
+    "تسأل أدوات المتصفح قبل قراءة موقع أو التصرف فيه أو الانتقال إليه. يُسمح بمواقع localhost. كل قاعدة محفوظة تمنح نوعًا واحدًا من الوصول إلى أصل واحد؛ تحتاج الإطارات المضمّنة إلى قواعدها الخاصة.",
+  "settings.browser.allowAll.title": "السماح بجميع المواقع",
+  "settings.browser.allowAll.description":
+    "تخطَّ مطالبات المواقع لكل أصل. يستبدل هذا قائمة المواقع أدناه؛ وإيقاف تشغيله يعيد الإعدادات الافتراضية المضمّنة.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "إضافة موقع",
+  "settings.browser.allowlist.remove": "إزالة موقع",
+  "settings.browser.allowlist.empty": "لا توجد مواقع بعد. يُسمح دائمًا بمواقع localhost.",
+  "settings.browser.class.read": "قراءة",
+  "settings.browser.class.act": "تنفيذ",
+  "settings.browser.class.navigate": "تنقل",
+  "settings.browser.allowSensitive.title": "السماح بخطوات المتصفح الحساسة",
+  "settings.browser.allowSensitive.description":
+    "اسمح لأدوات المتصفح بكتابة كلمات المرور وملء حقول البطاقات ورفع الملفات ومتابعة تسجيل الدخول دون سؤالك في كل مرة.",
+  "settings.browser.allowSensitive.warning":
+    "يمكن لأي شخص أو أي شيء يقود هذا الوكيل بعد ذلك إدخال بيانات الاعتماد ورفع الملفات دون موافقتك. اترك هذا مغلقًا إلا إذا كنت تراقب.",
 
   "settings.language.description": 'اختر اللغة لواجهة Kilo Code. "تلقائي" يستخدم لغة عرض VS Code.',
   "settings.language.auto": "تلقائي (لغة VS Code)",

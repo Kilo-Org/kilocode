@@ -302,6 +302,10 @@ export const dict = {
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
+  "notification.permission.titleBrowserSensitive": "Wrażliwy krok przeglądarki",
+  "notification.permission.descriptionBrowserSensitive":
+    "Ten krok może ujawnić hasło, dane płatności, jednorazowy kod lub plik. Zatwierdź go tylko, jeśli się go spodziewasz.",
+
   "notification.permission.titleSandboxEscalation": "Uruchomić poza sandboxem?",
   "notification.permission.descriptionSandboxEscalation":
     "Spowoduje to uruchomienie całego polecenia bez ograniczeń systemu plików i sieci, tylko dla tego polecenia. Git musi zapisywać w .git, który jest tylko do odczytu w sandboxie i znajduje się poza drzewem roboczym w połączonym worktree. Reguły zezwoleń Bash i automatyczne zatwierdzanie nigdy nie zatwierdzają tego żądania automatycznie.",
@@ -333,6 +337,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Zapis Todo",
   "ui.permission.toolLabel.codeSearch": "Wyszukiwanie kodu",
   "ui.permission.toolLabel.browserOpen": "Zintegrowana przeglądarka",
+  "ui.permission.toolLabel.browser": "Przeglądarka",
+  "ui.permission.toolLabel.browserSensitive": "Wrażliwy krok przeglądarki",
   "ui.permission.copyCommand": "Kopiuj",
   "ui.approval.auto": "Zatwierdzono automatycznie",
   "ui.approval.manual": "Zatwierdzone przez Ciebie",
@@ -847,6 +853,25 @@ export const dict = {
   "settings.browser.backend.extension": "Rozszerzenie Kilo do przeglądarki",
   "settings.browser.backend.extension.description":
     "Steruj własną przeglądarką przez rozszerzenie Kilo. Jeszcze niedostępne; wywołania narzędzi przeglądarki zgłaszają brak przeglądarki.",
+
+  "settings.browser.permissions.title": "Uprawnienia witryn",
+  "settings.browser.permissions.description":
+    "Narzędzia przeglądarki pytają przed odczytaniem, działaniem lub przejściem do witryny. Witryny localhost są dozwolone. Każda zapisana reguła przyznaje jeden rodzaj dostępu do jednego źródła; elementy iframe wymagają własnych reguł.",
+  "settings.browser.allowAll.title": "Zezwól na wszystkie witryny",
+  "settings.browser.allowAll.description":
+    "Pomija monity o witrynę dla każdego źródła. Zastępuje to listę poniżej; wyłączenie przywraca wbudowane ustawienia domyślne.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Dodaj witrynę",
+  "settings.browser.allowlist.remove": "Usuń witrynę",
+  "settings.browser.allowlist.empty": "Brak witryn. Witryny localhost są zawsze dozwolone.",
+  "settings.browser.class.read": "Czytaj",
+  "settings.browser.class.act": "Działaj",
+  "settings.browser.class.navigate": "Nawiguj",
+  "settings.browser.allowSensitive.title": "Zezwalaj na wrażliwe kroki przeglądarki",
+  "settings.browser.allowSensitive.description":
+    "Pozwala narzędziom przeglądarki wpisywać hasła, wypełniać pola karty, przesyłać pliki i kontynuować logowanie bez pytania za każdym razem.",
+  "settings.browser.allowSensitive.warning":
+    "Każdy, kto lub cokolwiek kieruje tym agentem, może wtedy wprowadzać dane logowania i przesyłać pliki bez Twojej zgody. Pozostaw wyłączone, chyba że obserwujesz.",
 
   "settings.language.description": 'Wybierz język interfejsu Kilo Code. „Auto" używa języka wyświetlania VS Code.',
   "settings.language.auto": "Auto (język VS Code)",

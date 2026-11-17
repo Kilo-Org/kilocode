@@ -283,6 +283,10 @@ export const dict = {
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
+  "notification.permission.titleBrowserSensitive": "敏感瀏覽器操作",
+  "notification.permission.descriptionBrowserSensitive":
+    "此步驟可能會洩露密碼、付款詳情、一次性驗證碼或檔案。僅在你預期時核准。",
+
   "notification.permission.titleSandboxEscalation": "要在沙盒外執行嗎？",
   "notification.permission.descriptionSandboxEscalation":
     "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
@@ -314,6 +318,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "更新待辦",
   "ui.permission.toolLabel.codeSearch": "程式碼搜尋",
   "ui.permission.toolLabel.browserOpen": "整合瀏覽器",
+  "ui.permission.toolLabel.browser": "瀏覽器",
+  "ui.permission.toolLabel.browserSensitive": "敏感瀏覽器操作",
   "ui.permission.copyCommand": "複製",
   "ui.approval.auto": "已自動核准",
   "ui.approval.manual": "由你核准",
@@ -811,6 +817,24 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo 瀏覽器擴充功能",
   "settings.browser.backend.extension.description":
     "透過 Kilo 瀏覽器擴充功能驅動你自己的瀏覽器。尚未可用；瀏覽器工具呼叫會回報沒有瀏覽器。",
+
+  "settings.browser.permissions.title": "網站權限",
+  "settings.browser.permissions.description":
+    "瀏覽器工具在讀取、操作或導覽至網站之前會先詢問。localhost 網站一律允許。每條儲存的規則只授予對某個來源的一種存取權限；iframe 需要各自的規則。",
+  "settings.browser.allowAll.title": "允許所有網站",
+  "settings.browser.allowAll.description": "略過所有來源的網站詢問。這會取代下方的網站清單；關閉後將還原內建預設值。",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "新增網站",
+  "settings.browser.allowlist.remove": "移除網站",
+  "settings.browser.allowlist.empty": "尚無網站。localhost 網站一律允許。",
+  "settings.browser.class.read": "讀取",
+  "settings.browser.class.act": "操作",
+  "settings.browser.class.navigate": "導覽",
+  "settings.browser.allowSensitive.title": "允許敏感瀏覽器操作",
+  "settings.browser.allowSensitive.description":
+    "允許瀏覽器工具輸入密碼、填寫卡片欄位、上傳檔案並繼續登入，而無需每次詢問你。",
+  "settings.browser.allowSensitive.warning":
+    "任何控制此代理的人或程式都可能未經你核准輸入憑證與上傳檔案。除非你在旁觀察，否則請保持關閉。",
 
   "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",
