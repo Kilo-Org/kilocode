@@ -128,6 +128,32 @@ describe("console and network filtering", () => {
   })
 })
 
+describe("opaque withheld frames", () => {
+  test("console lines with no origin are dropped while an opaque frame is withheld", () => {
+    const text = [
+      "Total messages: 2 (Errors: 1, Warnings: 0)",
+      "[LOG] page @ https://shop.example.com/app.js:1",
+      "[ERROR] hidden @ data:text/html,1:3",
+    ].join("\n")
+    expect(Frames.consoleMessages(text, new Set(), true)).not.toContain("hidden")
+    expect(Frames.consoleMessages(text, new Set(), true)).toContain("page @ https://shop.example.com/app.js:1")
+  })
+
+  test("the request list drops unattributable lines while an opaque frame is withheld", () => {
+    const text = ["1. [GET] https://shop.example.com/a => [200] OK", "2. [GET] blob:bundle => [200] OK"].join("\n")
+    const scoped = Frames.scope({
+      tool: "browser_network_requests",
+      text,
+      withholding: true,
+      withheld: new Set(),
+      opaque: true,
+      granted: () => true,
+    })
+    expect(scoped.text).toContain("https://shop.example.com/a")
+    expect(scoped.text).not.toContain("blob:bundle")
+  })
+})
+
 describe("scoping a tool result", () => {
   const withheld = new Set(["https://pay.example.net"])
 

@@ -20,6 +20,8 @@ export type CallResult = { content: ContentBlock[]; isError: boolean; meta?: Cal
 export type CallContext = {
   /** The turn's abort signal: closing the browser or cancelling the session ends the call. */
   signal?: AbortSignal
+  /** The tool session, so the backend keeps its current page per session instead of one for the process. */
+  session?: string
   /** `<class>:<origin>` pairs this session already approved. */
   authorized?: readonly string[]
   /** Step tokens approved for this call, one per sensitive step. */

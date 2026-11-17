@@ -8,7 +8,7 @@ describe("browser settings", () => {
       observation: "diff",
       allowSensitive: false,
       target: null,
-      headless: defaultHeadless("linux", {}),
+      headless: defaultHeadless(process.platform, {}),
     })
   })
 

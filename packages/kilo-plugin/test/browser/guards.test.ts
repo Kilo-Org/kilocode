@@ -1,0 +1,297 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import { Config } from "@opencode/core/config"
+import { Tool } from "@opencode/schema/tool"
+import { Effect, Exit, Scope } from "effect"
+import type { CallContext } from "../../src/browser/backend"
+import { BrowserContract } from "../../src/browser/contract"
+import { key, outputDirectory, playwright } from "../../src/browser/playwright"
+import { resolve } from "../../src/browser/settings"
+import { KiloBrowserToolsPlugin } from "../../src/browser/tools"
+
+/**
+ * The backend's own call path, over a stand-in browser and MCP client. The helpers above are pure; these drive
+ * `callTool` for real, so a guard removed from the call path fails a test instead of only losing helper coverage.
+ */
+type Call = { name: string; args: Record<string, unknown> }
+
+type Text = (name: string, args: Record<string, unknown>) => string
+
+type World = {
+  pages: Page[]
+  calls: Call[]
+  text: Text
+  onCall?: (name: string, args: Record<string, unknown>) => void
+  closed: number
+}
+
+const state: World = { pages: [], calls: [], text: () => "", closed: 0 }
+
+/** A page object with the surface the backend reads: its URL, its frame tree, and a ref lookup that finds nothing. */
+class Page {
+  constructor(readonly id: string, public value: string) {}
+
+  url() {
+    return this.value
+  }
+
+  mainFrame() {
+    return this
+  }
+
+  childFrames(): Page[] {
+    return []
+  }
+
+  parentFrame(): null {
+    return null
+  }
+
+  locator() {
+    return { elementHandle: async () => null }
+  }
+
+  async waitForTimeout() {}
+}
+
+/** The Chromium the backend would launch; the file only has to exist, because the launch itself is stand-in. */
+let executable = ""
+
+const pageText = [
+  "### Page",
+  "- Page URL: https://gate.example.com/",
+  "- Page Title: Gate",
+  "### Snapshot",
+  "```yaml",
+  '- button "Go" [ref=e1]',
+  "```",
+].join("\n")
+
+mock.module("playwright-core", () => ({
+  chromium: {
+    executablePath: () => executable,
+    launch: async () => ({
+      on() {},
+      off() {},
+      async close() {
+        state.closed += 1
+      },
+      async newContext() {
+        return {
+          pages: () => state.pages,
+          on() {},
+          off() {},
+          async close() {
+            state.closed += 1
+          },
+        }
+      },
+    }),
+  },
+}))
+
+mock.module("@playwright/mcp", () => ({
+  createConnection: async () => ({ connect: async () => {}, close: async () => {} }),
+}))
+
+mock.module("@modelcontextprotocol/client", () => ({
+  Client: class {
+    async connect() {}
+    async listTools() {
+      const entry = BrowserContract.entries[0]
+      return {
+        tools: [
+          {
+            name: entry.name,
+            description: entry.description,
+            inputSchema: entry.inputSchema,
+            annotations: { title: entry.title, readOnlyHint: entry.readOnly },
+          },
+        ],
+      }
+    }
+    async callTool(request: { name: string; arguments: Record<string, unknown> }) {
+      state.calls.push({ name: request.name, args: request.arguments })
+      state.onCall?.(request.name, request.arguments)
+      return { content: [{ type: "text", text: state.text(request.name, request.arguments) }], isError: false }
+    }
+    async close() {}
+  },
+}))
+
+const context = { session: "ses_guards" } as CallContext
+
+async function browser() {
+  return playwright.get(key(resolve(undefined)))
+}
+
+beforeEach(async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-browser-guards-"))
+  executable = path.join(directory, "chrome")
+  await fs.writeFile(executable, "")
+  state.pages = [new Page("a", "https://gate.example.com/")]
+  state.calls = []
+  state.closed = 0
+  state.onCall = undefined
+  state.text = (name) =>
+    name === "browser_console_messages"
+      ? "### Result\n- [ERROR] boom @ https://gate.example.com/app.js"
+      : pageText
+})
+
+afterEach(async () => {
+  await playwright.dispose()
+})
+
+/** One plugin location; its scope close runs the finalizers, which is the shutdown path under test. */
+async function boot() {
+  const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
+  const ctx = {
+    location: { directory: "/tmp/browser-guards-test" },
+    tool: {
+      transform: (fn: (typeof transforms)[number]) => Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+    },
+    permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
+  }
+  const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
+  const scope = await Effect.runPromise(Scope.make())
+  await Effect.runPromise(
+    KiloBrowserToolsPlugin.effect(ctx as never).pipe(
+      Effect.provideService(Scope.Scope, scope),
+      Effect.provideService(Config.Service, config),
+    ),
+  )
+  const tools = () => {
+    const added: Tool.Info[] = []
+    transforms.forEach((fn) => fn({ add: (tool) => added.push(tool) }))
+    return added
+  }
+  const call = (name: string, input: unknown = {}, session = "ses_guards_plugin") =>
+    Effect.runPromise(
+      Effect.result(
+        tools()
+          .find((tool) => tool.name === name)!
+          .execute(input, {
+            sessionID: session as never,
+            agent: "code" as never,
+            messageID: "msg_guards" as never,
+            id: "call_guards" as never,
+            progress: () => Effect.void,
+          }),
+      ),
+    )
+  return { call, close: () => Effect.runPromise(Scope.close(scope, Exit.void)) }
+}
+
+/** Run a call to completion and return its failure, so the recorded MCP traffic can be asserted as well. */
+async function settle(promise: Promise<unknown>) {
+  try {
+    await promise
+    return undefined
+  } catch (error) {
+    return error
+  }
+}
+
+function textOf(result: unknown) {
+  if (!result || typeof result !== "object" || !("success" in result)) return ""
+  const success = result.success
+  if (!success || typeof success !== "object" || !("content" in success) || !Array.isArray(success.content)) return ""
+  return success.content
+    .flatMap((block: unknown) => {
+      if (!block || typeof block !== "object" || !("type" in block) || block.type !== "text") return []
+      if (!("text" in block) || typeof block.text !== "string") return []
+      return [block.text]
+    })
+    .join("\n")
+}
+
+describe("the backend's call path", () => {
+  test("a tab that lands on a refused scheme is refused after the call", async () => {
+    const page = state.pages[0]
+    state.onCall = (name) => {
+      if (name === "browser_tabs") page.value = "file:///etc/passwd"
+    }
+    const backend = await browser()
+    await expect(backend.callTool("browser_tabs", { action: "new" }, context)).rejects.toThrow("Navigation refused")
+    // The tab really opened: the refusal came from the landing page, not from the requested arguments.
+    expect(state.calls.map((call) => call.name)).toEqual(["browser_tabs"])
+  })
+
+  test("a new tab's own url is refused before the browser sees it", async () => {
+    const backend = await browser()
+    // A refused scheme never reaches the browser, whatever the call would otherwise do with it.
+    const error = await settle(backend.callTool("browser_tabs", { action: "new", url: "file:///etc/passwd" }, context))
+    expect(state.calls).toEqual([])
+    expect(error instanceof Error ? error.message : String(error)).toContain("Navigation refused")
+  })
+
+  test("a model filename outside the output directory is refused before the call", async () => {
+    const backend = await browser()
+    const error = await settle(
+      backend.callTool("browser_snapshot", { filename: path.join(path.sep, "tmp", "escape.png") }, context),
+    )
+    expect(state.calls).toEqual([])
+    expect(error instanceof Error ? error.message : String(error)).toContain("output directory")
+    const inside = path.join(outputDirectory(), "page.png")
+    await backend.callTool("browser_snapshot", { filename: inside }, context)
+    expect(state.calls[0]?.args.filename).toBe(inside)
+  })
+
+  test("the current page is tracked per session, not taken from tool text", async () => {
+    const backend = await browser()
+    const one = await backend.callTool("browser_click", {}, { session: "ses_one" } as CallContext)
+    state.onCall = () => {
+      state.pages.push(new Page("b", "https://other.example.com/"))
+    }
+    const two = await backend.callTool("browser_click", {}, { session: "ses_two" } as CallContext)
+    state.onCall = undefined
+    const back = await backend.callTool("browser_click", {}, { session: "ses_one" } as CallContext)
+    // The second session opened a tab; the first session still inspects its own page.
+    expect(two.meta?.url).toBe("https://other.example.com/")
+    expect(one.meta?.url).toBe("https://gate.example.com/")
+    expect(back.meta?.url).toBe("https://gate.example.com/")
+  })
+})
+
+describe("the diff console read", () => {
+  test("does not run unless the plan is already granted for the session", async () => {
+    const host = await boot()
+    const result = await host.call("browser_click", {})
+    expect(state.calls.map((call) => call.name)).toEqual(["browser_click"])
+    expect(textOf(result)).not.toContain("Console errors")
+  })
+
+  test("runs with the session's own authorized list, so the frame filter sees the same grants", async () => {
+    const host = await boot()
+    const backend = await browser()
+    const seen: { name: string; authorized?: readonly string[] }[] = []
+    const real = backend.callTool.bind(backend)
+    backend.callTool = async (name, args, ctx) => {
+      seen.push({ name, authorized: ctx.authorized })
+      return real(name, args, ctx)
+    }
+    // A read grant exists before the diff read, so the console call is allowed to run.
+    await host.call("browser_find", { query: "Go" }, "ses_authorized")
+    await host.call("browser_click", {}, "ses_authorized")
+    const console = seen.filter((call) => call.name === "browser_console_messages")
+    expect(console.length).toBeGreaterThan(0)
+    expect(console.at(-1)?.authorized ?? []).toContain("read:https://gate.example.com")
+  })
+})
+
+describe("shutdown", () => {
+  test("clears the snapshot tracker, so a restarted location starts fresh", async () => {
+    const first = await boot()
+    await first.call("browser_click", {}, "ses_clear")
+    await first.close()
+    const second = await boot()
+    const result = await second.call("browser_click", {}, "ses_clear")
+    await second.close()
+    // Without the clear, the identical page would be reported as an unchanged diff against the old snapshot.
+    expect(textOf(result)).toContain("### Snapshot")
+    expect(textOf(result)).not.toContain("Page changes")
+  })
+})

@@ -45,8 +45,9 @@ export function outputDirectory() {
 export function launchFailure(error: unknown, executable?: string): Error {
   const message = error instanceof Error ? error.message : String(error)
   if (!/sandbox/i.test(message)) return error instanceof Error ? error : new Error(message)
+  // The instruction is a Linux one, so it keeps POSIX separators even when the test or a caller hands us a Windows path.
   const sandbox = executable
-    ? path.join(path.dirname(executable), "chrome_sandbox")
+    ? `${executable.replace(/[\\/][^\\/]+$/, "")}/chrome_sandbox`
     : "<playwright-chromium>/chrome-linux/chrome_sandbox"
   return new Error(
     [
@@ -173,11 +174,26 @@ function inspectElement(el: Element, kind: "fill" | "click") {
 async function readSnapshot(file: string): Promise<string | undefined> {
   const root = await fs.realpath(outputDirectory()).catch(() => undefined)
   if (!root) return undefined
-  const resolved = await fs.realpath(path.resolve(root, file)).catch(() => undefined)
-  if (!resolved || (resolved !== root && !resolved.startsWith(root + path.sep))) return undefined
+  const resolved = await snapshotFile(file, root)
+  if (!resolved) return undefined
   const stat = await fs.stat(resolved).catch(() => undefined)
   if (!stat?.isFile() || stat.size > INLINE_LIMIT) return undefined
   return fs.readFile(resolved, "utf8").catch(() => undefined)
+}
+
+/**
+ * The real path of a snapshot link, or undefined. The MCP prints the path relative to the process working directory
+ * (the CLI's project directory), so that is the base; the output directory is the fallback for a link that already
+ * points there. Either way the file must resolve inside the output directory the backend owns.
+ */
+export async function snapshotFile(file: string, root: string, cwd = process.cwd()): Promise<string | undefined> {
+  for (const base of [cwd, root]) {
+    const resolved = await fs.realpath(path.resolve(base, file)).catch(() => undefined)
+    if (!resolved) continue
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) continue
+    return resolved
+  }
+  return undefined
 }
 
 /**
@@ -348,11 +364,23 @@ export function withheldFrames(page: Page, authorized: readonly string[]): Frame
 export function frameOrigin(frame: Pick<Frame, "url" | "parentFrame">): string | undefined {
   let current: Pick<Frame, "url" | "parentFrame"> | null = frame
   while (current) {
-    const origin = BrowserPermission.origin(current.url())
-    if (origin) return origin
+    const own = current.url().trim()
+    // Only a document that inherits its parent's origin walks up: an opaque document (`data:`, `blob:`) does not, and
+    // a withheld ancestor must not lend its grant to it.
+    if (!INHERITS.test(own)) return BrowserPermission.origin(own)
     current = current.parentFrame()
   }
   return undefined
+}
+
+/** Documents that inherit the origin of the document that created them. */
+const INHERITS = /^about:(blank|srcdoc)$/i
+
+/** The URLs a call asks the browser to open: a navigation, or a new tab. */
+export function navigationTargets(name: string, args: Record<string, unknown>): string[] {
+  if (name === "browser_navigate" && typeof args.url === "string") return [args.url]
+  if (name === "browser_tabs" && args.action === "new" && typeof args.url === "string") return [args.url]
+  return []
 }
 
 /** The empty document a tab starts in; it carries no origin and no page data. */
@@ -385,10 +413,75 @@ export function navigationRefusal(url: string): string | undefined {
 export function outputBaseline(name: string): boolean {
   return (
     name === "browser_take_screenshot" ||
+    name === "browser_snapshot" ||
     name === "browser_network_request" ||
     name === "browser_network_requests" ||
     name === "browser_console_messages"
   )
+}
+
+/**
+ * The output path a screenshot asked for, or undefined. A name outside the browser output directory is refused; the
+ * file is written from the inline image the backend masked, never by the MCP.
+ */
+export function screenshotPath(
+  name: string,
+  args: Record<string, unknown>,
+  directory = outputDirectory(),
+): string | undefined {
+  if (name !== "browser_take_screenshot") return undefined
+  const filename = typeof args.filename === "string" ? args.filename.trim() : ""
+  return filename === "" ? undefined : insideOutput(filename, directory)
+}
+
+/**
+ * Refuse a file name that does not resolve inside the browser output directory. The MCP resolves a relative name
+ * against the workspace root, so a result file written there could not be redacted, baselined or deleted here.
+ */
+export function insideOutput(filename: string, directory = outputDirectory()): string {
+  const resolved = path.resolve(filename)
+  if (resolved !== directory && !resolved.startsWith(directory + path.sep)) {
+    throw new Error("The file name must stay inside the browser output directory.")
+  }
+  return resolved
+}
+
+/** Sessions whose current page is remembered. */
+const PAGE_LIMIT = 64
+
+/** Remember a session's page, moving it to the back and dropping the oldest session past the bound. */
+export function rememberPage(pages: Map<string, Page>, session: string, page: Page, limit = PAGE_LIMIT) {
+  pages.delete(session)
+  pages.set(session, page)
+  while (pages.size > limit) {
+    const oldest = pages.keys().next()
+    if (oldest.done) break
+    pages.delete(oldest.value)
+  }
+}
+
+/**
+ * The page a call leaves current. A page created during the call wins (a new tab, `window.open`); then the model's
+ * own tab choice; otherwise the page the session already had. Tool text is never an input.
+ */
+export function tabChoice(input: {
+  known: Page | undefined
+  before: readonly Page[]
+  after: readonly Page[]
+  name: string
+  args: Record<string, unknown>
+}): Page | undefined {
+  const after = input.after
+  if (!after.length) return undefined
+  const added = after.filter((page) => !input.before.includes(page))
+  if (added.length) return added[added.length - 1]
+  if (input.name === "browser_tabs" && input.args.action === "select" && typeof input.args.index === "number") {
+    return after[input.args.index] ?? input.known ?? after[after.length - 1]
+  }
+  if (input.name === "browser_tabs" && input.args.action === "close") {
+    return input.known && after.includes(input.known) ? input.known : after[after.length - 1]
+  }
+  return input.known && after.includes(input.known) ? input.known : after[after.length - 1]
 }
 
 /** The file link of a screenshot the backend deleted; the masked image replaces it. */
@@ -404,8 +497,12 @@ class PlaywrightBackend implements BrowserBackend {
   readonly contractSha = BrowserContract.sha256
   private readonly off: Array<() => void> = []
   private disposed = false
-  /** The URL the last result reported, so a call reaches the page MCP acted on before it saw a new tab. */
-  private url: string | undefined
+  /**
+   * The page each session acted on. It is a page object, not a URL taken from tool text: a page can name any URL in
+   * its own output, but it cannot choose which page the next call inspects. A tab is added by a call that creates one
+   * (`browser_tabs new`, a `window.open`) or selected by the model's own `index`, never by page content.
+   */
+  private readonly pages = new Map<string, Page>()
 
   private constructor(
     private readonly conn: Connection,
@@ -432,12 +529,33 @@ class PlaywrightBackend implements BrowserBackend {
     return this.conn.tools
   }
 
-  /** The page MCP is acting on: the one whose URL the last result reported. */
-  private current(): Page | undefined {
+  /** The page this session acts on, or the newest one when the session has none (a first call, or it was closed). */
+  private current(session: string): Page | undefined {
     const pages = this.conn.context.pages()
+    const known = this.pages.get(session)
+    // A page that was closed or crashed is dropped, so a session cannot pin a dead page (or its handles).
+    if (known && !pages.includes(known)) this.pages.delete(session)
     if (!pages.length) return undefined
-    const match = this.url ? pages.findLast((page) => page.url() === this.url) : undefined
-    return match ?? pages[pages.length - 1]
+    if (known && pages.includes(known)) return known
+    return pages[pages.length - 1]
+  }
+
+  /** Remember a session's page, oldest session first out. */
+  private remember(session: string, page: Page) {
+    rememberPage(this.pages, session, page)
+  }
+
+  /** Follow the call's own intent: a tab it created, or the model's own tab choice. */
+  private track(session: string, name: string, args: Record<string, unknown>, before: readonly Page[]) {
+    const next = tabChoice({
+      known: this.pages.get(session),
+      before,
+      after: this.conn.context.pages(),
+      name,
+      args,
+    })
+    if (next) this.remember(session, next)
+    else this.pages.delete(session)
   }
 
   /** The frame a `[ref=…]` snapshot ref lives in, resolved through Playwright's aria-ref engine. */
@@ -513,12 +631,15 @@ class PlaywrightBackend implements BrowserBackend {
     const withheld = withheldFrames(page, authorized)
     if (!withheld.length) return { text, refused: false }
     const origins = new Set(withheld.map((frame) => frameOrigin(frame)).filter((origin): origin is string => !!origin))
+    // An opaque withheld frame has no origin to add to the set: every unattributable line is dropped instead.
+    const opaque = withheld.some((frame) => frameOrigin(frame) === undefined)
     const resolved = text.includes("### Snapshot") ? await this.frameOrigins(page, text) : undefined
     return Frames.scope({
       tool: name,
       text,
       withholding: true,
       withheld: origins,
+      opaque,
       origins: resolved,
       granted: (origin) => authorized.includes(`read:${origin}`),
     })
@@ -567,20 +688,23 @@ class PlaywrightBackend implements BrowserBackend {
   }
 
   async plan(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]> {
-    const page = this.current()
+    const page = this.current(ctx.session ?? "")
     const elements: BrowserItems.Element[] = []
     if (page) {
       for (const ref of BrowserItems.refs(args)) {
         const frame = await this.frameOf(page, ref)
-        const origin = frame && BrowserPermission.origin(frame.url())
+        // A frame without an http(s) origin of its own is keyed by its site, so an opaque tab still asks.
+        const origin = frame && (frameOrigin(frame) ?? BrowserPermission.site(frame.url()))
         if (!frame || !origin) continue
         elements.push({ ref, origin, frame: frame !== page.mainFrame() })
       }
     }
+    // The page key is the site, so an `about:blank` or `data:` tab reaches a decision instead of `[]`.
+    const key = page && (BrowserPermission.origin(page.url()) ?? BrowserPermission.site(page.url()))
     return BrowserItems.plan({
       tool: name,
       args,
-      page: page && BrowserPermission.origin(page.url()),
+      page: key,
       elements,
       authorized: ctx.authorized ?? [],
     })
@@ -590,12 +714,14 @@ class PlaywrightBackend implements BrowserBackend {
     // Running code in the CLI process is not a browser action we can bound, so this backend refuses it.
     if (name === "browser_run_code_unsafe") throw new UnsupportedError()
     const authorized = ctx.authorized ?? []
-    let page = this.current()
+    const session = ctx.session ?? ""
+    const pagesBefore = this.conn.context.pages()
+    let page = this.current(session)
 
-    // A navigation target is checked before the browser sees it: a scheme without an http(s) origin has no grant to
-    // ask for, so it must not reach the page at all.
-    if (name === "browser_navigate") {
-      const refusal = navigationRefusal(String(args.url ?? ""))
+    // Every URL a call would open is checked before the browser sees it: a scheme without an http(s) origin has no
+    // grant to ask for, so it must not reach a page - or a new tab - at all.
+    for (const target of navigationTargets(name, args)) {
+      const refusal = navigationRefusal(target)
       if (refusal) throw new Error(refusal)
     }
 
@@ -631,6 +757,11 @@ class PlaywrightBackend implements BrowserBackend {
       callArgs = { ...args, type: "png", scale: "css" }
       delete callArgs.filename
     }
+    // A file name the model supplies is resolved by the MCP against the workspace root, outside the directory this
+    // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
+    // image the backend holds, so masking is applied to the file as well.
+    const save = screenshotPath(name, args)
+    if (!shot && typeof args.filename === "string" && args.filename.trim() !== "") insideOutput(args.filename)
     // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
     const before = outputBaseline(name) ? await this.outputFiles() : undefined
 
@@ -662,9 +793,8 @@ class PlaywrightBackend implements BrowserBackend {
       .filter((block) => block.type === "text")
       .map((block) => block.text)
       .join("\n")
-    const reported = /^- Page URL: (.+)$/m.exec(text)?.[1]?.trim()
-    if (reported) this.url = reported
-    page = this.current()
+    this.track(session, name, args, pagesBefore)
+    page = this.current(session)
 
     if (downloads.length) {
       const site = page && BrowserPermission.site(page.url())
@@ -679,7 +809,7 @@ class PlaywrightBackend implements BrowserBackend {
 
     // A navigation can land on another origin through a redirect; the real origin decides. A landing page without an
     // http(s) origin is refused the same way as such a target.
-    if (page && (name === "browser_navigate" || name === "browser_navigate_back")) {
+    if (page && (name === "browser_navigate" || name === "browser_navigate_back" || name === "browser_tabs")) {
       const refusal = navigationRefusal(page.url())
       if (refusal) throw new Error(refusal)
       const origin = BrowserPermission.origin(page.url())
@@ -728,6 +858,8 @@ class PlaywrightBackend implements BrowserBackend {
           },
         }
       }
+      // The model still gets the file it asked for, written from the masked image.
+      if (save && images[0]) await fs.writeFile(save, Buffer.from(images[0].data, "base64"))
       // The file link points at the deleted file; the masked image is the answer.
       return {
         content: [{ type: "text", text: withoutScreenshotLink(viewed) }, ...images],
@@ -740,10 +872,11 @@ class PlaywrightBackend implements BrowserBackend {
     }
 
     const meta: CallMeta = {
-      ...(this.url ? { url: this.url } : {}),
+      ...(page ? { url: page.url() } : {}),
       ...(origin ? { origin } : {}),
       ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
     }
+    if (save && images[0]) await fs.writeFile(save, Buffer.from(images[0].data, "base64"))
     return {
       content: [{ type: "text", text: viewed }, ...images],
       isError: result.isError === true,
@@ -754,6 +887,7 @@ class PlaywrightBackend implements BrowserBackend {
   async dispose() {
     if (this.disposed) return
     this.disposed = true
+    this.pages.clear()
     for (const off of this.off) off()
     await this.conn.client.close().catch(() => undefined)
     await this.conn.server.close().catch(() => undefined)
@@ -797,7 +931,13 @@ export class Backends {
   async dispose() {
     const values = Array.from(this.entries.values())
     this.entries.clear()
-    await Promise.all(values.map((entry) => entry.backend?.dispose()))
+    // An entry may still be launching: wait for it, so the process it starts is closed too.
+    await Promise.all(
+      values.map(async (entry) => {
+        const backend = await entry.promise.catch(() => undefined)
+        await backend?.dispose()
+      }),
+    )
   }
 }
 

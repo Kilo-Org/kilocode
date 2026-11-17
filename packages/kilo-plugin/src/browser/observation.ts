@@ -229,6 +229,9 @@ type SessionState = {
 
 const CONSOLE_SEEN_LIMIT = 500
 
+/** Tabs remembered per session; the least recently seen is dropped so a long-lived page cannot grow the map. */
+const TAB_LIMIT = 32
+
 /** Sessions remembered at once; the oldest is dropped when a new one pushes past this bound. */
 const SESSION_LIMIT = 32
 
@@ -253,6 +256,11 @@ export class Tracker {
     this.sessions.delete(session)
   }
 
+  /** Release every session, when the location that owns the tracker shuts down. */
+  clear() {
+    this.sessions.clear()
+  }
+
   /** The snapshot the next result is compared against, or undefined on the first visit. */
   previous(session: string, tool: string, url?: string): Snapshot | undefined {
     const state = this.state(session)
@@ -270,7 +278,15 @@ export class Tracker {
     if (!snapshot.lines.length) return
     const state = this.state(session)
     state.active = snapshot
-    if (snapshot.url) state.tabs.set(snapshot.url, snapshot)
+    if (!snapshot.url) return
+    // Least-recently-seen order: re-inserting moves a tab to the back of the map.
+    state.tabs.delete(snapshot.url)
+    state.tabs.set(snapshot.url, snapshot)
+    while (state.tabs.size > TAB_LIMIT) {
+      const oldest = state.tabs.keys().next()
+      if (oldest.done) break
+      state.tabs.delete(oldest.value)
+    }
   }
 
   /** Console messages not returned to the model before in this session. */

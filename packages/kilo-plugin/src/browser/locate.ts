@@ -15,7 +15,7 @@ export type Input = {
 }
 
 /** The command that installs the Chromium build this CLI pins; every "no browser" error names it. */
-export const INSTALL_HINT = "kilo browser install-chromium"
+export const INSTALL_HINT = "kilo2 browser install-chromium"
 
 function chromePaths(input: Input) {
   if (input.platform === "darwin") {
