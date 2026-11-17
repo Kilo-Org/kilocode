@@ -5,7 +5,7 @@ import { Wildcard } from "@opencode/core/util/wildcard"
 import { KiloBrowserPolicy } from "@kilocode/gateway-core/browser-policy"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Option, Result } from "effect"
+import { Effect, Option, Result, Stream } from "effect"
 import type { JsonSchema } from "effect"
 import {
   NeedsPermissionError,
@@ -409,6 +409,18 @@ export const KiloBrowserToolsPlugin = define({
         tracker.clear()
         await playwright.dispose()
       }),
+    )
+
+    // A deleted session releases its remembered page at once; the page map is otherwise only bounded by live pages.
+    yield* ctx.event.subscribe({ types: ["session.deleted"] }).pipe(
+      Stream.runForEach((event) =>
+        Effect.sync(() => {
+          if (event.type !== "session.deleted") return
+          tracker.forget(event.data.sessionID)
+          playwright.forgetSession(event.data.sessionID)
+        }),
+      ),
+      Effect.catch(() => Effect.void),
     )
 
     const config = yield* Effect.serviceOption(Config.Service)

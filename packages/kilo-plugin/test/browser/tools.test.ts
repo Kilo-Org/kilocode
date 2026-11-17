@@ -4,7 +4,7 @@ import type { Permission } from "@opencode/core/permission"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Document } from "@opencode/schema/config"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Exit, Option, Scope } from "effect"
+import { Effect, Exit, Option, Scope, Stream } from "effect"
 import { UNAVAILABLE_MESSAGE } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { authorize, KiloBrowserToolsPlugin } from "../../src/browser/tools"
@@ -25,8 +25,10 @@ async function boot(browser?: Browser) {
   const ctx = {
     location: { directory: "/tmp/browser-tools-test" },
     tool: {
-      transform: (fn: (typeof transforms)[number]) => Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
+      transform: (fn: (typeof transforms)[number]) =>
+        Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
+    event: { subscribe: () => Stream.empty },
     permission: {
       hook: (_: string, callback: Hook) =>
         Effect.sync(() => {
@@ -38,9 +40,7 @@ async function boot(browser?: Browser) {
   const config = {
     entries: () =>
       Effect.succeed(
-        browser === undefined
-          ? []
-          : [new Document({ type: "document", info: new KiloConfigPolicy.Info({ browser }) })],
+        browser === undefined ? [] : [new Document({ type: "document", info: new KiloConfigPolicy.Info({ browser }) })],
       ),
   } as unknown as Config.Interface
   const scope = await Effect.runPromise(Scope.make())
@@ -113,10 +113,19 @@ describe("browser tools", () => {
 describe("browser permission flow", () => {
   /** A stand-in permission service that records what it was asked. */
   function recorder() {
-    const asserts: { action: string; resources: readonly string[]; save: readonly string[]; metadata?: Record<string, unknown> }[] = []
+    const asserts: {
+      action: string
+      resources: readonly string[]
+      save: readonly string[]
+      metadata?: Record<string, unknown>
+    }[] = []
     const service = {
-      assert: (input: { action: string; resources: readonly string[]; save: readonly string[]; metadata?: Record<string, unknown> }) =>
-        Effect.sync(() => void asserts.push(input)),
+      assert: (input: {
+        action: string
+        resources: readonly string[]
+        save: readonly string[]
+        metadata?: Record<string, unknown>
+      }) => Effect.sync(() => void asserts.push(input)),
     } as unknown as Permission.Interface
     return { asserts, service: Option.some(service) }
   }
@@ -175,7 +184,13 @@ describe("browser permission flow", () => {
   test("a frame item is marked as one", async () => {
     const { asserts, service } = recorder()
     await Effect.runPromise(
-      authorize([{ class: "read" as const, origin: "https://frame.example.com", frame: true }], context, false, () => false, service),
+      authorize(
+        [{ class: "read" as const, origin: "https://frame.example.com", frame: true }],
+        context,
+        false,
+        () => false,
+        service,
+      ),
     )
     expect(asserts[0].metadata).toMatchObject({ frame: true })
   })
@@ -201,11 +216,21 @@ describe("browser permission hook", () => {
   test("a sensitive step asks unless browser.allow_sensitive is on", async () => {
     const strict = await boot()
     expect(
-      await strict.evaluate({ action: "browser_sensitive", effect: "allow", resources: ["https://example.com"], rules: [] }),
+      await strict.evaluate({
+        action: "browser_sensitive",
+        effect: "allow",
+        resources: ["https://example.com"],
+        rules: [],
+      }),
     ).toMatchObject({ effect: "ask" })
     const relaxed = await boot({ allow_sensitive: true })
     expect(
-      await relaxed.evaluate({ action: "browser_sensitive", effect: "allow", resources: ["https://example.com"], rules: [] }),
+      await relaxed.evaluate({
+        action: "browser_sensitive",
+        effect: "allow",
+        resources: ["https://example.com"],
+        rules: [],
+      }),
     ).toMatchObject({ effect: "allow" })
   })
 

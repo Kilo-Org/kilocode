@@ -414,6 +414,22 @@ export function screenshotPath(
 }
 
 /**
+ * The arguments a call forwards. The MCP resolves a file-writing `filename` against the workspace root, so a relative
+ * name is rewritten to its absolute path inside the output directory the backend owns. A screenshot is written by
+ * the backend itself, so its name is left for `screenshotPath`.
+ */
+export function forwardFilename(
+  name: string,
+  args: Record<string, unknown>,
+  directory = outputDirectory(),
+): Record<string, unknown> {
+  if (name === "browser_take_screenshot") return args
+  const filename = typeof args.filename === "string" ? args.filename.trim() : ""
+  if (filename === "") return args
+  return { ...args, filename: insideOutput(filename, directory) }
+}
+
+/**
  * Refuse a file name that does not resolve inside the browser output directory. The MCP resolves a relative name
  * against the workspace root, so a result file written there could not be redacted, baselined or deleted here.
  */
@@ -427,12 +443,26 @@ export function insideOutput(filename: string, directory = outputDirectory()): s
 }
 
 /**
- * Drop every session whose page the context no longer has. The map is bounded by the browser's live pages, so a
- * session that is still open keeps its page however many sessions have come and gone.
+ * Drop every session whose page the context no longer has. A session with a live page keeps it, however many sessions
+ * have come and gone; the plugin releases a session's entry when the session is deleted.
  */
 export function prunePages(pages: Map<string, Page>, live: readonly Page[]) {
   for (const [session, page] of pages) {
     if (!live.includes(page)) pages.delete(session)
+  }
+}
+
+/** Hard cap, last resort only: sessions are released when they end, long before this. */
+const PAGE_LIMIT = 1024
+
+/** Remember a session's page, least recently used first out past the cap. */
+export function rememberPage(pages: Map<string, Page>, session: string, page: Page, limit = PAGE_LIMIT) {
+  pages.delete(session)
+  pages.set(session, page)
+  while (pages.size > limit) {
+    const oldest = pages.keys().next()
+    if (oldest.done) break
+    pages.delete(oldest.value)
   }
 }
 
@@ -549,10 +579,14 @@ class PlaywrightBackend implements BrowserBackend {
     return pages[pages.length - 1]
   }
 
-  /** Remember a session's page. */
+  /** Remember a session's page, least recently used first out past the hard cap. */
   private remember(session: string, page: Page) {
+    rememberPage(this.pages, session, page)
+  }
+
+  /** Release a session's page when the session ends. */
+  forget(session: string) {
     this.pages.delete(session)
-    this.pages.set(session, page)
   }
 
   /** Follow the call's own intent: a tab it created, or the model's own tab choice. */
@@ -774,7 +808,11 @@ class PlaywrightBackend implements BrowserBackend {
     // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
     // image the backend holds, so masking is applied to the file as well.
     const save = screenshotPath(name, args)
-    if (!shot && typeof args.filename === "string" && args.filename.trim() !== "") insideOutput(args.filename)
+    // A rewritten name is absolute, so the MCP writes inside the directory this backend baselines and deletes.
+    if (!shot) callArgs = forwardFilename(name, callArgs)
+    if (save) await fs.mkdir(path.dirname(save), { recursive: true })
+    const forwarded = typeof callArgs.filename === "string" ? callArgs.filename : undefined
+    if (forwarded) await fs.mkdir(path.dirname(forwarded), { recursive: true })
     // What the call meant to act on, so a landing elsewhere is visible after it ran.
     const planned = plannedOrigin(name, args, page && BrowserPermission.origin(page.url()))
     // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
@@ -832,14 +870,13 @@ class PlaywrightBackend implements BrowserBackend {
     // action already ran, so its content is withheld and read is requested: the call is never retried.
     const need = page && landingNeed({ tool: name, planned, landed: BrowserPermission.origin(page.url()), authorized })
     if (need && page) {
-      const title = /^- Page Title: (.+)$/m.exec(text)?.[1]?.trim()
+      // Only the URL: a title is content of an origin this session was never granted.
       return {
         content: [
           {
             type: "text",
             text: [
               `- Page URL: ${page.url()}`,
-              ...(title ? [`- Page Title: ${title}`] : []),
               "",
               `The page moved to ${need.origin}; its content is withheld until read is granted.`,
             ].join("\n"),
@@ -958,6 +995,11 @@ export class Backends {
     )
     this.entries.set(key, entry)
     return entry.promise
+  }
+
+  /** Release a deleted session's page on every live backend. A missing backend is not launched for it. */
+  forgetSession(session: string) {
+    for (const entry of this.entries.values()) entry.backend?.forget?.(session)
   }
 
   async dispose() {

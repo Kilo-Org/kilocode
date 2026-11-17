@@ -45,6 +45,8 @@ export type BrowserBackend = {
    */
   plan?(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<Item[]>
   callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult>
+  /** Release per-session state when the session ends; a backend without any ignores it. */
+  forget?(session: string): void
   dispose(): Promise<void>
 }
 

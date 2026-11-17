@@ -6,6 +6,7 @@ import type { Frame, Page } from "playwright-core"
 import { browsersDirectory, useKiloBrowsers } from "../../src/browser/install"
 import {
   Backends,
+  forwardFilename,
   frameOrigin,
   insideOutput,
   screenshotPath,
@@ -17,6 +18,7 @@ import {
   outputBaseline,
   plannedOrigin,
   prunePages,
+  rememberPage,
   snapshotFile,
   tabChoice,
   withheldFrames,
@@ -121,6 +123,29 @@ describe("output directory", () => {
     expect(() => insideOutput("../page.png", directory)).toThrow("output directory")
   })
 
+  test("a forwarded file name is rewritten to its absolute path inside the output directory", () => {
+    const directory = path.join(path.sep, "tmp", "browser", "output")
+    // The MCP resolves a relative name against the workspace root, so only the rewritten absolute name is safe.
+    expect(forwardFilename("browser_snapshot", { filename: "page.yml" }, directory)).toEqual({
+      filename: path.join(directory, "page.yml"),
+    })
+    expect(forwardFilename("browser_snapshot", {}, directory)).toEqual({})
+    // A screenshot is written by the backend itself, so its name is not forwarded.
+    expect(forwardFilename("browser_take_screenshot", { filename: "shot.png" }, directory)).toEqual({
+      filename: "shot.png",
+    })
+    expect(() => forwardFilename("browser_console_messages", { filename: "../out.log" }, directory)).toThrow(
+      "output directory",
+    )
+  })
+
+  test("a nested screenshot name resolves inside the output directory", () => {
+    const directory = path.join(path.sep, "tmp", "browser", "output")
+    expect(screenshotPath("browser_take_screenshot", { filename: "nested/shot.png" }, directory)).toBe(
+      path.join(directory, "nested", "shot.png"),
+    )
+  })
+
   test("a file name outside the backend's directory is refused", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     expect(insideOutput(path.join(directory, "page.png"), directory)).toBe(path.join(directory, "page.png"))
@@ -170,6 +195,28 @@ describe("current page", () => {
     expect(tabChoice({ known: one, before: [one, two], after: [one, two], name: "browser_snapshot", args: {} })).toBe(
       one,
     )
+  })
+
+  test("the hard cap is the last resort, and it drops the least recently used session", () => {
+    const pages = new Map<string, Page>()
+    for (let index = 0; index < 1100; index += 1) rememberPage(pages, `s${index}`, one)
+    expect(pages.size).toBe(1024)
+    expect(pages.has("s0")).toBe(false)
+    expect(pages.has("s1099")).toBe(true)
+    // A session that acts again moves to the back, so the fallback never evicts a recently active one.
+    rememberPage(pages, "s1099", one)
+    expect([...pages.keys()].at(-1)).toBe("s1099")
+  })
+
+  test("a deleted session releases its page on every live backend", async () => {
+    const forgotten: string[] = []
+    const backends = new Backends(async (value) => ({
+      ...fake(value, []),
+      forget: (session: string) => forgotten.push(session),
+    }))
+    await backends.get(key(resolve(undefined)))
+    backends.forgetSession("ses_deleted")
+    expect(forgotten).toEqual(["ses_deleted"])
   })
 
   test("sessions are evicted by liveness, so a live session keeps its page", () => {

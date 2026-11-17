@@ -5,7 +5,7 @@ import path from "node:path"
 import { Config } from "@opencode/core/config"
 import { Permission } from "@opencode/core/permission"
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Exit, Scope } from "effect"
+import { Effect, Exit, Scope, Stream } from "effect"
 import type { CallContext } from "../../src/browser/backend"
 import { BrowserContract } from "../../src/browser/contract"
 import { key, outputDirectory, playwright } from "../../src/browser/playwright"
@@ -156,6 +156,7 @@ async function boot(options: { permission?: unknown } = {}) {
       transform: (fn: (typeof transforms)[number]) =>
         Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
+    event: { subscribe: () => Stream.empty },
     permission: { hook: () => Effect.sync(() => ({ dispose: Effect.void })) },
   }
   const config = { entries: () => Effect.succeed([]) } as unknown as Config.Interface
@@ -285,6 +286,8 @@ describe("a grant a withheld result asked for", () => {
     expect(text).toContain("- Page URL: https://other.example.com/landed")
     expect(text).toContain("the action ran")
     expect(text).not.toContain("cannot ask the user")
+    // Only the URL: the title is content of an origin this session was never granted.
+    expect(text).not.toContain("- Page Title:")
     // The click ran exactly once: the refusal never replayed it.
     expect(state.calls.filter((call) => call.name === "browser_click").length).toBe(1)
   })

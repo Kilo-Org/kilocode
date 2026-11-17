@@ -543,6 +543,8 @@ async function main() {
     output.clicked = clicked.slice(0, 400)
     // The action's own result says where the click went; reading that page is what the grant decides.
     expect(clicked.includes(`- Page URL: ${frame.url.origin}`), `the click result hides the landed URL:\n${clicked}`)
+    // An ungranted origin's title is content too, so the placeholder carries only the URL.
+    expect(!clicked.includes("- Page Title:"), `the placeholder leaked the title:\n${clicked}`)
     if (granted) {
       expect(clicked.includes("IFRAME-MARKER"), `the granted page's content is missing:\n${clicked.slice(0, 400)}`)
     } else {
