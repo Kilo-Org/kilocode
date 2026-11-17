@@ -1,6 +1,6 @@
 // A session can move to a directory the project does not track, for example when an agent calls the pinned
-// opencode.session_move tool. The root cache must still follow that move, so this drives the provider subscription
-// rather than the cache module alone.
+// session_move tool, and the event stream can drop events while it reconnects. The root cache must follow both, so
+// these tests drive the provider subscriptions rather than the cache module alone.
 import { afterEach, describe, expect, test } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
@@ -43,11 +43,15 @@ function temporaryWorkspace() {
   return root
 }
 
-/** A client that reports no session, so a cache miss would resolve to undefined instead of the event directory. */
-function fakeClient() {
+/** A client whose `session.get` answers from `known`, so a cache miss shows up as a fresh server read. */
+function fakeClient(known: Record<string, string>) {
   return {
     session: {
-      get: async () => undefined,
+      get: async ({ sessionID }: { sessionID: string }) => {
+        const directory = known[sessionID]
+        if (!directory) throw new Error("not found")
+        return { id: sessionID, location: { directory } }
+      },
       list: async () => ({ data: [] }),
       active: async () => ({}),
       context: async () => [],
@@ -55,6 +59,36 @@ function fakeClient() {
     },
     permission: { request: { list: async () => ({ data: [] }) } },
     form: {},
+  }
+}
+
+function fakeConnection(client: unknown) {
+  const listeners: Array<{ listener: (event: never) => void; filter?: (event: never) => boolean }> = []
+  const states: Array<(status: string) => void> = []
+  const connection = {
+    client: async () => client,
+    current: () => client,
+    state: () => "connected",
+    onState: (listener: (status: string) => void) => {
+      states.push(listener)
+      return () => undefined
+    },
+    onEvent: (listener: (event: never) => void, filter?: (event: never) => boolean) => {
+      listeners.push({ listener, filter })
+      return () => undefined
+    },
+    server: () => undefined,
+    view: () => undefined,
+    started: () => undefined,
+    stopped: () => undefined,
+    dispose: () => undefined,
+  } as unknown as AgentManagerConnection
+  return {
+    connection,
+    // Deliver as the connection does: every listener whose filter passes the event.
+    emit: (event: never) =>
+      listeners.filter(({ filter }) => !filter || filter(event)).forEach(({ listener }) => listener(event)),
+    status: (status: string) => states.forEach((listener) => listener(status)),
   }
 }
 
@@ -107,36 +141,33 @@ function providerAt(root: string, connection: AgentManagerConnection) {
 describe("Agent Manager session roots", () => {
   test("follows a move to a directory the project does not track", async () => {
     const root = temporaryWorkspace()
-    const listeners: Array<{ listener: (event: never) => void; filter?: (event: never) => boolean }> = []
-    const client = fakeClient()
-    const connection = {
-      client: async () => client,
-      current: () => client,
-      state: () => "connected",
-      onState: () => () => undefined,
-      onEvent: (listener: (event: never) => void, filter?: (event: never) => boolean) => {
-        listeners.push({ listener, filter })
-        return () => undefined
-      },
-      server: () => undefined,
-      view: () => undefined,
-      started: () => undefined,
-      stopped: () => undefined,
-      dispose: () => undefined,
-    } as unknown as AgentManagerConnection
-    const provider = providerAt(root, connection)
+    const fake = fakeConnection(fakeClient({}))
+    const provider = providerAt(root, fake.connection)
     const outside = path.join(root, "outside")
-    const event = {
+
+    fake.emit({
       type: "session.moved",
       location: { directory: outside },
       data: { sessionID: "ses_child", location: { directory: outside } },
-    } as never
-
-    // Deliver as the connection does: every listener whose filter passes the event.
-    const delivered = listeners.filter(({ filter }) => !filter || filter(event))
-    delivered.forEach(({ listener }) => listener(event))
+    } as never)
 
     expect(await provider.sessionRoots.get("ses_child")).toBe(outside)
+    await provider.dispose()
+  })
+
+  test("reads the server again after the event stream reconnects", async () => {
+    const root = temporaryWorkspace()
+    const known = { ses_child: path.join(root, "first") }
+    const fake = fakeConnection(fakeClient(known))
+    const provider = providerAt(root, fake.connection)
+
+    expect(await provider.sessionRoots.get("ses_child")).toBe(path.join(root, "first"))
+    // The move happened while the stream was down, so no session.moved event arrives.
+    known.ses_child = path.join(root, "second")
+    fake.status("connecting")
+    fake.status("connected")
+
+    expect(await provider.sessionRoots.get("ses_child")).toBe(path.join(root, "second"))
     await provider.dispose()
   })
 })

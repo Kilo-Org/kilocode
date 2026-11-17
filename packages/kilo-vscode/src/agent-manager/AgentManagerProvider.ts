@@ -386,8 +386,13 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
         ]),
       ),
     )
+    // Events sent while the stream reconnects are lost, so a move or delete in that gap would leave a stale root.
+    const stopSessionRootsReset = this.connection.onState((status) => {
+      if (status === "connected") this.sessionRoots.clear()
+    })
     this.unsubEvents = () => {
       stopSessionRoots()
+      stopSessionRootsReset()
       stopSessionEvents()
     }
     this.autoApprove = createHostAutoApprove({
@@ -1141,7 +1146,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.host.openFolder(target, true)
   }
 
-  /** A file link's id may be a worktree id, `local`, a filed session, or a session the state file does not file. */
+  /** A file link's id is a worktree id, `local`, or a session id, filed or not. */
   private fileLookup(id: string): SessionFileLookup {
     return { state: this.getStateManager(), roots: this.sessionRoots, id, root: this.getRoot() }
   }

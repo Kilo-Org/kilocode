@@ -90,7 +90,7 @@ describe("resolveSessionFile", () => {
     expect(manager.getSession("ses_unfiled")).toBeUndefined()
   })
 
-  it("keeps the project root of a session the user filed under Local", async () => {
+  it("uses the worktree the server runs a session in over a stale Local filing", async () => {
     const repo = project()
     const manager = state(repo.root)
     manager.addWorktree({ branch: "one", path: repo.worktree, parentBranch: "main" })
@@ -105,16 +105,33 @@ describe("resolveSessionFile", () => {
         file: "src/math.ts",
         root: repo.root,
       }),
-    ).toBe(path.join(repo.root, "src", "math.ts"))
-    expect(read.calls).toEqual([])
+    ).toBe(path.join(repo.worktree, "src", "math.ts"))
   })
 
-  it("uses the filed worktree without reading the server", async () => {
+  it("uses the project root the server runs a session in over a stale worktree filing", async () => {
     const repo = project()
     const manager = state(repo.root)
     const worktree = manager.addWorktree({ branch: "one", path: repo.worktree, parentBranch: "main" })
     manager.addSession("ses_filed", worktree.id)
-    const read = directories({ ses_filed: repo.worktree })
+    const read = directories({ ses_filed: repo.root })
+
+    expect(
+      await resolveSessionFile({
+        state: manager,
+        roots: read.roots,
+        id: "ses_filed",
+        file: "src/math.ts",
+        root: repo.root,
+      }),
+    ).toBe(path.join(repo.root, "src", "math.ts"))
+  })
+
+  it("falls back to the filing when the server cannot report the directory", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const worktree = manager.addWorktree({ branch: "one", path: repo.worktree, parentBranch: "main" })
+    manager.addSession("ses_filed", worktree.id)
+    const read = directories({})
 
     expect(
       await resolveSessionFile({
@@ -125,7 +142,34 @@ describe("resolveSessionFile", () => {
         root: repo.root,
       }),
     ).toBe(path.join(repo.worktree, "src", "math.ts"))
+    expect(read.calls).toEqual(["ses_filed"])
+  })
+
+  it("resolves a worktree id and local without reading the server", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const worktree = manager.addWorktree({ branch: "one", path: repo.worktree, parentBranch: "main" })
+    const read = directories({})
+    const lookup = { state: manager, roots: read.roots, file: "src/math.ts", root: repo.root }
+
+    expect(await resolveSessionFile({ ...lookup, id: worktree.id })).toBe(path.join(repo.worktree, "src", "math.ts"))
+    expect(await resolveSessionFile({ ...lookup, id: "local" })).toBe(path.join(repo.root, "src", "math.ts"))
     expect(read.calls).toEqual([])
+  })
+
+  it("reads the directory again after the cache is cleared", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const read = directories({ ses_child: repo.worktree })
+    const lookup = { state: manager, roots: read.roots, id: "ses_child", file: "src/math.ts", root: repo.root }
+
+    await resolveSessionFile(lookup)
+    // A move during a reconnect gap is never delivered; the next link must ask the server instead of the old root.
+    read.known.ses_child = repo.root
+    read.roots.clear()
+
+    expect(await resolveSessionFile(lookup)).toBe(path.join(repo.root, "src", "math.ts"))
+    expect(read.calls).toEqual(["ses_child", "ses_child"])
   })
 
   it("rejects a relative path that escapes the session directory", async () => {

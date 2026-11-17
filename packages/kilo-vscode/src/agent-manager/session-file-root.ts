@@ -1,6 +1,7 @@
-// File links from sessions the state file does not file: subagents, which pruneSubagents keeps out of it by design,
-// and sessions created outside the panel. The state file names a root only for a worktree id, `local`, or a filed
-// session, so these links resolve against the directory the server runs the session in instead.
+// File links resolve against the directory the server runs the session in. The state file cannot answer that: it never
+// files a subagent (pruneSubagents keeps them out by design), it misses sessions created outside the panel, and a
+// filing can lag behind a move. It still names the root of a worktree id and `local`, and is the fallback for a filed
+// session whose directory the server cannot report.
 import { isAbsolutePath } from "../path-utils"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { resolveWorktreeFile, resolveWorktreeRoot } from "./worktree-file-path"
@@ -41,6 +42,12 @@ export function createSessionRoots(read: (sessionID: string) => Promise<string |
   const forget = (sessionID: string) => {
     roots.delete(sessionID)
     pending.delete(sessionID)
+  }
+
+  /** Drops every directory, for example after a reconnect whose gap may have hidden a move or a delete. */
+  const clear = () => {
+    roots.clear()
+    pending.clear()
   }
 
   const get = (sessionID: string): Promise<string | undefined> => {
@@ -88,7 +95,7 @@ export function createSessionRoots(read: (sessionID: string) => Promise<string |
     }
   }
 
-  return { get, remember, forget, event }
+  return { get, remember, forget, clear, event }
 }
 
 export type SessionRoots = ReturnType<typeof createSessionRoots>
@@ -108,22 +115,19 @@ function eventDirectory(data: unknown): string | undefined {
   return typeof directory === "string" && directory.length > 0 ? directory : undefined
 }
 
-/**
- * Whether the state file already names the root of this id. Only a session it does not file needs the server read.
- */
-function filed(state: WorktreeStateManager | undefined, id: string): boolean {
-  return id === "local" || !!(state?.getWorktree(id) ?? state?.getSession(id))
+/** A worktree id or `local` names a directory itself; any other id is a session, which the server places. */
+function serverDirectory(input: SessionFileLookup): Promise<string | undefined> {
+  if (input.id === "local" || input.state?.getWorktree(input.id)) return Promise.resolve(undefined)
+  return input.roots.get(input.id)
 }
 
-/** The root a session's files resolve against, from the state file or the server directory. */
+/** The root a session's files resolve against: its server directory, else its filing. */
 export async function resolveSessionRoot(input: SessionFileLookup): Promise<string | undefined> {
-  const directory = filed(input.state, input.id) ? undefined : await input.roots.get(input.id)
-  return resolveWorktreeRoot(input.state, input.id, input.root, directory)
+  return resolveWorktreeRoot(input.state, input.id, input.root, await serverDirectory(input))
 }
 
 /** Resolve one file reference of a session, keeping the directory-boundary check of the resolved root. */
 export async function resolveSessionFile(input: SessionFileLookup & { file: string }): Promise<string | undefined> {
   if (isAbsolutePath(input.file)) return input.file
-  const directory = filed(input.state, input.id) ? undefined : await input.roots.get(input.id)
-  return resolveWorktreeFile(input.state, input.id, input.file, input.root, directory)
+  return resolveWorktreeFile(input.state, input.id, input.file, input.root, await serverDirectory(input))
 }

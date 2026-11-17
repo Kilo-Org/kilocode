@@ -6,9 +6,9 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 /**
  * The directory a worktree id, session id, or `local` reads files from.
  *
- * The state file names the root of a worktree, `local`, and a filed session. A session it does not file, such as a
- * subagent, is resolved from `directory`, the directory the server runs it in. A filed session keeps its filing even
- * when the server directory differs, because a session the user opened in Local reads the root checkout on purpose.
+ * A session runs in exactly one directory on the server, `directory`. When it is known it wins: the state file never
+ * files a subagent, and a filing can lag behind the server after a move the host missed or one an older build left
+ * behind. Without it, a filed session falls back to its filing.
  */
 export function resolveWorktreeRoot(
   state: WorktreeStateManager | undefined,
@@ -19,11 +19,11 @@ export function resolveWorktreeRoot(
   if (id === "local") return root
   const worktree = state?.getWorktree(id)
   if (worktree) return worktree.path
+  if (directory) return directory
   const session = state?.getSession(id)
+  if (!session) return undefined
   // A known session without a worktree is a local session, which reads from the project root.
-  if (session) return session.worktreeId ? state?.getWorktree(session.worktreeId)?.path : root
-  // An unfiled session: its server directory, which is the parent's directory for a subagent.
-  return directory
+  return session.worktreeId ? state?.getWorktree(session.worktreeId)?.path : root
 }
 
 /**
