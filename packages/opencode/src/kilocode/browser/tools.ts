@@ -195,15 +195,17 @@ function run(entry: Entry, args: unknown, ctx: Tool.Context, deps: Deps) {
     const mode = modeFor(entry.name, browser.observation)
     const consoleErrors =
       mode === "diff"
-        ? yield* Effect.promise(() =>
-            active
-              .call(
-                "browser_console_messages",
-                { level: "error" },
-                { session: ctx.sessionID, authorized: [...grantsFor(ctx.sessionID)], sensitive: [] },
-              )
-              .then((console) => tracker.consoleErrors(ctx.sessionID, textOf(console))),
-          ).pipe(Effect.catch(() => Effect.succeed<string[]>([])))
+        ? yield* Effect.tryPromise({
+            try: () =>
+              active
+                .call(
+                  "browser_console_messages",
+                  { level: "error" },
+                  { session: ctx.sessionID, authorized: [...grantsFor(ctx.sessionID)], sensitive: [] },
+                )
+                .then((console) => tracker.consoleErrors(ctx.sessionID, textOf(console))),
+            catch: (error) => error,
+          }).pipe(Effect.catch(() => Effect.succeed<string[]>([])))
         : []
     const previous = mode === "diff" ? tracker.previous(ctx.sessionID, entry.name, next?.url) : undefined
     const viewed = observe({ mode, text, previous, consoleErrors })
