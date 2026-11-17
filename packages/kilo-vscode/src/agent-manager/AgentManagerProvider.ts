@@ -66,7 +66,8 @@ import { routeSession } from "./route-session"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { documentExists, readDocument } from "../documents/document-reader"
-import { resolveWorktreeFile, resolveWorktreeRoot, sessionDirectory } from "./worktree-file-path"
+import { resolveWorktreeFile, resolveWorktreeRoot } from "./worktree-file-path"
+import { resolveImageDirectory } from "./save-image-directory"
 import { focusPanelPrompt, revealPanel } from "./focus-panel"
 import { formatLog } from "./log-format"
 import { HealthScheduler } from "./worktree-health"
@@ -606,12 +607,28 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     this.syncView()
   }
 
-  /** Default directory for a file the visible session saves, for example a rendered diagram. */
-  public imageDirectory(): string | undefined {
-    const id = this.visibleSession
-    const session = id ? this.state?.getSession(id) : undefined
-    const direct = session ? sessionDirectory(this.state, id, this.getRoot()) : undefined
-    return direct ?? this.diffs.activeDirectory() ?? this.getRoot()
+  /** Default directory for a file a session saves, for example a rendered diagram. The requesting session wins. */
+  public async imageDirectory(sessionID?: string): Promise<string | undefined> {
+    return resolveImageDirectory({
+      sessionID,
+      visibleSession: this.visibleSession,
+      activeDiffDirectory: () => this.diffs.activeDirectory(),
+      state: this.state,
+      root: this.getRoot(),
+      location: (id) => this.sessionLocation(id),
+    })
+  }
+
+  private async sessionLocation(sessionID: string): Promise<string | undefined> {
+    const client = await this.connection.client().catch(() => undefined)
+    if (!client) return undefined
+    return client.session.get({ sessionID }).then(
+      (info) => info.location.directory,
+      (err: unknown) => {
+        this.log(`Failed to read the directory of session ${sessionID}:`, err)
+        return undefined
+      },
+    )
   }
 
   public trackVisibleSession(id: string | null): void {

@@ -74,6 +74,13 @@ describe("project", () => {
     expect(code?.complete).toBe(true)
     expect(code?.src).toBe("unclosed fence line one\nline two")
   })
+
+  it("keeps the rest of the info string out of the code while the fence line streams", () => {
+    const opened = project(project(undefined, "Here:\n\n```t", true), "Here:\n\n```ts\nclass", true)
+    const code = opened.blocks.at(-1)
+    expect(code?.language).toBe("ts")
+    expect(code?.src).toBe("class")
+  })
 })
 
 describe("canReusePendingBlock", () => {

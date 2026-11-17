@@ -15,10 +15,15 @@ export const RichProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   onMount(() => {
     const save = (event: Event) => {
-      const detail = (event as CustomEvent<{ dataUrl: string; filename: string }>).detail
+      const detail = (event as CustomEvent<{ dataUrl: string; filename: string; sessionID?: string }>).detail
       if (!detail?.dataUrl || !detail.filename) return
       event.preventDefault()
-      vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
+      vscode.postMessage({
+        type: "saveImage",
+        dataUrl: detail.dataUrl,
+        filename: detail.filename,
+        sessionID: detail.sessionID,
+      })
     }
     window.addEventListener("kilo:save-image", save)
     onCleanup(() => window.removeEventListener("kilo:save-image", save))

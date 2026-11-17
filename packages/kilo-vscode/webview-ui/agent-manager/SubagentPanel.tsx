@@ -7,12 +7,11 @@
 import { AgentAvatar, AgentAvatarPalette } from "@kilocode/kilo-ui/agent-avatar"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { ToolActions } from "@kilocode/kilo-ui/message-part"
-import { createEffect, createMemo, on, Show, type Accessor, type Component } from "solid-js"
+import { createMemo, Show, type Accessor, type Component } from "solid-js"
 import { useLanguage } from "../src/context/language"
 import { SessionView } from "../src/v2/session-view"
 import { V2Scope } from "../src/v2/client"
 import { description, label, type Activity } from "./v2/activity"
-import { useBridge } from "./v2/vscode"
 import { SortableClosableTab } from "./ClosableTab"
 import { InspectorTabStrip } from "./InspectorTabStrip"
 import { availableSubagents, type SubagentTab } from "./subagent-tabs"
@@ -138,18 +137,6 @@ const SubagentContent: Component<ContentProps> = (props) => {
 }
 
 export const SubagentPanel: Component<Props> = (props) => {
-  const vscode = useBridge()
-  // A visible inspector shows the subagent transcript; report it as the viewed session.
-  createEffect(
-    on(
-      () => [props.visible(), props.active()] as const,
-      ([visible, active]) => {
-        if (!visible) return
-        vscode.postMessage({ type: "agentManager.visibleSession", sessionID: active ?? null })
-      },
-      { defer: true },
-    ),
-  )
   // Colors follow the parent's spawn order so tabs match the parent transcript.
   const siblings = createMemo(() => {
     const id = props.sessions.currentSessionID()

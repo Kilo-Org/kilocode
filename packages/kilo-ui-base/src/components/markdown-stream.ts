@@ -131,7 +131,8 @@ export function project(previous: Projection | undefined, text: string, live: bo
   const tail = previous.blocks.at(-1)
   const suffix = text.slice(previous.text.length)
   if (!suffix || !tail) return { text, blocks: stream(text, live) }
-  if (tail.mode === "code" && !tail.complete && !closesFence(tail.raw, suffix))
+  // kilocode_change - the fence line is still streaming until its newline, so the info string can still grow
+  if (tail.mode === "code" && !tail.complete && tail.raw.includes("\n") && !closesFence(tail.raw, suffix))
     return {
       text,
       blocks: [
