@@ -44,6 +44,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "mcp_tool_display",
   "hide_prompt_training_models",
   "sandbox",
+  "browser",
   "indexing",
   "experimental",
 ]

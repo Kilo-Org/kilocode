@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// kilocode_change - new file
 /**
  * Vendors the Playwright MCP tool contract into src/kilocode/browser/contract.generated.ts.
  *

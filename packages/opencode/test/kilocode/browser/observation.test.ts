@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Tracker, diff, observe, split, snapshot } from "../../../src/kilocode/browser/observation"
+import { Tracker, diff, modeFor, observe, split, snapshot } from "../../../src/kilocode/browser/observation"
 
 const first = `### Result
 Clicked "Sign in"
@@ -157,5 +157,16 @@ Total messages: 2 (Errors: 2, Warnings: 0)
     ])
     expect(tracker.consoleErrors("s1", text)).toEqual([])
     expect(tracker.consoleErrors("s2", text).length).toBe(2)
+  })
+})
+
+describe("explicit observation requests", () => {
+  test("a snapshot or find is answered in full in every mode", () => {
+    expect(modeFor("browser_snapshot", "none")).toBe("full")
+    expect(modeFor("browser_snapshot", "diff")).toBe("full")
+    expect(modeFor("browser_find", "none")).toBe("full")
+    expect(modeFor("browser_click", "none")).toBe("none")
+    expect(modeFor("browser_click", "diff")).toBe("diff")
+    expect(modeFor("browser_navigate", "full")).toBe("full")
   })
 })
