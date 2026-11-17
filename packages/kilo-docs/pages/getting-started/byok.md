@@ -9,7 +9,7 @@ Bring Your Own Key (BYOK) lets you use your own API keys when using the Kilo Gat
 
 You can also connect a ChatGPT subscription from this page without an API key. [ChatGPT connections](/docs/getting-started/byok#connect-a-chatgpt-subscription) and [provider API keys](/docs/getting-started/byok#add-a-byok-key) have different setup and billing behavior.
 
-To pay Anthropic directly for Claude usage without an API key, [link a Claude API organization](/docs/getting-started/byok#link-claude-billing).
+For Claude models, we recommend [linking a Claude API organization](/docs/getting-started/byok#link-claude-billing) instead of saving an Anthropic API key. Anthropic bills your organization directly and no key leaves it.
 
 A user or organization may want to use BYOK to:
 
@@ -74,11 +74,10 @@ See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#conn
 Link a Claude API organization on the [BYOK page](https://app.kilo.ai/byok) with the **Claude (linked billing)** card. Anthropic then bills that organization directly for Claude models used through the Kilo Gateway. No Anthropic API key is needed.
 
 - Linked billing uses API pricing on your Claude API organization's existing terms. Claude Pro and Max subscriptions do not qualify.
-- A personal link covers only your personal requests. An organization has one link that covers every member's Claude requests and Kilo services such as Code Reviews.
-- In an organization, only owners and admins can link or remove it. A Console user with the Owner, Admin, or Billing role in the Claude organization must approve the link in Claude Console.
-- For Claude models, a link takes priority over a saved Anthropic key. Linking a personal account deletes your saved personal Anthropic key.
+- If you use Kilo in an organization, link on the organization's BYOK page. Only organization owners and admins can link or remove it, and one link covers every member. A personal link covers only personal requests.
+- A Console user with the Owner, Admin, or Billing role in the Claude organization must approve the link.
 
-See [Claude sign-in and linked billing](/docs/ai-providers/claude-linked-billing) for setup steps, roles, spend limits, and billing details.
+See [Claude linked billing](/docs/ai-providers/claude-linked-billing) for setup steps, spend limits, and billing details.
 
 ## Add a BYOK key
 

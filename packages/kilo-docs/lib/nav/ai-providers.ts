@@ -14,7 +14,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/anthropic", children: "Anthropic" },
       {
         href: "/ai-providers/claude-linked-billing",
-        children: "Claude sign-in and linked billing",
+        children: "Claude linked billing and sign-in",
       },
       { href: "/ai-providers/openai", children: "OpenAI" },
       {
