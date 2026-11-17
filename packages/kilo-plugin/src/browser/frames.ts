@@ -62,27 +62,34 @@ export function snapshot(
   return out.join("\n")
 }
 
-/** Console lines end with ` @ <url>:<line>`, which names the frame that logged them. */
-export function consoleMessages(text: string, withheld: ReadonlySet<string>): string {
+/**
+ * Console lines end with ` @ <url>:<line>`, which names the frame that logged them. `opaque` is true when a withheld
+ * frame has no origin of its own (`data:`, `blob:`): its lines carry no origin either, so none is kept.
+ */
+export function consoleMessages(text: string, withheld: ReadonlySet<string>, opaque = false): string {
   return text
     .split("\n")
     .filter((line) => {
       const url = / @ (\S+?):\d+$/.exec(line)?.[1]
       if (!url) return true
-      return !withheld.has(BrowserPermission.origin(url) ?? "")
+      const origin = BrowserPermission.origin(url)
+      if (origin === undefined) return !opaque
+      return !withheld.has(origin)
     })
     .join("\n")
 }
 
 /** Network lines expose request URLs; a withheld origin's traffic leaves with its frame. */
-export function networkRequests(text: string, withheld: ReadonlySet<string>): string {
+export function networkRequests(text: string, withheld: ReadonlySet<string>, opaque = false): string {
   return text
     .split("\n")
     .filter((line) => {
       if (!/^\d+\. /.test(line)) return true
       const url = /(https?:\/\/\S+)/.exec(line)?.[1]
-      if (!url) return true
-      return !withheld.has(BrowserPermission.origin(url) ?? "")
+      if (!url) return !opaque
+      const origin = BrowserPermission.origin(url)
+      if (origin === undefined) return !opaque
+      return !withheld.has(origin)
     })
     .join("\n")
 }
@@ -103,6 +110,8 @@ export function scope(input: {
   text: string
   withholding: boolean
   withheld: ReadonlySet<string>
+  /** A withheld frame has no origin of its own, so a line without one cannot be attributed either. */
+  opaque?: boolean
   origins?: ReadonlyMap<string, string>
   granted: (origin: string) => boolean
 }): { text: string; refused: boolean } {
@@ -110,7 +119,7 @@ export function scope(input: {
   if (input.tool === "browser_network_request") return { text: REFUSED, refused: true }
   let text = input.text
   if (text.includes("### Snapshot")) text = snapshot(text, input.origins ?? new Map(), input.granted)
-  if (input.tool === "browser_console_messages") text = consoleMessages(text, input.withheld)
-  if (input.tool === "browser_network_requests") text = networkRequests(text, input.withheld)
+  if (input.tool === "browser_console_messages") text = consoleMessages(text, input.withheld, input.opaque)
+  if (input.tool === "browser_network_requests") text = networkRequests(text, input.withheld, input.opaque)
   return { text, refused: false }
 }

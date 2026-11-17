@@ -385,6 +385,20 @@ export function outputBaseline(name: string): boolean {
 }
 
 /**
+ * The output path a screenshot asked for, or undefined. A name outside the browser output directory is refused; the
+ * file is written from the inline image the backend masked, never by the MCP.
+ */
+export function screenshotPath(
+  name: string,
+  args: Record<string, unknown>,
+  directory = outputDirectory(),
+): string | undefined {
+  if (name !== "browser_take_screenshot") return undefined
+  const filename = typeof args.filename === "string" ? args.filename.trim() : ""
+  return filename === "" ? undefined : insideOutput(filename, directory)
+}
+
+/**
  * Refuse a file name that does not resolve inside the browser output directory. The MCP resolves a relative name
  * against the workspace root, so a result file written there could not be redacted, baselined or deleted here.
  */
@@ -394,6 +408,20 @@ export function insideOutput(filename: string, directory = outputDirectory()): s
     throw new Error("The file name must stay inside the browser output directory.")
   }
   return resolved
+}
+
+/** Sessions whose current page is remembered. */
+const PAGE_LIMIT = 64
+
+/** Remember a session's page, moving it to the back and dropping the oldest session past the bound. */
+export function rememberPage(pages: Map<string, Page>, session: string, page: Page, limit = PAGE_LIMIT) {
+  pages.delete(session)
+  pages.set(session, page)
+  while (pages.size > limit) {
+    const oldest = pages.keys().next()
+    if (oldest.done) break
+    pages.delete(oldest.value)
+  }
 }
 
 /**
@@ -468,10 +496,17 @@ class PlaywrightBackend implements BrowserBackend {
   /** The page this session acts on, or the newest one when the session has none (a first call, or it was closed). */
   private current(session: string): Page | undefined {
     const pages = this.conn.context.pages()
-    if (!pages.length) return undefined
     const known = this.pages.get(session)
+    // A page that was closed or crashed is dropped, so a session cannot pin a dead page (or its handles).
+    if (known && !pages.includes(known)) this.pages.delete(session)
+    if (!pages.length) return undefined
     if (known && pages.includes(known)) return known
     return pages[pages.length - 1]
+  }
+
+  /** Remember a session's page, oldest session first out. */
+  private remember(session: string, page: Page) {
+    rememberPage(this.pages, session, page)
   }
 
   /** Follow the call's own intent: a tab it created, or the model's own tab choice. */
@@ -483,7 +518,7 @@ class PlaywrightBackend implements BrowserBackend {
       name,
       args,
     })
-    if (next) this.pages.set(session, next)
+    if (next) this.remember(session, next)
     else this.pages.delete(session)
   }
 
@@ -560,12 +595,15 @@ class PlaywrightBackend implements BrowserBackend {
     const withheld = withheldFrames(page, authorized)
     if (!withheld.length) return { text, refused: false }
     const origins = new Set(withheld.map((frame) => frameOrigin(frame)).filter((origin): origin is string => !!origin))
+    // An opaque withheld frame has no origin to add to the set: every unattributable line is dropped instead.
+    const opaque = withheld.some((frame) => frameOrigin(frame) === undefined)
     const resolved = text.includes("### Snapshot") ? await this.frameOrigins(page, text) : undefined
     return Frames.scope({
       tool: name,
       text,
       withholding: true,
       withheld: origins,
+      opaque,
       origins: resolved,
       granted: (origin) => authorized.includes(`read:${origin}`),
     })
@@ -684,8 +722,10 @@ class PlaywrightBackend implements BrowserBackend {
       delete callArgs.filename
     }
     // A file name the model supplies is resolved by the MCP against the workspace root, outside the directory this
-    // backend owns: only a path that stays inside the output directory is accepted.
-    if (typeof args.filename === "string" && args.filename.trim() !== "") insideOutput(args.filename)
+    // backend owns: only a path that stays inside the output directory is accepted. A screenshot is written from the
+    // image the backend holds, so masking is applied to the file as well.
+    const save = screenshotPath(name, args)
+    if (!shot && typeof args.filename === "string" && args.filename.trim() !== "") insideOutput(args.filename)
     // The withheld set is read again after the call, so the baseline cannot depend on a frame being withheld now.
     const before = outputBaseline(name) ? await this.outputFiles() : undefined
 
@@ -782,6 +822,8 @@ class PlaywrightBackend implements BrowserBackend {
           },
         }
       }
+      // The model still gets the file it asked for, written from the masked image.
+      if (save && images[0]) await fs.writeFile(save, Buffer.from(images[0].data, "base64"))
       // The file link points at the deleted file; the masked image is the answer.
       return {
         content: [{ type: "text", text: withoutScreenshotLink(viewed) }, ...images],
@@ -798,6 +840,7 @@ class PlaywrightBackend implements BrowserBackend {
       ...(origin ? { origin } : {}),
       ...(withheldOrigins.length ? { withheldFrames: [...new Set(withheldOrigins)] } : {}),
     }
+    if (save && images[0]) await fs.writeFile(save, Buffer.from(images[0].data, "base64"))
     return {
       content: [{ type: "text", text: viewed }, ...images],
       isError: result.isError === true,
@@ -808,6 +851,7 @@ class PlaywrightBackend implements BrowserBackend {
   async dispose() {
     if (this.disposed) return
     this.disposed = true
+    this.pages.clear()
     for (const off of this.off) off()
     await this.conn.client.close().catch(() => undefined)
     await this.conn.server.close().catch(() => undefined)

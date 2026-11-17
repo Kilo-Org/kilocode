@@ -6,11 +6,13 @@ import {
   Backends,
   frameOrigin,
   insideOutput,
+  screenshotPath,
   key,
   launchFailure,
   navigationRefusal,
   navigationTargets,
   outputBaseline,
+  rememberPage,
   tabChoice,
   withheldFrames,
 } from "../../src/browser/playwright"
@@ -93,6 +95,19 @@ describe("output directory", () => {
     expect(() => insideOutput("../../page.png", directory)).toThrow("output directory")
   })
 
+  test("a screenshot may save inside the output directory, and is written from the masked image", () => {
+    const directory = path.join(path.sep, "tmp", "browser", "output")
+    // The path the model asked for is resolved up front; the MCP never writes it.
+    expect(screenshotPath("browser_take_screenshot", { filename: path.join(directory, "shot.png") }, directory)).toBe(
+      path.join(directory, "shot.png"),
+    )
+    expect(() => screenshotPath("browser_take_screenshot", { filename: "../../shot.png" }, directory)).toThrow(
+      "output directory",
+    )
+    expect(screenshotPath("browser_take_screenshot", {}, directory)).toBeUndefined()
+    expect(screenshotPath("browser_snapshot", { filename: "x" }, directory)).toBeUndefined()
+  })
+
   test("a snapshot is baselined because it can be saved as a file", () => {
     expect(outputBaseline("browser_snapshot")).toBe(true)
   })
@@ -122,6 +137,18 @@ describe("current page", () => {
     expect(tabChoice({ known: one, before: [one, two], after: [one, two], name: "browser_snapshot", args: {} })).toBe(
       one,
     )
+  })
+
+  test("the session page map is bounded and refreshes the entry it is given", () => {
+    const pages = new Map<string, Page>()
+    for (let index = 0; index < 70; index += 1) rememberPage(pages, `s${index}`, one, 64)
+    expect(pages.size).toBe(64)
+    expect(pages.has("s0")).toBe(false)
+    expect(pages.has("s69")).toBe(true)
+    // Re-remembering an existing session moves it to the back instead of duplicating it.
+    rememberPage(pages, "s6", two, 64)
+    expect(pages.size).toBe(64)
+    expect([...pages.keys()].at(-1)).toBe("s6")
   })
 
   test("closing the current tab falls back to a live page", () => {
