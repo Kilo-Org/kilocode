@@ -94,19 +94,19 @@ async function connect(browser: Settings): Promise<Connection> {
   await client.connect(clientTransport)
   const listed = await client.listTools()
   const live = readEntries(listed)
-  const sha = readHash(listed)
 
-  if (sha !== BrowserContract.sha256) {
+  // The pinned hash covers the raw stdio tools/list JSON, which the client re-serializes. Compare
+  // the normalized tool list instead: same tools, same schemas, same read-only hints.
+  if (readHash(live) !== readHash(BrowserContract.entries)) {
     log.warn("bundled playwright MCP contract differs from the pinned contract", {
       expected: BrowserContract.sha256,
-      actual: sha,
     })
   }
   // Keep the model-facing list identical to the vendored contract, on the tools this build has.
   const available = new Set(live.map((tool) => tool.name))
   const tools: Entry[] = BrowserContract.entries.filter((tool) => available.has(tool.name))
 
-  return { client, server, tools, sha }
+  return { client, server, tools, sha: BrowserContract.sha256 }
 }
 
 class PlaywrightBackend implements Backend {
