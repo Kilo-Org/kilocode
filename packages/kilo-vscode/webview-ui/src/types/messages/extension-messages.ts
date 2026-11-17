@@ -51,13 +51,7 @@ import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
-import type {
-  Config,
-  ConfigCollections,
-  FeatureFlags,
-  IndexingStatus,
-  KiloEmbeddingModelCatalog,
-} from "./config"
+import type { Config, ConfigCollections, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type { ProviderUsageLoadedMessage } from "./provider-usage"
