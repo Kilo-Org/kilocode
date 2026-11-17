@@ -14,6 +14,7 @@ import type { SessionID } from "@/session/schema"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
 import { Filesystem } from "@/util/filesystem" // kilocode_change
+import { BrowserPolicy } from "@/kilocode/browser/policy" // kilocode_change
 import { Review } from "@/kilocode/review/review" // kilocode_change
 import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_change
 import { WorktreeFamily } from "@/kilocode/worktree-family" // kilocode_change
@@ -67,10 +68,14 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
           concurrency: "unbounded",
         },
       )
+      // kilocode_change start - organization browser policy for the UI
+      const policy = yield* BrowserPolicy.get()
+      // kilocode_change end
       return {
         consoleManagedProviders: state.consoleManagedProviders,
         ...(state.activeOrgName ? { activeOrgName: state.activeOrgName } : {}),
         switchableOrgCount: groups.reduce((count, group) => count + group.orgs.length, 0),
+        ...(policy ? { browserPolicy: { control: policy.control, origins: [...policy.origins] } } : {}),
       }
     })
 

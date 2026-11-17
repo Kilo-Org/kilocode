@@ -54,6 +54,8 @@ export const TOOL_LABEL_KEYS: Record<string, string> = {
   websearch: "ui.permission.toolLabel.webSearch",
   codesearch: "ui.permission.toolLabel.codeSearch",
   browser_open: "ui.permission.toolLabel.browserOpen",
+  browser: "ui.permission.toolLabel.browser",
+  browser_sensitive: "ui.permission.toolLabel.browserSensitive",
   todoread: "ui.permission.toolLabel.todoRead",
   todowrite: "ui.permission.toolLabel.todoWrite",
   task: "ui.permission.toolLabel.task",
@@ -84,6 +86,11 @@ export function describeRule(
 // Browser navigation patterns carry a "navigate:" prefix so the rule matches the
 // origin. Hide the prefix in the prompt; the saved rule keeps it.
 function displayPattern(tool: string, rule: string) {
+  if (tool === "browser") {
+    // Browser rules are `<class>:<origin>`; the space between them reads better than the colon.
+    const index = rule.indexOf(":")
+    return index > 0 ? `${rule.slice(0, index)} ${rule.slice(index + 1)}` : rule
+  }
   if (tool !== "browser_open") return rule
   return rule.startsWith("navigate:") ? rule.slice("navigate:".length) : rule
 }

@@ -13,6 +13,7 @@ import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KilocodeConfigSources } from "../config/sources"
+import { BrowserPermission } from "../browser/permission"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -376,6 +377,7 @@ export function prepare(cfg: Config.Info, flags: Pick<RuntimeFlags.Info, "experi
   const mcpRules = getMcpRules(cfg)
   const enabled = BoardEnabled.on(cfg, flags)
   const defaultsPatch = Permission.fromConfig({
+    ...BrowserPermission.defaults(),
     bash,
     ...board(enabled),
     recall: "ask",

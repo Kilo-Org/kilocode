@@ -54,6 +54,8 @@ export const PermissionDock: Component<{
   // list is only shown for the bash ask; the sibling external_directory ask (same skillShell
   // metadata) keeps its normal directory rendering.
   const skillShell = () => props.request.args?.skillShell === true
+  // A sensitive browser step is approved for that step only; there is no rule to save.
+  const browserSensitive = () => props.request.args?.browserSensitive === true
   const skillShellCommands = () =>
     skillShell() && props.request.toolName === "bash" ? (props.request.args?.commands ?? []) : []
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
@@ -109,7 +111,7 @@ export const PermissionDock: Component<{
     setFeedback("")
   })
 
-  const hasRules = () => rules().length > 0 && !skillShell()
+  const hasRules = () => rules().length > 0 && !skillShell() && !browserSensitive()
 
   const toggleExpanded = () => {
     const next = !expanded()
@@ -158,6 +160,7 @@ export const PermissionDock: Component<{
 
   const title = () => {
     if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
+    if (browserSensitive()) return language.t("notification.permission.titleBrowserSensitive")
     const skill = props.request.args?.skill
     if (skillShell() && typeof skill === "string" && skill.length > 0)
       // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
@@ -364,6 +367,13 @@ export const PermissionDock: Component<{
                   <Show when={sandboxEscalation()}>
                     <div data-slot="permission-hint">
                       {language.t("notification.permission.descriptionSandboxEscalation")}
+                    </div>
+                  </Show>
+                  <Show when={browserSensitive()}>
+                    <div data-slot="permission-hint">
+                      {typeof props.request.args?.reason === "string" && props.request.args.reason.length > 0
+                        ? props.request.args.reason
+                        : language.t("notification.permission.descriptionBrowserSensitive")}
                     </div>
                   </Show>
                   <Show when={command()}>

@@ -295,6 +295,9 @@ export const dict = {
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
+  "notification.permission.titleBrowserSensitive": "Sensitive browser step",
+  "notification.permission.descriptionBrowserSensitive":
+    "This step can expose a password, payment details, a one-time code or a file. Approve it only if you expect it.",
   "notification.permission.titleSandboxEscalation": "Run outside the sandbox?",
   "notification.permission.descriptionSandboxEscalation":
     "This runs the whole command with filesystem and network restrictions removed, for this command only. Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree. Bash allow rules and auto-approve never approve this prompt automatically.",
@@ -326,6 +329,8 @@ export const dict = {
   "ui.permission.toolLabel.todoWrite": "Todo Write",
   "ui.permission.toolLabel.codeSearch": "Code Search",
   "ui.permission.toolLabel.browserOpen": "Integrated Browser",
+  "ui.permission.toolLabel.browser": "Browser",
+  "ui.permission.toolLabel.browserSensitive": "Sensitive browser step",
   "ui.permission.copyCommand": "Copy",
   "ui.approval.auto": "Auto-approved",
   "ui.approval.manual": "Approved by you",
@@ -860,6 +865,24 @@ export const dict = {
   "settings.browser.backend.extension": "Kilo browser extension",
   "settings.browser.backend.extension.description":
     "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+  "settings.browser.permissions.title": "Site permissions",
+  "settings.browser.permissions.description":
+    "Browser tools ask before they read, act on or navigate to a site. Localhost sites are allowed. Every saved rule grants one kind of access to one origin; iframes need their own rules.",
+  "settings.browser.allowAll.title": "Allow all sites",
+  "settings.browser.allowAll.description":
+    "Skip the site prompts for every origin. This replaces the site list below; turning it off restores the built-in defaults.",
+  "settings.browser.allowlist.placeholder": "https://example.com",
+  "settings.browser.allowlist.add": "Add site",
+  "settings.browser.allowlist.remove": "Remove site",
+  "settings.browser.allowlist.empty": "No sites yet. Localhost sites are always allowed.",
+  "settings.browser.class.read": "Read",
+  "settings.browser.class.act": "Act",
+  "settings.browser.class.navigate": "Navigate",
+  "settings.browser.allowSensitive.title": "Allow sensitive browser steps",
+  "settings.browser.allowSensitive.description":
+    "Let browser tools type passwords, fill card fields, upload files and continue sign-in without asking you each time.",
+  "settings.browser.allowSensitive.warning":
+    "Anyone or anything driving this agent can then enter credentials and upload files without your approval. Leave this off unless you are watching.",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',

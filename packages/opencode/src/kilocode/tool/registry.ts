@@ -7,6 +7,7 @@ import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
 import * as BrowserTools from "../browser/tools"
 import * as BrowserSettings from "../browser/settings"
+import { BrowserPolicy } from "../browser/policy"
 import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
 import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
@@ -244,8 +245,10 @@ export namespace KiloToolRegistry {
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
           : {}
       const browser = tools.browser ? yield* Tool.init(tools.browser) : undefined
+      // Browser tools are hidden when the config backend is off or the organization turned them off.
+      const policy = cfg && tools.browserTools ? yield* BrowserPolicy.get() : undefined
       const browserTools =
-        tools.browserTools && cfg && BrowserSettings.resolve(cfg).backend !== "off"
+        tools.browserTools && cfg && BrowserSettings.resolve(cfg).backend !== "off" && policy?.control !== "off"
           ? yield* Effect.all(tools.browserTools.map(Tool.init))
           : []
       const notebooks =

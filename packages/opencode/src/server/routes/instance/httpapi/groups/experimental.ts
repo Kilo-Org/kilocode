@@ -25,6 +25,14 @@ const ConsoleStateResponse = Schema.Struct({
   consoleManagedProviders: Schema.mutable(Schema.Array(Schema.String)),
   activeOrgName: Schema.optionalKey(Schema.String),
   switchableOrgCount: NonNegativeInt,
+  // kilocode_change start - organization browser policy, so clients can explain a forced backend
+  browserPolicy: Schema.optionalKey(
+    Schema.Struct({
+      control: Schema.Literals(["allow", "playwright_only", "off"]),
+      origins: Schema.mutable(Schema.Array(Schema.String)),
+    }),
+  ),
+  // kilocode_change end
 }).annotate({ identifier: "ConsoleState" })
 
 const CapabilitiesResponse = Schema.Struct({
