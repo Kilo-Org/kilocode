@@ -866,16 +866,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Beceriler",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Tarayıcı araçlarının nerede çalışacağını seçin: bu makinedeki paketlenmiş Playwright tarayıcısı veya Kilo tarayıcı uzantısı aracılığıyla kendi tarayıcınız.",
+  "settings.browser.backend.title": "Tarayıcı arka ucu",
+  "settings.browser.backend.off": "Kapalı",
+  "settings.browser.backend.off.description":
+    "Tarayıcı araçlarını gizle. Oturumlar web sayfalarını açamaz veya üzerinde işlem yapamaz.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Kilo'ya ait bir profille paketlenmiş Playwright tarayıcısını çalıştır. Sistem Chrome veya Edge kullanır, yoksa Playwright Chromium indirir.",
+  "settings.browser.backend.extension": "Kilo tarayıcı uzantısı",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Kendi tarayıcınızı Kilo tarayıcı uzantısı aracılığıyla yönetin. Henüz kullanılamıyor; tarayıcı aracı çağrıları tarayıcı olmadığını bildirir.",
 
   "settings.language.description":
     '"Otomatik" VS Code görüntüleme dilinizi kullanır. Kilo Code arayüzü için dil seçin.',

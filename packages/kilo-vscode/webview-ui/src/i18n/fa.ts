@@ -858,16 +858,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "مهارت‌ها",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "انتخاب کنید ابزارهای مرورگر کجا اجرا شوند: مرورگر Playwright همراه روی این دستگاه، یا مرورگر خودتان از طریق افزونه مرورگر Kilo.",
+  "settings.browser.backend.title": "بک‌اند مرورگر",
+  "settings.browser.backend.off": "خاموش",
+  "settings.browser.backend.off.description":
+    "پنهان کردن ابزارهای مرورگر. نشست‌ها نمی‌توانند صفحه‌های وب را باز یا روی آن‌ها عمل کنند.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "اجرای مرورگر Playwright همراه با نمایه‌ای متعلق به Kilo. از Chrome یا Edge سیستم استفاده می‌کند و در غیر این صورت Chromium مربوط به Playwright را دانلود می‌کند.",
+  "settings.browser.backend.extension": "افزونه مرورگر Kilo",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "مرورگر خودتان را از طریق افزونه مرورگر Kilo کنترل کنید. هنوز در دسترس نیست؛ فراخوانی ابزارهای مرورگر گزارش می‌دهد که مرورگری وجود ندارد.",
 
   "settings.language.description":
     "زبان رابط کاربری Kilo Code را انتخاب کنید. «Auto» از زبان نمایشی VS Code شما استفاده می‌کند.",

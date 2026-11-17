@@ -869,16 +869,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "스킬",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "브라우저 도구가 실행될 위치를 선택하세요. 이 컴퓨터의 기본 제공 Playwright 브라우저 또는 Kilo 브라우저 확장 프로그램을 통한 사용자 브라우저입니다.",
+  "settings.browser.backend.title": "브라우저 백엔드",
+  "settings.browser.backend.off": "꺼짐",
+  "settings.browser.backend.off.description": "브라우저 도구를 숨깁니다. 세션은 웹 페이지를 열거나 조작할 수 없습니다.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Kilo 전용 프로필로 기본 제공 Playwright 브라우저를 실행합니다. 시스템 Chrome 또는 Edge를 사용하고, 없으면 Playwright Chromium을 다운로드합니다.",
+  "settings.browser.backend.extension": "Kilo 브라우저 확장 프로그램",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Kilo 브라우저 확장 프로그램을 통해 사용자 브라우저를 제어합니다. 아직 사용할 수 없으며, 브라우저 도구 호출은 브라우저가 없다고 보고합니다.",
 
   "settings.language.description": 'Kilo Code UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
   "settings.language.auto": "자동 (VS Code 언어)",

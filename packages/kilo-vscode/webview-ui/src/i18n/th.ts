@@ -864,16 +864,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "ทักษะ",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "เลือกตำแหน่งที่เครื่องมือเบราว์เซอร์ทำงาน: เบราว์เซอร์ Playwright ที่มาพร้อมกับระบบบนเครื่องนี้ หรือเบราว์เซอร์ของคุณเองผ่านส่วนขยายเบราว์เซอร์ Kilo",
+  "settings.browser.backend.title": "แบ็กเอนด์ของเบราว์เซอร์",
+  "settings.browser.backend.off": "ปิด",
+  "settings.browser.backend.off.description": "ซ่อนเครื่องมือเบราว์เซอร์ เซสชันจะไม่สามารถเปิดหรือกระทำกับหน้าเว็บได้",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "เรียกใช้เบราว์เซอร์ Playwright ที่มาพร้อมกับระบบโดยใช้โปรไฟล์ที่เป็นของ Kilo ระบบจะใช้ Chrome หรือ Edge ของเครื่อง มิฉะนั้นจะดาวน์โหลด Chromium ของ Playwright",
+  "settings.browser.backend.extension": "ส่วนขยายเบราว์เซอร์ Kilo",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "ควบคุมเบราว์เซอร์ของคุณเองผ่านส่วนขยายเบราว์เซอร์ Kilo ยังไม่พร้อมใช้งาน การเรียกเครื่องมือเบราว์เซอร์จะรายงานว่าไม่มีเบราว์เซอร์",
 
   "settings.language.description": 'เลือกภาษาสำหรับ UI ของ Kilo Code "อัตโนมัติ" จะใช้ภาษาการแสดงผลของ VS Code',
   "settings.language.auto": "อัตโนมัติ (ภาษา VS Code)",

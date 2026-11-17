@@ -893,16 +893,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Fähigkeiten",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Legen Sie fest, wo Browser-Tools laufen: ein mitgelieferter Playwright-Browser auf diesem Rechner oder Ihr eigener Browser über die Kilo-Browsererweiterung.",
+  "settings.browser.backend.title": "Browser-Backend",
+  "settings.browser.backend.off": "Aus",
+  "settings.browser.backend.off.description":
+    "Browser-Tools ausblenden. Sitzungen können keine Webseiten öffnen oder bedienen.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Einen mitgelieferten Playwright-Browser mit einem Kilo-eigenen Profil ausführen. Er nutzt System-Chrome oder -Edge, sonst einen Playwright-Chromium-Download.",
+  "settings.browser.backend.extension": "Kilo-Browsererweiterung",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Ihren eigenen Browser über die Kilo-Browsererweiterung steuern. Noch nicht verfügbar; Browser-Tool-Aufrufe melden keinen Browser.",
 
   "settings.language.description":
     'Wählen Sie die Sprache für die Kilo Code Oberfläche. „Auto" verwendet die VS Code Anzeigesprache.',

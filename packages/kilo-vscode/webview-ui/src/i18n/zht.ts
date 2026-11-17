@@ -801,16 +801,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "選擇瀏覽器工具的執行位置：此機器上內建的 Playwright 瀏覽器，或透過 Kilo 瀏覽器擴充功能使用你自己的瀏覽器。",
+  "settings.browser.backend.title": "瀏覽器後端",
+  "settings.browser.backend.off": "關閉",
+  "settings.browser.backend.off.description": "隱藏瀏覽器工具。工作階段無法開啟或操作網頁。",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "執行使用 Kilo 專屬設定檔的內建 Playwright 瀏覽器。它優先使用系統 Chrome 或 Edge，否則下載 Playwright Chromium。",
+  "settings.browser.backend.extension": "Kilo 瀏覽器擴充功能",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "透過 Kilo 瀏覽器擴充功能驅動你自己的瀏覽器。尚未可用；瀏覽器工具呼叫會回報沒有瀏覽器。",
 
   "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",

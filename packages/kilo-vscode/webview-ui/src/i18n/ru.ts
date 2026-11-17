@@ -875,16 +875,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навыки",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Выберите, где работают инструменты браузера: встроенный браузер Playwright на этой машине или ваш собственный браузер через расширение Kilo для браузера.",
+  "settings.browser.backend.title": "Бэкенд браузера",
+  "settings.browser.backend.off": "Выключено",
+  "settings.browser.backend.off.description":
+    "Скрыть инструменты браузера. Сессии не могут открывать веб-страницы или действовать на них.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Запустить встроенный браузер Playwright с профилем Kilo. Используется системный Chrome или Edge, иначе загружается Chromium от Playwright.",
+  "settings.browser.backend.extension": "Расширение Kilo для браузера",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Управлять вашим браузером через расширение Kilo. Пока недоступно; вызовы инструментов браузера сообщают об отсутствии браузера.",
 
   "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",
