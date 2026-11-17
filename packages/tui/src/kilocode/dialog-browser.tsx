@@ -1,4 +1,5 @@
 import { createMemo, createSignal } from "solid-js"
+import type { Config, PermissionRuleConfig } from "@kilocode/sdk/v2"
 import { useDialog } from "../ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 import { DialogPrompt } from "../ui/dialog-prompt"
@@ -49,7 +50,12 @@ export function DialogBrowser() {
   const [busy, setBusy] = createSignal(false)
 
   const config = () => sync.data.globalConfig
-  const saved = () => config().permission?.browser
+  // The permission block is either the scalar form ("allow") or an object of rules.
+  const saved = (): PermissionRuleConfig | undefined => {
+    const permission = config().permission
+    if (!permission || typeof permission !== "object") return undefined
+    return permission.browser
+  }
   const allowAll = () => saved() === "allow"
   const policy = () => sync.data.console_state.browserPolicy
 
@@ -83,7 +89,9 @@ export function DialogBrowser() {
     if (busy()) return
     setBusy(true)
     try {
-      await sdk.client.global.config.update({ config: { permission: { browser } } }, { throwOnError: true })
+      // `null` is the config delete sentinel the server understands; the generated type omits it.
+      const permission = { browser } as unknown as NonNullable<Config["permission"]>
+      await sdk.client.global.config.update({ config: { permission } }, { throwOnError: true })
     } catch (error) {
       toast.show({ variant: "error", message: error instanceof Error ? error.message : "Could not save the browser rules" })
     } finally {
