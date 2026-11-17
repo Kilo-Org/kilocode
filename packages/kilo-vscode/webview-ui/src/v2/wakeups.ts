@@ -4,7 +4,7 @@
 import type { OpenCodeClient } from "@opencode/client"
 import { KiloWakeupRpc } from "@opencode/schema/kilocode/wakeup"
 import { createEffect, createSignal, on, onCleanup } from "solid-js"
-import { readListed } from "./plugin-inventory"
+import { readListed } from "../../../src/shared/plugin-inventory"
 
 function errorType(error: unknown) {
   if (error && typeof error === "object" && "type" in error && typeof error.type === "string") return error.type

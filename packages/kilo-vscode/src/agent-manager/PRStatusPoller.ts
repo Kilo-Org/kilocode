@@ -227,7 +227,8 @@ export class PRStatusPoller {
     this.activeWorktreeId = id
     // When switching to a different worktree, fetch it immediately so the
     // badge updates without waiting for the next poll cycle.
-    if (id && id !== prev && this.active) void this.fetchOne(id)
+    // fetchOne reports its failure itself and rethrows only for the poll cycle's backoff.
+    if (id && id !== prev && this.active) void this.fetchOne(id).catch(() => undefined)
   }
 
   private start(): void {
@@ -572,6 +573,8 @@ export class PRStatusPoller {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes("no pull requests found") || msg.includes("Could not resolve")) return null
+      // The bare form resolves the current branch, which a detached HEAD lacks; the SHA search answers it instead.
+      if (!branch && msg.includes("not on any branch")) return null
       // A hanging lookup is not evidence that the PR does not exist; let the next strategy answer.
       if (isTimeout(err)) {
         this.options.log(`PR lookup timed out (${branch ?? "current branch"}), trying next strategy`)
