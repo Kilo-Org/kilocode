@@ -53,6 +53,7 @@ import { settings } from "./settings-panel"
 import { createShutdown } from "./shutdown"
 import type { BrowserReference } from "./shared/browser-feedback"
 import { indexingHost, type IndexingHost } from "./indexing/host"
+import { RetentionService } from "./services/task-cleanup/retention"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { gitChanges } from "./git-changes"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
@@ -223,6 +224,9 @@ export function activate(context: ExtensionContext) {
   indexing = indexingService
   context.subscriptions.push(indexingService)
   const connection = createAgentManagerConnection({ server })
+  // One daily session retention trigger per extension host; the server owns the policy and the pass.
+  const retention = new RetentionService(connection, () => directory, (text) => output.appendLine(text))
+  context.subscriptions.push({ dispose: () => retention.dispose() })
   const autocomplete = createConnection({ server, directory })
   context.subscriptions.push({ dispose: autocomplete.dispose })
   context.subscriptions.push({ dispose: disposeGitChangesTarget })

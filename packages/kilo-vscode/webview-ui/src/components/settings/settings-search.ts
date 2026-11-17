@@ -125,9 +125,6 @@ const AGENT_BEHAVIOUR_SUBTABS: Record<string, string> = {
 /** i18n `*.title` keys under a mapped group that are not rendered rows. */
 const EXCLUDED_KEYS = new Set([
   "settings.permissions.toast.updateFailed.title",
-  "settings.autoCleanup.defaultRetention.title",
-  "settings.autoCleanup.enable.title",
-  "settings.autoCleanup.lastRun.title",
   "settings.autoApprove.maxCost.title",
   "settings.webTools.webSearch.title",
   "settings.experimental.batch.title",

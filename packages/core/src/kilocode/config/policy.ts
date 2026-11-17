@@ -431,4 +431,15 @@ export function pagesConfig(entries: readonly Config.Entry[]) {
   }, {})
 }
 
+/** The `retention` key of the effective entries: for each field the last document that sets it wins. */
+export function retentionConfig(entries: readonly Config.Entry[]) {
+  return entries.reduce<{ enabled?: boolean; maxAgeDays?: number }>((value, entry) => {
+    if (entry.type !== "document" || !(entry.info instanceof Info) || !entry.info.retention) return value
+    return {
+      enabled: entry.info.retention.enabled ?? value.enabled,
+      maxAgeDays: entry.info.retention.maxAgeDays ?? value.maxAgeDays,
+    }
+  }, {})
+}
+
 export const get = (config: Interface) => config.entries().pipe(Effect.map(fromEntries))

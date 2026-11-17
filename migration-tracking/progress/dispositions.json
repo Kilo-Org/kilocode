@@ -2696,5 +2696,41 @@
     "state": "dropped",
     "note": "Tested the dropped removePrefixOverlap.ts. Mercury autocomplete and the Next Edit API are retired on v2; Codestral FIM is the only autocomplete path.",
     "by": "retire-mercury"
+  },
+  "api:GET /kilocode/retention": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/retention.ts",
+    "note": "Method status. Served by the kilocode.retention RPC (contract packages/schema/src/kilocode/retention.ts, handler packages/kilo-plugin/src/retention/index.ts, registered in KiloPlugins) with v1's shapes: policy, last result, progress with phase/total/processed/deleted/failed/skippedActive, cancelled and the optional reclaimedBytes. Round trip through the generated client: packages/kilo-cli/test/retention.test.ts.",
+    "by": "session-retention"
+  },
+  "api:POST /kilocode/retention/run": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/retention.ts",
+    "note": "Method run ({ force? }); a call while a pass is in flight joins it. Served by the kilocode.retention RPC (contract packages/schema/src/kilocode/retention.ts, handler packages/kilo-plugin/src/retention/index.ts, registered in KiloPlugins) with v1's shapes: policy, last result, progress with phase/total/processed/deleted/failed/skippedActive, cancelled and the optional reclaimedBytes. Round trip through the generated client: packages/kilo-cli/test/retention.test.ts.",
+    "by": "session-retention"
+  },
+  "api:POST /kilocode/retention/cancel": {
+    "state": "ported",
+    "v2": "packages/schema/src/kilocode/retention.ts",
+    "note": "Method cancel, returning { requested }. Served by the kilocode.retention RPC (contract packages/schema/src/kilocode/retention.ts, handler packages/kilo-plugin/src/retention/index.ts, registered in KiloPlugins) with v1's shapes: policy, last result, progress with phase/total/processed/deleted/failed/skippedActive, cancelled and the optional reclaimedBytes. Round trip through the generated client: packages/kilo-cli/test/retention.test.ts.",
+    "by": "session-retention"
+  },
+  "module:packages/opencode/src/kilocode/session/retention.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/retention/retention.ts",
+    "note": "The engine is the retention plugin (rung 1): fail-closed policy (retention.enabled, retention.maxAgeDays, default 30, invalid ages fall back), the 23-hour spacing that only force skips, tree selection by the freshest session of each tree, active-session skip counted in skippedActive, cooperative cancel with a partial result, live progress, and the last result kept in plugin storage. Deletion uses Session.remove (which cascades children) and SessionStore reads only: no raw SQL and no new table. Busy is the in-process Session.active set, re-read before each removal, plus SessionStore.listSuspended (execution claims, which any backend on the machine writes); v1's one-hour message/part write probe is not carried because v2 bumps session time_updated on every message write, so an expired tree has no recent writes by definition. Not carried: the post-pass VACUUM and reclaimedBytes value (raw SQL on the store; the field stays optional in the contract and is never set). Tests: packages/kilo-plugin/test/retention.test.ts.",
+    "by": "session-retention"
+  },
+  "module:packages/opencode/test/kilocode/session/retention.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/retention.test.ts",
+    "note": "Carries the v1 assertions on tree selection (boundary, fresh fork or subagent keeps the tree, busy descendant holds the tree back, missing parent, cycles), policy defaults and clamping, and shouldRun (disabled refuses forced passes, spacing, force). Adds real-store passes through the plugin RPC with a TestClock: expired trees deleted, in-process active and claimed sessions skipped, disabled and absent policies, spacing; and engine passes with the plugin's own store wiring and a gated removal for mid-flight cancel and join. The v1 HTTP schema and vacuum assertions have no v2 counterpart (RPC schema is the contract; VACUUM is not carried).",
+    "by": "session-retention"
+  },
+  "module:packages/kilo-vscode/tests/unit/cleanup-stop.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-vscode/test/cleanup-poll.test.ts",
+    "note": "v1 tested KiloProvider.handleAutoCleanupMessage, the host relay between the settings webview and the v1 HTTP route. On v2 the webview calls the kilocode.retention RPC directly (principles.md section 3: no v1 wire facade), so the relay is not carried; the stop assertions (stop only while a pass reports progress, a failed cancel shows the run error, the status is read after a cancel) are in the 'stop cancels only a pass that reports progress' and 'a failed run' cases of cleanup-poll.test.ts.",
+    "by": "session-retention"
   }
 }

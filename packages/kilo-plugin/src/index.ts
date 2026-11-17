@@ -41,6 +41,7 @@ import { KiloWakeupPlugin } from "./wakeup"
 import { KiloAgentManagerPlugin } from "./agent-manager"
 import { KiloBackgroundJobs } from "./background-jobs"
 import { KiloSessionDrain } from "./session-drain"
+import { KiloSessionRetention } from "./retention"
 import { KiloSubagentBackgroundPlugin } from "./subagent-background"
 import { KiloRecallPlugin } from "./recall"
 import { KiloIndexingPlugin } from "./indexing"
@@ -103,6 +104,8 @@ export const KiloPlugins = [
   KiloBackgroundJobs.Plugin,
   // Waits until a session and the work it started have gone quiet. kilo_port(goals:b983b6af7e4b)
   KiloSessionDrain.Plugin,
+  // Deletes expired sessions machine-wide when `retention.enabled` is set; clients trigger the pass.
+  KiloSessionRetention.Plugin,
   // Runs subagents in the background unless the call passes `background: false`.
   KiloSubagentBackgroundPlugin,
   KiloRecallPlugin,
