@@ -6,6 +6,12 @@ export type Change = { added: string[]; removed: string[]; changed: { from: stri
 
 const fence = "```"
 
+/**
+ * The line diff holds a `previous × next` cell table. Above this many cells (16 MB of cells) the
+ * call reports the snapshot in full instead: a diff that large costs more than it saves.
+ */
+const DIFF_CELL_LIMIT = 4_000_000
+
 export function split(text: string): Section[] {
   const sections: Section[] = []
   let current: Section | undefined
@@ -160,12 +166,10 @@ function changes(change: Change): string[] {
  * full: unchanged. diff: the post-action snapshot becomes a line diff against the previous
  * snapshot, plus new console errors supplied by the caller. none: status, URL and title only.
  */
-export function observe(input: {
-  mode: Observation
+export function observe(input: { mode: Observation; text: string; previous?: Snapshot; consoleErrors?: string[] }): {
   text: string
-  previous?: Snapshot
-  consoleErrors?: string[]
-}): { text: string; snapshot?: Snapshot } {
+  snapshot?: Snapshot
+} {
   const sections = split(input.text)
   const next = snapshot(sections)
   if (input.mode === "full") return { text: input.text, snapshot: next }
@@ -179,7 +183,10 @@ export function observe(input: {
       text: render([
         {
           title: "Status",
-          lines: [`- ${sections.some((section) => section.title === "Error") ? "error" : "ok"}`, ...(page?.lines ?? [])],
+          lines: [
+            `- ${sections.some((section) => section.title === "Error") ? "error" : "ok"}`,
+            ...(page?.lines ?? []),
+          ],
         },
         ...kept,
       ]),
@@ -187,18 +194,21 @@ export function observe(input: {
   }
 
   const kept = sections.filter(
-    (section) => section.title !== "Snapshot" && section.title !== "Ran Playwright code" && section.title !== "Open tabs",
+    (section) =>
+      section.title !== "Snapshot" && section.title !== "Ran Playwright code" && section.title !== "Open tabs",
   )
   const out = [...kept]
   if (next && next.lines.length) {
+    const previous = input.previous
+    const comparable = previous !== undefined && previous.lines.length * next.lines.length <= DIFF_CELL_LIMIT
     out.push(
-      input.previous && input.previous.lines.length
-        ? { title: "Page changes", lines: changes(diff(input.previous.lines, next.lines)) }
+      comparable && previous
+        ? { title: "Page changes", lines: changes(diff(previous.lines, next.lines)) }
         : { title: "Snapshot", lines: [fence + "yaml", ...next.lines, fence] },
     )
   }
   if (input.consoleErrors?.length) out.push({ title: "Console errors", lines: input.consoleErrors })
-  return { text: render(out), snapshot: next && next.lines.length ? next : input.previous ?? next }
+  return { text: render(out), snapshot: next && next.lines.length ? next : (input.previous ?? next) }
 }
 
 /**
@@ -206,7 +216,7 @@ export function observe(input: {
  * full. Observation modes trim only the state reported after an action.
  */
 export function modeFor(tool: string, selected: Observation): Observation {
-  return tool === "browser_snapshot" || tool === "browser_find" ? "full" : selected
+  return tool === "browser_snapshot" || tool === "browser_find" || tool === "browser_tabs" ? "full" : selected
 }
 
 type SessionState = {
@@ -217,6 +227,9 @@ type SessionState = {
 
 const CONSOLE_SEEN_LIMIT = 500
 
+/** Sessions remembered at once; the oldest is dropped when a new one pushes past this bound. */
+const SESSION_LIMIT = 32
+
 /** Per-session, per-tab snapshot memory used by diff mode. */
 export class Tracker {
   private readonly sessions = new Map<string, SessionState>()
@@ -226,7 +239,16 @@ export class Tracker {
     if (existing) return existing
     const created: SessionState = { tabs: new Map(), console: new Set() }
     this.sessions.set(session, created)
+    if (this.sessions.size > SESSION_LIMIT) {
+      const oldest = this.sessions.keys().next()
+      if (!oldest.done) this.sessions.delete(oldest.value)
+    }
     return created
+  }
+
+  /** Release a session's snapshots and console memory when the session ends. */
+  forget(session: string) {
+    this.sessions.delete(session)
   }
 
   /** The snapshot the next result is compared against, or undefined on the first visit. */

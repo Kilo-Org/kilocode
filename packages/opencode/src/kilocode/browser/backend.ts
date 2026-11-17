@@ -5,7 +5,7 @@ export type ContentBlock = { type: "text"; text: string } | { type: "image"; dat
 
 export type CallResult = { content: ContentBlock[]; isError: boolean }
 
-export type CallContext = { session: string }
+export type CallContext = { session: string; signal?: AbortSignal }
 
 /** A browser backend exposes the same tool list and the same results to the agent. */
 export type Backend = {
