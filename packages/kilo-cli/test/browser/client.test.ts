@@ -61,6 +61,9 @@ function socketPath(root: string) {
 
 async function host(input: { root: string; hubs: string; paired?: boolean }) {
   const hub = createHub({ mode: "loopback", version: "test" })
+  // The controller ids the hub assigns, in connection order, so a test can route an
+  // extension frame to a specific CLI.
+  const controllers: string[] = []
   const server = await serve({
     path: socketPath(input.root),
     open(connection) {
@@ -68,6 +71,7 @@ async function host(input: { root: string; hubs: string; paired?: boolean }) {
         (frame) => connection.send(frame),
         () => connection.close(),
       )
+      controllers.push(controller.id)
       connection.onClose(() => controller.drop())
       return (frame) => controller.frame(frame)
     },
@@ -79,7 +83,7 @@ async function host(input: { root: string; hubs: string; paired?: boolean }) {
     paired: input.paired ?? false,
   })
   await Registry.write(entry, input.hubs)
-  return { hub, entry }
+  return { hub, entry, controllers }
 }
 
 // Resolves on the next state change to `kind`; no polling, and the timer only runs
@@ -141,6 +145,40 @@ describe("browser client", () => {
     extension.drop()
     await Bun.sleep(200)
     expect(calls).toBe(1)
+  })
+
+  test("keeps reading after a notification named like an Object.prototype member", async () => {
+    const at = await tmp()
+    const { hub, controllers } = await host({ ...at, paired: true })
+    const target = client({ dir: at.dir, start: () => {} })
+    await until(target, "waiting")
+    const extension = hub.attach(
+      () => true,
+      () => undefined,
+    )!
+    extension.hello(info)
+    await until(target, "ready")
+    const controllerId = controllers[0]!
+    const seen: number[] = []
+    target.on("tab.closed", (params) => seen.push(params.tabId))
+
+    // The extension picks the method name. A plain-object lookup finds an inherited
+    // Object.prototype member for each of these instead of undefined, and the
+    // resulting throw escapes this reader and drops every frame behind it.
+    for (const method of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+      extension.frame({ type: "rpc", controllerId, message: { jsonrpc: "2.0", method, params: {} } })
+    }
+
+    // A real notification still reaches its handler, so the connection is alive and
+    // dispatch was not disturbed.
+    extension.frame({
+      type: "rpc",
+      controllerId,
+      message: { jsonrpc: "2.0", method: "tab.closed", params: { sessionHandle: "s", tabId: 7 } },
+    })
+    await eventually(() => (seen.length === 1 ? true : undefined))
+    expect(seen).toStrictEqual([7])
+    expect(target.state().kind).toBe("ready")
   })
 
   test("does not open the pairing page for a hub that already paired", async () => {

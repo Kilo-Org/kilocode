@@ -218,7 +218,12 @@ export function create(input: Input = {}): Client {
     }
     const message = envelope.data.message
     if (proto.isNotification(message)) {
-      const known = proto.Notifications[message.method as proto.NotificationMethod]
+      // `Notifications` is a plain object literal, so a method the extension invents
+      // (`constructor`, `toString`, `__proto__`) would resolve to an inherited
+      // Object.prototype member instead of undefined and throw out of this reader.
+      const known = Object.hasOwn(proto.Notifications, message.method)
+        ? proto.Notifications[message.method as proto.NotificationMethod]
+        : undefined
       const parsed = known === undefined ? undefined : known.safeParse(message.params)
       dispatch(message.method, parsed?.success ? parsed.data : message.params)
       return
