@@ -7,6 +7,7 @@ const record = (quiet = new Set<string>()) => {
     calls,
     deps: {
       currentProjectId: () => "project",
+      resume: (id: string) => calls.push(`resume:${id}`),
       saveTabMemory: () => calls.push("save"),
       appendOrder: (worktreeId: string, sessionId: string) => calls.push(`order:${worktreeId}:${sessionId}`),
       setSelection: (id: string) => calls.push(`select:${id}`),
@@ -60,7 +61,7 @@ describe("applySessionAdded", () => {
 
     applySessionAdded({ type: "agentManager.sessionAdded", sessionId: "s", worktreeId: "wt-1" }, test.deps)
 
-    expect(test.calls).toEqual(["order:wt-1:s", "evict:s"])
+    expect(test.calls).toEqual(["resume:s", "order:wt-1:s", "evict:s"])
   })
 
   it("places a background session the host files under Local without focusing it", () => {
@@ -68,6 +69,6 @@ describe("applySessionAdded", () => {
 
     applySessionAdded({ type: "agentManager.sessionAdded", sessionId: "s", worktreeId: "local" }, test.deps)
 
-    expect(test.calls).toEqual(["place:s"])
+    expect(test.calls).toEqual(["resume:s", "place:s"])
   })
 })

@@ -85,6 +85,7 @@ export function applySetupMessage(
 
 export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   currentProjectId: Accessor<string | undefined>
+  resume: (sessionId: string) => void
   saveTabMemory: () => void
   appendOrder: (worktreeId: string, sessionId: string) => void
   setSelection: (id: string) => void
@@ -98,6 +99,8 @@ export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
   placeLocal: (id: string) => void
 }) {
   if (!isCurrent(msg, deps.currentProjectId())) return
+  // The host filing the session opens it again, even when the user closed its tab before this message arrived.
+  deps.resume(msg.sessionId)
   // A send that resolved after the user moved on files its session without pulling the user back.
   if (deps.quiet(msg.sessionId)) {
     if (msg.worktreeId === LOCAL) return deps.placeLocal(msg.sessionId)
