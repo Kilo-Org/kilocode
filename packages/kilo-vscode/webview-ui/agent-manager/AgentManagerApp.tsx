@@ -183,8 +183,7 @@ import type { ReviewAppendHandler } from "../src/v2/append-ready"
 import { formatReviewCommentsMarkdown, type ReviewCommentEntry } from "../../src/shared/review-comments"
 import { injectedMetadata } from "../../src/shared/injected-prompt"
 import { createMarkdownRender } from "./review-preferences"
-import { buildShortcutCategories } from "./shortcuts"
-import { ShortcutsDialog } from "./ShortcutsDialog"
+import { closeOnMiddleClick, showShortcuts } from "../src/v2/panel-interactions"
 import { defaultBindings } from "./keybind-defaults"
 import { createChatFocus, createFocusBridge, createMainSurface, createPromptFocus, forgetTerminalFocus } from "./focus"
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
@@ -944,7 +943,13 @@ const AgentManagerContent: Component = () => {
       keepTerminalStack(history(), selection(), contextEmpty(), terms.all().length + terms.sides().length),
   )
   const sideHostVisible = () =>
-    sideHostNeeded(sidePanel(), diffMounted(), terms.sides().length, subagents.tabs().length, browser.hasCache() ? 1 : 0)
+    sideHostNeeded(
+      sidePanel(),
+      diffMounted(),
+      terms.sides().length,
+      subagents.tabs().length,
+      browser.hasCache() ? 1 : 0,
+    )
   const overlay = createMemo((): SetupState | null => {
     if (restricted()) return null
     const state = setup()
@@ -1438,12 +1443,8 @@ const AgentManagerContent: Component = () => {
       restoreFocus: () => tabFocus.restore(),
     })
   }
-  const handleTabMouseDown = (sessionId: string, event: MouseEvent) => {
-    if (event.button !== 1) return
-    event.preventDefault()
-    event.stopPropagation()
-    handleCloseTab(sessionId)
-  }
+  const handleTabMouseDown = (sessionId: string, event: MouseEvent) =>
+    closeOnMiddleClick(event, () => handleCloseTab(sessionId))
   const selectSessionTab = (id: string, pending: boolean) =>
     selectTab({
       id,
@@ -1540,12 +1541,6 @@ const AgentManagerContent: Component = () => {
     refocus: () => main.focus(),
   })
   createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
-  const handleReviewTabMouseDown = (event: MouseEvent) => {
-    if (event.button !== 1) return
-    event.preventDefault()
-    event.stopPropagation()
-    closeReviewTab()
-  }
   const tabLookup = createMemo(() => new Map(activeTabs().map((session) => [session.id, session])))
   const drag = createTabDrag({
     selection,
@@ -1649,7 +1644,7 @@ const AgentManagerContent: Component = () => {
       terminalMiddleClick: (terminalID, event) =>
         tabFocus.middle(event, () => termHandlers.middleClick(terminalID, event)),
       closeReview: closeReviewTab,
-      reviewMiddleClick: handleReviewTabMouseDown,
+      reviewMiddleClick: (event: MouseEvent) => closeOnMiddleClick(event, closeReviewTab),
       selectReviewTab: () => setReviewActive(true),
       selectSessionTab,
       sessionMiddleClick: handleTabMouseDown,
@@ -1870,10 +1865,7 @@ const AgentManagerContent: Component = () => {
   const diffLoadingForCurrent = createMemo(() => diffs.diffLoadingFor(diffScopeId))
   const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t, activeProjectId)
   createEffect(() => diffOpen() && setDiffMounted(true))
-  const handleShowKeyboardShortcuts = () => {
-    const categories = buildShortcutCategories(kb(), t)
-    dialog.show(() => <ShortcutsDialog title={t("agentManager.shortcuts.title")} categories={categories} />)
-  }
+  const handleShowKeyboardShortcuts = () => showShortcuts(dialog, kb(), t)
   const loaded = () => worktreesLoaded() && sessionsLoaded()
   const openBlocked = (projectId: string) => {
     setSetup({ active: false, message: "" })
@@ -1886,7 +1878,6 @@ const AgentManagerContent: Component = () => {
     expandSidebar()
     quickCreate.start(projectId, baseBranch)
   }
-  const handleCreateWorktree = () => createWorktreeNow()
   const showNewWorktreeDialog = (projectId = activeProjectId()) => {
     if (!loaded()) return
     expandSidebar()
@@ -1930,7 +1921,7 @@ const AgentManagerContent: Component = () => {
       <SessionActionsRow
         hasMessages={hasMessages}
         branch={isGitRepo() ? transfer.branch() : undefined}
-        onNewWorktree={handleCreateWorktree}
+        onNewWorktree={() => createWorktreeNow()}
         onNewWorktreeFromBranch={(branch) => createWorktreeNow(branch)}
         onConfigureWorktree={() => showNewWorktreeDialog()}
         onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
@@ -1994,7 +1985,7 @@ const AgentManagerContent: Component = () => {
         closeAllTasks: () => closeAllTasks(activeTabs(), activeTaskId(), handleCloseTab),
         closeTab: closeActiveTab,
         newWorktree: showNewWorktreeDialog,
-        quickWorktree: handleCreateWorktree,
+        quickWorktree: () => createWorktreeNow(),
         openWorktree: openWorktreeDirectory,
         updateFromBase: update,
         openPR: openSelectedPR,
