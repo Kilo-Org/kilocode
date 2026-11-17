@@ -125,26 +125,26 @@
           "enumDescriptions": [
             "Auto (VS Code language)",
             "English",
-            "简体中文",
-            "繁體中文",
-            "한국어",
+            "\u7b80\u4f53\u4e2d\u6587",
+            "\u7e41\u9ad4\u4e2d\u6587",
+            "\ud55c\uad6d\uc5b4",
             "Deutsch",
-            "Español",
-            "Français",
+            "Espa\u00f1ol",
+            "Fran\u00e7ais",
             "Dansk",
-            "日本語",
+            "\u65e5\u672c\u8a9e",
             "Polski",
-            "Русский",
-            "العربية",
+            "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
+            "\u0627\u0644\u0639\u0631\u0628\u064a\u0629",
             "Norsk",
-            "Português (Brasil)",
-            "ภาษาไทย",
+            "Portugu\u00eas (Brasil)",
+            "\u0e20\u0e32\u0e29\u0e32\u0e44\u0e17\u0e22",
             "Bosanski",
-            "Türkçe",
+            "T\u00fcrk\u00e7e",
             "Nederlands",
-            "Українська",
+            "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430",
             "Italiano",
-            "فارسی"
+            "\u0641\u0627\u0631\u0633\u06cc"
           ]
         },
         "kilo-code.v2.chat.sendWhileRunning": {
@@ -200,7 +200,12 @@
         },
         "kilo-code.v2.agentWorkStyle": {
           "type": "string",
-          "enum": ["unset", "human-in-the-loop", "autonomous", "skipped"],
+          "enum": [
+            "unset",
+            "human-in-the-loop",
+            "autonomous",
+            "skipped"
+          ],
           "enumDescriptions": [
             "No work style chosen yet; the onboarding picker is shown for a project with no sessions.",
             "Review first: ask before edits and commands, and expand tool details.",
@@ -263,26 +268,26 @@
           "enumDescriptions": [
             "Sync with UI language",
             "English",
-            "简体中文",
-            "繁體中文",
-            "한국어",
+            "\u7b80\u4f53\u4e2d\u6587",
+            "\u7e41\u9ad4\u4e2d\u6587",
+            "\ud55c\uad6d\uc5b4",
             "Deutsch",
-            "Español",
-            "Français",
+            "Espa\u00f1ol",
+            "Fran\u00e7ais",
             "Dansk",
-            "日本語",
+            "\u65e5\u672c\u8a9e",
             "Polski",
-            "Русский",
-            "العربية",
+            "\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
+            "\u0627\u0644\u0639\u0631\u0628\u064a\u0629",
             "Norsk",
-            "Português (Brasil)",
-            "ภาษาไทย",
+            "Portugu\u00eas (Brasil)",
+            "\u0e20\u0e32\u0e29\u0e32\u0e44\u0e17\u0e22",
             "Bosanski",
-            "Türkçe",
+            "T\u00fcrk\u00e7e",
             "Nederlands",
-            "Українська",
+            "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430",
             "Italiano",
-            "فارسی"
+            "\u0641\u0627\u0631\u0633\u06cc"
           ]
         },
         "kilo-code.v2.autocomplete.model": {
@@ -384,25 +389,30 @@
           "default": "integrated",
           "scope": "application",
           "description": "Choose where web links open from Kilo chats. Requires the Integrated Browser."
-        },
-        "kilo-code.v2.browserAutomation.enabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
-        },
-        "kilo-code.v2.browserAutomation.useSystemChrome": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
-        },
-        "kilo-code.v2.browserAutomation.headless": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         }
       }
     },
     "commands": [
+      {
+        "command": "kilo-code.v2.browserSelectBackend",
+        "title": "Select Browser Backend",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.browserSelectObservation",
+        "title": "Select Browser Observation",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.browserToggleSensitive",
+        "title": "Toggle Sensitive Browser Steps",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.browserAllowlist",
+        "title": "Edit Browser Origin Allowlist",
+        "category": "Kilo Code (v2)"
+      },
       {
         "command": "kilo-code.v2.newSession",
         "title": "New Session",

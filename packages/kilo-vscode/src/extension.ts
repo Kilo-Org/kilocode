@@ -31,7 +31,8 @@ import { command, indexingEnvironment, manager, serverPlans, settingsEnvironment
 import { usePlanDir } from "./documents/document-reader"
 import { readKiloSettings } from "./settings-host"
 import { registerAutocompleteProvider } from "./services/autocomplete"
-import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import { BrowserBroker } from "./services/browser-automation"
+import { browserSettingsHost } from "./browser-settings"
 import {
   integratedBrowserEnabled,
   integratedBrowserFallback,
@@ -189,7 +190,6 @@ export function activate(context: ExtensionContext) {
       connection.started(started)
       alerts.start(started)
       autocomplete.started()
-      void automation.started()
       // Consent lives in globalState; a fresh server starts without it, so re-send it for the workspace project.
       void indexing?.sync()
     },
@@ -198,7 +198,6 @@ export function activate(context: ExtensionContext) {
       connection.stopped()
       alerts.stop()
       autocomplete.stopped()
-      automation.stopped()
     },
     onError: (error) => {
       output.appendLine(error.message)
@@ -208,13 +207,14 @@ export function activate(context: ExtensionContext) {
     },
   })
   const diffs = new DiffVirtualProvider(context.extensionUri)
-  // Registers the optional Playwright MCP server in the v2 server. It is independent from the Integrated Browser.
-  const automation = new BrowserAutomationService({
+  // The browser tools' settings: the `browser` config keys and the origin allowlist, plus the one-time move of the old
+  // `kilo-code.v2.browserAutomation.*` settings into them.
+  const browserSettings = browserSettingsHost({
     server,
-    log: (...args) => output.appendLine(`Browser automation: ${args.map((item) => String(item)).join(" ")}`),
+    state: context.globalState,
+    log: (...args) => output.appendLine(`Browser settings: ${args.map((item) => String(item)).join(" ")}`),
   })
-  void automation.syncWithSettings()
-  context.subscriptions.push({ dispose: () => automation.dispose() })
+  context.subscriptions.push(browserSettings)
   const indexingService = indexingHost({
     context,
     server,

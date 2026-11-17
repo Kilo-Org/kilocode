@@ -49,9 +49,6 @@ export const KILO_SETTING_KEYS = [
   "integratedBrowser",
   "agentManager.browser.useSystemChrome",
   "agentManager.browser.openLinksIn",
-  "browserAutomation.enabled",
-  "browserAutomation.useSystemChrome",
-  "browserAutomation.headless",
   "experimental.nativeNotebookTools",
   "experimental.conversationPromptHistory",
 ] as const

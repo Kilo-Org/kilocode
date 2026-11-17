@@ -139,6 +139,26 @@ export const KiloSettingsPlugin = define<FSUtil.Service | Global.Service | Effec
               Effect.fail(context.error("failed", error.message, { message: error.message })),
             ),
           ),
+        // What a settings editor shows: the file it would write, parsed. A missing file is an empty document.
+        read: (input, context) =>
+          Effect.gen(function* () {
+            const target = yield* readTarget(input.scope)
+            if (!target.exists) return { scope: input.scope, target, document: {} }
+            const text = yield* fs
+              .readFileString(target.path)
+              .pipe(Effect.mapError((error) => context.error("failed", error.message, { message: error.message })))
+            const errors: ParseError[] = []
+            const document = parse(text, errors, { allowTrailingComma: true })
+            if (errors.length > 0)
+              return yield* Effect.fail(
+                context.error("failed", `${target.path} is not valid JSON or JSONC`, { message: "Invalid JSONC" }),
+              )
+            return { scope: input.scope, target, document: document ?? {} }
+          }).pipe(
+            Effect.catchTag("KiloConfigWriterError", (error) =>
+              Effect.fail(context.error("failed", error.message, { message: error.message })),
+            ),
+          ),
         write: (input, context) =>
           Effect.gen(function* () {
             const scope = input.scope

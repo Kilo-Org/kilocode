@@ -71,7 +71,8 @@
     "remeda": "catalog:",
     "solid-js": "catalog:",
     "string-width": "catalog:",
-    "strip-ansi": "7.1.2"
+    "strip-ansi": "7.1.2",
+    "@kilocode/kilo-i18n": "workspace:*"
   },
   "devDependencies": {
     "@tsconfig/bun": "catalog:",
