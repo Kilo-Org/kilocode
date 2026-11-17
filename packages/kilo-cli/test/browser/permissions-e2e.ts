@@ -3,7 +3,7 @@
 // scripted OpenAI-compatible model, and the compiled CLI driven through `run`. Not a `bun test` file: it needs a
 // display (run it under xvfb), a built binary and an installed browser.
 //
-//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|tabs-new-file|nested
+//   bun test/browser/permissions-e2e.ts <binary> frames|frames-allowed|ask-public|sensitive-auto|sensitive-rejected|sensitive-allowed|deny-click|navigate-file|tabs-new-file|click-cross-origin|back-no-double|nested
 //
 // Each scenario prints one JSON report and exits non-zero when an expectation fails.
 import * as Png from "@kilocode/kilo-plugin/browser/png"
@@ -85,6 +85,13 @@ const middle = Bun.serve({
   port: 0,
   fetch: () => new Response(middlePage, { headers: { "content-type": "text/html; charset=utf-8" } }),
 })
+
+const linkedPage = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Linked E2E</title></head>
+<body>
+  <h1>Linked E2E</h1>
+  <a id="go" href="${frame.url.origin}/">Other origin</a>
+</body></html>`
 
 const nestedPage = `<!doctype html>
 <html><head><meta charset="utf-8"><title>Nested E2E</title></head>
@@ -231,6 +238,26 @@ const plans: Record<string, Plan> = {
     if (index === 2) return { name: "browser_evaluate", args: { function: "() => location.href" } }
     return undefined
   },
+  // A click can leave the page for an origin this session was never granted: the result is withheld and read is asked.
+  "click-cross-origin": (index, results) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_snapshot", args: {} }
+    if (index === 2) {
+      const ref = /link "Other origin" \[ref=([^\]]+)\]/.exec(results[1] ?? "")?.[1]
+      return ref ? { name: "browser_click", args: { element: "the Other origin link", target: ref } } : undefined
+    }
+    if (index === 3) return { name: "browser_evaluate", args: { function: "() => location.href" } }
+    return undefined
+  },
+  // Going back lands on an origin the session was never granted: withheld and asked, and the action runs once.
+  "back-no-double": (index) => {
+    if (index === 0) return { name: "browser_navigate", args: { url: fixture.url.origin } }
+    if (index === 1) return { name: "browser_navigate", args: { url: frame.url.origin } }
+    if (index === 2) return { name: "browser_navigate", args: { url: inner.url.origin } }
+    if (index === 3) return { name: "browser_navigate_back", args: {} }
+    if (index === 4) return { name: "browser_evaluate", args: { function: "() => location.href" } }
+    return undefined
+  },
   // Read the inner origin on its own page first, so its grant exists when it later appears inside a withheld frame.
   nested: (index) => {
     if (index === 0) return { name: "browser_navigate", args: { url: inner.url.origin } }
@@ -347,7 +374,13 @@ async function run(settings: { observation?: string; allowSensitive?: boolean; r
 
 async function main() {
   page =
-    scenario.startsWith("frames") || scenario === "ask-public" ? framed : scenario === "nested" ? nestedPage : simple
+    scenario.startsWith("frames") || scenario === "ask-public"
+      ? framed
+      : scenario === "nested"
+        ? nestedPage
+        : scenario === "click-cross-origin"
+          ? linkedPage
+          : simple
   const output: Record<string, unknown> = { scenario }
 
   if (scenario === "frames") {
@@ -490,6 +523,41 @@ async function main() {
     expect(refused.includes("file:"), `the refusal does not name the scheme:\n${refused.slice(0, 300)}`)
     expect(!refused.includes("root:"), `the local file was read:\n${refused.slice(0, 300)}`)
     expect(back.includes(fixture.url.origin), `the tab did not stay on the fixture:\n${back.slice(0, 300)}`)
+    return output
+  }
+
+  if (scenario === "click-cross-origin") {
+    const result = await run({})
+    const clicked = result.last.results[2] ?? ""
+    const href = result.last.results[3] ?? ""
+    output.clicked = clicked.slice(0, 300)
+    output.href = href.slice(0, 200)
+    // The click ran (the tab moved), and its result never carried the other origin's content.
+    expect(
+      clicked.includes("cannot ask the user for permission") || clicked.includes("Permission denied"),
+      `the cross-origin click was not withheld and asked:\n${clicked.slice(0, 300)}`,
+    )
+    expect(!clicked.includes("IFRAME-MARKER"), `the other origin's content leaked:\n${clicked.slice(0, 300)}`)
+    expect(href.includes(frame.url.origin), `the click did not navigate:\n${href.slice(0, 300)}`)
+    return output
+  }
+
+  if (scenario === "back-no-double") {
+    const rules: Rule[] = [
+      { action: "browser", resource: `navigate:${frame.url.origin}`, effect: "allow" },
+      { action: "browser", resource: `navigate:${inner.url.origin}`, effect: "allow" },
+    ]
+    const result = await run({ rules })
+    const back = result.last.results[3] ?? ""
+    const href = result.last.results[4] ?? ""
+    output.back = back.slice(0, 300)
+    output.href = href.slice(0, 200)
+    expect(
+      back.includes("cannot ask the user for permission") || back.includes("Permission denied"),
+      `the back result was not withheld and asked:\n${back.slice(0, 300)}`,
+    )
+    // One step back: the tab is on the frame origin, not on the page before it.
+    expect(href.includes(frame.url.origin), `back ran more than once:\n${href.slice(0, 300)}`)
     return output
   }
 

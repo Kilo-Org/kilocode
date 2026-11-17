@@ -63,33 +63,37 @@ export function snapshot(
 }
 
 /**
- * Console lines end with ` @ <url>:<line>`, which names the frame that logged them. `opaque` is true when a withheld
- * frame has no origin of its own (`data:`, `blob:`): its lines carry no origin either, so none is kept.
+ * Console lines end with ` @ <url>:<line>`, which names the frame that logged them. `allowed` is the set of origins
+ * this session may read: with it, only a line attributed to a granted origin is kept, and a line whose URL has no
+ * http(s) origin (`blob:` script, `data:` document) is dropped because no frame can be found for it.
  */
-export function consoleMessages(text: string, withheld: ReadonlySet<string>, opaque = false): string {
+export function consoleMessages(text: string, withheld: ReadonlySet<string>, allowed?: ReadonlySet<string>): string {
   return text
     .split("\n")
     .filter((line) => {
       const url = / @ (\S+?):\d+$/.exec(line)?.[1]
       if (!url) return true
       const origin = BrowserPermission.origin(url)
-      if (origin === undefined) return !opaque
-      return !withheld.has(origin)
+      if (origin === undefined) return allowed === undefined
+      if (withheld.has(origin)) return false
+      return allowed === undefined || allowed.has(origin)
     })
     .join("\n")
 }
 
 /** Network lines expose request URLs; a withheld origin's traffic leaves with its frame. */
-export function networkRequests(text: string, withheld: ReadonlySet<string>, opaque = false): string {
+/** The same attribution rule for the numbered request list. */
+export function networkRequests(text: string, withheld: ReadonlySet<string>, allowed?: ReadonlySet<string>): string {
   return text
     .split("\n")
     .filter((line) => {
       if (!/^\d+\. /.test(line)) return true
       const url = /(https?:\/\/\S+)/.exec(line)?.[1]
-      if (!url) return !opaque
+      if (!url) return allowed === undefined
       const origin = BrowserPermission.origin(url)
-      if (origin === undefined) return !opaque
-      return !withheld.has(origin)
+      if (origin === undefined) return allowed === undefined
+      if (withheld.has(origin)) return false
+      return allowed === undefined || allowed.has(origin)
     })
     .join("\n")
 }
@@ -110,8 +114,8 @@ export function scope(input: {
   text: string
   withholding: boolean
   withheld: ReadonlySet<string>
-  /** A withheld frame has no origin of its own, so a line without one cannot be attributed either. */
-  opaque?: boolean
+  /** Origins this session may read; set while withholding, so only attributable lines survive. */
+  allowed?: ReadonlySet<string>
   origins?: ReadonlyMap<string, string>
   granted: (origin: string) => boolean
 }): { text: string; refused: boolean } {
@@ -119,7 +123,7 @@ export function scope(input: {
   if (input.tool === "browser_network_request") return { text: REFUSED, refused: true }
   let text = input.text
   if (text.includes("### Snapshot")) text = snapshot(text, input.origins ?? new Map(), input.granted)
-  if (input.tool === "browser_console_messages") text = consoleMessages(text, input.withheld, input.opaque)
-  if (input.tool === "browser_network_requests") text = networkRequests(text, input.withheld, input.opaque)
+  if (input.tool === "browser_console_messages") text = consoleMessages(text, input.withheld, input.allowed)
+  if (input.tool === "browser_network_requests") text = networkRequests(text, input.withheld, input.allowed)
   return { text, refused: false }
 }

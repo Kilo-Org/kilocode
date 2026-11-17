@@ -307,6 +307,16 @@ function run(entry: Entry, args: unknown, context: Tool.Context, deps: Deps) {
     }
     if (!result) return yield* failure(new Error("the browser call did not settle"))
     if (result.isError) return yield* failure(new Error(textOf(result) || `${entry.name} failed`))
+    // The action already ran; its result asked for a grant. Ask now, and never repeat the action for it.
+    if (result.meta?.needs?.length) {
+      yield* authorize(
+        result.meta.needs,
+        context,
+        allowSensitive,
+        (origin) => KiloBrowserPolicy.allows(organization, origin),
+        deps.permission,
+      )
+    }
 
     const text = textOf(result)
     const next = snapshot(split(text))

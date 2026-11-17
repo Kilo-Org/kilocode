@@ -13,6 +13,8 @@ export type CallMeta = {
   origin?: string
   /** Origins whose iframes were withheld from this result, outermost first. */
   withheldFrames?: readonly string[]
+  /** Items the result needs after the action ran; the tool layer asks without repeating the action. */
+  needs?: readonly Item[]
 }
 
 export type CallResult = { content: ContentBlock[]; isError: boolean; meta?: CallMeta }

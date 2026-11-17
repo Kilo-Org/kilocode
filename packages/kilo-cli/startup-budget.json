@@ -19,6 +19,7 @@
     "kilocode.tool-todo": 10,
     "kilocode.tool-write": 10,
     "kilocode.tool-browser": 10,
+    "kilocode.browser-tools": 10,
     "kilocode.tool-notebook": 10,
     "kilocode.chart": 10,
     "kilocode.commit-message": 10,
@@ -49,6 +50,6 @@
     "kilocode.sandbox": 10,
     "kilocode.soul": 10
   },
-  "overhead": 75,
-  "modules": 140
+  "overhead": 90,
+  "modules": 260
 }

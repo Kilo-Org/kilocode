@@ -10,11 +10,13 @@ import {
   insideOutput,
   screenshotPath,
   key,
+  landingNeed,
   launchFailure,
   navigationRefusal,
   navigationTargets,
   outputBaseline,
-  rememberPage,
+  plannedOrigin,
+  prunePages,
   snapshotFile,
   tabChoice,
   withheldFrames,
@@ -112,6 +114,13 @@ describe("url-taking tools", () => {
 })
 
 describe("output directory", () => {
+  test("a relative file name resolves under the output directory, not the process cwd", () => {
+    const directory = path.join(path.sep, "tmp", "browser", "output")
+    expect(insideOutput("page.png", directory)).toBe(path.join(directory, "page.png"))
+    expect(insideOutput("nested/page.png", directory)).toBe(path.join(directory, "nested", "page.png"))
+    expect(() => insideOutput("../page.png", directory)).toThrow("output directory")
+  })
+
   test("a file name outside the backend's directory is refused", () => {
     const directory = path.join(path.sep, "tmp", "browser", "output")
     expect(insideOutput(path.join(directory, "page.png"), directory)).toBe(path.join(directory, "page.png"))
@@ -163,16 +172,83 @@ describe("current page", () => {
     )
   })
 
-  test("the session page map is bounded and refreshes the entry it is given", () => {
+  test("sessions are evicted by liveness, so a live session keeps its page", () => {
     const pages = new Map<string, Page>()
-    for (let index = 0; index < 70; index += 1) rememberPage(pages, `s${index}`, one, 64)
-    expect(pages.size).toBe(64)
-    expect(pages.has("s0")).toBe(false)
-    expect(pages.has("s69")).toBe(true)
-    // Re-remembering an existing session moves it to the back instead of duplicating it.
-    rememberPage(pages, "s6", two, 64)
-    expect(pages.size).toBe(64)
-    expect([...pages.keys()].at(-1)).toBe("s6")
+    for (let index = 0; index < 100; index += 1) pages.set(`s${index}`, one)
+    // A hundred sessions sharing one live page are all kept.
+    prunePages(pages, [one])
+    expect(pages.size).toBe(100)
+    // Dead pages go, live ones stay.
+    prunePages(pages, [])
+    expect(pages.size).toBe(0)
+    const mixed = new Map([
+      ["live", one],
+      ["dead", two],
+    ])
+    prunePages(mixed, [one])
+    expect([...mixed.keys()]).toEqual(["live"])
+  })
+
+  test("an action that lands on an ungranted origin is withheld, and a granted one is not", () => {
+    const authorized = ["act:https://shop.example.com", "read:https://shop.example.com"]
+    expect(
+      landingNeed({
+        tool: "browser_click",
+        planned: "https://shop.example.com",
+        landed: "https://pay.example.net",
+        authorized,
+      }),
+    ).toEqual({ class: "read", origin: "https://pay.example.net" })
+    expect(
+      landingNeed({
+        tool: "browser_click",
+        planned: "https://shop.example.com",
+        landed: "https://pay.example.net",
+        authorized: [...authorized, "read:https://pay.example.net"],
+      }),
+    ).toBeUndefined()
+    // A read tool reports where it is; it does not need a new grant for it.
+    expect(
+      landingNeed({ tool: "browser_snapshot", planned: "https://a.example", landed: "https://b.example", authorized }),
+    ).toBeUndefined()
+    // Same origin needs nothing, and a navigation allowed to that origin may report it.
+    expect(
+      landingNeed({
+        tool: "browser_click",
+        planned: "https://shop.example.com",
+        landed: "https://shop.example.com",
+        authorized,
+      }),
+    ).toBeUndefined()
+    expect(
+      landingNeed({
+        tool: "browser_navigate",
+        planned: "https://old.example",
+        landed: "https://new.example",
+        authorized: ["navigate:https://new.example"],
+      }),
+    ).toBeUndefined()
+    // navigate_back has no target of its own, so its plan is the page it left.
+    expect(
+      landingNeed({
+        tool: "browser_navigate_back",
+        planned: "https://pay.example.net",
+        landed: "https://shop.example.com",
+        authorized,
+      }),
+    ).toBeUndefined()
+  })
+
+  test("a navigation's plan is the url it asked to open, not the page it left", () => {
+    expect(plannedOrigin("browser_navigate", { url: "https://shop.example.com/x" }, "https://old.example")).toBe(
+      "https://shop.example.com",
+    )
+    expect(plannedOrigin("browser_tabs", { action: "new", url: "https://new.example/" }, "https://old.example")).toBe(
+      "https://new.example",
+    )
+    expect(plannedOrigin("browser_click", { target: "e1" }, "https://shop.example.com")).toBe(
+      "https://shop.example.com",
+    )
   })
 
   test("closing the current tab falls back to a live page", () => {
