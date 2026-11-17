@@ -438,6 +438,8 @@ import type {
   SessionHostGetWorkspacePullRequestDiffFileErrors,
   SessionHostGetWorkspacePullRequestDiffFileResponses,
   SessionHostGetWorkspacePullRequestDiffResponses,
+  SessionHostGetWorkspacePullRequestErrors,
+  SessionHostGetWorkspacePullRequestResponses,
   SessionHostGetWorkspaceResponses,
   SessionHostGetWorkspaceStatusErrors,
   SessionHostGetWorkspaceStatusResponses,
@@ -455,6 +457,8 @@ import type {
   SessionHostProvidersResponses,
   SessionHostRefreshWorkspaceChangesErrors,
   SessionHostRefreshWorkspaceChangesResponses,
+  SessionHostRefreshWorkspacePullRequestErrors,
+  SessionHostRefreshWorkspacePullRequestResponses,
   SessionHostSetWorkspacePersonalDefaultProfileErrors,
   SessionHostSetWorkspacePersonalDefaultProfileResponses,
   SessionHostStartErrors,
@@ -9891,10 +9895,21 @@ export class SessionHost extends HeyApiClient {
   public clearWorkspacePersonalDefaultProfile<ThrowOnError extends boolean = false>(
     parameters: {
       profileID: string
+      organizationID?: SessionHostOrganizationId
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "profileID" }] }])
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "profileID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
     return (options?.client ?? this.client).delete<
       SessionHostClearWorkspacePersonalDefaultProfileResponses,
       SessionHostClearWorkspacePersonalDefaultProfileErrors,
@@ -10013,6 +10028,78 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace PR status
+   *
+   * Read the cached linked PR without contacting GitHub or waking compute. Only no_pr means no eligible linked PR is known; unavailable or partial observations must not clear previous evidence.
+   */
+  public getWorkspacePullRequest<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspacePullRequestResponses,
+      SessionHostGetWorkspacePullRequestErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh hosted workspace PR status
+   *
+   * Explicitly refresh the linked PR observation. Preserve cached evidence, partial fields, cooldown status, and retry time; refresh failure is not no_pr and does not mutate the PR or wake compute.
+   */
+  public refreshWorkspacePullRequest<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostRefreshWorkspacePullRequestResponses,
+      SessionHostRefreshWorkspacePullRequestErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh",
       ...options,
       ...params,
     })

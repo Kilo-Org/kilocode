@@ -1,9 +1,14 @@
 import * as Attachments from "@/kilocode/server/hosted-attachments"
 import { SessionHostApi, SessionHostPaths } from "@/kilocode/server/httpapi/groups/session-host"
 import { sessionHostHandlers } from "@/kilocode/server/httpapi/handlers/session-host"
-import { SessionHost } from "@/kilocode/session-hosting"
+import { SessionHost, createRegistry } from "@/kilocode/session-hosting"
 import { PROVIDER } from "@/kilocode/session-hosting/kilo-cloud"
-import { HostedWorkspaceID } from "@/kilocode/session-hosting/types"
+import {
+  HostedFailure,
+  HostedWorkspaceID,
+  WorkspacePullRequestResult,
+  type WorkspacePullRequestInput,
+} from "@/kilocode/session-hosting/types"
 import { Auth } from "@/auth"
 import { GlobalBus, type GlobalEvent } from "@/bus/global"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -91,6 +96,24 @@ function workspaceStatus(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function summary(overrides: Record<string, unknown> = {}) {
+  return {
+    url: "https://github.com/Kilo-Org/cloud/pull/142",
+    number: 142,
+    state: "open" as const,
+    title: "Expose hosted workspace PR status",
+    headSha: "a".repeat(40),
+    lastSyncedAt: "2026-10-21T12:00:00.000Z",
+    review: { decision: "approved" as const, available: true, pending: false },
+    checks: { total: 2, passed: 2, failed: 0, pending: 0, skipped: 0, unknown: 0, complete: true, available: true },
+    conversations: { unresolved: 0, complete: true },
+    mergeability: { mergeable: true, state: "clean", complete: true },
+    partial: false,
+    unavailable: [],
+    ...overrides,
+  }
+}
+
 function comparison() {
   return { baseRef: "main", mergeBase: BASE, head: HEAD }
 }
@@ -141,6 +164,7 @@ type State = {
   pullFile: "available" | "omitted" | "stale"
   remove: "ok" | "invalid" | "unauthorized" | "conflict" | "unavailable"
   continuation: "ok" | "balance" | "mismatch"
+  pr?: { summary?: unknown; refresh?: unknown; status?: number; raw?: string; workspaceID?: string }
 }
 
 function workspaceSession(kiloSessionId: string, workspaceId: string) {
@@ -339,9 +363,18 @@ function harness(initial: Partial<State> = {}) {
             },
           })
         }
-        return Response.json({ result: { data: { items: [workspaceSummary()], nextCursor: "cursor-2" } } })
+        return Response.json({
+          result: {
+            data: {
+              items: [workspaceSummary(state.pr && "summary" in state.pr ? { pullRequest: state.pr.summary } : {})],
+              nextCursor: "cursor-2",
+            },
+          },
+        })
       }
       if (url.pathname === "/trpc/getHostedWorkspace") {
+        if (state.pr?.status) return Response.json({ error: "private upstream failure" }, { status: state.pr.status })
+        if (state.pr?.raw !== undefined) return new Response(state.pr.raw)
         const input = Object(parse(url.searchParams.get("input") ?? "{}"))
         if (state.workspace === "missing" || input.workspaceId !== WORKSPACE) {
           if (input.workspaceId === OTHER_WORKSPACE) {
@@ -356,7 +389,31 @@ function harness(initial: Partial<State> = {}) {
           }
           return Response.json({ result: { data: null } })
         }
-        return Response.json({ result: { data: workspaceSummary({ nextSessionCursor: "session-cursor-1" }) } })
+        return Response.json({
+          result: {
+            data: workspaceSummary({
+              nextSessionCursor: "session-cursor-1",
+              ...(state.pr && "summary" in state.pr ? { pullRequest: state.pr.summary } : {}),
+              ...(state.pr?.workspaceID ? { workspaceId: state.pr.workspaceID } : {}),
+            }),
+          },
+        })
+      }
+      if (url.pathname === "/trpc/refreshHostedWorkspacePullRequest") {
+        if (state.pr?.status) return Response.json({ error: "private upstream failure" }, { status: state.pr.status })
+        if (state.pr?.raw !== undefined) return new Response(state.pr.raw)
+        return Response.json({
+          result: {
+            data: {
+              workspaceId: state.pr?.workspaceID ?? WORKSPACE,
+              pullRequest: state.pr?.summary,
+              refresh: state.pr?.refresh ?? { status: "refreshed", retryAt: null },
+              controlToken: CONTROL,
+              ownerId: "private-owner",
+              sandboxId: CLOUD,
+            },
+          },
+        })
       }
       if (url.pathname === "/trpc/getHostedWorkspaceStatus") {
         const input = Object(parse(url.searchParams.get("input") ?? "{}"))
@@ -599,20 +656,21 @@ function harness(initial: Partial<State> = {}) {
   return { url: `http://127.0.0.1:${server.port}`, calls, state, stop: () => server.stop(true) }
 }
 
-function auth() {
-  const info = new Auth.Api({ type: "api", key: TOKEN })
+function auth(info: Auth.Info | null = new Auth.Api({ type: "api", key: TOKEN })) {
   return {
-    get: (id: string) => Effect.succeed(id === "kilo" ? info : undefined),
-    all: () => Effect.succeed<Record<string, Auth.Info>>({ kilo: info }),
+    get: (id: string) => Effect.succeed(id === "kilo" ? (info ?? undefined) : undefined),
+    all: () => Effect.succeed<Record<string, Auth.Info>>(info ? { kilo: info } : {}),
     set: () => Effect.void,
     remove: () => Effect.void,
   } satisfies Auth.Interface
 }
 
-function layer(url: string) {
-  const host = SessionHost.layer({
+function layer(
+  url: string,
+  host = SessionHost.layer({
     env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url, KILO_API_URL: url },
-  }).pipe(Layer.provide(Layer.succeed(Auth.Service, auth())))
+  }).pipe(Layer.provide(Layer.succeed(Auth.Service, auth()))),
+) {
   return HttpRouter.serve(
     HttpApiBuilder.layer(TestHttpApi).pipe(
       Layer.provide(sessionHostHandlers),
@@ -635,6 +693,66 @@ const app = harness()
 const it = testEffect(layer(app.url))
 const issuer = harness({ token: "invalid" })
 const itIssuer = testEffect(layer(issuer.url))
+const itSignedOut = testEffect(
+  layer(
+    app.url,
+    SessionHost.layer({
+      env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_WEB_APP_URL: app.url, KILO_API_URL: app.url },
+    }).pipe(Layer.provide(Layer.succeed(Auth.Service, auth(null)))),
+  ),
+)
+const itScoped = testEffect(
+  layer(
+    app.url,
+    SessionHost.layer({
+      env: {
+        CLOUD_AGENT_NEXT_BASE_URL: app.url,
+        KILO_WEB_APP_URL: app.url,
+        KILO_API_URL: app.url,
+        KILO_ORG_ID: ORG,
+      },
+    }).pipe(
+      Layer.provide(
+        Layer.succeed(
+          Auth.Service,
+          auth(
+            new Auth.Oauth({
+              type: "oauth",
+              access: TOKEN,
+              refresh: "private-refresh",
+              expires: 0,
+              accountId: PROFILE,
+            }),
+          ),
+        ),
+      ),
+    ),
+  ),
+)
+const offline = harness()
+void offline.stop()
+const itOffline = testEffect(layer(offline.url))
+const legacy = fixture("legacy")
+const registry = createRegistry([legacy.value])
+const itLegacy = testEffect(layer(app.url, Layer.succeed(SessionHost.Service, { registry, default: registry.default })))
+const projectionBase = Schema.decodeUnknownSync(WorkspacePullRequestResult)({
+  id: { providerID: "projector", workspaceID: WORKSPACE },
+  state: "available",
+  pullRequest: summary(),
+})
+const projection: { value: WorkspacePullRequestResult; failure?: HostedFailure; calls: WorkspacePullRequestInput[] } = {
+  value: projectionBase,
+  calls: [],
+}
+const project = (input: WorkspacePullRequestInput) => {
+  projection.calls.push(input)
+  return projection.failure ? Effect.fail(projection.failure) : Effect.succeed(projection.value)
+}
+const projector = fixture("projector", { getWorkspacePullRequest: project, refreshWorkspacePullRequest: project })
+const projections = createRegistry([projector.value])
+const itProjection = testEffect(
+  layer(app.url, Layer.succeed(SessionHost.Service, { registry: projections, default: projections.default })),
+)
 
 afterEach(() => {
   Attachments.store.clear()
@@ -647,6 +765,10 @@ afterEach(() => {
   app.state.pullFile = "available"
   app.state.remove = "ok"
   app.state.continuation = "ok"
+  app.state.pr = undefined
+  projection.failure = undefined
+  projection.value = projectionBase
+  projection.calls.length = 0
 })
 afterAll(() => {
   void app.stop()
@@ -657,6 +779,10 @@ const workspacePath = (workspaceID = WORKSPACE) =>
   SessionHostPaths.workspaceDetail.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
 const statusPath = (workspaceID = WORKSPACE) =>
   SessionHostPaths.workspaceStatus.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const prPath = (workspaceID = WORKSPACE, providerID = "kilo-cloud") =>
+  SessionHostPaths.workspacePullRequest.replace(":providerID", providerID).replace(":workspaceID", workspaceID)
+const refreshPath = (workspaceID = WORKSPACE, providerID = "kilo-cloud") =>
+  SessionHostPaths.workspacePullRequestRefresh.replace(":providerID", providerID).replace(":workspaceID", workspaceID)
 const sessionsPath = (workspaceID = WORKSPACE) =>
   SessionHostPaths.workspaceSession.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
 const changesPath = (workspaceID = WORKSPACE) =>
@@ -680,6 +806,21 @@ const attach = (sessionID = SESSION) =>
     expect(response.status).toBe(200)
     return String(Object(yield* response.json).attachmentID)
   })
+
+function wire(text: string, status: number) {
+  const calls: Request[] = []
+  const client = createKiloClient({
+    baseUrl: "http://handler.invalid",
+    fetch: Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push(new Request(input, init))
+        return new Response(text, { status, headers: { "content-type": "application/json" } })
+      },
+      { preconnect: fetch.preconnect },
+    ),
+  })
+  return { client, calls }
+}
 
 describe("session host HttpApi", () => {
   it.live("reports the registered provider without exposing provider internals", () =>
@@ -958,6 +1099,509 @@ describe("session host HttpApi", () => {
     }),
   )
 
+  for (const [name, value] of [
+    ["complete", summary()],
+    ["draft", summary({ state: "draft", review: { decision: "review_required", available: true, pending: false } })],
+    ["merged", summary({ state: "merged", review: { decision: "none", available: true, pending: false } })],
+    [
+      "closed",
+      summary({ state: "closed", review: { decision: "changes_requested", available: true, pending: false } }),
+    ],
+    [
+      "partial and unknown",
+      summary({
+        state: "unknown",
+        title: null,
+        headSha: null,
+        lastSyncedAt: "producer timestamp preserved verbatim",
+        review: { decision: null, available: false, pending: true },
+        checks: {
+          total: 6,
+          passed: 1,
+          failed: 1,
+          pending: 1,
+          skipped: 1,
+          unknown: 2,
+          complete: false,
+          available: false,
+        },
+        conversations: { unresolved: null, complete: false },
+        mergeability: { mergeable: null, state: null, complete: false },
+        partial: true,
+        unavailable: ["checks", "statuses", "reviews"],
+      }),
+    ],
+    [
+      "zero checks without inventing a passed check",
+      summary({
+        checks: { total: 0, passed: 0, failed: 0, pending: 0, skipped: 0, unknown: 0, complete: true, available: true },
+        mergeability: { mergeable: false, state: "blocked", complete: true },
+        partial: true,
+        unavailable: [],
+      }),
+    ],
+  ] as const) {
+    it.live(`returns ${name} PR evidence through the real handler and generated SDK`, () =>
+      Effect.gen(function* () {
+        app.state.pr = { summary: value }
+        const before = app.calls.length
+        const response = yield* HttpClient.get(`${prPath()}?organizationID=${PROFILE}`)
+        expect(response.status).toBe(200)
+        const text = yield* response.text
+        const expected = {
+          id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          state: "available" as const,
+          pullRequest: value,
+        }
+        expect(parse(text)).toEqual(expected)
+
+        const calls = app.calls.slice(before)
+        const call = calls.find((item) => item.path === "/trpc/getHostedWorkspace")
+        expect(call?.method).toBe("GET")
+        expect(call?.auth).toBe(`Bearer ${CONTROL}`)
+        expect(call?.org).toBe(PROFILE)
+        expect(parse(new URL(call?.search ?? "", app.url).searchParams.get("input") ?? "{}")).toEqual({
+          workspaceId: WORKSPACE,
+          sessionLimit: 1,
+        })
+        expect(calls.filter((item) => item.path.startsWith("/trpc/"))).toHaveLength(1)
+        expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(0)
+
+        const sdk = wire(text, response.status)
+        const typed = yield* Effect.promise(() =>
+          sdk.client.sessionHost.getWorkspacePullRequest({
+            providerID: "kilo-cloud",
+            workspaceID: WORKSPACE,
+            organizationID: PROFILE,
+          }),
+        )
+        expect(typed.error).toBeUndefined()
+        expect(typed.data).toEqual(expected)
+        expect(typed.data?.pullRequest?.checks).toEqual(value.checks)
+        const request = sdk.calls.at(0)
+        expect(request?.method).toBe("GET")
+        expect(request?.url).toBe(`http://handler.invalid${prPath()}?organizationID=${PROFILE}`)
+        expect(request?.body).toBeNull()
+      }),
+    )
+  }
+
+  for (const [status, state, value, retryAt] of [
+    ["refreshed", "available", summary(), null],
+    ["no_pr", "no_pr", null, null],
+    ["no_integration", "unavailable", summary(), null],
+    ["rate_limited", "rate_limited", summary(), "2026-10-21T12:01:00.000Z"],
+    ["throttled", "rate_limited", summary(), "2026-10-21T12:02:00.000Z"],
+    ["unavailable", "unavailable", summary(), null],
+    ["failed", "unavailable", summary(), null],
+    ["failed", "unavailable", null, null],
+  ] as const) {
+    it.live(
+      `refreshes PR status ${status} with ${value ? "cached evidence" : "null evidence"} and no local request body`,
+      () =>
+        Effect.gen(function* () {
+          app.state.pr = { summary: value, refresh: { status, retryAt } }
+          const before = app.calls.length
+          const response = yield* HttpClient.post(`${refreshPath()}?organizationID=${PROFILE}`)
+          expect(response.status).toBe(200)
+          const text = yield* response.text
+          const expected = {
+            id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+            state,
+            pullRequest: value,
+            refresh: { status, retryAt },
+          }
+          expect(parse(text)).toEqual(expected)
+          const calls = app.calls.slice(before)
+          const call = calls.find((item) => item.path === "/trpc/refreshHostedWorkspacePullRequest")
+          expect(call?.method).toBe("POST")
+          expect(call?.auth).toBe(`Bearer ${CONTROL}`)
+          expect(call?.org).toBe(PROFILE)
+          expect(call?.search).toBe("")
+          expect(parse(call?.body ?? "{}")).toEqual({ workspaceId: WORKSPACE })
+          expect(calls.filter((item) => item.path.startsWith("/trpc/"))).toHaveLength(1)
+          expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(0)
+
+          const sdk = wire(text, response.status)
+          const typed = yield* Effect.promise(() =>
+            sdk.client.sessionHost.refreshWorkspacePullRequest({
+              providerID: "kilo-cloud",
+              workspaceID: WORKSPACE,
+              organizationID: PROFILE,
+            }),
+          )
+          expect(typed.error).toBeUndefined()
+          expect(typed.data).toEqual(expected)
+          expect(typed.data?.refresh?.retryAt).toBe(retryAt)
+          const request = sdk.calls.at(0)
+          expect(request?.method).toBe("POST")
+          expect(request?.url).toBe(`http://handler.invalid${refreshPath()}?organizationID=${PROFILE}`)
+          expect(request?.body).toBeNull()
+        }),
+    )
+  }
+
+  it.live("does not extend existing workspace list or detail responses with PR fields", () =>
+    Effect.gen(function* () {
+      app.state.pr = { summary: summary() }
+      const response = yield* HttpClient.get(workspacePath())
+      expect(response.status).toBe(200)
+      expect(yield* response.json).not.toHaveProperty("pullRequest")
+      const page = yield* HttpClient.get(SessionHostPaths.workspace)
+      expect(page.status).toBe(200)
+      expect(JSON.stringify(yield* page.json)).not.toContain("pullRequest")
+    }),
+  )
+
+  it.live("sanitizes private PR response fields at every nested boundary", () =>
+    Effect.gen(function* () {
+      const value = summary()
+      app.state.pr = {
+        summary: summary({
+          origin: app.url,
+          controlToken: CONTROL,
+          ownerId: "private-owner",
+          directory: "/private/workspace",
+          review: { ...value.review, raw: TOKEN },
+          checks: { ...value.checks, contexts: ["private-check"] },
+          conversations: { ...value.conversations, threads: ["private-thread"] },
+          mergeability: { ...value.mergeability, sandboxId: CLOUD },
+        }),
+        refresh: { status: "refreshed", retryAt: null, credential: TOKEN },
+      }
+      for (const request of [HttpClientRequest.get(prPath()), HttpClientRequest.post(refreshPath())]) {
+        const response = yield* HttpClient.execute(request)
+        expect(response.status).toBe(200)
+        const text = yield* response.text
+        expect(Object(parse(text)).pullRequest).toEqual(value)
+        for (const secret of [
+          app.url,
+          CONTROL,
+          TOKEN,
+          CLOUD,
+          "private-owner",
+          "/private/workspace",
+          "private-check",
+          "private-thread",
+        ]) {
+          expect(text).not.toContain(secret)
+        }
+      }
+    }),
+  )
+
+  for (const [status, state] of [
+    [401, "rejected"],
+    [403, "rejected"],
+    [404, "unavailable"],
+    [429, "rate_limited"],
+    [500, "unavailable"],
+    [503, "unavailable"],
+  ] as const) {
+    it.live(`keeps upstream HTTP ${status} distinct from no PR and preserves attachments`, () =>
+      Effect.gen(function* () {
+        const id = yield* attach()
+        app.state.pr = { status }
+        for (const request of [HttpClientRequest.get(prPath()), HttpClientRequest.post(refreshPath())]) {
+          const before = app.calls.length
+          const response = yield* HttpClient.execute(request)
+          expect(response.status).toBe(200)
+          const text = yield* response.text
+          expect(parse(text)).toEqual({
+            id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+            state,
+            pullRequest: null,
+          })
+          expect(text).not.toContain("private upstream failure")
+          expect(Attachments.store.lookup(id).kind).toBe("found")
+          expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(1)
+          expect(app.calls.slice(before).filter((item) => item.path.startsWith("/trpc/"))).toHaveLength(1)
+
+          const sdk = wire(text, response.status)
+          const typed = yield* Effect.promise(() =>
+            request.method === "GET"
+              ? sdk.client.sessionHost.getWorkspacePullRequest({ providerID: "kilo-cloud", workspaceID: WORKSPACE })
+              : sdk.client.sessionHost.refreshWorkspacePullRequest({
+                  providerID: "kilo-cloud",
+                  workspaceID: WORKSPACE,
+                }),
+          )
+          expect(typed.data?.state).toBe(state)
+          expect(typed.data?.pullRequest).toBeNull()
+          expect(typed.error).toBeUndefined()
+        }
+      }),
+    )
+  }
+
+  it.live("reserves no_pr for an explicit null projection and never invalidates its workspace attachments", () =>
+    Effect.gen(function* () {
+      const id = yield* attach()
+      for (const [pr, workspace, state] of [
+        [{ summary: null }, "ok", "no_pr"],
+        [undefined, "ok", "unsupported"],
+        [{ summary: summary() }, "missing", "unavailable"],
+        [{ raw: "not JSON" }, "ok", "unavailable"],
+        [{ raw: JSON.stringify({ result: { data: {} } }) }, "ok", "unavailable"],
+        [{ summary: summary({ title: undefined }) }, "ok", "unavailable"],
+        [{ summary: summary({ checks: { total: -1 } }) }, "ok", "unavailable"],
+        [{ summary: summary(), workspaceID: OTHER_WORKSPACE }, "ok", "unavailable"],
+      ] as const) {
+        app.state.pr = pr
+        app.state.workspace = workspace
+        const response = yield* HttpClient.get(prPath())
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toEqual({
+          id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          state,
+          pullRequest: null,
+        })
+        expect(Attachments.store.lookup(id).kind).toBe("found")
+        expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(1)
+      }
+    }),
+  )
+
+  it.live("treats malformed or inconsistent refresh results as unavailable, not no PR", () =>
+    Effect.gen(function* () {
+      const id = yield* attach()
+      for (const pr of [
+        { summary: summary(), refresh: { status: "refreshed" } },
+        { summary: null, refresh: { status: "refreshed", retryAt: null } },
+        { summary: summary(), refresh: { status: "no_pr", retryAt: null } },
+        { summary: summary(), refresh: { status: "unknown", retryAt: null } },
+        { summary: summary(), workspaceID: OTHER_WORKSPACE },
+        { raw: JSON.stringify({ result: { data: null } }) },
+        { raw: "not JSON" },
+      ]) {
+        app.state.pr = pr
+        const response = yield* HttpClient.post(refreshPath())
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toEqual({
+          id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          state: "unavailable",
+          pullRequest: null,
+        })
+        expect(Attachments.store.lookup(id).kind).toBe("found")
+      }
+    }),
+  )
+
+  itScoped.live(
+    "keeps organization selection in query/auth with explicit query precedence over environment and saved account",
+    () =>
+      Effect.gen(function* () {
+        app.state.pr = { summary: summary() }
+        for (const [organization, query] of [
+          [ORG, ""],
+          [PROFILE, `?organizationID=${PROFILE}`],
+        ] as const) {
+          for (const request of [
+            HttpClientRequest.get(`${prPath()}${query}`),
+            HttpClientRequest.post(`${refreshPath()}${query}`),
+          ]) {
+            const before = app.calls.length
+            const response = yield* HttpClient.execute(request)
+            expect(response.status).toBe(200)
+            expect(Object(yield* response.json).state).toBe("available")
+            const calls = app.calls.slice(before)
+            const issued = calls.find((item) => item.path === "/api/cloud-agent-next/token")
+            if (issued) {
+              expect(issued.auth).toBe(`Bearer ${TOKEN}`)
+              expect(parse(issued.body)).toEqual({ organizationId: organization })
+            }
+            const worker = calls.find((item) => item.path.startsWith("/trpc/"))
+            expect(worker?.auth).toBe(`Bearer ${CONTROL}`)
+            expect(worker?.org).toBe(organization)
+            if (request.method === "GET") {
+              expect(parse(new URLSearchParams(worker?.search ?? "").get("input") ?? "{}")).toEqual({
+                workspaceId: WORKSPACE,
+                sessionLimit: 1,
+              })
+              expect(worker?.body).toBe("")
+            } else {
+              expect(worker?.search).toBe("")
+              expect(parse(worker?.body ?? "{}")).toEqual({ workspaceId: WORKSPACE })
+            }
+          }
+        }
+      }),
+  )
+
+  itSignedOut.live("reports signed_out only for absent local credentials without calling the issuer or Worker", () =>
+    Effect.gen(function* () {
+      const before = app.calls.length
+      for (const request of [HttpClientRequest.get(prPath()), HttpClientRequest.post(refreshPath())]) {
+        const response = yield* HttpClient.execute(request)
+        expect(response.status).toBe(200)
+        const text = yield* response.text
+        expect(parse(text)).toEqual({
+          id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          state: "signed_out",
+          pullRequest: null,
+        })
+        const sdk = wire(text, response.status)
+        const typed = yield* Effect.promise(() =>
+          request.method === "GET"
+            ? sdk.client.sessionHost.getWorkspacePullRequest({ providerID: "kilo-cloud", workspaceID: WORKSPACE })
+            : sdk.client.sessionHost.refreshWorkspacePullRequest({ providerID: "kilo-cloud", workspaceID: WORKSPACE }),
+        )
+        expect(typed.data?.state).toBe("signed_out")
+        expect(typed.data?.pullRequest).toBeNull()
+      }
+      expect(app.calls).toHaveLength(before)
+      expect(Attachments.store.count(hosted("kilo-cloud", SESSION))).toBe(0)
+    }),
+  )
+
+  itOffline.live("reports unreachable rather than signed_out or no PR on transport failure", () =>
+    Effect.gen(function* () {
+      for (const request of [HttpClientRequest.get(prPath()), HttpClientRequest.post(refreshPath())]) {
+        const response = yield* HttpClient.execute(request)
+        expect(response.status).toBe(200)
+        const text = yield* response.text
+        expect(parse(text)).toEqual({
+          id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+          state: "unreachable",
+          pullRequest: null,
+        })
+        const sdk = wire(text, response.status)
+        const typed = yield* Effect.promise(() =>
+          request.method === "GET"
+            ? sdk.client.sessionHost.getWorkspacePullRequest({ providerID: "kilo-cloud", workspaceID: WORKSPACE })
+            : sdk.client.sessionHost.refreshWorkspacePullRequest({ providerID: "kilo-cloud", workspaceID: WORKSPACE }),
+        )
+        expect(typed.data?.state).toBe("unreachable")
+        expect(typed.data?.pullRequest).toBeNull()
+      }
+    }),
+  )
+
+  itLegacy.live("returns unsupported for providers that omit the optional PR operations", () =>
+    Effect.gen(function* () {
+      for (const request of [
+        HttpClientRequest.get(prPath(WORKSPACE, "legacy")),
+        HttpClientRequest.post(refreshPath(WORKSPACE, "legacy")),
+      ]) {
+        const response = yield* HttpClient.execute(request)
+        expect(response.status).toBe(200)
+        const text = yield* response.text
+        expect(parse(text)).toEqual({
+          id: { providerID: "legacy", workspaceID: WORKSPACE },
+          state: "unsupported",
+          pullRequest: null,
+        })
+        const sdk = wire(text, response.status)
+        const typed = yield* Effect.promise(() =>
+          request.method === "GET"
+            ? sdk.client.sessionHost.getWorkspacePullRequest({ providerID: "legacy", workspaceID: WORKSPACE })
+            : sdk.client.sessionHost.refreshWorkspacePullRequest({ providerID: "legacy", workspaceID: WORKSPACE }),
+        )
+        expect(typed.data?.state).toBe("unsupported")
+        expect(typed.data?.pullRequest).toBeNull()
+      }
+      expect(legacy.calls).toHaveLength(0)
+    }),
+  )
+
+  itProjection.live(
+    "validates optional-provider identity and result invariants and strips private provider fields",
+    () =>
+      Effect.gen(function* () {
+        const id = Schema.decodeUnknownSync(HostedWorkspaceID)({ providerID: "projector", workspaceID: WORKSPACE })
+        const value = Schema.decodeUnknownSync(WorkspacePullRequestResult)({
+          id,
+          state: "available",
+          pullRequest: summary(),
+        })
+        projection.value = Object.assign({}, value, {
+          origin: app.url,
+          sourceToken: TOKEN,
+          pullRequest: Object.assign({}, value.pullRequest, { controlToken: CONTROL }),
+        })
+        for (const request of [
+          HttpClientRequest.get(`${prPath(WORKSPACE, "projector")}?organizationID=${PROFILE}`),
+          HttpClientRequest.post(`${refreshPath(WORKSPACE, "projector")}?organizationID=${PROFILE}`),
+        ]) {
+          const response = yield* HttpClient.execute(request)
+          expect(response.status).toBe(200)
+          expect(yield* response.json).toEqual(value)
+        }
+        expect(projection.calls).toEqual([
+          { id, organizationID: PROFILE },
+          { id, organizationID: PROFILE },
+        ])
+
+        for (const result of [
+          { ...value, id: { ...id, workspaceID: OTHER_WORKSPACE } },
+          { ...value, id: { ...id, providerID: legacy.value.id } },
+          { ...value, pullRequest: null },
+          { ...value, state: "no_pr" as const },
+          { ...value, refresh: { status: "failed" as const, retryAt: null } },
+        ]) {
+          projection.value = result
+          for (const request of [
+            HttpClientRequest.get(prPath(WORKSPACE, "projector")),
+            HttpClientRequest.post(refreshPath(WORKSPACE, "projector")),
+          ]) {
+            const response = yield* HttpClient.execute(request)
+            expect(response.status).toBe(200)
+            expect(yield* response.json).toEqual({ id, state: "unavailable", pullRequest: null })
+          }
+        }
+      }),
+  )
+
+  itProjection.live("does not invalidate attachments when an optional provider reports not_found", () =>
+    Effect.gen(function* () {
+      const entry = Attachments.store.mint({
+        provider: projector.value,
+        session: hosted("projector", SESSION),
+        workspace: Schema.decodeUnknownSync(HostedWorkspaceID)({ providerID: "projector", workspaceID: WORKSPACE }),
+        expiresAt: Date.now() + 60_000,
+      })
+      projection.failure = new HostedFailure({ code: "not_found", message: `private ${TOKEN}`, retryable: false })
+      for (const request of [
+        HttpClientRequest.get(prPath(WORKSPACE, "projector")),
+        HttpClientRequest.post(refreshPath(WORKSPACE, "projector")),
+      ]) {
+        const response = yield* HttpClient.execute(request)
+        expect(response.status).toBe(200)
+        expect(yield* response.json).toEqual({
+          id: { providerID: "projector", workspaceID: WORKSPACE },
+          state: "unavailable",
+          pullRequest: null,
+        })
+        expect(Attachments.store.lookup(entry.id).kind).toBe("found")
+      }
+    }),
+  )
+
+  it.live("validates PR route params and organization query before making provider requests", () =>
+    Effect.gen(function* () {
+      const before = app.calls.length
+      for (const path of [prPath(), refreshPath()]) {
+        for (const target of [
+          path.replace("kilo-cloud", "INVALID"),
+          path.replace(WORKSPACE, "invalid%20workspace"),
+          `${path}?organizationID=`,
+        ]) {
+          const response = yield* HttpClient.execute(
+            path === prPath() ? HttpClientRequest.get(target) : HttpClientRequest.post(target),
+          )
+          expect(response.status).toBe(400)
+        }
+        const response = yield* HttpClient.execute(
+          path === prPath()
+            ? HttpClientRequest.get(path.replace("kilo-cloud", "missing"))
+            : HttpClientRequest.post(path.replace("kilo-cloud", "missing")),
+        )
+        expect(response.status).toBe(503)
+      }
+      expect(app.calls).toHaveLength(before)
+    }),
+  )
+
   it.live("lists authorized workspace profiles with their default flags and no secret inputs", () =>
     Effect.gen(function* () {
       const response = yield* HttpClient.get(`${SessionHostPaths.workspaceProfiles}?organizationID=${PROFILE}`)
@@ -992,8 +1636,9 @@ describe("session host HttpApi", () => {
 
   it.live("sets and clears the personal default workspace profile", () =>
     Effect.gen(function* () {
+      const before = app.calls.length
       const set = yield* HttpClientRequest.post(SessionHostPaths.workspaceProfilePersonalDefault).pipe(
-        HttpClientRequest.bodyJson({ id: PROFILE }),
+        HttpClientRequest.bodyJson({ id: PROFILE, organizationID: PROFILE }),
         Effect.flatMap(HttpClient.execute),
       )
       expect(set.status).toBe(200)
@@ -1001,16 +1646,21 @@ describe("session host HttpApi", () => {
 
       const cleared = yield* HttpClient.execute(
         HttpClientRequest.delete(
-          SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE),
+          `${SessionHostPaths.workspaceProfilePersonalDefaultDetail.replace(":profileID", PROFILE)}?organizationID=${PROFILE}`,
         ),
       )
       expect(cleared.status).toBe(200)
       expect(yield* cleared.json).toEqual({ success: true })
 
-      expect(app.calls.at(-2)?.path).toBe("/trpc/setHostedWorkspacePersonalDefaultProfile")
-      expect(app.calls.at(-2)?.body).toBe(JSON.stringify({ profileId: PROFILE }))
-      expect(app.calls.at(-1)?.path).toBe("/trpc/clearHostedWorkspacePersonalDefaultProfile")
-      expect(app.calls.at(-1)?.body).toBe(JSON.stringify({ profileId: PROFILE }))
+      const calls = app.calls.slice(before)
+      const issued = calls.find((call) => call.path === "/api/cloud-agent-next/token")
+      expect(parse(issued?.body ?? "{}")).toEqual({ organizationId: PROFILE })
+      const assigned = calls.find((call) => call.path === "/trpc/setHostedWorkspacePersonalDefaultProfile")
+      expect(assigned?.org).toBe(PROFILE)
+      expect(assigned?.body).toBe(JSON.stringify({ profileId: PROFILE }))
+      const removed = calls.find((call) => call.path === "/trpc/clearHostedWorkspacePersonalDefaultProfile")
+      expect(removed?.org).toBe(PROFILE)
+      expect(removed?.body).toBe(JSON.stringify({ profileId: PROFILE }))
     }),
   )
 
@@ -1232,7 +1882,10 @@ describe("session host HttpApi", () => {
           const typed = createKiloClient({
             baseUrl: "http://handler.invalid",
             fetch: (async () =>
-              new Response(text, { status, headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
+              new Response(text, {
+                status,
+                headers: { "content-type": "application/json" },
+              })) as unknown as typeof fetch,
           })
           const { error } = yield* Effect.promise(() =>
             typed.sessionHost.continueWorkspace(body, { throwOnError: false }),
