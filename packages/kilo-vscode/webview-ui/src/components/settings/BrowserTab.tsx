@@ -300,10 +300,7 @@ const BrowserTools: Component = () => {
       <div>
         <Header title={language.t("settings.browser.status.title")} />
         <Card>
-          <SettingsRow
-            title={language.t("settings.browser.status.playwright")}
-            description={disconnected() ? language.t("settings.browser.status.extension.hint") : undefined}
-          >
+          <SettingsRow title={language.t("settings.browser.status.playwright")}>
             <Show
               when={!browser.status()?.playwright.ready}
               fallback={
@@ -331,7 +328,11 @@ const BrowserTools: Component = () => {
               </div>
             </Show>
           </SettingsRow>
-          <SettingsRow title={language.t("settings.browser.status.extension")} last>
+          <SettingsRow
+            title={language.t("settings.browser.status.extension")}
+            description={disconnected() ? language.t("settings.browser.status.extension.hint") : undefined}
+            last
+          >
             <span
               style={{
                 color: browser.status()?.extension.connected
