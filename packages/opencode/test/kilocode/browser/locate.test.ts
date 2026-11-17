@@ -20,7 +20,13 @@ describe("browser location", () => {
   })
 
   test("uses the Playwright Chromium of the bundled playwright-core last", () => {
-    expect(locate({ ...base, exists: exists(["/opt/ms-playwright/chromium-1200/chrome-linux/chrome"]), chromium: "/opt/ms-playwright/chromium-1200/chrome-linux/chrome" })).toEqual({
+    expect(
+      locate({
+        ...base,
+        exists: exists(["/opt/ms-playwright/chromium-1200/chrome-linux/chrome"]),
+        chromium: "/opt/ms-playwright/chromium-1200/chrome-linux/chrome",
+      }),
+    ).toEqual({
       executablePath: "/opt/ms-playwright/chromium-1200/chrome-linux/chrome",
     })
   })
@@ -43,7 +49,9 @@ describe("browser location", () => {
   })
 
   test("finds Chrome on Linux", () => {
-    expect(locate({ platform: "linux", home: "/home/kilo", env: {}, exists: exists(["/usr/bin/google-chrome"]) })).toEqual({
+    expect(
+      locate({ platform: "linux", home: "/home/kilo", env: {}, exists: exists(["/usr/bin/google-chrome"]) }),
+    ).toEqual({
       channel: "chrome",
     })
   })
