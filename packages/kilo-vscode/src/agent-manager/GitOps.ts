@@ -418,24 +418,30 @@ export class GitOps {
    * merge-base with `baseBranch`. Optionally scoped to `selectedFiles`.
    */
   async buildWorktreePatch(sourcePath: string, baseBranch: string, selectedFiles?: string[]): Promise<string> {
-    const tmp = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-apply-"))
-    const index = nodePath.join(tmp, "index")
-    const env = { ...process.env, GIT_INDEX_FILE: index }
-    const files = (selectedFiles ?? [])
-      .map((file) => file.trim())
+    const files = selectedFiles
+      ?.map((file) => file.trim())
       .filter((file) => file.length > 0 && !nodePath.isAbsolute(file) && !file.split(/[\\/]/).includes(".."))
-    const pathspec = files.length > 0 ? files : ["."]
+    if (files?.length === 0) return ""
+
+    const tmp = await fs.mkdtemp(nodePath.join(os.tmpdir(), "kilo-apply-"))
+    const env = { ...process.env, GIT_INDEX_FILE: nodePath.join(tmp, "index") }
 
     try {
       const base = (await this.raw(["merge-base", "HEAD", baseBranch], sourcePath)).trim()
       const baseTree = (await this.raw(["rev-parse", `${base}^{tree}`], sourcePath)).trim()
 
-      const read = await this.exec(["read-tree", "HEAD"], sourcePath, { env })
+      // Unselected entries must match the base, even if HEAD has committed changes to them.
+      const read = await this.exec(["read-tree", files ? baseTree : "HEAD"], sourcePath, { env })
       if (read.code !== 0) {
         throw new Error(read.stderr.trim() || "Failed to initialize temporary index")
       }
 
-      const add = await this.exec(["add", "-A", "--", ...pathspec], sourcePath, { env })
+      // update-index takes literal file names, including tracked files that match an ignore rule.
+      const add = await this.exec(
+        files ? ["update-index", "--add", "--remove", "--", ...files] : ["add", "-A", "--", "."],
+        sourcePath,
+        { env },
+      )
       if (add.code !== 0) {
         throw new Error(add.stderr.trim() || "Failed to stage worktree snapshot")
       }
