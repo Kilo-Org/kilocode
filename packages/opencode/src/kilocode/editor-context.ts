@@ -7,6 +7,7 @@ export const EditorContext = Schema.Struct({
   openTabs: Schema.optional(Schema.Array(Schema.String)),
   activeFile: Schema.optional(Schema.String),
   shell: Schema.optional(Schema.String),
+  timezone: Schema.optional(Schema.String),
 })
 export type EditorContext = Types.DeepMutable<Schema.Schema.Type<typeof EditorContext>>
 
@@ -36,8 +37,45 @@ function timestamp(now: Date): string {
   return now.toISOString().replace(/\.\d+Z$/, "Z")
 }
 
-export function environmentDetails(ctx?: EditorContext, now = new Date()): string {
+export function hostTimezone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function localTime(now: Date, zone?: string): string | undefined {
+  try {
+    // The CLI host timezone also governs offset-less scheduled wakeups. A remote
+    // CLI host may use a different timezone from its VS Code client.
+    const tz = zone ?? hostTimezone()
+    if (!tz) return undefined
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZoneName: "longOffset",
+    }).formatToParts(now)
+    const part = (type: string) => parts.find((item) => item.type === type)?.value
+    const date = [part("year"), part("month"), part("day")]
+    const time = [part("hour"), part("minute")]
+    const offset = part("timeZoneName")?.replace(/^GMT/, "UTC")
+    if (date.some((value) => !value) || time.some((value) => !value) || !offset) return undefined
+    return `${date.join("-")} ${time.join(":")} (${tz}, ${offset === "UTC" ? "UTC+00:00" : offset})`
+  } catch {
+    return undefined
+  }
+}
+
+export function environmentDetails(ctx?: EditorContext, now = new Date(), zone?: string): string {
   const lines: string[] = [`Message time: ${timestamp(now)}`]
+  const local = localTime(now, zone)
+  if (local) lines.push(`Local time: ${local}`)
   if (ctx?.directory) {
     lines.push(`Working directory: ${ctx.directory}`)
   }

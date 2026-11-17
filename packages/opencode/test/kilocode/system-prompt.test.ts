@@ -193,6 +193,23 @@ describe("environmentDetails", () => {
 
     expect(result).toContain("Message time: 2026-08-24T12:34:56Z")
   })
+
+  test("formats local time and offset from each message timestamp across daylight saving", () => {
+    const winter = environmentDetails({}, new Date("2026-01-15T12:34:00Z"), "America/New_York")
+    const summer = environmentDetails({}, new Date("2026-07-15T12:34:00Z"), "America/New_York")
+
+    expect(winter).toContain("Local time: 2026-01-15 07:34 (America/New_York, UTC-05:00)")
+    expect(summer).toContain("Local time: 2026-07-15 08:34 (America/New_York, UTC-04:00)")
+    expect(winter).toContain("Message time: 2026-01-15T12:34:00Z")
+    expect(summer).toContain("Message time: 2026-07-15T12:34:00Z")
+  })
+
+  test("keeps the UTC timestamp if the host timezone is unavailable", () => {
+    const result = environmentDetails({}, new Date("2026-01-15T12:34:00Z"), "Invalid/Zone")
+
+    expect(result).toContain("Message time: 2026-01-15T12:34:00Z")
+    expect(result).not.toContain("Local time:")
+  })
 })
 
 describe("KiloSessionPrompt.injectEditorContext", () => {
