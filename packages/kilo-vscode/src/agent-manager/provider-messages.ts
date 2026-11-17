@@ -53,7 +53,7 @@ export interface MessageHost {
   pushState: (ctx?: ProjectContext) => void
   waitForStateReady: (where: string) => Promise<void>
   openPanel: (preserveFocus?: boolean) => void
-  onCreateWorktree: (baseBranch?: string, branchName?: string) => Promise<null>
+  onCreateWorktree: (baseBranch?: string, branchName?: string, requestId?: string) => Promise<null>
   onDeleteWorktree: (worktreeId: string) => Promise<null>
   onRemoveStaleWorktree: (worktreeId: string, keepSessions: boolean) => Promise<null>
   recover: (message: RecoveryMessage) => Promise<null>
@@ -122,7 +122,7 @@ async function shouldWaitForState(m: AgentManagerInMessage, ctx: ProjectContext,
 
 async function handleWorktree(m: AgentManagerInMessage, ctx: ProjectContext, host: MessageHost): Promise<boolean> {
   if (m.type === "agentManager.createWorktree") {
-    await host.onCreateWorktree(m.baseBranch, m.branchName)
+    await host.onCreateWorktree(m.baseBranch, m.branchName, m.requestId)
     return true
   }
   if (m.type === "agentManager.deleteWorktree") {

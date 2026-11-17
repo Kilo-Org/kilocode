@@ -793,10 +793,10 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return true
   }
 
-  public async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
+  public async onCreateWorktree(baseBranch?: string, branchName?: string, requestId?: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
-    await createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName })
+    await createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName, requestId })
     return null
   }
 
@@ -1176,8 +1176,8 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return continueInActiveProject(this.api(), sessionId, progress)
   }
 
-  public createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
-    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName))
+  public createFromSidebar(baseBranch?: string, branchName?: string, requestId?: string): Promise<void> {
+    return this.inWorkspaceProject(() => createFromSidebar(this.api(), baseBranch, branchName, requestId))
   }
 
   public openAdvancedWorktree(): Promise<void> {

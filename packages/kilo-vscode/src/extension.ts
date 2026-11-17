@@ -251,8 +251,8 @@ export function activate(context: ExtensionContext) {
     gitStats: (onStats) => gitChanges({ directory, onStats }),
     worktree: {
       continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
-      create: (baseBranch, branchName) =>
-        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
+      create: (baseBranch, branchName, requestId) =>
+        agentManagerRef?.createFromSidebar(baseBranch, branchName, requestId) ?? Promise.resolve(),
       advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
       branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
     },

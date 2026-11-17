@@ -80,6 +80,7 @@ import {
   applySetupMessage,
   clearFailedDelete,
 } from "./app-messages"
+import { createQuickCreate } from "./quick-create"
 import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
@@ -1865,11 +1866,18 @@ const AgentManagerContent: Component = () => {
     dialog.show(() => <ShortcutsDialog title={t("agentManager.shortcuts.title")} categories={categories} />)
   }
   const loaded = () => worktreesLoaded() && sessionsLoaded()
-  const handleCreateWorktree = () => {
-    if (!loaded()) return
-    expandSidebar()
-    to({ type: "agentManager.createWorktree" })
+  const openBlocked = (projectId: string) => {
+    setSetup({ active: false, message: "" })
+    showNewWorktreeDialog(projectId)
   }
+  // A quick create reports a blocker on the setup message; its request ID keeps that answer tied to this create.
+  const quickCreate = createQuickCreate({ post: to, blocked: openBlocked })
+  const createWorktreeNow = (baseBranch?: string, projectId = activeProjectId()) => {
+    if (!loaded() || !projectId) return
+    expandSidebar()
+    quickCreate.start(projectId, baseBranch)
+  }
+  const handleCreateWorktree = () => createWorktreeNow()
   const showNewWorktreeDialog = (projectId = activeProjectId()) => {
     if (!loaded()) return
     expandSidebar()
@@ -1914,11 +1922,7 @@ const AgentManagerContent: Component = () => {
         hasMessages={hasMessages}
         branch={isGitRepo() ? transfer.branch() : undefined}
         onNewWorktree={handleCreateWorktree}
-        onNewWorktreeFromBranch={(branch) => {
-          if (!loaded()) return
-          expandSidebar()
-          to({ type: "agentManager.createWorktree", baseBranch: branch })
-        }}
+        onNewWorktreeFromBranch={(branch) => createWorktreeNow(branch)}
         onConfigureWorktree={() => showNewWorktreeDialog()}
         onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
         moving={transfer.transferring()}
@@ -2078,6 +2082,8 @@ const AgentManagerContent: Component = () => {
           setup,
           setSetup,
           creation,
+          quick: quickCreate.quick(),
+          openBlocked,
           ensure: (pid) => registry.ensure(pid),
           active: () => registry.active(),
           currentProjectId,
@@ -2327,7 +2333,7 @@ const AgentManagerContent: Component = () => {
         currentSessionID={() => sessions.currentSessionID()}
         mode={mode}
         defaultBase={defaultBase}
-        onCreate={creation.schedule}
+        onCreate={(projectId) => createWorktreeNow(undefined, projectId)}
         onSelect={activateSelection}
         onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
         onOpenPR={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}

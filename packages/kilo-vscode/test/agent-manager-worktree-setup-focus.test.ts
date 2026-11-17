@@ -62,6 +62,106 @@ describe("worktree setup selection", () => {
     expect(test.calls).toEqual(["save:local", "session:ses_1", "select:wt-1", "focus"])
   })
 
+  it("opens the dialog only for the quick create that reported the blocker", () => {
+    const other = scene("local")
+    const blocked: string[] = []
+    const done: string[] = []
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "no commits",
+        errorCode: "no_commits",
+        requestId: "other",
+      },
+      {
+        ...other.deps,
+        quick: { requestId: "q-1", project: "p", blocked: (id) => blocked.push(id), done: () => done.push("done") },
+      },
+    )
+    expect(blocked).toEqual([])
+
+    const mine = scene("local")
+    const opened: string[] = []
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "no commits",
+        errorCode: "no_commits",
+        requestId: "q-1",
+      },
+      {
+        ...mine.deps,
+        quick: { requestId: "q-1", project: "p", blocked: (id) => opened.push(id), done: () => done.push("done") },
+      },
+    )
+
+    expect(opened).toEqual(["p"])
+    expect(done).toEqual([])
+    expect(mine.deps.setup().active).toBe(false)
+  })
+
+  it("opens the dialog for a foreign blocker while its own quick create is in flight", () => {
+    const test = scene("local")
+    const opened: string[] = []
+    const done: string[] = []
+    const quick = { requestId: "q-1", project: "p", blocked: () => {}, done: () => done.push("done") }
+
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "not a repository",
+        errorCode: "not_git_repo",
+        requestId: "q-2",
+      },
+      { ...test.deps, quick, openBlocked: (id) => opened.push(id) },
+    )
+
+    expect(opened).toEqual(["p"])
+    expect(done).toEqual([])
+
+    applySetupMessage(
+      { type: "agentManager.worktreeSetup", status: "ready", message: "", worktreeId: "wt-1" },
+      { ...test.deps, quick, openBlocked: (id) => opened.push(id) },
+    )
+
+    expect(done).toEqual(["done"])
+  })
+
+  it("opens the dialog for a blocked quick create from another webview", () => {
+    const test = scene("local")
+    const opened: string[] = []
+
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "not a repository",
+        errorCode: "not_git_repo",
+        requestId: "q-2",
+      },
+      { ...test.deps, openBlocked: (id) => opened.push(id) },
+    )
+
+    expect(opened).toEqual(["p"])
+    expect(test.deps.setup().active).toBe(false)
+  })
+
+  it("clears the quick create marker when the setup finishes normally", () => {
+    const test = scene("local")
+    const done: string[] = []
+    const quick = { requestId: "q-1", project: "p", blocked: () => {}, done: () => done.push("done") }
+
+    applySetupMessage(
+      { type: "agentManager.worktreeSetup", status: "ready", message: "", worktreeId: "wt-1", sessionId: "ses_1" },
+      { ...test.deps, quick },
+    )
+
+    expect(done).toEqual(["done"])
+  })
+
   it("does not overwrite the memory of the new worktree on a later ready message", () => {
     const test = scene("wt-1")
 
