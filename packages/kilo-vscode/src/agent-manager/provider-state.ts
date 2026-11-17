@@ -19,12 +19,14 @@ import {
   pushProjectSessions,
   reactivateProject,
   registerSessionCatalogHost,
+  repairSessionFilings,
   type SessionCatalogHost,
 } from "./project/init"
 import { hydrateExpanded } from "./project/hydrate"
 import { getReviewMarkdownRender } from "./provider-messages"
 import { readTerminalFont } from "./terminal-font"
 import { isRestrictedRoot } from "./home-workspace"
+import { fileMovedSession } from "./session-move"
 
 export interface ProviderStateHost {
   readonly contexts: ProjectContexts
@@ -160,10 +162,38 @@ function sessionCatalog(p: ProviderStateHost): SessionCatalogHost {
     contextForDirectory: (directory) => p.contexts.byDirectory(directory),
     contextForSession: (sessionID) => p.contexts.byLiveSession(sessionID),
     list: async (directory) => (await (await p.client()).session.list({ directory, parentID: null })).data,
+    listAll: async (directory) =>
+      (await (await p.client()).session.list({ directory, parentID: null, limit: Number.MAX_SAFE_INTEGER })).data,
     get: async (sessionID) => (await p.client()).session.get({ sessionID }),
+    moved: (sessionID, directory) => {
+      const ctx = p.contexts.byDirectory(directory) ?? p.contexts.byLiveSession(sessionID)
+      const state = ctx?.peekState()
+      if (!ctx || !state) return
+      // A tracked session follows the directory that now runs it. A session outside every tracked directory has no
+      // tab strip to land in.
+      if (fileMovedSession(state, sessionID, directory, ctx.root)) pushState(p, ctx)
+    },
     post: (message) => p.postToWebview(message),
     log: (...args) => p.log(...args),
   }
+}
+
+/** Contexts whose filings were repaired from the server in this window. A reload creates a new context. */
+const repairedFilings = new WeakSet<ProjectContext>()
+
+/**
+ * Run the full filing repair once per context. The sidebar catalog keeps its newest-session window, so a full
+ * listing on every push would scan and post the entire history each time. Moves that land later are handled by the
+ * `session.moved` event; this catches filings an older build left stale at startup.
+ */
+function repairFilingsOnce(p: ProviderStateHost, ctx: ProjectContext, catalog: SessionCatalogHost): void {
+  if (repairedFilings.has(ctx)) return
+  repairedFilings.add(ctx)
+  void repairSessionFilings(ctx, catalog.listAll, (...args) => p.log(...args))
+    .then((changed) => {
+      if (changed) pushState(p, ctx)
+    })
+    .catch((err: unknown) => p.log("Agent Manager: repairing session filings failed:", err))
 }
 
 export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
@@ -201,6 +231,7 @@ export function pushState(p: ProviderStateHost, ctx?: ProjectContext): void {
   void p.activity.sync()
   const catalog = sessionCatalog(p)
   registerSessionCatalogHost(p.busySessions, catalog)
+  repairFilingsOnce(p, target, catalog)
   void pushProjectSessions(
     target,
     catalog.list,

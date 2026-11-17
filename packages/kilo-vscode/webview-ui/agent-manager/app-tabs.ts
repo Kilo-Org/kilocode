@@ -23,7 +23,7 @@ export function createLocalTabPlacement(opts: {
   setSelection: (id: string) => void
   setReviewActive: (open: boolean) => void
   focus: () => void
-  closed: () => Set<string>
+  resume: (id: string) => void
 }) {
   const addPending = () => {
     const id = `${PENDING_PREFIX}${crypto.randomUUID()}`
@@ -37,7 +37,7 @@ export function createLocalTabPlacement(opts: {
   }
 
   const place = (id: string, pending: string | undefined, active: string | undefined) => {
-    opts.closed().delete(id)
+    opts.resume(id)
     const existing = opts.ids().includes(id)
     const next = pending
       ? replacePendingTab({ ids: opts.ids(), active }, pending, id)
@@ -117,32 +117,33 @@ export function closeSessionTab(opts: {
   selectSession: (id: string) => void
   forgetFocus: (id: string) => void
   local: Set<string>
-  closed: Set<string>
+  dismiss: (id: string) => void
   removeLocal: (id: string) => void
   postClose: (id: string) => void
   restoreFocus: () => void
 }) {
   const pending = opts.isPending(opts.sessionId)
-  if (opts.isActive) {
-    const next = opts.next
-    if (next && opts.isPending(next)) {
-      opts.setActivePending(next)
-      opts.clearSession()
+  batch(() => {
+    // Remember the close before clearing the shown session: a state push that still lists the tab must not restore it.
+    if (!pending) opts.dismiss(opts.sessionId)
+    if (opts.isActive) {
+      const next = opts.next
+      if (next && opts.isPending(next)) {
+        opts.setActivePending(next)
+        opts.clearSession()
+      }
+      if (next && !opts.isPending(next)) {
+        opts.setActivePending(undefined)
+        opts.selectSession(next)
+      }
+      if (!next) {
+        opts.setActivePending(undefined)
+        opts.clearSession()
+      }
     }
-    if (next && !opts.isPending(next)) {
-      opts.setActivePending(undefined)
-      opts.selectSession(next)
-    }
-    if (!next) {
-      opts.setActivePending(undefined)
-      opts.clearSession()
-    }
-  }
-  opts.forgetFocus(opts.sessionId)
-  if (pending || opts.local.has(opts.sessionId)) {
-    if (!pending) opts.closed.add(opts.sessionId)
-    opts.removeLocal(opts.sessionId)
-  }
+    opts.forgetFocus(opts.sessionId)
+    if (pending || opts.local.has(opts.sessionId)) opts.removeLocal(opts.sessionId)
+  })
   if (opts.notify !== false) opts.postClose(opts.sessionId)
   opts.restoreFocus()
 }

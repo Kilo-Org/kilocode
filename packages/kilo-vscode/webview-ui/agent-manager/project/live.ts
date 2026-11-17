@@ -26,6 +26,8 @@ export interface ProjectLiveDeps {
     setLocalStats: (stats: LocalGitStats) => void
     setPrStatuses: (update: (prev: Record<string, PRStatus | null>) => Record<string, PRStatus | null>) => void
   }
+  /** The catalog of a project arrived, so a restore waiting for a session directory can finish. */
+  onSessions?: (projectId: string) => void
 }
 
 export function createProjectLive(deps: ProjectLiveDeps) {
@@ -59,6 +61,7 @@ export function createProjectLive(deps: ProjectLiveDeps) {
     }
     if (msg.type === "agentManager.projectSessions") {
       setSessions((prev) => ({ ...prev, [msg.projectId]: msg.sessions }))
+      deps.onSessions?.(msg.projectId)
       return true
     }
     return false

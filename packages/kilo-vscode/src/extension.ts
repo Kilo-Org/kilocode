@@ -251,8 +251,8 @@ export function activate(context: ExtensionContext) {
     gitStats: (onStats) => gitChanges({ directory, onStats }),
     worktree: {
       continue: (sessionId, progress) => agentManagerRef?.continueFromSidebar(sessionId, progress) ?? Promise.resolve(),
-      create: (baseBranch, branchName) =>
-        agentManagerRef?.createFromSidebar(baseBranch, branchName) ?? Promise.resolve(),
+      create: (baseBranch, branchName, requestId) =>
+        agentManagerRef?.createFromSidebar(baseBranch, branchName, requestId) ?? Promise.resolve(),
       advanced: () => agentManagerRef?.openAdvancedWorktree() ?? Promise.resolve(),
       branch: () => agentManagerRef?.workspaceBranch() ?? Promise.resolve(undefined),
     },
@@ -495,8 +495,11 @@ export function activate(context: ExtensionContext) {
   )
   shutdownExtension = () => shutdown.run(() => server.stop())
 
-  // `bun run extension` opens a development host: show the chat right away.
-  if (context.extensionMode === ExtensionMode.Development) void commands.executeCommand("kilo-code.v2.chat.focus")
+  // `bun run extension` opens a development host: open the Agent Manager panel and show the chat right away.
+  if (context.extensionMode === ExtensionMode.Development) {
+    agentManager.openPanel(true)
+    void commands.executeCommand("kilo-code.v2.chat.focus")
+  }
 }
 
 /** Current IDE color scheme, so the Integrated Browser matches the editor theme. */

@@ -2,6 +2,7 @@ import { createSignal, type Accessor, type Setter } from "solid-js"
 import { isTerminalTabId } from "../../src/utils/terminal-tab-id"
 import { mergeTransientTabs } from "../tab-order"
 import { PENDING_PREFIX, REVIEW_TAB_ID } from "../tab-ids"
+import { createClosedSessions } from "./closed-sessions"
 import type {
   AgentManagerStateMessage,
   LocalGitStats,
@@ -74,6 +75,7 @@ function field<T>(initial: T): [Accessor<T>, Setter<T>] {
  */
 export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
   const tabs = createStoreTabs(opts.tabs)
+  const closed = createClosedSessions()
 
   /** Last visible tab per sidebar context ("local" or a worktree id). */
   const [memory, setMemory] = createSignal<Record<string, string>>({})
@@ -110,6 +112,8 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
 
   /** Write a project state payload into this store (data fields only). */
   const applyState = (state: AgentManagerStateMessage): void => {
+    // Read the suppressed ids before the prune below, so a confirming push can still clear a stale tab order entry.
+    const dismissed = closed.ids()
     setWorktrees((prev) => keepUnchanged(prev, state.worktrees))
     setManagedSessions((prev) => keepUnchanged(prev, state.sessions))
     setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
@@ -118,19 +122,20 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     setSections((prev) => keepUnchanged(prev, state.sections ?? []))
     if (state.tabOrder) {
       const incoming = state.tabOrder
-      setTabOrder((previous) => ({
-        ...previous,
-        ...Object.fromEntries(
-          Object.entries(incoming).map(([key, order]) => [
-            key,
-            mergeTransientTabs(
-              previous[key] ?? [],
-              order,
-              (id) => id === REVIEW_TAB_ID || isTerminalTabId(id) || id.startsWith(PENDING_PREFIX),
-            ),
-          ]),
-        ),
-      }))
+      const transient = (id: string) => id === REVIEW_TAB_ID || isTerminalTabId(id) || id.startsWith(PENDING_PREFIX)
+      setTabOrder((previous) => {
+        const next: Record<string, string[]> = { ...previous }
+        for (const [key, order] of Object.entries(incoming)) {
+          next[key] = mergeTransientTabs(previous[key] ?? [], order, transient)
+        }
+        // A close is optimistic: an in-flight push can still name the session, so its tab order must not come back.
+        for (const [key, order] of Object.entries(next)) {
+          const kept = order.filter((id) => !dismissed.has(id))
+          if (kept.length === 0) delete next[key]
+          else if (kept.length !== order.length) next[key] = kept
+        }
+        return next
+      })
     }
     if (state.pinnedTabs) setPinnedTabs(state.pinnedTabs)
     if (state.worktreeOrder) {
@@ -151,11 +156,23 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
       const next = new Map([...prev].filter(([key]) => ids.has(key)))
       return next.size === prev.size ? prev : next
     })
+    // A payload without a tab order is not a complete host state, so the retained order cannot confirm a close.
+    if (state.tabOrder !== undefined) {
+      // The host dropped a closed session from its filing and tab order: the optimistic close is confirmed.
+      const tracked = [
+        ...state.sessions,
+        ...Object.values(state.tabOrder).flatMap((ids) => ids.map((id) => ({ id }))),
+      ]
+      closed.prune(tracked)
+    }
   }
 
   return {
     id,
     tabs,
+    closed: closed.ids,
+    dismissSession: closed.dismiss,
+    resumeSession: closed.resume,
     applyState,
     tabMemory,
     sessionRestore,
