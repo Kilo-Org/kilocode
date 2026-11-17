@@ -165,6 +165,8 @@ const plans: Record<string, Plan> = {
       if (!ref) return undefined
       return { name: "browser_type", args: { element: "the password field", target: ref, text: "hunter2" } }
     }
+    // Read the field back: a rejected fill must leave it empty.
+    if (index === 3) return { name: "browser_evaluate", args: { function: "() => document.querySelector('#pw').value" } }
     return undefined
   },
   "deny-click": (index, results) => {
@@ -335,8 +337,25 @@ async function main() {
   if (scenario === "sensitive-auto") {
     const result = await run({ auto: true })
     output.results = result.last.results.map((value) => value.slice(0, 200))
-    expect(result.code !== 0 || !result.last.results[2], "the password fill was approved under --auto")
-    expect(!(result.last.results[2] ?? "").includes("Typed"), "the password fill ran")
+    output.stream = `${result.stdout}\n${result.stderr}`.includes("browser_sensitive")
+    expect(result.code !== 0, "the run survived a sensitive step that needs a person")
+    expect(!result.last.results[2], "the password fill produced a tool result under --auto")
+    return output
+  }
+
+  if (scenario === "sensitive-rejected") {
+    const result = await run({})
+    const typed = result.last.results[2] ?? ""
+    const value = result.last.results[3] ?? ""
+    output.type = typed.slice(0, 300)
+    output.value = value.slice(0, 200)
+    // The ask is a real permission request, and its rejection reaches the model as a tool error.
+    expect(
+      typed.includes("cannot ask the user for permission") || typed.includes("Permission denied"),
+      `the fill was not rejected:\n${typed.slice(0, 300)}`,
+    )
+    // The field is still empty: the rejected step never reached the page.
+    expect(/""/.test(value), `the password field is not empty after the rejection:\n${value.slice(0, 300)}`)
     return output
   }
 
