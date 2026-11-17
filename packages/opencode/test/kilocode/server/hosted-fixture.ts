@@ -10,7 +10,13 @@ import { Effect, Schema } from "effect"
 
 export function provider(
   id: string,
-  options: { attach?: Provider["attach"]; membership?: Provider["membership"]; route?: Provider["route"] } = {},
+  options: {
+    attach?: Provider["attach"]
+    membership?: Provider["membership"]
+    route?: Provider["route"]
+    getWorkspacePullRequest?: Provider["getWorkspacePullRequest"]
+    refreshWorkspacePullRequest?: Provider["refreshWorkspacePullRequest"]
+  } = {},
 ) {
   const calls: NativeRequest[] = []
   const value: Provider = {
@@ -36,6 +42,10 @@ export function provider(
     getWorkspace: () => Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
     getWorkspaceStatus: () =>
       Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
+    ...(options.getWorkspacePullRequest ? { getWorkspacePullRequest: options.getWorkspacePullRequest } : {}),
+    ...(options.refreshWorkspacePullRequest
+      ? { refreshWorkspacePullRequest: options.refreshWorkspacePullRequest }
+      : {}),
     getWorkspaceChanges: (input) =>
       Effect.succeed({
         id: input.id,

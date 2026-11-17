@@ -77,6 +77,23 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   const deletion = workspaceStatus?.deletion?.properties
   if (deletion?.startedAt) deletion.startedAt = nullable(deletion.startedAt)
 
+  const pr = spec.components?.schemas?.SessionHostWorkspacePullRequestSummary?.properties
+  for (const field of ["title", "headSha"] as const) {
+    if (pr?.[field]) pr[field] = nullable(pr[field])
+  }
+  const review = pr?.review?.properties
+  if (review?.decision) review.decision = nullable(review.decision)
+  const conversations = pr?.conversations?.properties
+  if (conversations?.unresolved) conversations.unresolved = nullable(conversations.unresolved)
+  const mergeability = pr?.mergeability?.properties
+  for (const field of ["mergeable", "state"] as const) {
+    if (mergeability?.[field]) mergeability[field] = nullable(mergeability[field])
+  }
+  const refresh = spec.components?.schemas?.SessionHostWorkspacePullRequestRefresh?.properties
+  if (refresh?.retryAt) refresh.retryAt = nullable(refresh.retryAt)
+  const result = spec.components?.schemas?.SessionHostWorkspacePullRequestResult?.properties
+  if (result?.pullRequest) result.pullRequest = nullable(result.pullRequest)
+
   const workspaceChanges = spec.components?.schemas?.SessionHostWorkspaceChanges?.properties
   for (const field of ["revision", "capturedAt", "comparisons"] as const) {
     const value = workspaceChanges?.[field]

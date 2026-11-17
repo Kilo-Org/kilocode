@@ -1,0 +1,133 @@
+# kilocode_change - new file
+name: v2 upstream release notify
+
+# Posts to Slack when upstream OpenCode has a v2 release that the `v2` branch
+# does not have yet, and again every 7 days while `v2` stays behind. Read-only:
+# it never opens a PR or starts a sync.
+#
+# It lives on `main` because GitHub runs scheduled workflows only from the
+# default branch. The answer comes from the sync tooling on `v2`
+# (`script/upstream/list-versions.ts --json`), so this file holds no release
+# logic of its own. `watch-opencode-releases.yml` cannot do this: it follows
+# upstream's "latest" release, which is the v1 line.
+#
+# Setup: repo secret `V2_SYNC_SLACK_WEBHOOK` (a Slack incoming webhook URL).
+# Without it the run reports what it found in the job summary and posts nothing.
+
+on:
+  schedule:
+    - cron: "47 */6 * * *" # every 6 hours, offset to avoid the top of the hour
+  workflow_dispatch:
+
+concurrency:
+  group: v2-upstream-release-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # The upstream repository, as owner/name.
+      UPSTREAM: anomalyco/opencode
+    steps:
+      # `main`, for the pinned Bun runtime.
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          install: false
+
+      # Commit history of `v2` and of upstream `dev` with its tags, without file
+      # contents. Only the sync tooling is checked out, outside the workspace so
+      # that no config file of `main` applies to it.
+      - name: Fetch v2 and upstream history
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          git clone --quiet --filter=blob:none --no-checkout --single-branch --branch v2 "https://github.com/$REPO.git" "$RUNNER_TEMP/v2"
+          cd "$RUNNER_TEMP/v2"
+          git sparse-checkout set --no-cone '/script/upstream/'
+          git checkout --quiet v2
+          git remote add upstream "https://github.com/$UPSTREAM.git"
+          git fetch --quiet --filter=blob:none upstream dev --tags --force
+
+      - id: status
+        name: Ask the sync tooling which releases v2 lacks
+        run: |
+          mkdir -p .cache && cd .cache
+          (cd "$RUNNER_TEMP/v2" && bun script/upstream/list-versions.ts --no-fetch --json) > status.json
+          if ! jq -e 'has("pending") and has("lag")' status.json > /dev/null 2>&1; then
+            echo "::error::script/upstream/list-versions.ts on v2 did not print the --json status"
+            exit 1
+          fi
+
+          newest=$(jq -r '.pending[0].tag // empty' status.json)
+          echo "newest=$newest" >> "$GITHUB_OUTPUT"
+          if [ -z "$newest" ]; then
+            echo "\`v2\` has the newest upstream release ($(jq -r '.merged.tag // "none"' status.json))." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # One post when a release appears, then one every 7 days while it is still pending.
+          released=$(jq -r '.pending[0].date' status.json)
+          age=$(( ($(date -u +%s) - $(date -u -d "$released" +%s)) / 86400 ))
+          week=$(( age / 7 ))
+          echo "key=v2-sync-$newest-w$week" >> "$GITHUB_OUTPUT"
+
+          # The payload is built by jq from the tooling's JSON, never spliced into a script or YAML.
+          jq --argjson age "$age" --argjson week "$week" --arg upstream "$UPSTREAM" '
+            (.pending | length) as $count
+            | .pending[0].tag as $newest
+            | "<https://github.com/\($upstream)/releases/tag/\($newest)|\($newest)>" as $link
+            | (if $count == 1 then "1 release" else "\($count) releases" end) as $behind
+            | (if $week > 0
+                then ":hourglass_flowing_sand: Reminder: `v2` is still \($behind) behind upstream OpenCode. The newest is \($link), released \($age) days ago."
+                else ":package: OpenCode \($link) is out. `v2` has \(.merged.tag // "no release") and is \($behind) behind."
+              end) as $lead
+            | {text: "\($lead) Next sync: `bun script/upstream/merge.ts --version \(.next.tag)`"}
+          ' status.json > slack-payload.json
+          jq -r '.text' slack-payload.json >> "$GITHUB_STEP_SUMMARY"
+
+      - if: steps.status.outputs.newest != ''
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/v2-sync-notified
+          key: ${{ steps.status.outputs.key }}
+
+      # The secret is read in a step of its own, so the tooling above never sees it.
+      - if: steps.status.outputs.newest != '' && steps.cache.outputs.cache-hit != 'true'
+        id: webhook
+        env:
+          WEBHOOK: ${{ secrets.V2_SYNC_SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$WEBHOOK" ]; then
+            echo "set=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::V2_SYNC_SLACK_WEBHOOK is not set, so nothing was posted"
+          fi
+
+      - if: steps.webhook.outputs.set == 'true'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.V2_SYNC_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload-file-path: .cache/slack-payload.json
+
+      - if: steps.webhook.outputs.set == 'true'
+        name: Mark as notified
+        run: mkdir -p .cache/v2-sync-notified && date -u > .cache/v2-sync-notified/marker
+
+      - if: success() && steps.webhook.outputs.set == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/v2-sync-notified
+          key: ${{ steps.status.outputs.key }}

@@ -5127,6 +5127,7 @@ export type SessionHostWorkspaceProfilePage = {
 
 export type SessionHostWorkspaceProfileDefaultInput = {
   id: string
+  organizationID?: SessionHostOrganizationId
 }
 
 export type SessionHostWorkspaceProfileDefaultResult = {
@@ -5200,6 +5201,63 @@ export type SessionHostWorkspaceStatus = {
     completedRuntimeLocationCount: number
     remainingRuntimeLocationCount: number
   }
+}
+
+export type SessionHostWorkspacePullRequestState =
+  | "available"
+  | "no_pr"
+  | "signed_out"
+  | "rejected"
+  | "unreachable"
+  | "rate_limited"
+  | "unavailable"
+  | "unsupported"
+
+export type SessionHostWorkspacePullRequestSummary = {
+  url: string
+  number: number
+  state: "open" | "draft" | "merged" | "closed" | "unknown"
+  title: string | null
+  headSha: string | null
+  lastSyncedAt: string
+  review: {
+    decision: "none" | "review_required" | "approved" | "changes_requested" | null
+    available: boolean
+    pending: boolean
+  }
+  checks: {
+    total: number
+    passed: number
+    failed: number
+    pending: number
+    skipped: number
+    unknown: number
+    complete: boolean
+    available: boolean
+  }
+  conversations: {
+    unresolved: number | null
+    complete: boolean
+  }
+  mergeability: {
+    mergeable: boolean | null
+    state: string | null
+    complete: boolean
+  }
+  partial: boolean
+  unavailable: Array<"checks" | "statuses" | "reviews">
+}
+
+export type SessionHostWorkspacePullRequestRefresh = {
+  status: "refreshed" | "no_pr" | "no_integration" | "rate_limited" | "throttled" | "unavailable" | "failed"
+  retryAt: string | null
+}
+
+export type SessionHostWorkspacePullRequestResult = {
+  id: SessionHostWorkspaceIdentity
+  state: SessionHostWorkspacePullRequestState
+  pullRequest: SessionHostWorkspacePullRequestSummary | null
+  refresh?: SessionHostWorkspacePullRequestRefresh
 }
 
 export type SessionHostWorkspaceChangeRepository = {
@@ -19769,7 +19827,9 @@ export type SessionHostClearWorkspacePersonalDefaultProfileData = {
   path: {
     profileID: string
   }
-  query?: never
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
   url: "/kilocode/session-host/workspace/profiles/personal-default/{profileID}"
 }
 
@@ -19967,6 +20027,110 @@ export type SessionHostGetWorkspaceStatusResponses = {
 
 export type SessionHostGetWorkspaceStatusResponse =
   SessionHostGetWorkspaceStatusResponses[keyof SessionHostGetWorkspaceStatusResponses]
+
+export type SessionHostGetWorkspacePullRequestData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request"
+}
+
+export type SessionHostGetWorkspacePullRequestErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetWorkspacePullRequestError =
+  SessionHostGetWorkspacePullRequestErrors[keyof SessionHostGetWorkspacePullRequestErrors]
+
+export type SessionHostGetWorkspacePullRequestResponses = {
+  /**
+   * Hosted workspace PR observation
+   */
+  200: SessionHostWorkspacePullRequestResult
+}
+
+export type SessionHostGetWorkspacePullRequestResponse =
+  SessionHostGetWorkspacePullRequestResponses[keyof SessionHostGetWorkspacePullRequestResponses]
+
+export type SessionHostRefreshWorkspacePullRequestData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/pull-request/refresh"
+}
+
+export type SessionHostRefreshWorkspacePullRequestErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostRefreshWorkspacePullRequestError =
+  SessionHostRefreshWorkspacePullRequestErrors[keyof SessionHostRefreshWorkspacePullRequestErrors]
+
+export type SessionHostRefreshWorkspacePullRequestResponses = {
+  /**
+   * Hosted workspace PR refresh observation
+   */
+  200: SessionHostWorkspacePullRequestResult
+}
+
+export type SessionHostRefreshWorkspacePullRequestResponse =
+  SessionHostRefreshWorkspacePullRequestResponses[keyof SessionHostRefreshWorkspacePullRequestResponses]
 
 export type SessionHostGetWorkspaceChangesData = {
   body?: never
