@@ -90,6 +90,7 @@ import {
   createSessionRestore,
   createTabMemory,
   rememberSelectionTab,
+  replaceRememberedTab,
   selectLocalAction,
   selectWorktreeAction,
   vacantWorktreeTab,
@@ -186,7 +187,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { buildShortcutCategories } from "./shortcuts"
 import { ShortcutsDialog } from "./ShortcutsDialog"
 import { defaultBindings } from "./keybind-defaults"
-import { createChatFocus, createFocusBridge, createMainSurface, createPromptFocus, forgetTerminalFocus } from "./focus"
+import { createChatFocus, createDraftFocus, createFocusBridge, createMainSurface, createPromptFocus, forgetTerminalFocus } from "./focus"
 import { createAppDiffPanelFocus } from "./diff-panel-focus"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { createSidePanel, sideHostNeeded } from "./side-panel-state"
@@ -541,17 +542,7 @@ const AgentManagerContent: Component = () => {
     surface: main,
   })
   const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
-  /** Whether the composer mounted for this context takes focus, as v1's draft change did, or a visible terminal keeps it. */
-  const focusOnDraftChange = () => {
-    const key = focusKey()
-    const owner = focusMemory.get(key)
-    if (!owner || owner === "prompt") return true
-    if (!terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) {
-      focusMemory.delete(key)
-      return true
-    }
-    return !terminalVisible()
-  }
+  const focusOnDraftChange = createDraftFocus({ key: focusKey, memory: focusMemory, terms, terminalVisible })
   const restoreFocus = (owner = focusMemory.get(focusKey())) => {
     if (prompt.active()) return
     const key = focusKey()
@@ -709,6 +700,7 @@ const AgentManagerContent: Component = () => {
     setIds: setLocalSessionIDs,
     appendOrder: appendToTabOrder,
     replaceOrder: tabOrderSync.replaceOrAppend,
+    replaceRemembered: (from, to) => replaceRememberedTab(registry.active(), LOCAL, from, to),
     activePending: activePendingId,
     setActivePending: setActivePendingId,
     setActiveTerminal: (id) => terms.setActiveId(id),

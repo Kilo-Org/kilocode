@@ -6,6 +6,7 @@
  */
 import { openSessionTab, replacePendingTab } from "../src/utils/local-tabs"
 import { LOCAL, sendFiling } from "./navigate"
+import { replaceRememberedTab } from "./selection-actions"
 import { replaceInTabOrder } from "./tab-order"
 
 export type CreatedTab =
@@ -56,6 +57,8 @@ type BackgroundStore = {
   tabs: { ids: () => string[]; set: (ids: string[]) => void }
   tabOrder: () => Record<string, string[]>
   setTabOrder: (update: (prev: Record<string, string[]>) => Record<string, string[]>) => void
+  tabMemory: { get: (key: string) => string | undefined; set: (key: string, tab: string) => void }
+  sessionRestore: { get: (key: string) => string | undefined; set: (key: string, tab: string) => void }
 }
 
 /**
@@ -70,6 +73,7 @@ export function backgroundCreated(store: BackgroundStore, id: string, key: strin
   const order = store.tabOrder()[LOCAL] ?? []
   const next = (draft ? replaceInTabOrder(order, draft, id) : undefined) ?? [...order.filter((item) => item !== id), id]
   store.setTabOrder((prev) => ({ ...prev, [LOCAL]: next }))
+  if (draft) replaceRememberedTab(store, LOCAL, draft, id)
 }
 
 /**
