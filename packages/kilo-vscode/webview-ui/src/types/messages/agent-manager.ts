@@ -273,6 +273,8 @@ export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
   /** Owning project; absent in single-project mode. */
   projectId?: string
+  /** Quick-create request this message belongs to, when it reports one. */
+  requestId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -865,6 +867,8 @@ export interface CreateWorktreeRequest {
   baseBranch?: string
   branchName?: string
   variant?: string
+  /** Quick-create marker echoed on setup messages so a blocker can replace the transient overlay. */
+  requestId?: string
 }
 
 /** Delete a worktree and dissociate its sessions. */

@@ -18,6 +18,7 @@ import type {
 } from "../src/types/messages/agent-manager"
 import type { SetupState } from "./project/progress"
 import { clearMultiVersionBusy, markMultiVersionBusy, updateSetup } from "./project/progress"
+import type { QuickCreate } from "./quick-create"
 import { LOCAL } from "./navigate"
 import { isCurrent } from "./project/message-ownership"
 import type { ProjectStore } from "./project/store"
@@ -35,12 +36,8 @@ export function applySetupMessage(
     setup: () => SetupState
     setSetup: (state: SetupState | ((prev: SetupState) => SetupState)) => void
     creation: { setup: (msg: AgentManagerWorktreeSetupMessage) => void }
-    /** Project of a quick create in flight, which has no dialog to explain a setup blocker. */
-    quick?: string
-    /** Open the dialog for a blocked quick create. */
-    onQuickBlocked?: (projectId: string) => void
-    /** A quick create finished or failed for another reason. */
-    onQuickDone?: () => void
+    /** A quick create in flight, which has no dialog to explain a setup blocker. */
+    quick?: QuickCreate
     ensure: (projectId: string) => ProjectStore
     active: () => ProjectStore
     currentProjectId: Accessor<string | undefined>
@@ -55,7 +52,7 @@ export function applySetupMessage(
     saveTabMemory: () => void
   },
 ) {
-  if (quickCreateBlocked(msg, deps.quick, deps.onQuickBlocked, deps.onQuickDone)) return
+  if (quickCreateBlocked(msg, deps.quick)) return
   deps.creation.setup(msg)
   const store = msg.projectId ? deps.ensure(msg.projectId) : deps.active()
   const previous = deps.setup()
@@ -91,18 +88,17 @@ export function applySetupMessage(
 }
 
 /** True when a quick create hit a setup blocker; the dialog then replaces the transient overlay. */
-function quickCreateBlocked(
-  msg: AgentManagerWorktreeSetupMessage,
-  quick: string | undefined,
-  blocked?: (projectId: string) => void,
-  done?: () => void,
-): boolean {
-  if (!quick || (msg.projectId !== undefined && msg.projectId !== quick)) return false
-  if (msg.status === "error" && (msg.errorCode === "not_git_repo" || msg.errorCode === "no_commits")) {
-    blocked?.(msg.projectId ?? quick)
+function quickCreateBlocked(msg: AgentManagerWorktreeSetupMessage, quick: QuickCreate | undefined): boolean {
+  if (!quick) return false
+  const mine = msg.requestId === quick.requestId
+  if (mine && msg.status === "error" && (msg.errorCode === "not_git_repo" || msg.errorCode === "no_commits")) {
+    quick.blocked(quick.project)
     return true
   }
-  if (msg.status !== "creating") done?.()
+  // A terminal message for this request ends the marker. A ready message may come from the session
+  // stage without the request ID, so its project is enough; an error never clears another request.
+  if (mine && msg.status !== "creating") quick.done()
+  else if (msg.status === "ready" && (msg.projectId === quick.project || msg.projectId === undefined)) quick.done()
   return false
 }
 

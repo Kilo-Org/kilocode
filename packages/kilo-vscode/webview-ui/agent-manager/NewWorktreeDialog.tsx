@@ -1074,15 +1074,15 @@ export const NewWorktreeDialog: Component<{
                 </div>
               </div>
             </div>
-            <Show when={branchError()}>
-              {(code) => (
-                <div class="am-nv-branch-warning" role="status">
-                  <Icon name="warning" size="small" />
-                  <span>{t(`agentManager.setup.error.${code()}`)}</span>
-                </div>
-              )}
-            </Show>
           </div>
+          <Show when={branchError()}>
+            {(code) => (
+              <div class="am-nv-branch-warning" role="status">
+                <Icon name="warning" size="small" />
+                <span>{t(`agentManager.setup.error.${code()}`)}</span>
+              </div>
+            )}
+          </Show>
           <div class="am-nv-dialog-footer">
             <Show
               when={compareMode()}

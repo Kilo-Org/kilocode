@@ -66,7 +66,7 @@ export interface ProviderHostsSource {
   log(...args: unknown[]): void
   openPanel(preserveFocus?: boolean): void
   waitForStateReady(where: string): Promise<void>
-  onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null>
+  onCreateWorktree(baseBranch?: string, branchName?: string, requestId?: string): Promise<null>
   onDeleteWorktree(id: string): Promise<null>
   onRemoveStaleWorktree(id: string, keepSessions: boolean): Promise<null>
   recover(message: RecoveryMessage): Promise<null>
@@ -127,7 +127,7 @@ export function messageHost(p: ProviderHostsSource): MessageHost {
     pushState: (ctx) => p.pushState(ctx),
     waitForStateReady: (where) => p.waitForStateReady(where),
     openPanel: (preserve) => p.openPanel(preserve),
-    onCreateWorktree: (baseBranch, branchName) => p.onCreateWorktree(baseBranch, branchName),
+    onCreateWorktree: (baseBranch, branchName, requestId) => p.onCreateWorktree(baseBranch, branchName, requestId),
     onDeleteWorktree: (id) => p.onDeleteWorktree(id),
     onRemoveStaleWorktree: (id, keep) => p.onRemoveStaleWorktree(id, keep),
     recover: (message) => p.recover(message),

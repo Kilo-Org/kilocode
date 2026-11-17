@@ -61,7 +61,7 @@ export interface ProviderApiHost {
   getWorktreeManager(): WorktreeManager | undefined
   createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null>
   runSetupScriptForWorktree(path: string, branch: string | undefined, id: string): Promise<void>
-  onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null>
+  onCreateWorktree(baseBranch?: string, branchName?: string, requestId?: string): Promise<null>
   onDeleteWorktree(id: string): Promise<null>
   registerWorktreeSession(sessionId: string, directory: string): void
   notifyWorktreeReady(

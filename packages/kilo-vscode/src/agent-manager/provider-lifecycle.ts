@@ -130,14 +130,18 @@ export interface LifecycleHost {
 export async function createLifecycleWorktree(
   ctx: ProjectContext,
   host: LifecycleHost,
-  opts: { baseBranch?: string; branchName?: string },
+  opts: { baseBranch?: string; branchName?: string; requestId?: string },
 ): Promise<{ session: SessionInfo; ready: Promise<void> } | null> {
   const timing = Timing.start(`create ${opts.branchName ?? "worktree"}`, host.log)
 
   await initContextState(ctx, host.log)
   timing.mark("context")
 
-  const created = await host.createOnDisk({ baseBranch: opts.baseBranch, branchName: opts.branchName })
+  const created = await host.createOnDisk({
+    baseBranch: opts.baseBranch,
+    branchName: opts.branchName,
+    requestId: opts.requestId,
+  })
   timing.mark("create")
   if (!created) {
     timing.end()

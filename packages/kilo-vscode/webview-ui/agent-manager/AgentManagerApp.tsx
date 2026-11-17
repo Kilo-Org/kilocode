@@ -80,6 +80,7 @@ import {
   applySetupMessage,
   clearFailedDelete,
 } from "./app-messages"
+import { createQuickCreate } from "./quick-create"
 import { bindAppKeys } from "./app-keys"
 import { nextTabAfterClose, reconcileTrackedTabs, trackedSessionInventory } from "../src/utils/local-tabs"
 import { createLocalTabPlacement, closeSessionTab, newTabForSelection, selectSessionTab as selectTab } from "./app-tabs"
@@ -1865,13 +1866,20 @@ const AgentManagerContent: Component = () => {
     dialog.show(() => <ShortcutsDialog title={t("agentManager.shortcuts.title")} categories={categories} />)
   }
   const loaded = () => worktreesLoaded() && sessionsLoaded()
-  // A quick create reports a blocker on the setup message; keep the project so the dialog can replace the overlay.
-  const [quickCreate, setQuickCreate] = createSignal<string>()
-  const createWorktreeNow = (baseBranch?: string) => {
-    if (!loaded()) return
-    expandSidebar()
-    setQuickCreate(activeProjectId())
-    to({ type: "agentManager.createWorktree", ...(baseBranch ? { baseBranch } : {}) })
+  // A quick create reports a blocker on the setup message; its request ID keeps that answer tied to this create.
+  const quickCreate = createQuickCreate({
+    post: (message) => {
+      expandSidebar()
+      to(message)
+    },
+    blocked: (projectId) => {
+      setSetup({ active: false, message: "" })
+      showNewWorktreeDialog(projectId)
+    },
+  })
+  const createWorktreeNow = (baseBranch?: string, projectId = activeProjectId()) => {
+    if (!loaded() || !projectId) return
+    quickCreate.start(projectId, baseBranch)
   }
   const handleCreateWorktree = () => createWorktreeNow()
   const showNewWorktreeDialog = (projectId = activeProjectId()) => {
@@ -2078,14 +2086,7 @@ const AgentManagerContent: Component = () => {
           setup,
           setSetup,
           creation,
-          quick: quickCreate(),
-          // A quick create that hits a setup blocker opens the dialog instead of the overlay that vanishes after three seconds.
-          onQuickBlocked: (projectId) => {
-            setQuickCreate(undefined)
-            setSetup({ active: false, message: "" })
-            showNewWorktreeDialog(projectId)
-          },
-          onQuickDone: () => setQuickCreate(undefined),
+          quick: quickCreate.quick(),
           ensure: (pid) => registry.ensure(pid),
           active: () => registry.active(),
           currentProjectId,
@@ -2335,7 +2336,7 @@ const AgentManagerContent: Component = () => {
         currentSessionID={() => sessions.currentSessionID()}
         mode={mode}
         defaultBase={defaultBase}
-        onCreate={creation.schedule}
+        onCreate={(projectId) => createWorktreeNow(undefined, projectId)}
         onSelect={activateSelection}
         onOpenComments={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}
         onOpenPR={(projectId, worktreeId) => comments.open({ projectId, worktreeId })}

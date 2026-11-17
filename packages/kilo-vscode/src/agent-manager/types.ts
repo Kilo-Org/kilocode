@@ -158,6 +158,8 @@ interface WorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
   /** Owning project, when available. */
   projectId?: string
+  /** Quick-create request this message belongs to, when it reports one. */
+  requestId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -660,6 +662,8 @@ interface CreateWorktreeIn {
   branchName?: string
   /** Target project. Must match the active project when present; mismatches are dropped. */
   projectId?: string
+  /** Quick-create marker echoed on setup messages so a blocker can replace the transient overlay. */
+  requestId?: string
 }
 
 /** Request the current project catalog. */

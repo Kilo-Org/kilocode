@@ -62,28 +62,54 @@ describe("worktree setup selection", () => {
     expect(test.calls).toEqual(["save:local", "session:ses_1", "select:wt-1", "focus"])
   })
 
-  it("opens the dialog for a blocked quick create instead of the transient overlay", () => {
-    const test = scene("local")
+  it("opens the dialog only for the quick create that reported the blocker", () => {
+    const other = scene("local")
     const blocked: string[] = []
     const done: string[] = []
-
     applySetupMessage(
-      { type: "agentManager.worktreeSetup", status: "error", message: "no commits", errorCode: "no_commits" },
-      { ...test.deps, quick: "p", onQuickBlocked: (id) => blocked.push(id), onQuickDone: () => done.push("done") },
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "no commits",
+        errorCode: "no_commits",
+        requestId: "other",
+      },
+      {
+        ...other.deps,
+        quick: { requestId: "q-1", project: "p", blocked: (id) => blocked.push(id), done: () => done.push("done") },
+      },
+    )
+    expect(blocked).toEqual([])
+
+    const mine = scene("local")
+    const opened: string[] = []
+    applySetupMessage(
+      {
+        type: "agentManager.worktreeSetup",
+        status: "error",
+        message: "no commits",
+        errorCode: "no_commits",
+        requestId: "q-1",
+      },
+      {
+        ...mine.deps,
+        quick: { requestId: "q-1", project: "p", blocked: (id) => opened.push(id), done: () => done.push("done") },
+      },
     )
 
-    expect(blocked).toEqual(["p"])
+    expect(opened).toEqual(["p"])
     expect(done).toEqual([])
-    expect(test.deps.setup().active).toBe(false)
+    expect(mine.deps.setup().active).toBe(false)
   })
 
   it("clears the quick create marker when the setup finishes normally", () => {
     const test = scene("local")
     const done: string[] = []
+    const quick = { requestId: "q-1", project: "p", blocked: () => {}, done: () => done.push("done") }
 
     applySetupMessage(
       { type: "agentManager.worktreeSetup", status: "ready", message: "", worktreeId: "wt-1", sessionId: "ses_1" },
-      { ...test.deps, quick: "p", onQuickDone: () => done.push("done") },
+      { ...test.deps, quick },
     )
 
     expect(done).toEqual(["done"])

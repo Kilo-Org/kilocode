@@ -43,7 +43,7 @@ describe("branch list blockers", () => {
     })
     await branches
 
-    expect(posts.at(-1)).toMatchObject({ errorCode: "no_commits", branches: [] })
+    expect(posts.at(-1)).toMatchObject({ projectId: "p1", errorCode: "no_commits", branches: [] })
   })
 
   it("reports a folder that is not a repository", async () => {
@@ -52,7 +52,7 @@ describe("branch list blockers", () => {
     })
     await branches
 
-    expect(posts.at(-1)).toMatchObject({ errorCode: "not_git_repo" })
+    expect(posts.at(-1)).toMatchObject({ projectId: "p1", errorCode: "not_git_repo" })
   })
 
   it("leaves other failures as the plain empty list and keeps a healthy list clean", async () => {
@@ -66,6 +66,7 @@ describe("branch list blockers", () => {
     const healthy = importer(async () => ({ branches: [{ name: "main" }], defaultBranch: "main" }))
     await healthy.branches
     expect(healthy.posts.at(-1)).toMatchObject({
+      projectId: "p1",
       branches: [{ name: "main", isCheckedOut: false }],
       defaultBranch: "main",
     })
