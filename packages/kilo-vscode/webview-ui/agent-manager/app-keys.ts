@@ -3,6 +3,7 @@
  * the delete confirmation on a selected worktree, focus recovery, and the new-task request of the chat.
  */
 import type { Setter } from "solid-js"
+import { blocksBrowserDefault } from "./chords"
 import { LOCAL } from "./navigate"
 
 export interface AppActionHandlers {
@@ -37,10 +38,6 @@ export interface AppActionHandlers {
   jump: (index: number) => void
 }
 
-const PREVENT_WITH_COMMAND = new Set(["t", "w", "n", "d", "e", "f"])
-const PREVENT_WITH_COMMAND_SHIFT = new Set(["t", "m", "w", "n", "o", "r", "f", "[", "]"])
-const ARROWS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"])
-
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 export function bindAppKeys(opts: {
@@ -53,6 +50,7 @@ export function bindAppKeys(opts: {
   setHeld: Setter<boolean>
   focusReport: () => void
   restoreFocus: () => void
+  terminalFocused: () => boolean
   createDraft: (selection: string) => { id: string }
   setActiveTerminal: (id: undefined) => void
   postToWorktree: (worktreeId: string) => void
@@ -65,12 +63,9 @@ export function bindAppKeys(opts: {
     }
     if (msg.type !== "action") return
     const action = msg.action ?? ""
-    if (action === "cycleAgentMode" && document.hasFocus()) {
-      opts.handlers.cycleAgentMode()
-      return
-    }
-    if (action === "cyclePreviousAgentMode" && document.hasFocus()) {
-      opts.handlers.cyclePreviousAgentMode()
+    // Agent cycling acts on the composer the user types in: not from another surface, and not from a terminal.
+    if (action === "cycleAgentMode" || action === "cyclePreviousAgentMode") {
+      if (document.hasFocus() && !opts.terminalFocused()) opts.handlers[action]()
       return
     }
     const jump = /^jumpTo([1-9])$/.exec(action)
@@ -85,15 +80,9 @@ export function bindAppKeys(opts: {
   const messageHandler = (event: MessageEvent) => actionHandler(event.data ?? {})
 
   const preventDefaults = (event: KeyboardEvent) => {
-    if (!(event.metaKey || event.ctrlKey)) return
     const target = event.target as HTMLElement | null
     if (target?.closest("[data-agent-manager-native-text-shortcuts]")) return
-    const key = event.key.toLowerCase()
-    if (event.altKey && ARROWS.has(event.key)) event.preventDefault()
-    if (!event.shiftKey && PREVENT_WITH_COMMAND.has(key)) event.preventDefault()
-    if (event.shiftKey && PREVENT_WITH_COMMAND_SHIFT.has(key)) event.preventDefault()
-    if (event.shiftKey && (event.key === "/" || event.key === "?")) event.preventDefault()
-    if (/^[1-9]$/.test(event.key)) event.preventDefault()
+    if (blocksBrowserDefault(event, isMac)) event.preventDefault()
   }
 
   const deleteKeyHandler = (event: KeyboardEvent) => {

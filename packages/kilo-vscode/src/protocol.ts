@@ -119,7 +119,7 @@ export type SpeechToTextStatus = {
  */
 export type SidebarWorktree =
   | { type: "agentManager.continueInWorktree"; sessionId: string }
-  | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string }
+  | { type: "agentManager.createWorktree"; baseBranch?: string; branchName?: string; requestId?: string }
   | { type: "agentManager.requestRepoInfo" }
   | { type: "openAdvancedWorktree" }
 

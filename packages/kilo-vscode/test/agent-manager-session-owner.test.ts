@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { sendFiling, sessionOwner, showsSession } from "../webview-ui/agent-manager/navigate"
+import {
+  canOpenRootSession,
+  knownSessions,
+  sendFiling,
+  sessionOwner,
+  showsSession,
+} from "../webview-ui/agent-manager/navigate"
 
 const worktrees = [
   { id: "wt-a", path: "/repo/.kilo/worktrees/a" },
@@ -55,5 +61,18 @@ describe("sendFiling", () => {
     expect(sendFiling({ selection: "wt-a", filed: undefined, local: false, owner: null })).toBeNull()
     expect(sendFiling({ selection: "wt-a", filed: undefined, local: false, owner: "wt-b" })).toBe("wt-b")
     expect(sendFiling({ selection: "local", filed: undefined, local: false, owner: "wt-b" })).toBe("wt-b")
+  })
+})
+
+describe("knownSessions", () => {
+  it("opens a session only the host catalog lists, such as one of an unloaded worktree", () => {
+    const catalog = [{ id: "wt-session" }]
+    expect(canOpenRootSession("wt-session", knownSessions([], catalog))).toBe(true)
+    expect(canOpenRootSession("wt-session", knownSessions([], undefined))).toBe(false)
+  })
+
+  it("keeps a loaded child session closed even when the catalog lists the id", () => {
+    const sessions = knownSessions([{ id: "child", parentID: "root" }], [{ id: "child" }])
+    expect(canOpenRootSession("child", sessions)).toBe(false)
   })
 })

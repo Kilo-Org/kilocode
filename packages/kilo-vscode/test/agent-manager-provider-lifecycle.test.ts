@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock, setSystemTime } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
@@ -313,12 +313,21 @@ describe("Agent Manager worktree lifecycle", () => {
   })
 
   it("closes a session by interrupting it before dropping its state", async () => {
-    state.addSession("closed", state.getWorktrees()[0]!.id)
+    const worktree = state.getWorktrees()[0]!
+    state.addSession("closed", worktree.id)
+    state.setTabOrder(worktree.id, ["closed", "other"])
 
     await closeLifecycleSession(ctx, host, "closed")
 
     expect(calls).toEqual(["abort:closed", "push"])
     expect(state.getSession("closed")).toBeUndefined()
+    // The webview derives worktree tabs from the filed session and its tab order, so both must drop the closed session.
+    expect(state.getTabOrder()[worktree.id]).toEqual(["other"])
+
+    await state.flush()
+    const saved = JSON.parse(fs.readFileSync(path.join(root, ".kilo2", "agent-manager.json"), "utf8"))
+    expect(saved.sessions.closed).toBeUndefined()
+    expect(saved.tabOrder[worktree.id]).toEqual(["other"])
   })
 
   it("still interrupts a closed session when the project has no state", async () => {
@@ -446,6 +455,33 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(synthetic).toHaveBeenCalled()
   })
 
+  it("stops a promoted session and files it only once the move landed, without starting a reply", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    state.addSession("promoted", null)
+    const moved = { done: false }
+    client.session.move.mockImplementation(async ({ sessionID }: { sessionID: string }) => {
+      calls.push(`move:${sessionID}`)
+      moved.done = true
+    })
+    client.session.get.mockImplementation(async ({ sessionID }: { sessionID: string }) => {
+      calls.push(`get:${state.getSession(sessionID)?.worktreeId ?? "local"}`)
+      return { id: sessionID, location: { directory: moved.done ? worktree : root } }
+    })
+    const synthetic = mock(async (_input: { resume?: boolean }) => ({}))
+    ;(client.session as unknown as { synthetic: typeof synthetic }).synthetic = synthetic
+
+    await promoteLifecycleSession(ctx, host, "promoted")
+
+    expect(calls).toContain("abort:promoted")
+    expect(calls.indexOf("abort:promoted")).toBeLessThan(calls.indexOf("move:promoted"))
+    // The session stays in Local until the server reports the worktree directory.
+    expect(calls.filter((call) => call.startsWith("get:"))).toEqual(["get:local", "get:local"])
+    expect(state.getSession("promoted")?.worktreeId).toBe(wt.id)
+    expect(synthetic.mock.calls[0]?.[0]?.resume).toBe(false)
+  })
+
   it("keeps a promoted session in Local when the server cannot move it", async () => {
     await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const wt = state.getWorktrees()[0]!
@@ -459,6 +495,95 @@ describe("Agent Manager worktree lifecycle", () => {
     expect(state.getSession("promoted")?.worktreeId).toBeNull()
     expect(calls).toContain("post:agentManager.worktreeSetup")
     expect(host.notifyReady).not.toHaveBeenCalled()
+    // The worktree created for the promotion is removed again.
+    expect(calls).toContain("disk")
+    expect(state.getWorktree(wt.id)).toBeUndefined()
+  })
+
+  it("keeps the new worktree and reports the queued move instead of failing", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    host.notifyReady = mock(() => undefined)
+    const post = mock(host.post)
+    host.post = post
+    state.addSession("promoted", null)
+    // The server queued the move, but the session still runs in the root when the deadline passes.
+    client.session.get.mockResolvedValue({ id: "promoted", location: { directory: root } })
+    client.session.active.mockImplementation(async () => {
+      setSystemTime(new Date(Date.now() + 60_000))
+      return { promoted: { type: "running" } }
+    })
+
+    try {
+      await promoteLifecycleSession(ctx, host, "promoted")
+    } finally {
+      setSystemTime()
+    }
+
+    expect(calls).toContain("move:promoted")
+    expect(post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "agentManager.worktreeSetup",
+        status: "ready",
+        worktreeId: wt.id,
+        message: expect.stringContaining("moves here when its current step finishes"),
+      }),
+    )
+    expect(calls).toContain("push")
+    expect(calls).not.toContain("disk")
+    expect(state.getWorktree(wt.id)).toBeDefined()
+    expect(state.getSession("promoted")?.worktreeId).toBeNull()
+    expect(host.notifyReady).not.toHaveBeenCalled()
+  })
+
+  it("clears the setup state when the promoted session was closed before it could be filed", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    host.notifyReady = mock(() => undefined)
+    const post = mock(host.post)
+    host.post = post
+    state.addSession("promoted", null)
+    state.closeSession("promoted", null)
+
+    await promoteLifecycleSession(ctx, host, "promoted")
+
+    expect(post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "agentManager.worktreeSetup",
+        status: "ready",
+        projectId: ctx.id,
+        worktreeId: wt.id,
+      }),
+    )
+    expect(host.notifyReady).not.toHaveBeenCalled()
+    expect(calls).toContain("move:promoted")
+    expect(calls).not.toContain("disk")
+    expect(state.getWorktree(wt.id)).toBeDefined()
+  })
+
+  it("files a promoted session whose move has not settled, without admitting the handoff note", async () => {
+    await ctx.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
+    const wt = state.getWorktrees()[0]!
+    host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
+    state.addSession("promoted", null)
+    // The server already runs the session in the worktree, but its drain did not end before the deadline.
+    client.session.active.mockImplementation(async () => {
+      setSystemTime(new Date(Date.now() + 60_000))
+      return { promoted: { type: "running" } }
+    })
+    const synthetic = mock(async () => ({}))
+    ;(client.session as unknown as { synthetic: typeof synthetic }).synthetic = synthetic
+
+    try {
+      await promoteLifecycleSession(ctx, host, "promoted")
+    } finally {
+      setSystemTime()
+    }
+
+    expect(state.getSession("promoted")?.worktreeId).toBe(wt.id)
+    expect(synthetic).not.toHaveBeenCalled()
   })
 
   it("keeps the requested worktree for a session in a directory outside the project", async () => {

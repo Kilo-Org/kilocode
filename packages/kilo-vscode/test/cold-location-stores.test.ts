@@ -157,6 +157,11 @@ describe("webview stores on a mocked server whose Location starts without its pl
       }, 30_000)
 })
 
+test("a first send gets the sandbox default after a context switch disposed its composer", async () => {
+  const child = await run(bundles.mocked, { KILO_COLD_SCENARIO: "sandbox:send-disposed" })
+  expect(child.code, child.stdout + child.stderr).toBe(0)
+}, 30_000)
+
 describe("webview stores on a real server whose Location is still activating", () => {
   test("the sidebar reads the pending wakeups of its directory", async () => {
     const result = await mount({ store: "wakeups" })

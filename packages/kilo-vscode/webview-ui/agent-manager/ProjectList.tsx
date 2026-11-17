@@ -312,7 +312,7 @@ export const ProjectList: Component<Props> = (props) => {
       onRemove={(projectId) => vscode.postMessage({ type: "agentManager.removeProject", projectId })}
       onHistory={props.onHistory}
       onNew={newWorktree}
-      onCreate={(projectId) => vscode.postMessage({ type: "agentManager.createWorktree", projectId })}
+      onCreate={(projectId) => props.onCreate?.(projectId)}
       onSection={(projectId) => newSection(projectId)}
       onSettings={(projectId) => vscode.postMessage({ type: "openSettingsPanel", tab: "agentManager", projectId })}
       bindings={props.bindings}

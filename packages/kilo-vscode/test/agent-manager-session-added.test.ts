@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test"
 import { applySessionAdded } from "../webview-ui/agent-manager/app-messages"
 
-const record = () => {
+const record = (quiet = new Set<string>()) => {
   const calls: string[] = []
   return {
     calls,
     deps: {
       currentProjectId: () => "project",
+      resume: (id: string) => calls.push(`resume:${id}`),
       saveTabMemory: () => calls.push("save"),
       appendOrder: (worktreeId: string, sessionId: string) => calls.push(`order:${worktreeId}:${sessionId}`),
       setSelection: (id: string) => calls.push(`select:${id}`),
@@ -15,6 +16,8 @@ const record = () => {
       applyDraft: (worktreeId: string, sessionId: string) => calls.push(`draft:${worktreeId}:${sessionId}`),
       selectSession: (id: string) => calls.push(`session:${id}`),
       requestChatFocus: () => calls.push("focus"),
+      quiet: (id: string) => quiet.delete(id),
+      placeLocal: (id: string) => calls.push(`place:${id}`),
     },
   }
 }
@@ -51,5 +54,21 @@ describe("applySessionAdded", () => {
     )
 
     expect(test.calls).toEqual([])
+  })
+
+  it("files a session the panel added in the background without taking the view", () => {
+    const test = record(new Set(["s"]))
+
+    applySessionAdded({ type: "agentManager.sessionAdded", sessionId: "s", worktreeId: "wt-1" }, test.deps)
+
+    expect(test.calls).toEqual(["resume:s", "order:wt-1:s", "evict:s"])
+  })
+
+  it("places a background session the host files under Local without focusing it", () => {
+    const test = record(new Set(["s"]))
+
+    applySessionAdded({ type: "agentManager.sessionAdded", sessionId: "s", worktreeId: "local" }, test.deps)
+
+    expect(test.calls).toEqual(["resume:s", "place:s"])
   })
 })
