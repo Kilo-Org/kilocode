@@ -46,7 +46,8 @@ export function snapshot(text: string, origins: ReadonlyMap<string, string>, gra
     const ref = match ? /\[ref=([^\]\s]+)\]/.exec(line)?.[1] : undefined
     const origin = ref ? origins.get(ref) : undefined
     if (match && origin && !granted(origin)) {
-      out.push(`${match[1]}- iframe [origin withheld: ${origin}]`)
+      // Keep the ref: the model needs it to request `read:<origin>` for this frame.
+      out.push(`${match[1]}- iframe${ref ? ` [ref=${ref}]` : ""} [origin withheld: ${origin}]`)
       skipping = indent
       continue
     }

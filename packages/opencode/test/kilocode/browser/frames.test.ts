@@ -30,7 +30,7 @@ const origins = new Map([
 describe("snapshot frame scoping", () => {
   test("an ungranted frame keeps its node and loses its subtree", () => {
     const result = Frames.snapshot(snapshot, origins, granted)
-    expect(result).toContain("- iframe [origin withheld: https://pay.example.net]")
+    expect(result).toContain("- iframe [ref=e5] [origin withheld: https://pay.example.net]")
     expect(result).not.toContain("CARD-MARKER-9f3a")
     expect(result).not.toContain('button "Pay 42.00"')
   })
@@ -66,7 +66,7 @@ describe("snapshot frame scoping", () => {
     )
     expect(result).toBe(`### Snapshot
 \`\`\`yaml
-- iframe [origin withheld: https://a.example]
+- iframe [ref=e1] [origin withheld: https://a.example]
 \`\`\``)
     expect(result).not.toContain("DEEP-MARKER")
   })

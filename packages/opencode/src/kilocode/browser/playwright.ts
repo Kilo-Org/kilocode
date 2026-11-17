@@ -289,7 +289,10 @@ class PlaywrightBackend implements Backend {
       .elementHandle({ timeout: 2_000 })
       .catch(() => null)
     if (!handle) return undefined
-    const frame = await handle.ownerFrame()
+    // An iframe ref points at the frame element in its parent; the grant belongs to the
+    // document it contains, so prefer the child frame when there is one.
+    const child = await handle.contentFrame().catch(() => null)
+    const frame = child ?? (await handle.ownerFrame())
     handle.dispose()
     return frame ?? undefined
   }
