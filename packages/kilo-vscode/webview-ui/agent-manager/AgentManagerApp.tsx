@@ -2581,7 +2581,6 @@ const AgentManagerContent: Component = () => {
               worktree={activePR()!.wt}
               worktreeId={activePR()!.selected}
               activeTerminalId={terms.activeId()}
-              sessionId={activeDiffSession()}
               baseTarget={prBaseTarget()}
               onOpenDiff={remote.open}
               jump={comments.jump()}
