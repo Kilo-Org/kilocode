@@ -5,7 +5,7 @@ description: "Choose whether to share product telemetry and crash reports, with 
 
 # Product telemetry and crash reports
 
-Product telemetry helps us understand how Kilo is used so we can improve it: which features to prioritize, where sessions fail, and what is slow. It includes information about feature usage, performance, and errors. Kilo Desktop also sends crash reports to help diagnose crashes.
+Product telemetry helps us understand how Kilo is used so we can improve it: which features to prioritize, which errors come up most often, and what is slow. It includes information about feature usage, performance, and errors. Kilo Desktop also sends crash reports to help diagnose crashes.
 
 Not everyone wants to share this data, so you can turn it off. Product telemetry is enabled by default in the standalone CLI and Kilo Desktop. In VS Code, Kilo follows the editor's telemetry preference. Use the instructions for your client below; these clients do not share one telemetry preference.
 
