@@ -102,6 +102,8 @@
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://inference.do-ai.run/v1>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
+- <https://json-schema.org/draft/2020-12/schema>
+  <!-- packages/opencode/src/kilocode/browser/contract.generated.ts -->
 - <https://kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
   <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
