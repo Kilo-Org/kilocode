@@ -7,8 +7,10 @@ import ai.kilocode.rpc.dto.WorktreePrDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Path
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -52,10 +54,16 @@ internal data class PrLookup(
      * no PR was found or when `gh` answered without one.
      */
     val node: String = "",
+    /** When the PR was opened, closed, and merged, as epoch seconds. Null when gh did not answer. */
+    val created: Long? = null,
+    val closed: Long? = null,
+    val merged: Long? = null,
+    /** The commit at the pull request's head, used to recognise an imported PR branch. */
+    val head: String = "",
 )
 
 /** Scalar fields every supported `gh` release and token can answer. */
-internal const val PR_FIELDS = "id,number,state,isDraft,url,title"
+internal const val PR_FIELDS = "id,number,state,isDraft,url,title,headRefOid,createdAt,closedAt,mergedAt"
 
 /**
  * [PR_FIELDS] plus the review verdict, the CI rollup, and mergeability. None of the three is a plain
@@ -227,14 +235,85 @@ internal class PrResolver(
         if (spent(path, branch, head, maxAge)) return PrLookup()
         val epoch = epoch.get()
         val run = Run()
-        view(dir, path, branch, GH_READ_TIMEOUT_MS, run)?.let { return it }
-        view(dir, path, null, GH_PROBE_TIMEOUT_MS, run)?.let { return it }
-        if (branch != base) search(dir, path, head, run)?.let { return it }
+        val started = lazy { branchStart(dir, branch) }
+        fun fresh(lookup: PrLookup?): PrLookup? = lookup?.let { keep(it, dir, branch, head, started) }
+        fresh(view(dir, path, branch, GH_READ_TIMEOUT_MS, run))?.let { return it }
+        fresh(view(dir, path, null, GH_PROBE_TIMEOUT_MS, run))?.let { return it }
+        if (branch != base) fresh(search(dir, path, head, run))?.let { return it }
         // Nothing answered. A ladder that timed out has not established that there is no PR, so it
         // must not report one absent — the frontend keeps the previous answer for an unavailable gh.
         if (run.slow) return PrLookup(availability = GhAvailability.TIMEOUT)
         if (run.sure) remember(path, branch, head, epoch)
         return PrLookup()
+    }
+
+    /**
+     * Drops a PR that cannot belong to the branch's current incarnation.
+     *
+     * Branch names are the only identity GitHub keeps for the selector-based lookup, and Agent Manager
+     * can generate the name of a worktree whose merged PR is long gone. GitHub then still answers with
+     * that merged PR through the branch name, so the fresh worktree would show a merged badge before a
+     * single commit exists on its branch. The branch's own reflog records when this incarnation began
+     * and at which commit, which is enough to tell the two apart without persisting retired names:
+     *
+     * - A PR whose latest lifecycle event predates the branch was not opened or merged from this
+     *   incarnation. It is still this branch's PR when the branch was started exactly at the PR head,
+     *   which is how importing an older PR works, or (for a live PR) when that head is an ancestor of
+     *   the branch. Otherwise it belongs to the previous worktree that used the name.
+     * - A PR on a branch that predates it is the ordinary case and is kept unchanged.
+     *
+     * When either timestamp source is unavailable this keeps the PR, so a CLI without reflogs or an
+     * older `gh` that cannot answer the fields loses no badge.
+     */
+    private fun keep(
+        lookup: PrLookup,
+        dir: Path,
+        branch: String,
+        head: String,
+        started: Lazy<BranchStart?>,
+    ): PrLookup? {
+        val pr = lookup.pr ?: return lookup
+        val seen = listOfNotNull(lookup.created, lookup.closed, lookup.merged).maxOrNull() ?: return lookup
+        val start = started.value ?: return lookup
+        if (seen >= start.time) return lookup
+        if (lookup.head == start.commit) return lookup
+        if (pr.state == GhState.OPEN || pr.state == GhState.DRAFT) {
+            // A live PR branch can be imported at its head and then advanced locally, so ancestry is
+            // the identity check there. An unanswerable git check keeps the PR rather than hiding it.
+            val ancestor = if (lookup.head.isNotEmpty() && head.isNotEmpty()) {
+                isAncestor(dir, lookup.head, head)
+            } else {
+                null
+            }
+            if (ancestor != false) return lookup
+        }
+        LOG.info(
+            "ignoring pull request from a previous branch incarnation: branch=$branch " +
+                "pr=${pr.number} state=${pr.state} seen=$seen branch-start=${start.time}",
+        )
+        return null
+    }
+
+    /** The commit and epoch at which [branch] was created, read from its reflog. */
+    private data class BranchStart(val commit: String, val time: Long)
+
+    private fun branchStart(dir: Path, branch: String): BranchStart? {
+        val out = git(dir, listOf("reflog", "show", "--date=unix", "--format=%H %gd", branch))
+        if (!out.ok) return null
+        val line = out.stdout.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() } ?: return null
+        val commit = line.substringBefore(' ').takeIf { it.isNotEmpty() } ?: return null
+        val time = line.substringAfterLast("@{", "").substringBefore("}").toLongOrNull() ?: return null
+        return BranchStart(commit, time)
+    }
+
+    private fun isAncestor(dir: Path, ancestor: String, descendant: String): Boolean? {
+        if (ancestor.isEmpty() || descendant.isEmpty()) return null
+        val out = git(dir, listOf("merge-base", "--is-ancestor", ancestor, descendant))
+        return when (out.exit) {
+            0 -> true
+            1 -> false
+            else -> null
+        }
     }
 
     /**
@@ -338,7 +417,37 @@ internal class PrResolver(
             run.sure = false
             return null
         }
-        return PrLookup(pr, node = parsePrNodeId(out.stdout))
+        val meta = meta(out.stdout)
+        return PrLookup(
+            pr,
+            node = parsePrNodeId(out.stdout),
+            created = meta.created,
+            closed = meta.closed,
+            merged = meta.merged,
+            head = meta.head,
+        )
+    }
+
+    /** Timestamps and head commit `gh` reported for one pull request, when it answered them. */
+    private data class PrMeta(
+        val created: Long? = null,
+        val closed: Long? = null,
+        val merged: Long? = null,
+        val head: String = "",
+    )
+
+    private fun meta(raw: String): PrMeta {
+        val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return PrMeta()
+        fun time(key: String): Long? {
+            val text = obj[key]?.jsonPrimitive?.contentOrNull ?: return null
+            return runCatching { Instant.parse(text).epochSecond }.getOrNull()
+        }
+        return PrMeta(
+            time("createdAt"),
+            time("closedAt"),
+            time("mergedAt"),
+            obj["headRefOid"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+        )
     }
 
     /**
@@ -373,7 +482,7 @@ internal class PrResolver(
             return null
         }
         val out = query(dir) { fields ->
-            listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", "$fields,headRefOid")
+            listOf("pr", "list", "--state", "all", "--search", "$head is:pr", "--limit", "5", "--json", fields)
         }
         if (!out.ok) return unusable(out, run)
         val items = runCatching { json.parseToJsonElement(out.stdout) as? JsonArray }.getOrNull()
@@ -402,7 +511,15 @@ internal class PrResolver(
                 run.sure = false
                 continue
             }
-            return PrLookup(pr, node = parsePrNodeId(raw))
+            val meta = meta(raw)
+            return PrLookup(
+                pr,
+                node = parsePrNodeId(raw),
+                created = meta.created,
+                closed = meta.closed,
+                merged = meta.merged,
+                head = meta.head,
+            )
         }
         return null
     }

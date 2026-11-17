@@ -4,6 +4,7 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhChecks
 import ai.kilocode.rpc.dto.GhReview
 import ai.kilocode.rpc.dto.GhState
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -23,6 +24,15 @@ class PrResolverTest {
      * inside the search strategy — so how many of these ran is its own claim, not part of a ladder.
      */
     private val heads = mutableListOf<List<String>>()
+
+    /** Every local git read, so the identity checks that only run for dated PRs are visible. */
+    private val gitCalls = mutableListOf<List<String>>()
+
+    /** What `git reflog show` answers for the branch, oldest entry last like git itself. */
+    private var reflog = ""
+
+    /** Whether `git merge-base --is-ancestor` reports the PR head as reachable from the checkout. */
+    private var ancestor = true
 
     /** The checkout the command in flight runs in, so a test can answer differently per repository. */
     private var dir = ""
@@ -698,6 +708,103 @@ class PrResolverTest {
     }
 
     @Test
+    fun `ignores a merged pull request from a previous branch with the same name`() {
+        // The worktree was removed after its PR merged, then a generated branch name reused the same
+        // directory. `gh pr view <branch>` still resolves the old merged PR through headRefName, but
+        // this branch incarnation did not start at that PR's head.
+        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        val resolver = resolver(
+            view = {
+                pr(
+                    7,
+                    "MERGED",
+                    created = BRANCH_START - 2000,
+                    closed = BRANCH_START - 1000,
+                    merged = BRANCH_START - 1000,
+                    headOid = OTHER,
+                )
+            },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertNull(lookup.pr)
+        assertTrue(gitCalls.any { it.firstOrNull() == "reflog" }, "the branch start must be read, got $gitCalls")
+    }
+
+    @Test
+    fun `keeps a merged pull request opened before the current branch ended`() {
+        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        val resolver = resolver(
+            view = {
+                pr(
+                    7,
+                    "MERGED",
+                    created = BRANCH_START - 2000,
+                    closed = BRANCH_START + 1000,
+                    merged = BRANCH_START + 1000,
+                    headOid = OTHER,
+                )
+            },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(lookup.pr, "a PR merged while this branch existed is still its PR").number)
+    }
+
+    @Test
+    fun `keeps an imported merged pull request created after the branch`() {
+        // Importing an old merged PR starts the local branch at that PR's head after the merge. That
+        // exact identity is what separates it from a newly created branch that merely reuses the name.
+        reflog = "$OTHER feature/x@{${BRANCH_START}}\n"
+        val resolver = resolver(
+            view = {
+                pr(
+                    7,
+                    "MERGED",
+                    created = BRANCH_START - 2000,
+                    closed = BRANCH_START - 1000,
+                    merged = BRANCH_START - 1000,
+                    headOid = OTHER,
+                )
+            },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(lookup.pr, "the branch started exactly at this PR's head").number)
+    }
+
+    @Test
+    fun `keeps an imported live pull request whose head reaches the checkout`() {
+        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        ancestor = true
+        val resolver = resolver(
+            view = { pr(7, "OPEN", created = BRANCH_START - 2000, closed = null, merged = null, headOid = OTHER) },
+            api = { threads(unresolved = 2) },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertEquals(7, assertNotNull(lookup.pr).number)
+        assertEquals(2, lookup.pr?.comments?.unresolved)
+    }
+
+    @Test
+    fun `ignores a live pull request whose head cannot reach a newly created branch`() {
+        reflog = "$SHA feature/x@{${BRANCH_START}}\n"
+        ancestor = false
+        val resolver = resolver(
+            view = { pr(7, "OPEN", created = BRANCH_START - 2000, closed = null, merged = null, headOid = OTHER) },
+        )
+
+        val lookup = resolver.resolve(path, "feature/x", base = "main")
+
+        assertNull(lookup.pr)
+    }
+
+    @Test
     fun `treats a missing pull request as a clean result`() {
         val resolver = resolver(view = { missing() }, list = { ok("[]") })
 
@@ -724,16 +831,40 @@ class PrResolverTest {
         },
         git = { at, args ->
             dir = at.toString()
-            heads.add(args)
-            assertEquals(listOf("rev-parse", "HEAD"), args)
-            ok(head)
+            gitCalls.add(args)
+            when (args.firstOrNull()) {
+                "rev-parse" -> {
+                    heads.add(args)
+                    ok(head)
+                }
+                "reflog" -> if (reflog.isEmpty()) CmdOut(1, "", "no reflog") else ok(reflog)
+                "merge-base" -> CmdOut(if (ancestor) 0 else 1, "", "")
+                else -> error("unexpected git call: $args")
+            }
         },
     )
 
-    private fun pr(number: Int, state: String): CmdOut = ok(
-        """{"id":"$NODE","number":$number,"state":"$state","isDraft":${state == "DRAFT"},""" +
-            """"url":"https://pr/$number","title":"Work"}""",
-    )
+    private fun pr(number: Int, state: String): CmdOut = pr(number, state, null, null, null)
+
+    private fun pr(
+        number: Int,
+        state: String,
+        created: Long?,
+        closed: Long?,
+        merged: Long?,
+        headOid: String = SHA,
+    ): CmdOut {
+        val extras = buildList {
+            created?.let { add(""""createdAt":"${Instant.ofEpochSecond(it)}"""") }
+            closed?.let { add(""""closedAt":"${Instant.ofEpochSecond(it)}"""") }
+            merged?.let { add(""""mergedAt":"${Instant.ofEpochSecond(it)}"""") }
+            add(""""headRefOid":"$headOid"""")
+        }
+        return ok(
+            """{"id":"$NODE","number":$number,"state":"$state","isDraft":${state == "DRAFT"},""" +
+                """"url":"https://pr/$number","title":"Work",${extras.joinToString(",")}}""",
+        )
+    }
 
     /** A `reviewThreads` response with [unresolved] open conversations and [resolved] settled ones. */
     private fun threads(unresolved: Int = 0, resolved: Int = 0): CmdOut {
@@ -755,6 +886,8 @@ class PrResolverTest {
 
     private companion object {
         const val SHA = "1111111111111111111111111111111111111111"
+        const val OTHER = "2222222222222222222222222222222222222222"
         const val NODE = "PR_kwDOAbCdEf"
+        const val BRANCH_START = 1_800_000_000L
     }
 }

@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -197,6 +198,57 @@ class KiloBackendSessionManager(
         val ids = mapped.map { it.id }.toSet()
         val relevant = _statuses.value.filterKeys { it in ids }
         return SessionListDto(mapped, relevant)
+    }
+
+    /**
+     * Moves every session whose directory is exactly [from] to [to], preserving the conversation
+     * history and its child sessions.
+     *
+     * Agent Manager deletes a worktree directory when its work is done, but the CLI keeps sessions in
+     * the project database keyed by that directory. Reusing a branch name reuses the directory path,
+     * so without this a new worktree would immediately list and auto-open sessions from the previous
+     * worktree at the same path. Re-homing to the project root mirrors the VS Code Agent Manager and
+     * keeps the old conversations reachable under Local instead of deleting them.
+     *
+     * Returns the number of sessions moved. Never throws: removal has already succeeded by the time
+     * this runs, and a CLI that cannot answer must not turn that into a failed removal.
+     */
+    fun rehome(from: String, to: String): Int {
+        val api = client ?: return 0
+        val httpClient = http ?: return 0
+        val root = base ?: return 0
+        val ids = runCatching {
+            api.experimentalSessionList(
+                directory = from,
+                roots = JsonPrimitive(false),
+                limit = 10_000.0,
+                archived = JsonPrimitive(true),
+            ).map { it.id }
+        }.getOrElse { err ->
+            log.info("session rehome list skipped: from=$from message=${err.message}")
+            return 0
+        }
+        var moved = 0
+        for (id in ids) {
+            val body = JsonObject(
+                mapOf(
+                    "sessionID" to JsonPrimitive(id),
+                    "destination" to JsonObject(mapOf("directory" to JsonPrimitive(to))),
+                    "moveChanges" to JsonPrimitive(false),
+                ),
+            ).toString()
+            val request = Request.Builder()
+                .url("$root/experimental/control-plane/move-session")
+                .post(body.toRequestBody("application/json".toMediaType()))
+                .build()
+            val status = runCatching { httpClient.newCall(request).execute().use { it.code } }.getOrNull()
+            if (status != null && status in 200..299) {
+                moved++
+            } else {
+                log.info("session rehome failed: id=$id status=${status ?: "no response"}")
+            }
+        }
+        return moved
     }
 
     /**
