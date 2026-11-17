@@ -18,7 +18,7 @@ export function createSessions(input: {
   const connected = () => input.panel.connection.status() === "connected"
   const project = createMemo(() => input.directories().map((directory) => input.panel.store(directory)))
 
-  // Sessions loaded outside the tab strip, such as a subagent in the inspector. One can move itself to a directory the
+  // Sessions the inspector shows for the current parent, such as subagents. One can move itself to a directory the
   // project does not track (the session_move tool); its later events reach only that directory's store, so the store
   // joins the lookup. Every store that loaded the session applies the move, so a project store knows the destination.
   const [watched, setWatched] = createSignal<ReadonlySet<string>>(new Set())
@@ -139,7 +139,6 @@ export function createSessions(input: {
     },
     /** Loads a session the user did not open in a tab, for example a subagent in the inspector. */
     sync(sessionID: string) {
-      setWatched((previous) => new Set([...previous, sessionID]))
       const item = scope(sessionID)
       if (!item) return Promise.resolve()
       return Promise.all([item.data.session.sync(sessionID), item.data.session.message.sync(sessionID)]).then(
@@ -149,8 +148,17 @@ export function createSessions(input: {
     /** Drops the loaded session and its messages when the inspector no longer shows it. */
     release(sessionID: string) {
       scope(sessionID)?.data.session.message.evict(sessionID)
-      setWatched((previous) => new Set([...previous].filter((id) => id !== sessionID)))
-      for (const mark of [...loaded]) if (mark.endsWith(`\n${sessionID}`)) loaded.delete(mark)
+    },
+    /**
+     * The sessions the inspector shows now. Only these follow a move outside the project, so a tab of another parent
+     * session, or a closed one, releases its followed store.
+     */
+    watch(ids: readonly string[]) {
+      const next = new Set(ids)
+      const previous = untrack(watched)
+      if (next.size === previous.size && [...next].every((id) => previous.has(id))) return
+      for (const mark of [...loaded]) if (!next.has(mark.slice(mark.indexOf("\n") + 1))) loaded.delete(mark)
+      setWatched(next)
     },
     /** Directories outside the project that a watched session moved to; their stores must stay alive. */
     followed,

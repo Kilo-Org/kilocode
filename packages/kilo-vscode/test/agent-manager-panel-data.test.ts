@@ -359,6 +359,7 @@ describe("createPanelData", () => {
       await until(() => panel.connection.status() === "connected" && streams.size > 0)
       emit(created("ses_sub", ROOT))
       await until(() => !!panel.store(ROOT).data.session.get("ses_sub"))
+      layer.watch(["ses_sub"])
       void layer.sync("ses_sub")
       expect(layer.scope("ses_sub")).toBe(panel.store(ROOT))
 
@@ -380,8 +381,8 @@ describe("createPanelData", () => {
       await until(() => !!panel.find(OTHER)?.data.session.get("ses_foreign"))
       expect(layer.sessions().map((item) => item.id)).not.toContain("ses_foreign")
 
-      // Closing the inspector tab stops following the directory.
-      layer.release("ses_sub")
+      // A tab the inspector no longer shows (closed, or of another parent session) stops following the directory.
+      layer.watch([])
       expect(layer.followed()).toEqual([])
       dispose()
     })

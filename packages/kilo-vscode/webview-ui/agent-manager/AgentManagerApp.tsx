@@ -452,6 +452,7 @@ const AgentManagerContent: Component = () => {
     hide: () => panels.close(SidePanel.Subagents),
   })
   const subagents = subagentCtl.tabs
+  createEffect(() => sessions.watch(subagents.tabs().map((tab) => tab.id)))
   const editPreview = createEditPreview({
     context: panels.session,
     matches: (id) =>
