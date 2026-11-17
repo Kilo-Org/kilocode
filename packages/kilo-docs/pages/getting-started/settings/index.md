@@ -236,11 +236,11 @@ For **session** export and import, use the CLI commands:
 {% /tab %}
 {% /tabs %}
 
-## Usage analytics and crash reports
+## Product telemetry and crash reports
 
 Product telemetry helps us understand feature usage and improve reliability. VS Code uses the editor's telemetry preference; the standalone CLI uses its environment or global config; Kilo Desktop uses its Privacy toggle. These are separate from optional OTLP export.
 
-See [Usage analytics and crash reports](/docs/getting-started/settings/usage-analytics) for opt-out instructions, precedence, and the current JetBrains limitation.
+See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry) for opt-out instructions and precedence.
 
 ## Sandbox
 
@@ -302,7 +302,7 @@ Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of 
 
 The CLI does not expose these options through an IDE settings panel. Configure model behavior, permissions, telemetry, and other advanced options directly in JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 
-For product telemetry, use the [standalone CLI opt-out instructions](/docs/getting-started/settings/usage-analytics#standalone-cli). The setting must be in global config, and environment values take precedence. [Optional OTLP export](/docs/getting-started/settings/usage-analytics#optional-opentelemetry-export) is configured separately.
+For product telemetry, use the [standalone CLI opt-out instructions](/docs/getting-started/settings/product-telemetry#standalone-cli). The setting must be in global config, and environment values take precedence. [Optional OTLP export](/docs/getting-started/settings/product-telemetry#optional-opentelemetry-export) is configured separately.
 
 {% /tab %}
 {% /tabs %}

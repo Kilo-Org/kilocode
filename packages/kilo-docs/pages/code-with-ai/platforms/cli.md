@@ -492,7 +492,7 @@ Save the file and restart Windows Terminal or open a new tab. `Shift+Enter` will
 
 Product telemetry is enabled by default to help us understand feature usage and improve reliability. Disable it with `KILO_TELEMETRY_LEVEL=off`, or set `experimental.openTelemetry` to `false` in your **global** Kilo config and restart the CLI. The environment variable takes precedence over config. Project config alone does not control telemetry initialization.
 
-See [Usage analytics and crash reports](/docs/getting-started/settings/usage-analytics#standalone-cli) for complete instructions, including the different controls used by VS Code and Kilo Desktop.
+See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#standalone-cli) for complete instructions, including the different controls used by VS Code and Kilo Desktop.
 
 ### OpenTelemetry Export
 
