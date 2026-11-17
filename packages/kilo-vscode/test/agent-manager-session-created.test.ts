@@ -97,12 +97,12 @@ describe("createdTab", () => {
 })
 
 describe("backgroundCreated", () => {
-  const store = (ids: string[], order: string[], remembered?: string) => {
+  const store = (ids: string[], order: string[], remembered?: string, restored?: string) => {
     const state = {
       ids,
       order: { local: order } as Record<string, string[]>,
       memory: remembered ? ({ local: remembered } as Record<string, string>) : ({} as Record<string, string>),
-      restore: {} as Record<string, string>,
+      restore: restored ? ({ local: restored } as Record<string, string>) : ({} as Record<string, string>),
     }
     return {
       state,
@@ -132,12 +132,13 @@ describe("backgroundCreated", () => {
     expect(test.state.order.local).toEqual(["ses_new", "ses_old"])
   })
 
-  it("moves the remembered tab from the draft it replaced to the session", () => {
-    const test = store(["pending:a", "ses_old"], ["pending:a", "ses_old"], "pending:a")
+  it("moves the remembered tab and the restore memory from the draft it replaced to the session", () => {
+    const test = store(["pending:a", "ses_old"], ["pending:a", "ses_old"], "pending:a", "pending:a")
 
     backgroundCreated(test, "ses_new", "pending:a")
 
     expect(test.state.memory.local).toBe("ses_new")
+    expect(test.state.restore.local).toBe("ses_new")
   })
 
   it("adds a session without a draft tab and leaves an existing tab alone", () => {
