@@ -2,6 +2,10 @@
   "name": "@opencode-ai/ui",
   "version": "0.0.1",
   "type": "module",
+  "scripts": {
+    "typecheck": "bun check --no-script",
+    "typecheck:tsc": "tsc --noEmit"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

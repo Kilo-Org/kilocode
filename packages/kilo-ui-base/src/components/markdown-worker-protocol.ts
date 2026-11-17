@@ -9,10 +9,11 @@ export type MarkdownToken = [content: string, style: string]
 export function highlightTokens(lines: ThemedToken[][]): MarkdownToken[] {
   return lines
     .flatMap((line, index) => (index === lines.length - 1 ? line : [...line, { content: "\n", offset: 0 }]))
-    .map((token): MarkdownToken => [
-      token.content,
-      stringifyTokenStyle(token.htmlStyle ?? getTokenStyleObject(token)),
-    ])
+    .map(highlightToken)
+}
+
+export function highlightToken(token: ThemedToken): MarkdownToken {
+  return [token.content, stringifyTokenStyle(token.htmlStyle ?? getTokenStyleObject(token))]
 }
 
 export type MarkdownWorkerRequest =
