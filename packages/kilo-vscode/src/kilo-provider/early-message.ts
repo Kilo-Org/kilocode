@@ -15,7 +15,6 @@ type Ctx = {
   connection: KiloConnectionService
   dir: string
   post: (msg: unknown) => void
-  browserSettings: () => void
   exportTranscript: (sessionID: string) => Promise<void>
   resume: (sessionID: string, messageID: string, requestID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
@@ -140,10 +139,6 @@ export async function routeEarlyMessage(
   }
   if (message.type === "requestSpeechToTextModels") {
     await ctx.speechToTextModels()
-    return true
-  }
-  if (message.type === "requestBrowserSettings") {
-    ctx.browserSettings()
     return true
   }
   const background = await routeBackgroundMessage(message, ctx)

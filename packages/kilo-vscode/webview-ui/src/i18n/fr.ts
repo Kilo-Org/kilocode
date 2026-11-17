@@ -895,15 +895,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Compétences",
 
   "settings.browser.description":
-    "Configurez l'automatisation de navigateur intégrée propulsée par Playwright. Kilo peut naviguer, interagir et prendre des captures d'écran de pages web dans vos sessions.",
-  "settings.browser.enable.title": "Activer l'automatisation du navigateur",
-  "settings.browser.enable.description":
-    "Activer le navigateur d'Agent Manager propre à chaque session pour les applications locales et les pages HTTPS publiques.",
-  "settings.browser.systemChrome.title": "Utiliser le Chrome système",
-  "settings.browser.systemChrome.description":
-    "Utiliser votre navigateur Chrome installé au lieu d'une instance Chromium séparée.",
-  "settings.browser.headless.title": "Mode headless",
-  "settings.browser.headless.description": "Exécuter en mode headless (sans fenêtre de navigateur visible).",
+    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
+  "settings.browser.backend.title": "Browser backend",
+  "settings.browser.backend.off": "Off",
+  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+  "settings.browser.backend.playwright": "Playwright",
+  "settings.browser.backend.playwright.description":
+    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
+  "settings.browser.backend.extension": "Kilo browser extension",
+  "settings.browser.backend.extension.description":
+    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
 
   "settings.language.description":
     "Choisissez la langue de l'interface de Kilo Code. \"Auto\" utilise la langue d'affichage de VS Code.",

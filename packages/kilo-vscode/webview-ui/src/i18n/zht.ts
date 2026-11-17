@@ -801,14 +801,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "設定由 Playwright 提供支援的內建瀏覽器自動化。Kilo 可以在你的工作階段中瀏覽網頁、與網頁互動，並擷取螢幕截圖。",
-  "settings.browser.enable.title": "啟用瀏覽器自動化",
-  "settings.browser.enable.description":
-    "啟用工作階段專屬的 Agent Manager 瀏覽器，用於本機應用程式和公開的 HTTPS 頁面。",
-  "settings.browser.systemChrome.title": "使用系統 Chrome",
-  "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
-  "settings.browser.headless.title": "無頭模式",
-  "settings.browser.headless.description": "以無頭模式執行（無可見瀏覽器視窗）。",
+    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
+  "settings.browser.backend.title": "Browser backend",
+  "settings.browser.backend.off": "Off",
+  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+  "settings.browser.backend.playwright": "Playwright",
+  "settings.browser.backend.playwright.description":
+    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
+  "settings.browser.backend.extension": "Kilo browser extension",
+  "settings.browser.backend.extension.description":
+    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
 
   "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",

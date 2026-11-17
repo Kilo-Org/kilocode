@@ -24,7 +24,7 @@ import { AttentionService, showOSNotification } from "./services/attention"
 import { CaffeinationService } from "./services/caffeination"
 import { confirmCaffeination } from "./services/caffeination/confirm"
 import { createCaffeinationDriver } from "./services/caffeination/inhibitor"
-import { BrowserAutomationService, BrowserBroker } from "./services/browser-automation"
+import { BrowserBroker, migrateBrowserBackend } from "./services/browser-automation"
 import {
   integratedBrowserFallback,
   integratedBrowserUseSystemChrome,
@@ -88,11 +88,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.window.onDidChangeActiveColorTheme(() => browserBroker.retheme()))
 
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(
-    context,
-    () => browserBroker.env(),
-    (dir): Promise<void> => browserAutomationService.ready(dir),
-  )
+  const connectionService = new KiloConnectionService(context, () => browserBroker.env())
 
   // One MCP OAuth sign-in service for the whole extension (sidebar, Kilo tabs, Settings, Marketplace).
   // Initialize it eagerly so its MCP OAuth URL subscriptions and `onUrl`
@@ -100,10 +96,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // KiloProvider happens to construct first.
   mcpAuth(connectionService, { onUrl: showAuthUrl })
 
-  // Manages the built-in Playwright MCP server for ordinary sessions. This is
-  // independent from the Agent Manager browser broker above.
-  const browserAutomationService = new BrowserAutomationService(connectionService)
-  void browserAutomationService.syncWithSettings()
   const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
@@ -125,9 +117,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
-      void browserAutomationService
-        .reregisterIfEnabled()
-        .catch((error) => console.warn("[Kilo New] Playwright MCP re-registration failed:", error))
+      void migrateBrowserBackend(connectionService, context)
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
@@ -934,7 +924,6 @@ export async function activate(context: vscode.ExtensionContext) {
       unsubscribeStateChange()
       attention.dispose()
       browserBroker.dispose()
-      browserAutomationService.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()

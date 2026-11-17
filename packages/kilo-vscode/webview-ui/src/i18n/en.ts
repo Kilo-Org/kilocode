@@ -850,14 +850,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Configure built-in browser automation powered by Playwright. Kilo can navigate, interact with, and screenshot web pages in your sessions.",
-  "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
-  "settings.browser.systemChrome.title": "Use System Chrome",
-  "settings.browser.systemChrome.description":
-    "Use installed Google Chrome. Disable only when a compatible Playwright Chromium browser is already installed.",
-  "settings.browser.headless.title": "Headless Mode",
-  "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
+    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
+  "settings.browser.backend.title": "Browser backend",
+  "settings.browser.backend.off": "Off",
+  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+  "settings.browser.backend.playwright": "Playwright",
+  "settings.browser.backend.playwright.description":
+    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
+  "settings.browser.backend.extension": "Kilo browser extension",
+  "settings.browser.backend.extension.description":
+    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',

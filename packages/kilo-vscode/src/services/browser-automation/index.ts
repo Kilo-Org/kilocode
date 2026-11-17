@@ -1,4 +1,3 @@
-export { BrowserAutomationService } from "./browser-automation-service"
 export { BrowserBroker, BrowserLaunchError, diagnostic } from "./browser-broker"
 export type {
   BrowserContextFactory,
@@ -9,3 +8,4 @@ export type {
   BrowserState,
   BrowserStatus,
 } from "./browser-broker"
+export { MIGRATION_KEY, migrateBackend, migrateBrowserBackend } from "./backend-migration"

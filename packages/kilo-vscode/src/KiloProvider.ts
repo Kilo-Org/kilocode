@@ -1288,7 +1288,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           connection: this.connectionService,
           dir: this.getWorkspaceDirectory(this.currentSession?.id),
           post: (msg) => this.postMessage(msg),
-          browserSettings: () => this.sendBrowserSettings(),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
           resume: (sessionID, messageID, requestID) => this.handleResumeSession(sessionID, messageID, requestID),
           copy: (text) => vscode.env.clipboard.writeText(text),
@@ -5236,7 +5235,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())
     await this.sendIndexingSettings()
-    this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
     this.postMessage(buildThroughputSettingMessage())
@@ -5255,21 +5253,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.fetchAndSendNotifications()
 
     vscode.window.showInformationMessage("Kilo Code settings have been reset to defaults.")
-  }
-
-  /**
-   * Read the current browser automation settings and push them to the webview.
-   */
-  private sendBrowserSettings(): void {
-    const config = vscode.workspace.getConfiguration("kilo-code.new.browserAutomation")
-    this.postMessage({
-      type: "browserSettingsLoaded",
-      settings: {
-        enabled: config.get<boolean>("enabled", false),
-        useSystemChrome: config.get<boolean>("useSystemChrome", true),
-        headless: config.get<boolean>("headless", false),
-      },
-    })
   }
 
   /**

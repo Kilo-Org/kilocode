@@ -5,6 +5,8 @@ import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { BoardReadTool, BoardPostTool } from "./board"
 import { BrowserOpenTool } from "./browser-open"
+import * as BrowserTools from "../browser/tools"
+import * as BrowserSettings from "../browser/settings"
 import { CancelWakeupTool } from "./cancel-wakeup"
 import { ChartTool } from "./chart"
 import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
@@ -103,6 +105,7 @@ export namespace KiloToolRegistry {
       const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
       const browser = Flag.KILO_CLIENT === "vscode" ? yield* BrowserOpenTool : undefined
+      const browserTools = yield* BrowserTools.infos
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
       // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
@@ -134,6 +137,7 @@ export namespace KiloToolRegistry {
           manager,
           process,
           browser,
+          browserTools,
           chart,
           image,
           notify,
@@ -160,6 +164,7 @@ export namespace KiloToolRegistry {
         manager,
         process,
         browser,
+        browserTools,
         chart,
         image,
         notify,
@@ -188,6 +193,7 @@ export namespace KiloToolRegistry {
       manager: Tool.Info
       process: Tool.Info
       browser?: Tool.Info
+      browserTools?: Tool.Info[]
       chart: Tool.Info
       image: Tool.Info
       notify: Tool.Info
@@ -209,6 +215,7 @@ export namespace KiloToolRegistry {
     },
     deps: Deps,
     loaders: Loaders = {},
+    cfg?: Pick<Config.Info, "browser">,
   ) {
     return Effect.gen(function* () {
       const base = yield* Effect.all({
@@ -237,6 +244,10 @@ export namespace KiloToolRegistry {
           ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
           : {}
       const browser = tools.browser ? yield* Tool.init(tools.browser) : undefined
+      const browserTools =
+        tools.browserTools && cfg && BrowserSettings.resolve(cfg).backend !== "off"
+          ? yield* Effect.all(tools.browserTools.map(Tool.init))
+          : []
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
           ? yield* Effect.all({
@@ -252,6 +263,7 @@ export namespace KiloToolRegistry {
         ...report,
         ...goal,
         browser,
+        browserTools,
         ...notebooks,
         semantic,
         openPlan,
@@ -320,6 +332,7 @@ export namespace KiloToolRegistry {
       manager: Tool.Def
       process: Tool.Def
       browser?: Tool.Def
+      browserTools?: Tool.Def[]
       chart: Tool.Def
       image: Tool.Def
       notify: Tool.Def
@@ -368,6 +381,7 @@ export namespace KiloToolRegistry {
       tools.managerModels,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
+      ...(tools.browserTools ?? []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&
       tools.notebookRead &&

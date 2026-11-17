@@ -1,54 +1,51 @@
-import { Component, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, Show } from "solid-js"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
-import { useVSCode } from "../../context/vscode"
+import type { UiI18nKey } from "@kilocode/kilo-ui/context"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import type { BrowserSettings } from "../../types/messages"
+import type { BrowserConfig } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 const Header: Component<{ title: string }> = (props) => (
   <h4
     style={{
-      margin: "0 0 12px",
-      "padding-bottom": "10px",
-      "border-bottom": "1px solid var(--vscode-panel-border)",
-      color: "var(--text-base, var(--vscode-foreground))",
-      "font-size": "var(--kilo-font-size-18, 18px)",
-      "font-weight": 600,
-      "line-height": "1.4",
+      margin: "0 0 8px",
+      "font-size": "var(--kilo-font-size-13)",
+      "font-weight": "600",
+      color: "var(--vscode-foreground)",
     }}
   >
     {props.title}
   </h4>
 )
 
+type Backend = NonNullable<BrowserConfig["backend"]>
+
+const BACKENDS: { value: Backend; labelKey: UiI18nKey; descriptionKey: UiI18nKey }[] = [
+  { value: "off", labelKey: "settings.browser.backend.off", descriptionKey: "settings.browser.backend.off.description" },
+  {
+    value: "playwright",
+    labelKey: "settings.browser.backend.playwright",
+    descriptionKey: "settings.browser.backend.playwright.description",
+  },
+  {
+    value: "extension",
+    labelKey: "settings.browser.backend.extension",
+    descriptionKey: "settings.browser.backend.extension.description",
+  },
+]
+
 const BrowserTab: Component = () => {
-  const { postMessage, onMessage } = useVSCode()
   const { t } = useLanguage()
   const { globalConfig, projectConfig, updateGlobalConfig } = useConfig()
 
-  const [settings, setSettings] = createSignal<BrowserSettings>({
-    enabled: false,
-    useSystemChrome: true,
-    headless: false,
-  })
+  const selected = () => BACKENDS.find((item) => item.value === (globalConfig().browser?.backend ?? "playwright"))
 
-  onMount(() => {
-    postMessage({ type: "requestBrowserSettings" })
-  })
-
-  // Subscribe outside onMount to catch early pushes (per AGENTS.md pattern)
-  const unsubscribe = onMessage((msg) => {
-    if (msg.type === "browserSettingsLoaded") {
-      setSettings(msg.settings)
-    }
-  })
-  onCleanup(unsubscribe)
-
-  const update = (key: keyof BrowserSettings, value: boolean) => {
-    setSettings((prev) => ({ ...prev, [key]: value }))
-    postMessage({ type: "updateSetting", key: `browserAutomation.${key}`, value })
+  const backendDescription = () => {
+    const item = selected()
+    return item ? t(item.descriptionKey) : ""
   }
 
   const updateWebsearch = (checked: boolean) => {
@@ -120,43 +117,24 @@ const BrowserTab: Component = () => {
           {t("settings.browser.description")}
         </p>
         <Card>
-          {/* Enable toggle */}
           <SettingsRow
-            title={t("settings.browser.enable.title")}
-            description={t("settings.browser.enable.description")}
-          >
-            <Switch checked={settings().enabled} onChange={(checked: boolean) => update("enabled", checked)} hideLabel>
-              {t("settings.browser.enable.title")}
-            </Switch>
-          </SettingsRow>
-
-          {/* Use System Chrome */}
-          <SettingsRow
-            title={t("settings.browser.systemChrome.title")}
-            description={t("settings.browser.systemChrome.description")}
-          >
-            <Switch
-              checked={settings().useSystemChrome}
-              onChange={(checked: boolean) => update("useSystemChrome", checked)}
-              hideLabel
-            >
-              {t("settings.browser.systemChrome.title")}
-            </Switch>
-          </SettingsRow>
-
-          {/* Headless mode */}
-          <SettingsRow
-            title={t("settings.browser.headless.title")}
-            description={t("settings.browser.headless.description")}
+            title={t("settings.browser.backend.title")}
+            description={backendDescription()}
             last
           >
-            <Switch
-              checked={settings().headless}
-              onChange={(checked: boolean) => update("headless", checked)}
-              hideLabel
-            >
-              {t("settings.browser.headless.title")}
-            </Switch>
+            <Select
+              options={BACKENDS}
+              current={selected()}
+              value={(item) => item.value}
+              label={(item) => t(item.labelKey)}
+              onSelect={(item) => {
+                if (!item || item.value === selected()?.value) return
+                updateGlobalConfig({ browser: { backend: item.value } })
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
           </SettingsRow>
         </Card>
       </div>

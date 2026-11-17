@@ -869,14 +869,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "스킬",
 
   "settings.browser.description":
-    "Playwright 기반의 내장 브라우저 자동화를 구성합니다. Kilo는 세션에서 웹 페이지를 탐색하고 상호 작용하며 스크린샷을 찍을 수 있습니다.",
-  "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description":
-    "로컬 애플리케이션과 공개 HTTPS 페이지를 위한 세션별 Agent Manager 브라우저를 활성화합니다.",
-  "settings.browser.systemChrome.title": "시스템 Chrome 사용",
-  "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
-  "settings.browser.headless.title": "헤드리스 모드",
-  "settings.browser.headless.description": "헤드리스 모드로 실행합니다 (브라우저 창이 표시되지 않음).",
+    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
+  "settings.browser.backend.title": "Browser backend",
+  "settings.browser.backend.off": "Off",
+  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+  "settings.browser.backend.playwright": "Playwright",
+  "settings.browser.backend.playwright.description":
+    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
+  "settings.browser.backend.extension": "Kilo browser extension",
+  "settings.browser.backend.extension.description":
+    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
 
   "settings.language.description": 'Kilo Code UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
   "settings.language.auto": "자동 (VS Code 언어)",

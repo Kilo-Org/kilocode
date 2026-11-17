@@ -1143,17 +1143,8 @@
         "kilo-code.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
-        },
-        "kilo-code.new.browserAutomation.useSystemChrome": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
-        },
-        "kilo-code.new.browserAutomation.headless": {
-          "type": "boolean",
-          "default": false,
-          "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
+          "deprecationMessage": "Browser automation is configured by browser.backend in the Kilo config. This setting is only read once to migrate an existing value.",
+          "description": "Deprecated. Browser automation moved to browser.backend in the Kilo config; Web Tools has the backend picker."
         },
         "kilo-code.new.agentManager.browser.useSystemChrome": {
           "type": "boolean",

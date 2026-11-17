@@ -132,6 +132,25 @@ export const Info = Schema.Struct({
     description: "Share a board between a main session and its task subagents, including nested subagents",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
+  browser: Schema.optional(
+    Schema.Struct({
+      backend: Schema.optional(Schema.Literals(["playwright", "extension", "off"])).annotate({
+        description:
+          "Where the browser runs: the bundled Playwright browser, the user's browser through the Kilo browser extension, or nowhere. Defaults to playwright.",
+      }),
+      observation: Schema.optional(Schema.Literals(["full", "diff", "none"])).annotate({
+        description:
+          "How much page state a browser tool returns after an action: the full snapshot, a diff against the previous snapshot of the tab, or only status, URL and title. Defaults to full.",
+      }),
+      allowSensitive: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Allow sensitive browser steps such as password fields and file uploads without asking the user. Defaults to false.",
+      }),
+      target: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+        description: "Browser or profile identifier for the extension backend",
+      }),
+    }),
+  ).annotate({ description: "Browser automation configuration" }),
   console: Schema.optional(
     Schema.Struct({
       context_sidebar_width: Schema.optional(
@@ -330,6 +349,9 @@ export const Info = Schema.Struct({
       }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
+      }),
+      browser_extension: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable the browser backend that drives the user's own browser through the Kilo browser extension",
       }),
       glob_include_ignored: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
         description:

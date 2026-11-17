@@ -877,15 +877,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Vještine",
 
   "settings.browser.description":
-    "Konfigurirajte ugrađenu automatizaciju preglednika koju pokreće Playwright. Kilo može navigirati, komunicirati sa web stranicama i snimati ekran u vašim sesijama.",
-  "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description":
-    "Omogući preglednik vezan za sesiju u aplikaciji Agent Manager za lokalne aplikacije i javne HTTPS stranice.",
-  "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
-  "settings.browser.systemChrome.description":
-    "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
-  "settings.browser.headless.title": "Headless način",
-  "settings.browser.headless.description": "Pokreni u headless načinu (bez vidljivog prozora preglednika).",
+    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
+  "settings.browser.backend.title": "Browser backend",
+  "settings.browser.backend.off": "Off",
+  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+  "settings.browser.backend.playwright": "Playwright",
+  "settings.browser.backend.playwright.description":
+    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
+  "settings.browser.backend.extension": "Kilo browser extension",
+  "settings.browser.backend.extension.description":
+    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
 
   "settings.language.description": 'Odaberite jezik za Kilo Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
   "settings.language.auto": "Auto (VS Code jezik)",

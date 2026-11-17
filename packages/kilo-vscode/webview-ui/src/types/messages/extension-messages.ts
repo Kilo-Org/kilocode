@@ -52,7 +52,6 @@ import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from 
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
-  BrowserSettings,
   Config,
   ConfigCollections,
   FeatureFlags,
@@ -738,11 +737,6 @@ export interface SuggestionResolvedMessage {
 export interface SuggestionErrorMessage {
   type: "suggestionError"
   requestID: string
-}
-
-export interface BrowserSettingsLoadedMessage {
-  type: "browserSettingsLoaded"
-  settings: BrowserSettings
 }
 
 export interface ClaudeCompatSettingLoadedMessage {
@@ -1888,7 +1882,6 @@ export type ExtensionMessage =
   | SuggestionRequestMessage
   | SuggestionResolvedMessage
   | SuggestionErrorMessage
-  | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage

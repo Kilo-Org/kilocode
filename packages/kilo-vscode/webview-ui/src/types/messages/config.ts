@@ -139,10 +139,11 @@ export type KiloEmbeddingModelCatalog = {
 
 export type IndexingStatus = SdkIndexingStatus
 
-export interface BrowserSettings {
-  enabled: boolean
-  useSystemChrome: boolean
-  headless: boolean
+export interface BrowserConfig {
+  backend?: "playwright" | "extension" | "off"
+  observation?: "full" | "diff" | "none"
+  allowSensitive?: boolean
+  target?: string | null
 }
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
@@ -194,6 +195,7 @@ export interface Config {
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig
+  browser?: BrowserConfig
 }
 
 export interface FeatureFlags {

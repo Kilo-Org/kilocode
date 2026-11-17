@@ -318,11 +318,16 @@ const layer = Layer.effect(
         })
 
         // kilocode_change start
-        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, {
-          agent: agents,
-          truncate,
-          indexing: indexing ?? false,
-        })
+        const kilo = yield* KiloToolRegistry.build(
+          kiloToolInfos,
+          {
+            agent: agents,
+            truncate,
+            indexing: indexing ?? false,
+          },
+          undefined,
+          cfg,
+        )
         // kilocode_change end
 
         return {
