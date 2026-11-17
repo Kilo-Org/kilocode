@@ -4,6 +4,50 @@
 
 ### Minor Changes
 
+- [#16182](https://github.com/Kilo-Org/kilocode/pull/16182) [`c9212a6`](https://github.com/Kilo-Org/kilocode/commit/c9212a6158e00ffea059582f7307c96ca17c8a7f) - Move Agent Manager worktrees and Cloud tasks between sections, choose a section when creating tasks with the current tree selection prefilled, and dictate prompts in the creation dialogs.
+
+- [#16100](https://github.com/Kilo-Org/kilocode/pull/16100) [`ac9f2e3`](https://github.com/Kilo-Org/kilocode/commit/ac9f2e3b625f40eee6700cf2f1541e8b9f053b42) - Organize local and Cloud workspaces in a unified Agent Manager list with reorderable, color-coded sections and keep the primary checkout pinned at the top.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`c153a86`](https://github.com/Kilo-Org/kilocode/commit/c153a86705ad856843960f1339c5b973e56f56ce) - Create local and Cloud tasks from a unified Add menu in the JetBrains Agent Manager. Group Cloud workspaces, open them in the correct organization in your browser, close and reopen sessions, and delete whole workspaces with progress and retry. Allow Cloud workspaces without a profile, preselect and mark personal and organization default profiles, switch back to the default profile, show a standard border around the dialog prompt, and create a Cloud workspace with an empty prompt. Show submitted prompts immediately, show preparation progress while a Cloud workspace starts, wait for preparation to finish before loading chat history, and keep Cloud-generated session titles in sync in both the session header and the workspace list. Keep newly created Cloud workspaces visible while discovery catches up, and remove deleted ones immediately. Report setup failures with command output and retry even when chat history is unavailable, and show Cloud load failures in plain language with Retry for transient errors instead of Dismiss for permanent errors.
+
+- [#16021](https://github.com/Kilo-Org/kilocode/pull/16021) [`73c4f3a`](https://github.com/Kilo-Org/kilocode/commit/73c4f3a6a88fcf380908ac5fc8c53abaff952d52) - Search conversation text in the chat transcript with the IDE Find shortcut and native Find bar.
+
+- [#16138](https://github.com/Kilo-Org/kilocode/pull/16138) [`0652bf5`](https://github.com/Kilo-Org/kilocode/commit/0652bf515a1c3d378bba6da04c498b2ec44684d8) - Dictate prompts in JetBrains IDEs using the microphone button or a configurable start/stop shortcut.
+
+### Patch Changes
+
+- [#16096](https://github.com/Kilo-Org/kilocode/pull/16096) [`bfb2db1`](https://github.com/Kilo-Org/kilocode/commit/bfb2db11d71a98c153e8803f2aeda28d372d6198) - Keep Agent Manager branch labels and pull request badges in sync when a checkout switches branches outside the list.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`edb25bf`](https://github.com/Kilo-Org/kilocode/commit/edb25bf64f2802877d82907dca1c812475521150) - Prevent errors when editing branch searches in the worktree dialog, and preserve the search text and caret when suggestions open.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`89e06d1`](https://github.com/Kilo-Org/kilocode/commit/89e06d1d3a1070378bc354b6a299e9ad7523648b) - Open the New Cloud Workspace dialog immediately while profiles load in the background, and remember non-default profile selections per repository in IDE settings. Show the organization or personal default in the profile picker; the Set as default action is temporarily unavailable until organization profiles can be saved as personal defaults.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`babbfcb`](https://github.com/Kilo-Org/kilocode/commit/babbfcb2df8cc4f297f47d7ba285beda2480a007) - Unify the Cloud workspace editor with local worktrees: start new Cloud sessions from the same New Session row (no prompt dialog), share one title across the tree row, editor tab, header, and status bar, delete Cloud workspaces from the tree with the standard Delete shortcut, and keep the Starting badge instead of showing "not available" while a sandbox boots.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`a7964d3`](https://github.com/Kilo-Org/kilocode/commit/a7964d3a0a237f8923c623a4022470b18fee37e8) - Prevent session background painting errors while editor color schemes initialize or reload, while preserving custom editor backgrounds and theme updates.
+
+- [#15599](https://github.com/Kilo-Org/kilocode/pull/15599) [`92a8ea2`](https://github.com/Kilo-Org/kilocode/commit/92a8ea20c9594bbbb79b82a484996773d7636127) - Hide local MCP sign-in warnings from JetBrains Cloud sessions.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`a387dfa`](https://github.com/Kilo-Org/kilocode/commit/a387dfad5ae7b05964f1364da794226be5e13114) - Prevent IDE freezes when a Cloud workspace has no open sessions and keep session-history requests from blocking IDE background work.
+
+- [#16076](https://github.com/Kilo-Org/kilocode/pull/16076) [`90e5ea5`](https://github.com/Kilo-Org/kilocode/commit/90e5ea57d464451ec41c78ba7baa8c73464c5e12) - Fix the JetBrains plugin so Marketplace publishing passes plugin verification again.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`d3d201d`](https://github.com/Kilo-Org/kilocode/commit/d3d201d9bcc214e46a6a833e3dd3afbd03c844bb) - Prevent markdown hover and scrolling errors when mixed-direction text contains paths, URLs, or dotted names, while preserving word wrapping and link highlighting.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`08d725a`](https://github.com/Kilo-Org/kilocode/commit/08d725a75096662f8c684fb9ebc47055ecccf8fc) - Keep the Windows CLI connection working when optional native process cleanup is unavailable.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`d3d201d`](https://github.com/Kilo-Org/kilocode/commit/d3d201d9bcc214e46a6a833e3dd3afbd03c844bb) - Prevent overlay hover errors when display configuration changes or the pointer position is unavailable.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`d91b019`](https://github.com/Kilo-Org/kilocode/commit/d91b019219fe0065dcf66234bf6af6b187becec9) - Prevent prompt editing and paste errors after the input editor is recreated, and preserve mention and command highlighting across editor changes.
+
+- [#16103](https://github.com/Kilo-Org/kilocode/pull/16103) [`3d043b8`](https://github.com/Kilo-Org/kilocode/commit/3d043b8b0c6112f80ae7b37c03bac85af3cccd59) - Prevent tool-window setup errors when Kilo Code is disabled or uninstalled by safely skipping unavailable telemetry and honoring cancellation.
+
+- [#16181](https://github.com/Kilo-Org/kilocode/pull/16181) [`2233d32`](https://github.com/Kilo-Org/kilocode/commit/2233d32ad7b7342f2630b9949f98207729dd08cb) - Fix worktree creation getting stuck during background refreshes. Preserve creation prompts and their selected mode and model through failures, reopening, and IDE restarts.
+
+## 7.9.0
+
+### Minor Changes
+
 - [#15886](https://github.com/Kilo-Org/kilocode/pull/15886) [`912b83e`](https://github.com/Kilo-Org/kilocode/commit/912b83eb8b037d9e30da23a0218fe3eff3481de0) - Highlight the pull request badge, status glyphs, change summary, and row menu when the pointer hovers them in worktree rows.
 
 - [#15820](https://github.com/Kilo-Org/kilocode/pull/15820) [`073f573`](https://github.com/Kilo-Org/kilocode/commit/073f573d56b899d1b6d090b60d6ca890b510ab63) - Add "Update from Base" to the worktree row menu so a worktree agent fetches and merges its saved base branch, preserving uncommitted work without using Git stash.
