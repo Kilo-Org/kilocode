@@ -1,11 +1,24 @@
-import { afterEach, expect, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, expect, test } from "bun:test"
 import { createSignal } from "solid-js"
 import { Markdown } from "../src/components/markdown"
 import { highlightInProcess } from "../../kilo-ui-base/src/components/markdown-worker"
 import { mountRich, waitFor, type Mounted } from "./harness"
 
-// Bun cannot start the highlighting worker, which matches the VS Code webview: it cannot construct a worker from its
-// resource origin either. Every block therefore takes the in-process path, and it must look the same as the worker's.
+// The VS Code webview cannot construct the highlighting worker from its resource origin. Whether a Worker can be
+// constructed here depends on the environment, so the premise is made explicit instead of assumed.
+const WorkerImplementation = globalThis.Worker
+
+beforeAll(() => {
+  globalThis.Worker = class {
+    constructor() {
+      throw new Error("worker unavailable")
+    }
+  } as unknown as typeof Worker
+})
+
+afterAll(() => {
+  globalThis.Worker = WorkerImplementation
+})
 
 const source = [
   "class History<T> {",
