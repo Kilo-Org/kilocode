@@ -147,7 +147,7 @@ function changes(change: Change): string[] {
   return [
     `- ${size.join(", ")}`,
     fence + "diff",
-    ...change.changed.map((item) => `~ ${item.from}\n  ${item.to}`),
+    ...change.changed.map((item) => `~ ${item.from}\n${item.to}`),
     ...change.added.map((line) => `+ ${line}`),
     ...change.removed.map((line) => `- ${line}`),
     fence,

@@ -10,31 +10,85 @@
  */
 import fs from "node:fs/promises"
 import path from "node:path"
+import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
-import { Client } from "@modelcontextprotocol/sdk/client/index.js"
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { entries, hash } from "../src/kilocode/browser/contract-shape"
 import type { Entry } from "../src/kilocode/browser/contract-shape"
 
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const output = path.join(dir, "src/kilocode/browser/contract.generated.ts")
 const pin = "@playwright/mcp@0.0.81"
+const protocol = "2024-11-05"
+const timeout = 120_000
 
 // Mirrors apps/extension/scripts/generate-browser-tool-contract.mjs: the pinned server over stdio,
-// so the SHA-256 is the same value the extension vendor uses for the handshake.
+// so the SHA-256 is the same value the extension vendor uses for the handshake. The hash covers the
+// raw tools/list result, including the key order of every JSON Schema, so it must not go through a
+// client that re-serializes the payload.
 const list = async () => {
-  const transport = new StdioClientTransport({
-    command: process.execPath,
-    args: [path.join(dir, "node_modules/@playwright/mcp/cli.js"), "--headless"],
-    stderr: "ignore",
+  const child = spawn(process.execPath, [path.join(dir, "node_modules/@playwright/mcp/cli.js"), "--headless"], {
+    stdio: ["pipe", "pipe", "pipe"],
   })
-  const client = new Client({ name: "kilo-browser-tool-contract", version: "1.0.0" })
-  await client.connect(transport)
+  type Response = { result?: unknown; error?: unknown }
+  const pending = new Map<number, PromiseWithResolvers<Response>>()
+  const send = (message: unknown) => child.stdin.write(`${JSON.stringify(message)}\n`)
+  const request = (id: number, method: string, params: unknown) => {
+    const deferred = Promise.withResolvers<Response>()
+    pending.set(id, deferred)
+    send({ id, jsonrpc: "2.0", method, params })
+    return deferred.promise
+  }
+
+  let buffer = ""
+  let stderr = ""
+  child.stdout.setEncoding("utf8")
+  child.stderr.setEncoding("utf8")
+  child.stderr.on("data", (chunk: string) => {
+    stderr += chunk
+  })
+  child.stdout.on("data", (chunk: string) => {
+    buffer += chunk
+    let newline = buffer.indexOf("\n")
+    while (newline !== -1) {
+      const line = buffer.slice(0, newline).trim()
+      buffer = buffer.slice(newline + 1)
+      newline = buffer.indexOf("\n")
+      if (!line) continue
+      const message = JSON.parse(line) as Response & { id?: number }
+      if (message.id === undefined) continue
+      const settle = pending.get(message.id)
+      if (!settle) continue
+      pending.delete(message.id)
+      settle.resolve(message)
+    }
+  })
+  const fail = (error: Error) => {
+    for (const settle of pending.values()) settle.reject(error)
+    pending.clear()
+  }
+  child.on("error", (error) => fail(error))
+  child.on("exit", (code) => fail(new Error(`${pin} exited with code ${code}\n${stderr}`)))
+
+  const timer = setTimeout(() => {
+    child.kill("SIGTERM")
+    fail(new Error(`timed out after ${timeout}ms waiting for ${pin}`))
+  }, timeout)
+
   try {
-    const result = await client.listTools()
-    return { result, tools: entries(result) }
+    const initialized = await request(1, "initialize", {
+      capabilities: {},
+      clientInfo: { name: "kilo-browser-tool-contract", version: "1.0.0" },
+      protocolVersion: protocol,
+    })
+    if (initialized.error) throw new Error(`${pin} rejected initialize: ${JSON.stringify(initialized.error)}`)
+    send({ jsonrpc: "2.0", method: "notifications/initialized" })
+    const listed = await request(2, "tools/list", {})
+    if (listed.error) throw new Error(`${pin} rejected tools/list: ${JSON.stringify(listed.error)}`)
+    if (listed.result === undefined) throw new Error(`${pin} returned an empty tools/list result`)
+    return { result: listed.result, tools: entries(listed.result) }
   } finally {
-    await client.close()
+    clearTimeout(timer)
+    child.kill("SIGTERM")
   }
 }
 

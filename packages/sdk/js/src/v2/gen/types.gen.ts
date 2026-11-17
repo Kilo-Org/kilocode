@@ -118,6 +118,7 @@ export type Event =
   | EventKilocodeAgentManagerStart
   | EventKilocodeAgentManagerRequested
   | EventKilocodeAgentManagerCancelled
+  | EventBrowserUnavailable
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
@@ -1170,6 +1171,7 @@ export type GlobalEvent = {
     | EventKilocodeAgentManagerStart
     | EventKilocodeAgentManagerRequested
     | EventKilocodeAgentManagerCancelled
+    | EventBrowserUnavailable
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
@@ -2597,6 +2599,12 @@ export type Config = {
   reasoning_display?: "expanded" | "preview" | "headline"
   shared_agent_board?: boolean
   indexing?: IndexingConfig
+  browser?: {
+    backend?: "playwright" | "extension" | "off"
+    observation?: "full" | "diff" | "none"
+    allowSensitive?: boolean
+    target?: string
+  }
   console?: {
     /**
      * Width of the Kilo Console project context sidebar in pixels
@@ -2743,6 +2751,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    browser_extension?: boolean
     glob_include_ignored?: Array<string>
     code_mode?: boolean
     speech_to_text_model?: string
@@ -5975,6 +5984,16 @@ export type EventKilocodeAgentManagerCancelled = {
     requestID: AgentManagerRequestId
     sessionID: string
     reason: "cancelled" | "disposed" | "timeout"
+  }
+}
+
+export type EventBrowserUnavailable = {
+  id: string
+  type: "browser.unavailable"
+  properties: {
+    backend: "playwright" | "extension"
+    reason: string
+    hint: string
   }
 }
 
