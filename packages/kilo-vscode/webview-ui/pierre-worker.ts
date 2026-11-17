@@ -83,9 +83,12 @@ export function getWorkerPool(style: WorkerPoolStyle | undefined): WorkerPoolMan
     pools[key] = createPool()
     return undefined
   }
-  void load(url).then((loaded) => {
-    if (loaded) pools[key] ??= createPool()
-  })
+  void load(url)
+    .then((loaded) => {
+      if (loaded) pools[key] ??= createPool()
+    })
+    // A pool that cannot start keeps the main-thread fallback; it must not surface as an unhandled rejection.
+    .catch((err) => console.warn("[Kilo New] Failed to start the Pierre worker pool", err))
   return undefined
 }
 
