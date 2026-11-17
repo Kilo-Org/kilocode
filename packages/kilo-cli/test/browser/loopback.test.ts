@@ -42,7 +42,9 @@ async function freePort() {
 
 // An isolated data and run directory, then a real hub. `allow` is written to
 // `allowed.json` before the hub reads it, which is what `install-host` produces.
-async function startHub(input: { pairingTtlMs?: number; allow?: string[] } = {}) {
+async function startHub(
+  input: { pairingTtlMs?: number; exchangeTimeoutMs?: number; idleMs?: number; allow?: string[] } = {},
+) {
   const at = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-loopback-unit-"))
   roots.push(at)
   const before = { run: process.env.KILO_BROWSER_RUN_DIR, data: process.env.KILO_BROWSER_DATA_DIR }
@@ -62,7 +64,12 @@ async function startHub(input: { pairingTtlMs?: number; allow?: string[] } = {})
   const port = await freePort()
   // `run` resolves once the hub is listening; `done` resolves when it stops, which
   // is what these tests observe.
-  const running = await run({ port, idleMs: 200, pairingTtlMs: input.pairingTtlMs })
+  const running = await run({
+    port,
+    idleMs: input.idleMs ?? 200,
+    pairingTtlMs: input.pairingTtlMs,
+    exchangeTimeoutMs: input.exchangeTimeoutMs,
+  })
   const entry = await until(async () => (await Registry.list({ dir: path.join(at, "run", "hubs") })).at(0), 10_000)
   return { at, port, entry, done: running.done, stop: running.stop }
 }
@@ -199,9 +206,71 @@ describe("loopback pairing", () => {
     return new URLSearchParams(new URL(url).hash.slice(1)).get("t")
   }
 
-  function redeem(port: number, value: string | null, origin?: string) {
-    const target = `http://127.0.0.1:${port}${pair.PairingKeyPath}?t=${value ?? ""}`
-    return fetch(target, { headers: origin === undefined ? {} : { origin } })
+  // The exact request a Chrome MV3 service worker makes: a JSON POST, which is the
+  // only pairing request that carries the extension's Origin.
+  function redeem(port: number, value: string | null, origin?: string, body?: string) {
+    return fetch(`http://127.0.0.1:${port}${pair.PairingKeyPath}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(origin === undefined ? {} : { origin }),
+      },
+      body: body ?? JSON.stringify({ t: value }),
+    })
+  }
+
+  function preflight(port: number, origin?: string) {
+    return fetch(`http://127.0.0.1:${port}${pair.PairingKeyPath}`, {
+      method: "OPTIONS",
+      headers: {
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+        ...(origin === undefined ? {} : { origin }),
+      },
+    })
+  }
+
+  // The requests a browser would never make, so `fetch` cannot build them: a body
+  // that never ends and one that keeps streaming past the cap.
+  async function connect(port: number) {
+    const socket = net.createConnection({ host: "127.0.0.1", port })
+    sockets.push(socket)
+    // A refusal ends the connection under the test's feet.
+    socket.on("error", () => undefined)
+    const connected = Promise.withResolvers<void>()
+    socket.once("connect", connected.resolve)
+    socket.once("error", connected.reject)
+    await connected.promise
+    return socket
+  }
+
+  function head(port: number, length: number) {
+    return [
+      `POST ${pair.PairingKeyPath} HTTP/1.1`,
+      `Host: 127.0.0.1:${port}`,
+      `Origin: ${extension}`,
+      "Content-Type: application/json",
+      `Content-Length: ${length}`,
+      "",
+      "",
+    ].join("\r\n")
+  }
+
+  function status(socket: net.Socket) {
+    const { promise, resolve } = Promise.withResolvers<number>()
+    let buffered = ""
+    socket.on("data", (chunk: Buffer) => {
+      buffered += chunk.toString("latin1")
+      const line = /^HTTP\/1\.1 (\d{3})/.exec(buffered)
+      if (line?.[1] !== undefined) resolve(Number(line[1]))
+    })
+    return promise
+  }
+
+  function shut(socket: net.Socket) {
+    const { promise, resolve } = Promise.withResolvers<boolean>()
+    socket.once("close", () => resolve(true))
+    return promise
   }
 
   test("mints a token over the CLI socket and redeems it once for the key", async () => {
@@ -216,6 +285,8 @@ describe("loopback pairing", () => {
 
     const response = await redeem(hub.port, minted, extension)
     expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("application/json")
+    expect(response.headers.get("cache-control")).toBe("no-store")
     expect(response.headers.get("access-control-allow-origin")).toBe(extension)
     const body = pair.KeyExchange.parse(await response.json())
     // The extension receives the durable key here, out of band, and the HMAC
@@ -229,12 +300,20 @@ describe("loopback pairing", () => {
     await hub.stop()
   })
 
-  test("refuses a redemption from a web page and keeps the token unused", async () => {
+  test("refuses a POST with no origin and keeps the token unused", async () => {
+    const hub = await startHub()
+    const minted = token((await ask(hub.entry)).url)
+    expect((await redeem(hub.port, minted)).status).toBe(403)
+    // A refused request must not consume the token the real extension is about to use.
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("refuses a POST from a web page or an unknown extension id and keeps the token unused", async () => {
     const hub = await startHub()
     const minted = token((await ask(hub.entry)).url)
     expect((await redeem(hub.port, minted, "https://example.com")).status).toBe(403)
-    expect((await redeem(hub.port, minted)).status).toBe(403)
-    // A refused request must not consume the token the real extension is about to use.
+    expect((await redeem(hub.port, minted, `chrome-extension://${"c".repeat(32)}`)).status).toBe(403)
     expect((await redeem(hub.port, minted, extension)).status).toBe(200)
     await hub.stop()
   })
@@ -245,6 +324,72 @@ describe("loopback pairing", () => {
     const minted = token((await ask(hub.entry)).url)
     await Bun.sleep(150)
     expect((await redeem(hub.port, minted, extension)).status).toBe(404)
+    await hub.stop()
+  })
+
+  test("refuses a malformed body and keeps the token unused", async () => {
+    const hub = await startHub()
+    const minted = token((await ask(hub.entry)).url)
+    expect((await redeem(hub.port, minted, extension, "{")).status).toBe(400)
+    expect((await redeem(hub.port, minted, extension, JSON.stringify({ t: "short" }))).status).toBe(400)
+    expect((await redeem(hub.port, minted, extension, JSON.stringify({ t: 42 }))).status).toBe(400)
+    // Over the 1 KiB cap, with a body that would otherwise be a valid request.
+    expect(
+      (await redeem(hub.port, minted, extension, JSON.stringify({ t: minted, pad: "x".repeat(2_000) }))).status,
+    ).toBe(400)
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("times out a body that never ends and keeps the token unused", async () => {
+    const hub = await startHub({ exchangeTimeoutMs: 50 })
+    const minted = token((await ask(hub.entry)).url)
+    const socket = await connect(hub.port)
+    const answered = status(socket)
+    // Complete headers and a partial body, then silence: the upload never ends.
+    socket.write(`${head(hub.port, 100)}{"t":"${minted}"`)
+    expect(await answered).toBe(408)
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
+    await hub.stop()
+  })
+
+  test("stops reading an oversized upload once it answers 400", async () => {
+    // A long idle window keeps the hub from treating the still-open upload as the
+    // end of its useful life; the connection may only close because of the refusal.
+    const hub = await startHub({ idleMs: 60_000 })
+    const socket = await connect(hub.port)
+    const answered = status(socket)
+    const ended = shut(socket)
+    socket.write(head(hub.port, 100_000))
+    socket.write("x".repeat(2_048))
+    expect(await answered).toBe(400)
+    // The upload has barely started; the server closes the connection instead of
+    // consuming the rest of it.
+    expect(await ended).toBe(true)
+    await hub.stop()
+  })
+
+  test("answers the preflight and refuses one from a foreign origin", async () => {
+    const hub = await startHub()
+    const allowed = await preflight(hub.port, extension)
+    expect(allowed.status).toBe(204)
+    expect(allowed.headers.get("access-control-allow-origin")).toBe(extension)
+    expect(allowed.headers.get("access-control-allow-methods")).toBe("POST")
+    expect(allowed.headers.get("access-control-allow-headers")).toBe("content-type")
+    expect((await preflight(hub.port, "https://example.com")).status).toBe(403)
+    expect((await preflight(hub.port)).status).toBe(403)
+    await hub.stop()
+  })
+
+  test("refuses a GET redemption", async () => {
+    const hub = await startHub()
+    const minted = token((await ask(hub.entry)).url)
+    const response = await fetch(`http://127.0.0.1:${hub.port}${pair.PairingKeyPath}?t=${minted}`, {
+      headers: { origin: extension },
+    })
+    expect(response.status).toBe(405)
+    // The token is only burned by a POST that redeems it.
+    expect((await redeem(hub.port, minted, extension)).status).toBe(200)
     await hub.stop()
   })
 

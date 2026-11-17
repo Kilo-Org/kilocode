@@ -10,7 +10,7 @@ import { Paths } from "./paths"
 const log = Log.create({ service: "browser.pair" })
 
 export const PairingPath = "/__kilo_browser_pair"
-// The extension redeems the fragment's token here, once, for the durable key.
+// The extension POSTs the fragment's token here, once, for the durable key.
 export const PairingKeyPath = "/__kilo_browser_pair/key"
 export const SocketPath = "/__kilo_browser"
 export const KeyBytes = 32
@@ -129,6 +129,11 @@ export function url(input: { port: number; hubId: string; token: string }) {
 // the port again, and the key is the durable secret it will HMAC with.
 export const KeyExchange = z.object({ v: z.literal(1), key: z.string(), ws: z.string() })
 export type KeyExchange = z.infer<typeof KeyExchange>
+
+// The request body that redeems a token: one JSON object with the token from the
+// pairing page fragment. It is a POST so the browser sends the extension's Origin.
+export const Redeem = z.object({ t: z.string() })
+export type Redeem = z.infer<typeof Redeem>
 
 export type Exec = (cmd: string[]) => Promise<number>
 
