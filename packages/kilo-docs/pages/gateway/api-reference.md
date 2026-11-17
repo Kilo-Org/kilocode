@@ -11,6 +11,8 @@ The Kilo AI Gateway provides an OpenAI-compatible API. All endpoints use the bas
 https://ai-gateway.kilo.ai/api/v1
 ```
 
+For programmatic organization usage data, see the separate [Analytics API reference](https://app.kilo.ai/api/docs) and [organization analytics guide](/docs/collaborate/teams/analytics#analytics-api).
+
 ## Chat completions
 
 Create a chat completion. This is the primary endpoint for interacting with AI models.

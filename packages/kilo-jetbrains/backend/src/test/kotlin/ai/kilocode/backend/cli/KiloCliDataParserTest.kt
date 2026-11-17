@@ -2831,6 +2831,25 @@ class KiloCliDataParserTest {
             )
         }
 
+        @Test
+        fun `buildCommandJson - preserves correlation and selected choices`() {
+            val prompt = PromptDto(
+                parts = emptyList(),
+                messageID = "msg_initial",
+                agent = "plan",
+                variant = "high",
+                providerID = "kilo",
+                modelID = "gpt-5",
+            )
+
+            val result = KiloCliDataParser.buildCommandJson("review", "src/", prompt)
+
+            assertEquals(
+                """{"command":"review","arguments":"src/","messageID":"msg_initial","agent":"plan","variant":"high","model":"kilo/gpt-5"}""",
+                result,
+            )
+        }
+
         // ---- buildSummarizeJson ----
 
         @Test
