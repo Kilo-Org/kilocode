@@ -50,6 +50,6 @@
     "kilocode.sandbox": 10,
     "kilocode.soul": 10
   },
-  "overhead": 90,
-  "modules": 260
+  "overhead": 75,
+  "modules": 140
 }
