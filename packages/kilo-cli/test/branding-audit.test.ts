@@ -136,9 +136,9 @@ test("flags an upstream name left in Kilo-owned plugin text", async () => {
   // prose is the case the namespace patterns cannot see: it is one bare word.
   const file = "kilo-plugin/src/flow/permissions.ts"
   const source = await read(file)
-  expect(source).toContain("write, patch, and kilo use the edit action")
+  expect(source).toContain("write, patch, and kilo.worktree_remove use the edit action")
   expect(KiloBrandingAudit.check(file, source)).toMatchObject({ unexpected: [], stale: [] })
-  const drifted = source.replace("and kilo use", "and opencode use")
+  const drifted = source.replace("and kilo.worktree_remove use", "and opencode use")
   expect(KiloBrandingAudit.auditNamespace(file, drifted)).toEqual([])
   expect(KiloBrandingAudit.check(file, drifted).unexpected.map((f) => f.kind)).toEqual(["missing-interception"])
 })
