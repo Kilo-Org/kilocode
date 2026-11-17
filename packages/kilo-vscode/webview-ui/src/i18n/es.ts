@@ -886,16 +886,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Habilidades",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Elige dónde se ejecutan las herramientas de navegador: un navegador Playwright incluido en este equipo, o tu propio navegador mediante la extensión de navegador de Kilo.",
+  "settings.browser.backend.title": "Motor del navegador",
+  "settings.browser.backend.off": "Desactivado",
+  "settings.browser.backend.off.description":
+    "Ocultar las herramientas de navegador. Las sesiones no pueden abrir ni actuar en páginas web.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Ejecutar un navegador Playwright incluido con un perfil propio de Kilo. Usa Chrome o Edge del sistema, o en su defecto una descarga de Chromium de Playwright.",
+  "settings.browser.backend.extension": "Extensión de navegador de Kilo",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Controlar tu propio navegador mediante la extensión de Kilo. Aún no está disponible; las llamadas de herramientas de navegador informan de que no hay navegador.",
 
   "settings.language.description":
     'Elige el idioma de la interfaz de Kilo Code. "Auto" utiliza el idioma de visualización de VS Code.',

@@ -873,16 +873,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "スキル",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "ブラウザツールの実行場所を選択します。このマシン上の同梱 Playwright ブラウザ、または Kilo ブラウザ拡張機能経由のご自身のブラウザです。",
+  "settings.browser.backend.title": "ブラウザバックエンド",
+  "settings.browser.backend.off": "オフ",
+  "settings.browser.backend.off.description":
+    "ブラウザツールを非表示にします。セッションはウェブページを開いたり操作したりできません。",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Kilo 専用プロファイルで同梱の Playwright ブラウザを実行します。システムの Chrome または Edge を使用し、なければ Playwright の Chromium をダウンロードします。",
+  "settings.browser.backend.extension": "Kilo ブラウザ拡張機能",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Kilo ブラウザ拡張機能経由でご自身のブラウザを操作します。まだ利用できません。ブラウザツールの呼び出しはブラウザがないことを報告します。",
 
   "settings.language.description": "Kilo Code UIの言語を選択します。「自動」はVS Codeの表示言語を使用します。",
   "settings.language.auto": "自動（VS Code言語）",

@@ -10,6 +10,7 @@ export type CallResult = { content: ContentBlock[]; isError: boolean }
 
 export type CallContext = {
   session: string
+  signal?: AbortSignal
   /** `<class>:<origin>` pairs this session already approved. */
   authorized: readonly string[]
   /** Step tokens approved for this call, one per sensitive step. */

@@ -731,16 +731,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Workflow",
   "settings.agentBehaviour.subtab.skills": "Skill",
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Scegli dove vengono eseguiti gli strumenti del browser: un browser Playwright incluso su questa macchina, oppure il tuo browser tramite l'estensione browser di Kilo.",
+  "settings.browser.backend.title": "Backend del browser",
+  "settings.browser.backend.off": "Disattivato",
+  "settings.browser.backend.off.description":
+    "Nascondi gli strumenti del browser. Le sessioni non possono aprire né usare pagine web.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Esegui un browser Playwright incluso con un profilo di proprietà di Kilo. Usa Chrome o Edge di sistema, altrimenti un download Chromium di Playwright.",
+  "settings.browser.backend.extension": "Estensione browser di Kilo",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Guida il tuo browser tramite l'estensione di Kilo. Non ancora disponibile; le chiamate agli strumenti del browser segnalano che non c'è un browser.",
   "settings.language.description": 'Scegli la lingua dell\'interfaccia Kilo Code. "Auto" usa la lingua di VS Code.',
   "settings.language.auto": "Auto (lingua VS Code)",
   "settings.language.current": "Corrente:",

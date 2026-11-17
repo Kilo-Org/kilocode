@@ -117,6 +117,31 @@ describe("browser observation", () => {
     const observed = observe({ mode: "diff", text: first, previous: baseline })
     expect(observed.text).toContain("### Page changes\n- No snapshot changes")
   })
+
+  test("a snapshot too large to diff is returned in full for that call", () => {
+    const previous = { lines: Array.from({ length: 4000 }, (_, index) => `- ${index}`) }
+    const text = `### Page
+- Page URL: http://localhost/big
+### Snapshot
+\`\`\`yaml
+${Array.from({ length: 4000 }, (_, index) => `- ${index}`).join("\n")}
+\`\`\``
+    const observed = observe({ mode: "diff", text, previous })
+    expect(observed.text).toContain("### Snapshot\n```yaml")
+    expect(observed.text).not.toContain("Page changes")
+  })
+
+  test("the tracker releases a session and keeps a bounded number of them", () => {
+    const tracker = new Tracker()
+    tracker.record("gone", { url: "http://localhost/a", lines: ["- a"] })
+    tracker.forget("gone")
+    expect(tracker.previous("gone", "browser_click", "http://localhost/a")).toBeUndefined()
+
+    tracker.record("old", { url: "http://localhost/old", lines: ["- old"] })
+    for (let index = 0; index < 40; index += 1)
+      tracker.record(`s${index}`, { url: "http://localhost/x", lines: ["- x"] })
+    expect(tracker.previous("old", "browser_click", "http://localhost/old")).toBeUndefined()
+  })
 })
 
 describe("browser snapshot tracker", () => {
@@ -165,6 +190,8 @@ describe("explicit observation requests", () => {
     expect(modeFor("browser_snapshot", "none")).toBe("full")
     expect(modeFor("browser_snapshot", "diff")).toBe("full")
     expect(modeFor("browser_find", "none")).toBe("full")
+    expect(modeFor("browser_tabs", "none")).toBe("full")
+    expect(modeFor("browser_tabs", "diff")).toBe("full")
     expect(modeFor("browser_click", "none")).toBe("none")
     expect(modeFor("browser_click", "diff")).toBe("diff")
     expect(modeFor("browser_navigate", "full")).toBe("full")

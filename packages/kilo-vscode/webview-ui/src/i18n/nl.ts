@@ -869,16 +869,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Kies waar browsertools draaien: een meegeleverde Playwright-browser op deze machine, of je eigen browser via de Kilo-browserextensie.",
+  "settings.browser.backend.title": "Browserbackend",
+  "settings.browser.backend.off": "Uit",
+  "settings.browser.backend.off.description":
+    "Browsertools verbergen. Sessies kunnen geen webpagina's openen of bedienen.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Een meegeleverde Playwright-browser met een Kilo-eigen profiel uitvoeren. Gebruikt systeem-Chrome of -Edge, anders een Playwright Chromium-download.",
+  "settings.browser.backend.extension": "Kilo-browserextensie",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Je eigen browser aansturen via de Kilo-browserextensie. Nog niet beschikbaar; aanroepen van browsertools melden dat er geen browser is.",
 
   "settings.language.description": 'Kies de taal voor de Kilo Code UI. "Auto" gebruikt je VS Code schermtaal.',
   "settings.language.auto": "Auto (VS Code taal)",

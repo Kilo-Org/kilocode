@@ -857,16 +857,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "المهارات",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "اختر أين تعمل أدوات المتصفح: متصفح Playwright المضمّن على هذا الجهاز، أو متصفحك الخاص عبر إضافة Kilo للمتصفح.",
+  "settings.browser.backend.title": "خلفية المتصفح",
+  "settings.browser.backend.off": "إيقاف",
+  "settings.browser.backend.off.description": "إخفاء أدوات المتصفح. لا يمكن للجلسات فتح صفحات الويب أو التعامل معها.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "تشغيل متصفح Playwright المضمّن بملف تعريف يملكه Kilo. يستخدم Chrome أو Edge المثبّت في النظام، وإلا نزّل Chromium من Playwright.",
+  "settings.browser.backend.extension": "إضافة Kilo للمتصفح",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "تحكّم في متصفحك الخاص عبر إضافة Kilo للمتصفح. غير متاح بعد؛ تُبلغ استدعاءات أدوات المتصفح بعدم وجود متصفح.",
 
   "settings.language.description": 'اختر اللغة لواجهة Kilo Code. "تلقائي" يستخدم لغة عرض VS Code.',
   "settings.language.auto": "تلقائي (لغة VS Code)",

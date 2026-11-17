@@ -839,16 +839,16 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Ferdigheter",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Velg hvor nettleserverktøyene kjører: en innebygd Playwright-nettleser på denne maskinen, eller din egen nettleser via Kilo-nettleserutvidelsen.",
+  "settings.browser.backend.title": "Nettleserbackend",
+  "settings.browser.backend.off": "Av",
+  "settings.browser.backend.off.description": "Skjul nettleserverktøy. Økter kan ikke åpne eller bruke nettsider.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Kjør en innebygd Playwright-nettleser med en Kilo-eid profil. Den bruker systemets Chrome eller Edge, ellers en Playwright Chromium-nedlasting.",
+  "settings.browser.backend.extension": "Kilo-nettleserutvidelse",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Styr din egen nettleser via Kilo-nettleserutvidelsen. Ikke tilgjengelig ennå; kall til nettleserverktøy rapporterer at det ikke finnes noen nettleser.",
 
   "settings.language.description": 'Velg språket for Kilo Code-grensesnittet. "Auto" bruker VS Codes visningsspråk.',
   "settings.language.auto": "Auto (VS Code-språk)",

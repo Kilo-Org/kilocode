@@ -866,16 +866,17 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навички",
 
   "settings.browser.description":
-    "Choose where browser tools run: a bundled Playwright browser on this machine, or your own browser through the Kilo browser extension.",
-  "settings.browser.backend.title": "Browser backend",
-  "settings.browser.backend.off": "Off",
-  "settings.browser.backend.off.description": "Hide browser tools. Sessions cannot open or act on web pages.",
+    "Виберіть, де працюють інструменти браузера: вбудований браузер Playwright на цій машині або ваш власний браузер через розширення Kilo для браузера.",
+  "settings.browser.backend.title": "Бекенд браузера",
+  "settings.browser.backend.off": "Вимкнено",
+  "settings.browser.backend.off.description":
+    "Приховати інструменти браузера. Сесії не можуть відкривати вебсторінки або діяти на них.",
   "settings.browser.backend.playwright": "Playwright",
   "settings.browser.backend.playwright.description":
-    "Run a bundled Playwright browser with a Kilo-owned profile. It uses system Chrome or Edge, else a Playwright Chromium download.",
-  "settings.browser.backend.extension": "Kilo browser extension",
+    "Запустити вбудований браузер Playwright із профілем Kilo. Використовується системний Chrome або Edge, інакше завантажується Chromium від Playwright.",
+  "settings.browser.backend.extension": "Розширення Kilo для браузера",
   "settings.browser.backend.extension.description":
-    "Drive your own browser through the Kilo browser extension. Not available yet; browser tool calls report no browser.",
+    "Керувати вашим браузером через розширення Kilo. Поки недоступно; виклики інструментів браузера повідомляють про відсутність браузера.",
 
   "settings.language.description":
     '"Автоматично" використовує мову відображення VS Code. Виберіть мову для інтерфейсу Kilo Code.',

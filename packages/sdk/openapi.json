@@ -39010,6 +39010,9 @@
               },
               "target": {
                 "type": "string"
+              },
+              "headless": {
+                "type": "boolean"
               }
             },
             "additionalProperties": false
