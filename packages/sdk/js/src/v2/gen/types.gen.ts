@@ -2604,6 +2604,7 @@ export type Config = {
     observation?: "full" | "diff" | "none"
     allowSensitive?: boolean
     target?: string
+    headless?: boolean
   }
   console?: {
     /**

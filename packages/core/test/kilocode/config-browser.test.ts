@@ -15,7 +15,7 @@ describe("browser configuration", () => {
 
   test("reads every browser field and round-trips it", () => {
     const config = decode({
-      browser: { backend: "extension", observation: "diff", allowSensitive: true, target: "work" },
+      browser: { backend: "extension", observation: "diff", allowSensitive: true, target: "work", headless: true },
       experimental: { browser_extension: true },
     })
 
@@ -24,6 +24,7 @@ describe("browser configuration", () => {
       observation: "diff",
       allowSensitive: true,
       target: "work",
+      headless: true,
     })
     expect(config.experimental?.browser_extension).toBe(true)
     expect(encode(config).browser).toEqual(config.browser)

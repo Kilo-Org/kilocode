@@ -149,6 +149,10 @@ export const Info = Schema.Struct({
       target: Schema.optional(Schema.NullOr(Schema.String)).annotate({
         description: "Browser or profile identifier for the extension backend",
       }),
+      headless: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Run the bundled Playwright browser without a visible window. Defaults to false when a display is available and true when there is none, such as an SSH session or Linux without X11 or Wayland.",
+      }),
     }),
   ).annotate({ description: "Browser automation configuration" }),
   console: Schema.optional(
