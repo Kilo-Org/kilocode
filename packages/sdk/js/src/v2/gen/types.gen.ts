@@ -2892,6 +2892,10 @@ export type ConsoleState = {
   consoleManagedProviders: Array<string>
   activeOrgName?: string
   switchableOrgCount: number
+  browserPolicy?: {
+    control: "allow" | "playwright_only" | "off"
+    origins: Array<string>
+  }
 }
 
 export type EffectHttpApiErrorInternalServerError = {

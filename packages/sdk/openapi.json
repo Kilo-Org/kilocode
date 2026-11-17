@@ -39870,6 +39870,23 @@
           "switchableOrgCount": {
             "type": "integer",
             "minimum": 0
+          },
+          "browserPolicy": {
+            "type": "object",
+            "properties": {
+              "control": {
+                "type": "string",
+                "enum": ["allow", "playwright_only", "off"]
+              },
+              "origins": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["control", "origins"],
+            "additionalProperties": false
           }
         },
         "required": ["consoleManagedProviders", "switchableOrgCount"],
