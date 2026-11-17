@@ -612,6 +612,7 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
     return resolveImageDirectory({
       sessionID,
       visibleSession: this.visibleSession,
+      activeDiffDirectory: () => this.diffs.activeDirectory(),
       state: this.state,
       root: this.getRoot(),
       location: (id) => this.sessionLocation(id),

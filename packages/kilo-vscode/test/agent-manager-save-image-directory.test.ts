@@ -47,9 +47,9 @@ describe("Agent Manager save image directory", () => {
     expect(directory).toBe(other)
   })
 
-  it("uses the filed worktree when the server cannot report a directory", async () => {
+  it("uses the filed worktree of the viewed session when the server cannot report a directory", async () => {
     const directory = await resolveImageDirectory({
-      sessionID: "parent",
+      visibleSession: "parent",
       state,
       root,
       location: async () => undefined,
@@ -93,13 +93,52 @@ describe("Agent Manager save image directory", () => {
     expect(directory).toBe(root)
   })
 
-  it("prefers the requesting session over the viewed session", async () => {
+  it("prefers the requesting session over the viewed session and the review directory", async () => {
     const directory = await resolveImageDirectory({
       sessionID: "parent",
       visibleSession: "other",
+      activeDiffDirectory: () => os.tmpdir(),
       state,
       root,
       location: async (id) => (id === "other" ? os.tmpdir() : worktree),
+    })
+
+    expect(directory).toBe(worktree)
+  })
+
+  it("uses the review directory for a pane outside a transcript", async () => {
+    const review = path.join(root, ".kilo", "worktrees", "two")
+    const directory = await resolveImageDirectory({
+      visibleSession: "parent",
+      activeDiffDirectory: () => review,
+      state,
+      root,
+      location: async () => worktree,
+    })
+
+    expect(directory).toBe(review)
+  })
+
+  it("uses the review directory over a stale viewed subagent", async () => {
+    const review = path.join(root, ".kilo", "worktrees", "two")
+    const directory = await resolveImageDirectory({
+      visibleSession: "subagent",
+      activeDiffDirectory: () => review,
+      state,
+      root,
+      location: async () => worktree,
+    })
+
+    expect(directory).toBe(review)
+  })
+
+  it("falls back to the viewed session when no review directory is active", async () => {
+    const directory = await resolveImageDirectory({
+      visibleSession: "parent",
+      activeDiffDirectory: () => undefined,
+      state,
+      root,
+      location: async () => undefined,
     })
 
     expect(directory).toBe(worktree)
