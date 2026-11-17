@@ -52,7 +52,11 @@ function normalizeOrigin(value: string) {
 }
 
 const BACKENDS: { value: Backend; labelKey: UiI18nKey; descriptionKey: UiI18nKey }[] = [
-  { value: "off", labelKey: "settings.browser.backend.off", descriptionKey: "settings.browser.backend.off.description" },
+  {
+    value: "off",
+    labelKey: "settings.browser.backend.off",
+    descriptionKey: "settings.browser.backend.off.description",
+  },
   {
     value: "playwright",
     labelKey: "settings.browser.backend.playwright",
@@ -175,11 +179,7 @@ const BrowserTab: Component = () => {
           {t("settings.browser.description")}
         </p>
         <Card>
-          <SettingsRow
-            title={t("settings.browser.backend.title")}
-            description={backendDescription()}
-            last
-          >
+          <SettingsRow title={t("settings.browser.backend.title")} description={backendDescription()} last>
             <Select
               options={BACKENDS}
               current={selected()}
