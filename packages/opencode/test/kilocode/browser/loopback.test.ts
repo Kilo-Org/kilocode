@@ -144,4 +144,19 @@ describe("loopback idle lifecycle", () => {
     expect(await hub.finished).toBeUndefined()
     expect(await hub.exit.promise).toBe(0)
   }, 10_000)
+
+  test("an unauthenticated page cannot keep the hub alive by polling", async () => {
+    const hub = await startHub()
+    // A web page can reach 127.0.0.1; its pairing-page fetches must not count as
+    // activity, so the hub exits on its idle window anyway.
+    const deadline = Date.now() + 3_000
+    const polling = (async () => {
+      while (Date.now() < deadline) {
+        await fetch(`http://127.0.0.1:${hub.port}${pair.PairingPath}`).catch(() => undefined)
+        await Bun.sleep(200)
+      }
+    })()
+    expect(await hub.exit.promise).toBe(0)
+    await polling
+  }, 10_000)
 })

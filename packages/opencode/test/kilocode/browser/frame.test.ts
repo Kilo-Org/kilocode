@@ -91,6 +91,15 @@ describe("native messaging framing", () => {
     expect(view.frames).toStrictEqual([{ text: "z".repeat(5_000) }])
   })
 
+  test("decodes a large frame split into small chunks", () => {
+    const view = collect()
+    const text = "q".repeat(1_100_000)
+    const frame = encode({ text })
+    for (let offset = 0; offset < frame.length; offset += 1_024) view.feed(frame.subarray(offset, offset + 1_024))
+    expect(view.errors).toHaveLength(0)
+    expect(view.frames).toStrictEqual([{ text }])
+  })
+
   test("reports a frame it cannot serialize instead of throwing", () => {
     const written: Buffer[] = []
     const stream = {

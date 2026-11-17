@@ -135,7 +135,9 @@ export async function run(input: Run = {}) {
   const entry = Registry.empty({ hubId: hub.id, mode: "loopback", socket: Paths.socket(hub.id) })
 
   const server = http.createServer((request, response) => {
-    touch()
+    // No touch() here: an unauthenticated web page must not be able to keep a
+    // detached hub alive with a polling fetch. The idle guard already counts an
+    // upgrade socket and the handshake timeout covers the pre-auth window.
     const url = requestUrl(request, host)
     if (!url || url.pathname !== pair.PairingPath) {
       response.writeHead(404, { "content-type": "text/plain; charset=utf-8" })
@@ -151,7 +153,8 @@ export async function run(input: Run = {}) {
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: PeerLimit })
   server.on("upgrade", (request, socket, head) => {
-    touch()
+    // Unauthenticated too: only a connection that passed the origin check (the
+    // connection handler) refreshes the idle window.
     const url = requestUrl(request, host)
     if (!url || url.pathname !== pair.SocketPath) {
       socket.destroy()

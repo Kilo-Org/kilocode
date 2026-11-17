@@ -37,18 +37,43 @@ export namespace Registry {
     protocol: [1],
   })
 
+  // One write chain per registry file. A handshake can start a registry write from
+  // the hub's onChange callback and another when it records `paired`, and those two
+  // would otherwise share the temp path: one rename would fail with ENOENT and a
+  // concurrent read could see a half-written entry. Serializing also keeps a write
+  // that is already queued from recreating a file that remove() deleted.
+  const pending = new Map<string, Promise<void>>()
+
+  async function serialize(target: string, run: () => Promise<void>) {
+    const previous = pending.get(target) ?? Promise.resolve()
+    const work = previous.then(run)
+    // The chain must survive a rejected write so the next one still runs.
+    const tail = work.catch(() => undefined)
+    pending.set(target, tail)
+    void tail.finally(() => {
+      if (pending.get(target) === tail) pending.delete(target)
+    })
+    await work
+  }
+
   export async function write(entry: Entry, dir = Paths.hubs()) {
-    await fs.mkdir(dir, { recursive: true, mode: 0o700 })
     const target = path.join(dir, `${entry.hubId}.json`)
     const temp = `${target}.${process.pid}.tmp`
     // 0600: the socket path alone reaches the hub, but the file also carries the
     // browser label and PID, so keep it private to the user.
-    await fs.writeFile(temp, JSON.stringify(entry, null, 2), { mode: 0o600 })
-    await fs.rename(temp, target)
+    const body = JSON.stringify(entry, null, 2)
+    // The mkdir is inside the queued work too, so the queue order is the call order
+    // and a remove() issued right after this write cannot be overtaken.
+    await serialize(target, async () => {
+      await fs.mkdir(dir, { recursive: true, mode: 0o700 })
+      await fs.writeFile(temp, body, { mode: 0o600 })
+      await fs.rename(temp, target)
+    })
   }
 
   export async function remove(hubId: string, dir = Paths.hubs()) {
-    await fs.rm(path.join(dir, `${hubId}.json`), { force: true })
+    const target = path.join(dir, `${hubId}.json`)
+    await serialize(target, () => fs.rm(target, { force: true }))
   }
 
   export function alive(pid: number) {

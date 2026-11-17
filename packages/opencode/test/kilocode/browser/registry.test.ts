@@ -75,6 +75,27 @@ describe("hub registry", () => {
     await fs.rm(at, { recursive: true, force: true })
   })
 
+  test("serializes concurrent writes to one entry so the last one wins intact", async () => {
+    const at = await dir()
+    const base = Registry.empty({ hubId, mode: "loopback", socket: "/tmp/x.sock" })
+    await Promise.all(
+      Array.from({ length: 20 }, (_, index) => Registry.write({ ...base, profileLabel: `profile-${index}` }, at)),
+    )
+    const entry = Registry.Entry.parse(JSON.parse(await fs.readFile(path.join(at, `${hubId}.json`), "utf8")))
+    expect(entry.profileLabel).toBe("profile-19")
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
+  test("a queued write cannot recreate an entry that remove() deleted", async () => {
+    const at = await dir()
+    const entry = Registry.empty({ hubId, mode: "loopback", socket: "/tmp/x.sock" })
+    const write = Registry.write(entry, at)
+    const remove = Registry.remove(hubId, at)
+    await Promise.all([write, remove])
+    expect(await fs.readdir(at)).toStrictEqual([])
+    await fs.rm(at, { recursive: true, force: true })
+  })
+
   test("treats the current process as alive and a missing pid as dead", () => {
     expect(Registry.alive(process.pid)).toBe(true)
     // Above the maximum PID on both platforms, so no process can own it.

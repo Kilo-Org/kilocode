@@ -10,10 +10,10 @@ export const HostLimit = 1_000_000
 // Chrome allows 64 MiB towards the host; Firefox allows 4 GB. Tool results such as
 // screenshots need far more than 1 MB in the inbound direction.
 export const PeerLimit = 64 * 1024 * 1024
-// Chunks kept per frame before the decoder folds them into one buffer. Any
-// same-user process can write to the CLI socket, so a peer that writes one byte at
-// a time must not be able to grow the part list into millions of entries.
-const PartLimit = 1024
+// Smallest body buffer and first growth step. The buffer doubles from here, so a
+// 64 MiB frame delivered in tiny chunks copies each byte a bounded number of times
+// instead of re-copying the whole prefix on every fold.
+const FoldSize = 64 * 1024
 
 export class FrameError extends Error {
   constructor(
@@ -52,14 +52,16 @@ export function decoder(input: DecodeInput): Decoder {
   const state = {
     head: Buffer.alloc(0),
     need: -1,
-    parts: [] as Buffer[],
+    // One buffer per frame, grown by doubling: copying cost stays linear in the
+    // frame size, and a peer writing tiny chunks cannot grow an object list.
+    body: Buffer.alloc(0),
     got: 0,
     dead: false,
   }
 
   function fail(error: FrameError) {
     state.dead = true
-    state.parts = []
+    state.body = Buffer.alloc(0)
     state.head = Buffer.alloc(0)
     input.onError(error)
   }
@@ -101,20 +103,26 @@ export function decoder(input: DecodeInput): Decoder {
             return
           }
           state.need = need
-          state.parts = []
+          // Start small: memory follows the bytes that actually arrive, not the
+          // length the peer declared.
+          state.body = Buffer.allocUnsafe(Math.min(need, FoldSize))
           state.got = 0
           continue
         }
         const take = Math.min(state.need - state.got, view.length)
-        if (state.parts.length >= PartLimit) state.parts = [Buffer.concat(state.parts, state.got)]
-        state.parts.push(view.subarray(0, take))
+        if (state.got + take > state.body.length) {
+          const size = Math.min(state.need, Math.max(FoldSize, state.body.length * 2, state.got + take))
+          const grown = Buffer.allocUnsafe(size)
+          state.body.copy(grown, 0, 0, state.got)
+          state.body = grown
+        }
+        view.copy(state.body, state.got, 0, take)
         state.got += take
         view = view.subarray(take)
         if (state.got < state.need) return
-        const first = state.parts.length === 1 ? state.parts[0] : undefined
-        const body = first ?? Buffer.concat(state.parts, state.need)
+        const body = state.body.subarray(0, state.got)
         state.need = -1
-        state.parts = []
+        state.body = Buffer.alloc(0)
         state.got = 0
         if (!parse(body)) return
       }

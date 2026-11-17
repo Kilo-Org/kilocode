@@ -123,6 +123,13 @@ export function create(input: Input = {}): Client {
     // Bumped by close() so a connect() that resumes after an await cannot install a
     // socket into a closed client.
     generation: 0,
+    // True while a connect() attempt is awaiting the registry, so a retry scheduled
+    // from inside that attempt (the asynchronous spawn error) cannot start a second
+    // one and dial the same hub twice.
+    active: false,
+    // Set by the spawn error handler; the attempt that spawned the hub consumes it
+    // and schedules the retry itself instead of waiting out StartTimeout.
+    failed: false,
   }
   // Hubs whose pairing page this client has already opened, so a hub that keeps
   // reporting hub.waiting is surfaced once per start.
@@ -322,18 +329,21 @@ export function create(input: Input = {}): Client {
         env: { ...process.env, ...(input.dir === undefined ? {} : { KILO_BROWSER_RUN_DIR: input.dir }) },
       },
     )
-    // spawn reports a missing or non-executable command asynchronously; without a
-    // listener that error kills the host CLI.
+    // spawn reports a missing or non-executable command asynchronously, while the
+    // connect() that spawned it is still polling the registry. Record the failure
+    // for that attempt instead of scheduling a second connect() here.
     child.on("error", (error) => {
       log.warn("cannot start a detached loopback hub", { error })
       lifecycle.tried = false
-      schedule("cannot start the browser hub")
+      lifecycle.failed = true
     })
     child.unref()
   }
 
   async function waitForHub(deadline: number) {
     while (Date.now() < deadline) {
+      // The detached start already failed; there is nothing to wait for.
+      if (lifecycle.failed) return undefined
       const found = (await Registry.list({ dir: hubs() })).find((entry) => entry.mode === "loopback")
       if (found) return found
       await Bun.sleep(100)
@@ -343,7 +353,10 @@ export function create(input: Input = {}): Client {
   }
 
   async function connect() {
-    if (lifecycle.closed) return
+    // Single-flight: the retry timer can fire while this attempt is still polling
+    // the registry, and that attempt schedules its own retry when it ends.
+    if (lifecycle.closed || lifecycle.active) return
+    lifecycle.active = true
     const generation = lifecycle.generation
     const current = () => !lifecycle.closed && generation === lifecycle.generation
     try {
@@ -361,6 +374,11 @@ export function create(input: Input = {}): Client {
       start()
       const entry = await waitForHub(Date.now() + StartTimeout)
       if (!current()) return
+      if (lifecycle.failed) {
+        lifecycle.failed = false
+        schedule("cannot start the browser hub")
+        return
+      }
       const started = entry === undefined ? undefined : await dial(entry)
       if (!current()) {
         started?.socket.destroy()
@@ -375,6 +393,8 @@ export function create(input: Input = {}): Client {
     } catch (error) {
       log.warn("cannot connect to a browser hub", { error })
       if (current()) schedule("cannot connect to the browser hub")
+    } finally {
+      lifecycle.active = false
     }
   }
 
