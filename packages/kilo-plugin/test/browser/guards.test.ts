@@ -150,6 +150,8 @@ async function boot() {
   const transforms: ((editor: { add: (tool: Tool.Info) => void }) => void)[] = []
   const ctx = {
     location: { directory: "/tmp/browser-guards-test" },
+    // The status RPC the settings dialog reads; the tests here never call it.
+    rpc: { register: () => Effect.succeed({ events: { emit: () => Effect.void }, dispose: Effect.void }) },
     tool: {
       transform: (fn: (typeof transforms)[number]) => Effect.sync(() => (transforms.push(fn), { dispose: Effect.void })),
     },
