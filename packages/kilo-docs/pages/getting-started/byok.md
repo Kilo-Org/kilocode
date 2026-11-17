@@ -73,11 +73,9 @@ See [ChatGPT subscription setup](/docs/ai-providers/openai-chatgpt-plus-pro#conn
 
 Link a Claude API organization on the [BYOK page](https://app.kilo.ai/byok) with the **Claude (linked billing)** card. Anthropic then bills that organization directly for Claude models used through the Kilo Gateway. No Anthropic API key is needed.
 
-- Linked billing uses API pricing on your Claude API organization's existing terms. Claude Pro and Max subscriptions do not qualify.
-- If you use Kilo in an organization, link on the organization's BYOK page. Only organization owners and admins can link or remove it, and one link covers every member. A personal link covers only personal requests.
-- A Console user with the Owner, Admin, or Billing role in the Claude organization must approve the link.
+Linked billing uses API pricing, not a Claude Pro or Max subscription. In an organization, only owners and admins can set it up, and one link covers every member.
 
-See [Claude linked billing](/docs/ai-providers/claude-linked-billing) for setup steps, spend limits, and billing details.
+See [Claude linked billing](/docs/ai-providers/claude-linked-billing) for setup steps.
 
 ## Add a BYOK key
 

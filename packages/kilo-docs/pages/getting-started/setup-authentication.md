@@ -40,7 +40,7 @@ You can use ChatGPT to sign in to Kilo, connect your subscription for model requ
 
 ### Sign in with Claude
 
-You can use your Claude account to sign in to Kilo. Signing in does not change who pays for model requests. To have Anthropic bill your Claude usage directly, link a Claude API organization separately; this uses API pricing, not a Claude Pro or Max subscription. See [Claude linked billing and sign-in](/docs/ai-providers/claude-linked-billing) for setup and billing details.
+You can use your Claude account to sign in to Kilo. Signing in does not change who pays for model requests. To have Anthropic bill your Claude usage directly, see [Claude linked billing](/docs/ai-providers/claude-linked-billing).
 
 {% callout type="tip" title="Add Credits" %}
 [Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
