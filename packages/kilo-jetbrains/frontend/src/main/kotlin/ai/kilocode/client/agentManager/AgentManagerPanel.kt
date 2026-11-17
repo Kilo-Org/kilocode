@@ -31,6 +31,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeRowPopupBody
 import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.hosted.HostedManagementService
+import ai.kilocode.client.agentManager.hosted.HostedPullRequestService
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceCache
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDialog
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorKind
@@ -54,11 +55,6 @@ import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
-import ai.kilocode.client.ui.PrIcons
-import ai.kilocode.client.ui.checksTooltip
-import ai.kilocode.client.ui.checksUrl
-import ai.kilocode.client.ui.commentsCount
-import ai.kilocode.client.ui.commentsTooltip
 import ai.kilocode.client.ui.conflicted
 import ai.kilocode.client.ui.popup.SidePopupContent
 import ai.kilocode.client.ui.popup.SidePopupController
@@ -66,12 +62,11 @@ import ai.kilocode.client.ui.popup.SidePopupFit
 import ai.kilocode.client.ui.popup.SidePopupGeometry
 import ai.kilocode.client.ui.popup.SidePopupRequest
 import ai.kilocode.client.ui.popup.SidePopupSpot
-import ai.kilocode.client.ui.openTooltip
-import ai.kilocode.client.ui.reviewTooltip
-import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.prGlyphBadges
+import ai.kilocode.client.ui.prNumberBadge
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
@@ -216,10 +211,14 @@ class AgentManagerPanel(
             open = { row, focus ->
                 when (row) {
                     is WorktreeRow -> open(row.dto, focus)
-                    is HostedWorkspaceRow -> project?.let { openHostedWorkspace(it, row.data.dto, focus) }
+                    is HostedWorkspaceRow -> project?.let {
+                        it.service<HostedPullRequestService>().refresh(row.data.dto.ref)
+                        openHostedWorkspace(it, row.data.dto, focus)
+                    }
                     else -> Unit
                 }
             },
+            select = ::selectionChanged,
             hover = { row -> hover(row) },
         ),
         menu = ActiveMenu(
@@ -250,6 +249,7 @@ class AgentManagerPanel(
     private val popup = SidePopupController(dwell = SidePopupController.LIST_MS)
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
+    private var hostedPulls: Map<String, WorktreePrDto> = emptyMap()
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hostedState = KiloHostedService.HostedState()
@@ -296,6 +296,9 @@ class AgentManagerPanel(
         tree.installPopup(group)
         project?.let { target ->
             target.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
+            val management = target.service<HostedManagementService>()
+            val removal = target.service<HostedWorkspaceRemoval>()
+            val pulls = target.service<HostedPullRequestService>()
             target.service<KiloHostedService>().let { hosted ->
                 hosted.observe(this) { state ->
                     edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
@@ -323,6 +326,9 @@ class AgentManagerPanel(
                                     missedHosted.remove(key)
                                     if (workspace != null) closeHostedPending(target, workspace)
                                 }
+                                // Discovery and reconnect are the initial load for rows. A passive
+                                // read is enough; Cloud and the core cache keep the rest.
+                                pulls.refreshAll(management.visible(state.items).map { it.ref })
                             }
                         }
                         hostedState = state
@@ -330,8 +336,14 @@ class AgentManagerPanel(
                     }
                 }
                 hosted.refresh(controller.directory)
-                val management = target.service<HostedManagementService>()
-                val removal = target.service<HostedWorkspaceRemoval>()
+                hostedCs.launch {
+                    pulls.pulls.collect { value ->
+                        edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                            hostedPulls = value
+                            sync()
+                        }
+                    }
+                }
                 hostedCs.launch {
                     service<KiloAppService>().state.collect { app ->
                         val key = "${app.profile?.email}\u0000${app.profile?.currentOrgId}"
@@ -1020,7 +1032,7 @@ class AgentManagerPanel(
                     HostedWorkspaceStatus.of(status).busy() || (!known && status?.hasActiveTurn == true)
                 }
                 val progress = if (dto.ref.key in deletingHosted) KiloBundle.message("common.deleting") else null
-                HostedWorkspaceRowData(dto, status, kind, progress)
+                HostedWorkspaceRowData(dto, status, kind, progress, hostedPulls[dto.ref.key])
             }).distinctBy { it.dto.ref.key }.map(::HostedWorkspaceRow)
         } else {
             emptyList()
@@ -1072,15 +1084,42 @@ class AgentManagerPanel(
      */
     @RequiresEdt
     private fun hover(row: ActiveItem?) {
-        val item = row as? WorktreeRow
-        if (item == null || row is HostedWorkspaceRow) {
-            popup.notifyExit(hovered ?: return)
-            hovered = null
-            return
+        when (row) {
+            is WorktreeRow -> {
+                val key = row.dto.path
+                hovered = key
+                popup.show(key, this) { request(row) }
+            }
+            is HostedWorkspaceRow -> {
+                val key = "hosted:${row.key}"
+                hovered = key
+                popup.show(key, this) { request(row) }
+            }
+            else -> {
+                popup.notifyExit(hovered ?: return)
+                hovered = null
+            }
         }
-        val key = item.dto.path
-        hovered = key
-        popup.show(key, this) { request(item) }
+    }
+
+    /**
+     * The same hover detail a worktree row uses, with the workspace PR and no changes (I2F owns diffs).
+     * The shared body already names the merge verdict, conversation and inspection counts, and every
+     * line opens the page it describes.
+     */
+    @RequiresEdt
+    private fun request(row: HostedWorkspaceRow): SidePopupRequest? {
+        if (project == null || row.data.progress != null) return null
+        val pull = row.data.pull ?: return null
+        return SidePopupRequest(
+            build = {
+                val disposable = Disposer.newDisposable("Hosted workspace row popup")
+                val body = WorktreeRowPopupBody(openDiff = {})
+                body.update(null, pull, row.title, null)
+                HeaderPopupBody(body, disposable, UiStyle.Balloon.bg(), maxWidth = POPUP_WIDTH, horizontal = true)
+            },
+            place = { built -> place(built) },
+        )
     }
 
     /**
@@ -1162,14 +1201,21 @@ class AgentManagerPanel(
                 sessions.activitySnapshot() to statuses.keys
             }.collect { (kinds, known) ->
                 edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
-                    val idle = activity.any { (id, kind) ->
-                        kind == SessionActivityKind.RUNNING && !kinds.containsKey(id) &&
-                            HostedIDs.parseSession(id) != null
-                    }
+                    val finished = activity.filter { (id, kind) ->
+                        kind == SessionActivityKind.RUNNING && !kinds.containsKey(id)
+                    }.keys.mapNotNull { id ->
+                        HostedIDs.parseSession(id)?.let { (provider, workspace, _) ->
+                            HostedWorkspaceRefDto(provider, workspace)
+                        }
+                    }.distinct()
                     activity = kinds
                     observed = known
                     sync()
-                    if (idle) scheduleHostedRefresh()
+                    if (finished.isNotEmpty()) {
+                        // A turn that ran in any session of the workspace can open or update its PR.
+                        target.service<HostedPullRequestService>().refreshAll(finished, revalidate = true)
+                        scheduleHostedRefresh()
+                    }
                 }
             }
         }
@@ -1227,6 +1273,13 @@ class AgentManagerPanel(
     private fun selectedRow(): WorktreeRow? = tree.selected() as? WorktreeRow
 
     private fun selectedHosted(): HostedWorkspaceRow? = tree.selected() as? HostedWorkspaceRow
+
+    /** Selecting a Cloud row is an activation: read its PR evidence again, throttled by the service. */
+    @RequiresEdt
+    private fun selectionChanged() {
+        val ref = selectedHosted()?.data?.dto?.ref ?: return
+        project?.service<HostedPullRequestService>()?.refresh(ref)
+    }
 
     /** Local and hosted rows share the platform Delete shortcut and confirmation popup. */
     private inner class RowDeleteProvider : DeleteProvider {
@@ -1327,58 +1380,13 @@ class AgentManagerPanel(
         override val badges: List<ActiveBadge>
             get() {
                 if (progress != null) return emptyList()
-                val p = pr ?: return emptyList()
-                return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
+                return prGlyphBadges(pr)
             }
-
-        private fun reviewBadge(p: WorktreePrDto): ActiveBadge? {
-            val glyph = PrIcons.review(p.review) ?: return null
-            return ActiveBadge(
-                "",
-                id = "pr-review",
-                tooltip = reviewTooltip(p.review),
-                action = { BrowserUtil.browse(p.url) },
-                icon = glyph,
-            )
-        }
-
-        private fun checksBadge(p: WorktreePrDto): ActiveBadge? {
-            val glyph = PrIcons.checks(p.checks) ?: return null
-            return ActiveBadge(
-                "",
-                id = "pr-checks",
-                tooltip = checksTooltip(p.checks),
-                // The checks tab rather than the conversation: someone clicking a red build wants the log.
-                action = { BrowserUtil.browse(checksUrl(p)) },
-                icon = glyph,
-            )
-        }
-
-        private fun commentsBadge(p: WorktreePrDto): ActiveBadge? {
-            val glyph = PrIcons.comments(p.comments) ?: return null
-            return ActiveBadge(
-                commentsCount(p.comments),
-                id = "pr-comments",
-                tooltip = commentsTooltip(p.comments),
-                // The conversation tab, which is where GitHub lists the threads themselves.
-                action = { BrowserUtil.browse(p.url) },
-                icon = glyph,
-            )
-        }
 
         override val secondaryBadges: List<ActiveBadge>
             get() {
                 if (progress != null) return emptyList()
-                val p = pr ?: return emptyList()
-                return listOf(
-                    ActiveBadge(
-                        "#${p.number}",
-                        style(p.state),
-                        id = "pull-request",
-                        tooltip = openTooltip(),
-                        action = { BrowserUtil.browse(p.url) },
-                    ),
-                )
+                return listOfNotNull(prNumberBadge(pr))
             }
         /**
          * Committed counts against the base branch, with the uncommitted ones behind them so a worktree
