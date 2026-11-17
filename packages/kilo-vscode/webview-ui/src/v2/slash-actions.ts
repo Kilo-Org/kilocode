@@ -20,6 +20,14 @@ const ACTIONS = [
 
 export type SlashActionName = (typeof ACTIONS)[number]["name"]
 
+/**
+ * The handler a surface passes for the worktree-only action. Local and the sidebar have no saved base to merge from,
+ * so the entry stays out of their menu: only a worktree session whose surface supplies the handler lists it.
+ */
+export function worktreeAction(worktree: boolean | undefined, run: (() => void) | undefined) {
+  return worktree === true ? run : undefined
+}
+
 export type SlashHandlers = Partial<Record<SlashActionName, () => void>>
 
 /** The menu entries of the actions this surface handles, in menu order. */

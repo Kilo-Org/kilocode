@@ -47,7 +47,7 @@ import { createGoal } from "./goal"
 import { createPending } from "./pending"
 import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
-import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
@@ -512,7 +512,7 @@ export function SessionView(props: {
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
       compact: id ? () => compact(id) : undefined,
-      "update-from-base": props.worktree === true ? props.onUpdateBase : undefined,
+      "update-from-base": worktreeAction(props.worktree, props.onUpdateBase),
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
