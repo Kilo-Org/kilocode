@@ -9,9 +9,11 @@
 //
 // Here we instead load the worker from a real dist asset (`dist/shiki-worker.js`,
 // also produced by esbuild.js) using the webview URI the extension injects into
-// the page. Pierre can offload highlighted updates to the pool after its initial
-// plain render. The diff wrapper still needs to keep that initial render cheap,
-// which is why review surfaces pass hunk-bounded patches instead of full files.
+// the page. That URI is on the resource origin, not the webview origin, and a
+// worker script must be same-origin, so the script is fetched once and started
+// from a blob URL. Pierre can offload highlighted updates to the pool after its
+// initial plain render. The diff wrapper still needs to keep that initial render
+// cheap, which is why review surfaces pass hunk-bounded patches instead of full files.
 import { LINE_DIFF_TYPE } from "@kilocode/kilo-ui/pierre"
 import { WorkerPoolManager } from "@pierre/diffs/worker"
 import { ensureKiloDiffTheme, KILO_DIFF_THEME } from "@opencode-ai/ui/pierre/kilo-diff-theme"
@@ -36,10 +38,26 @@ function uri(): string | undefined {
   return (window as { KILO_SHIKI_WORKER_URI?: string }).KILO_SHIKI_WORKER_URI
 }
 
+const script: { url?: string; load?: Promise<string | undefined> } = {}
+
+/** The blob URL of the worker script, fetched on first use. Resolves undefined when it cannot be loaded. */
+function load(url: string) {
+  script.load ??= fetch(url)
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return response.blob()
+    })
+    .then((blob) => (script.url = URL.createObjectURL(blob)))
+    .catch((err) => {
+      console.warn("[Kilo New] Failed to load the Pierre worker script", err)
+      return undefined
+    })
+  return script.load
+}
+
 export function workerFactory(): Worker {
-  const url = uri()
-  if (!url) throw new Error("KILO_SHIKI_WORKER_URI is not set")
-  return new Worker(url)
+  if (!script.url) throw new Error("The Pierre worker script is not loaded")
+  return new Worker(script.url)
 }
 
 function createPool() {
@@ -51,21 +69,24 @@ function createPool() {
   return pool
 }
 
-let unified: WorkerPoolManager | undefined
-let split: WorkerPoolManager | undefined
+const pools: Partial<Record<WorkerPoolStyle, WorkerPoolManager>> = {}
 
 export function getWorkerPool(style: WorkerPoolStyle | undefined): WorkerPoolManager | undefined {
-  // A missing URI or a pool still starting up uses Pierre's main-thread fallback.
+  // A missing URI, a script still loading or a pool still starting up uses Pierre's main-thread fallback.
   // Passing a half-ready pool drops its first plain-text render before workers drain.
-  if (!uri()) return undefined
-
-  if (style === "split") {
-    if (!split) split = createPool()
-    return split.isInitialized() ? split : undefined
+  const url = uri()
+  if (!url) return undefined
+  const key = style === "split" ? "split" : "unified"
+  const pool = pools[key]
+  if (pool) return pool.isInitialized() ? pool : undefined
+  if (script.url) {
+    pools[key] = createPool()
+    return undefined
   }
-
-  if (!unified) unified = createPool()
-  return unified.isInitialized() ? unified : undefined
+  void load(url).then((loaded) => {
+    if (loaded) pools[key] ??= createPool()
+  })
+  return undefined
 }
 
 export function getWorkerPools() {

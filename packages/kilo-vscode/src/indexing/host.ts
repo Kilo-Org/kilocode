@@ -8,6 +8,7 @@ import { local } from "../local"
 import type { Manager } from "../server"
 import type { IndexingProject as HostProject, ToWebview } from "../protocol"
 import { buildIndexingSettingsMessage } from "../kilo-provider/indexing-settings"
+import { readListed } from "../shared/plugin-inventory"
 import {
   IndexingConsentStore,
   indexingConsentStore,
@@ -50,16 +51,24 @@ export function createIndexingHost(input: {
 
   const rpc = async (): Promise<IndexingRpc> => {
     const server = await input.server.get()
-    const client = OpenCode.make({
+    const api = OpenCode.make({
       baseUrl: server.url,
       headers: { authorization: server.authorization },
       fetch: local,
-    }).rpc(KiloIndexingRpc.Definition)
+    })
+    const client = api.rpc(KiloIndexingRpc.Definition)
+    // The server is ready before its plugins are, and `sync` runs as soon as it starts. Without the wait, the
+    // indexing RPC is not yet registered and the stored consent never reaches the new server.
+    const listed = <T>(directory: string | undefined, read: () => Promise<T>) => {
+      const location = directory ?? input.directory()
+      if (!location) return read()
+      return readListed({ api, directory: location, active: () => !state.disposed, read })
+    }
     return {
       status: (directory) =>
-        client.status({}, directory ? { location: { directory } } : undefined),
+        listed(directory, () => client.status({}, directory ? { location: { directory } } : undefined)),
       consent: (enabled, directory) =>
-        client.consent({ enabled }, directory ? { location: { directory } } : undefined),
+        listed(directory, () => client.consent({ enabled }, directory ? { location: { directory } } : undefined)),
     }
   }
 

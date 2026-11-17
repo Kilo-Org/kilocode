@@ -8,7 +8,7 @@ import { createEffect, createSignal, on, onCleanup } from "solid-js"
 import { toFailure, type Failure } from "./error"
 import { catalogEvent, createKiloCatalog } from "./kilo-catalog"
 import { createKiloModelsCache, type KiloModelsCache } from "./kilo-models"
-import { pluginsListed } from "./plugin-inventory"
+import { pluginsListed } from "../../../src/shared/plugin-inventory"
 
 type Connection = ReturnType<typeof createClientConnection>
 

@@ -10,6 +10,7 @@ import {
   type ParentComponent,
 } from "solid-js"
 import { useV2 } from "../v2/client"
+import { readListed } from "../../../src/shared/plugin-inventory"
 
 export type KiloEmbeddingModel = KiloGatewayRpc.EmbeddingCatalog["models"][number]
 export type KiloEmbeddingModelCatalog = KiloGatewayRpc.EmbeddingCatalog
@@ -48,15 +49,21 @@ export const KiloEmbeddingModelsProvider: ParentComponent = (props) => {
 
   const refresh = () => {
     const token = ++read
-    void v2.api
-      .rpc(KiloGatewayRpc.Definition)
-      ["models.embeddings"]({}, { location: { directory: v2.directory } })
+    // The webview connects before the server has registered its plugins, so a first read can find no gateway RPC.
+    void readListed({
+      api: v2.api,
+      directory: v2.directory,
+      active: () => token === read && v2.connection.status() === "connected",
+      read: () =>
+        v2.api.rpc(KiloGatewayRpc.Definition)["models.embeddings"]({}, { location: { directory: v2.directory } }),
+    })
       .then((next) => {
         if (token === read) setCatalog(next)
       })
       .catch((error: unknown) => {
+        if (token !== read) return
         console.error("Kilo embedding models failed", error)
-        if (token === read) setCatalog(EMPTY_KILO_EMBEDDING_MODEL_CATALOG)
+        setCatalog(EMPTY_KILO_EMBEDDING_MODEL_CATALOG)
       })
   }
 
