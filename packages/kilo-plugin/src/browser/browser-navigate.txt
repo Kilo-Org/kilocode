@@ -1,7 +1,0 @@
-Navigate the bundled browser to a URL and return the page snapshot.
-
-The browser is a Kilo-owned Chromium started from the CLI: system Chrome or Edge when one is installed, otherwise
-the Chromium build that Playwright downloaded. It has its own empty profile and never the user's browser session.
-
-Use this to open a page. The result carries the URL, the page title, and the accessibility snapshot of the page,
-whose `[ref=eN]` markers address elements for the other browser tools.

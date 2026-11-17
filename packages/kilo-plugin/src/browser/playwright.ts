@@ -1,11 +1,3 @@
-// The bundled Playwright backend. `playwright-core` and the pinned `@playwright/mcp` both run inside this process:
-// this build of playwright-core is the bundled one whose entry point is already in-process, so the CLI needs no
-// `npx`, no Node and no driver subprocess to drive a browser. `@playwright/mcp` exposes `createConnection`, so the
-// backend hands it a context it launched itself and talks MCP to it over an in-memory transport.
-//
-// The browser is one of: a system Chrome or Edge channel, or the Chromium that this playwright-core build downloads.
-// The context lives as long as this process, in memory: two Kilo processes never contend for one profile, and a
-// crash leaves no profile or SingletonLock behind.
 import { existsSync } from "node:fs"
 import fs from "node:fs/promises"
 import os from "node:os"
@@ -13,61 +5,28 @@ import path from "node:path"
 import type { Client, Transport } from "@modelcontextprotocol/client"
 import type { Browser, BrowserContext } from "playwright-core"
 import { Global } from "@opencode/util/global"
+import {
+  UnsupportedError,
+  type BrowserBackend,
+  type CallContext,
+  type CallResult,
+  type ContentBlock,
+} from "./backend"
+import { BrowserContract } from "./contract"
+import { entries as readEntries } from "./contract-shape"
+import type { Entry } from "./contract-shape"
+import { INSTALL_HINT, locate, type Target } from "./locate"
+import { useKiloBrowsers } from "./install"
+import type { Settings } from "./settings"
 
-/** How Kilo starts the browser: a system channel, or the Playwright-installed Chromium build. */
-export type Target = { channel: "chrome" | "msedge" } | { executablePath: string }
+/** A long action (a slow page, a download) still ends: the MCP call is bounded, and the session abort wins earlier. */
+const TIMEOUT = 180_000
 
-export const INSTALL_HINT = "npx @playwright/mcp@0.0.81 install-browser"
+/** Snapshots are page content: inline them, but never read more than this from disk. */
+const INLINE_LIMIT = 2 * 1024 * 1024
 
-const win = path.win32
-
-function chromePaths(home: string, env: Record<string, string | undefined>, platform: NodeJS.Platform) {
-  if (platform === "darwin")
-    return [
-      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      path.join(home, "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-    ]
-  if (platform === "win32")
-    return [
-      env["PROGRAMFILES"] && win.join(env["PROGRAMFILES"], "Google/Chrome/Application/chrome.exe"),
-      env["PROGRAMFILES(X86)"] && win.join(env["PROGRAMFILES(X86)"], "Google/Chrome/Application/chrome.exe"),
-      env["LOCALAPPDATA"] && win.join(env["LOCALAPPDATA"], "Google/Chrome/Application/chrome.exe"),
-    ]
-  return ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/opt/google/chrome/chrome"]
-}
-
-function edgePaths(home: string, env: Record<string, string | undefined>, platform: NodeJS.Platform) {
-  if (platform === "darwin")
-    return [
-      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-      path.join(home, "Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"),
-    ]
-  if (platform === "win32")
-    return [
-      env["PROGRAMFILES"] && win.join(env["PROGRAMFILES"], "Microsoft/Edge/Application/msedge.exe"),
-      env["PROGRAMFILES(X86)"] && win.join(env["PROGRAMFILES(X86)"], "Microsoft/Edge/Application/msedge.exe"),
-      env["LOCALAPPDATA"] && win.join(env["LOCALAPPDATA"], "Microsoft/Edge/Application/msedge.exe"),
-    ]
-  return ["/usr/bin/microsoft-edge", "/usr/bin/microsoft-edge-stable", "/opt/microsoft/msedge/msedge"]
-}
-
-/**
- * System Chrome first, then Edge, then the Playwright-installed Chromium of the bundled playwright-core. The
- * caller applies a Kilo-owned context; the user's own browser profile is never used.
- */
-export function locate(input: {
-  platform: NodeJS.Platform
-  home: string
-  env: Record<string, string | undefined>
-  exists: (candidate: string) => boolean
-  chromium?: string
-}): Target | undefined {
-  const found = (candidates: (string | undefined)[]) =>
-    candidates.filter((candidate): candidate is string => candidate !== undefined).some(input.exists)
-  if (found(chromePaths(input.home, input.env, input.platform))) return { channel: "chrome" }
-  if (found(edgePaths(input.home, input.env, input.platform))) return { channel: "msedge" }
-  if (input.chromium && input.exists(input.chromium)) return { executablePath: input.chromium }
-  return undefined
+export function outputDirectory() {
+  return path.join(Global.Path.data, "browser", "output")
 }
 
 /**
@@ -84,33 +43,79 @@ export function launchFailure(error: unknown, executable?: string): Error {
     [
       `Chromium cannot start because its sandbox is not permitted: ${message}`,
       `Fix the sandbox helper: sudo chown root:root ${sandbox} && sudo chmod 4755 ${sandbox}`,
-      "Or allow unprivileged user namespaces: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1",
+      "Or allow unprivileged user namespaces: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0",
       "Or install Google Chrome so the browser uses system Chrome. The sandbox is never disabled.",
     ].join("\n"),
   )
 }
 
-/** Snapshots are page content: inline them, but never read more than this from disk. */
-const INLINE_LIMIT = 2 * 1024 * 1024
+function blocks(content: unknown): ContentBlock[] {
+  if (!Array.isArray(content)) return []
+  return content.flatMap((item): ContentBlock[] => {
+    if (typeof item !== "object" || item === null) return []
+    if (!("type" in item)) return []
+    if (item.type === "text" && "text" in item && typeof item.text === "string")
+      return [{ type: "text", text: item.text }]
+    if (item.type === "image" && "data" in item && typeof item.data === "string") {
+      const mime = "mimeType" in item && typeof item.mimeType === "string" ? item.mimeType : "image/png"
+      return [{ type: "image", data: item.data, mimeType: mime }]
+    }
+    return []
+  })
+}
 
-const OUTPUT_DIR = path.join(Global.Path.data, "browser", "output")
+/**
+ * Read a snapshot file the Playwright MCP wrote, and nothing else. Tool output is page-controlled: a page could make
+ * `browser_evaluate` print `- [Snapshot](/etc/passwd)`, so only files that resolve inside the output directory the
+ * backend owns are read, and only up to `INLINE_LIMIT` bytes.
+ */
+async function readSnapshot(file: string): Promise<string | undefined> {
+  const root = await fs.realpath(outputDirectory()).catch(() => undefined)
+  if (!root) return undefined
+  const resolved = await fs.realpath(path.resolve(root, file)).catch(() => undefined)
+  if (!resolved || (resolved !== root && !resolved.startsWith(root + path.sep))) return undefined
+  const stat = await fs.stat(resolved).catch(() => undefined)
+  if (!stat?.isFile() || stat.size > INLINE_LIMIT) return undefined
+  return fs.readFile(resolved, "utf8").catch(() => undefined)
+}
+
+/**
+ * Playwright MCP writes an action's page snapshot to a file and returns `- [Snapshot](path)`. The model needs the
+ * snapshot itself, so every observation mode sees the page.
+ */
+async function inline(text: string): Promise<string> {
+  const out: string[] = []
+  for (const line of text.split("\n")) {
+    const match = /^- \[Snapshot\]\((.+)\)$/.exec(line.trim())
+    if (!match) {
+      out.push(line)
+      continue
+    }
+    const body = await readSnapshot(match[1])
+    if (body === undefined) {
+      out.push(line)
+      continue
+    }
+    out.push("```yaml", ...body.replace(/\n$/, "").split("\n"), "```")
+  }
+  return out.join("\n")
+}
+
+/** What `@playwright/mcp` returns: an MCP 1.x server bundled inside playwright-core. */
+type PlaywrightServer = { connect(transport: Transport): Promise<void>; close(): Promise<void> }
 
 type Connection = {
   client: Client
   server: PlaywrightServer
   browser: Browser
   context: BrowserContext
+  tools: readonly Entry[]
 }
 
-/** What `@playwright/mcp` returns: an MCP SDK 1.x server, bundled inside playwright-core. */
-type PlaywrightServer = { connect(transport: Transport): Promise<void>; close(): Promise<void> }
-
-let connection: Promise<Connection> | undefined
-
 /**
- * A linked in-memory transport pair. The MCP server that `@playwright/mcp` hands back comes from the SDK bundled in
- * playwright-core (1.x), while the CLI's own MCP client is `@modelcontextprotocol/client` (2.x); both speak JSON-RPC
- * over the same three-method transport surface, so one pair joins them without a second SDK in the build.
+ * A linked in-memory transport pair. The server `@playwright/mcp` hands back comes from the MCP SDK bundled in
+ * playwright-core (1.x), while the CLI's own client is `@modelcontextprotocol/client` (2.x); both speak JSON-RPC over
+ * the same three-method transport surface, so one pair joins them without a second SDK in the build.
  */
 function linked(): [Transport, Transport] {
   const sides: { left?: Transport; right?: Transport } = {}
@@ -125,58 +130,41 @@ function linked(): [Transport, Transport] {
 }
 
 /**
- * Read a file the Playwright MCP wrote, and nothing else. Tool output is page-controlled: a page could make
- * `browser_evaluate` print `- [Snapshot](/etc/passwd)`, so only files that resolve inside the output directory the
- * backend owns are read, and only up to `INLINE_LIMIT` bytes.
+ * The Chromium build of playwright-core is the last choice: system Chrome first, then Edge. An installed build under
+ * the Kilo data dir is found through `PLAYWRIGHT_BROWSERS_PATH`, which the install command and this backend both set
+ * before playwright-core is imported (its registry reads the variable once, at import).
  */
-async function readSnapshot(file: string): Promise<string | undefined> {
-  const root = await fs.realpath(OUTPUT_DIR).catch(() => undefined)
-  if (!root) return undefined
-  const resolved = await fs.realpath(path.resolve(root, file)).catch(() => undefined)
-  if (!resolved || (resolved !== root && !resolved.startsWith(root + path.sep))) return undefined
-  const stat = await fs.stat(resolved).catch(() => undefined)
-  if (!stat?.isFile() || stat.size > INLINE_LIMIT) return undefined
-  return fs.readFile(resolved, "utf8").catch(() => undefined)
-}
-
-/**
- * Playwright MCP writes an action's page snapshot to a file and returns `- [Snapshot](path)`. The model needs the
- * snapshot itself, so read the file back and inline it.
- */
-async function inline(text: string): Promise<string> {
-  const lines = await Promise.all(
-    text.split("\n").map(async (line) => {
-      const match = /^- \[Snapshot\]\((.+)\)$/.exec(line.trim())
-      if (!match) return [line]
-      const body = await readSnapshot(match[1])
-      if (body === undefined) return [line]
-      return ["```yaml", ...body.replace(/\n$/, "").split("\n"), "```"]
-    }),
-  )
-  return lines.flat().join("\n")
-}
-
-async function connect(): Promise<Connection> {
-  // Dynamic imports: playwright-core and the MCP server are megabytes of parse work on a session that may never
-  // open a browser, and this module is in the CLI's startup graph (AGENTS.md: "Prefer dynamic imports for heavy
-  // modules that are only needed in selected code paths"). A static import would load them for every CLI start.
-  const { chromium } = await import("playwright-core")
-  const mcp = await import("@playwright/mcp")
-  const sdk = await import("@modelcontextprotocol/client")
-  const out = OUTPUT_DIR
-  await fs.mkdir(out, { recursive: true })
+async function target(settings: Settings, chromium: string): Promise<Target> {
   const located = locate({
     platform: process.platform,
     home: os.homedir(),
     env: process.env,
     exists: existsSync,
-    chromium: chromium.executablePath(),
+    chromium,
   })
-  if (!located)
-    throw new Error(`No browser found. Install Chromium with ${INSTALL_HINT}, or install Google Chrome or Microsoft Edge.`)
+  if (located) return located
+  throw new Error(`No browser found. Install Chromium with \`${INSTALL_HINT}\`, or install Google Chrome or Microsoft Edge.`)
+}
+
+/**
+ * The browser is launched here, not by the MCP server, so the provider owns the process and the in-memory profile:
+ * two Kilo processes never contend for one Chrome profile on disk, and a crash leaves no profile or SingletonLock.
+ */
+async function connect(settings: Settings): Promise<Connection> {
+  const out = outputDirectory()
+  await fs.mkdir(out, { recursive: true })
+  // playwright-core and the MCP server are megabytes of parse work on a session that may never open a browser, and
+  // this module is in the CLI's startup graph, so they load on the first browser call. The browser directory is read
+  // once, at that import, so it must be set here.
+  useKiloBrowsers()
+  const { chromium } = await import("playwright-core")
+  const mcp = await import("@playwright/mcp")
+  const sdk = await import("@modelcontextprotocol/client")
+
+  const located = await target(settings, chromium.executablePath())
   const browser = await chromium
     .launch({
-      headless: process.env.KILO_BROWSER_HEADLESS !== "0",
+      headless: settings.headless,
       handleSIGINT: false,
       handleSIGTERM: false,
       ignoreDefaultArgs: ["--disable-extensions"],
@@ -185,71 +173,131 @@ async function connect(): Promise<Connection> {
     .catch((error) => {
       throw launchFailure(error, "executablePath" in located ? located.executablePath : undefined)
     })
+  let server: PlaywrightServer | undefined
+  let client: Client | undefined
   try {
     const context = await browser.newContext()
-    const server = (await mcp.createConnection(
+    server = (await mcp.createConnection(
       { browser: { browserName: "chromium", isolated: false }, outputDir: out },
       () => Promise.resolve(context),
     )) as unknown as PlaywrightServer
     const [clientTransport, serverTransport] = linked()
     await server.connect(serverTransport)
-    const client = new sdk.Client({ name: "kilo", version: "0.0.0" })
+    client = new sdk.Client({ name: "kilo", version: BrowserContract.upstream })
     await client.connect(clientTransport)
-    return { client, server, browser, context }
+    const listed = await client.listTools()
+    const live = readEntries(listed)
+    // Keep the model-facing list identical to the vendored contract, on the tools this build has.
+    const available = new Set(live.map((tool) => tool.name))
+    const tools = BrowserContract.entries.filter((tool) => available.has(tool.name))
+    return { client, server, browser, context, tools }
   } catch (error) {
+    await client?.close().catch(() => undefined)
+    await server?.close().catch(() => undefined)
     await browser.close().catch(() => undefined)
     throw error
   }
 }
 
-function text(result: unknown): string {
-  if (typeof result !== "object" || result === null || !("content" in result)) return ""
-  if (!Array.isArray(result.content)) return ""
-  return result.content
-    .flatMap((item): string[] => {
-      if (typeof item !== "object" || item === null || !("type" in item)) return []
-      return item.type === "text" && "text" in item && typeof item.text === "string" ? [item.text] : []
-    })
-    .join("\n")
-}
+/** The URL the last result reported, so a call reaches the page MCP acted on before it saw a new tab. */
+class PlaywrightBackend implements BrowserBackend {
+  readonly id = "playwright" as const
+  readonly contractSha = BrowserContract.sha256
+  private readonly off: Array<() => void> = []
+  private disposed = false
 
-/** Call one Playwright MCP tool on the shared browser, with the snapshot files already inlined. */
-export async function call(name: string, args: Record<string, unknown>) {
-  const current = (connection ??= connect())
-  const { client } = await current.catch((error) => {
-    connection = undefined
-    throw error
-  })
-  try {
-    const result: unknown = await client.callTool({ name, arguments: args })
-    const body = text(result)
-    const failed = typeof result === "object" && result !== null && "isError" in result && result.isError === true
-    if (failed) throw new Error(body || `${name} failed`)
-    return await inline(body)
-  } catch (error) {
-    // A closed browser leaves a dead client behind; the next call starts a new one.
-    reset()
-    throw error
+  private constructor(
+    private readonly conn: Connection,
+    private readonly onClosed: () => void,
+  ) {
+    // A crashed browser fires `disconnected`; the cache must not keep handing out a dead backend.
+    const gone = () => {
+      this.onClosed()
+      void this.dispose()
+    }
+    this.conn.browser.on("disconnected", gone)
+    this.conn.context.on("close", gone)
+    this.off.push(
+      () => this.conn.browser.off("disconnected", gone),
+      () => this.conn.context.off("close", gone),
+    )
+  }
+
+  static async create(settings: Settings, onClosed: () => void) {
+    return new PlaywrightBackend(await connect(settings), onClosed)
+  }
+
+  async listTools() {
+    return this.conn.tools
+  }
+
+  async callTool(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
+    // Running code in the CLI process is not a browser action we can bound, so this backend refuses it.
+    if (name === "browser_run_code_unsafe") throw new UnsupportedError()
+    const result = await this.conn.client.callTool({ name, arguments: args }, { timeout: TIMEOUT, signal: ctx.signal })
+    const content = blocks(result.content)
+    for (const block of content) if (block.type === "text") block.text = await inline(block.text)
+    if (!content.length && result.structuredContent !== undefined) {
+      content.push({ type: "text", text: JSON.stringify(result.structuredContent, null, 2) })
+    }
+    return { content, isError: result.isError === true }
+  }
+
+  async dispose() {
+    if (this.disposed) return
+    this.disposed = true
+    for (const off of this.off) off()
+    await this.conn.client.close().catch(() => undefined)
+    await this.conn.server.close().catch(() => undefined)
+    await this.conn.browser.close().catch(() => undefined)
   }
 }
 
-/** Drop the shared connection. The next call launches a new browser. */
-function reset() {
-  const current = connection
-  connection = undefined
-  void current?.then(async (value) => {
-    await value.client.close().catch(() => undefined)
-    await value.server.close().catch(() => undefined)
-    await value.browser.close().catch(() => undefined)
-  })
-}
+type EntryState = { promise: Promise<BrowserBackend>; backend?: BrowserBackend }
 
 /**
- * `browser_navigate`, then the page snapshot. The navigate result alone points at the snapshot file; the model needs
- * the tree, so this is the pair the contract's `browser_navigate` followed by `browser_snapshot` produces.
+ * One browser process per distinct configuration, shared by every session in the process. A backend that lost its
+ * browser evicts itself, so the next call launches a new one; `dispose` closes every live browser, which the tool
+ * plugin runs from an Effect finalizer when the location shuts down.
  */
-export async function navigate(url: string) {
-  const first = await call("browser_navigate", { url })
-  const snapshot = await call("browser_snapshot", {})
-  return [first, snapshot].filter(Boolean).join("\n\n")
+export class Backends {
+  private readonly entries = new Map<string, EntryState>()
+
+  constructor(private readonly create: (key: string, evict: () => void) => Promise<BrowserBackend>) {}
+
+  get(key: string): Promise<BrowserBackend> {
+    const existing = this.entries.get(key)
+    if (existing) return existing.promise
+    const entry: EntryState = { promise: Promise.resolve(undefined as unknown as BrowserBackend) }
+    const evict = () => {
+      if (this.entries.get(key) === entry) this.entries.delete(key)
+    }
+    entry.promise = this.create(key, evict).then(
+      (backend) => {
+        entry.backend = backend
+        return backend
+      },
+      (error) => {
+        evict()
+        throw error
+      },
+    )
+    this.entries.set(key, entry)
+    return entry.promise
+  }
+
+  async dispose() {
+    const values = Array.from(this.entries.values())
+    this.entries.clear()
+    await Promise.all(values.map((entry) => entry.backend?.dispose()))
+  }
 }
+
+export function key(settings: Settings) {
+  return JSON.stringify({ backend: settings.backend, target: settings.target, headless: settings.headless })
+}
+
+/** The process-wide browser pool of the bundled Playwright backend. */
+export const playwright = new Backends((value, evict) =>
+  PlaywrightBackend.create(JSON.parse(value) as Settings, evict),
+)

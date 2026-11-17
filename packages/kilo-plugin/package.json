@@ -10,12 +10,14 @@
     "./read": "./src/read/index.ts",
     "./request-identity": "./src/request-identity.ts",
     "./pages/auth": "./src/pages/auth.ts",
-    "./plugin/git-source": "./src/plugin/git-source.ts"
+    "./plugin/git-source": "./src/plugin/git-source.ts",
+    "./browser/install": "./src/browser/install.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "typecheck:tsc": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "generate:browser-contract": "bun script/generate-browser-tool-contract.ts"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",

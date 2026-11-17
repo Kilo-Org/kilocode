@@ -1,16 +1,19 @@
 import { Spec } from "@opencode/cli/framework/spec"
-import { Argument, Flag } from "effect/cli"
+import { Flag } from "effect/cli"
 
-// `kilo browser-smoke`: one-shot harness for the bundled Playwright backend. It boots a Location exactly as the
-// server does, so the Kilo plugins register their tools, then runs `browser_navigate` once and prints the result.
-// The spike needs it to prove that the tool runs from the compiled binary; the browser command group replaces it.
-export const BrowserSmokeCommand = Spec.make("browser-smoke", {
-  description: "navigate the bundled browser to a URL and print the page snapshot (spike harness)",
-  params: {
-    url: Argument.String("url").pipe(Argument.withDescription("URL to navigate to")),
-    directory: Flag.String("directory").pipe(
-      Flag.withDescription("directory the tool's session runs in"),
-      Flag.optional,
-    ),
-  },
+// `kilo browser`: the browser the bundled Playwright backend drives. The build is the Chromium that the CLI's own
+// playwright-core pins, downloaded into the Kilo data dir, so the backend finds it without a system Chrome or Edge.
+export const BrowserCommand = Spec.make("browser", {
+  description: "the browser the CLI drives",
+  commands: [
+    Spec.make("install-chromium", {
+      description: "download the Chromium build that matches this CLI into the Kilo data dir",
+      params: {
+        force: Flag.Boolean("force").pipe(
+          Flag.withDescription("download again even when the matching build is already installed"),
+          Flag.withDefault(false),
+        ),
+      },
+    }),
+  ],
 })
