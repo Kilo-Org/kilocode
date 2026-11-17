@@ -22,7 +22,6 @@ class KiloBackendTelemetry(
     }
 
     suspend fun capture(http: OkHttpClient?, port: Int, event: String, properties: Map<String, String>) {
-        if (!KiloTelemetrySettings.get()) return
         val body = payload(event, properties)
         if (KiloDevMode.enabled()) {
             log.info(body)

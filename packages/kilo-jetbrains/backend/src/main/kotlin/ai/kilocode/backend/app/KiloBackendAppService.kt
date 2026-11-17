@@ -7,7 +7,7 @@ import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
-import ai.kilocode.backend.telemetry.KiloTelemetrySettings
+import ai.kilocode.backend.telemetry.KiloTelemetryPolicy
 import ai.kilocode.log.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.jetbrains.api.client.DefaultApi
@@ -309,6 +309,7 @@ class KiloBackendAppService private constructor(
             }
         }
         log.info("Global config patch: saved $summary")
+        patch.openTelemetry?.let { syncTelemetry(it) }
         val cfg = fetchConfig().value
         if (cfg == null) {
             log.warn("Global config patch: config reload failed after save $summary")
@@ -475,9 +476,6 @@ class KiloBackendAppService private constructor(
                     activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
-                    // The CLI already resolved telemetry at spawn, so only an opt-out is pushed here;
-                    // it covers a setting flipped between spawn and connect.
-                    if (!KiloTelemetrySettings.get()) cs.launch { syncTelemetry() }
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
@@ -536,31 +534,23 @@ class KiloBackendAppService private constructor(
     }
 
     private fun captureLoad(event: String, start: Long, props: Map<String, String>) {
-        val http = connection.apiClient
-        val port = connection.port
         cs.launch {
             runCatching {
-                telemetry().capture(
-                    http,
-                    port,
-                    event,
-                    props + mapOf("durationMs" to (System.currentTimeMillis() - start).toString()),
-                )
+                capture(event, props + mapOf("durationMs" to (System.currentTimeMillis() - start).toString()))
             }.onFailure { log.info("Skipping backend load telemetry: ${it.message}") }
         }
     }
 
+    /** The telemetry decision made by an inherited `KILO_TELEMETRY_LEVEL`, or null when the config decides. */
+    fun telemetryOverride(): Boolean? = KiloTelemetryPolicy.override(env())
+
     /**
-     * Apply the plugin's "Share usage analytics" setting to the connected CLI without a restart.
-     *
-     * Off is always pushed. On is pushed only when the CLI's own resolution allows telemetry, so the
-     * plugin never re-enables it over an inherited `KILO_TELEMETRY_LEVEL` or
-     * `experimental.openTelemetry: false`.
+     * Apply a changed `experimental.openTelemetry` to the running CLI, which only reads it at startup.
+     * Skipped when an inherited `KILO_TELEMETRY_LEVEL` decides instead, as it does in the CLI.
      */
-    suspend fun syncTelemetry() {
-        val enabled = KiloTelemetrySettings.get()
-        if (enabled && !KiloTelemetrySettings.allowed(env(), config?.openTelemetry)) {
-            log.info("Telemetry stays off: opted out in the CLI environment or global config")
+    private suspend fun syncTelemetry(enabled: Boolean) {
+        if (telemetryOverride() != null) {
+            log.info("Telemetry config change not applied: KILO_TELEMETRY_LEVEL decides")
             return
         }
         runCatching {
@@ -568,8 +558,9 @@ class KiloBackendAppService private constructor(
         }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
     }
 
-    /** Forward one telemetry event to the connected CLI. Dropped while usage analytics are off. */
+    /** Forward one telemetry event to the connected CLI. Dropped while product telemetry is off. */
     suspend fun capture(event: String, props: Map<String, String>) {
+        if (!KiloTelemetryPolicy.enabled(env(), config?.openTelemetry)) return
         telemetry().capture(connection.apiClient, connection.port, event, props)
     }
 

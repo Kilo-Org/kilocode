@@ -2,9 +2,12 @@
 
 package ai.kilocode.client.telemetry
 
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.serviceOrNull
 import fleet.rpc.client.durable
@@ -21,12 +24,19 @@ object Telemetry {
     }
 }
 
+/** The loaded global config, without creating the app service just to send an event. */
+private fun loaded(): ConfigDto? =
+    ApplicationManager.getApplication()?.getServiceIfCreated(KiloAppService::class.java)?.state?.value?.config
+
 @Service(Service.Level.APP)
 class KiloTelemetryService internal constructor(
     private val cs: CoroutineScope,
     private val rpc: KiloAppRpcApi?,
+    private val config: () -> ConfigDto?,
 ) {
     constructor(cs: CoroutineScope) : this(cs, null)
+
+    internal constructor(cs: CoroutineScope, rpc: KiloAppRpcApi?) : this(cs, rpc, ::loaded)
 
     companion object {
         private val LOG = KiloLog.create(KiloTelemetryService::class.java)
@@ -39,14 +49,9 @@ class KiloTelemetryService internal constructor(
     private val pending = AtomicInteger()
     private val warned = AtomicBoolean()
 
-    /** The backend's "Share usage analytics" setting, read on first use. Null until known. */
+    /** The decision of the backend environment's `KILO_TELEMETRY_LEVEL`, once it has been read. */
     @Volatile
-    private var enabled: Boolean? = null
-
-    /** Apply a changed "Share usage analytics" setting at once, without waiting for the backend. */
-    fun update(value: Boolean) {
-        enabled = value
-    }
+    private var override: Override? = null
 
     fun send(event: String, properties: Map<String, String> = emptyMap()) {
         if (pending.incrementAndGet() > MAX_PENDING) {
@@ -82,16 +87,19 @@ class KiloTelemetryService internal constructor(
         }
     }
 
-    /** Whether events may be forwarded. An unknown setting drops the event and is read again next time. */
+    /**
+     * Whether events may be forwarded, resolved like the CLI does: the backend environment's
+     * `KILO_TELEMETRY_LEVEL` first, then `experimental.openTelemetry` from the global config. An
+     * environment that cannot be read drops the event and is read again next time.
+     */
     private suspend fun allowed(): Boolean {
-        val known = enabled
-        if (known != null) return known
-        val value = withTimeoutOrNull(TIMEOUT_MS) {
+        val known = override ?: withTimeoutOrNull(TIMEOUT_MS) {
             val api = rpc
-            if (api != null) api.telemetryEnabled()
-            else durable { KiloAppRpcApi.getInstance().telemetryEnabled() }
+            val value = if (api != null) api.telemetryOverride() else durable { KiloAppRpcApi.getInstance().telemetryOverride() }
+            Override(value).also { override = it }
         } ?: return false
-        // A setting applied while the read was in flight wins.
-        return enabled ?: value.also { enabled = it }
+        return known.value ?: (config()?.openTelemetry != false)
     }
+
+    private class Override(val value: Boolean?)
 }

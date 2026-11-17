@@ -1171,6 +1171,8 @@ object KiloCliDataParser {
 
             if (patch.shared_agent_board != null) put("shared_agent_board", patch.shared_agent_board)
             if (patch.snapshot != null) put("snapshot", patch.snapshot)
+            val telemetry = patch.openTelemetry
+            if (telemetry != null) put("experimental", buildJsonObject { put("openTelemetry", telemetry) })
             val retention = patch.retention
             if (retention != null) put("retention", buildJsonObject {
                 if (retention.enabled != null) put("enabled", retention.enabled)

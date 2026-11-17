@@ -1,7 +1,7 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.KiloPlugin
-import ai.kilocode.backend.telemetry.KiloTelemetrySettings
+import ai.kilocode.backend.telemetry.KiloTelemetryPolicy
 import ai.kilocode.log.KiloLog
 import com.intellij.execution.process.OSProcessUtil
 import com.intellij.openapi.application.ApplicationInfo
@@ -612,9 +612,9 @@ internal fun buildKiloCliEnv(
     put("KILO_ENABLE_QUESTION_TOOL", "true")
     put("KILO_PLATFORM", "jetbrains")
     put("KILO_APP_NAME", "kilo-code")
-    // Only ever force telemetry off. Otherwise an inherited KILO_TELEMETRY_LEVEL passes through and,
-    // without one, the CLI follows `experimental.openTelemetry` from the global config.
-    KiloTelemetrySettings.level()?.let { put(KiloTelemetrySettings.ENV, it) }
+    // Outside dev mode the CLI resolves telemetry itself: an inherited KILO_TELEMETRY_LEVEL passes
+    // through and, without one, it follows `experimental.openTelemetry` from the global config.
+    KiloTelemetryPolicy.level()?.let { put(KiloTelemetryPolicy.ENV, it) }
     if (!KiloClaudeCompatSettings.get()) put("KILO_DISABLE_CLAUDE_CODE", "true")
     put("KILOCODE_FEATURE", "jetbrains-plugin")
     ideEnv(log).forEach { entry -> put(entry.key, entry.value) }

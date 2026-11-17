@@ -2985,6 +2985,19 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `buildConfigPatch - product telemetry is written under experimental`() {
+            assertEquals(
+                """{"experimental":{"openTelemetry":false}}""",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(openTelemetry = false)),
+            )
+            assertEquals(
+                """{"experimental":{"openTelemetry":true}}""",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(openTelemetry = true)),
+            )
+            assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
+        }
+
+        @Test
         fun `buildConfigPatch - snapshot writes explicit booleans`() {
             assertEquals(
                 "{\"snapshot\":true}",

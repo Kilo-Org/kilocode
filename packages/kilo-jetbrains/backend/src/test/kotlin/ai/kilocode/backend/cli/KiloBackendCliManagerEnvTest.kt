@@ -1,6 +1,5 @@
 package ai.kilocode.backend.cli
 
-import ai.kilocode.backend.telemetry.KiloTelemetrySettings
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -26,7 +25,6 @@ class KiloBackendCliManagerEnvTest {
     @AfterTest
     fun tearDown() {
         KiloClaudeCompatSettings.set(false)
-        KiloTelemetrySettings.set(true)
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
         System.clearProperty("idea.plugin.in.sandbox.mode")
@@ -95,7 +93,7 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `telemetry level is left to the CLI when the setting is on`() {
+    fun `telemetry level is left to the CLI config when not inherited`() {
         val env = manager.buildEnv("pwd123", emptyMap())
 
         assertFalse(env.containsKey("KILO_TELEMETRY_LEVEL"))
@@ -116,17 +114,8 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `disabled setting forces CLI telemetry off`() {
-        KiloTelemetrySettings.set(false)
-
-        val env = manager.buildEnv("pwd123", emptyMap())
-
-        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
-    }
-
-    @Test
-    fun `disabled setting wins over an inherited opt-in`() {
-        KiloTelemetrySettings.set(false)
+    fun `dev mode disables CLI telemetry over an inherited opt-in`() {
+        System.setProperty("idea.plugin.in.sandbox.mode", "true")
 
         val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "all"))
 

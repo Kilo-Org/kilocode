@@ -446,22 +446,11 @@ class KiloAppService internal constructor(
     }
 
     /**
-     * The plugin's "Share usage analytics" setting. Throws when the backend cannot be reached, so a
-     * caller never mistakes a failed read for consent.
+     * The product telemetry decision made by `KILO_TELEMETRY_LEVEL` in the backend's environment, or
+     * null when `experimental.openTelemetry` in the global config decides. Throws when the backend
+     * cannot be reached.
      */
-    suspend fun telemetryEnabled(): Boolean = call { telemetryEnabled() }
-
-    /**
-     * Persist the "Share usage analytics" setting and apply it to the running CLI. Runs on the
-     * app-lifetime [scope] so the write survives the settings dialog closing on OK.
-     */
-    fun setTelemetryEnabledAsync(value: Boolean): Job = cs.launch {
-        try {
-            call { setTelemetryEnabled(value) }
-        } catch (e: Exception) {
-            LOG.warn("telemetry setting apply failed", e)
-        }
-    }
+    suspend fun telemetryOverride(): Boolean? = call { telemetryOverride() }
 
     private fun setModelState(state: ModelStateDto) {
         _models.value = state

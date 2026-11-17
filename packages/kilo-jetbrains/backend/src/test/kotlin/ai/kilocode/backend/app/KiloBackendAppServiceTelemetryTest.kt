@@ -2,10 +2,10 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.rpc.KiloAppRpcApiImpl
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
-import ai.kilocode.backend.telemetry.KiloTelemetrySettings
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,10 +17,10 @@ import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Telemetry state pushed to the CLI on connect and when the plugin setting changes. */
+/** Product telemetry follows the global config and the inherited environment, as in the CLI. */
 class KiloBackendAppServiceTelemetryTest {
     private val mock = MockCliServer()
     private val log = TestLog()
@@ -28,7 +28,6 @@ class KiloBackendAppServiceTelemetryTest {
 
     @AfterTest
     fun tearDown() {
-        KiloTelemetrySettings.set(true)
         scope.cancel()
         mock.close()
     }
@@ -38,105 +37,100 @@ class KiloBackendAppServiceTelemetryTest {
         return KiloBackendAppService.create(scope, FakeCliServer(mock), log, telemetry = { telemetry }, env = { env })
     }
 
-    private suspend fun ready(svc: KiloBackendAppService) {
+    private suspend fun ready(svc: KiloBackendAppService): KiloAppRpcApiImpl {
         svc.connect()
         withTimeout(TIMEOUT_MS) { svc.appState.first { it is KiloAppState.Ready } }
+        return KiloAppRpcApiImpl(svc)
     }
 
     @Test
-    fun `connect leaves the CLI telemetry state alone when the setting is on`() = runBlocking {
-        val svc = create()
+    fun `connect never overrides the telemetry state the CLI resolved`() = runBlocking {
+        ready(create())
 
-        ready(svc)
-
-        // Both load events are sent after the point where an opt-out would have been pushed.
+        // Both load events are sent after the point where the plugin used to force telemetry on.
         assertTrue(mock.awaitRequestCount(CAPTURE, 2), "load events were not captured; logs=${log.messages}")
         assertEquals(emptyList(), mock.telemetryStates.toList())
     }
 
     @Test
-    fun `connect turns CLI telemetry off when the setting is off`() = runBlocking {
-        KiloTelemetrySettings.set(false)
-        val svc = create()
+    fun `connect leaves a global config opt-out alone and forwards no events`() = runBlocking {
+        mock.config = OPTED_OUT
+        val rpc = ready(create())
 
-        ready(svc)
+        rpc.captureTelemetry(TelemetryCaptureDto("Test Event", emptyMap()))
 
-        assertTrue(mock.awaitRequestCount(SET_ENABLED, 1), "opt-out was not pushed; logs=${log.messages}")
-        assertEquals(listOf(OFF), mock.telemetryStates.toList())
+        assertEquals(emptyList(), mock.telemetryStates.toList())
         assertEquals(0, mock.requestCount(CAPTURE))
     }
 
     @Test
-    fun `setting change is applied to the running CLI`() = runBlocking {
+    fun `turning telemetry off writes the global config and applies to the running CLI`() = runBlocking {
         val svc = create()
-        ready(svc)
-        val rpc = KiloAppRpcApiImpl(svc)
-
-        rpc.setTelemetryEnabled(false)
-
-        assertFalse(rpc.telemetryEnabled())
-        assertEquals(listOf(OFF), mock.telemetryStates.toList())
-
-        rpc.setTelemetryEnabled(true)
-
-        assertTrue(rpc.telemetryEnabled())
-        assertEquals(listOf(OFF, ON), mock.telemetryStates.toList())
-    }
-
-    @Test
-    fun `unchanged setting is not pushed again`() = runBlocking {
-        val svc = create()
-        ready(svc)
-
-        KiloAppRpcApiImpl(svc).setTelemetryEnabled(true)
-
-        assertEquals(emptyList(), mock.telemetryStates.toList())
-    }
-
-    @Test
-    fun `turning the setting on does not override an inherited opt-out`() = runBlocking {
-        KiloTelemetrySettings.set(false)
-        val svc = create(mapOf("KILO_TELEMETRY_LEVEL" to "off"))
-        ready(svc)
-        assertTrue(mock.awaitRequestCount(SET_ENABLED, 1))
-
-        KiloAppRpcApiImpl(svc).setTelemetryEnabled(true)
-
-        assertEquals(listOf(OFF), mock.telemetryStates.toList())
-    }
-
-    @Test
-    fun `turning the setting on does not override a global config opt-out`() = runBlocking {
-        KiloTelemetrySettings.set(false)
-        mock.config = """{"model":"test/model","experimental":{"openTelemetry":false}}"""
-        val svc = create()
-        ready(svc)
-        assertTrue(mock.awaitRequestCount(SET_ENABLED, 1))
-
-        KiloAppRpcApiImpl(svc).setTelemetryEnabled(true)
-
-        assertEquals(listOf(OFF), mock.telemetryStates.toList())
-    }
-
-    @Test
-    fun `backend events are not forwarded while the setting is off`() = runBlocking {
-        val svc = create()
-        ready(svc)
+        val rpc = ready(svc)
         assertTrue(mock.awaitRequestCount(CAPTURE, 2))
-        val rpc = KiloAppRpcApiImpl(svc)
 
-        rpc.setTelemetryEnabled(false)
+        rpc.updateConfig(ConfigPatchDto(openTelemetry = false))
+
+        assertEquals("""{"experimental":{"openTelemetry":false}}""", mock.lastConfigPatchBody)
+        assertEquals(false, svc.config?.openTelemetry)
+        assertEquals(listOf(OFF), mock.telemetryStates.toList())
+
         val before = mock.requestCount(CAPTURE)
         rpc.captureTelemetry(TelemetryCaptureDto("Test Event", emptyMap()))
 
         assertEquals(before, mock.requestCount(CAPTURE))
     }
 
+    @Test
+    fun `turning telemetry back on applies to the running CLI`() = runBlocking {
+        mock.config = OPTED_OUT
+        val svc = create()
+        val rpc = ready(svc)
+
+        rpc.updateConfig(ConfigPatchDto(openTelemetry = true))
+
+        assertEquals(true, svc.config?.openTelemetry)
+        assertEquals(listOf(ON), mock.telemetryStates.toList())
+
+        rpc.captureTelemetry(TelemetryCaptureDto("Test Event", emptyMap()))
+
+        assertTrue(mock.awaitRequestCount(CAPTURE, 1))
+    }
+
+    @Test
+    fun `unrelated config changes do not touch the telemetry state`() = runBlocking {
+        val rpc = ready(create())
+
+        rpc.updateConfig(ConfigPatchDto(snapshot = false))
+
+        assertEquals(emptyList(), mock.telemetryStates.toList())
+    }
+
+    @Test
+    fun `an inherited opt-out is reported and not overridden by a config change`() = runBlocking {
+        val rpc = ready(create(mapOf("KILO_TELEMETRY_LEVEL" to "off")))
+
+        assertEquals(false, rpc.telemetryOverride())
+
+        rpc.updateConfig(ConfigPatchDto(openTelemetry = true))
+        rpc.captureTelemetry(TelemetryCaptureDto("Test Event", emptyMap()))
+
+        assertEquals(emptyList(), mock.telemetryStates.toList())
+        assertEquals(0, mock.requestCount(CAPTURE))
+    }
+
+    @Test
+    fun `no override is reported without an inherited level`() = runBlocking {
+        val rpc = ready(create())
+
+        assertNull(rpc.telemetryOverride())
+    }
+
     private companion object {
         const val TIMEOUT_MS = 35_000L
-        const val SET_ENABLED = "/telemetry/setEnabled"
         const val CAPTURE = "/telemetry/capture"
         const val ON = """{"enabled":true}"""
         const val OFF = """{"enabled":false}"""
+        const val OPTED_OUT = """{"model":"test/model","experimental":{"openTelemetry":false}}"""
     }
 }

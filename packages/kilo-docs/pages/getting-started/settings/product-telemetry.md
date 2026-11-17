@@ -7,7 +7,7 @@ description: "Choose whether to share product telemetry and crash reports, with 
 
 Product telemetry helps us understand how Kilo is used so we can improve it: which features to prioritize, which errors come up most often, and what is slow. It includes information about feature usage, performance, and errors. Kilo Desktop also sends crash reports to help diagnose crashes.
 
-Not everyone wants to share this data, so you can turn it off. Product telemetry is enabled by default in the standalone CLI, Kilo Desktop, and the JetBrains plugin. In VS Code, Kilo follows the editor's telemetry preference. Use the instructions for your client below; these clients do not share one telemetry preference.
+Not everyone wants to share this data, so you can turn it off. Product telemetry is enabled by default in the standalone CLI, Kilo Desktop, and the JetBrains plugin. In VS Code, Kilo follows the editor's telemetry preference. Use the instructions for your client below. The JetBrains plugin shares the standalone CLI's preference; VS Code and Kilo Desktop each use their own.
 
 This page covers product telemetry shared with Kilo. [OpenTelemetry export](#optional-opentelemetry-export) is a separate feature for monitoring Kilo in your own observability tools.
 
@@ -16,7 +16,7 @@ This page covers product telemetry shared with Kilo. [OpenTelemetry export](#opt
 | Standalone CLI | `KILO_TELEMETRY_LEVEL=off`, or `experimental.openTelemetry: false` in global Kilo config | The environment variable overrides global config. |
 | VS Code | VS Code's **Telemetry: Telemetry Level** setting: any level other than **all** | VS Code's preference overrides the CLI controls for its managed Kilo backend. |
 | Kilo Desktop | **Settings > General > Privacy > Share usage analytics and crash reports** | Desktop's preference overrides the CLI controls for its embedded Kilo service. |
-| JetBrains | **Settings > Tools > Kilo Code > Advanced > Share usage analytics**, or either standalone CLI control | Any opt-out wins: the plugin setting only turns telemetry off and never overrides the CLI controls. |
+| JetBrains | **Settings > Tools > Kilo Code > Advanced > Share usage analytics**, which edits `experimental.openTelemetry` in global Kilo config | Same as the standalone CLI: `KILO_TELEMETRY_LEVEL` in the IDE's environment overrides global config. |
 
 ## VS Code
 
@@ -90,9 +90,9 @@ See [Desktop privacy settings](/docs/desktop/settings/general#privacy) for the s
 1. Open **Settings > Tools > Kilo Code > Advanced**.
 2. Turn off **Share usage analytics** and apply.
 
-This setting is enabled by default. Turning it off applies immediately to the plugin and its bundled Kilo CLI, without restarting the IDE.
+The toggle is the same preference as the [standalone CLI](#standalone-cli): it reads and writes `experimental.openTelemetry` in global Kilo config. Turning it off in the IDE also turns product telemetry off for the standalone CLI on that machine, and editing the config file changes the toggle. It is enabled by default, and a change made in the IDE applies to the plugin and its bundled Kilo CLI immediately.
 
-The plugin setting only turns telemetry off. While it is on, the [standalone CLI](#standalone-cli) controls decide for the bundled CLI, so `KILO_TELEMETRY_LEVEL=off` in the IDE's environment or `experimental.openTelemetry: false` in global Kilo config also disables product telemetry. Restart the IDE after changing either of those.
+If `KILO_TELEMETRY_LEVEL` is set in the IDE's environment, it takes precedence as it does in the CLI, and the toggle is read-only and shows the resulting state. Restart the IDE after changing the environment variable or editing the config file by hand.
 
 The IDE's own **Data Sharing** setting covers usage statistics sent to JetBrains and does not control Kilo's product telemetry.
 

@@ -37,7 +37,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
 
     /** Same guard as [touched], for the usage analytics toggle. */
     private var edited = false
-    private val telemetry = SettingsToggle(selected = true) { edited = true }
+    private val telemetry = SettingsToggle(selected = true) { edited = true }.apply { isEnabled = false }
 
     private var saved = current()
 
@@ -136,9 +136,14 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     /** The usage analytics value as of the last [sync] (or the initial fetch via [refreshTelemetry]). */
     fun savedTelemetry(): Boolean = saved.telemetry
 
-    /** Populates the usage analytics toggle from the backend; a no-op once the user has flipped it. */
+    /**
+     * Shows the product telemetry state. [value] is `experimental.openTelemetry` from the global
+     * config, or the decision of `KILO_TELEMETRY_LEVEL` when [locked]; the toggle is read-only then,
+     * and while the config is not loaded ([ready] false). A no-op once the user has flipped it.
+     */
     @RequiresEdt
-    fun refreshTelemetry(value: Boolean) {
+    fun refreshTelemetry(value: Boolean, ready: Boolean, locked: Boolean) {
+        telemetry.isEnabled = ready && !locked
         if (edited) return
         saved = saved.copy(telemetry = value)
         telemetry.isSelected = value

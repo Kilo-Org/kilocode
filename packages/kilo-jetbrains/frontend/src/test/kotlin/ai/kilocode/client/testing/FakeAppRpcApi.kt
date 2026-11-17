@@ -252,26 +252,20 @@ class FakeAppRpcApi : KiloAppRpcApi {
         indexWorktreesSaves.add(value)
     }
 
-    var telemetryEnabled = true
-    val telemetrySaves = mutableListOf<Boolean>()
+    /** The decision of the backend environment's `KILO_TELEMETRY_LEVEL`; null when the config decides. */
+    var telemetryOverride: Boolean? = null
 
-    /** When set, [telemetryEnabled] awaits this deferred, emulating a slow split-mode fetch. */
+    /** When set, [telemetryOverride] awaits this deferred, emulating a slow split-mode fetch. */
     var telemetryGate: CompletableDeferred<Unit>? = null
 
-    /** When true, [telemetryEnabled] fails, emulating an unreachable backend. */
+    /** When true, [telemetryOverride] fails, emulating an unreachable backend. */
     var telemetryFails = false
 
-    override suspend fun telemetryEnabled(): Boolean {
-        assertNotEdt("telemetryEnabled")
+    override suspend fun telemetryOverride(): Boolean? {
+        assertNotEdt("telemetryOverride")
         telemetryGate?.await()
         if (telemetryFails) throw IllegalStateException("backend unreachable")
-        return telemetryEnabled
-    }
-
-    override suspend fun setTelemetryEnabled(value: Boolean) {
-        assertNotEdt("setTelemetryEnabled")
-        telemetryEnabled = value
-        telemetrySaves.add(value)
+        return telemetryOverride
     }
 
     var backendLog: LogFileDto? = null
@@ -351,6 +345,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
             permission = mergePermission(config.permission, patch.permission),
             shared_agent_board = patch.shared_agent_board ?: config.shared_agent_board,
             snapshot = patch.snapshot ?: config.snapshot,
+            openTelemetry = patch.openTelemetry ?: config.openTelemetry,
             retention = patch.retention?.let { item ->
                 val current = config.retention ?: RetentionConfigDto()
                 current.copy(
