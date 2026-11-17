@@ -17,7 +17,7 @@ export function shouldApprove(request: PermissionRequest, enabled: boolean, resp
   if (request.action === "sandbox_escalation") return false
   // A sensitive browser step needs a person, exactly like a sandbox escalation.
   if (request.action === "browser_sensitive") return false
-  return true
+  return request.metadata?.["sandboxEscalation"] !== true && request.metadata?.["browserSensitive"] !== true
 }
 
 export type AutoApproveReply = (request: PermissionRequest) => Promise<unknown>
