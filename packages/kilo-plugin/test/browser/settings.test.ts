@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { resolve, defaultHeadless } from "../../src/browser/settings"
 
 describe("browser settings", () => {
-  test("defaults to playwright and full observation", () => {
+  test("defaults to playwright and diff observation", () => {
     expect(resolve(undefined, {})).toEqual({
       backend: "playwright",
-      observation: "full",
+      observation: "diff",
       allowSensitive: false,
       target: null,
       headless: defaultHeadless("linux", {}),
@@ -13,7 +13,12 @@ describe("browser settings", () => {
   })
 
   test("reads the decoded config keys", () => {
-    expect(resolve({ backend: "extension", observation: "diff", allow_sensitive: true, headless: true, target: "chrome:abc" }, {})).toEqual({
+    expect(
+      resolve(
+        { backend: "extension", observation: "diff", allow_sensitive: true, headless: true, target: "chrome:abc" },
+        {},
+      ),
+    ).toEqual({
       backend: "extension",
       observation: "diff",
       allowSensitive: true,

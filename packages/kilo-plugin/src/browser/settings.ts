@@ -17,7 +17,7 @@ export type Settings = {
 }
 
 export const DEFAULT_BACKEND: Backend = "playwright"
-export const DEFAULT_OBSERVATION: Observation = "full"
+export const DEFAULT_OBSERVATION: Observation = "diff"
 
 /**
  * Headed by default so the user can watch the agent, headless when there is no display to show it: no X11 or
