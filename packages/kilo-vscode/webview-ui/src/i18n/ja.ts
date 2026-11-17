@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "やり直し",
   "revert.banner.redo.all": "すべてやり直し",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "圧縮を待機中",
+  "session.compaction.queued.busy": "圧縮を待機中です。現在のステップが終わると開始します。",
   "revert.banner.workspace.snapshotsDisabled":
     "会話を元に戻しました。スナップショットが無効になっているため、ファイルの変更は復元されませんでした。",
   "revert.banner.workspace.unavailable":

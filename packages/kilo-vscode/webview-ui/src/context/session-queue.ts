@@ -263,3 +263,17 @@ export function removeQueuedMessage(
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID, requestID })
   })
 }
+
+/**
+ * The compaction marker that was written but has not started yet (no summary assistant
+ * answers it). Mirrors the server-side rule so the webview derives it from persisted messages.
+ */
+export function queuedCompaction(messages: Message[], parts?: (msg: Message) => Message["parts"]) {
+  const pivot = messages.findLastIndex(
+    (msg) => msg.role === "assistant" && (typeof msg.time?.completed === "number" || !!msg.error || !!msg.finish),
+  )
+  const tail = messages.slice(pivot + 1)
+  return tail.findLast(
+    (msg) => isCompact(msg, parts) && !tail.some((item) => item.role === "assistant" && item.parentID === msg.id),
+  )
+}

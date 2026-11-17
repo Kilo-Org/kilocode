@@ -3,6 +3,7 @@ import {
   activeUserMessageID,
   messageTurns,
   partitionTurns,
+  queuedCompaction,
   queuedUserMessageIDs,
   removeQueuedMessage,
   stableMessageTurns,
@@ -693,5 +694,24 @@ describe("queued deletion cleanup", () => {
     if (message) state.emit(message)
     expect(await state.promise).toBe(false)
     expect(state.listeners.size).toBe(0)
+  })
+})
+
+describe("queuedCompaction", () => {
+  it("returns the marker until a summary assistant answers it", () => {
+    const messages = [user("u1"), assistant("a1", "u1", { finish: "stop" }), compact("c1")]
+    expect(queuedCompaction(messages)?.id).toBe("c1")
+    expect(queuedCompaction([...messages, assistant("s1", "c1")])).toBeUndefined()
+  })
+
+  it("does not report markers behind a finished assistant that already answered them", () => {
+    expect(queuedCompaction([user("u1"), compact("c1"), assistant("s1", "c1", { finish: "stop" })])).toBeUndefined()
+    expect(queuedCompaction([user("u1"), assistant("a1", "u1", { finish: "stop" })])).toBeUndefined()
+  })
+
+  it("reads parts through the injected accessor", () => {
+    const messages = [user("c1")]
+    expect(queuedCompaction(messages)).toBeUndefined()
+    expect(queuedCompaction(messages, (msg) => compact(msg.id).parts)?.id).toBe("c1")
   })
 })

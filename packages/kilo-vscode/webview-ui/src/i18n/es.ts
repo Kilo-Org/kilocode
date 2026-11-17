@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Rehacer",
   "revert.banner.redo.all": "Rehacer todo",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Compactación en cola",
+  "session.compaction.queued.busy": "Compactación en cola. Comenzará cuando termine el paso actual.",
   "revert.banner.workspace.snapshotsDisabled":
     "Conversación revertida. Los cambios en los archivos no se restauraron porque las instantáneas están desactivadas.",
   "revert.banner.workspace.unavailable":

@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Opnieuw uitvoeren",
   "revert.banner.redo.all": "Alles opnieuw uitvoeren",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Compactie in wachtrij",
+  "session.compaction.queued.busy": "Compactie in wachtrij. Start zodra de huidige stap klaar is.",
   "revert.banner.workspace.snapshotsDisabled":
     "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
   "revert.banner.workspace.unavailable":

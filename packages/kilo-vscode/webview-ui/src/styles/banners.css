@@ -387,3 +387,20 @@
   margin: 0;
   line-height: 1.4;
 }
+
+/* ============================================
+   Compaction Queued Banner
+   ============================================ */
+
+.compaction-queued-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
+  border: 1px solid var(--border-base, var(--vscode-editorWidget-border, #454545));
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-12);
+}

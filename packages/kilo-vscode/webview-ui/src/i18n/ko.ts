@@ -91,6 +91,8 @@ export const dict = {
   "revert.banner.redo": "다시 실행",
   "revert.banner.redo.all": "모두 다시 실행",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "압축 대기 중",
+  "session.compaction.queued.busy": "압축이 대기 중입니다. 현재 단계가 끝나면 시작됩니다.",
   "revert.banner.workspace.snapshotsDisabled":
     "대화를 되돌렸습니다. 스냅샷이 비활성화되어 있어 파일 변경 사항은 복원되지 않았습니다.",
   "revert.banner.workspace.unavailable":

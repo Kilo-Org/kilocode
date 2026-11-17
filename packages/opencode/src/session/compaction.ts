@@ -20,6 +20,7 @@ import { isOverflow as overflow, usable } from "./overflow"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 // kilocode_change start
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
 import { SessionExport } from "@/kilocode/session-export"
@@ -836,7 +837,7 @@ const layer = Layer.effect(
       isOverflow,
       prune,
       process: (input) => processCompaction(input).pipe(Effect.orDie), // kilocode_change
-      create,
+      create: (input) => KiloSessionCompaction.once(session, input.sessionID, create(input)), // kilocode_change - one pending marker per session
     })
   }),
 )

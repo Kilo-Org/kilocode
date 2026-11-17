@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Komprimering i kø",
+  "session.compaction.queued.busy": "Komprimering i kø. Den starter, når det nuværende trin er færdigt.",
   "revert.banner.workspace.snapshotsDisabled":
     "Samtalen blev gendannet. Filændringer blev ikke gendannet, fordi snapshots er deaktiveret.",
   "revert.banner.workspace.unavailable":

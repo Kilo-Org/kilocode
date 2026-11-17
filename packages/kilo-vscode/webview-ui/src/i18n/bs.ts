@@ -87,6 +87,8 @@ export const dict = {
   "revert.banner.redo": "Ponovi",
   "revert.banner.redo.all": "Ponovi Sve",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Sažimanje je u redu čekanja",
+  "session.compaction.queued.busy": "Sažimanje je u redu čekanja. Počet će kada se trenutni korak završi.",
   "revert.banner.workspace.snapshotsDisabled":
     "Razgovor je vraćen. Promjene datoteka nisu vraćene jer su snimci stanja onemogućeni.",
   "revert.banner.workspace.unavailable":

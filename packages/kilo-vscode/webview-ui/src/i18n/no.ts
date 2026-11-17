@@ -90,6 +90,8 @@ export const dict = {
   "revert.banner.redo": "Gjenta",
   "revert.banner.redo.all": "Gjenta alt",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "session.compaction.queued": "Komprimering i kø",
+  "session.compaction.queued.busy": "Komprimering i kø. Den starter når det gjeldende trinnet er ferdig.",
   "revert.banner.workspace.snapshotsDisabled":
     "Samtalen ble tilbakestilt. Filendringer ble ikke gjenopprettet fordi øyeblikksbilder er deaktivert.",
   "revert.banner.workspace.unavailable":
