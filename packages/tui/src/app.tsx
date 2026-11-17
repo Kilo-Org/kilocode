@@ -44,7 +44,7 @@ import { PermissionProvider } from "./context/permission"
 import { DialogModel } from "./component/dialog-model"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
-import { DialogBrowser } from "./kilocode/dialog-browser"
+import { DialogBrowser } from "./kilocode/dialog-browser" // kilocode_change
 import { DialogStatus } from "./component/dialog-status"
 import { DialogDebug } from "./component/dialog-debug"
 import { DialogThemeList } from "./component/dialog-theme-list"
@@ -713,6 +713,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           dialog.replace(() => <DialogMcp />)
         },
       },
+      // kilocode_change start - browser settings dialog
       {
         name: "browser.config",
         title: "Browser",
@@ -722,6 +723,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           dialog.replace(() => <DialogBrowser />)
         },
       },
+      // kilocode_change end
       {
         name: "agent.cycle",
         title: "Agent cycle",

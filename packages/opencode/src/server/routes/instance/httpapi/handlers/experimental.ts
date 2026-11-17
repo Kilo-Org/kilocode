@@ -75,7 +75,9 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
         consoleManagedProviders: state.consoleManagedProviders,
         ...(state.activeOrgName ? { activeOrgName: state.activeOrgName } : {}),
         switchableOrgCount: groups.reduce((count, group) => count + group.orgs.length, 0),
+        // kilocode_change start - browser policy for the UI
         ...(policy ? { browserPolicy: { control: policy.control, origins: [...policy.origins] } } : {}),
+        // kilocode_change end
       }
     })
 
