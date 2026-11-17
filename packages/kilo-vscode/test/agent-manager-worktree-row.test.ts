@@ -14,7 +14,7 @@ test("the Agent Manager chat wires the shared worktree actions row", () => {
   expect(app).toContain("onNewWorktree={handleCreateWorktree}")
   expect(app).toContain("onMoveToWorktree=")
   expect(app).toContain("onConfigureWorktree={() => showNewWorktreeDialog()}")
-  expect(app).toContain('to({ type: "agentManager.createWorktree", baseBranch: branch })')
+  expect(app).toContain("onNewWorktreeFromBranch={(branch) => createWorktreeNow(branch)}")
 })
 
 test("the shared row shows Move to Worktree only with a known branch", () => {

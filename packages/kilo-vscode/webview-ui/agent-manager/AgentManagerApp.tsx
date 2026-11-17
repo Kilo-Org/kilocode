@@ -1865,11 +1865,15 @@ const AgentManagerContent: Component = () => {
     dialog.show(() => <ShortcutsDialog title={t("agentManager.shortcuts.title")} categories={categories} />)
   }
   const loaded = () => worktreesLoaded() && sessionsLoaded()
-  const handleCreateWorktree = () => {
+  // A quick create reports a blocker on the setup message; keep the project so the dialog can replace the overlay.
+  const [quickCreate, setQuickCreate] = createSignal<string>()
+  const createWorktreeNow = (baseBranch?: string) => {
     if (!loaded()) return
     expandSidebar()
-    to({ type: "agentManager.createWorktree" })
+    setQuickCreate(activeProjectId())
+    to({ type: "agentManager.createWorktree", ...(baseBranch ? { baseBranch } : {}) })
   }
+  const handleCreateWorktree = () => createWorktreeNow()
   const showNewWorktreeDialog = (projectId = activeProjectId()) => {
     if (!loaded()) return
     expandSidebar()
@@ -1914,11 +1918,7 @@ const AgentManagerContent: Component = () => {
         hasMessages={hasMessages}
         branch={isGitRepo() ? transfer.branch() : undefined}
         onNewWorktree={handleCreateWorktree}
-        onNewWorktreeFromBranch={(branch) => {
-          if (!loaded()) return
-          expandSidebar()
-          to({ type: "agentManager.createWorktree", baseBranch: branch })
-        }}
+        onNewWorktreeFromBranch={(branch) => createWorktreeNow(branch)}
         onConfigureWorktree={() => showNewWorktreeDialog()}
         onMoveToWorktree={movable && id ? () => transfer.move(id) : undefined}
         moving={transfer.transferring()}
@@ -2078,6 +2078,14 @@ const AgentManagerContent: Component = () => {
           setup,
           setSetup,
           creation,
+          quick: quickCreate(),
+          // A quick create that hits a setup blocker opens the dialog instead of the overlay that vanishes after three seconds.
+          onQuickBlocked: (projectId) => {
+            setQuickCreate(undefined)
+            setSetup({ active: false, message: "" })
+            showNewWorktreeDialog(projectId)
+          },
+          onQuickDone: () => setQuickCreate(undefined),
           ensure: (pid) => registry.ensure(pid),
           active: () => registry.active(),
           currentProjectId,

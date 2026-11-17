@@ -35,6 +35,12 @@ export function applySetupMessage(
     setup: () => SetupState
     setSetup: (state: SetupState | ((prev: SetupState) => SetupState)) => void
     creation: { setup: (msg: AgentManagerWorktreeSetupMessage) => void }
+    /** Project of a quick create in flight, which has no dialog to explain a setup blocker. */
+    quick?: string
+    /** Open the dialog for a blocked quick create. */
+    onQuickBlocked?: (projectId: string) => void
+    /** A quick create finished or failed for another reason. */
+    onQuickDone?: () => void
     ensure: (projectId: string) => ProjectStore
     active: () => ProjectStore
     currentProjectId: Accessor<string | undefined>
@@ -49,6 +55,7 @@ export function applySetupMessage(
     saveTabMemory: () => void
   },
 ) {
+  if (quickCreateBlocked(msg, deps.quick, deps.onQuickBlocked, deps.onQuickDone)) return
   deps.creation.setup(msg)
   const store = msg.projectId ? deps.ensure(msg.projectId) : deps.active()
   const previous = deps.setup()
@@ -81,6 +88,22 @@ export function applySetupMessage(
     if (msg.worktreeId) deps.setSelection(msg.worktreeId)
     deps.setReviewActive(false)
   }
+}
+
+/** True when a quick create hit a setup blocker; the dialog then replaces the transient overlay. */
+function quickCreateBlocked(
+  msg: AgentManagerWorktreeSetupMessage,
+  quick: string | undefined,
+  blocked?: (projectId: string) => void,
+  done?: () => void,
+): boolean {
+  if (!quick || (msg.projectId !== undefined && msg.projectId !== quick)) return false
+  if (msg.status === "error" && (msg.errorCode === "not_git_repo" || msg.errorCode === "no_commits")) {
+    blocked?.(msg.projectId ?? quick)
+    return true
+  }
+  if (msg.status !== "creating") done?.()
+  return false
 }
 
 export function applySessionAdded(msg: AgentManagerSessionAddedMessage, deps: {
