@@ -69,6 +69,7 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
     private val prs = project.service<HostedPullRequestService>()
     private val management = project.service<HostedManagementService>()
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val job get() = cs.coroutineContext[Job]!!
     private val header = WorkspaceSessionHeader()
     private val changes = HoverIcon().apply {
         icon = AllIcons.Actions.Diff
@@ -269,6 +270,11 @@ internal class HostedWorkspaceEditorPanel @RequiresEdt constructor(
         manager.onCreated = null
         observation?.let(Disposer::dispose)
         cs.cancel()
+    }
+
+    suspend fun closed() {
+        manager.closed()
+        job.join()
     }
 
     @RequiresEdt

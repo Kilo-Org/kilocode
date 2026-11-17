@@ -856,6 +856,14 @@ class KiloWorktreeRpcApiImpl(
         if (!existing && parent != null) writeWorktreeMeta(Path.of(path), parent, remote)
         val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
         val paths = worktreePaths(items).ifEmpty { listOf(path) }
+        // A branch name can be reused after its worktree was deleted, which reuses this path. Drop any
+        // per-path state left from a removal done outside Agent Manager so the new worktree cannot
+        // inherit the old label or session-list visibility.
+        removeWorktreeState(store, path)
+        // The same cleanup covers a removal that did not go through Agent Manager, or an earlier
+        // re-home that failed. A newly created directory is a new incarnation and must start with no
+        // conversations while any previous ones stay reachable under Local.
+        rehomeSessions(path, root.toString())
         prependWorktreeOrder(store, path, paths)
         return CreateWorktreeResultDto(
             worktree = WorktreeDto(
@@ -914,7 +922,7 @@ class KiloWorktreeRpcApiImpl(
                 closeIfOpenSafe(Path.of(target.path))
                 trash?.mark(target.path)
                 try {
-                    removeManaged(base, target, branch, force, store, storage, start)
+                    removeManaged(base, target, branch, force, store, storage, main?.path, start)
                 } finally {
                     trash?.unmark(target.path)
                 }
@@ -936,6 +944,7 @@ class KiloWorktreeRpcApiImpl(
         force: Boolean,
         store: Path,
         storage: Path?,
+        root: String?,
         start: Long,
     ): RemoveWorktreeResultDto {
         // Force means the user accepted removing a locked worktree; unlock first so the plain
@@ -1007,6 +1016,7 @@ class KiloWorktreeRpcApiImpl(
         LOG.info("worktree removed: path=${target.path} branch=${branch ?: "(none)"} mode=$mode ms=${System.currentTimeMillis() - start}")
         invalidate()
         removeWorktreeState(store, target.path)
+        root?.let { rehomeSessions(target.path, it) }
         runCatching { service<KiloBackendAppService>().workspaces.remove(target.path) }
             .onFailure { err -> LOG.info("workspace cache eviction skipped: path=${target.path} message=${err.message}") }
         storage?.let { trash?.sweep(it) }
@@ -1050,6 +1060,23 @@ class KiloWorktreeRpcApiImpl(
         if (port <= 0) return
         val body = JsonObject(mapOf("worktree" to JsonPrimitive(path))).toString()
         postKilocode(http, port, "kilocode/worktree/teardown", base, body, "teardown")
+    }
+
+    /**
+     * Best-effort re-home of the removed worktree's sessions to the project root. Sessions are keyed
+     * by directory, so leaving them pointed at a deleted directory means the next worktree created at
+     * the same path inherits its predecessor's conversations — which is exactly what happens when a
+     * generated branch name is reused after the previous PR was merged and its worktree removed.
+     *
+     * Deletion has already succeeded when this runs, so a CLI that cannot answer only loses the
+     * history relocation; it must never turn the removal into a failure.
+     */
+    private fun rehomeSessions(path: String, root: String) {
+        val app = runCatching { service<KiloBackendAppService>() }.getOrNull() ?: return
+        val moved = runCatching { app.sessions.rehome(path, root) }
+            .onFailure { err -> LOG.info("worktree session rehome skipped: path=$path message=${err.message}") }
+            .getOrDefault(0)
+        if (moved > 0) LOG.info("worktree sessions moved to root: path=$path root=$root count=$moved")
     }
 
     /**

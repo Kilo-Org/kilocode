@@ -39,12 +39,14 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.Job
 import java.awt.EventQueue
 import javax.swing.SwingUtilities
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
@@ -262,6 +264,70 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `reload closes every workspace feed before reconnecting without affecting another workspace`() = runBlocking {
+        val first = HostedWorkspaceRefDto("cloud", "first")
+        val second = HostedWorkspaceRefDto("cloud", "second")
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(first, "one", parent)
+            service.observe(first, "two", parent)
+            service.observe(second, "three", parent)
+            repeat(3) { withTimeout(WAIT) { rpc.opened.receive() } }
+            val reconnected = CompletableDeferred<Boolean>()
+            lateinit var reload: Job
+
+            SwingUtilities.invokeAndWait {
+                reload = service.reload(first) {
+                    reconnected.complete(EventQueue.isDispatchThread())
+                }!!
+            }
+
+            repeat(2) { withTimeout(WAIT) { rpc.closed.receive() } }
+            reload.join()
+            assertEquals(true, reconnected.await())
+            assertEquals(1, rpc.events.subscriptionCount.value)
+
+            service.observe(first, "one", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            assertEquals(2, rpc.events.subscriptionCount.value)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `reload coalesces repeated requests and reconnects only after every close barrier`() {
+        runBlocking {
+            val ref = HostedWorkspaceRefDto("cloud", "one")
+            val rpc = FakeRpc()
+            val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+            val parent = Disposer.newDisposable()
+            try {
+                service.observe(ref, "one", parent)
+                withTimeout(WAIT) { rpc.opened.receive() }
+                val gate = CompletableDeferred<Unit>()
+                val calls = mutableListOf<String>()
+                lateinit var reload: Job
+
+                SwingUtilities.invokeAndWait {
+                    reload = service.reload(ref, close = { suspend { gate.await(); calls += "closed" } }) {
+                        calls += "reconnected"
+                    }!!
+                    assertNull(service.reload(ref) { calls += "duplicate" })
+                }
+
+                withTimeout(WAIT) { rpc.closed.receive() }
+                assertTrue(service.reloading(ref))
+                assertTrue(calls.isEmpty())
+                gate.complete(Unit)
+                reload.join()
+                assertEquals(listOf("closed", "reconnected"), calls)
+                assertFalse(service.reloading(ref))
+            } finally { Disposer.dispose(parent) }
+        }
+    }
+
+    @Test
     fun `booting workspace without a preparation record still prepares`() {
         val ref = HostedWorkspaceRefDto("cloud", "one")
         val state = KiloHostedService.HostedState(
@@ -440,6 +506,32 @@ class KiloHostedServiceTest {
             rpc.send(step.copy(step = null, action = "attempt_failed", failure = "workspace_setup_failed",
                 revision = 8, observedAt = 110.0))
             assertEquals("workspace_setup_failed", service.state.value.failure(key)?.failure)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `step failure remains nonterminal when the preparation attempt completes`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val step = HostedSystemEventDto(key, "preparing", step = "session_setup_commands",
+                action = "step_failed", attemptID = "attempt_1", revision = 27, observedAt = 100.0)
+            rpc.send(step)
+            assertNull(service.state.value.failure(key))
+            assertEquals("step_failed", service.state.value.preparation(key)?.action)
+
+            rpc.send(step.copy(action = "step_completed", revision = 28, observedAt = 110.0))
+            rpc.send(step.copy(step = null, action = "attempt_completed", revision = 35, observedAt = 120.0))
+
+            assertNull(service.state.value.failure(key))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("attempt_completed", service.state.value.preparations[key]?.action)
+            assertEquals("ready", service.state.value.preparations[key]?.cloudStatus)
         } finally { Disposer.dispose(parent) }
     }
 
