@@ -31,6 +31,7 @@ import { ImportCommand } from "./import/import"
 import { SyncCommand } from "./sync/sync"
 import { RemoteCommand } from "./remote/remote"
 import { KiloServiceCommands } from "./service/service"
+import { KiloBrowserCommands } from "./browser/commands"
 
 import { ensurePluginRuntime } from "./index"
 
@@ -70,6 +71,8 @@ const KiloCommands = {
     import: ImportCommand,
     sync: SyncCommand,
     remote: RemoteCommand,
+    // Kilo: the browser bridge hub and its native messaging host install.
+    browser: KiloBrowserCommands,
   },
 }
 
@@ -150,6 +153,12 @@ const Handlers = Runtime.handlers(KiloCommands, {
   // Kilo: manual import of an earlier Kilo installation.
   import: {
     v1: () => import("./import/v1"),
+  },
+  // Kilo: the browser bridge hub (started by the browser or by a CLI) and the native
+  // messaging host install.
+  browser: {
+    hub: () => import("./browser/hub-command"),
+    "install-host": () => import("./browser/install-host-command"),
   },
   // Kilo: custom auto routers.
   auto: {
