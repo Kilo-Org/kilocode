@@ -37,9 +37,15 @@ import {
   WorkspacePullRequestDiffFileResult,
   WorkspaceProfileDefaultInput,
   WorkspaceProfileListInput,
+  WorkspacePullRequestInput,
+  WorkspacePullRequestRefresh,
+  WorkspacePullRequestResult,
+  WorkspacePullRequestSummary,
   WorkspaceSessionStartInput,
   WorkspaceStatusInput,
   markDeletionDispatched,
+  pullRequestFailure,
+  refreshState,
   type Attachment,
   type Availability,
   type ContinueWorkspaceSession,
@@ -111,6 +117,12 @@ const WorkspaceSummary = z.object({
 const WorkspacePage = z.object({
   items: z.array(WorkspaceSummary),
   nextCursor: z.string().nullable(),
+})
+
+const PullRequestProjection = z.object({
+  workspaceId: z.string(),
+  pullRequest: z.unknown().optional(),
+  refresh: z.unknown().optional(),
 })
 
 const CloudWorkspaceStatus = z.object({
@@ -479,12 +491,13 @@ export function provider(options: Options): Provider {
   })
 
   const controlError = (error: unknown): HostedFailure => {
+    const status = error instanceof ControlTokenError && error.status != null ? { status: error.status } : {}
     if (error instanceof ControlTokenError) {
       if (error.reason === "unauthorized") {
-        return new HostedFailure({ code: "unauthorized", message: error.message, retryable: false })
+        return new HostedFailure({ code: "unauthorized", message: error.message, retryable: false, ...status })
       }
       if (error.reason === "invalid_response") {
-        return new HostedFailure({ code: "invalid_response", message: error.message, retryable: false })
+        return new HostedFailure({ code: "invalid_response", message: error.message, retryable: false, ...status })
       }
     }
     unreachable()
@@ -492,6 +505,7 @@ export function provider(options: Options): Provider {
       code: "unavailable",
       message: error instanceof ControlTokenError ? error.message : "Kilo control token could not be issued",
       retryable: true,
+      ...status,
     })
   }
 
@@ -617,7 +631,11 @@ export function provider(options: Options): Provider {
       })
     }
     if (code === "operation_key_reuse_mismatch") {
-      return new HostedFailure({ code, message: "This operation key was used for a different request", retryable: false })
+      return new HostedFailure({
+        code,
+        message: "This operation key was used for a different request",
+        retryable: false,
+      })
     }
     if (code === "creation_in_progress") {
       return new HostedFailure({ code, message: "Kilo Cloud is still completing this workspace", retryable: true })
@@ -1042,6 +1060,96 @@ export function provider(options: Options): Provider {
       } satisfies HostedWorkspaceStatus
     })
 
+  const pullRequest = (
+    raw: WorkspacePullRequestInput,
+    refresh: boolean,
+  ): Effect.Effect<WorkspacePullRequestResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspacePullRequestInput, raw)
+      if (input.id.providerID !== PROVIDER) {
+        return yield* Effect.fail(
+          new HostedFailure({
+            code: "invalid_request",
+            message: "Session host provider does not match",
+            retryable: false,
+          }),
+        )
+      }
+      return yield* Effect.gen(function* () {
+        const auth = yield* resolve(input.organizationID)
+        const payload = { workspaceId: input.id.workspaceID }
+        const response = yield* request(
+          auth,
+          refresh
+            ? {
+                method: "POST",
+                path: "/trpc/refreshHostedWorkspacePullRequest",
+                headers: { ...headers(auth), "content-type": "application/json" },
+                body: JSON.stringify(payload),
+                // The Worker allows 110 seconds for its internal refresh call.
+                timeoutMs: 120_000,
+              }
+            : {
+                method: "GET",
+                path: `/trpc/getHostedWorkspace?input=${encodeURIComponent(JSON.stringify({ ...payload, sessionLimit: 1 }))}`,
+                headers: headers(auth),
+              },
+        )
+        const body = yield* consume(response).pipe(
+          Effect.mapError(
+            (err) =>
+              new HostedFailure({
+                code: err.code,
+                message: err.message,
+                retryable: err.retryable,
+                status: response.status,
+              }),
+          ),
+          Effect.flatMap(data),
+        )
+        const parsed = PullRequestProjection.safeParse(body)
+        if (!parsed.success || parsed.data.workspaceId !== input.id.workspaceID) {
+          return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace PR projection"))
+        }
+        if (!refresh && parsed.data.pullRequest === undefined) {
+          return { id: input.id, state: "unsupported", pullRequest: null } as const
+        }
+        const summary = yield* decode(
+          Schema.NullOr(WorkspacePullRequestSummary),
+          parsed.data.pullRequest,
+          "Kilo Cloud returned an unsupported PR summary",
+        )
+        if (summary !== null) {
+          const url = yield* Effect.try({
+            try: () => new URL(summary.url),
+            catch: () => invalid("Kilo Cloud returned an unsupported PR URL"),
+          })
+          const match = /^\/[A-Za-z\d_.-]+\/[A-Za-z\d_.-]+\/pull\/([1-9]\d*)$/.exec(url.pathname)
+          if (
+            url.origin !== "https://github.com" ||
+            summary.url !== `${url.origin}${url.pathname}` ||
+            match?.at(1) !== String(summary.number)
+          ) {
+            return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported PR URL"))
+          }
+        }
+        if (!refresh) {
+          return { id: input.id, state: summary === null ? "no_pr" : "available", pullRequest: summary } as const
+        }
+        const metadata = yield* decode(
+          WorkspacePullRequestRefresh,
+          parsed.data.refresh,
+          "Kilo Cloud returned an unsupported PR refresh result",
+        )
+        const state = refreshState(metadata.status)
+        return yield* decode(
+          WorkspacePullRequestResult,
+          { id: input.id, state, pullRequest: summary, refresh: metadata },
+          "Kilo Cloud returned an inconsistent PR refresh result",
+        )
+      }).pipe(Effect.catch((err) => Effect.succeed(pullRequestFailure(input.id, err))))
+    })
+
   const workspaceScope = (input: { id: HostedWorkspaceID; organizationID?: string }) => ({
     workspaceId: input.id.workspaceID,
     ...(input.organizationID === undefined ? {} : { kilocodeOrganizationId: input.organizationID }),
@@ -1405,10 +1513,11 @@ export function provider(options: Options): Provider {
   ): Effect.Effect<WorkspaceProfileDefaultResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(WorkspaceProfileDefaultInput, raw)
-      const auth = yield* resolve()
+      const auth = yield* resolve(input.organizationID)
       const body = yield* mutation(auth, procedure, { profileId: input.id })
       const parsed = z.object({ success: z.literal(true) }).safeParse(body)
-      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported profile default result"))
+      if (!parsed.success)
+        return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported profile default result"))
       return { success: true }
     })
 
@@ -1477,6 +1586,8 @@ export function provider(options: Options): Provider {
     listWorkspaces,
     getWorkspace,
     getWorkspaceStatus,
+    getWorkspacePullRequest: (input) => pullRequest(input, false),
+    refreshWorkspacePullRequest: (input) => pullRequest(input, true),
     getWorkspaceChanges,
     refreshWorkspaceChanges,
     getWorkspaceChangeFile,

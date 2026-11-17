@@ -33,6 +33,7 @@ export class ControlTokenError extends Error {
   constructor(
     readonly reason: ControlTokenReason,
     message: string,
+    readonly status?: number,
   ) {
     super(message)
     this.name = "ControlTokenError"
@@ -147,14 +148,15 @@ async function issue(
 
 function errorForStatus(status: number) {
   if (status === 401 || status === 403) {
-    return new ControlTokenError("unauthorized", "Kilo Cloud denied the control token request")
+    return new ControlTokenError("unauthorized", "Kilo Cloud denied the control token request", status)
   }
   if (status === 408 || status === 429 || status >= 500) {
-    return new ControlTokenError("unavailable", "Kilo Cloud token issuance is temporarily unavailable")
+    return new ControlTokenError("unavailable", "Kilo Cloud token issuance is temporarily unavailable", status)
   }
   return new ControlTokenError(
     "invalid_response",
     `Kilo control token issuer returned an unexpected HTTP status: ${status}`,
+    status,
   )
 }
 
