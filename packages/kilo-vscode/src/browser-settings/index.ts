@@ -41,7 +41,7 @@ export namespace BrowserSettings {
     allowAll: boolean
   }
 
-  export const DEFAULTS = { backend: "playwright", observation: "full", allow_sensitive: false } as const
+  export const DEFAULTS = { backend: "playwright", observation: "diff", allow_sensitive: false } as const
   export const BACKENDS: readonly Backend[] = ["playwright", "extension", "off"]
   export const OBSERVATIONS: readonly Observation[] = ["full", "diff", "none"]
 

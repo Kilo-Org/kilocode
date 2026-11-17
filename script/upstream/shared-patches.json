@@ -3,7 +3,7 @@
   "limits": {
     "files": 138,
     "markedLines": 2434,
-    "unmarkedLines": 331,
+    "unmarkedLines": 332,
     "deletedFiles": 0
   },
   "files": {
@@ -271,7 +271,7 @@
     },
     "packages/tui/package.json": {
       "rung": 3,
-      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments. Also add the `@kilocode/caffeination` workspace dependency that the Kilo TUI `/caffeinate` command imports; the driver is Kilo-owned and shared with the VS Code client.",
+      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments. Also add the `@kilocode/caffeination` workspace dependency that the Kilo TUI `/caffeinate` command imports; the driver is Kilo-owned and shared with the VS Code client. Also add the `@kilocode/kilo-i18n` workspace dependency for the copy of the Kilo TUI `/browser` command (packages/tui/src/kilocode/browser.tsx), shared with the VS Code client; one unmarked dependency line raises unmarkedLines from 331 to 332.",
       "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-theme-list.tsx": {

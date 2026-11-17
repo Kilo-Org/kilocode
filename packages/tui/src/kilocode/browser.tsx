@@ -4,6 +4,9 @@
 import { dict } from "@kilocode/kilo-i18n/en"
 import { KiloSettingsRpc } from "@opencode/schema/kilocode/settings"
 import type { Plugin } from "@opencode/plugin/tui"
+import { For } from "solid-js"
+import { useTheme } from "../context/theme"
+import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 
 type Backend = "playwright" | "extension" | "off"
 type Observation = "full" | "diff" | "none"
@@ -43,7 +46,7 @@ function rules(documentValue: unknown): Rule[] {
   })
 }
 
-/** The state as the command shows it. Defaults follow the config schema: playwright, full, not sensitive. */
+/** The state as the command shows it. Defaults follow the browser plugin's: playwright, diff, not sensitive. */
 export function readState(documentValue: unknown): State {
   const input =
     typeof documentValue === "object" &&
@@ -55,7 +58,7 @@ export function readState(documentValue: unknown): State {
   const browser = all.filter((rule) => rule.action === "browser")
   return {
     backend: BACKENDS.includes(input.backend as Backend) ? (input.backend as Backend) : "playwright",
-    observation: OBSERVATIONS.includes(input.observation as Observation) ? (input.observation as Observation) : "full",
+    observation: OBSERVATIONS.includes(input.observation as Observation) ? (input.observation as Observation) : "diff",
     allowSensitive: input.allow_sensitive === true,
     grants: browser.filter((rule) => rule.resource !== "*"),
     allowAll: browser.some((rule) => rule.resource === "*" && rule.effect === "allow"),
@@ -110,6 +113,55 @@ async function write(context: Plugin.Context, browser: Record<string, unknown>) 
   )
 }
 
+/**
+ * The rows of the `/browser` dialog, grouped by setting. Each backend's hint is a detail line of its own, so it stays
+ * readable at any dialog width instead of being clipped after the title.
+ */
+export function browserOptions(state: State): DialogSelectOption<string>[] {
+  return [
+    ...BACKENDS.map((backend) => ({
+      category: copy("browser.command.backend"),
+      title: copy(`browser.backend.${backend}` as keyof typeof dict),
+      value: `backend:${backend}`,
+      details: [
+        backend === "extension"
+          ? copy("browser.state.extensionHint")
+          : backend === "off"
+            ? copy("browser.backend.offHint")
+            : copy("browser.state.readyHint"),
+      ],
+    })),
+    ...OBSERVATIONS.map((observation) => ({
+      category: copy("browser.command.observation"),
+      title: copy(`browser.observation.${observation}` as keyof typeof dict),
+      value: `observation:${observation}`,
+    })),
+    ...[false, true].map((allow) => ({
+      category: copy("browser.command.sensitive"),
+      title: allow ? copy("browser.sensitive.allowed") : copy("browser.sensitive.asks"),
+      value: `sensitive:${allow}`,
+    })),
+    {
+      category: copy("browser.command.grants"),
+      title: copy("browser.grants.title"),
+      value: "grants:show",
+      description: state.allowAll ? copy("browser.grants.all") : `${state.grants.length}`,
+    },
+  ]
+}
+
+/** The current backend, observation and sensitive-step choice, one line each under the list. */
+function StateLines(props: { state: State }) {
+  const theme = useTheme().surface("dialog")
+  return (
+    <box flexDirection="column">
+      <For each={describeState(props.state).split("\n").slice(0, 3)}>
+        {(line) => <text fg={theme.text.muted}>{line}</text>}
+      </For>
+    </box>
+  )
+}
+
 export function browserLayer(context: Plugin.Context) {
   const open = async () => {
     let state: State
@@ -124,40 +176,25 @@ export function browserLayer(context: Plugin.Context) {
       return
     }
 
-    const choose = async (): Promise<string | undefined> =>
-      context.ui.dialog.select<string>({
-        title: copy("browser.command.title"),
-        placeholder: describeState(state).split("\n")[0],
-        options: [
-          ...BACKENDS.map((backend) => ({
-            title: `${copy("browser.command.backend")}: ${copy(`browser.backend.${backend}` as keyof typeof dict)}`,
-            value: `backend:${backend}`,
-            current: state.backend === backend,
-            description:
-              backend === "extension"
-                ? copy("browser.state.extensionHint")
-                : backend === "off"
-                  ? copy("browser.backend.offHint")
-                  : copy("browser.state.readyHint"),
-          })),
-          ...OBSERVATIONS.map((observation) => ({
-            title: `${copy("browser.command.observation")}: ${copy(`browser.observation.${observation}` as keyof typeof dict)}`,
-            value: `observation:${observation}`,
-            current: state.observation === observation,
-          })),
-          {
-            title: `${copy("browser.command.sensitive")}: ${state.allowSensitive ? copy("browser.sensitive.allowed") : copy("browser.sensitive.asks")}`,
-            value: "sensitive:toggle",
-          },
-          {
-            title: copy("browser.command.grants"),
-            value: "grants:show",
-            description: state.allowAll ? copy("browser.grants.all") : `${state.grants.length}`,
-          },
-        ],
-      })
-
-    const action = await choose()
+    const picked = Promise.withResolvers<string | undefined>()
+    context.ui.dialog.show(
+      () => (
+        <DialogSelect<string>
+          title={copy("browser.command.title")}
+          options={browserOptions(state)}
+          current={`backend:${state.backend}`}
+          footer={<StateLines state={state} />}
+          onSelect={(option) => {
+            picked.resolve(option.value)
+            context.ui.dialog.clear()
+          }}
+        />
+      ),
+      () => picked.resolve(undefined),
+    )
+    // The widest dialog; it is capped at the terminal width, so the rows use whatever room the pane has.
+    context.ui.dialog.set({ size: "xlarge" })
+    const action = await picked.promise
     if (!action) return
     try {
       if (action.startsWith("backend:")) {
@@ -175,11 +212,12 @@ export function browserLayer(context: Plugin.Context) {
         context.ui.toast.show({ variant: "info", message: `${copy("browser.command.observation")}: ${observation}` })
         return
       }
-      if (action === "sensitive:toggle") {
-        await write(context, { allow_sensitive: !state.allowSensitive })
+      if (action.startsWith("sensitive:")) {
+        const allow = action === "sensitive:true"
+        await write(context, { allow_sensitive: allow })
         context.ui.toast.show({
           variant: "info",
-          message: !state.allowSensitive ? copy("browser.sensitive.allowed") : copy("browser.sensitive.asks"),
+          message: allow ? copy("browser.sensitive.allowed") : copy("browser.sensitive.asks"),
         })
         return
       }

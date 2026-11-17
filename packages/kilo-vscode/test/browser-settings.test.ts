@@ -16,7 +16,7 @@ describe("browser settings document", () => {
   test("reads the browser block with its defaults", () => {
     expect(BrowserSettings.read({})).toEqual({
       backend: "playwright",
-      observation: "full",
+      observation: "diff",
       allow_sensitive: false,
       rules: [],
       allowAll: false,

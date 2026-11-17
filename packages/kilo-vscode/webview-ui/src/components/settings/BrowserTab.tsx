@@ -269,7 +269,7 @@ const BrowserTools: Component = () => {
           >
             <Select
               options={[...OBSERVATIONS]}
-              current={state()?.observation ?? "full"}
+              current={state()?.observation ?? "diff"}
               value={(value) => value}
               label={(value) => language.t(`settings.browser.observation.${value}`)}
               onSelect={(value) => {
