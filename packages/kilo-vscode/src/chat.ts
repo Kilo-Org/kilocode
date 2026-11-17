@@ -193,7 +193,7 @@ export function wire(input: {
   view: View
   trackCostSession?: (sessionID: string) => void
   /** Directory for a saved image, when the view follows a session in another directory. */
-  saveImageDirectory?: () => string | undefined
+  saveImageDirectory?: (sessionID?: string) => string | undefined | Promise<string | undefined>
   /** The tool diff surfaces of the chat view. Settings has none. */
   diff?: ToolDiff
   /** The Changes editor tab the chat view opens. Settings has none. */
@@ -439,7 +439,9 @@ export function wire(input: {
   // Leaf host actions that carry no state, kept together so the main handler stays within the complexity limit.
   const handleLeafMessage = (message: ToHost): boolean => {
     if (message.type === "saveImage") {
-      void saveImage(input.saveImageDirectory?.() ?? input.directory, message)
+      void Promise.resolve(input.saveImageDirectory?.(message.sessionID)).then((directory) =>
+        saveImage(directory ?? input.directory, message),
+      )
       return true
     }
     if (message.type === "previewImage") {
@@ -626,7 +628,8 @@ export function html(input: {
     "default-src 'none'",
     `style-src 'unsafe-inline' ${input.csp}`,
     `script-src 'nonce-${nonce}'${module ? " 'strict-dynamic'" : ""} 'wasm-unsafe-eval'`,
-    `worker-src ${input.csp}`,
+    // Worker scripts must be same-origin, so the webview starts them from blob URLs of the fetched scripts.
+    `worker-src ${input.csp} blob:`,
     `font-src ${input.csp}`,
     `connect-src ${input.csp}`,
     `img-src ${input.csp} data: https:`,

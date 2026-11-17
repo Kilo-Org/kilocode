@@ -47,7 +47,7 @@ import { createGoal } from "./goal"
 import { createPending } from "./pending"
 import { promptInterrupt, steerInterrupts, type SendMode } from "./pending-actions"
 import { mergeCatalog, type SlashEntry } from "./slash"
-import { reviewScopes, slashActions, type SlashHandlers } from "./slash-actions"
+import { reviewScopes, slashActions, worktreeAction, type SlashHandlers } from "./slash-actions"
 import { createSlashCatalog } from "./slash-catalog"
 import { dispatchSlash } from "./slash-dispatch"
 import { TranscriptSearchProvider } from "./transcript-search"
@@ -63,10 +63,12 @@ export function SessionView(props: {
   onSession: (id: string | undefined, draftKey?: string) => void
   actions: ToolActions
   onShowHistory: () => void
-  /** True for a session in an Agent Manager worktree, which can run /review worktree. */
+  /** True for a session in an Agent Manager worktree, which can run /review worktree and /update-from-base. */
   worktree?: boolean
   /** Opens a new session draft; the /new slash action is listed only when set. */
   onNewSession?: () => void
+  /** Asks the host to merge the worktree's saved base branch; the /update-from-base action is listed only with it. */
+  onUpdateBase?: () => void
   /**
    * The row above the dock; receives whether the session has messages, the todo element it trails and the background
    * agent stack it leads.
@@ -510,6 +512,7 @@ export function SessionView(props: {
       agents: selection.agents().length > 1 ? picker("openModePicker") : undefined,
       variant: selection.variants().length > 0 ? picker("openVariantPicker") : undefined,
       compact: id ? () => compact(id) : undefined,
+      "update-from-base": worktreeAction(props.worktree, props.onUpdateBase),
       caffeinate: () =>
         getVSCodeAPI().postMessage({ type: "agentManager.toggleCaffeination" } satisfies ToHost as never),
       help: () => v2.open("https://kilo.ai/docs"),
@@ -590,7 +593,7 @@ export function SessionView(props: {
 
   return (
     <TranscriptSearchProvider>
-      <div class="chat-view">
+      <div class="chat-view" data-session-id={session()}>
         {props.tabStrip}
         <Show when={session()} keyed>
           {(id) => (

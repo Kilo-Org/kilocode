@@ -28,7 +28,7 @@ export function permissionInstructions(
     ...allowed,
     "Everything not matched by an approved action and resource pattern is denied.",
     "How permission resources are matched:",
-    "- read and edit match Location-relative file paths; write, patch, and opencode use the edit action.",
+    "- read and edit match Location-relative file paths; write, patch, and kilo.worktree_remove use the edit action.",
     "- glob and grep match their pattern text, not the directory searched.",
     "- shell matches every parsed command in a compound command separately.",
     "- webfetch matches the requested URL and every redirect URL; websearch matches the query text.",

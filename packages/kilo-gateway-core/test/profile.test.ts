@@ -76,3 +76,20 @@ test("selects the default team like v1", () => {
     KiloProfile.defaultOrganizationID({ email: "a@example.test", organizations: [], hasPersonalAccount: false }),
   ).toBeNull()
 })
+
+test("puts a preferred team or Personal before the backend team when the profile allows it", () => {
+  const profile = { email: "a@example.test", organizations: teams, selectedOrganizationId: "second" }
+  expect(KiloProfile.defaultOrganizationID(profile, "first")).toBe("first")
+  expect(KiloProfile.defaultOrganizationID(profile, null)).toBeNull()
+  expect(KiloProfile.defaultOrganizationID(profile, undefined)).toBe("second")
+  // A team the account does not belong to, or Personal on a team-only account, leaves the default as it was.
+  expect(KiloProfile.defaultOrganizationID(profile, "missing")).toBe("second")
+  expect(KiloProfile.defaultOrganizationID({ ...profile, hasPersonalAccount: false }, null)).toBe("second")
+  expect(
+    KiloProfile.defaultOrganizationID(
+      { email: "a@example.test", organizations: teams, hasPersonalAccount: false },
+      null,
+    ),
+  ).toBe("first")
+  expect(KiloProfile.defaultOrganizationID({ ...profile, hasPersonalAccount: false }, "first")).toBe("first")
+})

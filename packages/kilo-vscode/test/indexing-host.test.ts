@@ -217,4 +217,75 @@ describe("indexing host consent", () => {
   })
 })
 
+describe("indexing host RPC reads", () => {
+  const unavailable = { type: "rpc.unavailable", message: "RPC is unavailable: kilocode.indexing" }
+
+  function fixture(input: { stored: Record<string, boolean>; reads: string[]; lists: { count: number } }) {
+    const value: { current: unknown } = { current: { version: 1, projects: input.stored } }
+    const errors: string[] = []
+    const posts: ToWebview[] = []
+    const host = createIndexingHost({
+      context: {} as never,
+      server: { get: async () => ({ url: "http://127.0.0.1:1", authorization: "Basic test" }) } as never,
+      directory: () => "/repo",
+      store: new IndexingConsentStore(
+        {
+          read: () => value.current,
+          write: (next) => {
+            value.current = next
+          },
+        },
+        async (dir) => dir,
+      ),
+      extras: () => [],
+      // The Location lists no plugin until its activation ends, and the first read lands before that.
+      api: () =>
+        ({
+          plugin: {
+            list: async () => {
+              input.lists.count++
+              return { data: input.lists.count > 1 ? [{ id: "kilo" }] : [] }
+            },
+          },
+          rpc: () => ({
+            status: async () => {
+              input.reads.push("status")
+              if (input.reads.length === 1) throw unavailable
+              return initial
+            },
+            consent: async (body: { enabled: boolean }) => {
+              input.reads.push(`consent:${body.enabled}`)
+              if (input.reads.length === 1) throw unavailable
+              return initial
+            },
+          }),
+        }) as never,
+      log: (message) => errors.push(message),
+    })
+    host.attach((message) => posts.push(message))
+    return { host, errors, posts }
+  }
+
+  it("sends the stored consent through the real client once the plugins are listed", async () => {
+    const reads: string[] = []
+    const result = fixture({ stored: { [projectId("/repo")]: true }, reads, lists: { count: 0 } })
+
+    await result.host.sync()
+
+    expect(reads).toEqual(["consent:true", "consent:true"])
+    expect(result.errors).toEqual([])
+  })
+
+  it("reads the status through the real client once the plugins are listed", async () => {
+    const reads: string[] = []
+    const result = fixture({ stored: {}, reads, lists: { count: 0 } })
+
+    await result.host.requestSettings()
+
+    expect(reads).toEqual(["status", "status"])
+    expect(result.errors).toEqual([])
+    expect(statuses(result.posts)).toEqual([expect.objectContaining({ status: initial })])
+  })
+})
+
 const projectId = projectIdFor

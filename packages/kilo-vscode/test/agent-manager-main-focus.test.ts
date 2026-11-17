@@ -3,6 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
 import {
+  createDraftFocus,
   createFocusBridge,
   createMainFocus,
   dropForeignTerminal,
@@ -175,6 +176,51 @@ describe("dropForeignTerminal", () => {
     dropForeignTerminal(terms)
 
     expect(terms.activeId()).toBe("terminal:wt")
+  })
+})
+
+describe("createDraftFocus", () => {
+  const scene = (owner: "prompt" | { terminal: string } | undefined, sides = [{ id: "terminal:side" }]) => {
+    const memory = new Map<string, "prompt" | { terminal: string }>()
+    if (owner) memory.set("p:local:ses", owner)
+    return {
+      memory,
+      focus: createDraftFocus({
+        key: () => "p:local:ses",
+        memory,
+        terms: { sideKey: () => "p:local", sidesForContext: () => sides },
+        terminalVisible: () => true,
+      }),
+    }
+  }
+
+  it("lets a context without a remembered side terminal take focus", () => {
+    expect(scene(undefined).focus()).toBe(true)
+    expect(scene("prompt").focus()).toBe(true)
+  })
+
+  it("keeps a visible remembered side terminal in control", () => {
+    expect(scene({ terminal: "terminal:side" }).focus()).toBe(false)
+  })
+
+  it("forgets a side terminal that no longer exists", () => {
+    const test = scene({ terminal: "terminal:gone" })
+
+    expect(test.focus()).toBe(true)
+    expect(test.memory.has("p:local:ses")).toBe(false)
+  })
+
+  it("lets the composer take focus when the remembered terminal is hidden", () => {
+    const memory = new Map<string, "prompt" | { terminal: string }>([["p:local:ses", { terminal: "terminal:side" }]])
+
+    const focus = createDraftFocus({
+      key: () => "p:local:ses",
+      memory,
+      terms: { sideKey: () => "p:local", sidesForContext: () => [{ id: "terminal:side" }] },
+      terminalVisible: () => false,
+    })
+
+    expect(focus()).toBe(true)
   })
 })
 
