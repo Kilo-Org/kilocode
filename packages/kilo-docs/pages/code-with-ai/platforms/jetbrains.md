@@ -21,7 +21,7 @@ Open **Settings → Tools → Kilo Code** to configure the plugin. Shared agent 
 
 ## Product telemetry
 
-Product telemetry is currently always on in the JetBrains plugin. See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#jetbrains).
+Product telemetry is on by default. Turn it off with **Settings → Tools → Kilo Code → Advanced → Share usage analytics**; the change applies without restarting the IDE. The CLI opt-outs are also respected. See [Product telemetry and crash reports](/docs/getting-started/settings/product-telemetry#jetbrains) for precedence.
 
 ## Chat and worktrees
 

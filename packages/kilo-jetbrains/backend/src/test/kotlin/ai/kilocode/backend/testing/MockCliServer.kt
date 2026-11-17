@@ -264,6 +264,9 @@ class MockCliServer : AutoCloseable {
     /** Holds `/experimental/capabilities` so a test can simulate a hung optional probe. */
     @Volatile var capabilitiesGate: CountDownLatch? = null
 
+    /** Bodies posted to `/telemetry/setEnabled`, in arrival order. */
+    val telemetryStates = CopyOnWriteArrayList<String>()
+
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
     private val requests = Object()
@@ -468,6 +471,9 @@ class MockCliServer : AutoCloseable {
             val bare = path.substringBefore("?")
             paths.add(path)
             val latch = sseLatch
+
+            // Recorded before the count below, so a test woken by the count always sees the body.
+            if (bare == "/telemetry/setEnabled") telemetryStates.add(body)
 
             // Track request counts
             counts.computeIfAbsent(bare) { AtomicInteger(0) }.incrementAndGet()
@@ -787,6 +793,7 @@ class MockCliServer : AutoCloseable {
                     lastEnhanceBody = body
                     respond(output, enhanceStatus, enhanced)
                 }
+                bare.startsWith("/telemetry/") && method == "POST" -> respond(output, 200, "true")
                 else -> respond(output, 404, """{"error":"Not found"}""")
             }
         } catch (_: SocketException) {

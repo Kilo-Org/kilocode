@@ -2,10 +2,12 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.telemetry.KiloTelemetryService
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.log.LogConfig
+import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -25,6 +27,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
     private lateinit var ui: TestCoroutines
     private lateinit var appRpc: FakeAppRpcApi
     private lateinit var app: KiloAppService
+    private lateinit var telemetry: KiloTelemetryService
 
     override fun setUp() {
         super.setUp()
@@ -34,6 +37,7 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         ui = TestCoroutines()
         appRpc = FakeAppRpcApi()
         app = KiloAppService(coroutines.scope, appRpc)
+        telemetry = KiloTelemetryService(coroutines.scope, appRpc)
     }
 
     override fun tearDown() {
@@ -200,9 +204,95 @@ class AdvancedConfigurableTest : BasePlatformTestCase() {
         assertTrue("late fetch cleared the dirty state", edt { cfg.isModified })
     }
 
-    private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app) { ui.scope }
+    fun `test createComponent fetches and renders the usage analytics toggle`() {
+        appRpc.telemetryEnabled = false
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
 
-    private fun toggle(root: Container): SettingsToggle = toggles(root).single()
+        ui.drain()
+
+        assertFalse(edt { analytics(root).isSelected })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test usage analytics default to on`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        ui.drain()
+
+        assertTrue(edt { analytics(root).isSelected })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test apply persists usage analytics only when changed`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+        ui.drain()
+
+        edt { cfg.apply() }
+        coroutines.drain()
+
+        assertEquals(emptyList<Boolean>(), appRpc.telemetrySaves)
+
+        edt {
+            analytics(root).doClick()
+            assertTrue(cfg.isModified)
+            cfg.apply()
+        }
+
+        assertTrue(coroutines.pumpUntil { appRpc.telemetrySaves.isNotEmpty() })
+        assertEquals(listOf(false), appRpc.telemetrySaves)
+        assertEquals(emptyList<Boolean>(), appRpc.indexWorktreesSaves)
+        assertFalse(edt { cfg.isModified })
+    }
+
+    fun `test turning usage analytics off stops event forwarding at once`() {
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+        ui.drain()
+
+        edt {
+            analytics(root).doClick()
+            cfg.apply()
+        }
+        telemetry.send("Test Event")
+        coroutines.drain()
+
+        assertEquals(emptyList<TelemetryCaptureDto>(), appRpc.telemetry)
+    }
+
+    fun `test a late usage analytics fetch keeps a user toggle`() {
+        val gate = CompletableDeferred<Unit>()
+        appRpc.telemetryGate = gate
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        edt { analytics(root).doClick() }
+        gate.complete(Unit)
+        ui.drain()
+
+        assertFalse("late fetch cleared the user's toggle", edt { analytics(root).isSelected })
+        assertTrue("late fetch cleared the dirty state", edt { cfg.isModified })
+    }
+
+    fun `test a failed usage analytics fetch keeps the default`() {
+        appRpc.telemetryFails = true
+        val cfg = configurable()
+        val root = edt { cfg.createComponent() as Container }
+
+        ui.drain()
+
+        assertTrue(edt { analytics(root).isSelected })
+        assertFalse(edt { cfg.isModified })
+    }
+
+    private fun configurable() = AdvancedConfigurable(settings, { it.applyLocal() }, app, { ui.scope }) { telemetry }
+
+    /** The index worktrees toggle; the page lists it before usage analytics. */
+    private fun toggle(root: Container): SettingsToggle = toggles(root).first()
+
+    private fun analytics(root: Container): SettingsToggle = toggles(root).last()
 
     private fun toggles(root: Container): List<SettingsToggle> = buildList {
         collect(root) { if (it is SettingsToggle) add(it) }

@@ -2,6 +2,7 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.telemetry.KiloTelemetryService
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -22,6 +23,7 @@ class AdvancedConfigurable(
     private val save: (KiloLogSettingsService) -> Unit = { it.apply() },
     private val app: KiloAppService = service(),
     private val newScope: () -> CoroutineScope = { CoroutineScope(SupervisorJob() + Dispatchers.Default) },
+    private val telemetry: () -> KiloTelemetryService? = KiloTelemetryService::getInstance,
 ) : SearchableConfigurable, Configurable.NoScroll {
     private var ui: AdvancedSettingsUi? = null
     private var scope: CoroutineScope? = null
@@ -40,6 +42,11 @@ class AdvancedConfigurable(
             val value = app.indexWorktrees()
             withContext(edt) { panel.refreshIndexWorktrees(value) }
         }
+        cs.launch {
+            // A failed read keeps the default rather than presenting a guess as the saved value.
+            val value = runCatching { app.telemetryEnabled() }.getOrNull() ?: return@launch
+            withContext(edt) { panel.refreshTelemetry(value) }
+        }
         return panel
     }
 
@@ -53,10 +60,16 @@ class AdvancedConfigurable(
         settings.update(value.level, value.mode, value.preview)
         save(settings)
         val indexWorktreesChanged = value.indexWorktrees != panel.savedIndexWorktrees()
+        val telemetryChanged = value.telemetry != panel.savedTelemetry()
         panel.sync()
         // Runs on the app scope, not ours: OK calls apply() then disposeUIResources(), which cancels
         // this configurable's scope before a coroutine launched here could reach the RPC.
         if (indexWorktreesChanged) app.setIndexWorktreesAsync(value.indexWorktrees)
+        if (telemetryChanged) {
+            // Stop forwarding at once; the backend applies the same value to the CLI.
+            telemetry()?.update(value.telemetry)
+            app.setTelemetryEnabledAsync(value.telemetry)
+        }
     }
 
     override fun reset() {

@@ -24,6 +24,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         val mode: LogConfig.ContentMode,
         val preview: Int,
         val indexWorktrees: Boolean,
+        val telemetry: Boolean,
     )
 
     private val level = ComboBox(DefaultComboBoxModel(LogConfig.LogLevel.all.toTypedArray()))
@@ -33,6 +34,10 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
     /** Set once the user flips the toggle, so a late backend fetch cannot overwrite their choice. */
     private var touched = false
     private val indexWorktrees = SettingsToggle { touched = true }
+
+    /** Same guard as [touched], for the usage analytics toggle. */
+    private var edited = false
+    private val telemetry = SettingsToggle(selected = true) { edited = true }
 
     private var saved = current()
 
@@ -64,6 +69,12 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
                 KiloBundle.message("settings.advanced.indexWorktrees.description"),
                 indexWorktrees,
             ))
+            row(TitledSeparator(KiloBundle.message("settings.advanced.privacy.title")))
+            row(SettingsRow(
+                KiloBundle.message("settings.advanced.telemetry.title"),
+                KiloBundle.message("settings.advanced.telemetry.description"),
+                telemetry,
+            ))
         }
         add(rows, BorderLayout.CENTER)
     }
@@ -72,6 +83,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         if (level.selectedItem != saved.level) return true
         if (mode.selectedItem != saved.mode) return true
         if (indexWorktrees.isSelected != saved.indexWorktrees) return true
+        if (telemetry.isSelected != saved.telemetry) return true
         return preview.text.trim() != saved.preview.toString()
     }
 
@@ -88,7 +100,9 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         mode.selectedItem = saved.mode
         preview.text = saved.preview.toString()
         indexWorktrees.isSelected = saved.indexWorktrees
+        telemetry.isSelected = saved.telemetry
         touched = false
+        edited = false
     }
 
     fun sync() {
@@ -101,6 +115,7 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         mode = mode.selectedItem as LogConfig.ContentMode,
         preview = count() ?: saved.preview,
         indexWorktrees = indexWorktrees.isSelected,
+        telemetry = telemetry.isSelected,
     )
 
     /** The index-worktrees value as of the last [sync] (or the initial fetch via [refreshIndexWorktrees]). */
@@ -118,7 +133,24 @@ internal class AdvancedSettingsUi : JPanel(BorderLayout()) {
         indexWorktrees.isSelected = value
     }
 
-    private fun current(): Values = Values(LogConfig.level(), LogConfig.contentMode(), LogConfig.previewMax(), indexWorktrees = false)
+    /** The usage analytics value as of the last [sync] (or the initial fetch via [refreshTelemetry]). */
+    fun savedTelemetry(): Boolean = saved.telemetry
+
+    /** Populates the usage analytics toggle from the backend; a no-op once the user has flipped it. */
+    @RequiresEdt
+    fun refreshTelemetry(value: Boolean) {
+        if (edited) return
+        saved = saved.copy(telemetry = value)
+        telemetry.isSelected = value
+    }
+
+    private fun current(): Values = Values(
+        LogConfig.level(),
+        LogConfig.contentMode(),
+        LogConfig.previewMax(),
+        indexWorktrees = false,
+        telemetry = true,
+    )
 
     private fun count(): Int? = preview.text.trim().toIntOrNull()
 

@@ -252,6 +252,28 @@ class FakeAppRpcApi : KiloAppRpcApi {
         indexWorktreesSaves.add(value)
     }
 
+    var telemetryEnabled = true
+    val telemetrySaves = mutableListOf<Boolean>()
+
+    /** When set, [telemetryEnabled] awaits this deferred, emulating a slow split-mode fetch. */
+    var telemetryGate: CompletableDeferred<Unit>? = null
+
+    /** When true, [telemetryEnabled] fails, emulating an unreachable backend. */
+    var telemetryFails = false
+
+    override suspend fun telemetryEnabled(): Boolean {
+        assertNotEdt("telemetryEnabled")
+        telemetryGate?.await()
+        if (telemetryFails) throw IllegalStateException("backend unreachable")
+        return telemetryEnabled
+    }
+
+    override suspend fun setTelemetryEnabled(value: Boolean) {
+        assertNotEdt("setTelemetryEnabled")
+        telemetryEnabled = value
+        telemetrySaves.add(value)
+    }
+
     var backendLog: LogFileDto? = null
 
     override suspend fun backendLogFile(): LogFileDto? {

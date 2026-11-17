@@ -1,5 +1,6 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.backend.telemetry.KiloTelemetrySettings
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -25,6 +26,7 @@ class KiloBackendCliManagerEnvTest {
     @AfterTest
     fun tearDown() {
         KiloClaudeCompatSettings.set(false)
+        KiloTelemetrySettings.set(true)
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
         System.clearProperty("idea.plugin.in.sandbox.mode")
@@ -39,7 +41,6 @@ class KiloBackendCliManagerEnvTest {
         assertEquals("true", env["KILO_ENABLE_QUESTION_TOOL"])
         assertEquals("jetbrains", env["KILO_PLATFORM"])
         assertEquals("kilo-code", env["KILO_APP_NAME"])
-        assertEquals("all", env["KILO_TELEMETRY_LEVEL"])
         assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE"])
         assertEquals("jetbrains-plugin", env["KILOCODE_FEATURE"])
         assertEquals("pwd123", env["KILO_SERVER_PASSWORD"])
@@ -89,6 +90,45 @@ class KiloBackendCliManagerEnvTest {
         System.setProperty("idea.plugin.in.sandbox.mode", "true")
 
         val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `telemetry level is left to the CLI when the setting is on`() {
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertFalse(env.containsKey("KILO_TELEMETRY_LEVEL"))
+    }
+
+    @Test
+    fun `inherited telemetry opt-out is preserved`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "off"))
+
+        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `inherited telemetry opt-in is preserved`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "all"))
+
+        assertEquals("all", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `disabled setting forces CLI telemetry off`() {
+        KiloTelemetrySettings.set(false)
+
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `disabled setting wins over an inherited opt-in`() {
+        KiloTelemetrySettings.set(false)
+
+        val env = manager.buildEnv("pwd123", mapOf("KILO_TELEMETRY_LEVEL" to "all"))
 
         assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
     }

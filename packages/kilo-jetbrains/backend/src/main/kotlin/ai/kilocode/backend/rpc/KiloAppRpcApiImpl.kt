@@ -4,7 +4,7 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
-import ai.kilocode.backend.telemetry.KiloBackendTelemetry
+import ai.kilocode.backend.telemetry.KiloTelemetrySettings
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
@@ -253,8 +253,16 @@ class KiloAppRpcApiImpl internal constructor(
     override suspend fun setOrganization(organizationId: String?): ProfileDto? =
         app.setOrganization(organizationId)?.let(::profileDto)
 
+    override suspend fun telemetryEnabled(): Boolean = KiloTelemetrySettings.get()
+
+    override suspend fun setTelemetryEnabled(value: Boolean) {
+        if (KiloTelemetrySettings.get() == value) return
+        KiloTelemetrySettings.set(value)
+        app.syncTelemetry()
+    }
+
     override suspend fun captureTelemetry(capture: TelemetryCaptureDto) {
-        service<KiloBackendTelemetry>().capture(app.http, app.port, capture.event, capture.properties)
+        app.capture(capture.event, capture.properties)
     }
 
 }

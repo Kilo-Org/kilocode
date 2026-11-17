@@ -1498,6 +1498,14 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - telemetry opt-out is read from the experimental block`() {
+            assertEquals(false, KiloCliDataParser.parseConfig("""{"experimental":{"openTelemetry":false}}""").openTelemetry)
+            assertEquals(true, KiloCliDataParser.parseConfig("""{"experimental":{"openTelemetry":true}}""").openTelemetry)
+            assertNull(KiloCliDataParser.parseConfig("""{"experimental":{}}""").openTelemetry)
+            assertNull(KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""").openTelemetry)
+        }
+
+        @Test
         fun `parseConfig - snapshot values preserve default resolution`() {
             assertEquals(true, KiloCliDataParser.parseConfig("""{"snapshot":true}""").snapshot)
             assertEquals(false, KiloCliDataParser.parseConfig("""{"snapshot":false}""").snapshot)

@@ -39,6 +39,15 @@ class KiloTelemetryService internal constructor(
     private val pending = AtomicInteger()
     private val warned = AtomicBoolean()
 
+    /** The backend's "Share usage analytics" setting, read on first use. Null until known. */
+    @Volatile
+    private var enabled: Boolean? = null
+
+    /** Apply a changed "Share usage analytics" setting at once, without waiting for the backend. */
+    fun update(value: Boolean) {
+        enabled = value
+    }
+
     fun send(event: String, properties: Map<String, String> = emptyMap()) {
         if (pending.incrementAndGet() > MAX_PENDING) {
             pending.decrementAndGet()
@@ -49,6 +58,7 @@ class KiloTelemetryService internal constructor(
         }
         cs.launch {
             try {
+                if (!allowed()) return@launch
                 if (KiloLog.sandbox()) {
                     val payload = KiloLog.payload(LOG) + properties
                     LOG.info("event=$event ${payload.entries.joinToString(" ") { "${it.key}=${it.value}" }}")
@@ -70,5 +80,18 @@ class KiloTelemetryService internal constructor(
                 pending.decrementAndGet()
             }
         }
+    }
+
+    /** Whether events may be forwarded. An unknown setting drops the event and is read again next time. */
+    private suspend fun allowed(): Boolean {
+        val known = enabled
+        if (known != null) return known
+        val value = withTimeoutOrNull(TIMEOUT_MS) {
+            val api = rpc
+            if (api != null) api.telemetryEnabled()
+            else durable { KiloAppRpcApi.getInstance().telemetryEnabled() }
+        } ?: return false
+        // A setting applied while the read was in flight wins.
+        return enabled ?: value.also { enabled = it }
     }
 }

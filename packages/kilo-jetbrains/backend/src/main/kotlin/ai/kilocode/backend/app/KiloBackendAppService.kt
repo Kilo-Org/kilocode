@@ -7,6 +7,7 @@ import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
 import ai.kilocode.backend.migration.LegacyMigrationStatus
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
+import ai.kilocode.backend.telemetry.KiloTelemetrySettings
 import ai.kilocode.log.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.jetbrains.api.client.DefaultApi
@@ -26,6 +27,7 @@ import ai.kilocode.rpc.dto.HealthDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.util.EnvironmentUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -86,6 +88,8 @@ class KiloBackendAppService private constructor(
   private val server: CliServer,
   private val log: KiloLog,
   private val loadTimeoutMs: Long,
+  private val telemetry: () -> KiloBackendTelemetry,
+  private val env: () -> Map<String, String>,
 ) : Disposable {
 
     /** IntelliJ service injection entry point. */
@@ -94,6 +98,8 @@ class KiloBackendAppService private constructor(
         KiloBackendCliManager(),
       KiloLog.create(KiloBackendAppService::class.java),
         APP_LOAD_TIMEOUT_MS,
+        { service() },
+        EnvironmentUtil::getEnvironmentMap,
     )
 
     companion object {
@@ -108,7 +114,9 @@ class KiloBackendAppService private constructor(
           server: CliServer,
           log: KiloLog,
           loadTimeoutMs: Long = APP_LOAD_TIMEOUT_MS,
-        ) = KiloBackendAppService(cs, server, log, loadTimeoutMs)
+          telemetry: () -> KiloBackendTelemetry = { service() },
+          env: () -> Map<String, String> = EnvironmentUtil::getEnvironmentMap,
+        ) = KiloBackendAppService(cs, server, log, loadTimeoutMs, telemetry, env)
     }
 
     private val mutex = Mutex()
@@ -467,7 +475,9 @@ class KiloBackendAppService private constructor(
                     activity.start(sessions.statuses, { id -> hosted.directory(id) ?: sessions.sessionDirectory(id) }, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
-                    setTelemetry(true)
+                    // The CLI already resolved telemetry at spawn, so only an opt-out is pushed here;
+                    // it covers a setting flipped between spawn and connect.
+                    if (!KiloTelemetrySettings.get()) cs.launch { syncTelemetry() }
                     captureBackend("Backend Connected", mapOf("portKnown" to "true"))
                     captureLoad("Backend Load Completed", start, mapOf(
                         "profileStatus" to if (prof != null) "loaded" else "not_logged_in",
@@ -530,7 +540,7 @@ class KiloBackendAppService private constructor(
         val port = connection.port
         cs.launch {
             runCatching {
-                service<KiloBackendTelemetry>().capture(
+                telemetry().capture(
                     http,
                     port,
                     event,
@@ -540,22 +550,33 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private fun setTelemetry(enabled: Boolean) {
-        val http = connection.apiClient
-        val port = connection.port
-        cs.launch {
-            runCatching {
-                service<KiloBackendTelemetry>().setEnabled(http, port, enabled)
-            }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
+    /**
+     * Apply the plugin's "Share usage analytics" setting to the connected CLI without a restart.
+     *
+     * Off is always pushed. On is pushed only when the CLI's own resolution allows telemetry, so the
+     * plugin never re-enables it over an inherited `KILO_TELEMETRY_LEVEL` or
+     * `experimental.openTelemetry: false`.
+     */
+    suspend fun syncTelemetry() {
+        val enabled = KiloTelemetrySettings.get()
+        if (enabled && !KiloTelemetrySettings.allowed(env(), config?.openTelemetry)) {
+            log.info("Telemetry stays off: opted out in the CLI environment or global config")
+            return
         }
+        runCatching {
+            telemetry().setEnabled(connection.apiClient, connection.port, enabled)
+        }.onFailure { log.info("Skipping telemetry setEnabled: ${it.message}") }
+    }
+
+    /** Forward one telemetry event to the connected CLI. Dropped while usage analytics are off. */
+    suspend fun capture(event: String, props: Map<String, String>) {
+        telemetry().capture(connection.apiClient, connection.port, event, props)
     }
 
     private fun captureBackend(event: String, props: Map<String, String>) {
-        val http = connection.apiClient
-        val port = connection.port
         cs.launch {
             runCatching {
-                service<KiloBackendTelemetry>().capture(http, port, event, props)
+                capture(event, props)
             }.onFailure { log.info("Skipping backend telemetry: ${it.message}") }
         }
     }

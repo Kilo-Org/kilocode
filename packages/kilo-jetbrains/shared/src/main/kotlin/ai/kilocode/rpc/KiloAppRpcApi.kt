@@ -138,6 +138,15 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
      */
     suspend fun setOrganization(organizationId: String?): ProfileDto?
 
+    /** The plugin's "Share usage analytics" setting. On by default. */
+    suspend fun telemetryEnabled(): Boolean
+
+    /**
+     * Persist the "Share usage analytics" setting and apply it to the running CLI. Turning it on
+     * never overrides a CLI-level opt-out (`KILO_TELEMETRY_LEVEL`, `experimental.openTelemetry`).
+     */
+    suspend fun setTelemetryEnabled(value: Boolean)
+
     /** Fire-and-forget behavior telemetry routed through the CLI server. */
     suspend fun captureTelemetry(capture: TelemetryCaptureDto)
 }
