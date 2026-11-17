@@ -117,7 +117,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
     if (state === "connected") {
-      void migrateBrowserBackend(connectionService, context)
+      void migrateBrowserBackend(connectionService, context).catch((error) =>
+        console.warn("[Kilo New] Browser automation setting migration failed:", error),
+      )
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
