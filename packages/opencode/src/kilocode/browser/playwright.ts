@@ -6,10 +6,12 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js"
+import type { Browser, BrowserContext } from "playwright-core"
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import type { Entry } from "./contract-shape"
 import { entries as readEntries, hash as readHash } from "./contract-shape"
 import { UnavailableError } from "./backend"
-import type { Backend, CallResult, ContentBlock } from "./backend"
+import type { Backend, CallResult, CallContext, ContentBlock } from "./backend"
 import { BrowserContract } from "./contract"
 import { INSTALL_HINT, locate } from "./locate"
 import type { Target } from "./locate"
@@ -19,9 +21,8 @@ const log = Log.create({ service: "browser.playwright" })
 
 const TIMEOUT = 180_000
 
-function profile() {
-  return path.join(Global.Path.data, "browser", "profile")
-}
+/** Snapshots are page content: inline them, but never read more than this from disk. */
+const INLINE_LIMIT = 2 * 1024 * 1024
 
 function output() {
   return path.join(Global.Path.data, "browser", "output")
@@ -50,13 +51,29 @@ function blocks(content: unknown): ContentBlock[] {
   return content.flatMap((item): ContentBlock[] => {
     if (typeof item !== "object" || item === null) return []
     if (!("type" in item)) return []
-    if (item.type === "text" && "text" in item && typeof item.text === "string") return [{ type: "text", text: item.text }]
+    if (item.type === "text" && "text" in item && typeof item.text === "string")
+      return [{ type: "text", text: item.text }]
     if (item.type === "image" && "data" in item && typeof item.data === "string") {
       const mime = "mimeType" in item && typeof item.mimeType === "string" ? item.mimeType : "image/png"
       return [{ type: "image", data: item.data, mimeType: mime }]
     }
     return []
   })
+}
+
+/**
+ * Read a snapshot file the Playwright MCP wrote, and nothing else. Tool output is page-controlled:
+ * a page could make `browser_evaluate` print `- [Snapshot](/etc/passwd)`, so only files that resolve
+ * inside the output directory the backend owns are read, and only up to `INLINE_LIMIT` bytes.
+ */
+async function readSnapshot(file: string): Promise<string | undefined> {
+  const root = await fs.realpath(output()).catch(() => undefined)
+  if (!root) return undefined
+  const resolved = await fs.realpath(path.resolve(root, file)).catch(() => undefined)
+  if (!resolved || (resolved !== root && !resolved.startsWith(root + path.sep))) return undefined
+  const stat = await fs.stat(resolved).catch(() => undefined)
+  if (!stat?.isFile() || stat.size > INLINE_LIMIT) return undefined
+  return fs.readFile(resolved, "utf8").catch(() => undefined)
 }
 
 /**
@@ -72,10 +89,7 @@ async function inline(text: string): Promise<string> {
       out.push(line)
       continue
     }
-    const file = path.isAbsolute(match[1]) ? match[1] : path.resolve(process.cwd(), match[1])
-    const body =
-      (await fs.readFile(file, "utf8").catch(() => undefined)) ??
-      (await fs.readFile(path.join(output(), path.basename(match[1])), "utf8").catch(() => undefined))
+    const body = await readSnapshot(match[1])
     if (body === undefined) {
       out.push(line)
       continue
@@ -88,6 +102,8 @@ async function inline(text: string): Promise<string> {
 type Connection = {
   client: Client
   server: Server
+  browser: Browser
+  context: BrowserContext
   tools: Entry[]
   sha: string
 }
@@ -97,60 +113,94 @@ type Connection = {
  * start: together they add megabytes to a session that may never open a browser.
  */
 async function connect(browser: Settings): Promise<Connection> {
-  const dir = profile()
   const out = output()
-  await fs.mkdir(dir, { recursive: true })
   await fs.mkdir(out, { recursive: true })
   const located = await target()
+  const { chromium } = await import("playwright-core")
   const mcp = await import("@playwright/mcp")
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js")
   const { InMemoryTransport } = await import("@modelcontextprotocol/sdk/inMemory.js")
 
-  const server: Server = await mcp.createConnection({
-    browser: {
-      isolated: false,
-      userDataDir: dir,
-      launchOptions: { headless: false, ...located },
-    },
-    outputDir: out,
+  // An in-memory profile: two Kilo processes (the CLI and the extension's `kilo serve`, or two VS
+  // Code windows) never contend for one Chrome profile on disk, and a crashed process leaves no
+  // profile or SingletonLock behind. The context lives as long as this backend, so cookies and
+  // storage still survive between tool calls in one process.
+  const instance = await chromium.launch({
+    headless: browser.headless,
+    handleSIGINT: false,
+    handleSIGTERM: false,
+    ignoreDefaultArgs: ["--disable-extensions"],
+    ...located,
   })
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
-  await server.connect(serverTransport)
-  const client = new Client({ name: "kilo", version: BrowserContract.upstream })
-  await client.connect(clientTransport)
-  const listed = await client.listTools()
-  const live = readEntries(listed)
+  let server: Server | undefined
+  let client: Client | undefined
+  try {
+    const context = await instance.newContext()
+    server = await mcp.createConnection({ browser: { browserName: "chromium", isolated: false }, outputDir: out }, () =>
+      Promise.resolve(context),
+    )
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
+    await server.connect(serverTransport)
+    client = new Client({ name: "kilo", version: BrowserContract.upstream })
+    await client.connect(clientTransport)
+    const listed = await client.listTools()
+    const live = readEntries(listed)
 
-  // The pinned hash covers the raw stdio tools/list JSON, which the client re-serializes. Compare
-  // the normalized tool list instead: same tools, same schemas, same read-only hints.
-  if (readHash(live) !== readHash(BrowserContract.entries)) {
-    log.warn("bundled playwright MCP contract differs from the pinned contract", {
-      expected: BrowserContract.sha256,
-    })
+    // The pinned hash covers the raw stdio tools/list JSON, which the client re-serializes. Compare
+    // the normalized tool list instead: same tools, same schemas, same read-only hints.
+    if (readHash(live) !== readHash(BrowserContract.entries)) {
+      log.warn("bundled playwright MCP contract differs from the pinned contract", {
+        expected: BrowserContract.sha256,
+      })
+    }
+    // Keep the model-facing list identical to the vendored contract, on the tools this build has.
+    const available = new Set(live.map((tool) => tool.name))
+    const tools: Entry[] = BrowserContract.entries.filter((tool) => available.has(tool.name))
+
+    return { client, server, browser: instance, context, tools, sha: BrowserContract.sha256 }
+  } catch (error) {
+    await client?.close().catch(() => undefined)
+    await server?.close().catch(() => undefined)
+    await instance.close().catch(() => undefined)
+    throw error
   }
-  // Keep the model-facing list identical to the vendored contract, on the tools this build has.
-  const available = new Set(live.map((tool) => tool.name))
-  const tools: Entry[] = BrowserContract.entries.filter((tool) => available.has(tool.name))
-
-  return { client, server, tools, sha: BrowserContract.sha256 }
 }
 
 class PlaywrightBackend implements Backend {
   readonly id = "playwright" as const
 
+  private disposed = false
+  private readonly off: Array<() => void> = []
+
   private constructor(
     private readonly conn: Connection,
     readonly contractSha: string,
     readonly tools: readonly Entry[],
-  ) {}
-
-  static async create(browser: Settings) {
-    const conn = await connect(browser)
-    return new PlaywrightBackend(conn, conn.sha, conn.tools)
+    private readonly onClosed: () => void,
+  ) {
+    // A crashed browser fires `disconnected`; the cache must not keep handing out a dead backend.
+    const gone = () => {
+      this.onClosed()
+      void this.dispose()
+    }
+    this.conn.browser.on("disconnected", gone)
+    this.conn.context.on("close", gone)
+    this.off.push(
+      () => this.conn.browser.off("disconnected", gone),
+      () => this.conn.context.off("close", gone),
+    )
   }
 
-  async call(name: string, args: Record<string, unknown>): Promise<CallResult> {
-    const result = await this.conn.client.callTool({ name, arguments: args }, undefined, { timeout: TIMEOUT })
+  static async create(browser: Settings, onClosed: () => void) {
+    const conn = await connect(browser)
+    return new PlaywrightBackend(conn, conn.sha, conn.tools, onClosed)
+  }
+
+  async call(name: string, args: Record<string, unknown>, ctx: CallContext): Promise<CallResult> {
+    const result = await this.conn.client.callTool({ name, arguments: args }, undefined, {
+      timeout: TIMEOUT,
+      signal: ctx.signal,
+    })
     const content = blocks(result.content)
     for (const block of content) if (block.type === "text") block.text = await inline(block.text)
     if (!content.length && result.structuredContent !== undefined) {
@@ -160,28 +210,63 @@ class PlaywrightBackend implements Backend {
   }
 
   async dispose() {
-    await this.conn.client.close()
-    await this.conn.server.close()
+    if (this.disposed) return
+    this.disposed = true
+    for (const off of this.off) off()
+    await this.conn.client.close().catch(() => undefined)
+    await this.conn.server.close().catch(() => undefined)
+    await this.conn.browser.close().catch(() => undefined)
   }
 }
 
-const cache = new Map<string, Promise<Backend>>()
+type CacheEntry = { backend?: Backend; promise: Promise<Backend> }
+
+const cache = new Map<string, CacheEntry>()
+
+function evict(key: string, entry: CacheEntry) {
+  if (cache.get(key) === entry) cache.delete(key)
+}
+
+let shutdownRegistered = false
+
+function registerShutdown() {
+  if (shutdownRegistered) return
+  shutdownRegistered = true
+  KiloShutdown.register(async () => {
+    const entries = Array.from(cache.values())
+    cache.clear()
+    await Promise.all(entries.map((entry) => entry.backend?.dispose()))
+  })
+}
+
+/** Dispose every cached browser, for example when `browser.backend` switches to `off`. */
+export async function disposePlaywright() {
+  const entries = Array.from(cache.values())
+  cache.clear()
+  await Promise.all(entries.map((entry) => entry.backend?.dispose()))
+}
 
 /** One browser process per distinct Playwright configuration, shared by every session in the process. */
 export function playwright(browser: Settings): Promise<Backend> {
-  const key = JSON.stringify({ backend: browser.backend, target: browser.target })
+  const key = JSON.stringify({
+    backend: browser.backend,
+    target: browser.target,
+    headless: browser.headless,
+  })
   const existing = cache.get(key)
-  if (existing) return existing
-  const created = PlaywrightBackend.create(browser).then(
+  if (existing) return existing.promise
+  const entry: CacheEntry = { promise: Promise.resolve(undefined as unknown as Backend) }
+  entry.promise = PlaywrightBackend.create(browser, () => evict(key, entry)).then(
     (instance) => {
-      cache.set(key, Promise.resolve(instance))
+      entry.backend = instance
       return instance
     },
     (error) => {
-      cache.delete(key)
+      evict(key, entry)
       throw error
     },
   )
-  cache.set(key, created)
-  return created
+  cache.set(key, entry)
+  registerShutdown()
+  return entry.promise
 }
