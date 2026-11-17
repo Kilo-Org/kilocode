@@ -172,6 +172,18 @@ describe("browser client", () => {
     await until(target, "reconnecting")
   })
 
+  test("a hub process that exits before registering is treated as a failed start", async () => {
+    const at = await tmp()
+    const script = path.join(at.root, "exit.ts")
+    await fs.writeFile(script, "process.exit(1)\n")
+    const target = client({ dir: at.dir, command: [process.execPath, script] })
+
+    // Without the exit handler this would stay in `connecting` for the 8 s registry
+    // window and then report "no hub is reachable".
+    const state = await until(target, "reconnecting")
+    expect(state).toMatchObject({ kind: "reconnecting", reason: "cannot start the browser hub" })
+  })
+
   test("close() stops a connect that is still waiting for a hub", async () => {
     const at = await tmp()
     const target = client({ dir: at.dir, start: () => {} })

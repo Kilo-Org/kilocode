@@ -2,7 +2,7 @@
 // 2.0 through it. One connection state, one live socket, no replays after a drop.
 import net from "node:net"
 import path from "path"
-import { spawn } from "child_process"
+import { spawn, type ChildProcess } from "child_process"
 import { Log } from "@opencode-ai/core/util/log"
 import * as proto from "./protocol"
 import { PeerLimit, decoder, encode, type Decoder } from "./frame"
@@ -90,6 +90,9 @@ export type Input = {
   dir?: string
   // Replaces the detached-hub spawn in tests or in hosts that manage processes.
   start?: () => void
+  // Replaces the command `bin()` builds for the detached hub (tests spawn a script
+  // that exits immediately to exercise the early-exit path).
+  command?: string[]
   // Replaces the system opener for the pairing page (VS Code passes openExternal).
   opener?: pair.Opener
 }
@@ -130,6 +133,8 @@ export function create(input: Input = {}): Client {
     // Set by the spawn error handler; the attempt that spawned the hub consumes it
     // and schedules the retry itself instead of waiting out StartTimeout.
     failed: false,
+    // The child this attempt spawned, cleared when the attempt (or the child) ends.
+    child: undefined as ChildProcess | undefined,
   }
   // Hubs whose pairing page this client has already opened, so a hub that keeps
   // reporting hub.waiting is surfaced once per start.
@@ -318,7 +323,7 @@ export function create(input: Input = {}): Client {
     }
     // Same shape as the daemon: a detached process with no inherited stdio, and
     // windowsHide so no console window flashes.
-    const cmd = bin()
+    const cmd = input.command ?? bin()
     const child = spawn(
       cmd[0],
       [...cmd.slice(1), "browser-hub", "--loopback", "--port", String(input.port ?? proto.DefaultPort)],
@@ -329,14 +334,21 @@ export function create(input: Input = {}): Client {
         env: { ...process.env, ...(input.dir === undefined ? {} : { KILO_BROWSER_RUN_DIR: input.dir }) },
       },
     )
+    lifecycle.child = child
     // spawn reports a missing or non-executable command asynchronously, while the
-    // connect() that spawned it is still polling the registry. Record the failure
-    // for that attempt instead of scheduling a second connect() here.
-    child.on("error", (error) => {
-      log.warn("cannot start a detached loopback hub", { error })
+    // connect() that spawned it is still polling the registry. A child that starts
+    // and then dies before registering a hub (bad arguments, port taken) is the same
+    // outage. Record it for that attempt instead of scheduling a second connect()
+    // here; the guard makes `error` followed by `close` a single failure.
+    const restart = (detail: { error?: unknown; code?: number | null; signal?: string | null }) => {
+      if (lifecycle.child !== child) return
+      lifecycle.child = undefined
+      log.warn("a detached loopback hub did not start", detail)
       lifecycle.tried = false
       lifecycle.failed = true
-    })
+    }
+    child.on("error", (error) => restart({ error }))
+    child.on("exit", (code, signal) => restart({ code, signal }))
     child.unref()
   }
 
@@ -395,6 +407,9 @@ export function create(input: Input = {}): Client {
       if (current()) schedule("cannot connect to the browser hub")
     } finally {
       lifecycle.active = false
+      // Past this point the child is the hub's own lifetime; a later exit is not an
+      // early failure and the hub's socket close drives the reconnect.
+      lifecycle.child = undefined
     }
   }
 
