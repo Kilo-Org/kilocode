@@ -795,6 +795,13 @@ interface OpenSessionLocallyIn {
   sessionId: string
 }
 
+/** Open a session in the context of the directory the server runs it in, filing it where that directory lives. */
+interface OpenSessionIn {
+  type: "agentManager.openSession"
+  projectId?: string
+  sessionId: string
+}
+
 interface CloseSessionIn {
   type: "agentManager.closeSession"
   sessionId: string
@@ -1395,6 +1402,7 @@ export type AgentManagerInMessage =
   | PromoteSessionIn
   | OpenLocallyIn
   | OpenSessionLocallyIn
+  | OpenSessionIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn
