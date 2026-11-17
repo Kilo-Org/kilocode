@@ -120,7 +120,7 @@ test("reuses a cached token until shortly before expiry", async () => {
   }
 })
 
-test("normalizes issuer failures without retrying", async () => {
+test("preserves issuer HTTP status without changing normalized reasons or retrying", async () => {
   for (const item of [
     { status: 401, reason: "unauthorized" },
     { status: 403, reason: "unauthorized" },
@@ -139,6 +139,7 @@ test("normalizes issuer failures without retrying", async () => {
         .catch((value: unknown) => value)
       expect(error).toBeInstanceOf(ControlTokenError)
       expect(reasonOf(error)).toBe(item.reason)
+      expect(error).toHaveProperty("status", item.status)
       expect(app.calls).toHaveLength(1)
     } finally {
       app.stop()
@@ -162,6 +163,7 @@ test("rejects an invalid or already-expired token response", async () => {
         .exchange({ source: Redacted.make(SOURCE), issuer: app.url, worker: app.url })
         .catch((value: unknown) => value)
       expect(reasonOf(error)).toBe("invalid_response")
+      expect(error instanceof ControlTokenError && error.status).toBeUndefined()
     } finally {
       app.stop()
     }
@@ -177,6 +179,7 @@ test("reports transport failures as unavailable", async () => {
     .exchange({ source: Redacted.make(SOURCE), issuer: "http://127.0.0.1:1", worker: "http://127.0.0.1:1" })
     .catch((value: unknown) => value)
   expect(reasonOf(error)).toBe("unavailable")
+  expect(error instanceof ControlTokenError && error.status).toBeUndefined()
 })
 
 test("bounds the issued cache", async () => {

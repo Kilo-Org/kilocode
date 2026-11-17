@@ -1,5 +1,22 @@
 # kilo-code
 
+## 7.8.30
+
+### Minor Changes
+
+- [#16080](https://github.com/Kilo-Org/kilocode/pull/16080) [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121) - Retire the Mercury Edit 2 autocomplete models and Next Edit. Codestral is now the default autocomplete model, and saved Mercury or Inception selections use Codestral. The SDK no longer has `client.kilo.edit`, and `@kilocode/kilo-gateway` no longer exports `./edit` or `./edit-prompt`.
+
+### Patch Changes
+
+- Updated dependencies [[`37b2900`](https://github.com/Kilo-Org/kilocode/commit/37b2900fcb6223fec33c2bd5f59263e93682c670), [`8a762f8`](https://github.com/Kilo-Org/kilocode/commit/8a762f8487734a5db566cbd8938f84dec9076379), [`54de37a`](https://github.com/Kilo-Org/kilocode/commit/54de37a85dfef8feb828382d8a71f84139857121)]:
+  - @kilocode/sdk@7.9.0
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/kilo-ui@7.8.29
+  - @kilocode/plugin@7.8.29
+  - @opencode-ai/ui@7.8.29
+  - @opencode-ai/core@7.8.29
+  - @kilocode/kilo-indexing@7.8.29
+
 ## 7.8.28
 
 ## 7.8.26

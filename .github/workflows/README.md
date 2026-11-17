@@ -77,3 +77,16 @@ kilocode is a fork of opencode sharing one `bun.lock` with upstream-owned `@open
 - `dependabot-auto-merge.yml` only auto-merges a PR if every changed file (besides the shared `bun.lock`) lives under a `kilo`-named path. Anything touching shared/upstream code is left for a human.
 - The root `bun` block has version updates turned off. It scans ~17 upstream-owned packages and cannot be scoped by path, so its PRs almost always touched upstream files. Those dependencies come in with upstream merges.
 - `dependabot.yml` deliberately does **not** cover `packages/opencode/Dockerfile` or `.github/workflows/**`: both are shared/upstream paths that the auto-merge guard above would never approve anyway, and `.github/workflows/**` changes routinely fail this repo's `kilocode_change` annotation check unless they land inside an existing marker block. GitHub Actions in `.github/workflows/**` still get Dependabot alerts (the dependency graph reads workflow files), which `security-findings-notify.yml` reports. The Dockerfile has no alert coverage: the dependency graph does not read Dockerfiles.
+
+## Not security: upstream v2 releases
+
+`v2-upstream-release-notify.yml` is not part of the security automation above; it is listed here because it follows the same pattern (cron, read-only, Slack).
+
+| File | Trigger | Manual run |
+|---|---|---|
+| `v2-upstream-release-notify.yml` | `schedule`: every 6 hours, plus `workflow_dispatch` | Actions tab → "v2 upstream release notify" → Run workflow, or `gh workflow run v2-upstream-release-notify.yml` |
+
+- **What it does:** asks the sync tooling on the `v2` branch (`bun script/upstream/list-versions.ts --json`) which upstream OpenCode v2 releases `v2` does not have. It lives on `main` because GitHub runs scheduled workflows only from the default branch. `watch-opencode-releases.yml` does not cover this: it follows upstream's "latest" release, which is the v1 line.
+- **When it posts:** once when a release appears that `v2` lacks, then once every 7 days (counted from the release date) while `v2` is still behind. A new release posts at once. Nothing is posted while `v2` has the newest release.
+- **What a post contains:** the newest release with a link to its notes, the newest release `v2` has, how many releases `v2` is behind, and the command for the next sync.
+- **Setup:** repo secret `V2_SYNC_SLACK_WEBHOOK` (a Slack incoming webhook URL), separate from `SECURITY_ALERTS_SLACK_WEBHOOK` so the posts can go to their own channel. Without it a run prints its finding in the job summary and posts nothing, and it posts on the first run after the secret is added.
