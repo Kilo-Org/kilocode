@@ -225,7 +225,8 @@ describe("resolveSessionFile", () => {
     })
     read.roots.event({ type: "session.moved", data: { sessionID: "ses_child", location: { directory: other } } })
     read.settle(0, repo.worktree)
-    await raced
+    // The read started before the move, so the click that raced the event takes the destination it reported.
+    expect(await raced).toBe(path.join(other, "src", "math.ts"))
 
     // The read started before the move, so the next link keeps the destination the event reported.
     expect(
@@ -254,7 +255,8 @@ describe("resolveSessionFile", () => {
     })
     read.roots.event({ type: "session.deleted", data: { sessionID: "ses_child" } })
     read.settle(0, repo.worktree)
-    await raced
+    // The click that raced the delete gets no directory, so it opens nothing from the removed session.
+    expect(await raced).toBeUndefined()
 
     // The deleted id was not cached, so the next link asks the server again.
     const next = resolveSessionFile({
@@ -279,7 +281,8 @@ describe("resolveSessionFile", () => {
     read.roots.event({ type: "session.deleted", data: { sessionID: "ses_child" } })
     const second = resolveSessionFile(lookup)
     read.settle(0, repo.worktree)
-    await first
+    // The superseded read returns nothing and leaves the newer read in place.
+    expect(await first).toBeUndefined()
     // The third link joins the read started after the delete instead of starting another one.
     const third = resolveSessionFile(lookup)
     read.settle(1, repo.worktree)

@@ -28,11 +28,6 @@ const LIMIT = 500
 export function createSessionRoots(read: (sessionID: string) => Promise<string | undefined>) {
   const roots = new Map<string, string>()
   const pending = new Map<string, Promise<string | undefined>>()
-  // A read started before a create, move, or delete reports the directory from before that event, so only the
-  // revision it started at may still write its result.
-  const revisions = new Map<string, number>()
-
-  const bump = (sessionID: string) => revisions.set(sessionID, (revisions.get(sessionID) ?? 0) + 1)
 
   const remember = (sessionID: string, directory: string | undefined) => {
     if (!directory) return
@@ -44,7 +39,6 @@ export function createSessionRoots(read: (sessionID: string) => Promise<string |
   }
 
   const forget = (sessionID: string) => {
-    bump(sessionID)
     roots.delete(sessionID)
     pending.delete(sessionID)
   }
@@ -54,13 +48,15 @@ export function createSessionRoots(read: (sessionID: string) => Promise<string |
     if (known) return Promise.resolve(known)
     const running = pending.get(sessionID)
     if (running) return running
-    const started = revisions.get(sessionID) ?? 0
     // An unknown session is not cached, so a later link asks again after the server learns it.
     let request: Promise<string | undefined>
     request = read(sessionID).then(
       (directory) => {
-        if ((revisions.get(sessionID) ?? 0) === started) remember(sessionID, directory)
-        if (pending.get(sessionID) === request) pending.delete(sessionID)
+        // A create, move, or delete that landed while this read ran owns the newer value. The read also clears only
+        // its own pending entry, so an older read cannot abandon a newer one.
+        if (pending.get(sessionID) !== request) return roots.get(sessionID)
+        pending.delete(sessionID)
+        remember(sessionID, directory)
         return directory
       },
       () => {
@@ -80,11 +76,11 @@ export function createSessionRoots(read: (sessionID: string) => Promise<string |
     if (value.type === "session.moved") {
       const directory = movedDirectory(value.data)
       if (!directory) return
-      bump(sessionID)
+      pending.delete(sessionID)
       return remember(sessionID, directory)
     }
     if (value.type === "session.created") {
-      bump(sessionID)
+      pending.delete(sessionID)
       remember(sessionID, value.location?.directory)
     }
   }
