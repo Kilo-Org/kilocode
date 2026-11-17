@@ -266,7 +266,15 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
             this.log(`Failed to move session ${sessionId}:`, err)
             return "failed" as const
           }),
-      sessionDirectory: (sessionId) => this.sessionRoots.get(sessionId),
+      sessionDirectory: (sessionId) =>
+        this.connection
+          .client()
+          .then((client) => client.session.get({ sessionID: sessionId }))
+          .then((info) => info.location.directory)
+          .catch((err: unknown) => {
+            this.log(`Failed to read session ${sessionId} before opening it:`, err)
+            return undefined
+          }),
     })
     this.contexts = wiring.contexts
     // One browser page per Agent Manager session. The sidebar editor tab uses the same broker instance.
@@ -1091,11 +1099,13 @@ export class AgentManagerProvider implements Disposable, ProviderHostsSource, Pr
   }
 
   public async openWorktreeFile(id: string, filePath: string, line?: number, column?: number): Promise<void> {
+    await this.waitForStateReady("openWorktreeFile")
     const target = await resolveSessionFile({ ...this.fileLookup(id), file: filePath })
     if (target) this.host.openFile(target, line, column)
   }
 
   public async copyFilePath(id: string, filePath: string): Promise<void> {
+    await this.waitForStateReady("copyFilePath")
     const target = await resolveSessionFile({ ...this.fileLookup(id), file: filePath })
     if (target) await this.host.copyToClipboard(target)
   }

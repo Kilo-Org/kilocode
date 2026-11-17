@@ -27,6 +27,17 @@ function directories(known: Record<string, string | undefined>) {
   return { roots, calls, known }
 }
 
+/** A read that stays pending until the test settles it, in call order. */
+function deferred() {
+  const resolvers: Array<(directory: string | undefined) => void> = []
+  const calls: string[] = []
+  const roots = createSessionRoots((sessionID) => {
+    calls.push(sessionID)
+    return new Promise<string | undefined>((resolve) => resolvers.push(resolve))
+  })
+  return { roots, calls, settle: (index: number, directory: string | undefined) => resolvers[index]?.(directory) }
+}
+
 const dirs: string[] = []
 const managers: WorktreeStateManager[] = []
 
@@ -195,6 +206,87 @@ describe("resolveSessionFile", () => {
       }),
     ).toBeUndefined()
     expect(read.calls).toEqual(["ses_child", "ses_child"])
+  })
+
+  it("keeps a move that lands while the directory read is pending", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const other = path.join(repo.root, ".kilo", "worktrees", "two")
+    fs.mkdirSync(path.join(other, "src"), { recursive: true })
+    fs.writeFileSync(path.join(other, "src", "math.ts"), "")
+    const read = deferred()
+
+    const raced = resolveSessionFile({
+      state: manager,
+      roots: read.roots,
+      id: "ses_child",
+      file: "src/math.ts",
+      root: repo.root,
+    })
+    read.roots.event({ type: "session.moved", data: { sessionID: "ses_child", location: { directory: other } } })
+    read.settle(0, repo.worktree)
+    await raced
+
+    // The read started before the move, so the next link keeps the destination the event reported.
+    expect(
+      await resolveSessionFile({
+        state: manager,
+        roots: read.roots,
+        id: "ses_child",
+        file: "src/math.ts",
+        root: repo.root,
+      }),
+    ).toBe(path.join(other, "src", "math.ts"))
+    expect(read.calls).toEqual(["ses_child"])
+  })
+
+  it("does not resurrect a deleted session from a read that was already running", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const read = deferred()
+
+    const raced = resolveSessionFile({
+      state: manager,
+      roots: read.roots,
+      id: "ses_child",
+      file: "src/math.ts",
+      root: repo.root,
+    })
+    read.roots.event({ type: "session.deleted", data: { sessionID: "ses_child" } })
+    read.settle(0, repo.worktree)
+    await raced
+
+    // The deleted id was not cached, so the next link asks the server again.
+    const next = resolveSessionFile({
+      state: manager,
+      roots: read.roots,
+      id: "ses_child",
+      file: "src/math.ts",
+      root: repo.root,
+    })
+    read.settle(1, repo.worktree)
+    expect(await next).toBe(path.join(repo.worktree, "src", "math.ts"))
+    expect(read.calls).toEqual(["ses_child", "ses_child"])
+  })
+
+  it("does not let an older read replace a newer pending read", async () => {
+    const repo = project()
+    const manager = state(repo.root)
+    const read = deferred()
+    const lookup = { state: manager, roots: read.roots, id: "ses_child", file: "src/math.ts", root: repo.root }
+
+    const first = resolveSessionFile(lookup)
+    read.roots.event({ type: "session.deleted", data: { sessionID: "ses_child" } })
+    const second = resolveSessionFile(lookup)
+    read.settle(0, repo.worktree)
+    await first
+    // The third link joins the read started after the delete instead of starting another one.
+    const third = resolveSessionFile(lookup)
+    read.settle(1, repo.worktree)
+    expect(await second).toBe(path.join(repo.worktree, "src", "math.ts"))
+    expect(read.calls).toEqual(["ses_child", "ses_child"])
+    read.settle(2, repo.worktree)
+    expect(await third).toBe(path.join(repo.worktree, "src", "math.ts"))
   })
 
   it("resolves a session in a directory that is neither the root nor a worktree", async () => {
