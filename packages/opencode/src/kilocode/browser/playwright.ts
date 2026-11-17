@@ -24,6 +24,26 @@ const TIMEOUT = 180_000
 /** Snapshots are page content: inline them, but never read more than this from disk. */
 const INLINE_LIMIT = 2 * 1024 * 1024
 
+/**
+ * Chrome on Ubuntu refuses to start when its sandbox helper is not setuid or unprivileged user
+ * namespaces are restricted. Name the fix instead of surfacing a raw launch stack, and never paper
+ * over it by disabling the sandbox.
+ */
+export function launchFailure(error: unknown, executable?: string): Error {
+  const message = error instanceof Error ? error.message : String(error)
+  if (!/sandbox/i.test(message)) return error instanceof Error ? error : new Error(message)
+  const sandbox = executable
+    ? path.join(path.dirname(executable), "chrome_sandbox")
+    : "<playwright-chromium>/chrome-linux/chrome_sandbox"
+  const fix = [
+    `Chromium cannot start because its sandbox is not permitted: ${message}`,
+    `Fix the sandbox helper: sudo chown root:root ${sandbox} && sudo chmod 4755 ${sandbox}`,
+    "Or allow unprivileged user namespaces: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0",
+    "Or install Google Chrome so the browser uses system Chrome. The sandbox is never disabled.",
+  ].join("\n")
+  return new UnavailableError(fix, fix)
+}
+
 function output() {
   return path.join(Global.Path.data, "browser", "output")
 }
@@ -125,13 +145,17 @@ async function connect(browser: Settings): Promise<Connection> {
   // Code windows) never contend for one Chrome profile on disk, and a crashed process leaves no
   // profile or SingletonLock behind. The context lives as long as this backend, so cookies and
   // storage still survive between tool calls in one process.
-  const instance = await chromium.launch({
-    headless: browser.headless,
-    handleSIGINT: false,
-    handleSIGTERM: false,
-    ignoreDefaultArgs: ["--disable-extensions"],
-    ...located,
-  })
+  const instance = await chromium
+    .launch({
+      headless: browser.headless,
+      handleSIGINT: false,
+      handleSIGTERM: false,
+      ignoreDefaultArgs: ["--disable-extensions"],
+      ...located,
+    })
+    .catch((error) => {
+      throw launchFailure(error, "executablePath" in located ? located.executablePath : undefined)
+    })
   let server: Server | undefined
   let client: Client | undefined
   try {
